@@ -164,3 +164,33 @@ class IptablesManagerTestCase(test.TestCase):
             self.assertTrue('-A %s -j run_tests.py-%s' \
                             % (chain, chain) in new_lines,
                             "Built-in chain %s not wrapped" % (chain,))
+
+    def test_will_empty_chain(self):
+        self.manager.ipv4['filter'].add_chain('test-chain')
+        self.manager.ipv4['filter'].add_rule('test-chain', '-j DROP')
+        old_count = len(self.manager.ipv4['filter'].rules)
+        self.manager.ipv4['filter'].empty_chain('test-chain')
+        self.assertEqual(old_count - 1, len(self.manager.ipv4['filter'].rules))
+
+    def test_will_empty_unwrapped_chain(self):
+        self.manager.ipv4['filter'].add_chain('test-chain', wrap=False)
+        self.manager.ipv4['filter'].add_rule('test-chain', '-j DROP',
+                                             wrap=False)
+        old_count = len(self.manager.ipv4['filter'].rules)
+        self.manager.ipv4['filter'].empty_chain('test-chain', wrap=False)
+        self.assertEqual(old_count - 1, len(self.manager.ipv4['filter'].rules))
+
+    def test_will_not_empty_wrapped_when_unwrapped(self):
+        self.manager.ipv4['filter'].add_chain('test-chain')
+        self.manager.ipv4['filter'].add_rule('test-chain', '-j DROP')
+        old_count = len(self.manager.ipv4['filter'].rules)
+        self.manager.ipv4['filter'].empty_chain('test-chain', wrap=False)
+        self.assertEqual(old_count, len(self.manager.ipv4['filter'].rules))
+
+    def test_will_not_empty_unwrapped_when_wrapped(self):
+        self.manager.ipv4['filter'].add_chain('test-chain', wrap=False)
+        self.manager.ipv4['filter'].add_rule('test-chain', '-j DROP',
+                                             wrap=False)
+        old_count = len(self.manager.ipv4['filter'].rules)
+        self.manager.ipv4['filter'].empty_chain('test-chain')
+        self.assertEqual(old_count, len(self.manager.ipv4['filter'].rules))
