@@ -76,6 +76,15 @@ class FirewallDriver(object):
         the security group."""
         raise NotImplementedError()
 
+    def refresh_provider_fw_rules(self):
+        """Refresh common rules for all hosts/instances from data store.
+
+        Gets called when a rule has been added to or removed from
+        the list of rules (via admin api).
+
+        """
+        raise NotImplementedError()
+
     def setup_basic_filtering(self, instance, network_info=None):
         """Create rules to block spoofing and allow dhcp.
 
@@ -207,6 +216,13 @@ class NWFilterFirewall(FirewallDriver):
                                                        [base_filter]))
 
     def _ensure_static_filters(self):
+        """Static filters are filters that have no need to be IP aware.
+
+        There is no configuration or tuneability of these filters, so they
+        can be set up once and forgotten about.
+
+        """
+
         if self.static_filters_configured:
             return
 
@@ -310,19 +326,21 @@ class NWFilterFirewall(FirewallDriver):
                         'for %(instance_name)s is not found.') % locals())
 
     def prepare_instance_filter(self, instance, network_info=None):
-        """
-        Creates an NWFilter for the given instance. In the process,
-        it makes sure the filters for the security groups as well as
-        the base filter are all in place.
+        """Creates an NWFilter for the given instance.
+
+        In the process, it makes sure the filters for the provider blocks,
+        security groups, and base filter are all in place.
+
         """
         if not network_info:
             network_info = netutils.get_network_info(instance)
+
+        self.refresh_provider_fw_rules()
 
         ctxt = context.get_admin_context()
 
         instance_secgroup_filter_name = \
             '%s-secgroup' % (self._instance_filter_name(instance))
-            #% (instance_filter_name,)
 
         instance_secgroup_filter_children = ['nova-base-ipv4',
                                              'nova-base-ipv6',
@@ -366,7 +384,7 @@ class NWFilterFirewall(FirewallDriver):
         for (_n, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
-            instance_filter_children = [base_filter,
+            instance_filter_children = [base_filter, 'nova-provider-rules',
                                         instance_secgroup_filter_name]
 
             if FLAGS.allow_project_net_traffic:
@@ -387,6 +405,19 @@ class NWFilterFirewall(FirewallDriver):
                                      network_info=None):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))
+
+    def refresh_provider_fw_rules(self):
+        """Update rules for all instances.
+
+        This is part of the FirewallDriver API and is called when the
+        provider firewall rules change in the database.  In the
+        `prepare_instance_filter` we add a reference to the
+        'nova-provider-rules' filter for each instance's firewall, and
+        by changing that filter we update them all.
+
+        """
+        xml = self.provider_fw_to_nwfilter_xml()
+        return self._define_filter(xml)
 
     def security_group_to_nwfilter_xml(self, security_group_id):
         security_group = db.security_group_get(context.get_admin_context(),
@@ -426,6 +457,43 @@ class NWFilterFirewall(FirewallDriver):
             xml += "chain='ipv4'>%s</filter>" % rule_xml
         return xml
 
+    def provider_fw_to_nwfilter_xml(self):
+        """Compose a filter of drop rules from specified cidrs."""
+        rule_xml = ""
+        v6protocol = {'tcp': 'tcp-ipv6', 'udp': 'udp-ipv6', 'icmp': 'icmpv6'}
+        rules = db.provider_fw_rule_get_all(context.get_admin_context())
+        for rule in rules:
+            rule_xml += "<rule action='block' direction='in' priority='150'>"
+            version = netutils.get_ip_version(rule.cidr)
+            if(FLAGS.use_ipv6 and version == 6):
+                net, prefixlen = netutils.get_net_and_prefixlen(rule.cidr)
+                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
+                            (v6protocol[rule.protocol], net, prefixlen)
+            else:
+                net, mask = netutils.get_net_and_mask(rule.cidr)
+                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
+                            (rule.protocol, net, mask)
+            if rule.protocol in ['tcp', 'udp']:
+                rule_xml += "dstportstart='%s' dstportend='%s' " % \
+                            (rule.from_port, rule.to_port)
+            elif rule.protocol == 'icmp':
+                LOG.info('rule.protocol: %r, rule.from_port: %r, '
+                         'rule.to_port: %r', rule.protocol,
+                         rule.from_port, rule.to_port)
+                if rule.from_port != -1:
+                    rule_xml += "type='%s' " % rule.from_port
+                if rule.to_port != -1:
+                    rule_xml += "code='%s' " % rule.to_port
+
+                rule_xml += '/>\n'
+            rule_xml += "</rule>\n"
+        xml = "<filter name='nova-provider-rules' "
+        if(FLAGS.use_ipv6):
+            xml += "chain='root'>%s</filter>" % rule_xml
+        else:
+            xml += "chain='ipv4'>%s</filter>" % rule_xml
+        return xml
+
     def _instance_filter_name(self, instance, nic_id=None):
         if not nic_id:
             return 'nova-instance-%s' % (instance['name'])
@@ -453,6 +521,7 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables = linux_net.iptables_manager
         self.instances = {}
         self.nwfilter = NWFilterFirewall(kwargs['get_connection'])
+        self.basicly_filtered = False
 
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
@@ -460,10 +529,14 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def setup_basic_filtering(self, instance, network_info=None):
-        """Use NWFilter from libvirt for this."""
+        """Set up provider rules and basic NWFilter."""
         if not network_info:
             network_info = netutils.get_network_info(instance)
-        return self.nwfilter.setup_basic_filtering(instance, network_info)
+        self.nwfilter.setup_basic_filtering(instance, network_info)
+        if not self.basicly_filtered:
+            LOG.debug(_('iptables firewall: Setup Basic Filtering'))
+            self.refresh_provider_fw_rules()
+            self.basicly_filtered = True
 
     def apply_instance_filter(self, instance):
         """No-op. Everything is done in prepare_instance_filter"""
@@ -543,6 +616,10 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
         ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
 
+        # Pass through provider-wide drops
+        ipv4_rules += ['-j $provider']
+        ipv6_rules += ['-j $provider']
+
         dhcp_servers = [network['gateway'] for (network, _m) in network_info]
 
         for dhcp_server in dhcp_servers:
@@ -560,7 +637,7 @@ class IptablesFirewallDriver(FirewallDriver):
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            gateways_v6 = [network['gateway_v6'] for (network, _) in
+            gateways_v6 = [network['gateway_v6'] for (network, _m) in
                            network_info]
             for gateway_v6 in gateways_v6:
                 ipv6_rules.append(
@@ -583,7 +660,7 @@ class IptablesFirewallDriver(FirewallDriver):
                                                           security_group['id'])
 
             for rule in rules:
-                logging.info('%r', rule)
+                LOG.debug(_('Adding security group rule: %r'), rule)
 
                 if not rule.cidr:
                     # Eventually, a mechanism to grant access for security
@@ -592,9 +669,9 @@ class IptablesFirewallDriver(FirewallDriver):
 
                 version = netutils.get_ip_version(rule.cidr)
                 if version == 4:
-                    rules = ipv4_rules
+                    fw_rules = ipv4_rules
                 else:
-                    rules = ipv6_rules
+                    fw_rules = ipv6_rules
 
                 protocol = rule.protocol
                 if version == 6 and rule.protocol == 'icmp':
@@ -629,7 +706,7 @@ class IptablesFirewallDriver(FirewallDriver):
                                      icmp_type_arg]
 
                 args += ['-j ACCEPT']
-                rules += [' '.join(args)]
+                fw_rules += [' '.join(args)]
 
         ipv4_rules += ['-j $sg-fallback']
         ipv6_rules += ['-j $sg-fallback']
@@ -656,6 +733,85 @@ class IptablesFirewallDriver(FirewallDriver):
             if not network_info:
                 network_info = netutils.get_network_info(instance)
             self.add_filters_for_instance(instance, network_info)
+
+    def refresh_provider_fw_rules(self):
+        """See class:FirewallDriver: docs."""
+        self._do_refresh_provider_fw_rules()
+        self.iptables.apply()
+
+    @utils.synchronized('iptables', external=True)
+    def _do_refresh_provider_fw_rules(self):
+        """Internal, synchronized version of refresh_provider_fw_rules."""
+        self._purge_provider_fw_rules()
+        self._build_provider_fw_rules()
+
+    def _purge_provider_fw_rules(self):
+        """Remove all rules from the provider chains."""
+        self.iptables.ipv4['filter'].empty_chain('provider')
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].empty_chain('provider')
+
+    def _build_provider_fw_rules(self):
+        """Create all rules for the provider IP DROPs."""
+        self.iptables.ipv4['filter'].add_chain('provider')
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain('provider')
+        ipv4_rules, ipv6_rules = self._provider_rules()
+        for rule in ipv4_rules:
+            self.iptables.ipv4['filter'].add_rule('provider', rule)
+
+        if FLAGS.use_ipv6:
+            for rule in ipv6_rules:
+                self.iptables.ipv6['filter'].add_rule('provider', rule)
+
+    def _provider_rules(self):
+        """Generate a list of rules from provider for IP4 & IP6."""
+        ctxt = context.get_admin_context()
+        ipv4_rules = []
+        ipv6_rules = []
+        rules = db.provider_fw_rule_get_all(ctxt)
+        for rule in rules:
+            LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
+            version = netutils.get_ip_version(rule['cidr'])
+            if version == 4:
+                fw_rules = ipv4_rules
+            else:
+                fw_rules = ipv6_rules
+
+            protocol = rule['protocol']
+            if version == 6 and protocol == 'icmp':
+                protocol = 'icmpv6'
+
+            args = ['-p', protocol, '-s', rule['cidr']]
+
+            if protocol in ['udp', 'tcp']:
+                if rule['from_port'] == rule['to_port']:
+                    args += ['--dport', '%s' % (rule['from_port'],)]
+                else:
+                    args += ['-m', 'multiport',
+                             '--dports', '%s:%s' % (rule['from_port'],
+                                                    rule['to_port'])]
+            elif protocol == 'icmp':
+                icmp_type = rule['from_port']
+                icmp_code = rule['to_port']
+
+                if icmp_type == -1:
+                    icmp_type_arg = None
+                else:
+                    icmp_type_arg = '%s' % icmp_type
+                    if not icmp_code == -1:
+                        icmp_type_arg += '/%s' % icmp_code
+
+                if icmp_type_arg:
+                    if version == 4:
+                        args += ['-m', 'icmp', '--icmp-type',
+                                 icmp_type_arg]
+                    elif version == 6:
+                        args += ['-m', 'icmp6', '--icmpv6-type',
+                                 icmp_type_arg]
+            args += ['-j DROP']
+            fw_rules += [' '.join(args)]
+        return ipv4_rules, ipv6_rules
 
     def _security_group_chain_name(self, security_group_id):
         return 'nova-sg-%s' % (security_group_id,)

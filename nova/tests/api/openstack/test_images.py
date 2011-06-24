@@ -135,36 +135,6 @@ class _BaseImageServiceTests(test.TestCase):
         return fixture
 
 
-class LocalImageServiceTest(_BaseImageServiceTests):
-
-    """Tests the local image service"""
-
-    def setUp(self):
-        super(LocalImageServiceTest, self).setUp()
-        self.tempdir = tempfile.mkdtemp()
-        self.flags(images_path=self.tempdir)
-        self.stubs = stubout.StubOutForTesting()
-        service_class = 'nova.image.local.LocalImageService'
-        self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(None, None)
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-        self.stubs.UnsetAll()
-        super(LocalImageServiceTest, self).tearDown()
-
-    def test_get_all_ids_with_incorrect_directory_formats(self):
-        # create some old-style image directories (starting with 'ami-')
-        for x in [1, 2, 3]:
-            tempfile.mkstemp(prefix='ami-', dir=self.tempdir)
-        # create some valid image directories names
-        for x in ["1485baed", "1a60f0ee", "3123a73d"]:
-            os.makedirs(os.path.join(self.tempdir, x))
-        found_image_ids = self.service._ids()
-        self.assertEqual(True, isinstance(found_image_ids, list))
-        self.assertEqual(3, len(found_image_ids), len(found_image_ids))
-
-
 class GlanceImageServiceTest(_BaseImageServiceTests):
 
     """Tests the Glance image service, in particular that metadata translation
@@ -648,7 +618,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued backup',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -656,7 +625,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving backup',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -665,7 +633,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active backup',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE'
@@ -673,7 +640,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 127,
             'name': 'killed backup',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -719,7 +685,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -741,7 +707,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -764,7 +730,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -786,7 +752,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 127,
             'name': 'killed backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -1032,6 +998,30 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
 
+    def test_create_image_v1_1_actual_server_ref(self):
+
+        serverRef = 'http://localhost/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+        result = json.loads(response.body)
+        self.assertEqual(result['image']['serverRef'], serverRef)
+
+    def test_create_image_v1_1_server_ref_bad_hostname(self):
+
+        serverRef = 'http://asdf/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     def test_create_image_v1_1_xml_serialization(self):
 
         body = dict(image=dict(serverRef='123', name='Backup 1'))
@@ -1048,7 +1038,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             <image
                    created="None"
                    id="123"
-                   name="None"
+                   name="Backup 1"
                    serverRef="http://localhost/v1.1/servers/123"
                    status="ACTIVE"
                    updated="None"
@@ -1095,7 +1085,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_id += 1
 
         # Backup for User 1
-        backup_properties = {'instance_id': '42', 'user_id': '1'}
+        server_ref = 'http://localhost:8774/v1.1/servers/42'
+        backup_properties = {'instance_ref': server_ref, 'user_id': '1'}
         for status in ('queued', 'saving', 'active', 'killed'):
             add_fixture(id=image_id, name='%s backup' % status,
                         is_public=False, status=status,

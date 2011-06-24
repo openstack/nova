@@ -283,19 +283,16 @@ class VMHelper(HelperBase):
 
     @classmethod
     def get_vdi_for_vm_safely(cls, session, vm_ref):
-        vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
-        if vdi_refs is None:
-            raise Exception(_("No VDIs found for VM %s") % vm_ref)
-        else:
-            num_vdis = len(vdi_refs)
-            if num_vdis != 1:
-                raise Exception(
-                        _("Unexpected number of VDIs (%(num_vdis)s) found"
-                        " for VM %(vm_ref)s") % locals())
-
-        vdi_ref = vdi_refs[0]
-        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
-        return vdi_ref, vdi_rec
+        """Retrieves the primary VDI for a VM"""
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        for vbd in vbd_refs:
+            vbd_rec = session.get_xenapi().VBD.get_record(vbd)
+            # Convention dictates the primary VDI will be userdevice 0
+            if vbd_rec['userdevice'] == '0':
+                vdi_rec = session.get_xenapi().VDI.get_record(vbd_rec['VDI'])
+                return vbd_rec['VDI'], vdi_rec
+        raise exception.Error(_("No primary VDI found for"
+                "%(vm_ref)s") % locals())
 
     @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
@@ -875,7 +872,8 @@ def get_vdi_for_vm_safely(session, vm_ref):
     else:
         num_vdis = len(vdi_refs)
         if num_vdis != 1:
-            raise Exception(_("Unexpected number of VDIs (%(num_vdis)s) found"
+            raise exception.Exception(_("Unexpected number of VDIs"
+                    "(%(num_vdis)s) found"
                     " for VM %(vm_ref)s") % locals())
 
     vdi_ref = vdi_refs[0]
