@@ -118,7 +118,7 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
         res = extensions.ResourceExtension(
-                'flavor_extra_specs',
+                'extra_specs',
                 FlavorExtraSpecsController(),
                 parent=dict(member_name='flavor', collection_name='flavors'))
 
