@@ -506,7 +506,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
-        
+
         if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed
         elif image_type == 'backup':
@@ -518,7 +518,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 raise exception.RotationRequiredForBackup
         else:
             raise Exception(_('Image type not recognized %s') % image_type)
-
 
     def rotate_backups(self, context, instance_uuid, backup_type, rotation):
         """Delete excess backups associated to an instance.

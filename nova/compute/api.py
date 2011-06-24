@@ -719,7 +719,7 @@ class API(base.Base):
 
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param name: name of the backup or snapshot
-        
+
         :returns: A dict containing image metadata
         """
         return self._create_image(context, instance_id, name, 'snapshot')
