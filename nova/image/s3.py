@@ -186,7 +186,7 @@ class S3ImageService(service.BaseImageService):
         key = bucket.get_key(manifest_path)
         manifest = key.get_contents_as_string()
 
-        manifest, image = self._s3_parse_manifest(metadata, context, manifest)
+        manifest, image = self._s3_parse_manifest(context, metadata, manifest)
         image_id = image['id']
 
         def delayed_create():
