@@ -25,17 +25,18 @@ Starts both the EC2 and OpenStack APIs in separate processes.
 
 import sys
 
-import nova.log
 import nova.service
+import nova.utils
 
 
 def main():
     """Launch EC2 and OSAPI services."""
-    launcher = nova.service.Launcher(sys.argv)
+    nova.utils.Bootstrapper.bootstrap_binary(sys.argv)
 
     ec2 = nova.service.WSGIService("ec2")
     osapi = nova.service.WSGIService("osapi")
 
+    launcher = nova.service.Launcher()
     launcher.launch_service(ec2)
     launcher.launch_service(osapi)
 

@@ -60,47 +60,13 @@ flags.DEFINE_string('api_paste_config', "api-paste.ini",
 class Launcher(object):
     """Launch one or more services and wait for them to complete."""
 
-    def __init__(self, flags=None):
+    def __init__(self):
         """Initialize the service launcher.
 
-        :param flags: Flags to use for the services we're going to load.
         :returns: None
 
         """
         self._services = []
-        self._version = version.version_string_with_vcs()
-        self._flags = flags
-        self._setup_flags()
-        self._setup_logging()
-        self._log_flags()
-
-    def _setup_logging(self):
-        """Logic to ensure logging is going to work correctly for services.
-
-        :returns: None
-
-        """
-        logging.setup()
-        logging.audit(_("Nova Version (%(_version)s)") % self.__dict__)
-
-    def _setup_flags(self):
-        """Logic to ensure flags/configuration are correctly set.
-
-        :returns: None
-
-        """
-        utils.default_flagfile(args=self._flags)
-        FLAGS(self._flags or [])
-        flags.DEFINE_flag(flags.HelpFlag())
-        flags.DEFINE_flag(flags.HelpshortFlag())
-        flags.DEFINE_flag(flags.HelpXMLFlag())
-        FLAGS.ParseNewFlags()
-
-    def _log_flags(self):
-        LOG.debug(_("Full set of FLAGS:"))
-        for flag in FLAGS:
-            flag_get = FLAGS.get(flag, None)
-            LOG.debug("%(flag)s : %(flag_get)s" % locals())
 
     @staticmethod
     def run_service(service):
