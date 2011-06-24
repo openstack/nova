@@ -125,7 +125,7 @@ class LDAPWrapper(object):
     def connect(self):
         try:
             self.conn = self.ldap.initialize(self.url)
-            self.conn.bind_s(self.user, self.password)
+            self.conn.simple_bind_s(self.user, self.password)
         except self.ldap.SERVER_DOWN:
             self.conn = None
             raise
