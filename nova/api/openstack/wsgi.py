@@ -232,11 +232,13 @@ class XMLDictSerializer(DictSerializer):
         doc = minidom.Document()
         node = self._to_xml_node(doc, self.metadata, root_key, data[root_key])
 
-        xmlns = node.getAttribute('xmlns')
-        if not xmlns and self.xmlns:
-            node.setAttribute('xmlns', self.xmlns)
+        self._add_xmlns(node)
 
         return node.toprettyxml(indent='    ', encoding='utf-8')
+
+    def _add_xmlns(self, node):
+        if self.xmlns is not None:
+            node.setAttribute('xmlns', self.xmlns)
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""
@@ -363,11 +365,11 @@ class Resource(wsgi.Application):
             action, action_args, accept = self.deserializer.deserialize(
                                                                       request)
         except exception.InvalidContentType:
-            return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
+            msg = _("Unsupported Content-Type")
+            return webob.exc.HTTPBadRequest(explanation=msg)
         except exception.MalformedRequestBody:
-            explanation = _("Malformed request body")
-            return faults.Fault(webob.exc.HTTPBadRequest(
-                                            explanation=explanation))
+            msg = _("Malformed request body")
+            return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         action_result = self.dispatch(request, action, action_args)
 

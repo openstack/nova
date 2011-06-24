@@ -21,6 +21,7 @@ import unittest
 import webob
 
 
+from nova import exception
 from nova import flags
 from nova.api import openstack
 from nova.tests.api.openstack import fakes
@@ -67,6 +68,14 @@ def stub_max_server_metadata():
     return metadata
 
 
+def return_server(context, server_id):
+    return {'id': server_id}
+
+
+def return_server_nonexistant(context, server_id):
+    raise exception.InstanceNotFound()
+
+
 class ServerMetaDataTest(unittest.TestCase):
 
     def setUp(self):
@@ -76,6 +85,7 @@ class ServerMetaDataTest(unittest.TestCase):
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server)
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -91,6 +101,13 @@ class ServerMetaDataTest(unittest.TestCase):
         self.assertEqual(200, res.status_int)
         self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual('value1', res_dict['metadata']['key1'])
+
+    def test_index_nonexistant_server(self):
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_nonexistant)
+        req = webob.Request.blank('/v1.1/servers/1/meta')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(404, res.status_int)
 
     def test_index_no_data(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_get',
@@ -114,13 +131,19 @@ class ServerMetaDataTest(unittest.TestCase):
         self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual('value5', res_dict['key5'])
 
+    def test_show_nonexistant_server(self):
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_nonexistant)
+        req = webob.Request.blank('/v1.1/servers/1/meta/key5')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(404, res.status_int)
+
     def test_show_meta_not_found(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_get',
                        return_empty_server_metadata)
         req = webob.Request.blank('/v1.1/servers/1/meta/key6')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
         self.assertEqual(404, res.status_int)
 
     def test_delete(self):
@@ -132,6 +155,14 @@ class ServerMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
 
+    def test_delete_nonexistant_server(self):
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_nonexistant)
+        req = webob.Request.blank('/v1.1/servers/1/meta/key5')
+        req.environ['api.version'] = '1.1'
+        req.method = 'DELETE'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(404, res.status_int)
+
     def test_create(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
                        return_create_instance_metadata)
@@ -141,8 +172,8 @@ class ServerMetaDataTest(unittest.TestCase):
         req.body = '{"metadata": {"key1": "value1"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
+        res_dict = json.loads(res.body)
         self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual('value1', res_dict['metadata']['key1'])
 
@@ -155,6 +186,16 @@ class ServerMetaDataTest(unittest.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
+
+    def test_create_nonexistant_server(self):
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_nonexistant)
+        req = webob.Request.blank('/v1.1/servers/100/meta')
+        req.environ['api.version'] = '1.1'
+        req.method = 'POST'
+        req.body = '{"metadata": {"key1": "value1"}}'
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(404, res.status_int)
 
     def test_update_item(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
@@ -169,6 +210,16 @@ class ServerMetaDataTest(unittest.TestCase):
         self.assertEqual('application/json', res.headers['Content-Type'])
         res_dict = json.loads(res.body)
         self.assertEqual('value1', res_dict['key1'])
+
+    def test_update_item_nonexistant_server(self):
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_nonexistant)
+        req = webob.Request.blank('/v1.1/servers/asdf/100/key1')
+        req.environ['api.version'] = '1.1'
+        req.method = 'PUT'
+        req.body = '{"key1": "value1"}'
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(404, res.status_int)
 
     def test_update_item_empty_body(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',

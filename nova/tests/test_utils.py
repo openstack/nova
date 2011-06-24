@@ -275,3 +275,21 @@ class GenericUtilsTestCase(test.TestCase):
         # error case
         result = utils.parse_server_string('www.exa:mple.com:8443')
         self.assertEqual(('', ''), result)
+
+
+class IsUUIDLikeTestCase(test.TestCase):
+    def assertUUIDLike(self, val, expected):
+        result = utils.is_uuid_like(val)
+        self.assertEqual(result, expected)
+
+    def test_good_uuid(self):
+        val = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        self.assertUUIDLike(val, True)
+
+    def test_integer_passed(self):
+        val = 1
+        self.assertUUIDLike(val, False)
+
+    def test_non_uuid_string_passed(self):
+        val = 'foo-fooo'
+        self.assertUUIDLike(val, False)
