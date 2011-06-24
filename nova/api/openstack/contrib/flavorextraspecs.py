@@ -15,15 +15,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+""" The instance type extra specs extension"""
+
 from webob import exc
 
 from nova import db
 from nova import quota
+from nova.api.openstack import extensions
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
-class Controller(object):
+class FlavorExtraSpecsController(object):
     """ The flavor extra specs API controller for the Openstack API """
 
     def _get_extra_specs(self, context, flavor_id):
@@ -93,10 +96,28 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=error.message)
         raise error
 
+class Flavorextraspecs(extensions.ExtensionDescriptor):
+    def get_name(self):
+        return "FlavorExtraSpecs"
 
-def create_resource():
-    serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11),
-    }
+    def get_alias(self):
+        return "flavor-extra-specs"
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    def get_description(self):
+        return "Instance type (flavor) extra specs"
+
+    def get_namespace(self):
+        return \
+         "http://docs.openstack.org/ext/flavor-extra-specs/api/v1.1"
+
+    def get_updated(self):
+        return "2011-06-23T00:00:00+00:00"
+
+    def get_resources(self):
+        resources = []
+
+        res = extensions.ResourceExtension('flavor-extra-specs',
+                                           FlavorExtraSpecsController())
+        resources.append(res)
+
+        return resources

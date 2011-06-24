@@ -19,12 +19,16 @@ import json
 import stubout
 import unittest
 import webob
+import os.path
+
 
 from nova import flags
 from nova.api import openstack
+from nova.api.openstack import extensions
 from nova.tests.api.openstack import fakes
 import nova.wsgi
 
+FLAGS = flags.FLAGS
 
 def return_create_flavor_extra_specs(context, flavor_id, extra_specs):
     return stub_flavor_extra_specs()
@@ -60,6 +64,8 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
 
     def setUp(self):
         super(FlavorsExtraSpecsTest, self).setUp()
+        FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
+                                                    "extensions")
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
@@ -73,13 +79,19 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
     def test_index(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
                        return_flavor_extra_specs)
-        req = webob.Request.blank('/v1.1/flavors/1/extra')
-        req.environ['api.version'] = '1.1'
-        res = req.get_response(fakes.wsgi_app())
+        app = openstack.APIRouterV11()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        #request = webob.Request.blank('/flavors-extra-specs/1')
+        request = webob.Request.blank('/flavors-extra-specs')
+        res = request.get_response(ext_midware)
+        print res
+        #req.environ['api.version'] = '1.1'
+        #res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
         self.assertEqual('application/json', res.headers['Content-Type'])
-        self.assertEqual('value1', res_dict['extra']['key1'])
+        print res_dict
+        self.assertEqual('value1', res_dict['1']['key1'])
 
     def test_index_no_data(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
