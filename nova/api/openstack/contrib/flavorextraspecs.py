@@ -34,7 +34,7 @@ class FlavorExtraSpecsController(object):
         specs_dict = {}
         for key, value in extra_specs.iteritems():
             specs_dict[key] = value
-        return dict(extra=specs_dict)
+        return dict(extra_specs=specs_dict)
 
     def _check_body(self, body):
         if body == None or body == "":
@@ -43,13 +43,14 @@ class FlavorExtraSpecsController(object):
 
     def index(self, req, flavor_id):
         """ Returns the list of extra specs for a givenflavor """
+        print req.environ
         context = req.environ['nova.context']
         return self._get_extra_specs(context, flavor_id)
 
     def create(self, req, flavor_id, body):
         self._check_body(body)
         context = req.environ['nova.context']
-        specs = body.get('extra')
+        specs = body.get('extra_specs')
         try:
             db.api.instance_type_extra_specs_update_or_create(context,
                                                               flavor_id,
@@ -80,8 +81,8 @@ class FlavorExtraSpecsController(object):
         """ Return a single extra spec item """
         context = req.environ['nova.context']
         specs = self._get_extra_specs(context, flavor_id)
-        if id in specs['extra']:
-            return {id: specs['extra'][id]}
+        if id in specs['extra_specs']:
+            return {id: specs['extra_specs'][id]}
         else:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -108,16 +109,18 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
 
     def get_namespace(self):
         return \
-         "http://docs.openstack.org/ext/flavor-extra-specs/api/v1.1"
+         "http://docs.openstack.org/ext/flavor_extra_specs/api/v1.1"
 
     def get_updated(self):
         return "2011-06-23T00:00:00+00:00"
 
     def get_resources(self):
         resources = []
-
-        res = extensions.ResourceExtension('flavor-extra-specs',
-                                           FlavorExtraSpecsController())
+        res = extensions.ResourceExtension('flavor_extra_specs/:(flavor_id)',
+               FlavorExtraSpecsController(),
+               member_actions={
+                 'show' : 'flavor_extra_specs/:(flavor_id)/extra/:(id)'  })
         resources.append(res)
-
         return resources
+
+

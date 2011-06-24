@@ -24,6 +24,7 @@ import os.path
 
 from nova import flags
 from nova.api import openstack
+from nova.api.openstack import auth
 from nova.api.openstack import extensions
 from nova.tests.api.openstack import fakes
 import nova.wsgi
@@ -61,6 +62,7 @@ def stub_flavor_extra_specs():
 
 
 class FlavorsExtraSpecsTest(unittest.TestCase):
+    
 
     def setUp(self):
         super(FlavorsExtraSpecsTest, self).setUp()
@@ -71,6 +73,9 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
+        self.mware = auth.AuthMiddleware(
+                      extensions.ExtensionMiddleware(
+                      openstack.APIRouterV11()))
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -79,39 +84,31 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
     def test_index(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
                        return_flavor_extra_specs)
-        app = openstack.APIRouterV11()
-        ext_midware = extensions.ExtensionMiddleware(app)
-        #request = webob.Request.blank('/flavors-extra-specs/1')
-        request = webob.Request.blank('/flavors-extra-specs')
-        res = request.get_response(ext_midware)
-        print res
-        #req.environ['api.version'] = '1.1'
-        #res = req.get_response(fakes.wsgi_app())
+        request = webob.Request.blank('/flavor_extra_specs/1')
+        res = request.get_response(self.mware)
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
         self.assertEqual('application/json', res.headers['Content-Type'])
-        print res_dict
-        self.assertEqual('value1', res_dict['1']['key1'])
+        self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
     def test_index_no_data(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
                        return_empty_flavor_extra_specs)
-        req = webob.Request.blank('/v1.1/flavors/1/extra')
-        req.environ['api.version'] = '1.1'
-        res = req.get_response(fakes.wsgi_app())
+        req = webob.Request.blank('/flavor_extra_specs/1')
+        res = req.get_response(self.mware)
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
         self.assertEqual('application/json', res.headers['Content-Type'])
-        self.assertEqual(0, len(res_dict['extra']))
+        self.assertEqual(0, len(res_dict['extra_specs']))
 
     def test_show(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
                        return_flavor_extra_specs)
-        req = webob.Request.blank('/v1.1/flavors/1/extra/key5')
-        req.environ['api.version'] = '1.1'
-        res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        req = webob.Request.blank('/flavor_extra_specs/1/extra/key5')
+        res = req.get_response(self.mware)
+        print res
         self.assertEqual(200, res.status_int)
+        res_dict = json.loads(res.body)
         self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual('value5', res_dict['key5'])
 
