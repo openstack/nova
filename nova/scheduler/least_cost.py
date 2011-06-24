@@ -63,7 +63,7 @@ def compute_fill_first_cost_fn(host):
 class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):
     def __init__(self, *args, **kwargs):
         self.cost_fns_cache = {}
-        super(LeastCoastScheduler, self).__init__(*args, **kwargs)
+        super(LeastCostScheduler, self).__init__(*args, **kwargs)
 
     def get_cost_fns(self, topic):
         """Returns a list of tuples containing weights and cost functions to
