@@ -16,7 +16,6 @@
 #    under the License.
 
 import copy
-import json
 import random
 import string
 
@@ -29,19 +28,15 @@ from glance.common import exception as glance_exc
 
 from nova import context
 from nova import exception as exc
-from nova import flags
 from nova import utils
 import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
+from nova.api.openstack import extensions
 from nova.api.openstack import versions
 from nova.api.openstack import limits
 from nova.auth.manager import User, Project
 import nova.image.fake
-from nova.image import glance
-from nova.image import local
-from nova.image import service
-from nova.tests import fake_flags
 from nova.wsgi import Router
 
 
@@ -83,7 +78,8 @@ def wsgi_app(inner_app10=None, inner_app11=None):
     api10 = openstack.FaultWrapper(auth.AuthMiddleware(
               limits.RateLimitingMiddleware(inner_app10)))
     api11 = openstack.FaultWrapper(auth.AuthMiddleware(
-              limits.RateLimitingMiddleware(inner_app11)))
+              limits.RateLimitingMiddleware(
+                  extensions.ExtensionMiddleware(inner_app11))))
     mapper['/v1.0'] = api10
     mapper['/v1.1'] = api11
     mapper['/'] = openstack.FaultWrapper(versions.Versions())
