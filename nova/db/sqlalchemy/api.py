@@ -2581,6 +2581,18 @@ def instance_type_create(_context, values):
     return instance_type_ref
 
 
+def _inst_type_query_to_dict(inst_type_query):
+    """Takes an instance type query returned by sqlalchemy
+    and returns it as a dictionary.
+    """
+    extra_specs_objs = inst_type_query['extra_specs']
+    extra_specs = dict([(x['key'], x['value']) for x in \
+                        inst_type_query['extra_specs']])
+    inst_type_dict = dict(inst_type_query)
+    inst_type_dict['extra_specs'] = extra_specs
+    return inst_type_dict
+
+
 @require_context
 def instance_type_get_all(context, inactive=False):
     """
@@ -2589,17 +2601,19 @@ def instance_type_get_all(context, inactive=False):
     session = get_session()
     if inactive:
         inst_types = session.query(models.InstanceTypes).\
+                        options(joinedload('extra_specs')).\
                         order_by("name").\
                         all()
     else:
         inst_types = session.query(models.InstanceTypes).\
+                        options(joinedload('extra_specs')).\
                         filter_by(deleted=False).\
                         order_by("name").\
                         all()
     if inst_types:
         inst_dict = {}
         for i in inst_types:
-            inst_dict[i['name']] = dict(i)
+            inst_dict[i['name']] = _inst_type_query_to_dict(i)
         return inst_dict
     else:
         raise exception.NoInstanceTypesFound()
@@ -2610,12 +2624,14 @@ def instance_type_get_by_id(context, id):
     """Returns a dict describing specific instance_type"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
+                    options(joinedload('extra_specs')).\
                     filter_by(id=id).\
                     first()
+
     if not inst_type:
         raise exception.InstanceTypeNotFound(instance_type=id)
     else:
-        return dict(inst_type)
+        return _inst_type_query_to_dict(inst_type)
 
 
 @require_context
@@ -2623,12 +2639,13 @@ def instance_type_get_by_name(context, name):
     """Returns a dict describing specific instance_type"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
+                    options(joinedload('extra_specs')).\
                     filter_by(name=name).\
                     first()
     if not inst_type:
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
     else:
-        return dict(inst_type)
+        return _inst_type_query_to_dict(inst_type)
 
 
 @require_context
@@ -2636,12 +2653,13 @@ def instance_type_get_by_flavor_id(context, id):
     """Returns a dict describing specific flavor_id"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
+                                    options(joinedload('extra_specs')).\
                                     filter_by(flavorid=int(id)).\
                                     first()
     if not inst_type:
         raise exception.FlavorNotFound(flavor_id=id)
     else:
-        return dict(inst_type)
+        return _inst_type_query_to_dict(inst_type)
 
 
 @require_admin_context

@@ -1318,7 +1318,6 @@ def agent_build_update(context, agent_build_id, values):
     IMPL.agent_build_update(context, agent_build_id, values)
 
 
-
 ####################
 
 
