@@ -609,6 +609,20 @@ def floating_ip_get_by_address(context, address, session=None):
 
     return result
 
+@require_context
+def floating_ip_get_by_ip(context, ip, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.FloatingIp).\
+                filter_by(address=ip).\
+                filter_by(deleted=can_read_deleted(context)).\
+                first()
+
+    if not result:
+        raise exception.FloatingIpNotDefined(floating_ip=ip)
+
+    return result
 
 @require_context
 def floating_ip_update(context, address, values):

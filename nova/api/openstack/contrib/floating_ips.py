@@ -82,39 +82,45 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
 
         try:
-            ip = self.network_api.allocate_floating_ip(context)
+            address = self.network_api.allocate_floating_ip(context)
+            ip = self.network_api.get_floating_ip_by_ip(context, address)
         except rpc.RemoteError as ex:
             if ex.exc_type == 'NoMoreAddresses':
                 raise exception.NoMoreFloatingIps()
             else:
                 raise
 
-        return {'allocated': ip}
+        return {'allocated': {
+            "id" : ip['id'],
+            "floating_ip": ip['address']}}
 
     def delete(self, req, id):
         context = req.environ['nova.context']
-        
-        ip = self._get_ip_by_id(context, id)
+
+        ip = self.network_api.get(context, id)
         self.network_api.release_floating_ip(context, address=ip)
 
-        return {'released': ip}
+        return {'released': {
+            "id": ip['id'],
+            "floating_ip": ip['address']}}
 
     def associate(self, req, id_ip, body):
-        """ /floating_ips/ip or id/associate  fixed ip in body """
+        """ /floating_ips/{id}/associate  fixed ip in body """
         context = req.environ['nova.context']
         floating_ip = self._get_ip_by_id(context, id_ip)
 
         fixed_ip = body['associate_address']['fixed_ip']
 
         try:
-            self.network_api.associate_floating_ip(context, floating_ip, fixed_ip)
+            self.network_api.associate_floating_ip(context,
+                                                   floating_ip, fixed_ip)
         except rpc.RemoteError:
             raise
 
         return {'associated': [floating_ip, fixed_ip]}
 
     def disassociate(self, req, id_ip, body):
-        """ POST /floating_ips/{ip | ip_id}/disassociate """
+        """ POST /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
 
         floating_ip = self._get_ip_by_id(context, id_ip)
@@ -127,11 +133,8 @@ class FloatingIPController(object):
         return {'disassociated': floating_ip}
 
     def _get_ip_by_id(self, context, value):
-        """Checks that value is id and then returns its address.
-        If value is ip then return value."""
-        if value.isdigit():
-            return self.network_api.get(context, value)['address']
-        return value
+        """Checks that value is id and then returns its address."""
+        return self.network_api.get(context, value)['address']
 
 
 class Floating_ips(extensions.ExtensionDescriptor):

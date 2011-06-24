@@ -359,6 +359,8 @@ class DatastoreNotFound(NotFound):
 class NoFixedIpsFoundForInstance(NotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
 
+class FloatingIpNotDefined(NotFound):
+    message = _("Floating ip %(floating_ip)s not found")
 
 class FloatingIpNotFound(NotFound):
     message = _("Floating ip not found for fixed address %(fixed_ip)s.")

@@ -38,6 +38,10 @@ class API(base.Base):
         rv = self.db.floating_ip_get(context, id)
         return dict(rv.iteritems())
 
+    def get_floating_ip_by_ip(self, context, address):
+        res = self.db.floating_ip_get_by_ip(context, address)
+        return dict(res.iteritems())
+
     def list(self, context):
         ips = self.db.floating_ip_get_all_by_project(context,
                                                      context.project_id)
