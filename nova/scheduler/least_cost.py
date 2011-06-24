@@ -75,8 +75,15 @@ class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):
 
         cost_fns = []
         for cost_fn_str in FLAGS.least_cost_scheduler_cost_functions:
-            if not cost_fn_str.startswith('%s_' % topic) and \
-                    not cost_fn_str.startswith('noop'):
+            if '.' in cost_fn_str:
+                short_name = cost_fn_str.split('.')[-1]
+            else:
+                short_name = cost_fn_str
+                cost_fn_str = "%s.%s.%s" % (
+                        __name__, self.__class__.__name__, short_name)
+
+            if not (short_name.startswith('%s_' % topic) or
+                    short_name.startswith('noop')):
                 continue
 
             try:
