@@ -250,7 +250,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             weights.sort(key=operator.itemgetter('weight'))
             best_weight = weights[0]
             weighted.append(best_weight)
-            self.consume_resources(best_weight['capabilities'],
+            self.consume_resources(topic, best_weight['capabilities'],
                     instance_type)
 
         # Next, tack on the best weights from the child zones ...
