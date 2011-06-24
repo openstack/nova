@@ -133,7 +133,6 @@ class Controller(object):
             LOG.error(_("Invalid image_type '%s' passed" % image_type))
             raise webob.exc.HTTPBadRequest()
 
-
         return dict(image=self.get_builder(req).build(image, detail=True))
 
     def get_builder(self, request):
