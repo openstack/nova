@@ -507,8 +507,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.driver.snapshot(instance_ref, image_id)
 
-        if image_type == 'snapshot' and rotation:
-            raise exception.ImageRotationNotAllowed
+        if image_type == 'snapshot':
+            if rotation:
+                raise exception.ImageRotationNotAllowed
         elif image_type == 'backup':
             if rotation:
                 instance_uuid = instance_ref['uuid']
