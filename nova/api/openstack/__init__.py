@@ -32,7 +32,6 @@ from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
 from nova.api.openstack import flavors
-from nova.api.openstack import flavor_extra_specs
 from nova.api.openstack import images
 from nova.api.openstack import image_metadata
 from nova.api.openstack import ips
