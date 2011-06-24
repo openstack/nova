@@ -279,7 +279,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         is acceptable for scheduling.
         """
         instance_type = request_spec['instance_type']
-        reqested_mem = instance_type['memory_mb']
+        requested_mem = instance_type['memory_mb']
         return capabilities['host_memory_free'] >= requested_mem
 
     def filter_hosts(self, topic, request_spec, host_list=None):
