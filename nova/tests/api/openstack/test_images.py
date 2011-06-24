@@ -983,11 +983,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(200, response.status_int)
 
     def test_create_snapshot_no_name(self):
-        """Name is required for snapshots
-
-        If an image_type isn't passed, we default to image_type=snapshot,
-        thus `name` is required
-        """
+        """Name is required for snapshots"""
         body = dict(image=dict(serverId='123'))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
@@ -996,11 +992,19 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
 
-    def test_create_backup_no_name_with_rotation(self):
-        """Name isn't required for backups, but rotation is.
+    def test_create_backup_no_name(self):
+        """Name is also required for backups"""
+        body = dict(image=dict(serverId='123', image_type='backup',
+                               backup_type='daily', rotation=1))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
-        The reason name isn't required is because it defaults to the
-        image_type.
+    def test_create_backup_with_rotation_and_backup_type(self):
+        """The happy path for creating backups
 
         Creating a backup is an admin-only operation, as opposed to snapshots
         which are available to anybody.
@@ -1009,8 +1013,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         FLAGS.allow_admin_api = True
 
         # FIXME(sirp): should the fact that backups are admin_only be a FLAG
-        body = dict(image=dict(serverId='123', image_type='daily',
-                               rotation=1))
+        body = dict(image=dict(serverId='123', image_type='backup',
+                               name='Backup 1',
+                               backup_type='daily', rotation=1))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1024,7 +1029,23 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         FLAGS.allow_admin_api = True
 
         # FIXME(sirp): should the fact that backups are admin_only be a FLAG
-        body = dict(image=dict(serverId='123', image_type='daily'))
+        body = dict(image=dict(serverId='123', name='daily',
+                               image_type='backup', backup_type='daily'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_backup_type(self):
+        """Backup Type (daily or weekly) is required for backup requests"""
+        # FIXME(sirp): teardown needed?
+        FLAGS.allow_admin_api = True
+
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
+        body = dict(image=dict(serverId='123', name='daily',
+                               image_type='backup', rotation=1))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)

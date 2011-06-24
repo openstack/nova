@@ -553,6 +553,10 @@ class ImageRotationNotAllowed(NovaException):
     message = _("Rotation is not allowed for snapshots")
 
 
+class RotationRequiredForBackup(NovaException):
+    message = _("Rotation param is required for backup image_type")
+
+
 #TODO(bcwaldon): EOL this exception!
 class Duplicate(NovaException):
     pass

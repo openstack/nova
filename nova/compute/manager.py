@@ -476,13 +476,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     def snapshot_instance(self, context, instance_id, image_id,
-                          image_type='snapshot', rotation=None):
+                          image_type='snapshot', backup_type=None,
+                          rotation=None):
         """Snapshot an instance on this host.
 
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param image_id: glance.db.sqlalchemy.models.Image.Id
-        :param image_type: snapshot | daily | weekly
+        :param image_type: snapshot | backup
+        :param backup_type: daily | weekly
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
@@ -504,13 +506,21 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
-        if rotation and image_type == 'snapshot':
+        
+        if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed
-        elif rotation:
-            instance_uuid = instance_ref['uuid']
-            self.rotate_backups(context, instance_uuid, image_type, rotation)
+        elif image_type == 'backup':
+            if rotation:
+                instance_uuid = instance_ref['uuid']
+                self.rotate_backups(context, instance_uuid, backup_type,
+                                    rotation)
+            else:
+                raise exception.RotationRequiredForBackup
+        else:
+            raise Exception(_('Image type not recognized %s') % image_type)
 
-    def rotate_backups(self, context, instance_uuid, image_type, rotation):
+
+    def rotate_backups(self, context, instance_uuid, backup_type, rotation):
         """Delete excess backups associated to an instance.
 
         Instances are allowed a fixed number of backups (the rotation number);
@@ -519,12 +529,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: security context
         :param instance_uuid: string representing uuid of instance
-        :param image_type: snapshot | daily | weekly
+        :param backup_type: daily | weekly
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
         image_service = nova.image.get_default_image_service()
-        filters = {'property-image_type': image_type,
+        filters = {'property-image_type': 'backup',
+                   'property-backup_type': backup_type,
                    'property-instance_uuid': instance_uuid}
         images = image_service.detail(context, filters=filters)
         num_images = len(images)

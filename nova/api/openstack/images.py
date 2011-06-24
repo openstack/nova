@@ -118,19 +118,25 @@ class Controller(object):
         except KeyError:
             raise webob.exc.HTTPBadRequest()
 
+        image_name = get_param("name")
+
         if image_type == "snapshot":
-            image_name = get_param("name")
-            image = self._compute_service.snapshot(context, server_id,
-                    image_name)
-        elif image_type in ("daily", "weekly"):
+            image = self._compute_service.snapshot(
+                        context, server_id, image_name)
+        elif image_type == "backup":
+            # NOTE(sirp): Unlike snapshot, backup is not a customer facing
+            # API call; rather, it's used by the internal backup scheduler
             if not FLAGS.allow_admin_api:
                 raise webob.exc.HTTPBadRequest()
 
+            backup_type = get_param("backup_type")
             rotation = int(get_param("rotation"))
-            image = self._compute_service.backup(context, server_id,
-                    image_type, rotation)
+
+            image = self._compute_service.backup(
+                        context, server_id, image_name,
+                        backup_type, rotation)
         else:
-            LOG.error(_("Invalid image_type '%s' passed" % image_type))
+            LOG.error(_("Invalid image_type '%s' passed") % image_type)
             raise webob.exc.HTTPBadRequest()
 
         return dict(image=self.get_builder(req).build(image, detail=True))

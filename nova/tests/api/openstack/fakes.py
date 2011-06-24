@@ -147,10 +147,11 @@ def stub_out_compute_api_snapshot(stubs):
 
 
 def stub_out_compute_api_backup(stubs):
-    def backup(self, context, instance_id, backup_type, rotation):
+    def backup(self, context, instance_id, name, backup_type, rotation):
         return dict(id='123', status='ACTIVE',
                     properties=dict(instance_id='123',
-                                    image_type=backup_type,
+                                    name=name,
+                                    backup_type=backup_type,
                                     rotation=rotation))
     stubs.Set(nova.compute.API, 'backup', backup)
 

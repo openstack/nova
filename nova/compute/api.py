@@ -701,32 +701,38 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-    def backup(self, context, instance_id, backup_type, rotation):
+    def backup(self, context, instance_id, name, backup_type, rotation):
         """Backup the given instance
 
-            instance_id - int - id representing the instance
-            backup_type - str - whether it's 'daily' or 'weekly'
-            rotation - int - number of backups to keep around
-        """
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: name of the backup or snapshot
         name = backup_type  # daily backups are called 'daily'
-        recv_meta = self._snapshot(context, instance_id, name, backup_type,
-                                   rotation=rotation)
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        """
+        recv_meta = self._create_image(context, instance_id, name, 'backup',
+                            backup_type=backup_type, rotation=rotation)
         return recv_meta
 
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: name of the backup or snapshot
+        
         :returns: A dict containing image metadata
         """
-        return self._snapshot(context, instance_id, name, 'snapshot')
+        return self._create_image(context, instance_id, name, 'snapshot')
 
-    def _snapshot(self, context, instance_id, name, image_type, rotation=None):
-        """Snapshot an instance on this host.
+    def _create_image(self, context, instance_id, name, image_type,
+                      backup_type=None, rotation=None):
+        """Create snapshot or backup for an instance on this host.
 
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param name: string for name of the snapshot
-        :param image_type: snapshot | daily | weekly
+        :param image_type: snapshot | backup
+        :param backup_type: daily | weekly
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
@@ -734,12 +740,13 @@ class API(base.Base):
         properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
                       'image_state': 'creating',
-                      'image_type': image_type}
+                      'image_type': image_type,
+                      'backup_type': backup_type}
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id'], 'image_type': image_type,
-                  'rotation': rotation}
+                  'backup_type': backup_type, 'rotation': rotation}
         self._cast_compute_message('snapshot_instance', context, instance_id,
                                    params=params)
         return recv_meta
