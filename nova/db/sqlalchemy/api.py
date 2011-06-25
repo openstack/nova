@@ -2624,7 +2624,14 @@ def instance_type_create(_context, values):
 def _dict_with_extra_specs(inst_type_query):
     """Takes an instance type query returned by sqlalchemy
     and returns it as a dictionary, converting the extra_specs
-    from a list of key/value pairs to a dictionary
+    entry from a list of dicts:
+
+    'extra_specs' : [{'key': 'k1', 'value': 'v1', ...}, ...] 
+    
+    to a single dict:
+    
+    'extra_specs' : {'k1': 'v1'}
+     
     """
     inst_type_dict = dict(inst_type_query)
     extra_specs = dict([(x['key'], x['value']) for x in \
