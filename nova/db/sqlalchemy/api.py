@@ -2621,14 +2621,14 @@ def instance_type_create(_context, values):
     return instance_type_ref
 
 
-def _inst_type_query_to_dict(inst_type_query):
+def _dict_with_extra_specs(inst_type_query):
     """Takes an instance type query returned by sqlalchemy
-    and returns it as a dictionary.
+    and returns it as a dictionary, converting the extra_specs
+    from a list of key/value pairs to a dictionary
     """
-    extra_specs_objs = inst_type_query['extra_specs']
+    inst_type_dict = dict(inst_type_query)
     extra_specs = dict([(x['key'], x['value']) for x in \
                         inst_type_query['extra_specs']])
-    inst_type_dict = dict(inst_type_query)
     inst_type_dict['extra_specs'] = extra_specs
     return inst_type_dict
 
@@ -2653,7 +2653,7 @@ def instance_type_get_all(context, inactive=False):
     if inst_types:
         inst_dict = {}
         for i in inst_types:
-            inst_dict[i['name']] = _inst_type_query_to_dict(i)
+            inst_dict[i['name']] = _dict_with_extra_specs(i)
         return inst_dict
     else:
         raise exception.NoInstanceTypesFound()
@@ -2671,7 +2671,7 @@ def instance_type_get_by_id(context, id):
     if not inst_type:
         raise exception.InstanceTypeNotFound(instance_type=id)
     else:
-        return _inst_type_query_to_dict(inst_type)
+        return _dict_with_extra_specs(inst_type)
 
 
 @require_context
@@ -2685,7 +2685,7 @@ def instance_type_get_by_name(context, name):
     if not inst_type:
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
     else:
-        return _inst_type_query_to_dict(inst_type)
+        return _dict_with_extra_specs(inst_type)
 
 
 @require_context
@@ -2699,7 +2699,7 @@ def instance_type_get_by_flavor_id(context, id):
     if not inst_type:
         raise exception.FlavorNotFound(flavor_id=id)
     else:
-        return _inst_type_query_to_dict(inst_type)
+        return _dict_with_extra_specs(inst_type)
 
 
 @require_admin_context
