@@ -1115,6 +1115,13 @@ class IptablesFirewallTestCase(test.TestCase):
                 provjump_rules.append(rule)
         self.assertEqual(1, len(provjump_rules))
 
+        # remove a rule from the db, cast to compute to refresh rule
+        db.provider_fw_rule_destroy(admin_ctxt, provider_fw1['id'])
+        self.fw.refresh_provider_fw_rules()
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(1, len(rules))
+
 
 class NWFilterTestCase(test.TestCase):
     def setUp(self):
