@@ -20,6 +20,7 @@
 
 import calendar
 import inspect
+import netaddr
 import os
 
 from nova import db
@@ -27,7 +28,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from IPy import IP
 
 
 LOG = logging.getLogger("nova.linux_net")
@@ -707,7 +707,7 @@ def _dnsmasq_cmd(net):
            '--listen-address=%s' % net['gateway'],
            '--except-interface=lo',
            '--dhcp-range=%s,static,120s' % net['dhcp_start'],
-           '--dhcp-lease-max=%s' % IP(net['cidr']).len(),
+           '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(net['cidr'])),
            '--dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
            '--dhcp-script=%s' % FLAGS.dhcpbridge,
            '--leasefile-ro']

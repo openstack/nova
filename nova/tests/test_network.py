@@ -18,7 +18,7 @@
 """
 Unit Tests for network code
 """
-import IPy
+import netaddr
 import os
 
 from nova import test

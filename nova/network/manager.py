@@ -45,9 +45,8 @@ topologies.  All of the network commands are issued to a subclass of
 
 import datetime
 import math
+import netaddr
 import socket
-
-import IPy
 
 from nova import context
 from nova import db
@@ -295,8 +294,8 @@ class NetworkManager(manager.SchedulerDependentManager):
     def create_networks(self, context, cidr, num_networks, network_size,
                         cidr_v6, gateway_v6, label, *args, **kwargs):
         """Create networks based on parameters."""
-        fixed_net = IPy.IP(cidr)
-        fixed_net_v6 = IPy.IP(cidr_v6)
+        fixed_net = netaddr.IPNetwork(cidr)
+        fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
         significant_bits_v6 = 64
         network_size_v6 = 1 << 64
         count = 1
@@ -305,15 +304,15 @@ class NetworkManager(manager.SchedulerDependentManager):
             start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = '%s/%s' % (fixed_net[start], significant_bits)
-            project_net = IPy.IP(cidr)
+            project_net = netaddr.IPNetwork(cidr)
             net = {}
             net['bridge'] = FLAGS.flat_network_bridge
             net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
-            net['netmask'] = str(project_net.netmask())
-            net['gateway'] = str(project_net[1])
-            net['broadcast'] = str(project_net.broadcast())
-            net['dhcp_start'] = str(project_net[2])
+            net['netmask'] = str(project_net.netmask)
+            net['gateway'] = str(list(project_net)[1])
+            net['broadcast'] = str(project_net.broadcast)
+            net['dhcp_start'] = str(list(project_net)[2])
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, count)
             else:
@@ -324,15 +323,16 @@ class NetworkManager(manager.SchedulerDependentManager):
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
-                project_net_v6 = IPy.IP(cidr_v6)
+
+                project_net_v6 = netaddr.IPNetwork(cidr_v6)
 
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
-                    net['gateway_v6'] = str(gateway_v6)
+                    net['gateway_v6'] = str(list(gateway_v6)[1])
                 else:
-                    net['gateway_v6'] = str(project_net_v6[1])
+                    net['gateway_v6'] = str(list(project_net_v6)[1])
 
-                net['netmask_v6'] = str(project_net_v6.prefixlen())
+                net['netmask_v6'] = str(project_net_v6._prefixlen)
 
             network_ref = self.db.network_create_safe(context, net)
 
@@ -356,7 +356,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         #             to properties of the manager class?
         bottom_reserved = self._bottom_reserved_ips
         top_reserved = self._top_reserved_ips
-        project_net = IPy.IP(network_ref['cidr'])
+        project_net = netaddr.IPNetwork(network_ref['cidr'])
         num_ips = len(project_net)
         for index in range(num_ips):
             address = str(project_net[index])
@@ -546,13 +546,13 @@ class VlanManager(NetworkManager):
                                ' the vlan start cannot be greater'
                                ' than 4094'))
 
-        fixed_net = IPy.IP(cidr)
-        if fixed_net.len() < num_networks * network_size:
+        fixed_net = netaddr.IPNetwork(cidr)
+        if len(fixed_net) < num_networks * network_size:
             raise ValueError(_('The network range is not big enough to fit '
                   '%(num_networks)s. Network size is %(network_size)s' %
                   locals()))
 
-        fixed_net_v6 = IPy.IP(cidr_v6)
+        fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
         network_size_v6 = 1 << 64
         significant_bits_v6 = 64
         for index in range(num_networks):
@@ -561,14 +561,14 @@ class VlanManager(NetworkManager):
             start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = "%s/%s" % (fixed_net[start], significant_bits)
-            project_net = IPy.IP(cidr)
+            project_net = netaddr.IPNetwork(cidr)
             net = {}
             net['cidr'] = cidr
-            net['netmask'] = str(project_net.netmask())
-            net['gateway'] = str(project_net[1])
-            net['broadcast'] = str(project_net.broadcast())
-            net['vpn_private_address'] = str(project_net[2])
-            net['dhcp_start'] = str(project_net[3])
+            net['netmask'] = str(project_net.netmask)
+            net['gateway'] = str(list(project_net)[1])
+            net['broadcast'] = str(project_net.broadcast)
+            net['vpn_private_address'] = str(list(project_net)[2])
+            net['dhcp_start'] = str(list(project_net)[3])
             net['vlan'] = vlan
             net['bridge'] = 'br%s' % vlan
             if(FLAGS.use_ipv6):
