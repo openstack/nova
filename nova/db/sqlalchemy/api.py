@@ -2626,12 +2626,12 @@ def _dict_with_extra_specs(inst_type_query):
     and returns it as a dictionary, converting the extra_specs
     entry from a list of dicts:
 
-    'extra_specs' : [{'key': 'k1', 'value': 'v1', ...}, ...] 
-    
+    'extra_specs' : [{'key': 'k1', 'value': 'v1', ...}, ...]
+
     to a single dict:
-    
+
     'extra_specs' : {'k1': 'v1'}
-     
+
     """
     inst_type_dict = dict(inst_type_query)
     extra_specs = dict([(x['key'], x['value']) for x in \
