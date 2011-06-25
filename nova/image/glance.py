@@ -59,7 +59,7 @@ class GlanceImageService(service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
 
     GLANCE_ONLY_ATTRS = ['size', 'location', 'disk_format',
-                         'container_format']
+                         'container_format', 'checksum']
 
     # NOTE(sirp): Overriding to use _translate_to_service provided by
     # BaseImageService
