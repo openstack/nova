@@ -92,6 +92,35 @@ class Application(object):
     """Base WSGI application wrapper. Subclasses need to implement __call__."""
 
     @classmethod
+    def fake_connection(cls):
+        """Return a fake httplib connection object for this Application"""
+        class FakeConnection(object):
+            """Faked version of httplib.HTTPConnection to talk to app."""
+            def __init__(self):
+                self.app = cls()
+
+            def request(self, method, url, body=None, headers={}):
+                self.req = webob.Request.blank("/" + url.lstrip("/"))
+                self.req.remote_addr = '127.0.0.1'
+                self.req.method = method
+                if headers:
+                    self.req.headers = headers
+                if body:
+                    self.req.body = body
+
+            def getresponse(self):
+                res = self.req.get_response(self.app)
+
+                # httplib.Response has a read() method...fake it out
+                def fake_reader():
+                    return res.body
+
+                setattr(res, 'read', fake_reader)
+                return res
+
+        return FakeConnection()
+
+    @classmethod
     def factory(cls, global_config, **local_config):
         """Used for paste app factories in paste.deploy config files.
 
