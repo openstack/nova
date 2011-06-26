@@ -1166,6 +1166,24 @@ class ImageXMLSerializationTest(test.TestCase):
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
+    def test_index_zero_images(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixtures = {
+            'images': [],
+        }
+
+        output = serializer.serialize(fixtures, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected_serverRef = self.SERVER_HREF
+        expected_now = self.TIMESTAMP
+        expected = minidom.parseString("""
+        <images xmlns="http://docs.openstack.org/compute/api/v1.1" />
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
     def test_detail(self):
         serializer = images.ImageXMLSerializer()
 
