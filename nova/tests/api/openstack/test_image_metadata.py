@@ -38,6 +38,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'name': 'image1',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -53,6 +54,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'name': 'image2',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -68,6 +70,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'name': 'image3',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -104,7 +107,10 @@ class ImageMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
-        self.assertEqual('value1', res_dict['metadata']['key1'])
+        expected = self.IMAGE_FIXTURES[0]['properties']
+        self.assertEqual(len(expected), len(res_dict['metadata']))
+        for (key, value) in res_dict['metadata'].items():
+            self.assertEqual(value, res_dict['metadata'][key])
 
     def test_index_xml(self):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
@@ -156,7 +162,9 @@ class ImageMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
-        self.assertEqual('value1', res_dict['key1'])
+        self.assertTrue('meta' in res_dict)
+        self.assertEqual(len(res_dict['meta']), 1)
+        self.assertEqual('value1', res_dict['meta']['key1'])
 
     def test_show_xml(self):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
@@ -180,7 +188,6 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/key9')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
         self.assertEqual(404, res.status_int)
 
     def test_create(self):
@@ -230,12 +237,23 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"key1": "zz"}'
+        req.body = '{"meta": {"key1": "zz"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
-        self.assertEqual('zz', res_dict['key1'])
+        self.assertTrue('meta' in res_dict)
+        self.assertEqual(len(res_dict['meta']), 1)
+        self.assertEqual('zz', res_dict['meta']['key1'])
+
+    def test_update_item_bad_body(self):
+        req = webob.Request.blank('/v1.1/images/1/meta/key1')
+        req.environ['api.version'] = '1.1'
+        req.method = 'PUT'
+        req.body = '{"key1": "zz"}'
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, res.status_int)
 
     def test_update_item_xml(self):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
@@ -259,7 +277,7 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"key1": "value1", "key2": "value2"}'
+        req.body = '{"meta": {"key1": "value1", "key2": "value2"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
@@ -268,7 +286,7 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/bad')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"key1": "value1"}'
+        req.body = '{"meta": {"key1": "value1"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
@@ -304,7 +322,7 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/3/meta/blah')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"blah": "blah"}'
+        req.body = '{"meta": {"blah": "blah"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
