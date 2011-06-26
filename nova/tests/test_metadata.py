@@ -40,7 +40,7 @@ class MetadataTestCase(test.TestCase):
                          'reservation_id': 'r-xxxxxxxx',
                          'user_data': '',
                          'image_ref': 7,
-                         'hostname' : 'test'})
+                         'hostname': 'test'})
 
         def instance_get(*args, **kwargs):
             return self.instance
@@ -79,4 +79,3 @@ class MetadataTestCase(test.TestCase):
         self.stubs.Set(api, 'security_group_get_by_instance', sg_get)
         self.assertEqual(self.request('/meta-data/security-groups'),
                          'default\nother')
-
