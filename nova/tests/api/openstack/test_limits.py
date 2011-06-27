@@ -672,8 +672,7 @@ class WsgiLimiterTest(BaseLimitTestSuite):
         """Only POSTs should work."""
         requests = []
         for method in ["GET", "PUT", "DELETE", "HEAD", "OPTIONS"]:
-            request = webob.Request.blank("/")
-            request.body = self._request_data("GET", "/something")
+            request = webob.Request.blank("/", method=method)
             response = request.get_response(self.app)
             self.assertEqual(response.status_int, 405)
 
