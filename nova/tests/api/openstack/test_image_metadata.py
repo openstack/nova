@@ -247,7 +247,7 @@ class ImageMetadataXMLSerializationTest(test.TestCase):
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
-    def test_index_xml_null_key_and_value(self):
+    def test_index_xml_null(self):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
         fixture = {
             'metadata': {
@@ -267,7 +267,7 @@ class ImageMetadataXMLSerializationTest(test.TestCase):
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
-    def test_index_xml_unicode_value(self):
+    def test_index_xml_unicode(self):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
         fixture = {
             'metadata': {
