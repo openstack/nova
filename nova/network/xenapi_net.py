@@ -56,8 +56,10 @@ def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
                        'other_config': {}}
         network_ref = session.call_xenapi('network.create', network_rec)
         # 2 - find PIF for VLAN
-        expr = "field 'device' = '%s' and \
-                field 'VLAN' = '-1'" % bridge_interface
+        # NOTE(salvatore-orlando): using double quotes inside single quotes
+        # as xapi filter only support tokens in double quotes
+        expr = 'field "device" = "%s" and \
+                field "VLAN" = "-1"' % bridge_interface
         pifs = session.call_xenapi('PIF.get_all_records_where', expr)
         pif_ref = None
         # Multiple PIF are ok: we are dealing with a pool

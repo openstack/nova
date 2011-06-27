@@ -114,8 +114,8 @@ def upgrade(migrate_engine):
                fixed_ips.c.instance_id != None)
 
     for row in s.execute():
-        m = select([virtual_interfaces.c.id].\
-            where(virtual_interfaces.c.instance_id == row['instance_id'])).\
+        m = select([virtual_interfaces.c.id]).\
+            where(virtual_interfaces.c.instance_id == row['instance_id']).\
             as_scalar()
         u = fixed_ips.update().values(virtual_interface_id=m).\
             where(fixed_ips.c.id == row['id'])

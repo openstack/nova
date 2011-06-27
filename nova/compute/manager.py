@@ -201,6 +201,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
+    @exception.wrap_exception
+    def refresh_provider_fw_rules(self, context, **_kwargs):
+        """This call passes straight through to the virtualization driver."""
+        return self.driver.refresh_provider_fw_rules()
+
     def _setup_block_device_mapping(self, context, instance_id):
         """setup volumes for block device mapping"""
         self.db.instance_set_state(context,
@@ -277,39 +282,45 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'networking')
 
         is_vpn = instance['image_ref'] == str(FLAGS.vpn_image_id)
-        # NOTE(vish): This could be a cast because we don't do anything
-        #             with the address currently, but I'm leaving it as
-        #             a call to ensure that network setup completes.  We
-        #             will eventually also need to save the address here.
-        if not FLAGS.stub_network:
-            network_info = self.network_api.allocate_for_instance(context,
-                                                                  instance,
-                                                                  vpn=is_vpn)
-            LOG.debug(_("instance network_info: |%s|"), network_info)
-            self.network_manager.setup_compute_network(context, instance_id)
-        else:
-            # TODO(tr3buchet) not really sure how this should be handled.
-            # virt requires network_info to be passed in but stub_network
-            # is enabled. Setting to [] for now will cause virt to skip
-            # all vif creation and network injection, maybe this is correct
-            network_info = []
-
-        block_device_mapping = self._setup_block_device_mapping(context,
-                                                                instance_id)
-
-        # TODO(vish) check to make sure the availability zone matches
-        self._update_state(context, instance_id, power_state.BUILDING)
-
         try:
-            self.driver.spawn(instance_ref, network_info, block_device_mapping)
-        except Exception as ex:  # pylint: disable=W0702
-            msg = _("Instance '%(instance_id)s' failed to spawn. Is "
-                    "virtualization enabled in the BIOS? Details: "
-                    "%(ex)s") % locals()
-            LOG.exception(msg)
+            # NOTE(vish): This could be a cast because we don't do anything
+            #             with the address currently, but I'm leaving it as
+            #             a call to ensure that network setup completes.  We
+            #             will eventually also need to save the address here.
+            if not FLAGS.stub_network:
+                network_info = self.network_api.allocate_for_instance(context,
+                                                         instance, vpn=is_vpn)
+                LOG.debug(_("instance network_info: |%s|"), network_info)
+                self.network_manager.setup_compute_network(context,
+                                                           instance_id)
+            else:
+                # TODO(tr3buchet) not really sure how this should be handled.
+                # virt requires network_info to be passed in but stub_network
+                # is enabled. Setting to [] for now will cause virt to skip
+                # all vif creation and network injection, maybe this is correct
+                network_info = []
 
-        self._update_launched_at(context, instance_id)
-        self._update_state(context, instance_id)
+            bd_mapping = self._setup_block_device_mapping(context, instance_id)
+
+            # TODO(vish) check to make sure the availability zone matches
+            self._update_state(context, instance_id, power_state.BUILDING)
+
+            try:
+                self.driver.spawn(instance, network_info, bd_mapping)
+            except Exception as ex:  # pylint: disable=W0702
+                msg = _("Instance '%(instance_id)s' failed to spawn. Is "
+                        "virtualization enabled in the BIOS? Details: "
+                        "%(ex)s") % locals()
+                LOG.exception(msg)
+
+            self._update_launched_at(context, instance_id)
+            self._update_state(context, instance_id)
+        except exception.InstanceNotFound:
+            # FIXME(wwolf): We are just ignoring InstanceNotFound
+            # exceptions here in case the instance was immediately
+            # deleted before it actually got created.  This should
+            # be fixed once we have no-db-messaging
+            pass
 
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **kwargs):
@@ -505,6 +516,24 @@ class ComputeManager(manager.SchedulerDependentManager):
         msg = _('instance %(nm)s: injecting file to %(path)s') % locals()
         LOG.audit(msg)
         self.driver.inject_file(instance_ref, path, file_contents)
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def agent_update(self, context, instance_id, url, md5hash):
+        """Update agent running on an instance on this host."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        instance_id = instance_ref['id']
+        instance_state = instance_ref['state']
+        expected_state = power_state.RUNNING
+        if instance_state != expected_state:
+            LOG.warn(_('trying to update agent on a non-running '
+                    'instance: %(instance_id)s (state: %(instance_state)s '
+                    'expected: %(expected_state)s)') % locals())
+        nm = instance_ref['name']
+        msg = _('instance %(nm)s: updating agent to %(url)s') % locals()
+        LOG.audit(msg)
+        self.driver.agent_update(instance_ref, url, md5hash)
 
     @exception.wrap_exception
     @checks_instance_lock

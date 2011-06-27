@@ -8,7 +8,7 @@
      fi
      ;;
  
-@@ -224,9 +225,11 @@
+@@ -224,6 +225,7 @@
  
  remove)
      if [ "${TYPE}" = "vif" ] ;then
@@ -16,7 +16,3 @@
          xenstore-rm "${HOTPLUG}/hotplug"
      fi
      logger -t scripts-vif "${dev} has been removed"
-     remove_from_bridge
-     ;;
- esac
-+

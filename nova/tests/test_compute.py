@@ -280,6 +280,14 @@ class ComputeTestCase(test.TestCase):
                 "File Contents")
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_agent_update(self):
+        """Ensure instance can have its agent updated"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.agent_update(self.context, instance_id,
+                'http://127.0.0.1/agent', '00112233445566778899aabbccddeeff')
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
         instance_id = self._create_instance()
