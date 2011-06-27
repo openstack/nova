@@ -117,7 +117,7 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
 
     def _meta_item_to_xml(self, doc, key, value):
         node = doc.createElement('meta')
-        node.setAttribute('key', key)
+        node.setAttribute('key', str(key))
         text = doc.createTextNode(str(value))
         node.appendChild(text)
         return node

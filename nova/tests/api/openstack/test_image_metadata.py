@@ -247,11 +247,11 @@ class ImageMetadataXMLSerializationTest(test.TestCase):
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
-    def test_index_xml_null_value(self):
+    def test_index_xml_null_key_and_value(self):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
         fixture = {
             'metadata': {
-                'three': None,
+                None: None,
             },
         }
         output = serializer.serialize(fixture, 'index')
@@ -259,7 +259,7 @@ class ImageMetadataXMLSerializationTest(test.TestCase):
 
         expected = minidom.parseString("""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="three">
+                <meta key="None">
                     None
                 </meta>
             </metadata>
