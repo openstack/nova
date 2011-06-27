@@ -523,14 +523,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if image_type == 'snapshot':
             if rotation:
-                raise exception.ImageRotationNotAllowed
+                raise exception.ImageRotationNotAllowed()
         elif image_type == 'backup':
             if rotation:
                 instance_uuid = instance_ref['uuid']
                 self.rotate_backups(context, instance_uuid, backup_type,
                                     rotation)
             else:
-                raise exception.RotationRequiredForBackup
+                raise exception.RotationRequiredForBackup()
         else:
             raise Exception(_('Image type not recognized %s') % image_type)
 
