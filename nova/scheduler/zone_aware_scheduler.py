@@ -181,8 +181,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             return None
 
         num_instances = request_spec.get('num_instances', 1)
-        LOG.debug(_("Attemping to build %d instance%s") %
-            (num_instances, "" if num_instances == 1 else "s"))
+        LOG.debug(_("Attemping to build %d instance(s)") % locals())
 
         # Create build plan and provision ...
         build_plan = self.select(context, request_spec)
@@ -245,7 +244,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             host_list = self.filter_hosts(topic, request_spec, host_list)
             if not host_list:
                 LOG.warn(_("Ran out of available hosts after weighing "
-                        "%d of %d instances") % (i, num_instances))
+                        "%(i)d of %(num_instances)d instances") % locals())
                 break
 
             # then weigh the selected hosts.
