@@ -196,7 +196,7 @@ class VMOps(object):
                 kernel, ramdisk, use_pv_kernel)
 
         # device 0 reserved for RW disk
-		userdevice = 0;
+        userdevice = 0
 
         # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
         if disk_image_type == ImageType.DISK_ISO:
@@ -214,14 +214,11 @@ class VMOps(object):
             userdevice = userdevice + 2
             VMHelper.create_cd_vbd(session=self._session, vm_ref=vm_ref,
                     vdi_ref=cd_vdi_ref, userdevice=userdevice, bootable=True)
-
-
         else:
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=True)
             # userdevice 1 is reserved for rescue
             userdevice = userdevice + 1
-
 
         # Attach any other disks
         for vdi in vdis[1:]:
