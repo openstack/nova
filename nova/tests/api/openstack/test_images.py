@@ -22,12 +22,12 @@ and as a WSGI layer
 
 import copy
 import json
-import datetime
 import os
 import shutil
 import tempfile
 import xml.dom.minidom as minidom
 
+import mox
 import stubout
 import webob
 
@@ -127,42 +127,12 @@ class _BaseImageServiceTests(test.TestCase):
 
     @staticmethod
     def _make_fixture(name):
-        fixture = {'name': 'test image',
+        fixture = {'name': name,
                    'updated': None,
                    'created': None,
                    'status': None,
                    'is_public': True}
         return fixture
-
-
-class LocalImageServiceTest(_BaseImageServiceTests):
-
-    """Tests the local image service"""
-
-    def setUp(self):
-        super(LocalImageServiceTest, self).setUp()
-        self.tempdir = tempfile.mkdtemp()
-        self.flags(images_path=self.tempdir)
-        self.stubs = stubout.StubOutForTesting()
-        service_class = 'nova.image.local.LocalImageService'
-        self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(None, None)
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-        self.stubs.UnsetAll()
-        super(LocalImageServiceTest, self).tearDown()
-
-    def test_get_all_ids_with_incorrect_directory_formats(self):
-        # create some old-style image directories (starting with 'ami-')
-        for x in [1, 2, 3]:
-            tempfile.mkstemp(prefix='ami-', dir=self.tempdir)
-        # create some valid image directories names
-        for x in ["1485baed", "1a60f0ee", "3123a73d"]:
-            os.makedirs(os.path.join(self.tempdir, x))
-        found_image_ids = self.service._ids()
-        self.assertEqual(True, isinstance(found_image_ids, list))
-        self.assertEqual(3, len(found_image_ids), len(found_image_ids))
 
 
 class GlanceImageServiceTest(_BaseImageServiceTests):
@@ -226,6 +196,127 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         expected = {'name': 'test image', 'properties': {}}
         self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
+    def test_index_default_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.index(self.context)
+        i = 0
+        for meta in image_metas:
+            expected = {'id': 'DONTCARE',
+                        'name': 'TestImage %d' % (i)}
+            self.assertDictMatch(meta, expected)
+            i = i + 1
+
+    def test_index_marker(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.index(self.context, marker=ids[1])
+        self.assertEquals(len(image_metas), 8)
+        i = 2
+        for meta in image_metas:
+            expected = {'id': 'DONTCARE',
+                        'name': 'TestImage %d' % (i)}
+            self.assertDictMatch(meta, expected)
+            i = i + 1
+
+    def test_index_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.index(self.context, limit=3)
+        self.assertEquals(len(image_metas), 3)
+
+    def test_index_marker_and_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.index(self.context, marker=ids[3], limit=1)
+        self.assertEquals(len(image_metas), 1)
+        i = 4
+        for meta in image_metas:
+            expected = {'id': 'DONTCARE',
+                        'name': 'TestImage %d' % (i)}
+            self.assertDictMatch(meta, expected)
+            i = i + 1
+
+    def test_detail_marker(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.detail(self.context, marker=ids[1])
+        self.assertEquals(len(image_metas), 8)
+        i = 2
+        for meta in image_metas:
+            expected = {
+                'id': 'DONTCARE',
+                'status': None,
+                'is_public': True,
+                'name': 'TestImage %d' % (i),
+                'properties': {
+                    'updated': None,
+                    'created': None,
+                },
+            }
+
+            self.assertDictMatch(meta, expected)
+            i = i + 1
+
+    def test_detail_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.detail(self.context, limit=3)
+        self.assertEquals(len(image_metas), 3)
+
+    def test_detail_marker_and_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.detail(self.context, marker=ids[3], limit=3)
+        self.assertEquals(len(image_metas), 3)
+        i = 4
+        for meta in image_metas:
+            expected = {
+                'id': 'DONTCARE',
+                'status': None,
+                'is_public': True,
+                'name': 'TestImage %d' % (i),
+                'properties': {
+                    'updated': None, 'created': None},
+            }
+            self.assertDictMatch(meta, expected)
+            i = i + 1
+
 
 class ImageControllerWithGlanceServiceTest(test.TestCase):
     """
@@ -248,6 +339,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.fixtures = self._make_image_fixtures()
         fakes.stub_out_glance(self.stubs, initial_fixtures=self.fixtures)
+        fakes.stub_out_compute_api_snapshot(self.stubs)
 
     def tearDown(self):
         """Run after each test."""
@@ -526,7 +618,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued backup',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -534,7 +625,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving backup',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -543,7 +633,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active backup',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE'
@@ -551,7 +640,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 127,
             'name': 'killed backup',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -597,7 +685,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -619,7 +707,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -642,7 +730,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -664,7 +752,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 127,
             'name': 'killed backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -708,6 +796,156 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         self.assertDictListMatch(expected, response_list)
 
+    def test_image_filter_with_name(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'name': 'testname'}
+        image_service.index(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images?name=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_with_status(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE'}
+        image_service.index(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images?status=ACTIVE')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_with_property(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'property-test': '3'}
+        image_service.index(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images?property-test=3')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_not_supported(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE'}
+        image_service.index(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_no_filters(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {}
+        image_service.index(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_with_name(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'name': 'testname'}
+        image_service.detail(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail?name=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_with_status(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE'}
+        image_service.detail(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail?status=ACTIVE')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_with_property(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'property-test': '3'}
+        image_service.detail(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail?property-test=3')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_not_supported(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE'}
+        image_service.detail(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_no_filters(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {}
+        image_service.detail(
+            context, filters=filters, marker=0, limit=0).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
     def test_get_image_found(self):
         req = webob.Request.blank('/v1.0/images/123')
         res = req.get_response(fakes.wsgi_app())
@@ -730,6 +968,103 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
+    def test_create_image(self):
+
+        body = dict(image=dict(serverId='123', name='Backup 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+
+    def test_create_image_no_server_id(self):
+
+        body = dict(image=dict(name='Backup 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_v1_1(self):
+
+        body = dict(image=dict(serverRef='123', name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+
+    def test_create_image_v1_1_actual_server_ref(self):
+
+        serverRef = 'http://localhost/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+        result = json.loads(response.body)
+        self.assertEqual(result['image']['serverRef'], serverRef)
+
+    def test_create_image_v1_1_server_ref_bad_hostname(self):
+
+        serverRef = 'http://asdf/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_v1_1_xml_serialization(self):
+
+        body = dict(image=dict(serverRef='123', name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        req.headers["accept"] = "application/xml"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+        resp_xml = minidom.parseString(response.body.replace("  ", ""))
+        expected_href = "http://localhost/v1.1/images/123"
+        expected_image = minidom.parseString("""
+            <image
+                   created="None"
+                   id="123"
+                   name="Backup 1"
+                   serverRef="http://localhost/v1.1/servers/123"
+                   status="ACTIVE"
+                   updated="None"
+                   xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <links>
+                    <link href="%(expected_href)s" rel="self"/>
+                    <link href="%(expected_href)s" rel="bookmark"
+                        type="application/json" />
+                    <link href="%(expected_href)s" rel="bookmark"
+                        type="application/xml" />
+                </links>
+            </image>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected_image.toxml(), resp_xml.toxml())
+
+    def test_create_image_v1_1_no_server_ref(self):
+
+        body = dict(image=dict(name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     @classmethod
     def _make_image_fixtures(cls):
         image_id = 123
@@ -750,7 +1085,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_id += 1
 
         # Backup for User 1
-        backup_properties = {'instance_id': '42', 'user_id': '1'}
+        server_ref = 'http://localhost:8774/v1.1/servers/42'
+        backup_properties = {'instance_ref': server_ref, 'user_id': '1'}
         for status in ('queued', 'saving', 'active', 'killed'):
             add_fixture(id=image_id, name='%s backup' % status,
                         is_public=False, status=status,

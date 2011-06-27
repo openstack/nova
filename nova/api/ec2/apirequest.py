@@ -21,20 +21,13 @@ APIRequest class
 """
 
 import datetime
-import re
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
 
 from nova import log as logging
+from nova.api.ec2 import ec2utils
 
 LOG = logging.getLogger("nova.api.request")
-
-
-_c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
-
-
-def _camelcase_to_underscore(str):
-    return _c2u.sub(r'_\1', str).lower().strip('_')
 
 
 def _underscore_to_camelcase(str):
@@ -51,59 +44,6 @@ def _database_to_isoformat(datetimeobj):
     return datetimeobj.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _try_convert(value):
-    """Return a non-string from a string or unicode, if possible.
-
-    ============= =====================================================
-    When value is returns
-    ============= =====================================================
-    zero-length   ''
-    'None'        None
-    'True'        True
-    'False'       False
-    '0', '-0'     0
-    0xN, -0xN     int from hex (postitive) (N is any number)
-    0bN, -0bN     int from binary (positive) (N is any number)
-    *             try conversion to int, float, complex, fallback value
-
-    """
-    if len(value) == 0:
-        return ''
-    if value == 'None':
-        return None
-    if value == 'True':
-        return True
-    if value == 'False':
-        return False
-    valueneg = value[1:] if value[0] == '-' else value
-    if valueneg == '0':
-        return 0
-    if valueneg == '':
-        return value
-    if valueneg[0] == '0':
-        if valueneg[1] in 'xX':
-            return int(value, 16)
-        elif valueneg[1] in 'bB':
-            return int(value, 2)
-        else:
-            try:
-                return int(value, 8)
-            except ValueError:
-                pass
-    try:
-        return int(value)
-    except ValueError:
-        pass
-    try:
-        return float(value)
-    except ValueError:
-        pass
-    try:
-        return complex(value)
-    except ValueError:
-        return value
-
-
 class APIRequest(object):
     def __init__(self, controller, action, version, args):
         self.controller = controller
@@ -114,7 +54,7 @@ class APIRequest(object):
     def invoke(self, context):
         try:
             method = getattr(self.controller,
-                             _camelcase_to_underscore(self.action))
+                             ec2utils.camelcase_to_underscore(self.action))
         except AttributeError:
             controller = self.controller
             action = self.action
@@ -125,19 +65,7 @@ class APIRequest(object):
             #       and reraise as 400 error.
             raise Exception(_error)
 
-        args = {}
-        for key, value in self.args.items():
-            parts = key.split(".")
-            key = _camelcase_to_underscore(parts[0])
-            if isinstance(value, str) or isinstance(value, unicode):
-                # NOTE(vish): Automatically convert strings back
-                #             into their respective values
-                value = _try_convert(value)
-            if len(parts) > 1:
-                d = args.get(key, {})
-                d[parts[1]] = value
-                value = d
-            args[key] = value
+        args = ec2utils.dict_from_dotted_str(self.args.items())
 
         for key in args.keys():
             # NOTE(vish): Turn numeric dict keys into lists

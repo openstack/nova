@@ -36,6 +36,7 @@ from twisted.application import service
 
 from nova import flags
 from nova import log as logging
+from nova import utils
 from nova.virt import connection as virt_connection
 
 
@@ -86,7 +87,7 @@ RRD_VALUES = {
         ]}
 
 
-utcnow = datetime.datetime.utcnow
+utcnow = utils.utcnow
 
 
 LOG = logging.getLogger('nova.compute.monitor')

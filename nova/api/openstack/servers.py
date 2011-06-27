@@ -17,22 +17,20 @@ import base64
 import traceback
 
 from webob import exc
-from xml.dom import minidom
 
 from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import quota
 from nova import utils
 from nova.api.openstack import common
+from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
-from nova.auth import manager as auth_manager
-from nova.compute import instance_types
+from nova.api.openstack import wsgi
 import nova.api.openstack
 from nova.scheduler import api as scheduler_api
 
@@ -41,45 +39,28 @@ LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
 
 
-class Controller(common.OpenstackController):
+class Controller(object):
     """ The Server API controller for the OpenStack API """
-
-    _serialization_metadata = {
-        "application/xml": {
-            "attributes": {
-                "server": ["id", "imageId", "name", "flavorId", "hostId",
-                           "status", "progress", "adminPass", "flavorRef",
-                           "imageRef"],
-                "link": ["rel", "type", "href"],
-            },
-            "dict_collections": {
-                "metadata": {"item_name": "meta", "item_key": "key"},
-            },
-            "list_collections": {
-                "public": {"item_name": "ip", "item_key": "addr"},
-                "private": {"item_name": "ip", "item_key": "addr"},
-            },
-        },
-    }
 
     def __init__(self):
         self.compute_api = compute.API()
-        self._image_service = utils.import_object(FLAGS.image_service)
-        super(Controller, self).__init__()
+        self.helper = helper.CreateInstanceHelper(self)
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, is_detail=False)
+        try:
+            servers = self._items(req, is_detail=False)
+        except exception.Invalid as err:
+            return exc.HTTPBadRequest(explanation=str(err))
+        return servers
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, is_detail=True)
-
-    def _image_id_from_req_data(self, data):
-        raise NotImplementedError()
-
-    def _flavor_id_from_req_data(self, data):
-        raise NotImplementedError()
+        try:
+            servers = self._items(req, is_detail=True)
+        except exception.Invalid as err:
+            return exc.HTTPBadRequest(explanation=str(err))
+        return servers
 
     def _get_view_builder(self, req):
         raise NotImplementedError()
@@ -95,7 +76,10 @@ class Controller(common.OpenstackController):
 
         builder - the response model builder
         """
-        instance_list = self.compute_api.get_all(req.environ['nova.context'])
+        reservation_id = req.str_GET.get('reservation_id')
+        instance_list = self.compute_api.get_all(
+                                            req.environ['nova.context'],
+                                            reservation_id=reservation_id)
         limited_list = self._limit_items(instance_list, req)
         builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
@@ -122,157 +106,45 @@ class Controller(common.OpenstackController):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def create(self, req):
+    def create(self, req, body):
         """ Creates a new server for a given user """
-        env = self._deserialize_create(req)
-        if not env:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-
-        context = req.environ['nova.context']
-
-        password = self._get_server_admin_password(env['server'])
-
-        key_name = None
-        key_data = None
-        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
-        if key_pairs:
-            key_pair = key_pairs[0]
-            key_name = key_pair['name']
-            key_data = key_pair['public_key']
-
-        requested_image_id = self._image_id_from_req_data(env)
+        extra_values = None
+        result = None
         try:
-            image_id = common.get_image_id_from_image_hash(self._image_service,
-                context, requested_image_id)
-        except:
-            msg = _("Can not find requested image")
-            return faults.Fault(exc.HTTPBadRequest(msg))
+            extra_values, result = self.helper.create_instance(
+                                    req, body, self.compute_api.create)
+        except faults.Fault, f:
+            return f
 
-        kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
-            req, image_id)
+        instances = result
 
-        personality = env['server'].get('personality')
-        injected_files = []
-        if personality:
-            injected_files = self._get_injected_files(personality)
-
-        flavor_id = self._flavor_id_from_req_data(env)
-
-        if not 'name' in env['server']:
-            msg = _("Server name is not defined")
-            return exc.HTTPBadRequest(msg)
-
-        name = env['server']['name']
-        self._validate_server_name(name)
-        name = name.strip()
-
-        try:
-            inst_type = \
-                instance_types.get_instance_type_by_flavor_id(flavor_id)
-            (inst,) = self.compute_api.create(
-                context,
-                inst_type,
-                image_id,
-                kernel_id=kernel_id,
-                ramdisk_id=ramdisk_id,
-                display_name=name,
-                display_description=name,
-                key_name=key_name,
-                key_data=key_data,
-                metadata=env['server'].get('metadata', {}),
-                injected_files=injected_files)
-        except quota.QuotaError as error:
-            self._handle_quota_error(error)
-
-        inst['instance_type'] = inst_type
-        inst['image_id'] = requested_image_id
+        (inst, ) = instances
+        for key in ['instance_type', 'image_ref']:
+            inst[key] = extra_values[key]
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        server['server']['adminPass'] = password
-        self.compute_api.set_admin_password(context, server['server']['id'],
-                                            password)
+        server['server']['adminPass'] = extra_values['password']
         return server
 
-    def _deserialize_create(self, request):
-        """
-        Deserialize a create request
-
-        Overrides normal behavior in the case of xml content
-        """
-        if request.content_type == "application/xml":
-            deserializer = ServerCreateRequestXMLDeserializer()
-            return deserializer.deserialize(request.body)
-        else:
-            return self._deserialize(request.body, request.get_content_type())
-
-    def _get_injected_files(self, personality):
-        """
-        Create a list of injected files from the personality attribute
-
-        At this time, injected_files must be formatted as a list of
-        (file_path, file_content) pairs for compatibility with the
-        underlying compute service.
-        """
-        injected_files = []
-
-        for item in personality:
-            try:
-                path = item['path']
-                contents = item['contents']
-            except KeyError as key:
-                expl = _('Bad personality format: missing %s') % key
-                raise exc.HTTPBadRequest(explanation=expl)
-            except TypeError:
-                expl = _('Bad personality format')
-                raise exc.HTTPBadRequest(explanation=expl)
-            try:
-                contents = base64.b64decode(contents)
-            except TypeError:
-                expl = _('Personality content for %s cannot be decoded') % path
-                raise exc.HTTPBadRequest(explanation=expl)
-            injected_files.append((path, contents))
-        return injected_files
-
-    def _handle_quota_error(self, error):
-        """
-        Reraise quota errors as api-specific http exceptions
-        """
-        if error.code == "OnsetFileLimitExceeded":
-            expl = _("Personality file limit exceeded")
-            raise exc.HTTPBadRequest(explanation=expl)
-        if error.code == "OnsetFilePathLimitExceeded":
-            expl = _("Personality file path too long")
-            raise exc.HTTPBadRequest(explanation=expl)
-        if error.code == "OnsetFileContentLimitExceeded":
-            expl = _("Personality file content too long")
-            raise exc.HTTPBadRequest(explanation=expl)
-        # if the original error is okay, just reraise it
-        raise error
-
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        return utils.generate_password(16)
-
     @scheduler_api.redirect_handler
-    def update(self, req, id):
+    def update(self, req, id, body):
         """ Updates the server name or password """
         if len(req.body) == 0:
             raise exc.HTTPUnprocessableEntity()
 
-        inst_dict = self._deserialize(req.body, req.get_content_type())
-        if not inst_dict:
+        if not body:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
         ctxt = req.environ['nova.context']
         update_dict = {}
 
-        if 'name' in inst_dict['server']:
-            name = inst_dict['server']['name']
-            self._validate_server_name(name)
+        if 'name' in body['server']:
+            name = body['server']['name']
+            self.helper._validate_server_name(name)
             update_dict['display_name'] = name.strip()
 
-        self._parse_update(ctxt, id, inst_dict, update_dict)
+        self._parse_update(ctxt, id, body, update_dict)
 
         try:
             self.compute_api.update(ctxt, id, **update_dict)
@@ -281,20 +153,11 @@ class Controller(common.OpenstackController):
 
         return exc.HTTPNoContent()
 
-    def _validate_server_name(self, value):
-        if not isinstance(value, basestring):
-            msg = _("Server name is not a string or unicode")
-            raise exc.HTTPBadRequest(msg)
-
-        if value.strip() == '':
-            msg = _("Server name is an empty string")
-            raise exc.HTTPBadRequest(msg)
-
     def _parse_update(self, context, id, inst_dict, update_dict):
         pass
 
     @scheduler_api.redirect_handler
-    def action(self, req, id):
+    def action(self, req, id, body):
         """Multi-purpose method used to reboot, rebuild, or
         resize a server"""
 
@@ -307,10 +170,9 @@ class Controller(common.OpenstackController):
             'rebuild': self._action_rebuild,
             }
 
-        input_dict = self._deserialize(req.body, req.get_content_type())
         for key in actions.keys():
-            if key in input_dict:
-                return actions[key](input_dict, req, id)
+            if key in body:
+                return actions[key](body, req, id)
         return faults.Fault(exc.HTTPNotImplemented())
 
     def _action_change_password(self, input_dict, req, id):
@@ -333,19 +195,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     def _action_resize(self, input_dict, req, id):
-        """ Resizes a given instance to the flavor size requested """
-        try:
-            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
-                flavor_id = input_dict['resize']['flavorId']
-                self.compute_api.resize(req.environ['nova.context'], id,
-                        flavor_id)
-            else:
-                LOG.exception(_("Missing arguments for resize"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
-        except Exception, e:
-            LOG.exception(_("Error in resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+        return exc.HTTPNotImplemented()
 
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
@@ -410,7 +260,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
-    def reset_network(self, req, id):
+    def reset_network(self, req, id, body):
         """
         Reset networking on an instance (admin only).
 
@@ -425,7 +275,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
-    def inject_network_info(self, req, id):
+    def inject_network_info(self, req, id, body):
         """
         Inject network info for an instance (admin only).
 
@@ -440,7 +290,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
-    def pause(self, req, id):
+    def pause(self, req, id, body):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
         try:
@@ -452,7 +302,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
-    def unpause(self, req, id):
+    def unpause(self, req, id, body):
         """ Permit Admins to Unpause the server. """
         ctxt = req.environ['nova.context']
         try:
@@ -464,7 +314,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
-    def suspend(self, req, id):
+    def suspend(self, req, id, body):
         """permit admins to suspend the server"""
         context = req.environ['nova.context']
         try:
@@ -476,7 +326,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
-    def resume(self, req, id):
+    def resume(self, req, id, body):
         """permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
         try:
@@ -551,48 +401,10 @@ class Controller(common.OpenstackController):
                 error=item.error))
         return dict(actions=actions)
 
-    def _get_kernel_ramdisk_from_image(self, req, image_id):
-        """Fetch an image from the ImageService, then if present, return the
-        associated kernel and ramdisk image IDs.
-        """
-        context = req.environ['nova.context']
-        image_meta = self._image_service.show(context, image_id)
-        # NOTE(sirp): extracted to a separate method to aid unit-testing, the
-        # new method doesn't need a request obj or an ImageService stub
-        kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
-            image_meta)
-        return kernel_id, ramdisk_id
-
-    @staticmethod
-    def  _do_get_kernel_ramdisk_from_image(image_meta):
-        """Given an ImageService image_meta, return kernel and ramdisk image
-        ids if present.
-
-        This is only valid for `ami` style images.
-        """
-        image_id = image_meta['id']
-        if image_meta['status'] != 'active':
-            raise exception.ImageUnacceptable(image_id=image_id,
-                                              reason=_("status is not active"))
-
-        if image_meta.get('container_format') != 'ami':
-            return None, None
-
-        try:
-            kernel_id = image_meta['properties']['kernel_id']
-        except KeyError:
-            raise exception.KernelNotFoundForImage(image_id=image_id)
-
-        try:
-            ramdisk_id = image_meta['properties']['ramdisk_id']
-        except KeyError:
-            raise exception.RamdiskNotFoundForImage(image_id=image_id)
-
-        return kernel_id, ramdisk_id
-
 
 class ControllerV10(Controller):
-    def _image_id_from_req_data(self, data):
+
+    def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
     def _flavor_id_from_req_data(self, data):
@@ -608,8 +420,23 @@ class ControllerV10(Controller):
 
     def _parse_update(self, context, server_id, inst_dict, update_dict):
         if 'adminPass' in inst_dict['server']:
-            update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            self.compute_api.set_admin_password(context, server_id)
+            self.compute_api.set_admin_password(context, server_id,
+                    inst_dict['server']['adminPass'])
+
+    def _action_resize(self, input_dict, req, id):
+        """ Resizes a given instance to the flavor size requested """
+        try:
+            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
+                flavor_id = input_dict['resize']['flavorId']
+                self.compute_api.resize(req.environ['nova.context'], id,
+                        flavor_id)
+            else:
+                LOG.exception(_("Missing 'flavorId' argument for resize"))
+                return faults.Fault(exc.HTTPUnprocessableEntity())
+        except Exception, e:
+            LOG.exception(_("Error in resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPAccepted()
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -633,11 +460,14 @@ class ControllerV10(Controller):
         response.empty_body = True
         return response
 
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return self.helper._get_server_admin_password_old_style(server)
+
 
 class ControllerV11(Controller):
-    def _image_id_from_req_data(self, data):
-        href = data['server']['imageRef']
-        return common.get_id_from_href(href)
+    def _image_ref_from_req_data(self, data):
+        return data['server']['imageRef']
 
     def _flavor_id_from_req_data(self, data):
         href = data['server']['flavorRef']
@@ -658,11 +488,11 @@ class ControllerV11(Controller):
         if (not 'changePassword' in input_dict
             or not 'adminPass' in input_dict['changePassword']):
             msg = _("No adminPass was specified")
-            return exc.HTTPBadRequest(msg)
+            return exc.HTTPBadRequest(explanation=msg)
         password = input_dict['changePassword']['adminPass']
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
-            return exc.HTTPBadRequest(msg)
+            return exc.HTTPBadRequest(explanation=msg)
         self.compute_api.set_admin_password(context, id, password)
         return exc.HTTPAccepted()
 
@@ -696,27 +526,44 @@ class ControllerV11(Controller):
                 LOG.info(msg)
                 raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
+    def _action_resize(self, input_dict, req, id):
+        """ Resizes a given instance to the flavor size requested """
+        try:
+            if 'resize' in input_dict and 'flavorRef' in input_dict['resize']:
+                flavor_ref = input_dict['resize']['flavorRef']
+                flavor_id = common.get_id_from_href(flavor_ref)
+                self.compute_api.resize(req.environ['nova.context'], id,
+                        flavor_id)
+            else:
+                LOG.exception(_("Missing 'flavorRef' argument for resize"))
+                return faults.Fault(exc.HTTPUnprocessableEntity())
+        except Exception, e:
+            LOG.exception(_("Error in resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPAccepted()
+
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
         instance_id = int(instance_id)
 
         try:
-            image_ref = info["rebuild"]["imageRef"]
+            image_href = info["rebuild"]["imageRef"]
         except (KeyError, TypeError):
             msg = _("Could not parse imageRef from request.")
             LOG.debug(msg)
             return faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-        image_id = common.get_id_from_href(image_ref)
         personalities = info["rebuild"].get("personality", [])
-        metadata = info["rebuild"].get("metadata", {})
+        metadata = info["rebuild"].get("metadata")
+        name = info["rebuild"].get("name")
 
-        self._validate_metadata(metadata)
+        if metadata:
+            self._validate_metadata(metadata)
         self._decode_personalities(personalities)
 
         try:
-            self.compute_api.rebuild(context, instance_id, image_id, metadata,
-                                     personalities)
+            self.compute_api.rebuild(context, instance_id, image_href, name,
+                                     metadata, personalities)
         except exception.BuildInProgress:
             msg = _("Instance %d is currently being rebuilt.") % instance_id
             LOG.debug(msg)
@@ -726,92 +573,49 @@ class ControllerV11(Controller):
         response.empty_body = True
         return response
 
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        password = server.get('adminPass')
-        if password is None:
-            return utils.generate_password(16)
-        if not isinstance(password, basestring) or password == '':
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(msg)
-        return password
-
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
 
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return self.helper._get_server_admin_password_new_style(server)
 
-class ServerCreateRequestXMLDeserializer(object):
-    """
-    Deserializer to handle xml-formatted server create requests.
 
-    Handles standard server attributes as well as optional metadata
-    and personality attributes
-    """
+def create_resource(version='1.0'):
+    controller = {
+        '1.0': ControllerV10,
+        '1.1': ControllerV11,
+    }[version]()
 
-    def deserialize(self, string):
-        """Deserialize an xml-formatted server create request"""
-        dom = minidom.parseString(string)
-        server = self._extract_server(dom)
-        return {'server': server}
+    metadata = {
+        "attributes": {
+            "server": ["id", "imageId", "name", "flavorId", "hostId",
+                       "status", "progress", "adminPass", "flavorRef",
+                       "imageRef"],
+            "link": ["rel", "type", "href"],
+        },
+        "dict_collections": {
+            "metadata": {"item_name": "meta", "item_key": "key"},
+        },
+        "list_collections": {
+            "public": {"item_name": "ip", "item_key": "addr"},
+            "private": {"item_name": "ip", "item_key": "addr"},
+        },
+    }
 
-    def _extract_server(self, node):
-        """Marshal the server attribute of a parsed request"""
-        server = {}
-        server_node = self._find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
-            if server_node.getAttribute(attr):
-                server[attr] = server_node.getAttribute(attr)
-        metadata = self._extract_metadata(server_node)
-        if metadata is not None:
-            server["metadata"] = metadata
-        personality = self._extract_personality(server_node)
-        if personality is not None:
-            server["personality"] = personality
-        return server
+    xmlns = {
+        '1.0': wsgi.XMLNS_V10,
+        '1.1': wsgi.XMLNS_V11,
+    }[version]
 
-    def _extract_metadata(self, server_node):
-        """Marshal the metadata attribute of a parsed request"""
-        metadata_node = self._find_first_child_named(server_node, "metadata")
-        if metadata_node is None:
-            return None
-        metadata = {}
-        for meta_node in self._find_children_named(metadata_node, "meta"):
-            key = meta_node.getAttribute("key")
-            metadata[key] = self._extract_text(meta_node)
-        return metadata
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
+                                                  xmlns=xmlns),
+    }
 
-    def _extract_personality(self, server_node):
-        """Marshal the personality attribute of a parsed request"""
-        personality_node = \
-                self._find_first_child_named(server_node, "personality")
-        if personality_node is None:
-            return None
-        personality = []
-        for file_node in self._find_children_named(personality_node, "file"):
-            item = {}
-            if file_node.hasAttribute("path"):
-                item["path"] = file_node.getAttribute("path")
-            item["contents"] = self._extract_text(file_node)
-            personality.append(item)
-        return personality
+    deserializers = {
+        'application/xml': helper.ServerXMLDeserializer(),
+    }
 
-    def _find_first_child_named(self, parent, name):
-        """Search a nodes children for the first child with a given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                return node
-        return None
-
-    def _find_children_named(self, parent, name):
-        """Return all of a nodes children who have the given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                yield node
-
-    def _extract_text(self, node):
-        """Get the text field contained by the given node"""
-        if len(node.childNodes) == 1:
-            child = node.childNodes[0]
-            if child.nodeType == child.TEXT_NODE:
-                return child.nodeValue
-        return ""
+    return wsgi.Resource(controller, serializers=serializers,
+                         deserializers=deserializers)

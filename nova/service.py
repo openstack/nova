@@ -19,14 +19,11 @@
 
 """Generic Node baseclass for all workers that run on hosts."""
 
+import greenlet
 import inspect
 import os
-import sys
-import time
 
-from eventlet import event
 from eventlet import greenthread
-from eventlet import greenpool
 
 from nova import context
 from nova import db
@@ -91,27 +88,37 @@ class Service(object):
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
-        conn1 = rpc.Connection.instance(new=True)
-        conn2 = rpc.Connection.instance(new=True)
-        conn3 = rpc.Connection.instance(new=True)
+        self.conn = rpc.Connection.instance(new=True)
+        logging.debug("Creating Consumer connection for Service %s" %
+                      self.topic)
+
+        # Share this same connection for these Consumers
+        consumer_all = rpc.TopicAdapterConsumer(
+                connection=self.conn,
+                topic=self.topic,
+                proxy=self)
+        consumer_node = rpc.TopicAdapterConsumer(
+                connection=self.conn,
+                topic='%s.%s' % (self.topic, self.host),
+                proxy=self)
+        fanout = rpc.FanoutAdapterConsumer(
+                connection=self.conn,
+                topic=self.topic,
+                proxy=self)
+        consumer_set = rpc.ConsumerSet(
+                connection=self.conn,
+                consumer_list=[consumer_all, consumer_node, fanout])
+
+        # Wait forever, processing these consumers
+        def _wait():
+            try:
+                consumer_set.wait()
+            finally:
+                consumer_set.close()
+
+        self.consumer_set_thread = greenthread.spawn(_wait)
+
         if self.report_interval:
-            consumer_all = rpc.TopicAdapterConsumer(
-                    connection=conn1,
-                    topic=self.topic,
-                    proxy=self)
-            consumer_node = rpc.TopicAdapterConsumer(
-                    connection=conn2,
-                    topic='%s.%s' % (self.topic, self.host),
-                    proxy=self)
-            fanout = rpc.FanoutAdapterConsumer(
-                    connection=conn3,
-                    topic=self.topic,
-                    proxy=self)
-
-            self.timers.append(consumer_all.attach_to_eventlet())
-            self.timers.append(consumer_node.attach_to_eventlet())
-            self.timers.append(fanout.attach_to_eventlet())
-
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
             self.timers.append(pulse)
@@ -174,6 +181,11 @@ class Service(object):
             logging.warn(_('Service killed that has no database entry'))
 
     def stop(self):
+        self.consumer_set_thread.kill()
+        try:
+            self.consumer_set_thread.wait()
+        except greenlet.GreenletExit:
+            pass
         for x in self.timers:
             try:
                 x.stop()

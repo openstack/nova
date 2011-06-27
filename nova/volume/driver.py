@@ -90,42 +90,97 @@ class VolumeDriver(object):
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
+    def _create_volume(self, volume_name, sizestr):
+        self._try_execute('sudo', 'lvcreate', '-L', sizestr, '-n',
+                          volume_name, FLAGS.volume_group)
+
+    def _copy_volume(self, srcstr, deststr, size_in_g):
+        self._execute('sudo', 'dd', 'if=%s' % srcstr, 'of=%s' % deststr,
+                      'count=%d' % (size_in_g * 1024), 'bs=1M')
+
+    def _volume_not_present(self, volume_name):
+        path_name = '%s/%s' % (FLAGS.volume_group, volume_name)
+        try:
+            self._try_execute('sudo', 'lvdisplay', path_name)
+        except Exception as e:
+            # If the volume isn't present
+            return True
+        return False
+
+    def _delete_volume(self, volume, size_in_g):
+        """Deletes a logical volume."""
+        # zero out old volumes to prevent data leaking between users
+        # TODO(ja): reclaiming space should be done lazy and low priority
+        self._copy_volume('/dev/zero', self.local_path(volume), size_in_g)
+        self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
+                          (FLAGS.volume_group,
+                           self._escape_snapshot(volume['name'])))
+
+    def _sizestr(self, size_in_g):
+        if int(size_in_g) == 0:
+            return '100M'
+        return '%sG' % size_in_g
+
+    # Linux LVM reserves name that starts with snapshot, so that
+    # such volume name can't be created. Mangle it.
+    def _escape_snapshot(self, snapshot_name):
+        if not snapshot_name.startswith('snapshot'):
+            return snapshot_name
+        return '_' + snapshot_name
+
     def create_volume(self, volume):
         """Creates a logical volume. Can optionally return a Dictionary of
         changes to the volume object to be persisted."""
-        if int(volume['size']) == 0:
-            sizestr = '100M'
-        else:
-            sizestr = '%sG' % volume['size']
-        self._try_execute('sudo', 'lvcreate', '-L', sizestr, '-n',
-                           volume['name'],
-                           FLAGS.volume_group)
+        self._create_volume(volume['name'], self._sizestr(volume['size']))
+
+    def create_volume_from_snapshot(self, volume, snapshot):
+        """Creates a volume from a snapshot."""
+        self._create_volume(volume['name'], self._sizestr(volume['size']))
+        self._copy_volume(self.local_path(snapshot), self.local_path(volume),
+                          snapshot['volume_size'])
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
-        try:
-            self._try_execute('sudo', 'lvdisplay',
-                              '%s/%s' %
-                              (FLAGS.volume_group,
-                               volume['name']))
-        except Exception as e:
+        if self._volume_not_present(volume['name']):
             # If the volume isn't present, then don't attempt to delete
             return True
 
-        # zero out old volumes to prevent data leaking between users
-        # TODO(ja): reclaiming space should be done lazy and low priority
-        self._execute('sudo', 'dd', 'if=/dev/zero',
-                      'of=%s' % self.local_path(volume),
-                      'count=%d' % (volume['size'] * 1024),
-                      'bs=1M')
-        self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
-                          (FLAGS.volume_group,
-                           volume['name']))
+        # TODO(yamahata): lvm can't delete origin volume only without
+        # deleting derived snapshots. Can we do something fancy?
+        out, err = self._execute('sudo', 'lvdisplay', '--noheading',
+                                 '-C', '-o', 'Attr',
+                                 '%s/%s' % (FLAGS.volume_group,
+                                            volume['name']))
+        # fake_execute returns None resulting unit test error
+        if out:
+            out = out.strip()
+            if (out[0] == 'o') or (out[0] == 'O'):
+                raise exception.VolumeIsBusy(volume_name=volume['name'])
+
+        self._delete_volume(volume, volume['size'])
+
+    def create_snapshot(self, snapshot):
+        """Creates a snapshot."""
+        orig_lv_name = "%s/%s" % (FLAGS.volume_group, snapshot['volume_name'])
+        self._try_execute('sudo', 'lvcreate', '-L',
+                          self._sizestr(snapshot['volume_size']),
+                          '--name', self._escape_snapshot(snapshot['name']),
+                          '--snapshot', orig_lv_name)
+
+    def delete_snapshot(self, snapshot):
+        """Deletes a snapshot."""
+        if self._volume_not_present(self._escape_snapshot(snapshot['name'])):
+            # If the snapshot isn't present, then don't attempt to delete
+            return True
+
+        # TODO(yamahata): zeroing out the whole snapshot triggers COW.
+        # it's quite slow.
+        self._delete_volume(snapshot, snapshot['volume_size'])
 
     def local_path(self, volume):
         # NOTE(vish): stops deprecation warning
         escaped_group = FLAGS.volume_group.replace('-', '--')
-        escaped_name = volume['name'].replace('-', '--')
+        escaped_name = self._escape_snapshot(volume['name']).replace('-', '--')
         return "/dev/mapper/%s-%s" % (escaped_group, escaped_name)
 
     def ensure_export(self, context, volume):
@@ -527,6 +582,14 @@ class FakeISCSIDriver(ISCSIDriver):
         """No setup necessary in fake mode."""
         pass
 
+    def discover_volume(self, context, volume):
+        """Discover volume on a remote host."""
+        return "/dev/disk/by-path/volume-id-%d" % volume['id']
+
+    def undiscover_volume(self, volume):
+        """Undiscover volume on a remote host."""
+        pass
+
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command."""
@@ -558,6 +621,18 @@ class RBDDriver(VolumeDriver):
         """Deletes a logical volume."""
         self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
                           'rm', volume['name'])
+
+    def create_snapshot(self, snapshot):
+        """Creates an rbd snapshot"""
+        self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
+                          'snap', 'create', '--snap', snapshot['name'],
+                          snapshot['volume_name'])
+
+    def delete_snapshot(self, snapshot):
+        """Deletes an rbd snapshot"""
+        self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
+                          'snap', 'rm', '--snap', snapshot['name'],
+                          snapshot['volume_name'])
 
     def local_path(self, volume):
         """Returns the path of the rbd volume."""
@@ -600,17 +675,30 @@ class SheepdogDriver(VolumeDriver):
 
     def create_volume(self, volume):
         """Creates a sheepdog volume"""
-        if int(volume['size']) == 0:
-            sizestr = '100M'
-        else:
-            sizestr = '%sG' % volume['size']
         self._try_execute('qemu-img', 'create',
                           "sheepdog:%s" % volume['name'],
-                          sizestr)
+                          self._sizestr(volume['size']))
+
+    def create_volume_from_snapshot(self, volume, snapshot):
+        """Creates a sheepdog volume from a snapshot."""
+        self._try_execute('qemu-img', 'create', '-b',
+                          "sheepdog:%s:%s" % (snapshot['volume_name'],
+                                              snapshot['name']),
+                          "sheepdog:%s" % volume['name'])
 
     def delete_volume(self, volume):
         """Deletes a logical volume"""
         self._try_execute('collie', 'vdi', 'delete', volume['name'])
+
+    def create_snapshot(self, snapshot):
+        """Creates a sheepdog snapshot"""
+        self._try_execute('qemu-img', 'snapshot', '-c', snapshot['name'],
+                          "sheepdog:%s" % snapshot['volume_name'])
+
+    def delete_snapshot(self, snapshot):
+        """Deletes a sheepdog snapshot"""
+        self._try_execute('collie', 'vdi', 'delete', snapshot['volume_name'],
+                          '-s', snapshot['name'])
 
     def local_path(self, volume):
         return "sheepdog:%s" % volume['name']

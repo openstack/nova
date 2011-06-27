@@ -89,7 +89,7 @@ class FakeHttplibConnection(object):
 class XmlConversionTestCase(test.TestCase):
     """Unit test api xml conversion"""
     def test_number_conversion(self):
-        conv = apirequest._try_convert
+        conv = ec2utils._try_convert
         self.assertEqual(conv('None'), None)
         self.assertEqual(conv('True'), True)
         self.assertEqual(conv('False'), False)
@@ -223,6 +223,29 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEquals(len(results), 1)
         self.manager.delete_project(project)
         self.manager.delete_user(user)
+
+    def test_create_duplicate_key_pair(self):
+        """Test that, after successfully generating a keypair,
+        requesting a second keypair with the same name fails sanely"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                          for x in range(random.randint(4, 8)))
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+        # NOTE(vish): create depends on pool, so call helper directly
+        self.ec2.create_key_pair('test')
+
+        try:
+            self.ec2.create_key_pair('test')
+        except EC2ResponseError, e:
+            if e.code == 'KeyPairExists':
+                pass
+            else:
+                self.fail("Unexpected EC2ResponseError: %s "
+                          "(expected KeyPairExists)" % e.code)
+        else:
+            self.fail('Exception not raised.')
 
     def test_get_all_security_groups(self):
         """Test that we can retrieve security groups"""

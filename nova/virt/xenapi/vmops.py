@@ -47,6 +47,21 @@ LOG = logging.getLogger("nova.virt.xenapi.vmops")
 FLAGS = flags.FLAGS
 
 
+def cmp_version(a, b):
+    """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)"""
+    a = a.split('.')
+    b = b.split('.')
+
+    # Compare each individual portion of both version strings
+    for va, vb in zip(a, b):
+        ret = int(va) - int(vb)
+        if ret:
+            return ret
+
+    # Fallback to comparing length last
+    return len(a) - len(b)
+
+
 class VMOps(object):
     """
     Management class for VM-related tasks
@@ -91,7 +106,8 @@ class VMOps(object):
     def finish_resize(self, instance, disk_info):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
-        vm_ref = self._create_vm(instance, vdi_uuid)
+        vm_ref = self._create_vm(instance,
+                [dict(vdi_type='os', vdi_uuid=vdi_uuid)])
         self.resize_instance(instance, vdi_uuid)
         self._spawn(instance, vm_ref)
 
@@ -100,29 +116,30 @@ class VMOps(object):
         if not vm_ref:
             vm_ref = VMHelper.lookup(self._session, instance.name)
         if vm_ref is None:
-            raise exception(_('Attempted to power on non-existent instance'
+            raise Exception(_('Attempted to power on non-existent instance'
             ' bad instance id %s') % instance.id)
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def _create_disk(self, instance):
+    def _create_disks(self, instance):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
-                instance.image_id, user, project, disk_image_type)
-        return vdi_uuid
+        vdis = VMHelper.fetch_image(self._session,
+                instance.id, instance.image_ref, user, project,
+                disk_image_type)
+        return vdis
 
     def spawn(self, instance, network_info=None):
-        vdi_uuid = self._create_disk(instance)
-        vm_ref = self._create_vm(instance, vdi_uuid, network_info)
+        vdis = self._create_disks(instance)
+        vm_ref = self._create_vm(instance, vdis, network_info)
         self._spawn(instance, vm_ref)
 
     def spawn_rescue(self, instance):
         """Spawn a rescue instance."""
         self.spawn(instance)
 
-    def _create_vm(self, instance, vdi_uuid, network_info=None):
+    def _create_vm(self, instance, vdis, network_info=None):
         """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -141,43 +158,81 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
 
-        # Are we building from a pre-existing disk?
-        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-
         disk_image_type = VMHelper.determine_disk_image_type(instance)
 
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
-                instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
+                    instance.kernel_id, user, project,
+                    ImageType.KERNEL_RAMDISK)
 
         ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+                    instance.ramdisk_id, user, project,
+                    ImageType.KERNEL_RAMDISK)
+        # Create the VM ref and attach the first disk
+        first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                vdis[0]['vdi_uuid'])
 
-        use_pv_kernel = VMHelper.determine_is_pv(self._session, instance.id,
-            vdi_ref, disk_image_type, instance.os_type)
-        vm_ref = VMHelper.create_vm(self._session, instance, kernel, ramdisk,
-                                    use_pv_kernel)
+        vm_mode = instance.vm_mode and instance.vm_mode.lower()
+        if vm_mode == 'pv':
+            use_pv_kernel = True
+        elif vm_mode in ('hv', 'hvm'):
+            use_pv_kernel = False
+            vm_mode = 'hvm'  # Normalize
+        else:
+            use_pv_kernel = VMHelper.determine_is_pv(self._session,
+                    instance.id, first_vdi_ref, disk_image_type,
+                    instance.os_type)
+            vm_mode = use_pv_kernel and 'pv' or 'hvm'
+
+        if instance.vm_mode != vm_mode:
+            # Update database with normalized (or determined) value
+            db.instance_update(context.get_admin_context(),
+                               instance['id'], {'vm_mode': vm_mode})
+
+        vm_ref = VMHelper.create_vm(self._session, instance,
+                kernel, ramdisk, use_pv_kernel)
+
+        # device 0 reserved for RW disk
+		userdevice = 0;
 
         # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
         if disk_image_type == ImageType.DISK_ISO:
             LOG.debug("detected ISO image type, going to create blank VM for "
                   "install")
-            # device 0 reserved for RW disk, so use '1'
-            cd_vdi_ref = vdi_ref
-            VMHelper.create_cd_vbd(session=self._session, vm_ref=vm_ref,
-                    vdi_ref=cd_vdi_ref, userdevice=1, bootable=True)
 
-            vdi_ref = VMHelper.fetch_blank_disk(session=self._session,
+            cd_vdi_ref = first_vdi_ref
+            first_vdi_ref = VMHelper.fetch_blank_disk(session=self._session,
                         instance_type_id=instance.instance_type_id)
 
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                vdi_ref=vdi_ref, userdevice=0, bootable=False)
+                vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=False)
+
+            # device 1 reserved for rescue disk so use '2'.
+            userdevice = userdevice + 2
+            VMHelper.create_cd_vbd(session=self._session, vm_ref=vm_ref,
+                    vdi_ref=cd_vdi_ref, userdevice=userdevice, bootable=True)
+
+
         else:
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                vdi_ref=vdi_ref, userdevice=0, bootable=True)
+                vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=True)
+            # userdevice 1 is reserved for rescue
+            userdevice = userdevice + 1
+
+
+        # Attach any other disks
+        for vdi in vdis[1:]:
+            # vdi['vdi_type'] is either 'os' or 'swap', but we don't
+            # really care what it is right here.
+            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                    vdi['vdi_uuid'])
+            VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
+                    vdi_ref=vdi_ref, userdevice=userdevice,
+                    bootable=False)
+            userdevice += 1
 
         # TODO(tr3buchet) - check to make sure we have network info, otherwise
         # create it now. This goes away once nova-multi-nic hits.
@@ -187,7 +242,7 @@ class VMOps(object):
         # Alter the image before VM start for, e.g. network injection
         if FLAGS.xenapi_inject_image:
             VMHelper.preconfigure_instance(self._session, instance,
-                                           vdi_ref, network_info)
+                                           first_vdi_ref, network_info)
 
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
@@ -200,6 +255,34 @@ class VMOps(object):
         instance_name = instance.name
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
+
+        ctx = context.get_admin_context()
+        agent_build = db.agent_build_get_by_triple(ctx, 'xen',
+                              instance.os_type, instance.architecture)
+        if agent_build:
+            LOG.info(_('Latest agent build for %(hypervisor)s/%(os)s' + \
+                       '/%(architecture)s is %(version)s') % agent_build)
+        else:
+            LOG.info(_('No agent build found for %(hypervisor)s/%(os)s' + \
+                       '/%(architecture)s') % {
+                        'hypervisor': 'xen',
+                        'os': instance.os_type,
+                        'architecture': instance.architecture})
+
+        def _check_agent_version():
+            version = self.get_agent_version(instance)
+            if not version:
+                LOG.info(_('No agent version returned by instance'))
+                return
+
+            LOG.info(_('Instance agent version: %s') % version)
+            if not agent_build:
+                return
+
+            if cmp_version(version, agent_build['version']) < 0:
+                LOG.info(_('Updating Agent to %s') % agent_build['version'])
+                self.agent_update(instance, agent_build['url'],
+                              agent_build['md5hash'])
 
         def _inject_files():
             injected_files = instance.injected_files
@@ -217,6 +300,13 @@ class VMOps(object):
                 for path, contents in instance.injected_files:
                     LOG.debug(_("Injecting file path: '%s'") % path)
                     self.inject_file(instance, path, contents)
+
+        def _set_admin_password():
+            admin_password = instance.admin_pass
+            if admin_password:
+                LOG.debug(_("Setting admin password"))
+                self.set_admin_password(instance, admin_password)
+
         # NOTE(armando): Do we really need to do this in virt?
         # NOTE(tr3buchet): not sure but wherever we do it, we need to call
         #                  reset_network afterwards
@@ -228,7 +318,9 @@ class VMOps(object):
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
+                    _check_agent_version()
                     _inject_files()
+                    _set_admin_password()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
@@ -268,7 +360,8 @@ class VMOps(object):
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=instance_obj.id)
+            raise exception.NotFound(_("No opaque_ref could be determined "
+                    "for '%s'.") % instance_or_vm)
         return vm_ref
 
     def _acquire_bootlock(self, vm):
@@ -432,6 +525,34 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
         self._session.wait_for_task(task, instance.id)
 
+    def get_agent_version(self, instance):
+        """Get the version of the agent running on the VM instance."""
+
+        # Send the encrypted password
+        transaction_id = str(uuid.uuid4())
+        args = {'id': transaction_id}
+        resp = self._make_agent_call('version', instance, '', args)
+        if resp is None:
+            # No response from the agent
+            return
+        resp_dict = json.loads(resp)
+        return resp_dict['message']
+
+    def agent_update(self, instance, url, md5sum):
+        """Update agent on the VM instance."""
+
+        # Send the encrypted password
+        transaction_id = str(uuid.uuid4())
+        args = {'id': transaction_id, 'url': url, 'md5sum': md5sum}
+        resp = self._make_agent_call('agentupdate', instance, '', args)
+        if resp is None:
+            # No response from the agent
+            return
+        resp_dict = json.loads(resp)
+        if resp_dict['returncode'] != '0':
+            raise RuntimeError(resp_dict['message'])
+        return resp_dict['message']
+
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance.
 
@@ -472,6 +593,9 @@ class VMOps(object):
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])
+        db.instance_update(context.get_admin_context(),
+                                  instance['id'],
+                                  dict(admin_pass=new_pass))
         return resp_dict['message']
 
     def inject_file(self, instance, path, contents):
@@ -1176,16 +1300,12 @@ class SimpleDH(object):
         mpi = M2Crypto.m2.bn_to_mpi(bn)
         return mpi
 
-    def _run_ssl(self, text, which):
-        base_cmd = ('openssl enc -aes-128-cbc -a -pass pass:%(shared)s '
-                '-nosalt %(dec_flag)s')
-        if which.lower()[0] == 'd':
-            dec_flag = ' -d'
-        else:
-            dec_flag = ''
-        shared = self._shared
-        cmd = base_cmd % locals()
-        proc = _runproc(cmd)
+    def _run_ssl(self, text, extra_args=None):
+        if not extra_args:
+            extra_args = ''
+        cmd = 'enc -aes-128-cbc -A -a -pass pass:%s -nosalt %s' % (
+                self._shared, extra_args)
+        proc = _runproc('openssl %s' % cmd)
         proc.stdin.write(text)
         proc.stdin.close()
         proc.wait()
@@ -1195,7 +1315,7 @@ class SimpleDH(object):
         return proc.stdout.read()
 
     def encrypt(self, text):
-        return self._run_ssl(text, 'enc')
+        return self._run_ssl(text).strip('\n')
 
     def decrypt(self, text):
-        return self._run_ssl(text, 'dec')
+        return self._run_ssl(text, '-d')

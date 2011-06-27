@@ -51,13 +51,13 @@ A fake XenAPI SDK.
 """
 
 
-import datetime
 import uuid
 
 from pprint import pformat
 
 from nova import exception
 from nova import log as logging
+from nova import utils
 
 
 _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',
@@ -146,6 +146,7 @@ def create_vdi(name_label, read_only, sr_ref, sharable):
 def create_vbd(vm_ref, vdi_ref):
     vbd_rec = {'VM': vm_ref,
                'VDI': vdi_ref,
+               'userdevice': '0',
                'currently_attached': False}
     vbd_ref = _create_object('VBD', vbd_rec)
     after_VBD_create(vbd_ref, vbd_rec)
@@ -159,7 +160,10 @@ def after_VBD_create(vbd_ref, vbd_rec):
     vbd_rec['device'] = ''
     vm_ref = vbd_rec['VM']
     vm_rec = _db_content['VM'][vm_ref]
-    vm_rec['VBDs'] = [vbd_ref]
+    if vm_rec.get('VBDs', None):
+        vm_rec['VBDs'].append(vbd_ref)
+    else:
+        vm_rec['VBDs'] = [vbd_ref]
 
     vm_name_label = _db_content['VM'][vm_ref]['name_label']
     vbd_rec['vm_name_label'] = vm_name_label
@@ -337,10 +341,6 @@ class SessionBase(object):
             return
         db_ref['xenstore_data'][key] = None
 
-    def network_get_all_records_where(self, _1, _2):
-        # TODO (salvatore-orlando): filter table on _2
-        return _db_content['network']
-
     def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
         db_ref = _db_content['VM'][vm_ref]
         if not 'xenstore_data' in db_ref:
@@ -351,7 +351,7 @@ class SessionBase(object):
         #Always return 12GB available
         return 12 * 1024 * 1024 * 1024
 
-    def host_call_plugin(*args):
+    def host_call_plugin(self, *args):
         return 'herp'
 
     def network_get_all_records_where(self, _1, filter):
@@ -537,7 +537,7 @@ class SessionBase(object):
         except Failure, exc:
             task['error_info'] = exc.details
             task['status'] = 'failed'
-        task['finished'] = datetime.datetime.now()
+        task['finished'] = utils.utcnow()
         return task_ref
 
     def _check_session(self, params):

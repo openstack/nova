@@ -67,11 +67,13 @@
             <target dev='${disk_prefix}b' bus='${disk_bus}'/>
         </disk>
     #else
+        #if not ($getVar('ebs_root', False))
         <disk type='file'>
             <driver type='${driver_type}'/>
             <source file='${basepath}/disk'/>
             <target dev='${disk_prefix}a' bus='${disk_bus}'/>
         </disk>
+        #end if
         #if $getVar('local', False)
             <disk type='file'>
                 <driver type='${driver_type}'/>
@@ -79,6 +81,13 @@
                 <target dev='${disk_prefix}b' bus='${disk_bus}'/>
             </disk>
         #end if
+        #for $vol in $volumes
+            <disk type='block'>
+                <driver type='raw'/>
+                <source dev='${vol.device_path}'/>
+                <target dev='${vol.mount_device}' bus='${disk_bus}'/>
+            </disk>
+        #end for
     #end if
 #end if
 
@@ -116,7 +125,7 @@
         </serial>
 
 #if $getVar('vncserver_host', False)
-        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='${vncserver_host}'/>
+        <graphics type='vnc' port='-1' autoport='yes' keymap='${vnc_keymap}' listen='${vncserver_host}'/>
 #end if
     </devices>
 </domain>

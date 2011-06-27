@@ -26,7 +26,7 @@ import webob.exc
 
 from nova import flags
 from nova import log as logging
-from nova import wsgi
+from nova import wsgi as base_wsgi
 from nova.api.openstack import accounts
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
@@ -40,6 +40,7 @@ from nova.api.openstack import servers
 from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
+from nova.api.openstack import wsgi
 from nova.api.openstack import zones
 
 
@@ -50,7 +51,7 @@ flags.DEFINE_bool('allow_admin_api',
     'When True, this API service will accept admin operations.')
 
 
-class FaultWrapper(wsgi.Middleware):
+class FaultWrapper(base_wsgi.Middleware):
     """Calls down the middleware stack, making exceptions into faults."""
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
@@ -63,7 +64,7 @@ class FaultWrapper(wsgi.Middleware):
             return faults.Fault(exc)
 
 
-class APIRouter(wsgi.Router):
+class APIRouter(base_wsgi.Router):
     """
     Routes requests on the OpenStack API to the appropriate controller
     and method.
@@ -80,7 +81,9 @@ class APIRouter(wsgi.Router):
         self._setup_routes(mapper)
         super(APIRouter, self).__init__(mapper)
 
-    def _setup_routes(self, mapper):
+    def _setup_routes(self, mapper, version):
+        """Routes common to all versions."""
+
         server_members = self.server_members
         server_members['action'] = 'POST'
         if FLAGS.allow_admin_api:
@@ -97,21 +100,41 @@ class APIRouter(wsgi.Router):
             server_members['reset_network'] = 'POST'
             server_members['inject_network_info'] = 'POST'
 
-            mapper.resource("zone", "zones", controller=zones.Controller(),
-                        collection={'detail': 'GET', 'info': 'GET',
-                                    'select': 'GET'})
-
-            mapper.resource("user", "users", controller=users.Controller(),
+            mapper.resource("user", "users",
+                        controller=users.create_resource(),
                         collection={'detail': 'GET'})
 
             mapper.resource("account", "accounts",
-                            controller=accounts.Controller(),
+                            controller=accounts.create_resource(),
                             collection={'detail': 'GET'})
 
+            mapper.resource("zone", "zones",
+                        controller=zones.create_resource(version),
+                        collection={'detail': 'GET',
+                                    'info': 'GET',
+                                    'select': 'POST',
+                                    'boot': 'POST'})
+
         mapper.resource("console", "consoles",
-                        controller=consoles.Controller(),
-                        parent_resource=dict(member_name='server',
-                        collection_name='servers'))
+                    controller=consoles.create_resource(),
+                    parent_resource=dict(member_name='server',
+                    collection_name='servers'))
+
+        mapper.resource("server", "servers",
+                        controller=servers.create_resource(version),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
+
+        mapper.resource("image", "images",
+                        controller=images.create_resource(version),
+                        collection={'detail': 'GET'})
+
+        mapper.resource("limit", "limits",
+                        controller=limits.create_resource(version))
+
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.create_resource(version),
+                        collection={'detail': 'GET'})
 
         super(APIRouter, self).__init__(mapper)
 
@@ -120,33 +143,21 @@ class APIRouterV10(APIRouter):
     """Define routes specific to OpenStack API V1.0."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV10, self)._setup_routes(mapper)
-        mapper.resource("server", "servers",
-                        controller=servers.ControllerV10(),
-                        collection={'detail': 'GET'},
-                        member=self.server_members)
-
+        super(APIRouterV10, self)._setup_routes(mapper, '1.0')
         mapper.resource("image", "images",
-                        controller=images.ControllerV10(),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("flavor", "flavors",
-                        controller=flavors.ControllerV10(),
+                        controller=images.create_resource('1.0'),
                         collection={'detail': 'GET'})
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
-                        controller=shared_ip_groups.Controller())
+                        controller=shared_ip_groups.create_resource())
 
         mapper.resource("backup_schedule", "backup_schedule",
-                        controller=backup_schedules.Controller(),
+                        controller=backup_schedules.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("limit", "limits",
-                        controller=limits.LimitsControllerV10())
-
-        mapper.resource("ip", "ips", controller=ips.Controller(),
+        mapper.resource("ip", "ips", controller=ips.create_resource(),
                         collection=dict(public='GET', private='GET'),
                         parent_resource=dict(member_name='server',
                                              collection_name='servers'))
@@ -156,29 +167,13 @@ class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV11, self)._setup_routes(mapper)
-        mapper.resource("server", "servers",
-                        controller=servers.ControllerV11(),
-                        collection={'detail': 'GET'},
-                        member=self.server_members)
-
-        mapper.resource("image", "images",
-                        controller=images.ControllerV11(),
-                        collection={'detail': 'GET'})
-
+        super(APIRouterV11, self)._setup_routes(mapper, '1.1')
         mapper.resource("image_meta", "meta",
-                        controller=image_metadata.Controller(),
+                        controller=image_metadata.create_resource(),
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
 
         mapper.resource("server_meta", "meta",
-                        controller=server_metadata.Controller(),
+                        controller=server_metadata.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
-
-        mapper.resource("flavor", "flavors",
-                        controller=flavors.ControllerV11(),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("limit", "limits",
-                        controller=limits.LimitsControllerV11())

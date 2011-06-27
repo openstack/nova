@@ -17,11 +17,11 @@
 Zones
 =====
 
-A Nova deployment is called a Zone. At the very least a Zone requires an API node, a Scheduler node, a database and RabbitMQ. Pushed further a Zone may contain many API nodes, many Scheduler, Volume, Network and Compute nodes as well as a cluster of databases and RabbitMQ servers. A Zone allows you to partition your deployments into logical groups for load balancing and instance distribution.
+A Nova deployment is called a Zone. A Zone allows you to partition your deployments into logical groups for load balancing and instance distribution. At the very least a Zone requires an API node, a Scheduler node, a database and RabbitMQ. Pushed further a Zone may contain many API nodes, many Scheduler, Volume, Network and Compute nodes as well as a cluster of databases and RabbitMQ servers. 
 
 The idea behind Zones is, if a particular deployment is not capable of servicing a particular request, the request may be forwarded to (child) Zones for possible processing. Zones may be nested in a tree fashion. 
 
-Zones only know about their immediate children, they do not know about their parent Zones and may in fact have more than one parent. Likewise, a Zone's children may themselves have child Zones. 
+Zones only know about their immediate children, they do not know about their parent Zones and may in fact have more than one parent. Likewise, a Zone's children may themselves have child Zones and, in those cases, the grandchild's internal structure would not be known to the grand-parent. 
 
 Zones share nothing. They communicate via the public OpenStack API only. No database, queue, user or project definition is shared between Zones. 
 
@@ -34,7 +34,7 @@ Routing between Zones is based on the Capabilities of that Zone. Capabilities ar
 
   key=value;value;value, key=value;value;value
 
-Zones have Capabilities which are general to the Zone and are set via `--zone-capabilities` flag. Zones also have dynamic per-service Capabilities. Services derived from `nova.manager.SchedulerDependentManager` (such as Compute, Volume and Network) can set these capabilities by calling the `update_service_capabilities()` method on their `Manager` base class. These capabilities will be periodically sent to the Scheduler service automatically. The rate at which these updates are sent is controlled by the `--periodic_interval` flag.
+Zones have Capabilities which are general to the Zone and are set via `--zone_capabilities` flag. Zones also have dynamic per-service Capabilities. Services derived from `nova.manager.SchedulerDependentManager` (such as Compute, Volume and Network) can set these capabilities by calling the `update_service_capabilities()` method on their `Manager` base class. These capabilities will be periodically sent to the Scheduler service automatically. The rate at which these updates are sent is controlled by the `--periodic_interval` flag.
 
 Flow within a Zone
 ------------------
@@ -47,7 +47,7 @@ Inter-service communication within a Zone is done with RabbitMQ. Each class of S
 
 These capability messages are received by the Scheduler services and stored in the `ZoneManager` object. The SchedulerManager object has a reference to the `ZoneManager` it can use for load balancing.
 
-The `ZoneManager` also polls the child Zones periodically to gather their capabilities to aid in decision making. This is done via the OpenStack API `/v1.0/zones/info` REST call. This also captures the name of each child Zone. The Zone name is set via the `--zone-name` flag (and defaults to "nova"). 
+The `ZoneManager` also polls the child Zones periodically to gather their capabilities to aid in decision making. This is done via the OpenStack API `/v1.0/zones/info` REST call. This also captures the name of each child Zone. The Zone name is set via the `--zone_name` flag (and defaults to "nova"). 
 
 Zone administrative functions
 -----------------------------
@@ -99,7 +99,7 @@ You can get the `child zone api url`, `nova api key` and `username` from the `no
   export NOVA_URL="http://192.168.2.120:8774/v1.0/"
 
 
-This equates to a POST operation to `.../zones/` to add a new zone. No connection attempt to the child zone is done when this command. It only puts an entry in the db at this point. After about 30 seconds the `ZoneManager` in the Scheduler services will attempt to talk to the child zone and get its information. 
+This equates to a POST operation to `.../zones/` to add a new zone. No connection attempt to the child zone is done with this command. It only puts an entry in the db at this point. After about 30 seconds the `ZoneManager` in the Scheduler services will attempt to talk to the child zone and get its information. 
 
 Getting a list of child Zones
 -----------------------------
