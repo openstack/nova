@@ -47,11 +47,10 @@ topologies.  All of the network commands are issued to a subclass of
 
 import datetime
 import math
+import netaddr
 import socket
 import pickle
 from eventlet import greenpool
-
-import IPy
 
 from nova import context
 from nova import db
@@ -550,8 +549,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, **kwargs):
         """Create networks based on parameters."""
-        fixed_net = IPy.IP(cidr)
-        fixed_net_v6 = IPy.IP(cidr_v6)
+        fixed_net = netaddr.IPNetwork(cidr)
+        fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
         significant_bits_v6 = 64
         network_size_v6 = 1 << 64
         for index in range(num_networks):
@@ -559,16 +558,16 @@ class NetworkManager(manager.SchedulerDependentManager):
             start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = '%s/%s' % (fixed_net[start], significant_bits)
-            project_net = IPy.IP(cidr)
+            project_net = netaddr.IPNetwork(cidr)
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
             net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
-            net['netmask'] = str(project_net.netmask())
-            net['gateway'] = str(project_net[1])
-            net['broadcast'] = str(project_net.broadcast())
-            net['dhcp_start'] = str(project_net[2])
+            net['netmask'] = str(project_net.netmask)
+            net['gateway'] = str(list(project_net)[1])
+            net['broadcast'] = str(project_net.broadcast)
+            net['dhcp_start'] = str(list(project_net)[2])
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, index)
             else:
@@ -578,15 +577,16 @@ class NetworkManager(manager.SchedulerDependentManager):
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
-                project_net_v6 = IPy.IP(cidr_v6)
+
+                project_net_v6 = netaddr.IPNetwork(cidr_v6)
 
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
-                    net['gateway_v6'] = str(gateway_v6)
+                    net['gateway_v6'] = str(list(gateway_v6)[1])
                 else:
-                    net['gateway_v6'] = str(project_net_v6[1])
+                    net['gateway_v6'] = str(list(project_net_v6)[1])
 
-                net['netmask_v6'] = str(project_net_v6.prefixlen())
+                net['netmask_v6'] = str(project_net_v6._prefixlen)
 
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
@@ -627,7 +627,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         #             to properties of the manager class?
         bottom_reserved = self._bottom_reserved_ips
         top_reserved = self._top_reserved_ips
-        project_net = IPy.IP(network['cidr'])
+        project_net = netaddr.IPNetwork(network['cidr'])
         num_ips = len(project_net)
         for index in range(num_ips):
             address = str(project_net[index])
@@ -845,8 +845,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                ' than 4094'))
 
         # check that num networks and network size fits in fixed_net
-        fixed_net = IPy.IP(kwargs['cidr'])
-        if fixed_net.len() < kwargs['num_networks'] * kwargs['network_size']:
+        fixed_net = netaddr.IPNetwork(kwargs['cidr'])
+        if len(fixed_net) < kwargs['num_networks'] * kwargs['network_size']:
             raise ValueError(_('The network range is not big enough to fit '
                   '%(num_networks)s. Network size is %(network_size)s') %
                   kwargs)

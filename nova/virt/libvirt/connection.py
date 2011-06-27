@@ -38,6 +38,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 import hashlib
 import multiprocessing
+import netaddr
 import os
 import random
 import re
@@ -52,8 +53,6 @@ from xml.etree import ElementTree
 
 from eventlet import greenthread
 from eventlet import tpool
-
-import IPy
 
 from nova import context
 from nova import db

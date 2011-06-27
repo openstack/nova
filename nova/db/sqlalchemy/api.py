@@ -2421,11 +2421,32 @@ def provider_fw_rule_create(context, rule):
     return fw_rule_ref
 
 
+@require_admin_context
 def provider_fw_rule_get_all(context):
     session = get_session()
     return session.query(models.ProviderFirewallRule).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
+
+
+@require_admin_context
+def provider_fw_rule_get_all_by_cidr(context, cidr):
+    session = get_session()
+    return session.query(models.ProviderFirewallRule).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(cidr=cidr).\
+                   all()
+
+
+@require_admin_context
+def provider_fw_rule_destroy(context, rule_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.ProviderFirewallRule).\
+                filter_by(id=rule_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 ###################

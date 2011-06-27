@@ -1094,6 +1094,16 @@ def provider_fw_rule_get_all(context):
     return IMPL.provider_fw_rule_get_all(context)
 
 
+def provider_fw_rule_get_all_by_cidr(context, cidr):
+    """Get all provider-level firewall rules."""
+    return IMPL.provider_fw_rule_get_all_by_cidr(context, cidr)
+
+
+def provider_fw_rule_destroy(context, rule_id):
+    """Delete a provider firewall rule from the database."""
+    return IMPL.provider_fw_rule_destroy(context, rule_id)
+
+
 ###################
 
 
