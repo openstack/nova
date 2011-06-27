@@ -271,7 +271,7 @@ class ImageMetadataXMLSerializationTest(test.TestCase):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
         fixture = {
             'metadata': {
-                'three': u'asdf',
+                u'three': u'asdf',
             },
         }
         output = serializer.serialize(fixture, 'index')
