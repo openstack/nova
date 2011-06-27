@@ -448,7 +448,7 @@ def floating_ip_get(context, ip_id):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.FloatingIpNotFound()
+        raise exception.FloatingIpNotFoundForFixedAddress()
 
     return result
 
@@ -605,7 +605,7 @@ def floating_ip_get_by_address(context, address, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.FloatingIpNotFound(fixed_ip=address)
+        raise exception.FloatingIpNotFoundForFixedAddress(fixed_ip=address)
 
     return result
 
@@ -621,7 +621,7 @@ def floating_ip_get_by_ip(context, ip, session=None):
                 first()
 
     if not result:
-        raise exception.FloatingIpNotDefined(floating_ip=ip)
+        raise exception.FloatingIpNotFound(floating_ip=ip)
 
     return result
 
@@ -761,7 +761,7 @@ def fixed_ip_get_by_address(context, address, session=None):
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.FloatingIpNotFound(fixed_ip=address)
+        raise exception.FloatingIpNotFoundForFixedAddress(fixed_ip=address)
 
     if is_user_context(context):
         authorize_project_context(context, result.instance.project_id)

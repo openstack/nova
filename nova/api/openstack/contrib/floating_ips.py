@@ -65,7 +65,7 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
 
         try:
-            floating_ip = self.network_api.get(context, id)
+            floating_ip = self.network_api.get_floating_ip(context, id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -74,7 +74,7 @@ class FloatingIPController(object):
     def index(self, req):
         context = req.environ['nova.context']
 
-        floating_ips = self.network_api.list(context)
+        floating_ips = self.network_api.list_floating_ips(context)
 
         return _translate_floating_ips_view(floating_ips)
 
@@ -97,7 +97,7 @@ class FloatingIPController(object):
     def delete(self, req, id):
         context = req.environ['nova.context']
 
-        ip = self.network_api.get(context, id)
+        ip = self.network_api.get_floating_ip(context, id)
         self.network_api.release_floating_ip(context, address=ip)
 
         return {'released': {
@@ -126,7 +126,7 @@ class FloatingIPController(object):
     def disassociate(self, req, id, body):
         """ POST /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
-        floating_ip = self.network_api.get(context, id)
+        floating_ip = self.network_api.get_floating_ip(context, id)
         address = floating_ip['address']
         fixed_ip = floating_ip['fixed_ip']['address']
 
@@ -140,7 +140,7 @@ class FloatingIPController(object):
 
     def _get_ip_by_id(self, context, value):
         """Checks that value is id and then returns its address."""
-        return self.network_api.get(context, value)['address']
+        return self.network_api.get_floating_ip(context, value)['address']
 
 
 class Floating_ips(extensions.ExtensionDescriptor):
@@ -148,7 +148,7 @@ class Floating_ips(extensions.ExtensionDescriptor):
         return "Floating_ips"
 
     def get_alias(self):
-        return "FLOATING_IPS"
+        return "os-floating-ips"
 
     def get_description(self):
         return "Floating IPs support"
@@ -163,10 +163,10 @@ class Floating_ips(extensions.ExtensionDescriptor):
         resources = []
 
         res = extensions.ResourceExtension('floating_ips',
-                                        FloatingIPController(),
-                                        member_actions={
-                                            'associate': 'POST',
-                                            'disassociate': 'POST'})
+                         FloatingIPController(),
+                         member_actions={
+                            'associate': 'POST',
+                            'disassociate': 'POST'})
         resources.append(res)
 
         return resources

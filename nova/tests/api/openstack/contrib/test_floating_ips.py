@@ -28,12 +28,12 @@ from nova.api.openstack.contrib.floating_ips import FloatingIPController
 from nova.api.openstack.contrib.floating_ips import _translate_floating_ip_view
 
 
-def network_api_get(self, context, id):
+def network_api_get_floating_ip(self, context, id):
     return {'id': 1, 'address': '10.10.10.10',
             'fixed_ip': {'address': '11.0.0.1'}}
 
 
-def network_api_list(self, context):
+def network_api_list_floating_ips(self, context):
     return [{'id': 1,
              'address': '10.10.10.10',
              'instance': {'id': 11},
@@ -80,10 +80,10 @@ class FloatingIpTest(test.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
-        self.stubs.Set(network.api.API, "get",
-                       network_api_get)
-        self.stubs.Set(network.api.API, "list",
-                       network_api_list)
+        self.stubs.Set(network.api.API, "get_floating_ip",
+                       network_api_get_floating_ip)
+        self.stubs.Set(network.api.API, "list_floating_ips",
+                       network_api_list_floating_ips)
         self.stubs.Set(network.api.API, "allocate_floating_ip",
                        network_api_allocate)
         self.stubs.Set(network.api.API, "release_floating_ip",

@@ -360,11 +360,11 @@ class NoFixedIpsFoundForInstance(NotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
 
 
-class FloatingIpNotDefined(NotFound):
+class FloatingIpNotFound(NotFound):
     message = _("Floating ip %(floating_ip)s not found")
 
 
-class FloatingIpNotFound(NotFound):
+class FloatingIpNotFoundForFixedAddress(NotFound):
     message = _("Floating ip not found for fixed address %(fixed_ip)s.")
 
 

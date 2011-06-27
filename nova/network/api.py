@@ -34,7 +34,7 @@ LOG = logging.getLogger('nova.network')
 class API(base.Base):
     """API for interacting with the network manager."""
 
-    def get(self, context, id):
+    def get_floating_ip(self, context, id):
         rv = self.db.floating_ip_get(context, id)
         return dict(rv.iteritems())
 
@@ -42,7 +42,7 @@ class API(base.Base):
         res = self.db.floating_ip_get_by_ip(context, address)
         return dict(res.iteritems())
 
-    def list(self, context):
+    def list_floating_ips(self, context):
         ips = self.db.floating_ip_get_all_by_project(context,
                                                      context.project_id)
         return ips
