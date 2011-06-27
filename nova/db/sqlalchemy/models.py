@@ -495,6 +495,17 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     group_id = Column(Integer, ForeignKey('security_groups.id'))
 
 
+class ProviderFirewallRule(BASE, NovaBase):
+    """Represents a rule in a security group."""
+    __tablename__ = 'provider_fw_rules'
+    id = Column(Integer, primary_key=True)
+
+    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(String(255))
+
+
 class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh."""
     __tablename__ = 'key_pairs'

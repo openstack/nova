@@ -23,7 +23,7 @@ datastore.
 """
 
 import base64
-import IPy
+import netaddr
 import os
 import urllib
 import tempfile
@@ -541,7 +541,7 @@ class CloudController(object):
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
             cidr_ip = urllib.unquote(cidr_ip).decode()
-            IPy.IP(cidr_ip)
+            netaddr.IPNetwork(cidr_ip)
             values['cidr'] = cidr_ip
         else:
             values['cidr'] = '0.0.0.0/0'

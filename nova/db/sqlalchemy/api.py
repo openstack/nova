@@ -2197,6 +2197,46 @@ def security_group_rule_destroy(context, security_group_rule_id):
 
 ###################
 
+
+@require_admin_context
+def provider_fw_rule_create(context, rule):
+    fw_rule_ref = models.ProviderFirewallRule()
+    fw_rule_ref.update(rule)
+    fw_rule_ref.save()
+    return fw_rule_ref
+
+
+@require_admin_context
+def provider_fw_rule_get_all(context):
+    session = get_session()
+    return session.query(models.ProviderFirewallRule).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_admin_context
+def provider_fw_rule_get_all_by_cidr(context, cidr):
+    session = get_session()
+    return session.query(models.ProviderFirewallRule).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(cidr=cidr).\
+                   all()
+
+
+@require_admin_context
+def provider_fw_rule_destroy(context, rule_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.ProviderFirewallRule).\
+                filter_by(id=rule_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+###################
+
+
 @require_admin_context
 def user_get(context, id, session=None):
     if not session:
