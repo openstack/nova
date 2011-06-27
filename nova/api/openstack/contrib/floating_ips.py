@@ -162,7 +162,7 @@ class Floating_ips(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        res = extensions.ResourceExtension('floating_ips',
+        res = extensions.ResourceExtension('os-floating-ips',
                          FloatingIPController(),
                          member_actions={
                             'associate': 'POST',
