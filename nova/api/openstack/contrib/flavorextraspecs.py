@@ -103,7 +103,7 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
         return "FlavorExtraSpecs"
 
     def get_alias(self):
-        return "flavor-extra-specs"
+        return "os-flavor-extra-specs"
 
     def get_description(self):
         return "Instance type (flavor) extra specs"
@@ -118,7 +118,7 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
         res = extensions.ResourceExtension(
-                'extra_specs',
+                'os-extra_specs',
                 FlavorExtraSpecsController(),
                 parent=dict(member_name='flavor', collection_name='flavors'))
 

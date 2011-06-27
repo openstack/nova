@@ -1,5 +1,5 @@
 SQLAlchemy==0.6.3
-pep8
+pep8==0.6.1
 pylint==0.19
 Cheetah==2.4.4
 M2Crypto==0.20.2
