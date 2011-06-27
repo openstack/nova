@@ -162,32 +162,53 @@ def child_zone_helper(zone_list, func):
                     _wrap_method(_process, func), zone_list)]
 
 
-def _issue_novaclient_command(nova, zone, collection, method_name, item_id):
+def _issue_novaclient_command(nova, zone, collection,
+        method_name, *args, **kwargs):
     """Use novaclient to issue command to a single child zone.
-       One of these will be run in parallel for each child zone."""
+       One of these will be run in parallel for each child zone.
+    """
     manager = getattr(nova, collection)
-    result = None
-    try:
+
+    # NOTE(comstud): This is not ideal, but we have to do this based on
+    # how novaclient is implemented right now.
+    # 'find' is special cased as novaclient requires kwargs for it to
+    # filter on a 'get_all'.
+    # Every other method first needs to do a 'get' on the first argument
+    # passed, which should be a UUID.  If it's 'get' itself that we want,
+    # we just return the result.  Otherwise, we next call the real method
+    # that's wanted... passing other arguments that may or may not exist.
+    if method_name in ['find', 'findall']:
         try:
-            result = manager.get(item_id)
-        except ValueError, e:
-            result = manager.find(name=item_id)
+            return getattr(manager, method_name)(**kwargs)
+        except novaclient.NotFound:
+            url = zone.api_url
+            LOG.debug(_("%(collection)s.%(method_name)s didn't find "
+                    "anything matching '%(kwargs)s' on '%(url)s'" %
+                    locals()))
+            return None
+
+    args = list(args)
+    # pop off the UUID to look up
+    item = args.pop(0)
+    try:
+        result = manager.get(item)
     except novaclient.NotFound:
         url = zone.api_url
-        LOG.debug(_("%(collection)s '%(item_id)s' not found on '%(url)s'" %
+        LOG.debug(_("%(collection)s '%(item)s' not found on '%(url)s'" %
                                                 locals()))
         return None
 
-    if method_name.lower() not in ['get', 'find']:
-        result = getattr(result, method_name)()
+    if method_name.lower() != 'get':
+        # if we're doing something other than 'get', call it passing args.
+        result = getattr(result, method_name)(*args, **kwargs)
     return result
 
 
-def wrap_novaclient_function(f, collection, method_name, item_id):
-    """Appends collection, method_name and item_id to the incoming
+def wrap_novaclient_function(f, collection, method_name, *args, **kwargs):
+    """Appends collection, method_name and arguments to the incoming
     (nova, zone) call from child_zone_helper."""
     def inner(nova, zone):
-        return f(nova, zone, collection, method_name, item_id)
+        return f(nova, zone, collection, method_name, *args, **kwargs)
 
     return inner
 
@@ -220,7 +241,7 @@ class reroute_compute(object):
            the wrapped method. (This ensures that zone-local code can
            continue to use integer IDs).
 
-        4. If the item was not found, we delgate the call to a child zone
+        4. If the item was not found, we delegate the call to a child zone
            using the UUID.
     """
     def __init__(self, method_name):

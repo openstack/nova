@@ -180,7 +180,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                                     request_spec, kwargs)
             return None
 
-        num_instances = request_spec['num_instances']
+        num_instances = request_spec.get('num_instances', 1)
         LOG.debug(_("Attemping to build %d instance%s") %
             (num_instances, "" if num_instances == 1 else "s"))
 
@@ -227,7 +227,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             raise NotImplemented(_("Zone Aware Scheduler only understands "
                                    "Compute nodes (for now)"))
 
-        num_instances = request_spec['num_instances']
+        num_instances = request_spec.get('num_instances', 1)
         instance_type = request_spec['instance_type']
 
         weighted = []
