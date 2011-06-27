@@ -21,7 +21,7 @@
 """Network-releated utilities for supporting libvirt connection code."""
 
 
-import IPy
+import netaddr
 
 from nova import context
 from nova import db
@@ -34,18 +34,18 @@ FLAGS = flags.FLAGS
 
 
 def get_net_and_mask(cidr):
-    net = IPy.IP(cidr)
-    return str(net.net()), str(net.netmask())
+    net = netaddr.IPNetwork(cidr)
+    return str(net.ip), str(net.netmask)
 
 
 def get_net_and_prefixlen(cidr):
-    net = IPy.IP(cidr)
-    return str(net.net()), str(net.prefixlen())
+    net = netaddr.IPNetwork(cidr)
+    return str(net.ip), str(net._prefixlen)
 
 
 def get_ip_version(cidr):
-    net = IPy.IP(cidr)
-    return int(net.version())
+    net = netaddr.IPNetwork(cidr)
+    return int(net.version)
 
 
 def get_network_info(instance):

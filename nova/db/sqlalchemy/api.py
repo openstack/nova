@@ -2180,6 +2180,46 @@ def security_group_rule_destroy(context, security_group_rule_id):
 
 ###################
 
+
+@require_admin_context
+def provider_fw_rule_create(context, rule):
+    fw_rule_ref = models.ProviderFirewallRule()
+    fw_rule_ref.update(rule)
+    fw_rule_ref.save()
+    return fw_rule_ref
+
+
+@require_admin_context
+def provider_fw_rule_get_all(context):
+    session = get_session()
+    return session.query(models.ProviderFirewallRule).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_admin_context
+def provider_fw_rule_get_all_by_cidr(context, cidr):
+    session = get_session()
+    return session.query(models.ProviderFirewallRule).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(cidr=cidr).\
+                   all()
+
+
+@require_admin_context
+def provider_fw_rule_destroy(context, rule_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.ProviderFirewallRule).\
+                filter_by(id=rule_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+###################
+
+
 @require_admin_context
 def user_get(context, id, session=None):
     if not session:
@@ -2792,3 +2832,54 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
         meta_ref.save(session=session)
 
     return metadata
+
+
+@require_admin_context
+def agent_build_create(context, values):
+    agent_build_ref = models.AgentBuild()
+    agent_build_ref.update(values)
+    agent_build_ref.save()
+    return agent_build_ref
+
+
+@require_admin_context
+def agent_build_get_by_triple(context, hypervisor, os, architecture,
+                              session=None):
+    if not session:
+        session = get_session()
+    return session.query(models.AgentBuild).\
+                   filter_by(hypervisor=hypervisor).\
+                   filter_by(os=os).\
+                   filter_by(architecture=architecture).\
+                   filter_by(deleted=False).\
+                   first()
+
+
+@require_admin_context
+def agent_build_get_all(context):
+    session = get_session()
+    return session.query(models.AgentBuild).\
+                   filter_by(deleted=False).\
+                   all()
+
+
+@require_admin_context
+def agent_build_destroy(context, agent_build_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.AgentBuild).\
+                filter_by(id=agent_build_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_admin_context
+def agent_build_update(context, agent_build_id, values):
+    session = get_session()
+    with session.begin():
+        agent_build_ref = session.query(models.AgentBuild).\
+                   filter_by(id=agent_build_id). \
+                   first()
+        agent_build_ref.update(values)
+        agent_build_ref.save(session=session)

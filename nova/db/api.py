@@ -1034,6 +1034,29 @@ def security_group_rule_destroy(context, security_group_rule_id):
 ###################
 
 
+def provider_fw_rule_create(context, rule):
+    """Add a firewall rule at the provider level (all hosts & instances)."""
+    return IMPL.provider_fw_rule_create(context, rule)
+
+
+def provider_fw_rule_get_all(context):
+    """Get all provider-level firewall rules."""
+    return IMPL.provider_fw_rule_get_all(context)
+
+
+def provider_fw_rule_get_all_by_cidr(context, cidr):
+    """Get all provider-level firewall rules."""
+    return IMPL.provider_fw_rule_get_all_by_cidr(context, cidr)
+
+
+def provider_fw_rule_destroy(context, rule_id):
+    """Delete a provider firewall rule from the database."""
+    return IMPL.provider_fw_rule_destroy(context, rule_id)
+
+
+###################
+
+
 def user_get(context, id):
     """Get user by id."""
     return IMPL.user_get(context, id)
@@ -1287,3 +1310,32 @@ def instance_metadata_delete(context, instance_id, key):
 def instance_metadata_update_or_create(context, instance_id, metadata):
     """Create or update instance metadata."""
     IMPL.instance_metadata_update_or_create(context, instance_id, metadata)
+
+
+####################
+
+
+def agent_build_create(context, values):
+    """Create a new agent build entry."""
+    return IMPL.agent_build_create(context, values)
+
+
+def agent_build_get_by_triple(context, hypervisor, os, architecture):
+    """Get agent build by hypervisor/OS/architecture triple."""
+    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
+            architecture)
+
+
+def agent_build_get_all(context):
+    """Get all agent builds."""
+    return IMPL.agent_build_get_all(context)
+
+
+def agent_build_destroy(context, agent_update_id):
+    """Destroy agent build entry."""
+    IMPL.agent_build_destroy(context, agent_update_id)
+
+
+def agent_build_update(context, agent_build_id, values):
+    """Update agent build entry."""
+    IMPL.agent_build_update(context, agent_build_id, values)

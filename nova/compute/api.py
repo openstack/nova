@@ -178,6 +178,9 @@ class API(base.Base):
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
             os_type = image['properties']['os_type']
+        architecture = None
+        if 'properties' in image and 'arch' in image['properties']:
+            architecture = image['properties']['arch']
         vm_mode = None
         if 'properties' in image and 'vm_mode' in image['properties']:
             vm_mode = image['properties']['vm_mode']
@@ -243,6 +246,7 @@ class API(base.Base):
             'metadata': metadata,
             'availability_zone': availability_zone,
             'os_type': os_type,
+            'architecture': architecture,
             'vm_mode': vm_mode}
 
         return (num_instances, base_options, security_groups)
@@ -492,6 +496,16 @@ class API(base.Base):
                      {"method": "refresh_security_group_members",
                       "args": {"security_group_id": group_id}})
 
+    def trigger_provider_fw_rules_refresh(self, context):
+        """Called when a rule is added to or removed from a security_group"""
+
+        hosts = [x['host'] for (x, idx)
+                           in db.service_get_all_compute_sorted(context)]
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {'method': 'refresh_provider_fw_rules', 'args': {}})
+
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
@@ -697,7 +711,7 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-    def snapshot(self, context, instance_id, name):
+    def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
 
         :returns: A dict containing image metadata
@@ -705,6 +719,7 @@ class API(base.Base):
         properties = {'instance_id': str(instance_id),
                       'user_id': str(context.user_id),
                       'image_state': 'creating'}
+        properties.update(extra_properties or {})
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)

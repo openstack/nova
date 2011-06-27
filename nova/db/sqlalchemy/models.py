@@ -232,6 +232,7 @@ class Instance(BASE, NovaBase):
     locked = Column(Boolean)
 
     os_type = Column(String(255))
+    architecture = Column(String(255))
     vm_mode = Column(String(255))
     uuid = Column(String(36))
 
@@ -492,6 +493,17 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     group_id = Column(Integer, ForeignKey('security_groups.id'))
 
 
+class ProviderFirewallRule(BASE, NovaBase):
+    """Represents a rule in a security group."""
+    __tablename__ = 'provider_fw_rules'
+    id = Column(Integer, primary_key=True)
+
+    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(String(255))
+
+
 class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh."""
     __tablename__ = 'key_pairs'
@@ -713,6 +725,18 @@ class Zone(BASE, NovaBase):
     password = Column(String(255))
 
 
+class AgentBuild(BASE, NovaBase):
+    """Represents an agent build."""
+    __tablename__ = 'agent_builds'
+    id = Column(Integer, primary_key=True)
+    hypervisor = Column(String(255))
+    os = Column(String(255))
+    architecture = Column(String(255))
+    version = Column(String(255))
+    url = Column(String(255))
+    md5hash = Column(String(255))
+
+
 def register_models():
     """Register Models and create metadata.
 
@@ -726,7 +750,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata, Migration)
+              AgentBuild, InstanceMetadata, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
