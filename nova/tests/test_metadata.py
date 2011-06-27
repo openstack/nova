@@ -31,6 +31,7 @@ from nova.db.sqlalchemy import api
 
 class MetadataTestCase(test.TestCase):
     """Test that metadata is returning proper values."""
+
     def setUp(self):
         super(MetadataTestCase, self).setUp()
         self.instance = ({'id': 1,
