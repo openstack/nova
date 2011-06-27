@@ -48,7 +48,8 @@ LOG = logging.getLogger("nova.virt.xenapi.vmops")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('windows_version_timeout', 300,
-                     'time to wait for windows agent to be fully operational')
+                     'number of seconds to wait for windows agent to be '
+                     'fully operational')
 
 
 def cmp_version(a, b):
