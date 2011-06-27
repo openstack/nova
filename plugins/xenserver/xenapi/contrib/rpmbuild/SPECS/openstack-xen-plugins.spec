@@ -2,7 +2,7 @@ Name:           openstack-xen-plugins
 Version:        2011.3
 Release:        1
 Summary:        Files for XenAPI support.
-License:        Apache
+License:        ASL 2.0
 Group:          Applications/Utilities
 Source0:        openstack-xen-plugins.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
