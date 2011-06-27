@@ -46,6 +46,7 @@ from eventlet.green import subprocess
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import version
 
 
 LOG = logging.getLogger("nova.utils")
