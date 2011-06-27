@@ -21,6 +21,8 @@
 import base64
 import httplib
 
+import webob
+
 from nova import test
 from nova import wsgi
 from nova.api.ec2 import metadatarequesthandler
@@ -48,23 +50,15 @@ class MetadataTestCase(test.TestCase):
         def floating_get(*args, **kwargs):
             return '99.99.99.99'
 
-        self.conn = self.fake_connection()
         self.stubs.Set(api, 'instance_get', instance_get)
         self.stubs.Set(api, 'fixed_ip_get_instance', instance_get)
         self.stubs.Set(api, 'instance_get_floating_address', floating_get)
-
-    def real_connection(self):
-        router = metadatarequesthandler.MetadataRequestHandler()
-        service = wsgi.Server()
-        service.start(router, 16969)
-        return httplib.HTTPConnection('127.0.0.1', 16969)
-
-    def fake_connection(self):
-        return metadatarequesthandler.MetadataRequestHandler.fake_connection()
+        self.app = metadatarequesthandler.MetadataRequestHandler()
 
     def request(self, relative_url):
-        self.conn.request('GET', relative_url)
-        return self.conn.getresponse().read()
+        request = webob.Request.blank(relative_url)
+        request.remote_addr = "127.0.0.1"
+        return request.get_response(self.app).body
 
     def test_base(self):
         self.assertEqual(self.request('/'), 'meta-data/\nuser-data')
