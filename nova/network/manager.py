@@ -503,10 +503,9 @@ class NetworkManager(manager.SchedulerDependentManager):
                                 {'allocated': False,
                                  'virtual_interface_id': None})
 
-    def lease_fixed_ip(self, context, mac, address):
+    def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
-        LOG.debug(_('Leased IP |%(address)s| to mac |%(mac)s|'), locals(),
-                                                          context=context)
+        LOG.debug(_('Leased IP |%(address)s|'), locals(), context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
         instance = fixed_ip['instance']
         if not instance:
@@ -521,10 +520,9 @@ class NetworkManager(manager.SchedulerDependentManager):
             LOG.warn(_('IP |%s| leased that isn\'t allocated'), address,
                      context=context)
 
-    def release_fixed_ip(self, context, mac, address):
+    def release_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug(_('Released IP |%(address)s| from mac |%(mac)s|'), locals(),
-                                                              context=context)
+        LOG.debug(_('Released IP |%(address)s|'), locals(), context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
         instance = fixed_ip['instance']
         if not instance:
