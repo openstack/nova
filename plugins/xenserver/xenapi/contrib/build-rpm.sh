@@ -1,5 +1,5 @@
 #!/bin/bash
-PACKAGE=nova-xenapi-plugins
+PACKAGE=openstack-xen-plugins
 RPMBUILD_DIR=$PWD/rpmbuild
 if [ ! -d $RPMBUILD_DIR ]; then
     echo $RPMBUILD_DIR is missing

@@ -1,11 +1,12 @@
-Name:           nova-xenapi-plugins
-Version:        1.0
+Name:           openstack-xen-plugins
+Version:        2011.3
 Release:        1
 Summary:        Files for XenAPI support.
 License:        Apache
 Group:          Applications/Utilities
-Source0:        nova-xenapi-plugins.tar.gz
+Source0:        openstack-xen-plugins.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+Requires:       parted
 
 %define debug_package %{nil}
 
@@ -13,14 +14,13 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 This package contains files that are required for XenAPI support for OpenStack.
 
 %prep
-%setup -q -n nova-xenapi-plugins
+%setup -q -n openstack-xen-plugins
 
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc
 cp -r xapi.d $RPM_BUILD_ROOT/etc
-chmod u+x $RPM_BUILD_ROOT/etc/xapi.d/plugins/objectstore
-#%{_fixperms} $RPM_BUILD_ROOT/*
+chmod a+x $RPM_BUILD_ROOT/etc/xapi.d/plugins/*
 
 %clean
 rm -rf $RPM_BUILD_ROOT
