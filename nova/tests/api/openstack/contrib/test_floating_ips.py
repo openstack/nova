@@ -144,8 +144,7 @@ class FloatingIpTest(test.TestCase):
         ip = json.loads(res.body)['allocated']
         expected = {
             "id": 1,
-            "floating_ip": '10.10.10.10'
-        }
+            "floating_ip": '10.10.10.10'}
         self.assertEqual(ip, expected)
 
     def test_floating_ip_release(self):
@@ -156,8 +155,7 @@ class FloatingIpTest(test.TestCase):
         actual = json.loads(res.body)['released']
         expected = {
             "id": 1,
-            "floating_ip": '10.10.10.10'
-        }
+            "floating_ip": '10.10.10.10'}
         self.assertEqual(actual, expected)
 
     def test_floating_ip_associate(self):
@@ -184,6 +182,5 @@ class FloatingIpTest(test.TestCase):
         ip = json.loads(res.body)['disassociated']
         expected = {
             "floating_ip": '10.10.10.10',
-            "fixed_ip": '11.0.0.1'
-        }
+            "fixed_ip": '11.0.0.1'}
         self.assertEqual(ip, expected)

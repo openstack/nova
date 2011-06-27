@@ -429,14 +429,14 @@ def certificate_update(context, certificate_id, values):
 
 ###################
 @require_context
-def floating_ip_get(context, ip_id):
+def floating_ip_get(context, id):
     session = get_session()
     result = None
     if is_admin_context(context):
         result = session.query(models.FloatingIp).\
                          options(joinedload('fixed_ip')).\
                          options(joinedload_all('fixed_ip.instance')).\
-                         filter_by(id=ip_id).\
+                         filter_by(id=id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
@@ -444,7 +444,7 @@ def floating_ip_get(context, ip_id):
                          options(joinedload('fixed_ip')).\
                          options(joinedload_all('fixed_ip.instance')).\
                          filter_by(project_id=context.project_id).\
-                         filter_by(id=ip_id).\
+                         filter_by(id=id).\
                          filter_by(deleted=False).\
                          first()
     if not result:
