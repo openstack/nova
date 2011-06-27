@@ -207,22 +207,43 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(delete(self.context, group_id=sec['id']))
 
     def test_authorize_revoke_security_group_ingress(self):
-        sec = db.security_group_create(self.context,
-                                       {'project_id': self.context.project_id,
-                                        'name': 'test'})
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        authz(self.context, group_name=sec['name'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
+
+    def test_authorize_security_group_ingress_missing_protocol_params(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         self.assertRaises(exception.ApiError, authz, self.context, sec['name'])
-        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        # ApiError: Not enough parameters, need group_name or group_id
+
+    def test_authorize_security_group_ingress_missing_group_name_or_id(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
         self.assertRaises(exception.ApiError, authz, self.context, **kwargs)
+
+    def test_authorize_security_group_ingress_already_exists(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
         authz(self.context, group_name=sec['name'], **kwargs)
-        # ApiError: This rule already exists in group test
         self.assertRaises(exception.ApiError, authz, self.context,
                           group_name=sec['name'], **kwargs)
+
+    def test_revoke_security_group_ingress_missing_group_name_or_id(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        authz(self.context, group_name=sec['name'], **kwargs)
         revoke = self.cloud.revoke_security_group_ingress
-        # ApiError: Not enough parameters, need group_name or group_id
         self.assertRaises(exception.ApiError, revoke, self.context, **kwargs)
-        self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
 
     def test_authorize_revoke_security_group_ingress_by_id(self):
         sec = db.security_group_create(self.context,
@@ -230,11 +251,7 @@ class CloudTestCase(test.TestCase):
                                         'name': 'test'})
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        self.assertRaises(exception.ApiError, authz, self.context, sec['name'])
         authz(self.context, group_id=sec['id'], **kwargs)
-        # ApiError: This rule already exists in group test
-        self.assertRaises(exception.ApiError, authz, self.context,
-                          group_id=sec['id'], **kwargs)
         revoke = self.cloud.revoke_security_group_ingress
         self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
 
