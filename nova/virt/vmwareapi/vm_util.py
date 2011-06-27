@@ -102,7 +102,7 @@ def create_network_spec(client_factory, network_name, mac_address,
     # Get the recommended card type for the VM based on the guest OS of the VM
     net_device = client_factory.create('ns0:VirtualPCNet32')
 
-    # NOTE: Only works on ESXi if the portgroup binding is set to
+    # NOTE(asomya): Only works on ESXi if the portgroup binding is set to
     # ephemeral. Invalid configuration if set to static and the NIC does
     # not come up on boot if set to dynamic.
     backing = None

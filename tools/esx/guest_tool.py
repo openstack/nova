@@ -31,7 +31,7 @@ import subprocess
 import sys
 import time
 
-_ = gettext.gettext
+gettext.install('nova', unicode=1)
 
 PLATFORM_WIN = 'win32'
 PLATFORM_LINUX = 'linux2'
