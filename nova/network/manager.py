@@ -103,7 +103,7 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
                   'Whether to update dhcp when fixed_ip is disassociated')
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
-flags.DEFINE_integer('create_unique_mac_address_atempts', 5,
+flags.DEFINE_integer('create_unique_mac_address_attempts', 5,
                      'Number of attempts to create unique mac address')
 
 flags.DEFINE_bool('use_ipv6', False,
