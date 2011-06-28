@@ -26,15 +26,15 @@ from nova import flags
 from nova.api import openstack
 from nova.api.openstack import extensions
 from nova.api.openstack import flavors
+from nova.api.openstack import wsgi
 from nova.tests.api.openstack import fakes
-import nova.wsgi
 
 FLAGS = flags.FLAGS
 
 response_body = "Try to say this Mr. Knox, sir..."
 
 
-class StubController(nova.wsgi.Controller):
+class StubController(object):
 
     def __init__(self, body):
         self.body = body
@@ -128,6 +128,11 @@ class ResourceExtensionTest(unittest.TestCase):
         self.assertEqual(response_body, response.body)
 
 
+class InvalidExtension(object):
+    def get_alias(self):
+        return "THIRD"
+
+
 class ExtensionManagerTest(unittest.TestCase):
 
     response_body = "Try to say this Mr. Knox, sir..."
@@ -143,6 +148,14 @@ class ExtensionManagerTest(unittest.TestCase):
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
+
+    def test_invalid_extensions(self):
+        app = openstack.APIRouterV11()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        ext_mgr = ext_midware.ext_mgr
+        ext_mgr.add_extension(InvalidExtension())
+        self.assertTrue('FOXNSOX' in ext_mgr.extensions)
+        self.assertTrue('THIRD' not in ext_mgr.extensions)
 
 
 class ActionExtensionTest(unittest.TestCase):

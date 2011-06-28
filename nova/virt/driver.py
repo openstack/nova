@@ -61,7 +61,7 @@ class ComputeDriver(object):
         """Return a list of InstanceInfo for all registered VMs"""
         raise NotImplementedError()
 
-    def spawn(self, instance, network_info=None):
+    def spawn(self, instance, network_info=None, block_device_mapping=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
@@ -191,6 +191,10 @@ class ComputeDriver(object):
     def refresh_security_group_members(self, security_group_id):
         raise NotImplementedError()
 
+    def refresh_provider_fw_rules(self, security_group_id):
+        """See: nova/virt/fake.py for docs."""
+        raise NotImplementedError()
+
     def reset_network(self, instance):
         """reset networking for specified instance"""
         raise NotImplementedError()
@@ -232,6 +236,10 @@ class ComputeDriver(object):
         """Create a file on the VM instance. The file path and contents
         should be base64-encoded.
         """
+        raise NotImplementedError()
+
+    def agent_update(self, instance, url, md5hash):
+        """Update agent on the VM instance."""
         raise NotImplementedError()
 
     def inject_network_info(self, instance):

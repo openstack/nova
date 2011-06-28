@@ -21,10 +21,9 @@
 Simple Scheduler
 """
 
-import datetime
-
 from nova import db
 from nova import flags
+from nova import utils
 from nova.scheduler import driver
 from nova.scheduler import chance
 
@@ -40,7 +39,7 @@ flags.DEFINE_integer("max_networks", 1000,
 class SimpleScheduler(chance.ChanceScheduler):
     """Implements Naive Scheduler that tries to find least loaded host."""
 
-    def schedule_run_instance(self, context, instance_id, *_args, **_kwargs):
+    def _schedule_instance(self, context, instance_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest running instances."""
         instance_ref = db.instance_get(context, instance_id)
         if (instance_ref['availability_zone']
@@ -54,7 +53,7 @@ class SimpleScheduler(chance.ChanceScheduler):
 
             # TODO(vish): this probably belongs in the manager, if we
             #             can generalize this somehow
-            now = datetime.datetime.utcnow()
+            now = utils.utcnow()
             db.instance_update(context, instance_id, {'host': host,
                                                       'scheduled_at': now})
             return host
@@ -66,7 +65,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             if self.service_is_up(service):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
-                now = datetime.datetime.utcnow()
+                now = utils.utcnow()
                 db.instance_update(context,
                                    instance_id,
                                    {'host': service['host'],
@@ -75,6 +74,12 @@ class SimpleScheduler(chance.ChanceScheduler):
         raise driver.NoValidHost(_("Scheduler was unable to locate a host"
                                    " for this request. Is the appropriate"
                                    " service running?"))
+
+    def schedule_run_instance(self, context, instance_id, *_args, **_kwargs):
+        return self._schedule_instance(context, instance_id, *_args, **_kwargs)
+
+    def schedule_start_instance(self, context, instance_id, *_args, **_kwargs):
+        return self._schedule_instance(context, instance_id, *_args, **_kwargs)
 
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
@@ -90,7 +95,7 @@ class SimpleScheduler(chance.ChanceScheduler):
 
             # TODO(vish): this probably belongs in the manager, if we
             #             can generalize this somehow
-            now = datetime.datetime.utcnow()
+            now = utils.utcnow()
             db.volume_update(context, volume_id, {'host': host,
                                                   'scheduled_at': now})
             return host
@@ -103,7 +108,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             if self.service_is_up(service):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
-                now = datetime.datetime.utcnow()
+                now = utils.utcnow()
                 db.volume_update(context,
                                  volume_id,
                                  {'host': service['host'],

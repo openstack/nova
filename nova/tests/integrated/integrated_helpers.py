@@ -27,6 +27,7 @@ from nova import flags
 from nova import service
 from nova import test  # For the flags
 from nova.auth import manager
+import nova.image.glance
 from nova.log import logging
 from nova.tests.integrated.api import client
 
@@ -151,6 +152,11 @@ class _IntegratedTestBase(test.TestCase):
         f = self._get_flags()
         self.flags(**f)
 
+        def fake_get_image_service(image_href):
+            image_id = int(str(image_href).split('/')[-1])
+            return (nova.image.fake.FakeImageService(), image_id)
+        self.stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
+
         # set up services
         self.start_service('compute')
         self.start_service('volume')
@@ -165,16 +171,10 @@ class _IntegratedTestBase(test.TestCase):
         self.api = self.user.openstack_api
 
     def _start_api_service(self):
-        api_service = service.ApiService.create()
-        api_service.start()
-
-        if not api_service:
-            raise Exception("API Service was None")
-
-        self.api_service = api_service
-
-        host, port = api_service.get_socket_info('osapi')
-        self.auth_url = 'http://%s:%s/v1.1' % (host, port)
+        osapi = service.WSGIService("osapi")
+        osapi.start()
+        self.auth_url = 'http://%s:%s/v1.1' % (osapi.host, osapi.port)
+        LOG.warn(self.auth_url)
 
     def tearDown(self):
         self.context.cleanup()
@@ -199,19 +199,13 @@ class _IntegratedTestBase(test.TestCase):
         LOG.debug("Image: %s" % image)
 
         if 'imageRef' in image:
-            image_ref = image['imageRef']
+            image_href = image['imageRef']
         else:
-            # NOTE(justinsb): The imageRef code hasn't yet landed
-            LOG.warning("imageRef not yet in images output")
-            image_ref = image['id']
-
-            # TODO(justinsb): This is FUBAR
-            image_ref = abs(hash(image_ref))
-
-            image_ref = 'http://fake.server/%s' % image_ref
+            image_href = image['id']
+            image_href = 'http://fake.server/%s' % image_href
 
         # We now have a valid imageId
-        server['imageRef'] = image_ref
+        server['imageRef'] = image_href
 
         # Set a valid flavorId
         flavor = self.api.get_flavors()[0]

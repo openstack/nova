@@ -18,7 +18,7 @@
 """
 Base class of Unit Tests for all network models
 """
-import IPy
+import netaddr
 import os
 
 from nova import context

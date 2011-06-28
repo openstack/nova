@@ -23,7 +23,6 @@ inline callbacks.
 
 """
 
-import datetime
 import functools
 import os
 import shutil
@@ -37,8 +36,8 @@ from eventlet import greenthread
 from nova import fakerabbit
 from nova import flags
 from nova import rpc
+from nova import utils
 from nova import service
-from nova import wsgi
 from nova.virt import fake
 
 
@@ -69,7 +68,7 @@ class TestCase(unittest.TestCase):
         # NOTE(vish): We need a better method for creating fixtures for tests
         #             now that we have some required db setup for the system
         #             to work properly.
-        self.start = datetime.datetime.utcnow()
+        self.start = utils.utcnow()
         shutil.copyfile(os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db),
                         os.path.join(FLAGS.state_path, FLAGS.sqlite_db))
 
@@ -81,7 +80,6 @@ class TestCase(unittest.TestCase):
         self.injected = []
         self._services = []
         self._monkey_patch_attach()
-        self._monkey_patch_wsgi()
         self._original_flags = FLAGS.FlagValuesDict()
         rpc.ConnectionPool = rpc.Pool(max_size=FLAGS.rpc_conn_pool_size)
 
@@ -107,7 +105,6 @@ class TestCase(unittest.TestCase):
 
             # Reset our monkey-patches
             rpc.Consumer.attach_to_eventlet = self.original_attach
-            wsgi.Server.start = self.original_start
 
             # Stop any timers
             for x in self.injected:
@@ -163,28 +160,8 @@ class TestCase(unittest.TestCase):
         _wrapped.func_name = self.original_attach.func_name
         rpc.Consumer.attach_to_eventlet = _wrapped
 
-    def _monkey_patch_wsgi(self):
-        """Allow us to kill servers spawned by wsgi.Server."""
-        self.original_start = wsgi.Server.start
-
-        @functools.wraps(self.original_start)
-        def _wrapped_start(inner_self, *args, **kwargs):
-            original_spawn_n = inner_self.pool.spawn_n
-
-            @functools.wraps(original_spawn_n)
-            def _wrapped_spawn_n(*args, **kwargs):
-                rv = greenthread.spawn(*args, **kwargs)
-                self._services.append(rv)
-
-            inner_self.pool.spawn_n = _wrapped_spawn_n
-            self.original_start(inner_self, *args, **kwargs)
-            inner_self.pool.spawn_n = original_spawn_n
-
-        _wrapped_start.func_name = self.original_start.func_name
-        wsgi.Server.start = _wrapped_start
-
     # Useful assertions
-    def assertDictMatch(self, d1, d2):
+    def assertDictMatch(self, d1, d2, approx_equal=False, tolerance=0.001):
         """Assert two dicts are equivalent.
 
         This is a 'deep' match in the sense that it handles nested
@@ -215,15 +192,26 @@ class TestCase(unittest.TestCase):
         for key in d1keys:
             d1value = d1[key]
             d2value = d2[key]
+            try:
+                error = abs(float(d1value) - float(d2value))
+                within_tolerance = error <= tolerance
+            except (ValueError, TypeError):
+                # If both values aren't convertable to float, just ignore
+                # ValueError if arg is a str, TypeError if it's something else
+                # (like None)
+                within_tolerance = False
+
             if hasattr(d1value, 'keys') and hasattr(d2value, 'keys'):
                 self.assertDictMatch(d1value, d2value)
             elif 'DONTCARE' in (d1value, d2value):
+                continue
+            elif approx_equal and within_tolerance:
                 continue
             elif d1value != d2value:
                 raise_assertion("d1['%(key)s']=%(d1value)s != "
                                 "d2['%(key)s']=%(d2value)s" % locals())
 
-    def assertDictListMatch(self, L1, L2):
+    def assertDictListMatch(self, L1, L2, approx_equal=False, tolerance=0.001):
         """Assert a list of dicts are equivalent."""
         def raise_assertion(msg):
             L1str = str(L1)
@@ -239,4 +227,5 @@ class TestCase(unittest.TestCase):
                             'len(L2)=%(L2count)d' % locals())
 
         for d1, d2 in zip(L1, L2):
-            self.assertDictMatch(d1, d2)
+            self.assertDictMatch(d1, d2, approx_equal=approx_equal,
+                                 tolerance=tolerance)

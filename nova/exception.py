@@ -65,7 +65,7 @@ class BuildInProgress(Error):
 
 class DBError(Error):
     """Wraps an implementation specific exception."""
-    def __init__(self, inner_exception):
+    def __init__(self, inner_exception=None):
         self.inner_exception = inner_exception
         super(DBError, self).__init__(str(inner_exception))
 
@@ -122,7 +122,7 @@ class NotAuthorized(NovaException):
     message = _("Not authorized.")
 
     def __init__(self, *args, **kwargs):
-        super(NotFound, self).__init__(**kwargs)
+        super(NotAuthorized, self).__init__(**kwargs)
 
 
 class AdminRequired(NotAuthorized):
@@ -291,6 +291,15 @@ class DiskNotFound(NotFound):
     message = _("No disk at %(location)s")
 
 
+class InvalidImageRef(Invalid):
+    message = _("Invalid image href %(image_href)s.")
+
+
+class ListingImageRefsNotSupported(Invalid):
+    message = _("Some images have been stored via hrefs."
+        + " This version of the api does not support displaying image hrefs.")
+
+
 class ImageNotFound(NotFound):
     message = _("Image %(image_id)s could not be found.")
 
@@ -352,6 +361,10 @@ class NoFixedIpsFoundForInstance(NotFound):
 
 
 class FloatingIpNotFound(NotFound):
+    message = _("Floating ip %(floating_ip)s not found")
+
+
+class FloatingIpNotFoundForFixedAddress(NotFound):
     message = _("Floating ip not found for fixed address %(fixed_ip)s.")
 
 
@@ -365,6 +378,10 @@ class NoFloatingIpsDefinedForHost(NoFloatingIpsDefined):
 
 class NoFloatingIpsDefinedForInstance(NoFloatingIpsDefined):
     message = _("Zero floating ips defined for instance %(instance_id)s.")
+
+
+class NoMoreFloatingIps(NotFound):
+    message = _("Zero floating ips available.")
 
 
 class KeypairNotFound(NotFound):
@@ -477,9 +494,23 @@ class SchedulerHostFilterNotFound(NotFound):
     message = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
 
+class SchedulerCostFunctionNotFound(NotFound):
+    message = _("Scheduler cost function %(cost_fn_str)s could"
+                " not be found.")
+
+
+class SchedulerWeightFlagNotFound(NotFound):
+    message = _("Scheduler weight flag not found: %(flag_name)s")
+
+
 class InstanceMetadataNotFound(NotFound):
     message = _("Instance %(instance_id)s has no metadata with "
                 "key %(metadata_key)s.")
+
+
+class InstanceTypeExtraSpecsNotFound(NotFound):
+    message = _("Instance Type %(instance_type_id)s has no extra specs with "
+                "key %(extra_specs_key)s.")
 
 
 class LDAPObjectNotFound(NotFound):
@@ -563,3 +594,15 @@ class InstanceExists(Duplicate):
 
 class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
+
+
+class MalformedRequestBody(NovaException):
+    message = _("Malformed message body: %(reason)s")
+
+
+class PasteConfigNotFound(NotFound):
+    message = _("Could not find paste config at %(path)s")
+
+
+class PasteAppNotFound(NotFound):
+    message = _("Could not load paste app '%(name)s' from %(path)s")

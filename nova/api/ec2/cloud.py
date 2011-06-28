@@ -23,8 +23,7 @@ datastore.
 """
 
 import base64
-import datetime
-import IPy
+import netaddr
 import os
 import urllib
 import tempfile
@@ -40,6 +39,7 @@ from nova import flags
 from nova import ipv6
 from nova import log as logging
 from nova import network
+from nova import rpc
 from nova import utils
 from nova import volume
 from nova.api.ec2 import ec2utils
@@ -137,6 +137,13 @@ class CloudController(object):
             return services[0]['availability_zone']
         return 'unknown zone'
 
+    def _get_image_state(self, image):
+        # NOTE(vish): fallback status if image_state isn't set
+        state = image.get('status')
+        if state == 'active':
+            state = 'available'
+        return image['properties'].get('image_state', state)
+
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
@@ -159,7 +166,7 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
+        image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -235,7 +242,7 @@ class CloudController(object):
                                         'zoneState': 'available'}]}
 
         services = db.service_get_all(context, False)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
             if not host in hosts:
@@ -445,7 +452,7 @@ class CloudController(object):
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
             cidr_ip = urllib.unquote(cidr_ip).decode()
-            IPy.IP(cidr_ip)
+            netaddr.IPNetwork(cidr_ip)
             values['cidr'] = cidr_ip
         else:
             values['cidr'] = '0.0.0.0/0'
@@ -595,7 +602,7 @@ class CloudController(object):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         output = self.compute_api.get_console_output(
                 context, instance_id=instance_id)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
@@ -774,13 +781,13 @@ class CloudController(object):
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.is_admin:
-                if instance['image_id'] == str(FLAGS.vpn_image_id):
+                if instance['image_ref'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
             instance_id = instance['id']
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
-            i['imageId'] = self.image_ec2_id(instance['image_id'])
+            i['imageId'] = self.image_ec2_id(instance['image_ref'])
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
@@ -866,8 +873,14 @@ class CloudController(object):
 
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
-        public_ip = self.network_api.allocate_floating_ip(context)
-        return {'publicIp': public_ip}
+        try:
+            public_ip = self.network_api.allocate_floating_ip(context)
+            return {'publicIp': public_ip}
+        except rpc.RemoteError as ex:
+            if ex.exc_type == 'NoMoreAddresses':
+                raise exception.NoMoreFloatingIps()
+            else:
+                raise
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
@@ -896,10 +909,39 @@ class CloudController(object):
         if kwargs.get('ramdisk_id'):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
+        for bdm in kwargs.get('block_device_mapping', []):
+            # NOTE(yamahata)
+            # BlockDevicedMapping.<N>.DeviceName
+            # BlockDevicedMapping.<N>.Ebs.SnapshotId
+            # BlockDevicedMapping.<N>.Ebs.VolumeSize
+            # BlockDevicedMapping.<N>.Ebs.DeleteOnTermination
+            # BlockDevicedMapping.<N>.VirtualName
+            # => remove .Ebs and allow volume id in SnapshotId
+            ebs = bdm.pop('ebs', None)
+            if ebs:
+                ec2_id = ebs.pop('snapshot_id')
+                id = ec2utils.ec2_id_to_id(ec2_id)
+                if ec2_id.startswith('snap-'):
+                    bdm['snapshot_id'] = id
+                elif ec2_id.startswith('vol-'):
+                    bdm['volume_id'] = id
+                ebs.setdefault('delete_on_termination', True)
+                bdm.update(ebs)
+
+        image = self._get_image(context, kwargs['image_id'])
+
+        if image:
+            image_state = self._get_image_state(image)
+        else:
+            raise exception.ImageNotFound(image_id=kwargs['image_id'])
+
+        if image_state != 'available':
+            raise exception.ApiError(_('Image must be available'))
+
         instances = self.compute_api.create(context,
             instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
-            image_id=self._get_image(context, kwargs['image_id'])['id'],
+            image_href=self._get_image(context, kwargs['image_id'])['id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),
@@ -910,37 +952,54 @@ class CloudController(object):
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
-                                  'AvailabilityZone'))
+                                  'AvailabilityZone'),
+            block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
+
+    def _do_instance(self, action, context, ec2_id):
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
+        action(context, instance_id=instance_id)
+
+    def _do_instances(self, action, context, instance_id):
+        for ec2_id in instance_id:
+            self._do_instance(action, context, ec2_id)
 
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified."""
         LOG.debug(_("Going to start terminating instances"))
-        for ec2_id in instance_id:
-            instance_id = ec2utils.ec2_id_to_id(ec2_id)
-            self.compute_api.delete(context, instance_id=instance_id)
+        self._do_instances(self.compute_api.delete, context, instance_id)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
-        for ec2_id in instance_id:
-            instance_id = ec2utils.ec2_id_to_id(ec2_id)
-            self.compute_api.reboot(context, instance_id=instance_id)
+        self._do_instances(self.compute_api.reboot, context, instance_id)
+        return True
+
+    def stop_instances(self, context, instance_id, **kwargs):
+        """Stop each instances in instance_id.
+        Here instance_id is a list of instance ids"""
+        LOG.debug(_("Going to stop instances"))
+        self._do_instances(self.compute_api.stop, context, instance_id)
+        return True
+
+    def start_instances(self, context, instance_id, **kwargs):
+        """Start each instances in instance_id.
+        Here instance_id is a list of instance ids"""
+        LOG.debug(_("Going to start instances"))
+        self._do_instances(self.compute_api.start, context, instance_id)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        instance_id = ec2utils.ec2_id_to_id(instance_id)
-        self.compute_api.rescue(context, instance_id=instance_id)
+        self._do_instance(self.compute_api.rescue, contect, instnace_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        instance_id = ec2utils.ec2_id_to_id(instance_id)
-        self.compute_api.unrescue(context, instance_id=instance_id)
+        self._do_instance(self.compute_api.unrescue, context, instance_id)
         return True
 
     def update_instance(self, context, instance_id, **kwargs):
@@ -951,7 +1010,8 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             instance_id = ec2utils.ec2_id_to_id(instance_id)
-            self.compute_api.update(context, instance_id=instance_id, **kwargs)
+            self.compute_api.update(context, instance_id=instance_id,
+                                    **changes)
         return True
 
     @staticmethod
@@ -975,7 +1035,12 @@ class CloudController(object):
     def image_ec2_id(image_id, image_type='ami'):
         """Returns image ec2_id using id and three letter type."""
         template = image_type + '-%08x'
-        return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        try:
+            return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        except ValueError:
+            #TODO(wwolf): once we have ec2_id -> glance_id mapping
+            # in place, this wont be necessary
+            return "ami-00000000"
 
     def _get_image(self, context, ec2_id):
         try:
@@ -1006,11 +1071,8 @@ class CloudController(object):
                                               get('image_location'), name)
         else:
             i['imageLocation'] = image['properties'].get('image_location')
-        # NOTE(vish): fallback status if image_state isn't set
-        state = image.get('status')
-        if state == 'active':
-            state = 'available'
-        i['imageState'] = image['properties'].get('image_state', state)
+
+        i['imageState'] = self._get_image_state(image)
         i['displayName'] = name
         i['description'] = image.get('description')
         display_mapping = {'aki': 'kernel',
