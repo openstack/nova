@@ -619,7 +619,7 @@ class NetworkCommands(object):
     @args('--project', dest="project_id", metavar='<Project name>', help='Project for network')
     def create(self, fixed_range=None, num_networks=None, network_size=None,
             vlan_start=None, vpn_start=None, fixed_range_v6=None,
-            gateway_v6=None, label='public', project_id=None):
+            gateway_v6=None, label='public'):
         """Creates fixed ips for host by range"""
 
         if not fixed_range:
@@ -649,8 +649,7 @@ class NetworkCommands(object):
                                         vpn_start=int(vpn_start),
                                         cidr_v6=fixed_range_v6,
                                         gateway_v6=gateway_v6,
-                                        label=label,
-                                        project_id=project_id)
+                                        label=label)
         except ValueError, e:
             print e
             raise e
