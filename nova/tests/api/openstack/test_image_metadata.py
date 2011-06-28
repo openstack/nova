@@ -271,19 +271,19 @@ class ImageMetadataXMLSerializationTest(test.TestCase):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
         fixture = {
             'metadata': {
-                u'three': u'asdf',
+                u'three': u'Jos\xe9',
             },
         }
         output = serializer.serialize(fixture, 'index')
         actual = minidom.parseString(output.replace("  ", ""))
 
-        expected = minidom.parseString("""
+        expected = minidom.parseString(u"""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
                 <meta key="three">
-                    asdf
+                    Jos\xe9
                 </meta>
             </metadata>
-        """.replace("  ", ""))
+        """.encode("UTF-8").replace("  ", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 

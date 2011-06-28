@@ -117,8 +117,9 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
 
     def _meta_item_to_xml(self, doc, key, value):
         node = doc.createElement('meta')
-        node.setAttribute('key', str(key))
-        text = doc.createTextNode(str(value))
+        doc.appendChild(node)
+        node.setAttribute('key', '%s' % key)
+        text = doc.createTextNode('%s' % value)
         node.appendChild(text)
         return node
 
@@ -133,8 +134,9 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
         xml_doc = minidom.Document()
         items = metadata_dict['metadata'].items()
         container_node = self.meta_list_to_xml(xml_doc, items)
+        xml_doc.appendChild(container_node)
         self._add_xmlns(container_node)
-        return container_node.toprettyxml(indent='    ')
+        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
 
     def index(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
@@ -146,8 +148,9 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
         xml_doc = minidom.Document()
         item_key, item_value = meta_item_dict.items()[0]
         item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
+        xml_doc.appendChild(item_node)
         self._add_xmlns(item_node)
-        return item_node.toprettyxml(indent='    ')
+        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
 
     def show(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
