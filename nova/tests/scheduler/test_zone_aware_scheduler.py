@@ -146,8 +146,8 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
 
     def test_zone_aware_scheduler(self):
         """
-        Create a nested set of FakeZones, ensure that a select call returns the
-        appropriate build plan.
+        Create a nested set of FakeZones, try to build multiple instances
+        and ensure that a select call returns the appropriate build plan.
         """
         sched = FakeZoneAwareScheduler()
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
