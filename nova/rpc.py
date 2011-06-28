@@ -45,6 +45,8 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 
+from nova.notifier import api as notifier
+
 
 LOG = logging.getLogger('nova.rpc')
 
@@ -312,6 +314,7 @@ class ConsumerSet(object):
             if not it:
                 break
             while True:
+                ex = None
                 try:
                     it.next()
                 except StopIteration:
@@ -319,7 +322,17 @@ class ConsumerSet(object):
                 except greenlet.GreenletExit:
                     running = False
                     break
+                except exception.NovaException, e:
+                    if not e.notification_level:
+                        ex = e
+                    # We have an exception we can
+                    # tell the Notification system about.
+                    # Pass it on. 
+
                 except Exception as e:
+                    ex = e
+
+                if ex:
                     LOG.exception(_("Exception while processing consumer"))
                     self.reconnect()
                     # Break to outer loop
