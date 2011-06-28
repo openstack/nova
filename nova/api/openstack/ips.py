@@ -20,53 +20,59 @@ import time
 from webob import exc
 
 import nova
-import nova.api.openstack.views.addresses
-from nova.api.openstack import common
 from nova.api.openstack import faults
+import nova.api.openstack.views.addresses
+from nova.api.openstack import wsgi
 
 
-class Controller(common.OpenstackController):
+class Controller(object):
     """The servers addresses API controller for the Openstack API."""
-
-    _serialization_metadata = {
-        'application/xml': {
-            'list_collections': {
-                'public':  {'item_name': 'ip', 'item_key': 'addr'},
-                'private': {'item_name': 'ip', 'item_key': 'addr'},
-            },
-        },
-    }
 
     def __init__(self):
         self.compute_api = nova.compute.API()
         self.builder = nova.api.openstack.views.addresses.ViewBuilderV10()
 
-    def index(self, req, server_id):
+    def _get_instance(self, req, server_id):
         try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
+            instance = self.compute_api.get(
+                req.environ['nova.context'], server_id)
         except nova.exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+        return instance
+
+    def index(self, req, server_id):
+        instance = self._get_instance(req, server_id)
         return {'addresses': self.builder.build(instance)}
 
     def public(self, req, server_id):
-        try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
-        except nova.exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+        instance = self._get_instance(req, server_id)
         return {'public': self.builder.build_public_parts(instance)}
 
     def private(self, req, server_id):
-        try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
-        except nova.exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+        instance = self._get_instance(req, server_id)
         return {'private': self.builder.build_private_parts(instance)}
 
     def show(self, req, server_id, id):
         return faults.Fault(exc.HTTPNotImplemented())
 
-    def create(self, req, server_id):
+    def create(self, req, server_id, body):
         return faults.Fault(exc.HTTPNotImplemented())
 
     def delete(self, req, server_id, id):
         return faults.Fault(exc.HTTPNotImplemented())
+
+
+def create_resource():
+    metadata = {
+        'list_collections': {
+            'public':  {'item_name': 'ip', 'item_key': 'addr'},
+            'private': {'item_name': 'ip', 'item_key': 'addr'},
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
+                                                  xmlns=wsgi.XMLNS_V10),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)

@@ -28,12 +28,15 @@ import json
 import sys
 import time
 import traceback
+import types
 import uuid
 
 from carrot import connection as carrot_connection
 from carrot import messaging
 from eventlet import greenpool
-from eventlet import greenthread
+from eventlet import pools
+from eventlet import queue
+import greenlet
 
 from nova import context
 from nova import exception
@@ -47,7 +50,10 @@ LOG = logging.getLogger('nova.rpc')
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('rpc_thread_pool_size', 1024, 'Size of RPC thread pool')
+flags.DEFINE_integer('rpc_thread_pool_size', 1024,
+                     'Size of RPC thread pool')
+flags.DEFINE_integer('rpc_conn_pool_size', 30,
+                     'Size of RPC connection pool')
 
 
 class Connection(carrot_connection.BrokerConnection):
@@ -59,6 +65,7 @@ class Connection(carrot_connection.BrokerConnection):
         if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
                           port=FLAGS.rabbit_port,
+                          ssl=FLAGS.rabbit_use_ssl,
                           userid=FLAGS.rabbit_userid,
                           password=FLAGS.rabbit_password,
                           virtual_host=FLAGS.rabbit_virtual_host)
@@ -88,6 +95,22 @@ class Connection(carrot_connection.BrokerConnection):
             # it. So don't freak out if it doesn't exist.
             pass
         return cls.instance()
+
+
+class Pool(pools.Pool):
+    """Class that implements a Pool of Connections."""
+
+    # TODO(comstud): Timeout connections not used in a while
+    def create(self):
+        LOG.debug('Creating new connection')
+        return Connection.instance(new=True)
+
+# Create a ConnectionPool to use for RPC calls.  We'll order the
+# pool as a stack (LIFO), so that we can potentially loop through and
+# timeout old unused connections at some point
+ConnectionPool = Pool(
+        max_size=FLAGS.rpc_conn_pool_size,
+        order_as_stack=True)
 
 
 class Consumer(messaging.Consumer):
@@ -131,7 +154,9 @@ class Consumer(messaging.Consumer):
                 self.connection = Connection.recreate()
                 self.backend = self.connection.create_backend()
                 self.declare()
-            super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
+            return super(Consumer, self).fetch(no_ack,
+                                               auto_ack,
+                                               enable_callbacks)
             if self.failed_connection:
                 LOG.error(_('Reconnected to queue'))
                 self.failed_connection = False
@@ -159,13 +184,13 @@ class AdapterConsumer(Consumer):
         self.pool = greenpool.GreenPool(FLAGS.rpc_thread_pool_size)
         super(AdapterConsumer, self).__init__(connection=connection,
                                               topic=topic)
+        self.register_callback(self.process_data)
 
-    def receive(self, *args, **kwargs):
-        self.pool.spawn_n(self._receive, *args, **kwargs)
+    def process_data(self, message_data, message):
+        """Consumer callback to call a method on a proxy object.
 
-    @exception.wrap_exception
-    def _receive(self, message_data, message):
-        """Magically looks for a method on the proxy object and calls it.
+        Parses the message for validity and fires off a thread to call the
+        proxy object method.
 
         Message data should be a dictionary with two keys:
             method: string representing the method to call
@@ -175,8 +200,8 @@ class AdapterConsumer(Consumer):
 
         """
         LOG.debug(_('received %s') % message_data)
-        msg_id = message_data.pop('_msg_id', None)
-
+        # This will be popped off in _unpack_context
+        msg_id = message_data.get('_msg_id', None)
         ctxt = _unpack_context(message_data)
 
         method = message_data.get('method')
@@ -188,8 +213,17 @@ class AdapterConsumer(Consumer):
             #             we just log the message and send an error string
             #             back to the caller
             LOG.warn(_('no method for message: %s') % message_data)
-            msg_reply(msg_id, _('No method for message: %s') % message_data)
+            if msg_id:
+                msg_reply(msg_id,
+                          _('No method for message: %s') % message_data)
             return
+        self.pool.spawn_n(self._process_data, msg_id, ctxt, method, args)
+
+    @exception.wrap_exception
+    def _process_data(self, msg_id, ctxt, method, args):
+        """Thread that maigcally looks for a method on the proxy
+        object and calls it.
+        """
 
         node_func = getattr(self.proxy, str(method))
         node_args = dict((str(k), v) for k, v in args.iteritems())
@@ -197,17 +231,23 @@ class AdapterConsumer(Consumer):
         try:
             rval = node_func(context=ctxt, **node_args)
             if msg_id:
-                msg_reply(msg_id, rval, None)
+                # Check if the result was a generator
+                if isinstance(rval, types.GeneratorType):
+                    for x in rval:
+                        msg_reply(msg_id, x, None)
+                else:
+                    msg_reply(msg_id, rval, None)
+
+                # This final None tells multicall that it is done.
+                msg_reply(msg_id, None, None)
+            elif isinstance(rval, types.GeneratorType):
+                # NOTE(vish): this iterates through the generator
+                list(rval)
         except Exception as e:
             logging.exception('Exception during message handling')
             if msg_id:
                 msg_reply(msg_id, None, sys.exc_info())
         return
-
-
-class Publisher(messaging.Publisher):
-    """Publisher base class."""
-    pass
 
 
 class TopicAdapterConsumer(AdapterConsumer):
@@ -240,6 +280,58 @@ class FanoutAdapterConsumer(AdapterConsumer):
                  dict(exchange=self.exchange, key=self.routing_key))
         super(FanoutAdapterConsumer, self).__init__(connection=connection,
                                     topic=topic, proxy=proxy)
+
+
+class ConsumerSet(object):
+    """Groups consumers to listen on together on a single connection."""
+
+    def __init__(self, connection, consumer_list):
+        self.consumer_list = set(consumer_list)
+        self.consumer_set = None
+        self.enabled = True
+        self.init(connection)
+
+    def init(self, conn):
+        if not conn:
+            conn = Connection.instance(new=True)
+        if self.consumer_set:
+            self.consumer_set.close()
+        self.consumer_set = messaging.ConsumerSet(conn)
+        for consumer in self.consumer_list:
+            consumer.connection = conn
+            # consumer.backend is set for us
+            self.consumer_set.add_consumer(consumer)
+
+    def reconnect(self):
+        self.init(None)
+
+    def wait(self, limit=None):
+        running = True
+        while running:
+            it = self.consumer_set.iterconsume(limit=limit)
+            if not it:
+                break
+            while True:
+                try:
+                    it.next()
+                except StopIteration:
+                    return
+                except greenlet.GreenletExit:
+                    running = False
+                    break
+                except Exception as e:
+                    LOG.exception(_("Exception while processing consumer"))
+                    self.reconnect()
+                    # Break to outer loop
+                    break
+
+    def close(self):
+        self.consumer_set.close()
+
+
+class Publisher(messaging.Publisher):
+    """Publisher base class."""
+    pass
 
 
 class TopicPublisher(Publisher):
@@ -306,16 +398,18 @@ def msg_reply(msg_id, reply=None, failure=None):
         LOG.error(_("Returning exception %s to caller"), message)
         LOG.error(tb)
         failure = (failure[0].__name__, str(failure[1]), tb)
-    conn = Connection.instance()
-    publisher = DirectPublisher(connection=conn, msg_id=msg_id)
-    try:
-        publisher.send({'result': reply, 'failure': failure})
-    except TypeError:
-        publisher.send(
-                {'result': dict((k, repr(v))
-                                for k, v in reply.__dict__.iteritems()),
-                 'failure': failure})
-    publisher.close()
+
+    with ConnectionPool.item() as conn:
+        publisher = DirectPublisher(connection=conn, msg_id=msg_id)
+        try:
+            publisher.send({'result': reply, 'failure': failure})
+        except TypeError:
+            publisher.send(
+                    {'result': dict((k, repr(v))
+                                    for k, v in reply.__dict__.iteritems()),
+                     'failure': failure})
+
+        publisher.close()
 
 
 class RemoteError(exception.Error):
@@ -347,8 +441,9 @@ def _unpack_context(msg):
         if key.startswith('_context_'):
             value = msg.pop(key)
             context_dict[key[9:]] = value
+    context_dict['msg_id'] = msg.pop('_msg_id', None)
     LOG.debug(_('unpacked context: %s'), context_dict)
-    return context.RequestContext.from_dict(context_dict)
+    return RpcContext.from_dict(context_dict)
 
 
 def _pack_context(msg, context):
@@ -360,70 +455,112 @@ def _pack_context(msg, context):
     for args at some point.
 
     """
-    context = dict([('_context_%s' % key, value)
-                   for (key, value) in context.to_dict().iteritems()])
-    msg.update(context)
+    context_d = dict([('_context_%s' % key, value)
+                      for (key, value) in context.to_dict().iteritems()])
+    msg.update(context_d)
 
 
-def call(context, topic, msg):
-    """Sends a message on a topic and wait for a response."""
+class RpcContext(context.RequestContext):
+    def __init__(self, *args, **kwargs):
+        msg_id = kwargs.pop('msg_id', None)
+        self.msg_id = msg_id
+        super(RpcContext, self).__init__(*args, **kwargs)
+
+    def reply(self, *args, **kwargs):
+        msg_reply(self.msg_id, *args, **kwargs)
+
+
+def multicall(context, topic, msg):
+    """Make a call that returns multiple times."""
     LOG.debug(_('Making asynchronous call on %s ...'), topic)
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug(_('MSG_ID is %s') % (msg_id))
     _pack_context(msg, context)
 
-    class WaitMessage(object):
-        def __call__(self, data, message):
-            """Acks message and sets result."""
-            message.ack()
-            if data['failure']:
-                self.result = RemoteError(*data['failure'])
-            else:
-                self.result = data['result']
-
-    wait_msg = WaitMessage()
-    conn = Connection.instance()
-    consumer = DirectConsumer(connection=conn, msg_id=msg_id)
+    con_conn = ConnectionPool.get()
+    consumer = DirectConsumer(connection=con_conn, msg_id=msg_id)
+    wait_msg = MulticallWaiter(consumer)
     consumer.register_callback(wait_msg)
 
-    conn = Connection.instance()
-    publisher = TopicPublisher(connection=conn, topic=topic)
+    publisher = TopicPublisher(connection=con_conn, topic=topic)
     publisher.send(msg)
     publisher.close()
 
-    try:
-        consumer.wait(limit=1)
-    except StopIteration:
-        pass
-    consumer.close()
-    # NOTE(termie): this is a little bit of a change from the original
-    #               non-eventlet code where returning a Failure
-    #               instance from a deferred call is very similar to
-    #               raising an exception
-    if isinstance(wait_msg.result, Exception):
-        raise wait_msg.result
-    return wait_msg.result
+    return wait_msg
+
+
+class MulticallWaiter(object):
+    def __init__(self, consumer):
+        self._consumer = consumer
+        self._results = queue.Queue()
+        self._closed = False
+
+    def close(self):
+        self._closed = True
+        self._consumer.close()
+        ConnectionPool.put(self._consumer.connection)
+
+    def __call__(self, data, message):
+        """Acks message and sets result."""
+        message.ack()
+        if data['failure']:
+            self._results.put(RemoteError(*data['failure']))
+        else:
+            self._results.put(data['result'])
+
+    def __iter__(self):
+        return self.wait()
+
+    def wait(self):
+        while True:
+            rv = None
+            while rv is None and not self._closed:
+                try:
+                    rv = self._consumer.fetch(enable_callbacks=True)
+                except Exception:
+                    self.close()
+                    raise
+                time.sleep(0.01)
+
+            result = self._results.get()
+            if isinstance(result, Exception):
+                self.close()
+                raise result
+            if result == None:
+                self.close()
+                raise StopIteration
+            yield result
+
+
+def call(context, topic, msg):
+    """Sends a message on a topic and wait for a response."""
+    rv = multicall(context, topic, msg)
+    # NOTE(vish): return the last result from the multicall
+    rv = list(rv)
+    if not rv:
+        return
+    return rv[-1]
 
 
 def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response."""
     LOG.debug(_('Making asynchronous cast on %s...'), topic)
     _pack_context(msg, context)
-    conn = Connection.instance()
-    publisher = TopicPublisher(connection=conn, topic=topic)
-    publisher.send(msg)
-    publisher.close()
+    with ConnectionPool.item() as conn:
+        publisher = TopicPublisher(connection=conn, topic=topic)
+        publisher.send(msg)
+        publisher.close()
 
 
 def fanout_cast(context, topic, msg):
     """Sends a message on a fanout exchange without waiting for a response."""
     LOG.debug(_('Making asynchronous fanout cast...'))
     _pack_context(msg, context)
-    conn = Connection.instance()
-    publisher = FanoutPublisher(topic, connection=conn)
-    publisher.send(msg)
-    publisher.close()
+    with ConnectionPool.item() as conn:
+        publisher = FanoutPublisher(topic, connection=conn)
+        publisher.send(msg)
+        publisher.close()
 
 
 def generic_response(message_data, message):
@@ -459,6 +596,7 @@ def send_message(topic, message, wait=True):
 
     if wait:
         consumer.wait()
+        consumer.close()
 
 
 if __name__ == '__main__':

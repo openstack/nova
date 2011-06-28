@@ -22,7 +22,10 @@ Admin API controller, exposed through http via the api worker.
 
 import base64
 import datetime
+import netaddr
+import urllib
 
+from nova import compute
 from nova import db
 from nova import exception
 from nova import flags
@@ -117,6 +120,9 @@ class AdminController(object):
 
     def __str__(self):
         return 'AdminController'
+
+    def __init__(self):
+        self.compute_api = compute.API()
 
     def describe_instance_types(self, context, **_kwargs):
         """Returns all active instance types data (vcpus, memory, etc.)"""
@@ -305,7 +311,7 @@ class AdminController(object):
             * Volume Count
         """
         services = db.service_get_all(context, False)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         hosts = []
         rv = []
         for host in [service['host'] for service in services]:
@@ -326,6 +332,60 @@ class AdminController(object):
                                 now))
         return {'hosts': rv}
 
-    def describe_host(self, _context, name, **_kwargs):
-        """Returns status info for single node."""
-        return host_dict(db.host_get(name))
+    def _provider_fw_rule_exists(self, context, rule):
+        # TODO(todd): we call this repeatedly, can we filter by protocol?
+        for old_rule in db.provider_fw_rule_get_all(context):
+            if all([rule[k] == old_rule[k] for k in ('cidr', 'from_port',
+                                                     'to_port', 'protocol')]):
+                return True
+        return False
+
+    def block_external_addresses(self, context, cidr):
+        """Add provider-level firewall rules to block incoming traffic."""
+        LOG.audit(_('Blocking traffic to all projects incoming from %s'),
+                  cidr, context=context)
+        cidr = urllib.unquote(cidr).decode()
+        # raise if invalid
+        netaddr.IPNetwork(cidr)
+        rule = {'cidr': cidr}
+        tcp_rule = rule.copy()
+        tcp_rule.update({'protocol': 'tcp', 'from_port': 1, 'to_port': 65535})
+        udp_rule = rule.copy()
+        udp_rule.update({'protocol': 'udp', 'from_port': 1, 'to_port': 65535})
+        icmp_rule = rule.copy()
+        icmp_rule.update({'protocol': 'icmp', 'from_port': -1,
+                          'to_port': None})
+        rules_added = 0
+        if not self._provider_fw_rule_exists(context, tcp_rule):
+            db.provider_fw_rule_create(context, tcp_rule)
+            rules_added += 1
+        if not self._provider_fw_rule_exists(context, udp_rule):
+            db.provider_fw_rule_create(context, udp_rule)
+            rules_added += 1
+        if not self._provider_fw_rule_exists(context, icmp_rule):
+            db.provider_fw_rule_create(context, icmp_rule)
+            rules_added += 1
+        if not rules_added:
+            raise exception.ApiError(_('Duplicate rule'))
+        self.compute_api.trigger_provider_fw_rules_refresh(context)
+        return {'status': 'OK', 'message': 'Added %s rules' % rules_added}
+
+    def describe_external_address_blocks(self, context):
+        blocks = db.provider_fw_rule_get_all(context)
+        # NOTE(todd): use a set since we have icmp/udp/tcp rules with same cidr
+        blocks = set([b.cidr for b in blocks])
+        blocks = [{'cidr': b} for b in blocks]
+        return {'externalIpBlockInfo':
+                list(sorted(blocks, key=lambda k: k['cidr']))}
+
+    def remove_external_address_block(self, context, cidr):
+        LOG.audit(_('Removing ip block from %s'), cidr, context=context)
+        cidr = urllib.unquote(cidr).decode()
+        # raise if invalid
+        netaddr.IPNetwork(cidr)
+        rules = db.provider_fw_rule_get_all_by_cidr(context, cidr)
+        for rule in rules:
+            db.provider_fw_rule_destroy(context, rule['id'])
+        if rules:
+            self.compute_api.trigger_provider_fw_rules_refresh(context)
+        return {'status': 'OK', 'message': 'Deleted %s rules' % len(rules)}

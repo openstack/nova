@@ -1,0 +1,1 @@
+#DEVICE_BRIDGES="eth0:xenbr0 eth1:xenbr1"

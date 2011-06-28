@@ -50,7 +50,7 @@ def setup():
 
     testdb = os.path.join(FLAGS.state_path, FLAGS.sqlite_db)
     if os.path.exists(testdb):
-        os.unlink(testdb)
+        return
     migration.db_sync()
     ctxt = context.get_admin_context()
     network_manager.VlanManager().create_networks(ctxt,

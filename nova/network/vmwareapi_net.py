@@ -15,9 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Implements vlans for vmwareapi.
-"""
+"""Implements vlans for vmwareapi."""
 
 from nova import db
 from nova import exception
@@ -27,12 +25,12 @@ from nova import utils
 from nova.virt.vmwareapi_conn import VMWareAPISession
 from nova.virt.vmwareapi import network_utils
 
+
 LOG = logging.getLogger("nova.network.vmwareapi_net")
 
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vlan_interface', 'vmnic0',
-                    'Physical network adapter name in VMware ESX host for '
-                    'vlan networking')
+FLAGS['vlan_interface'].SetDefault('vmnic0')
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
@@ -42,10 +40,10 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     host_username = FLAGS.vmwareapi_host_username
     host_password = FLAGS.vmwareapi_host_password
     if not host_ip or host_username is None or host_password is None:
-        raise Exception(_("Must specify vmwareapi_host_ip,"
-                        "vmwareapi_host_username "
-                        "and vmwareapi_host_password to use"
-                        "connection_type=vmwareapi"))
+        raise Exception(_('Must specify vmwareapi_host_ip, '
+                          'vmwareapi_host_username '
+                          'and vmwareapi_host_password to use '
+                          'connection_type=vmwareapi'))
     session = VMWareAPISession(host_ip, host_username, host_password,
                                FLAGS.vmwareapi_api_retry_count)
     vlan_interface = FLAGS.vlan_interface

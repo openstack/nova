@@ -16,9 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Handles all requests relating to instances (guest vms).
-"""
+"""Handles all requests relating to instances (guest vms)."""
 
 from nova import db
 from nova import exception
@@ -28,6 +26,7 @@ from nova import quota
 from nova import rpc
 from nova.db import base
 
+
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.network')
 
@@ -35,21 +34,34 @@ LOG = logging.getLogger('nova.network')
 class API(base.Base):
     """API for interacting with the network manager."""
 
+    def get_floating_ip(self, context, id):
+        rv = self.db.floating_ip_get(context, id)
+        return dict(rv.iteritems())
+
+    def get_floating_ip_by_ip(self, context, address):
+        res = self.db.floating_ip_get_by_ip(context, address)
+        return dict(res.iteritems())
+
+    def list_floating_ips(self, context):
+        ips = self.db.floating_ip_get_all_by_project(context,
+                                                     context.project_id)
+        return ips
+
     def allocate_floating_ip(self, context):
         if quota.allowed_floating_ips(context, 1) < 1:
-            LOG.warn(_("Quota exceeeded for %s, tried to allocate "
-                           "address"),
-                         context.project_id)
-            raise quota.QuotaError(_("Address quota exceeded. You cannot "
-                                     "allocate any more addresses"))
+            LOG.warn(_('Quota exceeeded for %s, tried to allocate '
+                       'address'),
+                     context.project_id)
+            raise quota.QuotaError(_('Address quota exceeded. You cannot '
+                                     'allocate any more addresses'))
         # NOTE(vish): We don't know which network host should get the ip
         #             when we allocate, so just send it to any one.  This
         #             will probably need to move into a network supervisor
         #             at some point.
         return rpc.call(context,
                         FLAGS.network_topic,
-                        {"method": "allocate_floating_ip",
-                         "args": {"project_id": context.project_id}})
+                        {'method': 'allocate_floating_ip',
+                         'args': {'project_id': context.project_id}})
 
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
@@ -62,8 +74,8 @@ class API(base.Base):
         #             at some point.
         rpc.cast(context,
                  FLAGS.network_topic,
-                 {"method": "deallocate_floating_ip",
-                  "args": {"floating_address": floating_ip['address']}})
+                 {'method': 'deallocate_floating_ip',
+                  'args': {'floating_address': floating_ip['address']}})
 
     def associate_floating_ip(self, context, floating_ip, fixed_ip,
                               affect_auto_assigned=False):
@@ -74,17 +86,17 @@ class API(base.Base):
             return
         # Check if the floating ip address is allocated
         if floating_ip['project_id'] is None:
-            raise exception.ApiError(_("Address (%s) is not allocated") %
+            raise exception.ApiError(_('Address (%s) is not allocated') %
                                        floating_ip['address'])
         # Check if the floating ip address is allocated to the same project
         if floating_ip['project_id'] != context.project_id:
-            LOG.warn(_("Address (%(address)s) is not allocated to your "
-                       "project (%(project)s)"),
+            LOG.warn(_('Address (%(address)s) is not allocated to your '
+                       'project (%(project)s)'),
                        {'address': floating_ip['address'],
                        'project': context.project_id})
-            raise exception.ApiError(_("Address (%(address)s) is not "
-                                       "allocated to your project"
-                                       "(%(project)s)") %
+            raise exception.ApiError(_('Address (%(address)s) is not '
+                                       'allocated to your project'
+                                       '(%(project)s)') %
                                         {'address': floating_ip['address'],
                                         'project': context.project_id})
         # NOTE(vish): Perhaps we should just pass this on to compute and
@@ -92,9 +104,9 @@ class API(base.Base):
         host = fixed_ip['network']['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
-                 {"method": "associate_floating_ip",
-                  "args": {"floating_address": floating_ip['address'],
-                           "fixed_address": fixed_ip['address']}})
+                 {'method': 'associate_floating_ip',
+                  'args': {'floating_address': floating_ip['address'],
+                           'fixed_address': fixed_ip['address']}})
 
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
@@ -108,5 +120,5 @@ class API(base.Base):
         host = floating_ip['fixed_ip']['network']['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
-                 {"method": "disassociate_floating_ip",
-                  "args": {"floating_address": floating_ip['address']}})
+                 {'method': 'disassociate_floating_ip',
+                  'args': {'floating_address': floating_ip['address']}})

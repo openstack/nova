@@ -19,25 +19,24 @@
 Tests For Compute
 """
 
-import datetime
 import mox
 import stubout
 
+from nova.auth import manager
 from nova import compute
+from nova.compute import instance_types
+from nova.compute import manager as compute_manager
+from nova.compute import power_state
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import models
 from nova import exception
 from nova import flags
+import nova.image.fake
 from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
-from nova.auth import manager
-from nova.compute import instance_types
-from nova.compute import manager as compute_manager
-from nova.compute import power_state
-from nova.db.sqlalchemy import models
-from nova.image import local
 from nova.notifier import test_notifier
 
 LOG = logging.getLogger('nova.tests.compute')
@@ -77,7 +76,7 @@ class ComputeTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(nova.image.fake._FakeImageService, 'show', fake_show)
 
     def tearDown(self):
         self.manager.delete_user(self.user)
@@ -87,7 +86,7 @@ class ComputeTestCase(test.TestCase):
     def _create_instance(self, params={}):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 1
+        inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id
@@ -153,7 +152,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
         try:
             self.assertEqual(len(db.security_group_get_by_instance(
@@ -171,7 +170,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
         try:
             db.instance_destroy(self.context, ref[0]['id'])
@@ -187,7 +186,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
 
         try:
@@ -220,17 +219,32 @@ class ComputeTestCase(test.TestCase):
         instance_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(instance_ref['launched_at'], None)
         self.assertEqual(instance_ref['deleted_at'], None)
-        launch = datetime.datetime.utcnow()
+        launch = utils.utcnow()
         self.compute.run_instance(self.context, instance_id)
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] > launch)
         self.assertEqual(instance_ref['deleted_at'], None)
-        terminate = datetime.datetime.utcnow()
+        terminate = utils.utcnow()
         self.compute.terminate_instance(self.context, instance_id)
         self.context = self.context.elevated(True)
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)
+
+    def test_stop(self):
+        """Ensure instance can be stopped"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_start(self):
+        """Ensure instance can be started"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance_id)
+        self.compute.start_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
 
     def test_pause(self):
         """Ensure instance can be paused"""
@@ -268,6 +282,14 @@ class ComputeTestCase(test.TestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.inject_file(self.context, instance_id, "/tmp/test",
                 "File Contents")
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_agent_update(self):
+        """Ensure instance can have its agent updated"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.agent_update(self.context, instance_id,
+                'http://127.0.0.1/agent', '00112233445566778899aabbccddeeff')
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_snapshot(self):
@@ -381,8 +403,30 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_finish_resize(self):
+        """Contrived test to ensure finish_resize doesn't raise anything"""
+
+        def fake(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+        self.compute.prep_resize(context, instance_id, 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+        try:
+            self.compute.finish_resize(context, instance_id,
+                    int(migration_ref['id']), {})
+        except KeyError, e:
+            # Only catch key errors. We want other reasons for the test to
+            # fail to actually error out so we don't obscure anything
+            self.fail()
+
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_resize_instance_notification(self):
-        """Ensure instance can be migrated/resized"""
+        """Ensure notifications on instance migrate/resize"""
         instance_id = self._create_instance()
         context = self.context.elevated()
 

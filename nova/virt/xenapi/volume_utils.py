@@ -204,14 +204,17 @@ def _get_volume_id(path_or_id):
     if isinstance(path_or_id, int):
         return path_or_id
     # n must contain at least the volume_id
-    # /vol- is for remote volumes
-    # -vol- is for local volumes
+    # :volume- is for remote volumes
+    # -volume- is for local volumes
     # see compute/manager->setup_compute_volume
-    volume_id = path_or_id[path_or_id.find('/vol-') + 1:]
+    volume_id = path_or_id[path_or_id.find(':volume-') + 1:]
     if volume_id == path_or_id:
-        volume_id = path_or_id[path_or_id.find('-vol-') + 1:]
-        volume_id = volume_id.replace('--', '-')
-    return volume_id
+        volume_id = path_or_id[path_or_id.find('-volume--') + 1:]
+        volume_id = volume_id.replace('volume--', '')
+    else:
+        volume_id = volume_id.replace('volume-', '')
+        volume_id = volume_id[0:volume_id.find('-')]
+    return int(volume_id)
 
 
 def _get_target_host(iscsi_string):
@@ -244,25 +247,23 @@ def _get_target(volume_id):
     Gets iscsi name and portal from volume name and host.
     For this method to work the following are needed:
     1) volume_ref['host'] must resolve to something rather than loopback
-    2) ietd must bind only to the address as resolved above
-    If any of the two conditions are not met, fall back on Flags.
     """
-    volume_ref = db.volume_get_by_ec2_id(context.get_admin_context(),
-                                         volume_id)
+    volume_ref = db.volume_get(context.get_admin_context(),
+                               volume_id)
     result = (None, None)
     try:
-        (r, _e) = utils.execute("sudo iscsiadm -m discovery -t "
-                                     "sendtargets -p %s" %
-                                     volume_ref['host'])
+        (r, _e) = utils.execute('sudo', 'iscsiadm',
+                                '-m', 'discovery',
+                                '-t', 'sendtargets',
+                                '-p', volume_ref['host'])
     except exception.ProcessExecutionError, exc:
         LOG.exception(exc)
     else:
-        targets = r.splitlines()
-        if len(_e) == 0 and len(targets) == 1:
-            for target in targets:
-                if volume_id in target:
-                    (location, _sep, iscsi_name) = target.partition(" ")
-                    break
-            iscsi_portal = location.split(",")[0]
-            result = (iscsi_name, iscsi_portal)
+        volume_name = "volume-%08x" % volume_id
+        for target in r.splitlines():
+            if FLAGS.iscsi_ip_prefix in target and volume_name in target:
+                (location, _sep, iscsi_name) = target.partition(" ")
+                break
+        iscsi_portal = location.split(",")[0]
+        result = (iscsi_name, iscsi_portal)
     return result

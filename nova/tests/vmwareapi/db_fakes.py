@@ -52,7 +52,7 @@ def stub_out_db_instance_api(stubs):
             else:
                 raise NotImplementedError()
 
-    def fake_instance_create(values):
+    def fake_instance_create(context, values):
         """Stubs out the db.instance_create method."""
 
         type_data = INSTANCE_TYPES[values['instance_type']]
@@ -61,7 +61,7 @@ def stub_out_db_instance_api(stubs):
             'name': values['name'],
             'id': values['id'],
             'reservation_id': utils.generate_uid('r'),
-            'image_id': values['image_id'],
+            'image_ref': values['image_ref'],
             'kernel_id': values['kernel_id'],
             'ramdisk_id': values['ramdisk_id'],
             'state_description': 'scheduling',

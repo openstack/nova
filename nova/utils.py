@@ -35,6 +35,7 @@ import struct
 import sys
 import time
 import types
+import uuid
 from xml.sax import saxutils
 
 from eventlet import event
@@ -142,24 +143,26 @@ def execute(*cmd, **kwargs):
             env = os.environ.copy()
             if addl_env:
                 env.update(addl_env)
+            _PIPE = subprocess.PIPE  # pylint: disable=E1101
             obj = subprocess.Popen(cmd,
-                                   stdin=subprocess.PIPE,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE,
+                                   stdin=_PIPE,
+                                   stdout=_PIPE,
+                                   stderr=_PIPE,
                                    env=env)
             result = None
             if process_input is not None:
                 result = obj.communicate(process_input)
             else:
                 result = obj.communicate()
-            obj.stdin.close()
-            if obj.returncode:
-                LOG.debug(_('Result was %s') % obj.returncode)
+            obj.stdin.close()  # pylint: disable=E1101
+            _returncode = obj.returncode  # pylint: disable=E1101
+            if _returncode:
+                LOG.debug(_('Result was %s') % _returncode)
                 if type(check_exit_code) == types.IntType \
-                        and obj.returncode != check_exit_code:
+                        and _returncode != check_exit_code:
                     (stdout, stderr) = result
                     raise exception.ProcessExecutionError(
-                            exit_code=obj.returncode,
+                            exit_code=_returncode,
                             stdout=stdout,
                             stderr=stderr,
                             cmd=' '.join(cmd))
@@ -307,7 +310,7 @@ def  get_my_linklocal(interface):
 
 
 def utcnow():
-    """Overridable version of datetime.datetime.utcnow."""
+    """Overridable version of utils.utcnow."""
     if utcnow.override_time:
         return utcnow.override_time
     return datetime.datetime.utcnow()
@@ -523,6 +526,16 @@ def loads(s):
     return json.loads(s)
 
 
+try:
+    import anyjson
+except ImportError:
+    pass
+else:
+    anyjson._modules.append(("nova.utils", "dumps", TypeError,
+                                           "loads", ValueError))
+    anyjson.force_implementation("nova.utils")
+
+
 _semaphores = {}
 
 
@@ -724,3 +737,17 @@ def parse_server_string(server_str):
     except:
         LOG.debug(_('Invalid server_string: %s' % server_str))
         return ('', '')
+
+
+def gen_uuid():
+    return uuid.uuid4()
+
+
+def is_uuid_like(val):
+    """For our purposes, a UUID is a string in canoical form:
+
+        aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+    """
+    if not isinstance(val, basestring):
+        return False
+    return (len(val) == 36) and (val.count('-') == 4)

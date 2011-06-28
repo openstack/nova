@@ -20,6 +20,7 @@ import json
 
 import nova.db
 from nova import context
+from nova import crypto
 from nova import flags
 from nova import test
 from nova.api.openstack import zones
@@ -77,6 +78,18 @@ def zone_get_all_db(context):
 
 def zone_capabilities(method, context):
     return dict()
+
+
+GLOBAL_BUILD_PLAN = [
+        dict(name='host1', weight=10, ip='10.0.0.1', zone='zone1'),
+        dict(name='host2', weight=9, ip='10.0.0.2', zone='zone2'),
+        dict(name='host3', weight=8, ip='10.0.0.3', zone='zone3'),
+        dict(name='host4', weight=7, ip='10.0.0.4', zone='zone4'),
+     ]
+
+
+def zone_select(context, specs):
+    return GLOBAL_BUILD_PLAN
 
 
 class ZonesTest(test.TestCase):
@@ -190,3 +203,36 @@ class ZonesTest(test.TestCase):
         self.assertEqual(res_dict['zone']['name'], 'darksecret')
         self.assertEqual(res_dict['zone']['cap1'], 'a;b')
         self.assertEqual(res_dict['zone']['cap2'], 'c;d')
+
+    def test_zone_select(self):
+        FLAGS.build_plan_encryption_key = 'c286696d887c9aa0611bbb3e2025a45a'
+        self.stubs.Set(api, 'select', zone_select)
+
+        req = webob.Request.blank('/v1.0/zones/select')
+        req.method = 'POST'
+        req.headers["Content-Type"] = "application/json"
+        # Select queries end up being JSON encoded twice.
+        # Once to a string and again as an HTTP POST Body
+        req.body = json.dumps(json.dumps({}))
+
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res.status_int, 200)
+
+        self.assertTrue('weights' in res_dict)
+
+        for item in res_dict['weights']:
+            blob = item['blob']
+            decrypt = crypto.decryptor(FLAGS.build_plan_encryption_key)
+            secret_item = json.loads(decrypt(blob))
+            found = False
+            for original_item in GLOBAL_BUILD_PLAN:
+                if original_item['name'] != secret_item['name']:
+                    continue
+                found = True
+                for key in ('weight', 'ip', 'zone'):
+                    self.assertEqual(secret_item[key], original_item[key])
+
+            self.assertTrue(found)
+            self.assertEqual(len(item), 2)
+            self.assertTrue('weight' in item)

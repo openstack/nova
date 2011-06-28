@@ -176,7 +176,8 @@ def revoke_certs_by_project(project_id):
 def revoke_certs_by_user_and_project(user_id, project_id):
     """Revoke certs for user in project."""
     admin = context.get_admin_context()
-    for cert in db.certificate_get_all_by_user(admin, user_id, project_id):
+    for cert in db.certificate_get_all_by_user_and_project(admin,
+                                            user_id, project_id):
         revoke_cert(cert['project_id'], cert['file_name'])
 
 
@@ -330,6 +331,51 @@ def mkcacert(subject='nova', years=1):
     print pk.get_rsa().as_pem()
 
     return cert, pk, pkey
+
+
+def _build_cipher(key, iv, encode=True):
+    """Make a 128bit AES CBC encode/decode Cipher object.
+       Padding is handled internally."""
+    operation = 1 if encode else 0
+    return M2Crypto.EVP.Cipher(alg='aes_128_cbc', key=key, iv=iv, op=operation)
+
+
+def encryptor(key, iv=None):
+    """Simple symmetric key encryption."""
+    key = base64.b64decode(key)
+    if iv is None:
+        iv = '\0' * 16
+    else:
+        iv = base64.b64decode(iv)
+
+    def encrypt(data):
+        cipher = _build_cipher(key, iv, encode=True)
+        v = cipher.update(data)
+        v = v + cipher.final()
+        del cipher
+        v = base64.b64encode(v)
+        return v
+
+    return encrypt
+
+
+def decryptor(key, iv=None):
+    """Simple symmetric key decryption."""
+    key = base64.b64decode(key)
+    if iv is None:
+        iv = '\0' * 16
+    else:
+        iv = base64.b64decode(iv)
+
+    def decrypt(data):
+        data = base64.b64decode(data)
+        cipher = _build_cipher(key, iv, encode=False)
+        v = cipher.update(data)
+        v = v + cipher.final()
+        del cipher
+        return v
+
+    return decrypt
 
 
 # Copyright (c) 2006-2009 Mitch Garnaat http://garnaat.org/

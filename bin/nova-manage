@@ -53,15 +53,14 @@
   CLI interface for nova management.
 """
 
-import datetime
 import gettext
 import glob
 import json
+import netaddr
 import os
 import sys
 import time
 
-import IPy
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -78,6 +77,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import image
 from nova import log as logging
 from nova import quota
 from nova import rpc
@@ -96,8 +96,8 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
-flags.DECLARE('images_path', 'nova.image.local')
-flags.DECLARE('libvirt_type', 'nova.virt.libvirt_conn')
+flags.DECLARE('gateway_v6', 'nova.network.manager')
+flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
@@ -257,6 +257,11 @@ class RoleCommands(object):
         """adds role to user
         if project is specified, adds project specific role
         arguments: user, role [project]"""
+        if project:
+            projobj = self.manager.get_project(project)
+            if not projobj.has_member(user):
+                print "%s not a member of %s" % (user, project)
+                return
         self.manager.add_role(user, role, project)
 
     def has(self, user, role, project=None):
@@ -362,27 +367,47 @@ class ProjectCommands(object):
     def add(self, project_id, user_id):
         """Adds user to project
         arguments: project_id user_id"""
-        self.manager.add_to_project(user_id, project_id)
+        try:
+            self.manager.add_to_project(user_id, project_id)
+        except exception.UserNotFound as ex:
+            print ex
+            raise
 
     def create(self, name, project_manager, description=None):
         """Creates a new project
         arguments: name project_manager [description]"""
-        self.manager.create_project(name, project_manager, description)
+        try:
+            self.manager.create_project(name, project_manager, description)
+        except exception.UserNotFound as ex:
+            print ex
+            raise
 
     def modify(self, name, project_manager, description=None):
         """Modifies a project
         arguments: name project_manager [description]"""
-        self.manager.modify_project(name, project_manager, description)
+        try:
+            self.manager.modify_project(name, project_manager, description)
+        except exception.UserNotFound as ex:
+            print ex
+            raise
 
     def delete(self, name):
         """Deletes an existing project
         arguments: name"""
-        self.manager.delete_project(name)
+        try:
+            self.manager.delete_project(name)
+        except exception.ProjectNotFound as ex:
+            print ex
+            raise
 
     def environment(self, project_id, user_id, filename='novarc'):
         """Exports environment variables to an sourcable file
         arguments: project_id user_id [filename='novarc]"""
-        rc = self.manager.get_environment_rc(user_id, project_id)
+        try:
+            rc = self.manager.get_environment_rc(user_id, project_id)
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
+            raise
         with open(filename, 'w') as f:
             f.write(rc)
 
@@ -397,18 +422,26 @@ class ProjectCommands(object):
         arguments: project_id [key] [value]"""
         ctxt = context.get_admin_context()
         if key:
+            if value.lower() == 'unlimited':
+                value = None
             try:
                 db.quota_update(ctxt, project_id, key, value)
-            except exception.NotFound:
+            except exception.ProjectQuotaNotFound:
                 db.quota_create(ctxt, project_id, key, value)
-        project_quota = quota.get_quota(ctxt, project_id)
+        project_quota = quota.get_project_quotas(ctxt, project_id)
         for key, value in project_quota.iteritems():
+            if value is None:
+                value = 'unlimited'
             print '%s: %s' % (key, value)
 
     def remove(self, project_id, user_id):
         """Removes user from project
         arguments: project_id user_id"""
-        self.manager.remove_from_project(user_id, project_id)
+        try:
+            self.manager.remove_from_project(user_id, project_id)
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
+            raise
 
     def scrub(self, project_id):
         """Deletes data associated with project
@@ -427,6 +460,9 @@ class ProjectCommands(object):
             zip_file = self.manager.get_credentials(user_id, project_id)
             with open(filename, 'w') as f:
                 f.write(zip_file)
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
+            raise
         except db.api.NoMoreNetworks:
             print _('No more networks available. If this is a new '
                     'installation, you need\nto call something like this:\n\n'
@@ -482,7 +518,7 @@ class FloatingIpCommands(object):
     def create(self, host, range):
         """Creates floating ips for host by range
         arguments: host ip_range"""
-        for address in IPy.IP(range):
+        for address in netaddr.IPNetwork(range):
             db.floating_ip_create(context.get_admin_context(),
                                   {'address': str(address),
                                    'host': host})
@@ -490,7 +526,7 @@ class FloatingIpCommands(object):
     def delete(self, ip_range):
         """Deletes floating ips by range
         arguments: range"""
-        for address in IPy.IP(ip_range):
+        for address in netaddr.IPNetwork(ip_range):
             db.floating_ip_destroy(context.get_admin_context(),
                                    str(address))
 
@@ -505,7 +541,7 @@ class FloatingIpCommands(object):
         for floating_ip in floating_ips:
             instance = None
             if floating_ip['fixed_ip']:
-                instance = floating_ip['fixed_ip']['instance']['ec2_id']
+                instance = floating_ip['fixed_ip']['instance']['hostname']
             print "%s\t%s\t%s" % (floating_ip['host'],
                                   floating_ip['address'],
                                   instance)
@@ -514,16 +550,15 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
-    def create(self, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None,
-               vpn_start=None, fixed_range_v6=None, label='public'):
-        """Creates fixed ips for host by range
-        arguments: fixed_range=FLAG, [num_networks=FLAG],
-                   [network_size=FLAG], [vlan_start=FLAG],
-                   [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
+    def create(self, fixed_range=None, num_networks=None, network_size=None,
+            vlan_start=None, vpn_start=None, fixed_range_v6=None,
+            gateway_v6=None, label='public'):
+        """Creates fixed ips for host by range"""
         if not fixed_range:
-            raise TypeError(_('Fixed range in the form of 10.0.0.0/8 is '
-                              'required to create networks.'))
+            msg = _('Fixed range in the form of 10.0.0.0/8 is '
+                    'required to create networks.')
+            print msg
+            raise TypeError(msg)
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
@@ -534,15 +569,22 @@ class NetworkCommands(object):
             vpn_start = FLAGS.vpn_start
         if not fixed_range_v6:
             fixed_range_v6 = FLAGS.fixed_range_v6
+        if not gateway_v6:
+            gateway_v6 = FLAGS.gateway_v6
         net_manager = utils.import_object(FLAGS.network_manager)
-        net_manager.create_networks(context.get_admin_context(),
-                                    cidr=fixed_range,
-                                    num_networks=int(num_networks),
-                                    network_size=int(network_size),
-                                    vlan_start=int(vlan_start),
-                                    vpn_start=int(vpn_start),
-                                    cidr_v6=fixed_range_v6,
-                                    label=label)
+        try:
+            net_manager.create_networks(context.get_admin_context(),
+                                        cidr=fixed_range,
+                                        num_networks=int(num_networks),
+                                        network_size=int(network_size),
+                                        vlan_start=int(vlan_start),
+                                        vpn_start=int(vpn_start),
+                                        cidr_v6=fixed_range_v6,
+                                        gateway_v6=gateway_v6,
+                                        label=label)
+        except ValueError, e:
+            print e
+            raise e
 
     def list(self):
         """List all created networks"""
@@ -652,7 +694,7 @@ class ServiceCommands(object):
         """Show a list of all running services. Filter by host & service name.
         args: [host] [service]"""
         ctxt = context.get_admin_context()
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         services = db.service_get_all(ctxt)
         if host:
             services = [s for s in services if s['host'] == host]
@@ -836,7 +878,7 @@ class InstanceTypeCommands(object):
         try:
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
-        except exception.InvalidInputException:
+        except exception.InvalidInput:
             print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
@@ -899,7 +941,7 @@ class ImageCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
     def __init__(self, *args, **kwargs):
-        self.image_service = utils.import_object(FLAGS.image_service)
+        self.image_service = image.get_default_image_service()
 
     def _register(self, container_format, disk_format,
                   path, owner, name=None, is_public='T',
@@ -1018,16 +1060,6 @@ class ImageCommands(object):
         machine_images = {}
         other_images = {}
         directory = os.path.abspath(directory)
-        # NOTE(vish): If we're importing from the images path dir, attempt
-        #             to move the files out of the way before importing
-        #             so we aren't writing to the same directory. This
-        #             may fail if the dir was a mointpoint.
-        if (FLAGS.image_service == 'nova.image.local.LocalImageService'
-            and directory == os.path.abspath(FLAGS.images_path)):
-            new_dir = "%s_bak" % directory
-            os.rename(directory, new_dir)
-            os.mkdir(directory)
-            directory = new_dir
         for fn in glob.glob("%s/*/info.json" % directory):
             try:
                 image_path = os.path.join(fn.rpartition('/')[0], 'image')
@@ -1044,24 +1076,100 @@ class ImageCommands(object):
         self._convert_images(machine_images)
 
 
+class AgentBuildCommands(object):
+    """Class for managing agent builds."""
+
+    def create(self, os, architecture, version, url, md5hash,
+                hypervisor='xen'):
+        """Creates a new agent build.
+        arguments: os architecture version url md5hash [hypervisor='xen']"""
+        ctxt = context.get_admin_context()
+        agent_build = db.agent_build_create(ctxt,
+                                            {'hypervisor': hypervisor,
+                                             'os': os,
+                                             'architecture': architecture,
+                                             'version': version,
+                                             'url': url,
+                                             'md5hash': md5hash})
+
+    def delete(self, os, architecture, hypervisor='xen'):
+        """Deletes an existing agent build.
+        arguments: os architecture [hypervisor='xen']"""
+        ctxt = context.get_admin_context()
+        agent_build_ref = db.agent_build_get_by_triple(ctxt,
+                                  hypervisor, os, architecture)
+        db.agent_build_destroy(ctxt, agent_build_ref['id'])
+
+    def list(self, hypervisor=None):
+        """Lists all agent builds.
+        arguments: <none>"""
+        fmt = "%-10s  %-8s  %12s  %s"
+        ctxt = context.get_admin_context()
+        by_hypervisor = {}
+        for agent_build in db.agent_build_get_all(ctxt):
+            buildlist = by_hypervisor.get(agent_build.hypervisor)
+            if not buildlist:
+                buildlist = by_hypervisor[agent_build.hypervisor] = []
+
+            buildlist.append(agent_build)
+
+        for key, buildlist in by_hypervisor.iteritems():
+            if hypervisor and key != hypervisor:
+                continue
+
+            print "Hypervisor: %s" % key
+            print fmt % ('-' * 10, '-' * 8, '-' * 12, '-' * 32)
+            for agent_build in buildlist:
+                print fmt % (agent_build.os, agent_build.architecture,
+                             agent_build.version, agent_build.md5hash)
+                print '    %s' % agent_build.url
+
+            print
+
+    def modify(self, os, architecture, version, url, md5hash,
+               hypervisor='xen'):
+        """Update an existing agent build.
+        arguments: os architecture version url md5hash [hypervisor='xen']
+        """
+        ctxt = context.get_admin_context()
+        agent_build_ref = db.agent_build_get_by_triple(ctxt,
+                                  hypervisor, os, architecture)
+        db.agent_build_update(ctxt, agent_build_ref['id'],
+                              {'version': version,
+                               'url': url,
+                               'md5hash': md5hash})
+
+
+class ConfigCommands(object):
+    """Class for exposing the flags defined by flag_file(s)."""
+
+    def __init__(self):
+        pass
+
+    def list(self):
+        print FLAGS.FlagsIntoString()
+
+
 CATEGORIES = [
-    ('user', UserCommands),
     ('account', AccountCommands),
-    ('project', ProjectCommands),
-    ('role', RoleCommands),
-    ('shell', ShellCommands),
-    ('vpn', VpnCommands),
-    ('fixed', FixedIpCommands),
-    ('floating', FloatingIpCommands),
-    ('network', NetworkCommands),
-    ('vm', VmCommands),
-    ('service', ServiceCommands),
+    ('agent', AgentBuildCommands),
+    ('config', ConfigCommands),
     ('db', DbCommands),
-    ('volume', VolumeCommands),
+    ('fixed', FixedIpCommands),
+    ('flavor', InstanceTypeCommands),
+    ('floating', FloatingIpCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands),
-    ('version', VersionCommands)]
+    ('network', NetworkCommands),
+    ('project', ProjectCommands),
+    ('role', RoleCommands),
+    ('service', ServiceCommands),
+    ('shell', ShellCommands),
+    ('user', UserCommands),
+    ('version', VersionCommands),
+    ('vm', VmCommands),
+    ('volume', VolumeCommands),
+    ('vpn', VpnCommands)]
 
 
 def lazy_match(name, key_value_tuples):
