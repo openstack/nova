@@ -428,6 +428,29 @@ def certificate_update(context, certificate_id, values):
 
 
 ###################
+@require_context
+def floating_ip_get(context, id):
+    session = get_session()
+    result = None
+    if is_admin_context(context):
+        result = session.query(models.FloatingIp).\
+                         options(joinedload('fixed_ip')).\
+                         options(joinedload_all('fixed_ip.instance')).\
+                         filter_by(id=id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.FloatingIp).\
+                         options(joinedload('fixed_ip')).\
+                         options(joinedload_all('fixed_ip.instance')).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.FloatingIpNotFoundForFixedAddress()
+
+    return result
 
 
 @require_context
@@ -582,7 +605,23 @@ def floating_ip_get_by_address(context, address, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.FloatingIpNotFound(fixed_ip=address)
+        raise exception.FloatingIpNotFoundForFixedAddress(fixed_ip=address)
+
+    return result
+
+
+@require_context
+def floating_ip_get_by_ip(context, ip, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.FloatingIp).\
+                filter_by(address=ip).\
+                filter_by(deleted=can_read_deleted(context)).\
+                first()
+
+    if not result:
+        raise exception.FloatingIpNotFound(floating_ip=ip)
 
     return result
 
@@ -722,7 +761,7 @@ def fixed_ip_get_by_address(context, address, session=None):
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.FloatingIpNotFound(fixed_ip=address)
+        raise exception.FloatingIpNotFoundForFixedAddress(fixed_ip=address)
 
     if is_user_context(context):
         authorize_project_context(context, result.instance.project_id)
