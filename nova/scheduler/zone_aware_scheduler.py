@@ -192,9 +192,10 @@ class ZoneAwareScheduler(driver.Scheduler):
         for num in xrange(num_instances):
             if not build_plan:
                 break
-            item = build_plan.pop(0)
-            self._provision_resource(context, item, instance_id,
-                    request_spec, kwargs)
+
+            build_plan_item = build_plan.pop(0)
+            self._provision_resource(context, build_plan_item, instance_id,
+                                     request_spec, kwargs)
 
         # Returning None short-circuits the routing to Compute (since
         # we've already done it here)
