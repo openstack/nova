@@ -790,4 +790,3 @@ class Bootstrapper(object):
         for key in FLAGS:
             value = FLAGS.get(key, None)
             logging.audit(_("%(key)s : %(value)s" % locals()))
-
