@@ -422,6 +422,11 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
+def instance_get_active_by_window(context, begin, end=None):
+    """Get instances active during a certain time window."""
+    return IMPL.instance_get_active_by_window(context, begin, end)
+
+
 def instance_get_all_by_user(context, user_id):
     """Get all instances."""
     return IMPL.instance_get_all_by_user(context, user_id)
