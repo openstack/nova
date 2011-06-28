@@ -373,9 +373,10 @@ class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
     def test_reconnect_on_server_failure(self):
         self.manager.get_users()
         fakeldap.server_fail = True
-        with self.assertRaises(fakeldap.SERVER_DOWN):
-            self.manager.get_users()
-        fakeldap.server_fail = False
+        try:
+            self.assertRaises(fakeldap.SERVER_DOWN, self.manager.get_users)
+        finally:
+            fakeldap.server_fail = False
         self.manager.get_users()
 
 
