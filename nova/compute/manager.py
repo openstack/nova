@@ -215,6 +215,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
+    @exception.wrap_exception
+    def refresh_provider_fw_rules(self, context, **_kwargs):
+        """This call passes straight through to the virtualization driver."""
+        return self.driver.refresh_provider_fw_rules()
+
     def _setup_block_device_mapping(self, context, instance_id):
         """setup volumes for block device mapping"""
         self.db.instance_set_state(context,

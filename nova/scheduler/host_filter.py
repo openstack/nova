@@ -93,6 +93,26 @@ class InstanceTypeFilter(HostFilter):
         """Use instance_type to filter hosts."""
         return (self._full_name(), instance_type)
 
+    def _satisfies_extra_specs(self, capabilities, instance_type):
+        """Check that the capabilities provided by the compute service
+        satisfy the extra specs associated with the instance type"""
+
+        if 'extra_specs' not in instance_type:
+            return True
+
+        # Note(lorinh): For now, we are just checking exact matching on the
+        # values. Later on, we  want to handle numerical
+        # values so we can represent things like number of GPU cards
+
+        try:
+            for key, value in instance_type['extra_specs'].iteritems():
+                if capabilities[key] != value:
+                    return False
+        except KeyError:
+            return False
+
+        return True
+
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that can create instance_type."""
         instance_type = query
@@ -103,7 +123,11 @@ class InstanceTypeFilter(HostFilter):
             disk_bytes = capabilities['disk_available']
             spec_ram = instance_type['memory_mb']
             spec_disk = instance_type['local_gb']
-            if host_ram_mb >= spec_ram and disk_bytes >= spec_disk:
+            extra_specs = instance_type['extra_specs']
+
+            if host_ram_mb >= spec_ram and \
+               disk_bytes >= spec_disk and \
+               self._satisfies_extra_specs(capabilities, instance_type):
                 selected_hosts.append((host, capabilities))
         return selected_hosts
 

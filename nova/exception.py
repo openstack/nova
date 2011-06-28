@@ -361,6 +361,10 @@ class NoFixedIpsFoundForInstance(NotFound):
 
 
 class FloatingIpNotFound(NotFound):
+    message = _("Floating ip %(floating_ip)s not found")
+
+
+class FloatingIpNotFoundForFixedAddress(NotFound):
     message = _("Floating ip not found for fixed address %(fixed_ip)s.")
 
 
@@ -502,6 +506,11 @@ class SchedulerWeightFlagNotFound(NotFound):
 class InstanceMetadataNotFound(NotFound):
     message = _("Instance %(instance_id)s has no metadata with "
                 "key %(metadata_key)s.")
+
+
+class InstanceTypeExtraSpecsNotFound(NotFound):
+    message = _("Instance Type %(instance_type_id)s has no extra specs with "
+                "key %(extra_specs_key)s.")
 
 
 class LDAPObjectNotFound(NotFound):
