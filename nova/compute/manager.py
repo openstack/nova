@@ -547,15 +547,30 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
+        # NOTE(jk0): Eventually extract this out to the ImageService?
+        def fetch_images():
+            images = []
+            offset = 0
+            while True:
+                batch = image_service.detail(context, filters=filters,
+                        offset=offset)
+                if not batch:
+                    break
+                images += batch
+                offset += len(batch)
+            return images
+
         image_service = nova.image.get_default_image_service()
         filters = {'property-image_type': 'backup',
                    'property-backup_type': backup_type,
                    'property-instance_uuid': instance_uuid}
-        images = image_service.detail(context, filters=filters)
+
+        images = fetch_images()
         num_images = len(images)
         LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)"
                     % locals()))
         if num_images > rotation:
+            # TODO(jk0): Use db-level sorting in glance when it hits trunk.
             # Sort oldest (by created_at) to end of list
             images.sort(key=itemgetter('created_at'), reverse=True)
 
