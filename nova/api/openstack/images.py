@@ -105,7 +105,8 @@ class Controller(object):
             try:
                 return body["image"][param]
             except KeyError:
-                raise webob.exc.HTTPBadRequest()
+                raise webob.exc.HTTPBadRequest(explanation="Missing required "
+                        "param: %s" % param)
 
         context = req.environ['nova.context']
         content_type = req.get_content_type()
@@ -131,7 +132,8 @@ class Controller(object):
             # NOTE(sirp): Unlike snapshot, backup is not a customer facing
             # API call; rather, it's used by the internal backup scheduler
             if not FLAGS.allow_admin_api:
-                raise webob.exc.HTTPBadRequest()
+                raise webob.exc.HTTPBadRequest(
+                        explanation="Admin API Required")
 
             backup_type = get_param("backup_type")
             rotation = int(get_param("rotation"))
@@ -141,7 +143,8 @@ class Controller(object):
                         backup_type, rotation, extra_properties=props)
         else:
             LOG.error(_("Invalid image_type '%s' passed") % image_type)
-            raise webob.exc.HTTPBadRequest()
+            raise webob.exc.HTTPBadRequest(explanation="Invalue image_type: "
+                   "%s" % image_type)
 
         return dict(image=self.get_builder(req).build(image, detail=True))
 
