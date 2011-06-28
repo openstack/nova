@@ -27,6 +27,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import notifier
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
@@ -45,6 +46,15 @@ class NoValidHost(exception.Error):
 class WillNotSchedule(exception.Error):
     """The specified host is not up or doesn't exist."""
     pass
+
+
+def publisher_id(host=None):
+    return notifier.publisher_id("scheduler", host)
+
+
+def notifier(instance_id, event_type, level, host=None):
+    return dict(instance_id=instance_id, event_type=event_type,
+                notification_level=level, host=publisher_id(host))
 
 
 class Scheduler(object):

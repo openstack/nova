@@ -44,7 +44,6 @@ from nova import fakerabbit
 from nova import flags
 from nova import log as logging
 from nova import utils
-
 from nova.notifier import api as notifier
 
 
@@ -323,12 +322,8 @@ class ConsumerSet(object):
                     running = False
                     break
                 except exception.NovaException, e:
-                    if not e.notification_level:
-                        ex = e
-                    # We have an exception we can
-                    # tell the Notification system about.
-                    # Pass it on. 
-
+                    ex = e
+                    notifier.exception_to_notification(e) 
                 except Exception as e:
                     ex = e
 
