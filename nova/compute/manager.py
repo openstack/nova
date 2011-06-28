@@ -441,6 +441,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
         usage_info = dict(
               tenant_id=instance_ref['project_id'],
               user_id=instance_ref['user_id'],
