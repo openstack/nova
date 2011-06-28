@@ -550,14 +550,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(jk0): Eventually extract this out to the ImageService?
         def fetch_images():
             images = []
-            offset = 0
+            marker = 0
             while True:
                 batch = image_service.detail(context, filters=filters,
-                        offset=offset)
+                        marker=marker)
                 if not batch:
                     break
                 images += batch
-                offset += len(batch)
+                marker += len(batch)
             return images
 
         image_service = nova.image.get_default_image_service()
