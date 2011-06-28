@@ -956,6 +956,24 @@ def instance_get_all(context):
 
 
 @require_admin_context
+def instance_get_active_by_window(context, begin, end=None):
+    """Return instances that were continuously active over the given window"""
+    session = get_session()
+    query = session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('instance_type')).\
+                   filter(models.Instance.launched_at < begin)
+    if end:
+        query = query.filter(or_(models.Instance.terminated_at == None,
+                                 models.Instance.terminated_at > end))
+    else:
+        query = query.filter(models.Instance.terminated_at == None)
+    return query.all()
+
+
+@require_admin_context
 def instance_get_all_by_user(context, user_id):
     session = get_session()
     return session.query(models.Instance).\
