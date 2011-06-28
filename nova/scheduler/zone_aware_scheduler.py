@@ -181,7 +181,8 @@ class ZoneAwareScheduler(driver.Scheduler):
             return None
 
         num_instances = request_spec.get('num_instances', 1)
-        LOG.debug(_("Attemping to build %d instance(s)") % locals())
+        LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
+                locals())
 
         # Create build plan and provision ...
         build_plan = self.select(context, request_spec)

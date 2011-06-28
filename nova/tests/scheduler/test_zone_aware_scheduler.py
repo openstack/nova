@@ -63,13 +63,13 @@ class FakeZoneManager(zone_manager.ZoneManager):
     def __init__(self):
         self.service_states = {
             'host1': {
-                'compute': {'host_memory_free': 1000*1024*1024},
+                'compute': {'host_memory_free': 1073741824},
             },
             'host2': {
-                'compute': {'host_memory_free': 2000*1024*1024},
+                'compute': {'host_memory_free': 2147483648},
             },
             'host3': {
-                'compute': {'host_memory_free': 3000*1024*1024},
+                'compute': {'host_memory_free': 3221225472},
             },
         }
 
@@ -158,7 +158,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         fake_context = {}
         build_plan = sched.select(fake_context,
                 {'instance_type': {'memory_mb': 512},
-                    'num_instances': 4 })
+                    'num_instances': 4})
 
         # 4 from local zones, 12 from remotes
         self.assertEqual(16, len(build_plan))
