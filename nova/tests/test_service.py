@@ -21,7 +21,6 @@ Unit Tests for remote procedure calls using queue
 """
 
 import mox
-import unittest2 as unittest
 
 from nova import context
 from nova import db

@@ -21,7 +21,7 @@
 import os.path
 import tempfile
 
-import unittest2 as unittest
+import unittest
 
 import nova.exception
 import nova.test
