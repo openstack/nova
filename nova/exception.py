@@ -598,3 +598,11 @@ class MigrationError(NovaException):
 
 class MalformedRequestBody(NovaException):
     message = _("Malformed message body: %(reason)s")
+
+
+class PasteConfigNotFound(NotFound):
+    message = _("Could not find paste config at %(path)s")
+
+
+class PasteAppNotFound(NotFound):
+    message = _("Could not load paste app '%(name)s' from %(path)s")
