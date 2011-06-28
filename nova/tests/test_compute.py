@@ -348,7 +348,7 @@ class ComputeTestCase(test.TestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        self.assertEquals(payload['image_id'], '1')
+        self.assertEquals(payload['image_ref'], '1')
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_terminate_usage_notification(self):
@@ -372,7 +372,7 @@ class ComputeTestCase(test.TestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        self.assertEquals(payload['image_id'], '1')
+        self.assertEquals(payload['image_ref'], '1')
 
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
@@ -452,7 +452,7 @@ class ComputeTestCase(test.TestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        self.assertEquals(payload['image_id'], '1')
+        self.assertEquals(payload['image_ref'], '1')
         self.compute.terminate_instance(context, instance_id)
 
     def test_resize_instance(self):
