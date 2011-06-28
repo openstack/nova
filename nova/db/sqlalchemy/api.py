@@ -1437,11 +1437,11 @@ def network_associate(context, project_id, force=False):
 
         def network_query(project_filter):
             return session.query(models.Network).\
-                                 filter_by(deleted=False).\
-                                 filter(models.Network.host != None).\
-                                 filter_by(project_id=project_filter).\
-                                 with_lockmode('update').\
-                                 first()
+                           filter_by(deleted=False).\
+                           filter(models.Network.host != None).\
+                           filter_by(project_id=project_filter).\
+                           with_lockmode('update').\
+                           first()
 
         if not force:
             # find out if project has a network

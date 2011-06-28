@@ -135,10 +135,10 @@ class TestFuncs(object):
         db.fixed_ip_update(self.context, address,
                            {'virtual_interface_id': vif['id']})
 
-        self.network.lease_fixed_ip(self.context, vif['address'], address)
+        self.network.lease_fixed_ip(self.context, address)
         ip = db.fixed_ip_get_by_address(self.context, address)
         self.assertTrue(ip['leased'])
 
-        self.network.release_fixed_ip(self.context, vif['address'], address)
+        self.network.release_fixed_ip(self.context, address)
         ip = db.fixed_ip_get_by_address(self.context, address)
         self.assertFalse(ip['leased'])
