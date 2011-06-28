@@ -355,7 +355,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                   created_at=str(instance_ref['created_at']),
                   launched_at=str(instance_ref['launched_at']) \
                               if instance_ref['launched_at'] else '',
-                  image_id=instance_ref['image_id'])
+                  image_ref=instance_ref['image_ref'])
             notifier_api.notify('compute.%s' % self.host,
                                 'compute.instance.create',
                                 notifier_api.INFO,
@@ -451,7 +451,7 @@ class ComputeManager(manager.SchedulerDependentManager):
               created_at=str(instance_ref['created_at']),
               launched_at=str(instance_ref['launched_at']) \
                           if instance_ref['launched_at'] else '',
-              image_id=instance_ref['image_id'])
+              image_ref=instance_ref['image_ref'])
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.delete',
                             notifier_api.INFO,
@@ -502,7 +502,7 @@ class ComputeManager(manager.SchedulerDependentManager):
               created_at=str(instance_ref['created_at']),
               launched_at=str(instance_ref['launched_at']) \
                           if instance_ref['launched_at'] else '',
-              image_id=image_id)
+              image_ref=image_ref)
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.rebuild',
                             notifier_api.INFO,
@@ -694,7 +694,7 @@ class ComputeManager(manager.SchedulerDependentManager):
               created_at=str(instance_ref['created_at']),
               launched_at=str(instance_ref['launched_at']) \
                           if instance_ref['launched_at'] else '',
-              image_id=instance_ref['image_id'])
+              image_ref=instance_ref['image_ref'])
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.resize.confirm',
                             notifier_api.INFO,
@@ -756,7 +756,7 @@ class ComputeManager(manager.SchedulerDependentManager):
               created_at=str(instance_ref['created_at']),
               launched_at=str(instance_ref['launched_at']) \
                           if instance_ref['launched_at'] else '',
-              image_id=instance_ref['image_id'])
+              image_ref=instance_ref['image_ref'])
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.resize.revert',
                             notifier_api.INFO,
@@ -809,7 +809,7 @@ class ComputeManager(manager.SchedulerDependentManager):
               created_at=str(instance_ref['created_at']),
               launched_at=str(instance_ref['launched_at']) \
                           if instance_ref['launched_at'] else '',
-              image_id=instance_ref['image_id'])
+              image_ref=instance_ref['image_ref'])
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.resize.prep',
                             notifier_api.INFO,

@@ -117,7 +117,7 @@ if __name__ == '__main__':
               created_at=str(instance_ref['created_at']),
               launched_at=str(instance_ref['launched_at']) \
                           if instance_ref['launched_at'] else '',
-              image_id=instance_ref['image_id'],
+              image_ref=instance_ref['image_ref'],
               audit_period_begining=str(begin),
               audit_period_ending=str(end))
         notifier_api.notify('compute.%s' % FLAGS.host,
