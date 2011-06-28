@@ -571,7 +571,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             marker = None
             while True:
                 batch = image_service.detail(context, filters=filters,
-                        marker=marker)
+                        marker=marker, sort_key='created_at', sort_dir='desc')
                 if not batch:
                     break
                 images += batch
