@@ -369,3 +369,23 @@ class AdminController(object):
             raise exception.ApiError(_('Duplicate rule'))
         self.compute_api.trigger_provider_fw_rules_refresh(context)
         return {'status': 'OK', 'message': 'Added %s rules' % rules_added}
+
+    def describe_external_address_blocks(self, context):
+        blocks = db.provider_fw_rule_get_all(context)
+        # NOTE(todd): use a set since we have icmp/udp/tcp rules with same cidr
+        blocks = set([b.cidr for b in blocks])
+        blocks = [{'cidr': b} for b in blocks]
+        return {'externalIpBlockInfo':
+                list(sorted(blocks, key=lambda k: k['cidr']))}
+
+    def remove_external_address_block(self, context, cidr):
+        LOG.audit(_('Removing ip block from %s'), cidr, context=context)
+        cidr = urllib.unquote(cidr).decode()
+        # raise if invalid
+        netaddr.IPNetwork(cidr)
+        rules = db.provider_fw_rule_get_all_by_cidr(context, cidr)
+        for rule in rules:
+            db.provider_fw_rule_destroy(context, rule['id'])
+        if rules:
+            self.compute_api.trigger_provider_fw_rules_refresh(context)
+        return {'status': 'OK', 'message': 'Deleted %s rules' % len(rules)}

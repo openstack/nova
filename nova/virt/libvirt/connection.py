@@ -38,6 +38,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 import hashlib
 import multiprocessing
+import netaddr
 import os
 import random
 import re
@@ -52,8 +53,6 @@ from xml.etree import ElementTree
 
 from eventlet import greenthread
 from eventlet import tpool
-
-import IPy
 
 from nova import context
 from nova import db
@@ -186,6 +185,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             if state != power_state.RUNNING:
                 continue
+            self.firewall_driver.setup_basic_filtering(instance)
             self.firewall_driver.prepare_instance_filter(instance)
             self.firewall_driver.apply_instance_filter(instance)
 
