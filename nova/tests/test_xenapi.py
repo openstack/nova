@@ -446,6 +446,12 @@ class XenAPIVMTestCase(test.TestCase):
                          os_type="windows", architecture="i386")
         self.check_vm_params_for_windows()
 
+    def test_spawn_iso_glance(self):
+        FLAGS.xenapi_image_service = 'glance'
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_ISO, None, None,
+                         os_type="windows", architecture="i386")
+        self.check_vm_params_for_windows()
+
     def test_spawn_glance(self):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
