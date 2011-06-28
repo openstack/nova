@@ -345,17 +345,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._update_launched_at(context, instance_id)
             self._update_state(context, instance_id)
-            usage_info = dict(
-                  tenant_id=instance_ref['project_id'],
-                  user_id=instance_ref['user_id'],
-                  instance_id=instance_ref['id'],
-                  instance_type=instance_ref['instance_type']['name'],
-                  instance_type_id=instance_ref['instance_type_id'],
-                  display_name=instance_ref['display_name'],
-                  created_at=str(instance_ref['created_at']),
-                  launched_at=str(instance_ref['launched_at']) \
-                              if instance_ref['launched_at'] else '',
-                  image_ref=instance_ref['image_ref'])
+            usage_info = utils.usage_from_instance(instance_ref)
             notifier_api.notify('compute.%s' % self.host,
                                 'compute.instance.create',
                                 notifier_api.INFO,
@@ -442,17 +432,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
-        usage_info = dict(
-              tenant_id=instance_ref['project_id'],
-              user_id=instance_ref['user_id'],
-              instance_id=instance_ref['id'],
-              instance_type=instance_ref['instance_type']['name'],
-              instance_type_id=instance_ref['instance_type_id'],
-              display_name=instance_ref['display_name'],
-              created_at=str(instance_ref['created_at']),
-              launched_at=str(instance_ref['launched_at']) \
-                          if instance_ref['launched_at'] else '',
-              image_ref=instance_ref['image_ref'])
+        usage_info = utils.usage_from_instance(instance_ref)
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.delete',
                             notifier_api.INFO,
@@ -493,17 +473,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
-        usage_info = dict(
-              tenant_id=instance_ref['project_id'],
-              user_id=instance_ref['user_id'],
-              instance_id=instance_ref['id'],
-              instance_type=instance_ref['instance_type']['name'],
-              instance_type_id=instance_ref['instance_type_id'],
-              display_name=instance_ref['display_name'],
-              created_at=str(instance_ref['created_at']),
-              launched_at=str(instance_ref['launched_at']) \
-                          if instance_ref['launched_at'] else '',
-              image_ref=image_ref)
+        usage_info = utils.usage_from_instance(instance_ref,
+                                               image_ref=image_ref)
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.rebuild',
                             notifier_api.INFO,
@@ -685,17 +656,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.destroy(instance_ref)
-        usage_info = dict(
-              tenant_id=instance_ref['project_id'],
-              user_id=instance_ref['user_id'],
-              instance_id=instance_ref['id'],
-              instance_type=instance_ref['instance_type']['name'],
-              instance_type_id=instance_ref['instance_type_id'],
-              display_name=instance_ref['display_name'],
-              created_at=str(instance_ref['created_at']),
-              launched_at=str(instance_ref['launched_at']) \
-                          if instance_ref['launched_at'] else '',
-              image_ref=instance_ref['image_ref'])
+        usage_info = utils.usage_from_instance(instance_ref)
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.resize.confirm',
                             notifier_api.INFO,
@@ -747,17 +708,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.revert_resize(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
-        usage_info = dict(
-              tenant_id=instance_ref['project_id'],
-              user_id=instance_ref['user_id'],
-              instance_id=instance_ref['id'],
-              instance_type=instance_type['name'],
-              instance_type_id=instance_type['id'],
-              display_name=instance_ref['display_name'],
-              created_at=str(instance_ref['created_at']),
-              launched_at=str(instance_ref['launched_at']) \
-                          if instance_ref['launched_at'] else '',
-              image_ref=instance_ref['image_ref'])
+        usage_info = utils.usage_from_instance(instance_ref)
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.resize.revert',
                             notifier_api.INFO,
@@ -798,19 +749,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'migration_id': migration_ref['id'],
                        'instance_id': instance_id, },
                 })
-        usage_info = dict(
-              tenant_id=instance_ref['project_id'],
-              user_id=instance_ref['user_id'],
-              instance_id=instance_ref['id'],
-              instance_type=instance_ref['instance_type']['name'],
-              instance_type_id=instance_ref['instance_type_id'],
-              new_instance_type=instance_type['name'],
-              new_instance_type_id=instance_type['id'],
-              display_name=instance_ref['display_name'],
-              created_at=str(instance_ref['created_at']),
-              launched_at=str(instance_ref['launched_at']) \
-                          if instance_ref['launched_at'] else '',
-              image_ref=instance_ref['image_ref'])
+        usage_info = utils.usage_from_instance(instance_ref,
+                              new_instance_type=instance_type['name'],
+                              new_instance_type_id=instance_type['id'])
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.resize.prep',
                             notifier_api.INFO,
