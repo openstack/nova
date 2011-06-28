@@ -984,12 +984,14 @@ def find_iso_sr(session):
         sr_rec = session.get_xenapi().SR.get_record(sr_ref)
 
         LOG.debug(_("ISO: looking at SR %(sr_rec)s") % locals())
-        #TODO: use ['other_config']['il8n-key-iso-sr'] == 'local-storage'
-        #    or something similar to identify the iso sr
         if not (sr_rec['content_type'] == 'iso' and
-                sr_rec['name_label'] == 'Local ISOs'):
-            LOG.debug(_("ISO: No match"))
+                'i18n-key' in sr_rec['other_config'] and
+                sr_rec['other_config']['i18n-key'] == 'local-storage-iso'):
+            LOG.debug(_("ISO: SR with 'content_type' of 'iso' and"
+                            " 'other-config' key 'i18n-key' of value"
+                            " 'local-storage-iso'"))
             continue
+
         LOG.debug(_("ISO: SR MATCHing our criteria"))
         for pbd_ref in sr_rec['PBDs']:
             LOG.debug(_("ISO: ISO, looking to see if it is host local"))
