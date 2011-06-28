@@ -43,7 +43,6 @@ import time
 import functools
 
 from eventlet import greenthread
-from operator import itemgetter
 
 from nova import exception
 from nova import flags
@@ -570,10 +569,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)"
                     % locals()))
         if num_images > rotation:
-            # TODO(jk0): Use db-level sorting in glance when it hits trunk.
-            # Sort oldest (by created_at) to end of list
-            images.sort(key=itemgetter('created_at'), reverse=True)
-
             # NOTE(sirp): this deletes all backups that exceed the rotation
             # limit
             excess = len(images) - rotation
