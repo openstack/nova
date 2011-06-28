@@ -73,7 +73,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.controller = limits.LimitsControllerV10()
+        self.controller = limits.create_resource('1.0')
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -209,7 +209,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.controller = limits.LimitsControllerV11()
+        self.controller = limits.create_resource('1.1')
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -672,8 +672,7 @@ class WsgiLimiterTest(BaseLimitTestSuite):
         """Only POSTs should work."""
         requests = []
         for method in ["GET", "PUT", "DELETE", "HEAD", "OPTIONS"]:
-            request = webob.Request.blank("/")
-            request.body = self._request_data("GET", "/something")
+            request = webob.Request.blank("/", method=method)
             response = request.get_response(self.app)
             self.assertEqual(response.status_int, 405)
 

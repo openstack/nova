@@ -24,6 +24,7 @@ other backends by creating another class that exposes the same
 public methods.
 """
 
+import functools
 import sys
 
 from nova import exception
@@ -68,6 +69,12 @@ flags.DEFINE_string('ldap_developer',
 LOG = logging.getLogger("nova.ldapdriver")
 
 
+if FLAGS.memcached_servers:
+    import memcache
+else:
+    from nova import fakememcache as memcache
+
+
 # TODO(vish): make an abstract base class with the same public methods
 #             to define a set interface for AuthDrivers. I'm delaying
 #             creating this now because I'm expecting an auth refactor
@@ -85,12 +92,48 @@ def _clean(attr):
 
 def sanitize(fn):
     """Decorator to sanitize all args"""
+    @functools.wraps(fn)
     def _wrapped(self, *args, **kwargs):
         args = [_clean(x) for x in args]
         kwargs = dict((k, _clean(v)) for (k, v) in kwargs)
         return fn(self, *args, **kwargs)
     _wrapped.func_name = fn.func_name
     return _wrapped
+
+
+class LDAPWrapper(object):
+    def __init__(self, ldap, url, user, password):
+        self.ldap = ldap
+        self.url = url
+        self.user = user
+        self.password = password
+        self.conn = None
+
+    def __wrap_reconnect(f):
+        def inner(self, *args, **kwargs):
+            if self.conn is None:
+                self.connect()
+                return f(self.conn)(*args, **kwargs)
+            else:
+                try:
+                    return f(self.conn)(*args, **kwargs)
+                except self.ldap.SERVER_DOWN:
+                    self.connect()
+                    return f(self.conn)(*args, **kwargs)
+        return inner
+
+    def connect(self):
+        try:
+            self.conn = self.ldap.initialize(self.url)
+            self.conn.simple_bind_s(self.user, self.password)
+        except self.ldap.SERVER_DOWN:
+            self.conn = None
+            raise
+
+    search_s = __wrap_reconnect(lambda conn: conn.search_s)
+    add_s = __wrap_reconnect(lambda conn: conn.add_s)
+    delete_s = __wrap_reconnect(lambda conn: conn.delete_s)
+    modify_s = __wrap_reconnect(lambda conn: conn.modify_s)
 
 
 class LdapDriver(object):
@@ -103,29 +146,56 @@ class LdapDriver(object):
     isadmin_attribute = 'isNovaAdmin'
     project_attribute = 'owner'
     project_objectclass = 'groupOfNames'
+    conn = None
+    mc = None
 
     def __init__(self):
         """Imports the LDAP module"""
         self.ldap = __import__('ldap')
-        self.conn = None
         if FLAGS.ldap_schema_version == 1:
             LdapDriver.project_pattern = '(objectclass=novaProject)'
             LdapDriver.isadmin_attribute = 'isAdmin'
             LdapDriver.project_attribute = 'projectManager'
             LdapDriver.project_objectclass = 'novaProject'
+        self.__cache = None
+        if LdapDriver.conn is None:
+            LdapDriver.conn = LDAPWrapper(self.ldap, FLAGS.ldap_url,
+                                          FLAGS.ldap_user_dn,
+                                          FLAGS.ldap_password)
+        if LdapDriver.mc is None:
+            LdapDriver.mc = memcache.Client(FLAGS.memcached_servers, debug=0)
 
     def __enter__(self):
-        """Creates the connection to LDAP"""
-        self.conn = self.ldap.initialize(FLAGS.ldap_url)
-        self.conn.simple_bind_s(FLAGS.ldap_user_dn, FLAGS.ldap_password)
+        # TODO(yorik-sar): Should be per-request cache, not per-driver-request
+        self.__cache = {}
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """Destroys the connection to LDAP"""
-        self.conn.unbind_s()
+        self.__cache = None
         return False
 
+    def __local_cache(key_fmt):  # pylint: disable=E0213
+        """Wrap function to cache it's result in self.__cache.
+        Works only with functions with one fixed argument.
+        """
+        def do_wrap(fn):
+            @functools.wraps(fn)
+            def inner(self, arg, **kwargs):
+                cache_key = key_fmt % (arg,)
+                try:
+                    res = self.__cache[cache_key]
+                    LOG.debug('Local cache hit for %s by key %s' %
+                              (fn.__name__, cache_key))
+                    return res
+                except KeyError:
+                    res = fn(self, arg, **kwargs)
+                    self.__cache[cache_key] = res
+                    return res
+            return inner
+        return do_wrap
+
     @sanitize
+    @__local_cache('uid_user-%s')
     def get_user(self, uid):
         """Retrieve user by id"""
         attr = self.__get_ldap_user(uid)
@@ -134,15 +204,31 @@ class LdapDriver(object):
     @sanitize
     def get_user_from_access_key(self, access):
         """Retrieve user by access key"""
+        cache_key = 'uak_dn_%s' % (access,)
+        user_dn = self.mc.get(cache_key)
+        if user_dn:
+            user = self.__to_user(
+                self.__find_object(user_dn, scope=self.ldap.SCOPE_BASE))
+            if user:
+                if user['access'] == access:
+                    return user
+                else:
+                    self.mc.set(cache_key, None)
         query = '(accessKey=%s)' % access
         dn = FLAGS.ldap_user_subtree
-        return self.__to_user(self.__find_object(dn, query))
+        user_obj = self.__find_object(dn, query)
+        user = self.__to_user(user_obj)
+        if user:
+            self.mc.set(cache_key, user_obj['dn'][0])
+        return user
 
     @sanitize
+    @__local_cache('pid_project-%s')
     def get_project(self, pid):
         """Retrieve project by id"""
-        dn = self.__project_to_dn(pid)
-        attr = self.__find_object(dn, LdapDriver.project_pattern)
+        dn = self.__project_to_dn(pid, search=False)
+        attr = self.__find_object(dn, LdapDriver.project_pattern,
+                                  scope=self.ldap.SCOPE_BASE)
         return self.__to_project(attr)
 
     @sanitize
@@ -395,6 +481,7 @@ class LdapDriver(object):
         """Check if project exists"""
         return self.get_project(project_id) is not None
 
+    @__local_cache('uid_attrs-%s')
     def __get_ldap_user(self, uid):
         """Retrieve LDAP user entry by id"""
         dn = FLAGS.ldap_user_subtree
@@ -426,12 +513,20 @@ class LdapDriver(object):
         if scope is None:
             # One of the flags is 0!
             scope = self.ldap.SCOPE_SUBTREE
+        if query is None:
+            query = "(objectClass=*)"
         try:
             res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
         # Just return the attributes
-        return [attributes for dn, attributes in res]
+        # FIXME(yorik-sar): Whole driver should be refactored to
+        #                   prevent this hack
+        res1 = []
+        for dn, attrs in res:
+            attrs['dn'] = [dn]
+            res1.append(attrs)
+        return res1
 
     def __find_role_dns(self, tree):
         """Find dns of role objects in given tree"""
@@ -564,6 +659,7 @@ class LdapDriver(object):
             'description': attr.get('description', [None])[0],
             'member_ids': [self.__dn_to_uid(x) for x in member_dns]}
 
+    @__local_cache('uid_dn-%s')
     def __uid_to_dn(self, uid, search=True):
         """Convert uid to dn"""
         # By default return a generated DN
@@ -576,6 +672,7 @@ class LdapDriver(object):
                 userdn = user[0]
         return userdn
 
+    @__local_cache('pid_dn-%s')
     def __project_to_dn(self, pid, search=True):
         """Convert pid to dn"""
         # By default return a generated DN
@@ -603,16 +700,18 @@ class LdapDriver(object):
         else:
             return None
 
+    @__local_cache('dn_uid-%s')
     def __dn_to_uid(self, dn):
         """Convert user dn to uid"""
         query = '(objectclass=novaUser)'
-        user = self.__find_object(dn, query)
+        user = self.__find_object(dn, query, scope=self.ldap.SCOPE_BASE)
         return user[FLAGS.ldap_user_id_attribute][0]
 
 
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
 
-    def __init__(self):  # pylint: disable=W0231
-        __import__('nova.auth.fakeldap')
-        self.ldap = sys.modules['nova.auth.fakeldap']
+    def __init__(self):
+        import nova.auth.fakeldap
+        sys.modules['ldap'] = nova.auth.fakeldap
+        super(FakeLdapDriver, self).__init__()

@@ -30,6 +30,7 @@ from nova import rpc
 from nova import test
 from nova import service
 from nova import manager
+from nova import wsgi
 from nova.compute import manager as compute_manager
 
 FLAGS = flags.FLAGS
@@ -349,3 +350,32 @@ class ServiceTestCase(test.TestCase):
         serv.stop()
 
         db.service_destroy(ctxt, service_ref['id'])
+
+
+class TestWSGIService(test.TestCase):
+
+    def setUp(self):
+        super(TestWSGIService, self).setUp()
+        self.stubs.Set(wsgi.Loader, "load_app", mox.MockAnything())
+
+    def test_service_random_port(self):
+        test_service = service.WSGIService("test_service")
+        self.assertEquals(0, test_service.port)
+        test_service.start()
+        self.assertNotEqual(0, test_service.port)
+        test_service.stop()
+
+
+class TestLauncher(test.TestCase):
+
+    def setUp(self):
+        super(TestLauncher, self).setUp()
+        self.stubs.Set(wsgi.Loader, "load_app", mox.MockAnything())
+        self.service = service.WSGIService("test_service")
+
+    def test_launch_app(self):
+        self.assertEquals(0, self.service.port)
+        launcher = service.Launcher()
+        launcher.launch_service(self.service)
+        self.assertEquals(0, self.service.port)
+        launcher.stop()

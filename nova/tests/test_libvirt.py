@@ -14,10 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import eventlet
 import mox
 import os
 import re
+import shutil
 import sys
 
 from xml.etree.ElementTree import fromstring as xml_to_tree
@@ -124,6 +126,7 @@ class CacheConcurrencyTestCase(test.TestCase):
 
 
 class LibvirtConnTestCase(test.TestCase):
+
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
         connection._late_load_cheetah()
@@ -160,6 +163,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'vcpus':         2,
                      'project_id':    'fake',
                      'bridge':        'br101',
+                     'image_ref':     '123456',
                      'instance_type_id': '5'}  # m1.small
 
     def lazy_load_library_exists(self):
@@ -204,6 +208,29 @@ class LibvirtConnTestCase(test.TestCase):
         connection.utils.import_class(mox.IgnoreArg()).AndReturn(fakeip)
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
         connection.LibvirtConnection._conn = fake
+
+    def fake_lookup(self, instance_name):
+
+        class FakeVirtDomain(object):
+
+            def snapshotCreateXML(self, *args):
+                return None
+
+            def XMLDesc(self, *args):
+                return """
+                    <domain type='kvm'>
+                        <devices>
+                            <disk type='file'>
+                                <source file='filename'/>
+                            </disk>
+                        </devices>
+                    </domain>
+                """
+
+        return FakeVirtDomain()
+
+    def fake_execute(self, *args):
+        open(args[-1], "a").close()
 
     def create_service(self, **kwargs):
         service_ref = {'host': kwargs.get('host', 'dummy'),
@@ -279,6 +306,81 @@ class LibvirtConnTestCase(test.TestCase):
     def test_lxc_container_and_uri(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
+
+    def test_snapshot(self):
+        if not self.lazy_load_library_exists():
+            return
+
+        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+
+        # Start test
+        image_service = utils.import_object(FLAGS.image_service)
+
+        # Assuming that base image already exists in image_service
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        # Create new image. It will be updated in snapshot method
+        # To work with it from snapshot, the single image_service is needed
+        recv_meta = image_service.create(context, sent_meta)
+
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
+        self.mox.StubOutWithMock(connection.utils, 'execute')
+        connection.utils.execute = self.fake_execute
+
+        self.mox.ReplayAll()
+
+        conn = connection.LibvirtConnection(False)
+        conn.snapshot(instance_ref, recv_meta['id'])
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['name'], snapshot_name)
+
+    def test_snapshot_no_image_architecture(self):
+        if not self.lazy_load_library_exists():
+            return
+
+        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+
+        # Start test
+        image_service = utils.import_object(FLAGS.image_service)
+
+        # Assign image_ref = 2 from nova/images/fakes for testing different
+        # base image
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["image_ref"] = "2"
+
+        # Assuming that base image already exists in image_service
+        instance_ref = db.instance_create(self.context, test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        # Create new image. It will be updated in snapshot method
+        # To work with it from snapshot, the single image_service is needed
+        recv_meta = image_service.create(context, sent_meta)
+
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
+        self.mox.StubOutWithMock(connection.utils, 'execute')
+        connection.utils.execute = self.fake_execute
+
+        self.mox.ReplayAll()
+
+        conn = connection.LibvirtConnection(False)
+        conn.snapshot(instance_ref, recv_meta['id'])
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['name'], snapshot_name)
 
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
@@ -645,6 +747,8 @@ class LibvirtConnTestCase(test.TestCase):
         except Exception, e:
             count = (0 <= str(e.message).find('Unexpected method call'))
 
+        shutil.rmtree(os.path.join(FLAGS.instances_path, instance.name))
+
         self.assertTrue(count)
 
     def test_get_host_ip_addr(self):
@@ -656,6 +760,31 @@ class LibvirtConnTestCase(test.TestCase):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
         super(LibvirtConnTestCase, self).tearDown()
+
+
+class NWFilterFakes:
+    def __init__(self):
+        self.filters = {}
+
+    def nwfilterLookupByName(self, name):
+        if name in self.filters:
+            return self.filters[name]
+        raise libvirt.libvirtError('Filter Not Found')
+
+    def filterDefineXMLMock(self, xml):
+        class FakeNWFilterInternal:
+            def __init__(self, parent, name):
+                self.name = name
+                self.parent = parent
+
+            def undefine(self):
+                del self.parent.filters[self.name]
+                pass
+        tree = xml_to_tree(xml)
+        name = tree.get('name')
+        if name not in self.filters:
+            self.filters[name] = FakeNWFilterInternal(self, name)
+        return True
 
 
 class IptablesFirewallTestCase(test.TestCase):
@@ -670,10 +799,26 @@ class IptablesFirewallTestCase(test.TestCase):
         self.network = utils.import_object(FLAGS.network_manager)
 
         class FakeLibvirtConnection(object):
-            pass
+            def nwfilterDefineXML(*args, **kwargs):
+                """setup_basic_rules in nwfilter calls this."""
+                pass
         self.fake_libvirt_connection = FakeLibvirtConnection()
         self.fw = firewall.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
+
+    def lazy_load_library_exists(self):
+        """check if libvirt is available."""
+        # try to connect libvirt. if fail, skip test.
+        try:
+            import libvirt
+            import libxml2
+        except ImportError:
+            return False
+        global libvirt
+        libvirt = __import__('libvirt')
+        connection.libvirt = __import__('libvirt')
+        connection.libxml2 = __import__('libxml2')
+        return True
 
     def tearDown(self):
         self.manager.delete_project(self.project)
@@ -880,6 +1025,103 @@ class IptablesFirewallTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.fw.do_refresh_security_group_rules("fake")
 
+    def test_unfilter_instance_undefines_nwfilter(self):
+        # Skip if non-libvirt environment
+        if not self.lazy_load_library_exists():
+            return
+
+        admin_ctxt = context.get_admin_context()
+
+        fakefilter = NWFilterFakes()
+        self.fw.nwfilter._conn.nwfilterDefineXML =\
+                               fakefilter.filterDefineXMLMock
+        self.fw.nwfilter._conn.nwfilterLookupByName =\
+                               fakefilter.nwfilterLookupByName
+        instance_ref = self._create_instance_ref()
+        inst_id = instance_ref['id']
+        instance = db.instance_get(self.context, inst_id)
+
+        ip = '10.11.12.13'
+        network_ref = db.project_get_network(self.context, 'fake')
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': inst_id})
+        self.fw.setup_basic_filtering(instance)
+        self.fw.prepare_instance_filter(instance)
+        self.fw.apply_instance_filter(instance)
+        original_filter_count = len(fakefilter.filters)
+        self.fw.unfilter_instance(instance)
+
+        # should undefine just the instance filter
+        self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
+
+        db.instance_destroy(admin_ctxt, instance_ref['id'])
+
+    def test_provider_firewall_rules(self):
+        # setup basic instance data
+        instance_ref = self._create_instance_ref()
+        nw_info = _create_network_info(1)
+        ip = '10.11.12.13'
+        network_ref = db.project_get_network(self.context, 'fake')
+        admin_ctxt = context.get_admin_context()
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': instance_ref['id']})
+        # FRAGILE: peeks at how the firewall names chains
+        chain_name = 'inst-%s' % instance_ref['id']
+
+        # create a firewall via setup_basic_filtering like libvirt_conn.spawn
+        # should have a chain with 0 rules
+        self.fw.setup_basic_filtering(instance_ref, network_info=nw_info)
+        self.assertTrue('provider' in self.fw.iptables.ipv4['filter'].chains)
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(0, len(rules))
+
+        # add a rule and send the update message, check for 1 rule
+        provider_fw0 = db.provider_fw_rule_create(admin_ctxt,
+                                                  {'protocol': 'tcp',
+                                                   'cidr': '10.99.99.99/32',
+                                                   'from_port': 1,
+                                                   'to_port': 65535})
+        self.fw.refresh_provider_fw_rules()
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(1, len(rules))
+
+        # Add another, refresh, and make sure number of rules goes to two
+        provider_fw1 = db.provider_fw_rule_create(admin_ctxt,
+                                                  {'protocol': 'udp',
+                                                   'cidr': '10.99.99.99/32',
+                                                   'from_port': 1,
+                                                   'to_port': 65535})
+        self.fw.refresh_provider_fw_rules()
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(2, len(rules))
+
+        # create the instance filter and make sure it has a jump rule
+        self.fw.prepare_instance_filter(instance_ref, network_info=nw_info)
+        self.fw.apply_instance_filter(instance_ref)
+        inst_rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                           if rule.chain == chain_name]
+        jump_rules = [rule for rule in inst_rules if '-j' in rule.rule]
+        provjump_rules = []
+        # IptablesTable doesn't make rules unique internally
+        for rule in jump_rules:
+            if 'provider' in rule.rule and rule not in provjump_rules:
+                provjump_rules.append(rule)
+        self.assertEqual(1, len(provjump_rules))
+
+        # remove a rule from the db, cast to compute to refresh rule
+        db.provider_fw_rule_destroy(admin_ctxt, provider_fw1['id'])
+        self.fw.refresh_provider_fw_rules()
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(1, len(rules))
+
 
 class NWFilterTestCase(test.TestCase):
     def setUp(self):
@@ -1056,3 +1298,37 @@ class NWFilterTestCase(test.TestCase):
                                                  network_info,
                                                  "fake")
         self.assertEquals(len(result), 3)
+
+    def test_unfilter_instance_undefines_nwfilters(self):
+        admin_ctxt = context.get_admin_context()
+
+        fakefilter = NWFilterFakes()
+        self.fw._conn.nwfilterDefineXML = fakefilter.filterDefineXMLMock
+        self.fw._conn.nwfilterLookupByName = fakefilter.nwfilterLookupByName
+
+        instance_ref = self._create_instance()
+        inst_id = instance_ref['id']
+
+        self.security_group = self.setup_and_return_security_group()
+
+        db.instance_add_security_group(self.context, inst_id,
+                                       self.security_group.id)
+
+        instance = db.instance_get(self.context, inst_id)
+
+        ip = '10.11.12.13'
+        network_ref = db.project_get_network(self.context, 'fake')
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': inst_id})
+        self.fw.setup_basic_filtering(instance)
+        self.fw.prepare_instance_filter(instance)
+        self.fw.apply_instance_filter(instance)
+        original_filter_count = len(fakefilter.filters)
+        self.fw.unfilter_instance(instance)
+
+        # should undefine 2 filters: instance and instance-secgroup
+        self.assertEqual(original_filter_count - len(fakefilter.filters), 2)
+
+        db.instance_destroy(admin_ctxt, instance_ref['id'])

@@ -270,8 +270,10 @@ DEFINE_list('region_list',
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
 DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
-DEFINE_integer('glance_port', 9292, 'glance port')
-DEFINE_string('glance_host', '$my_ip', 'glance host')
+# NOTE(sirp): my_ip interpolation doesn't work within nested structures
+DEFINE_list('glance_api_servers',
+            ['%s:9292' % _get_my_ip()],
+            'list of glance api servers available to nova (host:port)')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '$my_ip', 's3 host (for infrastructure)')
 DEFINE_string('s3_dmz', '$my_ip', 's3 dmz ip (for instances)')
@@ -296,6 +298,7 @@ DEFINE_bool('fake_network', False,
             'should we use fake network devices and addresses')
 DEFINE_string('rabbit_host', 'localhost', 'rabbit host')
 DEFINE_integer('rabbit_port', 5672, 'rabbit port')
+DEFINE_bool('rabbit_use_ssl', False, 'connect over SSL')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
@@ -361,7 +364,7 @@ DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
 
 # The service to use for image search and retrieval
-DEFINE_string('image_service', 'nova.image.local.LocalImageService',
+DEFINE_string('image_service', 'nova.image.glance.GlanceImageService',
               'The service to use for retrieving and searching for images.')
 
 DEFINE_string('host', socket.gethostname(),
@@ -380,3 +383,5 @@ DEFINE_string('zone_name', 'nova', 'name of this zone')
 DEFINE_list('zone_capabilities',
                 ['hypervisor=xenserver;kvm', 'os=linux;windows'],
                  'Key/Multi-value list representng capabilities of this zone')
+DEFINE_string('build_plan_encryption_key', None,
+        '128bit (hex) encryption key for scheduler build plans.')

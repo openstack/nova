@@ -25,6 +25,7 @@ from nova import log as logging
 from nova import test
 from nova.auth import manager
 from nova.api.ec2 import cloud
+from nova.auth import fakeldap
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.auth_unittest')
@@ -86,6 +87,7 @@ class _AuthManagerBaseTestCase(test.TestCase):
         super(_AuthManagerBaseTestCase, self).setUp()
         self.flags(connection_type='fake')
         self.manager = manager.AuthManager(new=True)
+        self.manager.mc.cache = {}
 
     def test_create_and_find_user(self):
         with user_generator(self.manager):
@@ -367,6 +369,15 @@ class _AuthManagerBaseTestCase(test.TestCase):
 
 class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+
+    def test_reconnect_on_server_failure(self):
+        self.manager.get_users()
+        fakeldap.server_fail = True
+        try:
+            self.assertRaises(fakeldap.SERVER_DOWN, self.manager.get_users)
+        finally:
+            fakeldap.server_fail = False
+        self.manager.get_users()
 
 
 class AuthManagerDbTestCase(_AuthManagerBaseTestCase):

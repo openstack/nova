@@ -6,10 +6,12 @@ function usage {
   echo ""
   echo "  -V, --virtual-env        Always use virtualenv.  Install automatically if not present"
   echo "  -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment"
+  echo "  -r, --recreate-db        Recreate the test database."
   echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -p, --pep8               Just run pep8"
   echo "  -h, --help               Print this usage message"
+  echo "  --hide-elapsed           Don't print the elapsed time for each test along with slow test list"
   echo ""
   echo "Note: with no options specified, the script will try to run the tests in a virtual environment,"
   echo "      If no virtualenv is found, the script will ask if you would like to create one.  If you "
@@ -22,8 +24,10 @@ function process_option {
     -h|--help) usage;;
     -V|--virtual-env) let always_venv=1; let never_venv=0;;
     -N|--no-virtual-env) let always_venv=0; let never_venv=1;;
+    -r|--recreate-db) let recreate_db=1;;
     -f|--force) let force=1;;
     -p|--pep8) let just_pep8=1;;
+    -*) noseopts="$noseopts $1";;
     *) noseargs="$noseargs $1"
   esac
 }
@@ -34,8 +38,10 @@ always_venv=0
 never_venv=0
 force=0
 noseargs=
+noseopts=
 wrapper=""
 just_pep8=0
+recreate_db=0
 
 for arg in "$@"; do
   process_option $arg
@@ -67,15 +73,12 @@ function run_pep8 {
   srcfiles=`find bin -type f ! -name "nova.conf*"`
   srcfiles+=" `find tools/*`"
   srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
-  pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles}
+  # Just run PEP8 in current environment
+  ${wrapper} pep8 --repeat --show-pep8 --show-source \
+  --exclude=vcsversion.py ${srcfiles}
 }
 
-if [ $just_pep8 -eq 1 ]; then
-    run_pep8
-    exit
-fi
-
-NOSETESTS="python run_tests.py $noseargs"
+NOSETESTS="python run_tests.py $noseopts $noseargs"
 
 if [ $never_venv -eq 0 ]
 then
@@ -103,9 +106,21 @@ then
   fi
 fi
 
+if [ $just_pep8 -eq 1 ]; then
+    run_pep8
+    exit
+fi
+
+if [ $recreate_db -eq 1 ]; then
+    rm tests.sqlite
+fi
+
 run_tests || exit
 
-# Also run pep8 if no options were provided.
+# NOTE(sirp): we only want to run pep8 when we're running the full-test suite,
+# not when we're running tests individually. To handle this, we need to
+# distinguish between options (noseopts), which begin with a '-', and
+# arguments (noseargs).
 if [ -z "$noseargs" ]; then
   run_pep8
 fi

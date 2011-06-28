@@ -19,8 +19,6 @@
 SQLAlchemy models for nova data.
 """
 
-import datetime
-
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
@@ -33,6 +31,7 @@ from nova.db.sqlalchemy.session import get_session
 from nova import auth
 from nova import exception
 from nova import flags
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -43,10 +42,11 @@ class NovaBase(object):
     """Base class for Nova Models."""
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utils.utcnow)
+    updated_at = Column(DateTime, onupdate=utils.utcnow)
     deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
+    metadata = None
 
     def save(self, session=None):
         """Save this object."""
@@ -64,7 +64,7 @@ class NovaBase(object):
     def delete(self, session=None):
         """Delete this object."""
         self.deleted = True
-        self.deleted_at = datetime.datetime.utcnow()
+        self.deleted_at = utils.utcnow()
         self.save(session=session)
 
     def __setitem__(self, key, value):
@@ -184,11 +184,11 @@ class Instance(BASE, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
-    image_id = Column(String(255))
+    image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
 
-#    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    image_ref = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
@@ -232,6 +232,9 @@ class Instance(BASE, NovaBase):
     locked = Column(Boolean)
 
     os_type = Column(String(255))
+    architecture = Column(String(255))
+    vm_mode = Column(String(255))
+    uuid = Column(String(36))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -356,6 +359,45 @@ class Snapshot(BASE, NovaBase):
     display_description = Column(String(255))
 
 
+class BlockDeviceMapping(BASE, NovaBase):
+    """Represents block device mapping that is defined by EC2"""
+    __tablename__ = "block_device_mapping"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance = relationship(Instance,
+                            backref=backref('balock_device_mapping'),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_(BlockDeviceMapping.instance_id=='
+                                              'Instance.id,'
+                                              'BlockDeviceMapping.deleted=='
+                                              'False)')
+    device_name = Column(String(255), nullable=False)
+
+    # default=False for compatibility of the existing code.
+    # With EC2 API,
+    # default True for ami specified device.
+    # default False for created with other timing.
+    delete_on_termination = Column(Boolean, default=False)
+
+    # for ephemeral device
+    virtual_name = Column(String(255), nullable=True)
+
+    # for snapshot or volume
+    snapshot_id = Column(Integer, ForeignKey('snapshots.id'), nullable=True)
+    # outer join
+    snapshot = relationship(Snapshot,
+                            foreign_keys=snapshot_id)
+
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume = relationship(Volume,
+                          foreign_keys=volume_id)
+    volume_size = Column(Integer, nullable=True)
+
+    # for no device to suppress devices.
+    no_device = Column(Boolean, nullable=True)
+
+
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on."""
     __tablename__ = 'export_devices'
@@ -449,6 +491,17 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
     group_id = Column(Integer, ForeignKey('security_groups.id'))
+
+
+class ProviderFirewallRule(BASE, NovaBase):
+    """Represents a rule in a security group."""
+    __tablename__ = 'provider_fw_rules'
+    id = Column(Integer, primary_key=True)
+
+    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(String(255))
 
 
 class KeyPair(BASE, NovaBase):
@@ -663,6 +716,21 @@ class InstanceMetadata(BASE, NovaBase):
                                 'InstanceMetadata.deleted == False)')
 
 
+class InstanceTypeExtraSpecs(BASE, NovaBase):
+    """Represents additional specs as key/value pairs for an instance_type"""
+    __tablename__ = 'instance_type_extra_specs'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
+                              nullable=False)
+    instance_type = relationship(InstanceTypes, backref="extra_specs",
+                 foreign_keys=instance_type_id,
+                 primaryjoin='and_('
+                 'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
+                 'InstanceTypeExtraSpecs.deleted == False)')
+
+
 class Zone(BASE, NovaBase):
     """Represents a child zone of this zone."""
     __tablename__ = 'zones'
@@ -670,6 +738,18 @@ class Zone(BASE, NovaBase):
     api_url = Column(String(255))
     username = Column(String(255))
     password = Column(String(255))
+
+
+class AgentBuild(BASE, NovaBase):
+    """Represents an agent build."""
+    __tablename__ = 'agent_builds'
+    id = Column(Integer, primary_key=True)
+    hypervisor = Column(String(255))
+    os = Column(String(255))
+    architecture = Column(String(255))
+    version = Column(String(255))
+    url = Column(String(255))
+    md5hash = Column(String(255))
 
 
 def register_models():
@@ -685,7 +765,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata, Migration)
+              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

@@ -20,7 +20,8 @@
 Handles all requests relating to volumes.
 """
 
-import datetime
+
+from eventlet import greenthread
 
 from nova import db
 from nova import exception
@@ -28,6 +29,7 @@ from nova import flags
 from nova import log as logging
 from nova import quota
 from nova import rpc
+from nova import utils
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -45,7 +47,8 @@ class API(base.Base):
             if snapshot['status'] != "available":
                 raise exception.ApiError(
                     _("Snapshot status must be available"))
-            size = snapshot['volume_size']
+            if not size:
+                size = snapshot['volume_size']
 
         if quota.allowed_volumes(context, 1, size) < 1:
             pid = context.project_id
@@ -74,11 +77,19 @@ class API(base.Base):
                            "snapshot_id": snapshot_id}})
         return volume
 
+    # TODO(yamahata): eliminate dumb polling
+    def wait_creation(self, context, volume_id):
+        while True:
+            volume = self.get(context, volume_id)
+            if volume['status'] != 'creating':
+                return
+            greenthread.sleep(1)
+
     def delete(self, context, volume_id):
         volume = self.get(context, volume_id)
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
                                                    'terminated_at': now})
         host = volume['host']

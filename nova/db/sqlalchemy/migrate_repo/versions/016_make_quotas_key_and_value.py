@@ -17,7 +17,7 @@
 from sqlalchemy import Boolean, Column, DateTime, Integer
 from sqlalchemy import MetaData, String, Table
 
-import datetime
+from nova import utils
 
 meta = MetaData()
 
@@ -35,9 +35,9 @@ def old_style_quotas_table(name):
     return Table(name, meta,
                  Column('id', Integer(), primary_key=True),
                  Column('created_at', DateTime(),
-                        default=datetime.datetime.utcnow),
+                        default=utils.utcnow),
                  Column('updated_at', DateTime(),
-                        onupdate=datetime.datetime.utcnow),
+                        onupdate=utils.utcnow),
                  Column('deleted_at', DateTime()),
                  Column('deleted', Boolean(), default=False),
                  Column('project_id',
@@ -57,9 +57,9 @@ def new_style_quotas_table(name):
     return Table(name, meta,
                  Column('id', Integer(), primary_key=True),
                  Column('created_at', DateTime(),
-                        default=datetime.datetime.utcnow),
+                        default=utils.utcnow),
                  Column('updated_at', DateTime(),
-                        onupdate=datetime.datetime.utcnow),
+                        onupdate=utils.utcnow),
                  Column('deleted_at', DateTime()),
                  Column('deleted', Boolean(), default=False),
                  Column('project_id',
@@ -160,7 +160,7 @@ def convert_backward(migrate_engine, old_quotas, new_quotas):
                 'project_id': quota.project_id,
                 'created_at': quota.created_at,
                 'updated_at': quota.updated_at,
-                quota.resource: quota.hard_limit
+                quota.resource: quota.hard_limit,
             }
         else:
             quotas[quota.project_id]['created_at'] = earliest(

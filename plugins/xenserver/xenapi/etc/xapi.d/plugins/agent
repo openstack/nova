@@ -53,6 +53,19 @@ class TimeoutError(StandardError):
     pass
 
 
+def version(self, arg_dict):
+    """Get version of agent."""
+    arg_dict["value"] = json.dumps({"name": "version", "value": ""})
+    request_id = arg_dict["id"]
+    arg_dict["path"] = "data/host/%s" % request_id
+    xenstore.write_record(self, arg_dict)
+    try:
+        resp = _wait_for_agent(self, request_id, arg_dict)
+    except TimeoutError, e:
+        raise PluginError(e)
+    return resp
+
+
 def key_init(self, arg_dict):
     """Handles the Diffie-Hellman key exchange with the agent to
     establish the shared secret key used to encrypt/decrypt sensitive
@@ -144,6 +157,23 @@ def inject_file(self, arg_dict):
     return resp
 
 
+def agent_update(self, arg_dict):
+    """Expects an URL and md5sum of the contents, then directs the agent to
+    update itself."""
+    request_id = arg_dict["id"]
+    url = arg_dict["url"]
+    md5sum = arg_dict["md5sum"]
+    arg_dict["value"] = json.dumps({"name": "agentupdate",
+                "value": {"url": url, "md5sum": md5sum}})
+    arg_dict["path"] = "data/host/%s" % request_id
+    xenstore.write_record(self, arg_dict)
+    try:
+        resp = _wait_for_agent(self, request_id, arg_dict)
+    except TimeoutError, e:
+        raise PluginError(e)
+    return resp
+
+
 def _agent_has_method(self, method):
     """Check that the agent has a particular method by checking its
     features.  Cache the features so we don't have to query the agent
@@ -201,7 +231,9 @@ def _wait_for_agent(self, request_id, arg_dict):
 
 if __name__ == "__main__":
     XenAPIPlugin.dispatch(
-        {"key_init": key_init,
+        {"version": version,
+        "key_init": key_init,
         "password": password,
         "resetnetwork": resetnetwork,
-        "inject_file": inject_file})
+        "inject_file": inject_file,
+        "agentupdate": agent_update})
