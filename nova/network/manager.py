@@ -563,9 +563,9 @@ class NetworkManager(manager.SchedulerDependentManager):
             net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
             net['netmask'] = str(project_net.netmask)
-            net['gateway'] = str(list(project_net)[1])
+            net['gateway'] = str(project_net[1])
             net['broadcast'] = str(project_net.broadcast)
-            net['dhcp_start'] = str(list(project_net)[2])
+            net['dhcp_start'] = str(project_net[2])
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, index)
             else:
