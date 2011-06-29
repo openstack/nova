@@ -181,9 +181,9 @@ class ControllerV11(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        (marker, limit) = common.get_pagination_params(req)
-        images = self._image_service.index(
-            context, filters=filters, marker=marker, limit=limit)
+        page_params = common.get_pagination_params(req)
+        images = self._image_service.index(context, filters=filters,
+                                           **page_params)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
 
@@ -195,9 +195,9 @@ class ControllerV11(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        (marker, limit) = common.get_pagination_params(req)
-        images = self._image_service.detail(
-            context, filters=filters, marker=marker, limit=limit)
+        page_params = common.get_pagination_params(req)
+        images = self._image_service.detail(context, filters=filters,
+                                            **page_params)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
