@@ -46,7 +46,7 @@ def publisher_id(service, host=None):
 def safe_notify(publisher_id, event_type, priority, payload):
     try:
         notify(publisher_id, event_type, notification_level, payload)
-    exception Exception, e:
+    except Exception, e:
         LOG.exception(_("Problem '%(e)' attempting to "
                         "send to notification system." % locals()))
 

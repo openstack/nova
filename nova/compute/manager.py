@@ -53,8 +53,8 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import power_state
+from nova.notifier import api as notifier_api
 from nova.compute.utils import terminate_volumes
-from nova.notifier import api as notifier
 from nova.virt import driver
 
 
@@ -113,7 +113,7 @@ def checks_instance_lock(function):
 
 
 def publisher_id(host=None):
-    return notifier.publisher_id("compute", host)
+    return notifier_api.publisher_id("compute", host)
 
 
 class ComputeManager(manager.SchedulerDependentManager):
@@ -200,7 +200,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def refresh_security_group_rules(self, context, security_group_id,
                                      **kwargs):
         """Tell the virtualization driver to refresh security group rules.
@@ -210,7 +210,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_rules(security_group_id)
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def refresh_security_group_members(self, context,
                                        security_group_id, **kwargs):
         """Tell the virtualization driver to refresh security group members.
@@ -220,7 +220,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def refresh_provider_fw_rules(self, context, **_kwargs):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
@@ -348,6 +348,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._update_launched_at(context, instance_id)
             self._update_state(context, instance_id)
+            usage_info = utils.usage_from_instance(instance_ref)
+            notifier_api.notify('compute.%s' % self.host,
+                                'compute.instance.create',
+                                notifier_api.INFO,
+                                usage_info)
         except exception.InstanceNotFound:
             # FIXME(wwolf): We are just ignoring InstanceNotFound
             # exceptions here in case the instance was immediately
@@ -355,11 +360,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             # be fixed once we have no-db-messaging
             pass
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def run_instance(self, context, instance_id, **kwargs):
         self._run_instance(context, instance_id, **kwargs)
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def start_instance(self, context, instance_id):
         """Starting an instance on this host."""
@@ -421,23 +426,29 @@ class ComputeManager(manager.SchedulerDependentManager):
         if action_str == 'Terminating':
             terminate_volumes(self.db, context, instance_id)
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
+        instance_ref = self.db.instance_get(context.elevated(), instance_id)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.delete',
+                            notifier_api.INFO,
+                            usage_info)
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def stop_instance(self, context, instance_id):
         """Stopping an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Stopping')
         # instance state will be updated to stopped by _poll_instance_states()
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def rebuild_instance(self, context, instance_id, **kwargs):
         """Destroy and re-make this instance.
@@ -465,8 +476,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
+        usage_info = utils.usage_from_instance(instance_ref,
+                                               image_ref=image_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.rebuild',
+                            notifier_api.INFO,
+                            usage_info)
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this host."""
@@ -491,7 +508,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
-    @exception.wrap_exception(publisher_id())
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def snapshot_instance(self, context, instance_id, image_id):
         """Snapshot an instance on this host."""
         context = context.elevated()
@@ -513,7 +530,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.driver.snapshot(instance_ref, image_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def set_admin_password(self, context, instance_id, new_pass=None):
         """Set the root/admin password for an instance on this host.
@@ -561,7 +578,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     time.sleep(1)
                     continue
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def inject_file(self, context, instance_id, path, file_contents):
         """Write a file to the specified path in an instance on this host."""
@@ -579,7 +596,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(msg)
         self.driver.inject_file(instance_ref, path, file_contents)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def agent_update(self, context, instance_id, url, md5hash):
         """Update agent running on an instance on this host."""
@@ -597,7 +614,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(msg)
         self.driver.agent_update(instance_ref, url, md5hash)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this host."""
@@ -614,7 +631,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.rescue(instance_ref, _update_state)
         self._update_state(context, instance_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def unrescue_instance(self, context, instance_id):
         """Rescue an instance on this host."""
@@ -635,15 +652,20 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Update instance state when async task completes."""
         self._update_state(context, instance_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def confirm_resize(self, context, instance_id, migration_id):
         """Destroys the source instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.destroy(instance_ref)
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.confirm',
+                            notifier_api.INFO,
+                            usage_info)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def revert_resize(self, context, instance_id, migration_id):
         """Destroys the new instance on the destination machine.
@@ -665,7 +687,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'instance_id': instance_id, },
                 })
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def finish_revert_resize(self, context, instance_id, migration_id):
         """Finishes the second half of reverting a resize.
@@ -689,8 +711,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.revert_resize(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.revert',
+                            notifier_api.INFO,
+                            usage_info)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def prep_resize(self, context, instance_id, flavor_id):
         """Initiates the process of moving a running instance to another host.
@@ -725,8 +752,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'migration_id': migration_ref['id'],
                        'instance_id': instance_id, },
                 })
+        usage_info = utils.usage_from_instance(instance_ref,
+                              new_instance_type=instance_type['name'],
+                              new_instance_type_id=instance_type['id'])
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.prep',
+                            notifier_api.INFO,
+                            usage_info)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def resize_instance(self, context, instance_id, migration_id):
         """Starts the migration of a running instance to another host."""
@@ -752,7 +786,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            'instance_id': instance_id,
                                            'disk_info': disk_info}})
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def finish_resize(self, context, instance_id, migration_id, disk_info):
         """Completes the migration process.
@@ -782,7 +816,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def pause_instance(self, context, instance_id):
         """Pause an instance on this host."""
@@ -799,7 +833,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        instance_id,
                                                        result))
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def unpause_instance(self, context, instance_id):
         """Unpause a paused instance on this host."""
@@ -816,7 +850,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        instance_id,
                                                        result))
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get(context, instance_id)
@@ -825,7 +859,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                       context=context)
             return self.driver.get_diagnostics(instance_ref)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def suspend_instance(self, context, instance_id):
         """Suspend the given instance."""
@@ -841,7 +875,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        instance_id,
                                                        result))
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     @checks_instance_lock
     def resume_instance(self, context, instance_id):
         """Resume the given suspended instance."""
@@ -857,7 +891,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        instance_id,
                                                        result))
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def lock_instance(self, context, instance_id):
         """Lock the given instance."""
         context = context.elevated()
@@ -865,7 +899,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.debug(_('instance %s: locking'), instance_id, context=context)
         self.db.instance_update(context, instance_id, {'locked': True})
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def unlock_instance(self, context, instance_id):
         """Unlock the given instance."""
         context = context.elevated()
@@ -873,7 +907,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.debug(_('instance %s: unlocking'), instance_id, context=context)
         self.db.instance_update(context, instance_id, {'locked': False})
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def get_lock(self, context, instance_id):
         """Return the boolean state of the given instance's lock."""
         context = context.elevated()
@@ -900,7 +934,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                          context=context)
         self.driver.inject_network_info(instance_ref)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier_api, publisher_id=publisher_id())
     def get_console_output(self, context, instance_id):
         """Send the console output for the given instance."""
         context = context.elevated()

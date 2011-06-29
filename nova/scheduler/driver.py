@@ -27,10 +27,11 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import notifier
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
+from nova.notifier import api as notifier_api
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('service_down_time', 60,
@@ -49,12 +50,7 @@ class WillNotSchedule(exception.Error):
 
 
 def publisher_id(host=None):
-    return notifier.publisher_id("scheduler", host)
-
-
-def notifier(instance_id, event_type, level, host=None):
-    return dict(instance_id=instance_id, event_type=event_type,
-                notification_level=level, host=publisher_id(host))
+    return notifier_api.publisher_id("scheduler", host)
 
 
 class Scheduler(object):

@@ -6,6 +6,7 @@ function usage {
   echo ""
   echo "  -V, --virtual-env        Always use virtualenv.  Install automatically if not present"
   echo "  -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment"
+  echo "  -r, --recreate-db        Recreate the test database."
   echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -p, --pep8               Just run pep8"
@@ -23,6 +24,7 @@ function process_option {
     -h|--help) usage;;
     -V|--virtual-env) let always_venv=1; let never_venv=0;;
     -N|--no-virtual-env) let always_venv=0; let never_venv=1;;
+    -r|--recreate-db) let recreate_db=1;;
     -f|--force) let force=1;;
     -p|--pep8) let just_pep8=1;;
     -*) noseopts="$noseopts $1";;
@@ -39,6 +41,7 @@ noseargs=
 noseopts=
 wrapper=""
 just_pep8=0
+recreate_db=0
 
 for arg in "$@"; do
   process_option $arg
@@ -106,6 +109,10 @@ fi
 if [ $just_pep8 -eq 1 ]; then
     run_pep8
     exit
+fi
+
+if [ $recreate_db -eq 1 ]; then
+    rm tests.sqlite
 fi
 
 run_tests || exit

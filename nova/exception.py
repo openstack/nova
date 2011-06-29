@@ -25,7 +25,6 @@ SHOULD include dedicated exception logging.
 """
 
 from nova import log as logging
-from nova.notifier import api as notifier
 
 
 LOG = logging.getLogger('nova.exception')
@@ -82,14 +81,18 @@ def wrap_db_error(f):
     _wrap.func_name = f.func_name
 
 
-def wrap_exception(f, event_type=None, publisher_id=None, level=notifier.ERROR):
+def wrap_exception(f, notifier=None, publisher_id=None, event_type=None, level=None):
     def _wrap(*args, **kw):
         try:
             return f(*args, **kw)
         except Exception, e:
-            if event_type and publisher_id:
+            if notifier:
                 payload = dict(args=args, exception=e)
                 payload.update(kw)
+
+                if not level:
+                    level = notifier.ERROR
+
                 notifier.safe_notify(publisher_id, event_type, level, payload)
 
             if not isinstance(e, Error):
@@ -367,6 +370,10 @@ class NoFixedIpsFoundForInstance(NotFound):
 
 
 class FloatingIpNotFound(NotFound):
+    message = _("Floating ip %(floating_ip)s not found")
+
+
+class FloatingIpNotFoundForFixedAddress(NotFound):
     message = _("Floating ip not found for fixed address %(fixed_ip)s.")
 
 
@@ -510,6 +517,11 @@ class InstanceMetadataNotFound(NotFound):
                 "key %(metadata_key)s.")
 
 
+class InstanceTypeExtraSpecsNotFound(NotFound):
+    message = _("Instance Type %(instance_type_id)s has no extra specs with "
+                "key %(extra_specs_key)s.")
+
+
 class LDAPObjectNotFound(NotFound):
     message = _("LDAP object could not be found")
 
@@ -595,3 +607,11 @@ class MigrationError(NovaException):
 
 class MalformedRequestBody(NovaException):
     message = _("Malformed message body: %(reason)s")
+
+
+class PasteConfigNotFound(NotFound):
+    message = _("Could not find paste config at %(path)s")
+
+
+class PasteAppNotFound(NotFound):
+    message = _("Could not load paste app '%(name)s' from %(path)s")
