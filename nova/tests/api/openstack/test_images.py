@@ -802,7 +802,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'name': 'testname'}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images?name=testname')
@@ -817,7 +817,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'status': 'ACTIVE'}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images?status=ACTIVE')
@@ -832,7 +832,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'property-test': '3'}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images?property-test=3')
@@ -847,7 +847,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'status': 'ACTIVE'}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images?status=ACTIVE&UNSUPPORTEDFILTER=testname')
@@ -862,7 +862,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images')
@@ -877,7 +877,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'name': 'testname'}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?name=testname')
@@ -892,7 +892,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'status': 'ACTIVE'}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?status=ACTIVE')
@@ -907,7 +907,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'property-test': '3'}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?property-test=3')
@@ -922,7 +922,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'status': 'ACTIVE'}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?status=ACTIVE&UNSUPPORTEDFILTER=testname')
@@ -937,7 +937,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail')
