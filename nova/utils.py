@@ -274,6 +274,22 @@ EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
                            'ABCDEFGHJKLMNPQRSTUVWXYZ')  # Removed: I, O
 
 
+def usage_from_instance(instance_ref, **kw):
+    usage_info = dict(
+          tenant_id=instance_ref['project_id'],
+          user_id=instance_ref['user_id'],
+          instance_id=instance_ref['id'],
+          instance_type=instance_ref['instance_type']['name'],
+          instance_type_id=instance_ref['instance_type_id'],
+          display_name=instance_ref['display_name'],
+          created_at=str(instance_ref['created_at']),
+          launched_at=str(instance_ref['launched_at']) \
+                      if instance_ref['launched_at'] else '',
+          image_ref=instance_ref['image_ref'])
+    usage_info.update(kw)
+    return usage_info
+
+
 def generate_password(length=20, symbols=DEFAULT_PASSWORD_SYMBOLS):
     """Generate a random password from the supplied symbols.
 

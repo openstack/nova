@@ -644,7 +644,7 @@ class VmCommands(object):
         :param host: show all instance on specified host.
         :param instance: show specificed instance.
         """
-        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+        print "%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s" \
               "  %-10s %-10s %-10s %-5s" % (
             _('instance'),
             _('node'),
@@ -666,14 +666,14 @@ class VmCommands(object):
                            context.get_admin_context(), host)
 
         for instance in instances:
-            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+            print "%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s" \
                   "  %-10s %-10s %-10s %-5d" % (
                 instance['hostname'],
                 instance['host'],
-                instance['instance_type'],
+                instance['instance_type'].name,
                 instance['state_description'],
                 instance['launched_at'],
-                instance['image_id'],
+                instance['image_ref'],
                 instance['kernel_id'],
                 instance['ramdisk_id'],
                 instance['project_id'],
@@ -905,7 +905,7 @@ class InstanceTypeCommands(object):
         try:
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
-        except exception.InvalidInput:
+        except exception.InvalidInput, e:
             print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
