@@ -194,7 +194,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                         cooked_weight = offset + scale * raw_weight
                         item['weight'] = cooked_weight
                         item['raw_weight'] = raw_weight
-                    except Exception, e:
+                    except KeyError:
                         LOG.exception(_("Bad child zone scaling values "
                                         "for Zone: %(zone)s") % locals())
 

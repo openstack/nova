@@ -260,7 +260,7 @@ class API(base.Base):
         elevated = context.elevated()
         if security_group is None:
             security_group = ['default']
-        if not type(security_group) is list:
+        if not isinstance(security_group, list):
             security_group = [security_group]
 
         security_groups = []

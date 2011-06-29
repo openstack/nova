@@ -16,8 +16,6 @@
 Tests For Zone Aware Scheduler.
 """
 
-import stubout
-
 import nova.db
 
 from nova import exception
@@ -169,14 +167,6 @@ def fake_zone_get_all(context):
 
 class ZoneAwareSchedulerTestCase(test.TestCase):
     """Test case for Zone Aware Scheduler."""
-
-    def setUp(self):
-        super(ZoneAwareSchedulerTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(ZoneAwareSchedulerTestCase, self).tearDown()
 
     def test_zone_aware_scheduler(self):
         """
