@@ -137,8 +137,9 @@ if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
     logging.setup()
-    server = wsgi.Server()
+    acp_port = FLAGS.ajax_console_proxy_port
     acp = AjaxConsoleProxy()
     acp.register_listeners()
-    server.start(acp, FLAGS.ajax_console_proxy_port, host='0.0.0.0')
+    server = wsgi.Server("AJAX Console Proxy", acp, port=acp_port)
+    server.start()
     server.wait()

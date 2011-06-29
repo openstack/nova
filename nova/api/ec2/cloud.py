@@ -877,7 +877,8 @@ class CloudController(object):
             public_ip = self.network_api.allocate_floating_ip(context)
             return {'publicIp': public_ip}
         except rpc.RemoteError as ex:
-            if ex.exc_type == 'NoMoreAddresses':
+            # NOTE(tr3buchet) - why does this block exist?
+            if ex.exc_type == 'NoMoreFloatingIps':
                 raise exception.NoMoreFloatingIps()
             else:
                 raise
