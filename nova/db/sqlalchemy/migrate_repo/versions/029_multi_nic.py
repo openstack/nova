@@ -39,15 +39,10 @@ virtual_interfaces = Table('virtual_interfaces', meta,
         Column('network_id',
                Integer(),
                ForeignKey('networks.id'),
-               nullable=False),
+               nullable=True),
         Column('instance_id',
                Integer(),
-               ForeignKey('instances.id'),
-               nullable=False),
-        Column('port_id',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-               unique=True),
+               ForeignKey('instances.id')),
         mysql_engine='InnoDB')
 
 

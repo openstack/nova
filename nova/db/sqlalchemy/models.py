@@ -568,12 +568,11 @@ class VirtualInterface(BASE, NovaBase):
     __tablename__ = 'virtual_interfaces'
     id = Column(Integer, primary_key=True)
     address = Column(String(255), unique=True)
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('virtual_interfaces'))
-    port_id = Column(String(255), unique=True, nullable=True)
 
     # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance_id = Column(Integer, ForeignKey('instances.id'))
     instance = relationship(Instance, backref=backref('virtual_interfaces'))
 
 
