@@ -258,8 +258,7 @@ class VMOps(object):
                 # need to be more patient than normal as well as watch for
                 # domid changes
                 version = self.get_agent_version(instance,
-                                  timeout=FLAGS.windows_version_timeout,
-                                  check_domid_changes=True)
+                                  timeout=FLAGS.windows_version_timeout)
             else:
                 version = self.get_agent_version(instance)
             if not version:
@@ -516,8 +515,7 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
         self._session.wait_for_task(task, instance.id)
 
-    def get_agent_version(self, instance, timeout=None,
-                          check_domid_changes=False):
+    def get_agent_version(self, instance, timeout=None):
         """Get the version of the agent running on the VM instance."""
 
         def _call():
@@ -543,14 +541,13 @@ class VMOps(object):
                 if ret:
                     return ret
 
-                if check_domid_changes:
-                    vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
-                    if vm_rec['domid'] != domid:
-                        LOG.info(_('domid changed from %(olddomid)s to '
-                                   '%(newdomid)s') % {
-                                       'olddomid': domid,
-                                        'newdomid': vm_rec['domid']})
-                        domid = vm_rec['domid']
+                vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+                if vm_rec['domid'] != domid:
+                    LOG.info(_('domid changed from %(olddomid)s to '
+                               '%(newdomid)s') % {
+                                   'olddomid': domid,
+                                    'newdomid': vm_rec['domid']})
+                    domid = vm_rec['domid']
         else:
             return _call()
 
