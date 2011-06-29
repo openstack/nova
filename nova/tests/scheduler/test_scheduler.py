@@ -1074,7 +1074,7 @@ class DynamicNovaClientTest(test.TestCase):
 
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeServerCollection()),
-                    zone, "servers", "find", "name").b, 22)
+                    zone, "servers", "find", name="test").b, 22)
 
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeServerCollection()),
@@ -1088,7 +1088,7 @@ class DynamicNovaClientTest(test.TestCase):
 
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "find", "name"), None)
+                    zone, "servers", "find", name="test"), None)
 
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeEmptyServerCollection()),
