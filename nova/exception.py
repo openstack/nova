@@ -25,6 +25,7 @@ SHOULD include dedicated exception logging.
 """
 
 from nova import log as logging
+from nova.notifier import api as notifier
 
 
 LOG = logging.getLogger('nova.exception')
@@ -81,13 +82,12 @@ def wrap_db_error(f):
     _wrap.func_name = f.func_name
 
 
-def wrap_exception(f, notifier=None, publisher_id=None, level=None):
+def wrap_exception(f, event_type=None, publisher_id=None, level=notifier.ERROR):
     def _wrap(*args, **kw):
         try:
             return f(*args, **kw)
         except Exception, e:
-            if notifier != None and 'safe_notify' in notifier.dir():
-                event_type = f.__name__
+            if event_type and publisher_id:
                 payload = dict(args=args, exception=e)
                 payload.update(kw)
                 notifier.safe_notify(publisher_id, event_type, level, payload)

@@ -200,7 +200,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     def refresh_security_group_rules(self, context, security_group_id,
                                      **kwargs):
         """Tell the virtualization driver to refresh security group rules.
@@ -210,7 +210,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_rules(security_group_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     def refresh_security_group_members(self, context,
                                        security_group_id, **kwargs):
         """Tell the virtualization driver to refresh security group members.
@@ -220,7 +220,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     def refresh_provider_fw_rules(self, context, **_kwargs):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
@@ -355,11 +355,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             # be fixed once we have no-db-messaging
             pass
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     def run_instance(self, context, instance_id, **kwargs):
         self._run_instance(context, instance_id, **kwargs)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     @checks_instance_lock
     def start_instance(self, context, instance_id):
         """Starting an instance on this host."""
@@ -421,7 +421,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if action_str == 'Terminating':
             terminate_volumes(self.db, context, instance_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     @checks_instance_lock
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
@@ -430,14 +430,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     @checks_instance_lock
     def stop_instance(self, context, instance_id):
         """Stopping an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Stopping')
         # instance state will be updated to stopped by _poll_instance_states()
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     @checks_instance_lock
     def rebuild_instance(self, context, instance_id, **kwargs):
         """Destroy and re-make this instance.
@@ -466,7 +466,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     @checks_instance_lock
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this host."""
@@ -491,7 +491,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(publisher_id())
     def snapshot_instance(self, context, instance_id, image_id):
         """Snapshot an instance on this host."""
         context = context.elevated()
