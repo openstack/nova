@@ -208,9 +208,14 @@ class ControllerV11(Controller):
             msg = _("Expected serverRef attribute on server entity.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        head, tail = os.path.split(server_ref)
+        head, _sep, tail = server_ref.rpartition('/')
 
-        if head and head != os.path.join(req.application_url, 'servers'):
+        url, _sep, version = req.application_url.rpartition('/')
+        long_url = '%s:%s/%s' % (url, FLAGS.osapi_port, version)
+        valid_urls = ['%s/servers' % req.application_url,
+                      '%s/servers' % long_url]
+        if head and head not in valid_urls:
+            LOG.warn(head)
             msg = _("serverRef must match request url")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
