@@ -79,12 +79,10 @@ class ViewBuilderV11(ViewBuilder):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
                 "href": href,
             },
             {
                 "rel": "bookmark",
-                "type": "application/xml",
                 "href": href,
             },
         ]
