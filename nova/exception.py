@@ -81,11 +81,17 @@ def wrap_db_error(f):
     _wrap.func_name = f.func_name
 
 
-def wrap_exception(f):
+def wrap_exception(f, notifier=None, publisher_id=None, level=None):
     def _wrap(*args, **kw):
         try:
             return f(*args, **kw)
         except Exception, e:
+            if notifier != None and 'safe_notify' in notifier.dir():
+                event_type = f.__name__
+                payload = dict(args=args, exception=e)
+                payload.update(kw)
+                notifier.safe_notify(publisher_id, event_type, level, payload)
+
             if not isinstance(e, Error):
                 #exc_type, exc_value, exc_traceback = sys.exc_info()
                 LOG.exception(_('Uncaught exception'))

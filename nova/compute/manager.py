@@ -54,6 +54,7 @@ from nova import utils
 from nova import volume
 from nova.compute import power_state
 from nova.compute.utils import terminate_volumes
+from nova.notifier import api as notifier
 from nova.virt import driver
 
 
@@ -109,6 +110,10 @@ def checks_instance_lock(function):
             return False
 
     return decorated_function
+
+
+def publisher_id(host=None):
+    return notifier.publisher_id("compute", host)
 
 
 class ComputeManager(manager.SchedulerDependentManager):
@@ -1158,7 +1163,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                      {"method": "pre_live_migration",
                       "args": {'instance_id': instance_id}})
 
-        except Exception:
+        except Exception, e:
             msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
             LOG.error(msg % locals())
             self.recover_live_migration(context, instance_ref)

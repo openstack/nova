@@ -43,38 +43,12 @@ def publisher_id(service, host=None):
     return "%s.%s" % (service, host)
 
 
-def msgkeys(event_type, instance_id, level, publisher_id):
-    return dict(event_type=event_type, instance_id=instance_id, 
-                notification_level=level, publisher_id=publisher_id)
-
-
 def safe_notify(publisher_id, event_type, priority, payload):
     try:
         notify(publisher_id, event_type, notification_level, payload)
     exception Exception, e:
         LOG.exception(_("Problem '%(e)' attempting to "
                         "send to notification system." % locals()))
-
-
-def instance_safe_notify(publisher_id, event_type, priority, instance_id,
-                    extra_payload=None):
-    payload = dict(instance_id = instance_id)
-    if extra_payload:
-        payload.extend(extra_payload)
-    safe_notify(publisher_id, event_type, priority, payload)
-
-
-def exception_to_notification(self, ex):
-    required = ['instance_id', 'publisher_id', 'notification_level',
-                'event_type']
-    for key in required:
-        if not (hasattr(ex, key) and ex.key):
-            return  # Doesn't have everything we need. Skip it.
-    instance_id = ex.instance_id
-    publisher_id = ex.publisher_id
-    notification_level = ex.notification_level
-    event_type = ex.event_type
-    instance_safe_notify(publisher_id, event_type, priority, instance_id)
 
 def notify(publisher_id, event_type, priority, payload):
     """
