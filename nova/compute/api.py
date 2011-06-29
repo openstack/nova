@@ -725,19 +725,60 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
+    def backup(self, context, instance_id, name, backup_type, rotation,
+               extra_properties=None):
+        """Backup the given instance
+
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: name of the backup or snapshot
+            name = backup_type  # daily backups are called 'daily'
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        :param extra_properties: dict of extra image properties to include
+        """
+        recv_meta = self._create_image(context, instance_id, name, 'backup',
+                            backup_type=backup_type, rotation=rotation,
+                            extra_properties=extra_properties)
+        return recv_meta
+
     def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
 
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: name of the backup or snapshot
+        :param extra_properties: dict of extra image properties to include
+
         :returns: A dict containing image metadata
         """
-        properties = {'instance_id': str(instance_id),
+        return self._create_image(context, instance_id, name, 'snapshot',
+                                  extra_properties=extra_properties)
+
+    def _create_image(self, context, instance_id, name, image_type,
+                      backup_type=None, rotation=None, extra_properties=None):
+        """Create snapshot or backup for an instance on this host.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: string for name of the snapshot
+        :param image_type: snapshot | backup
+        :param backup_type: daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        :param extra_properties: dict of extra image properties to include
+
+        """
+        instance = db.api.instance_get(context, instance_id)
+        properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
-                      'image_state': 'creating'}
+                      'image_state': 'creating',
+                      'image_type': image_type,
+                      'backup_type': backup_type}
         properties.update(extra_properties or {})
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
-        params = {'image_id': recv_meta['id']}
+        params = {'image_id': recv_meta['id'], 'image_type': image_type,
+                  'backup_type': backup_type, 'rotation': rotation}
         self._cast_compute_message('snapshot_instance', context, instance_id,
                                    params=params)
         return recv_meta

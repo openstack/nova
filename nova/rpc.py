@@ -275,6 +275,11 @@ class FanoutAdapterConsumer(AdapterConsumer):
         unique = uuid.uuid4().hex
         self.queue = '%s_fanout_%s' % (topic, unique)
         self.durable = False
+        # Fanout creates unique queue names, so we should auto-remove
+        # them when done, so they're not left around on restart.
+        # Also, we're the only one that should be consuming.  exclusive
+        # implies auto_delete, so we'll just set that..
+        self.exclusive = True
         LOG.info(_('Created "%(exchange)s" fanout exchange '
                    'with "%(key)s" routing key'),
                  dict(exchange=self.exchange, key=self.routing_key))
