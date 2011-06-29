@@ -65,6 +65,8 @@ def generate_default_hostname(instance):
         else:
             table += '\0'
             deletions += c
+    if isinstance(display_name, unicode):
+        display_name = display_name.encode('latin-1', 'ignore')
     return display_name.translate(table, deletions)
 
 
