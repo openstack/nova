@@ -65,7 +65,7 @@ def generate_default_hostname(instance):
         else:
             table += '\0'
             deletions += c
-    return display_name.encode('latin-1', 'ignore').translate(table, deletions)
+    return display_name.translate(table, deletions)
 
 
 class API(base.Base):
