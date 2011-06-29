@@ -318,7 +318,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._update_launched_at(context, instance_id)
             self._update_state(context, instance_id)
-            usage_info = utils.usage_from_instance(instance_ref)
+            usage_info = utils.usage_from_instance(instance)
             notifier_api.notify('compute.%s' % self.host,
                                 'compute.instance.create',
                                 notifier_api.INFO,
@@ -372,11 +372,11 @@ class ComputeManager(manager.SchedulerDependentManager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
-        instance_ref = self.db.instance_get(context.elevated(), instance_id)
+        instance = self.db.instance_get(context.elevated(), instance_id)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
-        usage_info = utils.usage_from_instance(instance_ref)
+        usage_info = utils.usage_from_instance(instance)
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.delete',
                             notifier_api.INFO,
