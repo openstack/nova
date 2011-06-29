@@ -116,9 +116,16 @@ class CreateInstanceHelper(object):
         reservation_id = body['server'].get('reservation_id')
         min_count = body['server'].get('min_count')
         max_count = body['server'].get('max_count')
-        if min_count:
+        # min_count and max_count are optional.  If they exist, they come
+        # in as strings.  We want to default 'min_count' to 1, and default
+        # 'max_count' to be 'min_count'.
+        if not min_count:
+            min_count = 1
+        else:
             min_count = int(min_count)
-        if max_count:
+        if not max_count:
+            max_count = min_count
+        else:
             max_count = int(max_count)
         if min_count > max_count:
             min_count = max_count

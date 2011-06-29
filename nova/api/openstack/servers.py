@@ -83,11 +83,11 @@ class Controller(object):
         recurse_zones = query_str.get('recurse_zones')
         recurse_zones = recurse_zones and True or False
         instance_list = self.compute_api.get_all(
-                                            req.environ['nova.context'],
-                                            reservation_id=reservation_id,
-                                            project_id=project_id,
-                                            fixed_ip=fixed_ip,
-                                            recurse_zones=recurse_zones)
+                req.environ['nova.context'],
+                reservation_id=reservation_id,
+                project_id=project_id,
+                fixed_ip=fixed_ip,
+                recurse_zones=recurse_zones)
         limited_list = self._limit_items(instance_list, req)
         builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
@@ -120,7 +120,7 @@ class Controller(object):
         result = None
         try:
             extra_values, instances = self.helper.create_instance(
-                                    req, body, self.compute_api.create)
+                    req, body, self.compute_api.create)
         except faults.Fault, f:
             return f
 

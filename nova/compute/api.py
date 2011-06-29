@@ -657,12 +657,13 @@ class API(base.Base):
             return instances
 
         admin_context = context.elevated()
-        children = scheduler_api.call_zone_method(admin_context, "list",
-                                novaclient_collection_name="servers",
-                                reservation_id=reservation_id,
-                                project_id=project_id,
-                                fixed_ip=fixed_ip,
-                                recurse_zones=True)
+        children = scheduler_api.call_zone_method(admin_context,
+                "list",
+                novaclient_collection_name="servers",
+                reservation_id=reservation_id,
+                project_id=project_id,
+                fixed_ip=fixed_ip,
+                recurse_zones=True)
 
         for zone, servers in children:
             for server in servers:

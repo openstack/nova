@@ -245,7 +245,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             # may have been consumed from a previous build..
             host_list = self.filter_hosts(topic, request_spec, host_list)
             if not host_list:
-                LOG.warn(_("Ran out of available hosts after weighing "
+                LOG.warn(_("Filter returned no hosts after processing "
                         "%(i)d of %(num_instances)d instances") % locals())
                 break
 
