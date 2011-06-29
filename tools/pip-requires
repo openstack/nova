@@ -1,14 +1,13 @@
 SQLAlchemy==0.6.3
-pep8==0.5.0
+pep8==0.6.1
 pylint==0.19
-IPy==0.70
 Cheetah==2.4.4
 M2Crypto==0.20.2
 amqplib==0.6.1
 anyjson==0.2.4
 boto==1.9b
 carrot==0.10.5
-eventlet==0.9.12
+eventlet
 lockfile==0.8
 python-novaclient==2.5.5
 python-daemon==1.5.5

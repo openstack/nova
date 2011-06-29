@@ -49,10 +49,12 @@ from nova import flags
 from nova import log as logging
 from nova import manager
 from nova import network
+from nova import notifier
 from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import power_state
+from nova.notifier import api as notifier_api
 from nova.compute.utils import terminate_volumes
 from nova.virt import driver
 
@@ -215,6 +217,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
+    @exception.wrap_exception
+    def refresh_provider_fw_rules(self, context, **_kwargs):
+        """This call passes straight through to the virtualization driver."""
+        return self.driver.refresh_provider_fw_rules()
+
     def _setup_block_device_mapping(self, context, instance_id):
         """setup volumes for block device mapping"""
         self.db.instance_set_state(context,
@@ -338,6 +345,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._update_launched_at(context, instance_id)
             self._update_state(context, instance_id)
+            usage_info = utils.usage_from_instance(instance_ref)
+            notifier_api.notify('compute.%s' % self.host,
+                                'compute.instance.create',
+                                notifier_api.INFO,
+                                usage_info)
         except exception.InstanceNotFound:
             # FIXME(wwolf): We are just ignoring InstanceNotFound
             # exceptions here in case the instance was immediately
@@ -416,9 +428,15 @@ class ComputeManager(manager.SchedulerDependentManager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
+        instance_ref = self.db.instance_get(context.elevated(), instance_id)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.delete',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -455,6 +473,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
+        usage_info = utils.usage_from_instance(instance_ref,
+                                               image_ref=image_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.rebuild',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -632,6 +656,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.destroy(instance_ref)
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.confirm',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -679,6 +708,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.revert_resize(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.revert',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -715,6 +749,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'migration_id': migration_ref['id'],
                        'instance_id': instance_id, },
                 })
+        usage_info = utils.usage_from_instance(instance_ref,
+                              new_instance_type=instance_type['name'],
+                              new_instance_type_id=instance_type['id'])
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.prep',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock

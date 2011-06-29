@@ -56,11 +56,11 @@
 import gettext
 import glob
 import json
+import netaddr
 import os
 import sys
 import time
 
-import IPy
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -257,6 +257,11 @@ class RoleCommands(object):
         """adds role to user
         if project is specified, adds project specific role
         arguments: user, role [project]"""
+        if project:
+            projobj = self.manager.get_project(project)
+            if not projobj.has_member(user):
+                print "%s not a member of %s" % (user, project)
+                return
         self.manager.add_role(user, role, project)
 
     def has(self, user, role, project=None):
@@ -513,7 +518,7 @@ class FloatingIpCommands(object):
     def create(self, host, range):
         """Creates floating ips for host by range
         arguments: host ip_range"""
-        for address in IPy.IP(range):
+        for address in netaddr.IPNetwork(range):
             db.floating_ip_create(context.get_admin_context(),
                                   {'address': str(address),
                                    'host': host})
@@ -521,7 +526,7 @@ class FloatingIpCommands(object):
     def delete(self, ip_range):
         """Deletes floating ips by range
         arguments: range"""
-        for address in IPy.IP(ip_range):
+        for address in netaddr.IPNetwork(ip_range):
             db.floating_ip_destroy(context.get_admin_context(),
                                    str(address))
 

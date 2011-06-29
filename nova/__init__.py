@@ -30,3 +30,8 @@
 .. moduleauthor:: Manish Singh <yosh@gimp.org>
 .. moduleauthor:: Andy Smith <andy@anarkystic.com>
 """
+
+import gettext
+
+
+gettext.install("nova", unicode=1)

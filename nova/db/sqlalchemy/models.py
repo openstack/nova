@@ -493,6 +493,17 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     group_id = Column(Integer, ForeignKey('security_groups.id'))
 
 
+class ProviderFirewallRule(BASE, NovaBase):
+    """Represents a rule in a security group."""
+    __tablename__ = 'provider_fw_rules'
+    id = Column(Integer, primary_key=True)
+
+    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(String(255))
+
+
 class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh."""
     __tablename__ = 'key_pairs'
@@ -705,6 +716,21 @@ class InstanceMetadata(BASE, NovaBase):
                                 'InstanceMetadata.deleted == False)')
 
 
+class InstanceTypeExtraSpecs(BASE, NovaBase):
+    """Represents additional specs as key/value pairs for an instance_type"""
+    __tablename__ = 'instance_type_extra_specs'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
+                              nullable=False)
+    instance_type = relationship(InstanceTypes, backref="extra_specs",
+                 foreign_keys=instance_type_id,
+                 primaryjoin='and_('
+                 'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
+                 'InstanceTypeExtraSpecs.deleted == False)')
+
+
 class Zone(BASE, NovaBase):
     """Represents a child zone of this zone."""
     __tablename__ = 'zones'
@@ -741,7 +767,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              AgentBuild, InstanceMetadata, Migration)
+              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

@@ -70,11 +70,15 @@ class S3APITestCase(test.TestCase):
         os.mkdir(FLAGS.buckets_path)
 
         router = s3server.S3Application(FLAGS.buckets_path)
-        server = wsgi.Server()
-        server.start(router, FLAGS.s3_port, host=FLAGS.s3_host)
+        self.server = wsgi.Server("S3 Objectstore",
+                                  router,
+                                  host=FLAGS.s3_host,
+                                  port=FLAGS.s3_port)
+        self.server.start()
 
         if not boto.config.has_section('Boto'):
             boto.config.add_section('Boto')
+
         boto.config.set('Boto', 'num_retries', '0')
         conn = s3.S3Connection(aws_access_key_id=self.admin_user.access,
                                aws_secret_access_key=self.admin_user.secret,
@@ -145,4 +149,5 @@ class S3APITestCase(test.TestCase):
         """Tear down auth and test server."""
         self.auth_manager.delete_user('admin')
         self.auth_manager.delete_project('admin')
+        self.server.stop()
         super(S3APITestCase, self).tearDown()
