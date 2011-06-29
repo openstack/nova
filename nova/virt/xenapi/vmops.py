@@ -535,8 +535,8 @@ class VMOps(object):
 
             domid = vm_rec['domid']
 
-            timeout = time.time() + timeout
-            while time.time() < timeout:
+            expiration = time.time() + timeout
+            while time.time() < expiration:
                 ret = _call()
                 if ret:
                     return ret
