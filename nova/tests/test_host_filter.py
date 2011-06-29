@@ -67,7 +67,8 @@ class HostFilterTestCase(test.TestCase):
                 flavorid=1,
                 swap=500,
                 rxtx_quota=30000,
-                rxtx_cap=200)
+                rxtx_cap=200,
+                extra_specs={})
 
         self.zone_manager = FakeZoneManager()
         states = {}
