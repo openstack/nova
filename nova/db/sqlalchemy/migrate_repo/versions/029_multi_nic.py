@@ -38,11 +38,11 @@ virtual_interfaces = Table('virtual_interfaces', meta,
                unique=True),
         Column('network_id',
                Integer(),
-               ForeignKey('networks.id'),
-               nullable=True),
+               ForeignKey('networks.id')),
         Column('instance_id',
                Integer(),
-               ForeignKey('instances.id')),
+               ForeignKey('instances.id'),
+               nullable=False),
         mysql_engine='InnoDB')
 
 
