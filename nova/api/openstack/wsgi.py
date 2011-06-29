@@ -358,7 +358,7 @@ class Resource(wsgi.Application):
     def __call__(self, request):
         """WSGI method that controls (de)serialization and method dispatch."""
 
-        LOG.debug("%(method)s %(url)s" % {"method": request.method,
+        LOG.info("%(method)s %(url)s" % {"method": request.method,
                                           "url": request.url})
 
         try:
@@ -386,7 +386,7 @@ class Resource(wsgi.Application):
             msg_dict = dict(url=request.url, e=e)
             msg = _("%(url)s returned a fault: %(e)s" % msg_dict)
 
-        LOG.debug(msg)
+        LOG.info(msg)
 
         return response
 

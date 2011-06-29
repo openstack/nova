@@ -185,6 +185,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             if state != power_state.RUNNING:
                 continue
+            self.firewall_driver.setup_basic_filtering(instance)
             self.firewall_driver.prepare_instance_filter(instance)
             self.firewall_driver.apply_instance_filter(instance)
 

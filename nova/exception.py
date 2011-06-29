@@ -365,32 +365,48 @@ class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
 
-class NoFixedIpFound(NotFound):
-    message = _("No fixed IP associated with address %(address)s.")
+class FixedIpNotFound(NotFound):
+    message = _("No fixed IP associated with id %(id)s.")
 
 
-class NoFixedIpsFoundForInstance(NoFixedIpFound):
+class FixedIpNotFoundForAddress(FixedIpNotFound):
+    message = _("Fixed ip not found for address %(address)s.")
+
+
+class FixedIpNotFoundForInstance(FixedIpNotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
 
 
-class NoFixedIpsFoundForVirtualInterface(NoFixedIpFound):
+class FixedIpNotFoundForVirtualInterface(FixedIpNotFound):
     message = _("Virtual interface %(vif_id)s has zero associated fixed ips.")
+
+
+class FixedIpNotFoundForHost(FixedIpNotFound):
+    message = _("Host %(host)s has zero fixed ips.")
+
+
+class NoMoreFixedIps(Error):
+    message = _("Zero fixed ips available.")
 
 
 class NoFixedIpsDefined(NotFound):
     message = _("Zero fixed ips could be found.")
 
 
-class NoFixedIpsDefinedForHost(NotFound):
-    message = _("Zero fixed ips defined for host %(host)s.")
-
-
 class FloatingIpNotFound(NotFound):
+    message = _("Floating ip not found for id %(id)s.")
+
+
+class FloatingIpNotFoundForAddress(FloatingIpNotFound):
     message = _("Floating ip not found for address %(address)s.")
 
 
-class NoFloatingIpFoundForProject(FloatingIpNotFound):
+class FloatingIpNotFoundForProject(FloatingIpNotFound):
     message = _("Floating ip not found for project %(project_id)s.")
+
+
+class FloatingIpNotFoundForHost(FloatingIpNotFound):
+    message = _("Floating ip not found for host %(host)s.")
 
 
 class NoMoreFloatingIps(FloatingIpNotFound):
@@ -398,11 +414,7 @@ class NoMoreFloatingIps(FloatingIpNotFound):
 
 
 class NoFloatingIpsDefined(NotFound):
-    message = _("Zero floating ips could be found.")
-
-
-class NoFloatingIpsDefinedForHost(NoFloatingIpsDefined):
-    message = _("Zero floating ips defined for host %(host)s.")
+    message = _("Zero floating ips exist.")
 
 
 class KeypairNotFound(NotFound):
@@ -529,6 +541,11 @@ class InstanceMetadataNotFound(NotFound):
                 "key %(metadata_key)s.")
 
 
+class InstanceTypeExtraSpecsNotFound(NotFound):
+    message = _("Instance Type %(instance_type_id)s has no extra specs with "
+                "key %(extra_specs_key)s.")
+
+
 class LDAPObjectNotFound(NotFound):
     message = _("LDAP object could not be found")
 
@@ -614,3 +631,11 @@ class MigrationError(NovaException):
 
 class MalformedRequestBody(NovaException):
     message = _("Malformed message body: %(reason)s")
+
+
+class PasteConfigNotFound(NotFound):
+    message = _("Could not find paste config at %(path)s")
+
+
+class PasteAppNotFound(NotFound):
+    message = _("Could not load paste app '%(name)s' from %(path)s")

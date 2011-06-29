@@ -106,7 +106,7 @@ def stub_out_db_network_api(stubs):
                            and i['project_id'] == None,
                      floating_ips)
         if not ips:
-            raise db.NoMoreAddresses()
+            raise exception.NoMoreFloatingIps()
         ips[0]['project_id'] = project_id
         return FakeModel(ips[0])
 
@@ -150,7 +150,7 @@ def stub_out_db_network_api(stubs):
         ips = filter(lambda i: i['address'] == address,
                      floating_ips)
         if not ips:
-            raise exception.FloatingIpNotFound(address=address)
+            raise exception.FloatingIpNotFoundForAddress(address=address)
         return FakeModel(ips[0])
 
     def fake_floating_ip_set_auto_assigned(contex, address):
@@ -163,7 +163,7 @@ def stub_out_db_network_api(stubs):
         ips = filter(lambda i: i['address'] == address,
                      fixed_ips)
         if not ips:
-            raise db.NoMoreAddresses()
+            raise exception.NoMoreFixedIps()
         ips[0]['instance'] = True
         ips[0]['instance_id'] = instance_id
 
@@ -173,7 +173,7 @@ def stub_out_db_network_api(stubs):
                             and not i['instance'],
                      fixed_ips)
         if not ips:
-            raise db.NoMoreAddresses()
+            raise exception.NoMoreFixedIps()
         ips[0]['instance'] = True
         ips[0]['instance_id'] = instance_id
         return ips[0]['address']

@@ -55,11 +55,6 @@ IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')
 
 
-class NoMoreAddresses(exception.Error):
-    """No more available addresses."""
-    pass
-
-
 class NoMoreBlades(exception.Error):
     """No more available blades."""
     pass
@@ -222,6 +217,9 @@ def certificate_update(context, certificate_id, values):
 
 
 ###################
+
+def floating_ip_get(context, id):
+    return IMPL.floating_ip_get(context, id)
 
 
 def floating_ip_allocate_address(context, project_id):
@@ -1398,3 +1396,24 @@ def agent_build_destroy(context, agent_update_id):
 def agent_build_update(context, agent_build_id, values):
     """Update agent build entry."""
     IMPL.agent_build_update(context, agent_build_id, values)
+
+
+####################
+
+
+def instance_type_extra_specs_get(context, instance_type_id):
+    """Get all extra specs for an instance type."""
+    return IMPL.instance_type_extra_specs_get(context, instance_type_id)
+
+
+def instance_type_extra_specs_delete(context, instance_type_id, key):
+    """Delete the given extra specs item."""
+    IMPL.instance_type_extra_specs_delete(context, instance_type_id, key)
+
+
+def instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                               extra_specs):
+    """Create or update instance type extra specs. This adds or modifies the
+    key/value pairs specified in the extra specs dict argument"""
+    IMPL.instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                                    extra_specs)

@@ -1051,7 +1051,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Getting fixed ips
         fixed_ips = self.db.instance_get_fixed_addresses(context, instance_id)
         if not fixed_ips:
-            raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
+            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
 
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:

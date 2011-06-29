@@ -33,6 +33,19 @@ LOG = logging.getLogger('nova.network')
 class API(base.Base):
     """API for interacting with the network manager."""
 
+    def get_floating_ip(self, context, id):
+        rv = self.db.floating_ip_get(context, id)
+        return dict(rv.iteritems())
+
+    def get_floating_ip_by_ip(self, context, address):
+        res = self.db.floating_ip_get_by_address(context, address)
+        return dict(res.iteritems())
+
+    def list_floating_ips(self, context):
+        ips = self.db.floating_ip_get_all_by_project(context,
+                                                     context.project_id)
+        return ips
+
     def allocate_floating_ip(self, context):
         """Adds a floating ip to a project."""
         # NOTE(vish): We don't know which network host should get the ip
