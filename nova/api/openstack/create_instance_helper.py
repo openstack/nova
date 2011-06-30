@@ -114,6 +114,15 @@ class CreateInstanceHelper(object):
         name = name.strip()
 
         reservation_id = body['server'].get('reservation_id')
+        min_count = body['server'].get('min_count')
+        max_count = body['server'].get('max_count')
+        # min_count and max_count are optional.  If they exist, they come
+        # in as strings.  We want to default 'min_count' to 1, and default
+        # 'max_count' to be 'min_count'.
+        min_count = int(min_count) if min_count else 1
+        max_count = int(max_count) if max_count else min_count
+        if min_count > max_count:
+            min_count = max_count
 
         try:
             inst_type = \
@@ -137,7 +146,9 @@ class CreateInstanceHelper(object):
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,
-                                  reservation_id=reservation_id))
+                                  reservation_id=reservation_id,
+                                  min_count=min_count,
+                                  max_count=max_count))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
