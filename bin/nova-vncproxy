@@ -106,7 +106,11 @@ if __name__ == "__main__":
 
     service.serve()
 
-    server = wsgi.Server()
-    server.start(with_auth, FLAGS.vncproxy_port, host=FLAGS.vncproxy_host)
+    server = wsgi.Server("VNC Proxy",
+                         with_auth,
+                         host=FLAGS.vncproxy_host,
+                         port=FLAGS.vncproxy_port)
+    server.start()
     server.start_tcp(handle_flash_socket_policy, 843, host=FLAGS.vncproxy_host)
+
     server.wait()

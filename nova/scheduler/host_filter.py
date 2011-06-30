@@ -93,6 +93,26 @@ class InstanceTypeFilter(HostFilter):
         """Use instance_type to filter hosts."""
         return (self._full_name(), instance_type)
 
+    def _satisfies_extra_specs(self, capabilities, instance_type):
+        """Check that the capabilities provided by the compute service
+        satisfy the extra specs associated with the instance type"""
+
+        if 'extra_specs' not in instance_type:
+            return True
+
+        # Note(lorinh): For now, we are just checking exact matching on the
+        # values. Later on, we  want to handle numerical
+        # values so we can represent things like number of GPU cards
+
+        try:
+            for key, value in instance_type['extra_specs'].iteritems():
+                if capabilities[key] != value:
+                    return False
+        except KeyError:
+            return False
+
+        return True
+
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that can create instance_type."""
         instance_type = query
@@ -103,7 +123,11 @@ class InstanceTypeFilter(HostFilter):
             disk_bytes = capabilities['disk_available']
             spec_ram = instance_type['memory_mb']
             spec_disk = instance_type['local_gb']
-            if host_ram_mb >= spec_ram and disk_bytes >= spec_disk:
+            extra_specs = instance_type['extra_specs']
+
+            if host_ram_mb >= spec_ram and \
+               disk_bytes >= spec_disk and \
+               self._satisfies_extra_specs(capabilities, instance_type):
                 selected_hosts.append((host, capabilities))
         return selected_hosts
 
@@ -305,8 +329,9 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
                     'instance_type': <InstanceType dict>}
     """
 
-    def filter_hosts(self, num, request_spec):
+    def filter_hosts(self, topic, request_spec, hosts=None):
         """Filter the full host list (from the ZoneManager)"""
+
         filter_name = request_spec.get('filter', None)
         host_filter = choose_host_filter(filter_name)
 
@@ -317,8 +342,9 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
         name, query = host_filter.instance_type_to_filter(instance_type)
         return host_filter.filter_hosts(self.zone_manager, query)
 
-    def weigh_hosts(self, num, request_spec, hosts):
+    def weigh_hosts(self, topic, request_spec, hosts):
         """Derived classes must override this method and return
         a lists of hosts in [{weight, hostname}] format.
         """
-        return [dict(weight=1, hostname=host) for host, caps in hosts]
+        return [dict(weight=1, hostname=hostname, capabilities=caps)
+                for hostname, caps in hosts]

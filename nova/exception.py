@@ -361,6 +361,10 @@ class NoFixedIpsFoundForInstance(NotFound):
 
 
 class FloatingIpNotFound(NotFound):
+    message = _("Floating ip %(floating_ip)s not found")
+
+
+class FloatingIpNotFoundForFixedAddress(NotFound):
     message = _("Floating ip not found for fixed address %(fixed_ip)s.")
 
 
@@ -504,6 +508,11 @@ class InstanceMetadataNotFound(NotFound):
                 "key %(metadata_key)s.")
 
 
+class InstanceTypeExtraSpecsNotFound(NotFound):
+    message = _("Instance Type %(instance_type_id)s has no extra specs with "
+                "key %(extra_specs_key)s.")
+
+
 class LDAPObjectNotFound(NotFound):
     message = _("LDAP object could not be found")
 
@@ -549,6 +558,14 @@ class GlobalRoleNotAllowed(NotAllowed):
     message = _("Unable to use global role %(role_id)s")
 
 
+class ImageRotationNotAllowed(NovaException):
+    message = _("Rotation is not allowed for snapshots")
+
+
+class RotationRequiredForBackup(NovaException):
+    message = _("Rotation param is required for backup image_type")
+
+
 #TODO(bcwaldon): EOL this exception!
 class Duplicate(NovaException):
     pass
@@ -589,3 +606,11 @@ class MigrationError(NovaException):
 
 class MalformedRequestBody(NovaException):
     message = _("Malformed message body: %(reason)s")
+
+
+class PasteConfigNotFound(NotFound):
+    message = _("Could not find paste config at %(path)s")
+
+
+class PasteAppNotFound(NotFound):
+    message = _("Could not load paste app '%(name)s' from %(path)s")

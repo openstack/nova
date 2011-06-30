@@ -93,6 +93,9 @@ if __name__ == '__main__':
     with_req = direct.PostParamsMiddleware(with_json)
     with_auth = direct.DelegatedAuthMiddleware(with_req)
 
-    server = wsgi.Server()
-    server.start(with_auth, FLAGS.direct_port, host=FLAGS.direct_host)
+    server = wsgi.Server("Direct API",
+                         with_auth,
+                         host=FLAGS.direct_host,
+                         port=FLAGS.direct_port)
+    server.start()
     server.wait()

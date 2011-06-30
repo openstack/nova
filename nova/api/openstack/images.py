@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os.path
+
 import webob.exc
 
 from nova import compute
@@ -88,31 +90,73 @@ class Controller(object):
         return webob.exc.HTTPNoContent()
 
     def create(self, req, body):
-        """Snapshot a server instance and save the image.
+        """Snapshot or backup a server instance and save the image.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
 
         :param req: `wsgi.Request` object
         """
+        def get_param(param):
+            try:
+                return body["image"][param]
+            except KeyError:
+                raise webob.exc.HTTPBadRequest(explanation="Missing required "
+                        "param: %s" % param)
+
         context = req.environ['nova.context']
         content_type = req.get_content_type()
 
         if not body:
             raise webob.exc.HTTPBadRequest()
 
+        image_type = body["image"].get("image_type", "snapshot")
+
         try:
-            server_id = self._server_id_from_req_data(body)
-            image_name = body["image"]["name"]
+            server_id = self._server_id_from_req(req, body)
         except KeyError:
             raise webob.exc.HTTPBadRequest()
 
-        image = self._compute_service.snapshot(context, server_id, image_name)
+        image_name = get_param("name")
+        props = self._get_extra_properties(req, body)
+
+        if image_type == "snapshot":
+            image = self._compute_service.snapshot(
+                        context, server_id, image_name,
+                        extra_properties=props)
+        elif image_type == "backup":
+            # NOTE(sirp): Unlike snapshot, backup is not a customer facing
+            # API call; rather, it's used by the internal backup scheduler
+            if not FLAGS.allow_admin_api:
+                raise webob.exc.HTTPBadRequest(
+                        explanation="Admin API Required")
+
+            backup_type = get_param("backup_type")
+            rotation = int(get_param("rotation"))
+
+            image = self._compute_service.backup(
+                        context, server_id, image_name,
+                        backup_type, rotation, extra_properties=props)
+        else:
+            LOG.error(_("Invalid image_type '%s' passed") % image_type)
+            raise webob.exc.HTTPBadRequest(explanation="Invalue image_type: "
+                   "%s" % image_type)
+
         return dict(image=self.get_builder(req).build(image, detail=True))
 
     def get_builder(self, request):
         """Indicates that you must use a Controller subclass."""
-        raise NotImplementedError
-
-    def _server_id_from_req_data(self, data):
         raise NotImplementedError()
+
+    def _server_id_from_req(self, req, data):
+        raise NotImplementedError()
+
+    def _get_extra_properties(self, req, data):
+        return {}
 
 
 class ControllerV10(Controller):
@@ -149,8 +193,12 @@ class ControllerV10(Controller):
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
-    def _server_id_from_req_data(self, data):
-        return data['image']['serverId']
+    def _server_id_from_req(self, req, data):
+        try:
+            return data['image']['serverId']
+        except KeyError:
+            msg = _("Expected serverId attribute on server entity.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
 
 class ControllerV11(Controller):
@@ -169,9 +217,9 @@ class ControllerV11(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        (marker, limit) = common.get_pagination_params(req)
-        images = self._image_service.index(
-            context, filters=filters, marker=marker, limit=limit)
+        page_params = common.get_pagination_params(req)
+        images = self._image_service.index(context, filters=filters,
+                                           **page_params)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
 
@@ -183,14 +231,33 @@ class ControllerV11(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        (marker, limit) = common.get_pagination_params(req)
-        images = self._image_service.detail(
-            context, filters=filters, marker=marker, limit=limit)
+        page_params = common.get_pagination_params(req)
+        images = self._image_service.detail(context, filters=filters,
+                                            **page_params)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
-    def _server_id_from_req_data(self, data):
-        return data['image']['serverRef']
+    def _server_id_from_req(self, req, data):
+        try:
+            server_ref = data['image']['serverRef']
+        except KeyError:
+            msg = _("Expected serverRef attribute on server entity.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        head, tail = os.path.split(server_ref)
+
+        if head and head != os.path.join(req.application_url, 'servers'):
+            msg = _("serverRef must match request url")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        return tail
+
+    def _get_extra_properties(self, req, data):
+        server_ref = data['image']['serverRef']
+        if not server_ref.startswith('http'):
+            server_ref = os.path.join(req.application_url, 'servers',
+                                      server_ref)
+        return {'instance_ref': server_ref}
 
 
 def create_resource(version='1.0'):

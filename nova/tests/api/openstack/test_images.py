@@ -340,6 +340,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.fixtures = self._make_image_fixtures()
         fakes.stub_out_glance(self.stubs, initial_fixtures=self.fixtures)
         fakes.stub_out_compute_api_snapshot(self.stubs)
+        fakes.stub_out_compute_api_backup(self.stubs)
 
     def tearDown(self):
         """Run after each test."""
@@ -364,10 +365,10 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response_list = response_dict["images"]
 
         expected = [{'id': 123, 'name': 'public image'},
-                    {'id': 124, 'name': 'queued backup'},
-                    {'id': 125, 'name': 'saving backup'},
-                    {'id': 126, 'name': 'active backup'},
-                    {'id': 127, 'name': 'killed backup'},
+                    {'id': 124, 'name': 'queued snapshot'},
+                    {'id': 125, 'name': 'saving snapshot'},
+                    {'id': 126, 'name': 'active snapshot'},
+                    {'id': 127, 'name': 'killed snapshot'},
                     {'id': 129, 'name': None}]
 
         self.assertDictListMatch(response_list, expected)
@@ -617,16 +618,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 124,
-            'name': 'queued backup',
-            'serverId': 42,
+            'name': 'queued snapshot',
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
         },
         {
             'id': 125,
-            'name': 'saving backup',
-            'serverId': 42,
+            'name': 'saving snapshot',
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -634,16 +633,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 126,
-            'name': 'active backup',
-            'serverId': 42,
+            'name': 'active snapshot',
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE'
         },
         {
             'id': 127,
-            'name': 'killed backup',
-            'serverId': 42,
+            'name': 'killed snapshot',
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -688,8 +685,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 124,
-            'name': 'queued backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'name': 'queued snapshot',
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -710,8 +707,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 125,
-            'name': 'saving backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'name': 'saving snapshot',
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -733,8 +730,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 126,
-            'name': 'active backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'name': 'active snapshot',
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -755,8 +752,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 127,
-            'name': 'killed backup',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'name': 'killed snapshot',
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -806,7 +803,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'name': 'testname'}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images?name=testname')
@@ -821,7 +818,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'status': 'ACTIVE'}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images?status=ACTIVE')
@@ -836,7 +833,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'property-test': '3'}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images?property-test=3')
@@ -851,7 +848,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'status': 'ACTIVE'}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images?status=ACTIVE&UNSUPPORTEDFILTER=testname')
@@ -866,7 +863,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {}
         image_service.index(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images')
@@ -881,7 +878,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'name': 'testname'}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?name=testname')
@@ -896,7 +893,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'status': 'ACTIVE'}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?status=ACTIVE')
@@ -911,7 +908,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'property-test': '3'}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?property-test=3')
@@ -926,7 +923,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {'status': 'ACTIVE'}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?status=ACTIVE&UNSUPPORTEDFILTER=testname')
@@ -941,7 +938,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         context = object()
         filters = {}
         image_service.detail(
-            context, filters=filters, marker=0, limit=0).AndReturn([])
+            context, filters=filters).AndReturn([])
         mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail')
@@ -973,8 +970,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_create_image(self):
-
-        body = dict(image=dict(serverId='123', name='Backup 1'))
+        body = dict(image=dict(serverId='123', name='Snapshot 1'))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -982,9 +978,95 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
 
+    def test_create_snapshot_no_name(self):
+        """Name is required for snapshots"""
+        body = dict(image=dict(serverId='123'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_name(self):
+        """Name is also required for backups"""
+        body = dict(image=dict(serverId='123', image_type='backup',
+                               backup_type='daily', rotation=1))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_with_rotation_and_backup_type(self):
+        """The happy path for creating backups
+
+        Creating a backup is an admin-only operation, as opposed to snapshots
+        which are available to anybody.
+        """
+        # FIXME(sirp): teardown needed?
+        FLAGS.allow_admin_api = True
+
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
+        body = dict(image=dict(serverId='123', image_type='backup',
+                               name='Backup 1',
+                               backup_type='daily', rotation=1))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+
+    def test_create_backup_no_rotation(self):
+        """Rotation is required for backup requests"""
+        # FIXME(sirp): teardown needed?
+        FLAGS.allow_admin_api = True
+
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
+        body = dict(image=dict(serverId='123', name='daily',
+                               image_type='backup', backup_type='daily'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_backup_type(self):
+        """Backup Type (daily or weekly) is required for backup requests"""
+        # FIXME(sirp): teardown needed?
+        FLAGS.allow_admin_api = True
+
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
+        body = dict(image=dict(serverId='123', name='daily',
+                               image_type='backup', rotation=1))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_with_invalid_image_type(self):
+        """Valid image_types are snapshot | daily | weekly"""
+        # FIXME(sirp): teardown needed?
+        FLAGS.allow_admin_api = True
+
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
+        body = dict(image=dict(serverId='123', image_type='monthly',
+                               rotation=1))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     def test_create_image_no_server_id(self):
 
-        body = dict(image=dict(name='Backup 1'))
+        body = dict(image=dict(name='Snapshot 1'))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -994,7 +1076,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_create_image_v1_1(self):
 
-        body = dict(image=dict(serverRef='123', name='Backup 1'))
+        body = dict(image=dict(serverRef='123', name='Snapshot 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1002,9 +1084,33 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
 
+    def test_create_image_v1_1_actual_server_ref(self):
+
+        serverRef = 'http://localhost/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+        result = json.loads(response.body)
+        self.assertEqual(result['image']['serverRef'], serverRef)
+
+    def test_create_image_v1_1_server_ref_bad_hostname(self):
+
+        serverRef = 'http://asdf/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     def test_create_image_v1_1_xml_serialization(self):
 
-        body = dict(image=dict(serverRef='123', name='Backup 1'))
+        body = dict(image=dict(serverRef='123', name='Snapshot 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1018,7 +1124,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             <image
                    created="None"
                    id="123"
-                   name="None"
+                   name="Snapshot 1"
                    serverRef="http://localhost/v1.1/servers/123"
                    status="ACTIVE"
                    updated="None"
@@ -1037,7 +1143,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_create_image_v1_1_no_server_ref(self):
 
-        body = dict(image=dict(name='Backup 1'))
+        body = dict(image=dict(name='Snapshot 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1064,18 +1170,21 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     status='active', properties={})
         image_id += 1
 
-        # Backup for User 1
-        backup_properties = {'instance_id': '42', 'user_id': '1'}
+        # Snapshot for User 1
+        server_ref = 'http://localhost:8774/v1.1/servers/42'
+        snapshot_properties = {'instance_ref': server_ref, 'user_id': '1'}
         for status in ('queued', 'saving', 'active', 'killed'):
-            add_fixture(id=image_id, name='%s backup' % status,
+            add_fixture(id=image_id, name='%s snapshot' % status,
                         is_public=False, status=status,
-                        properties=backup_properties)
+                        properties=snapshot_properties)
             image_id += 1
 
-        # Backup for User 2
-        other_backup_properties = {'instance_id': '43', 'user_id': '2'}
-        add_fixture(id=image_id, name='someone elses backup', is_public=False,
-                    status='active', properties=other_backup_properties)
+        # Snapshot for User 2
+        other_snapshot_properties = {'instance_id': '43', 'user_id': '2'}
+        add_fixture(id=image_id, name='someone elses snapshot',
+                    is_public=False, status='active',
+                    properties=other_snapshot_properties)
+
         image_id += 1
 
         # Image without a name

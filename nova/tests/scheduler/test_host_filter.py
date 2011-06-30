@@ -67,13 +67,36 @@ class HostFilterTestCase(test.TestCase):
                 flavorid=1,
                 swap=500,
                 rxtx_quota=30000,
-                rxtx_cap=200)
+                rxtx_cap=200,
+                extra_specs={})
+        self.gpu_instance_type = dict(name='tiny.gpu',
+                memory_mb=50,
+                vcpus=10,
+                local_gb=500,
+                flavorid=2,
+                swap=500,
+                rxtx_quota=30000,
+                rxtx_cap=200,
+                extra_specs={'xpu_arch': 'fermi',
+                             'xpu_info': 'Tesla 2050'})
 
         self.zone_manager = FakeZoneManager()
         states = {}
         for x in xrange(10):
             states['host%02d' % (x + 1)] = {'compute': self._host_caps(x)}
         self.zone_manager.service_states = states
+
+        # Add some extra capabilities to some hosts
+        host07 = self.zone_manager.service_states['host07']['compute']
+        host07['xpu_arch'] = 'fermi'
+        host07['xpu_info'] = 'Tesla 2050'
+
+        host08 = self.zone_manager.service_states['host08']['compute']
+        host08['xpu_arch'] = 'radeon'
+
+        host09 = self.zone_manager.service_states['host09']['compute']
+        host09['xpu_arch'] = 'fermi'
+        host09['xpu_info'] = 'Tesla 2150'
 
     def tearDown(self):
         FLAGS.default_host_filter = self.old_flag
@@ -115,6 +138,17 @@ class HostFilterTestCase(test.TestCase):
         just_hosts.sort()
         self.assertEquals('host05', just_hosts[0])
         self.assertEquals('host10', just_hosts[5])
+
+    def test_instance_type_filter_extra_specs(self):
+        hf = host_filter.InstanceTypeFilter()
+        # filter all hosts that can support 50 ram and 500 disk
+        name, cooked = hf.instance_type_to_filter(self.gpu_instance_type)
+        self.assertEquals('nova.scheduler.host_filter.InstanceTypeFilter',
+                          name)
+        hosts = hf.filter_hosts(self.zone_manager, cooked)
+        self.assertEquals(1, len(hosts))
+        just_hosts = [host for host, caps in hosts]
+        self.assertEquals('host07', just_hosts[0])
 
     def test_json_filter(self):
         hf = host_filter.JsonFilter()
