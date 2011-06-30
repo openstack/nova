@@ -348,6 +348,7 @@ class TopicPublisher(Publisher):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
         self.durable = False
+        self.auto_delete = True
         super(TopicPublisher, self).__init__(connection=connection)
 
 
@@ -360,6 +361,7 @@ class FanoutPublisher(Publisher):
         self.exchange = '%s_fanout' % topic
         self.queue = '%s_fanout' % topic
         self.durable = False
+        self.auto_delete = True
         LOG.info(_('Creating "%(exchange)s" fanout exchange'),
                  dict(exchange=self.exchange))
         super(FanoutPublisher, self).__init__(connection=connection)
