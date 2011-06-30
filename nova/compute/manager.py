@@ -49,7 +49,6 @@ from nova import flags
 from nova import log as logging
 from nova import manager
 from nova import network
-from nova import notifier
 from nova import rpc
 from nova import utils
 from nova import volume
