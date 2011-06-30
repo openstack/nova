@@ -49,7 +49,7 @@ class FakeNotifier(object):
         self.provided_event = event
         self.provided_priority = priority
         self.provided_payload = payload
-        
+
 
 def good_function():
     return 99
