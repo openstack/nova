@@ -16,6 +16,8 @@
 Tests For Zone Aware Scheduler.
 """
 
+import nova.db
+
 from nova import exception
 from nova import test
 from nova.scheduler import driver
@@ -79,7 +81,7 @@ class FakeEmptyZoneManager(zone_manager.ZoneManager):
         self.service_states = {}
 
 
-def fake_empty_call_zone_method(context, method, specs):
+def fake_empty_call_zone_method(context, method, specs, zones):
     return []
 
 
@@ -98,7 +100,7 @@ def fake_ask_child_zone_to_create_instance(context, zone_info,
     was_called = True
 
 
-def fake_provision_resource_locally(context, item, instance_id, kwargs):
+def fake_provision_resource_locally(context, build_plan, request_spec, kwargs):
     global was_called
     was_called = True
 
@@ -118,7 +120,7 @@ def fake_decrypt_blob_returns_child_info(blob):
             'child_blob': True}  # values aren't important. Keys are.
 
 
-def fake_call_zone_method(context, method, specs):
+def fake_call_zone_method(context, method, specs, zones):
     return [
         ('zone1', [
             dict(weight=1, blob='AAAAAAA'),
@@ -141,6 +143,20 @@ def fake_call_zone_method(context, method, specs):
     ]
 
 
+def fake_zone_get_all(context):
+    return [
+        dict(id=1, api_url='zone1',
+             username='admin', password='password',
+             weight_offset=0.0, weight_scale=1.0),
+        dict(id=2, api_url='zone2',
+             username='admin', password='password',
+             weight_offset=1000.0, weight_scale=1.0),
+        dict(id=3, api_url='zone3',
+             username='admin', password='password',
+             weight_offset=0.0, weight_scale=1000.0),
+    ]
+
+
 class ZoneAwareSchedulerTestCase(test.TestCase):
     """Test case for Zone Aware Scheduler."""
 
@@ -151,6 +167,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         """
         sched = FakeZoneAwareScheduler()
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
+        self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
 
         zm = FakeZoneManager()
         sched.set_zone_manager(zm)
@@ -168,12 +185,33 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         # 4 local hosts
         self.assertEqual(4, len(hostnames))
 
+    def test_adjust_child_weights(self):
+        """Make sure the weights returned by child zones are
+        properly adjusted based on the scale/offset in the zone
+        db entries.
+        """
+        sched = FakeZoneAwareScheduler()
+        child_results = fake_call_zone_method(None, None, None, None)
+        zones = fake_zone_get_all(None)
+        sched._adjust_child_weights(child_results, zones)
+        scaled = [130000, 131000, 132000, 3000]
+        for zone, results in child_results:
+            for item in results:
+                w = item['weight']
+                if zone == 'zone1':  # No change
+                    self.assertTrue(w < 1000.0)
+                if zone == 'zone2':  # Offset +1000
+                    self.assertTrue(w >= 1000.0 and w < 2000)
+                if zone == 'zone3':  # Scale x1000
+                    self.assertEqual(scaled.pop(0), w)
+
     def test_empty_zone_aware_scheduler(self):
         """
         Ensure empty hosts & child_zones result in NoValidHosts exception.
         """
         sched = FakeZoneAwareScheduler()
         self.stubs.Set(sched, '_call_zone_method', fake_empty_call_zone_method)
+        self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
 
         zm = FakeEmptyZoneManager()
         sched.set_zone_manager(zm)

@@ -21,7 +21,7 @@ SQLAlchemy models for nova data.
 
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, String, schema
-from sqlalchemy import ForeignKey, DateTime, Boolean, Text
+from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import ForeignKeyConstraint
@@ -738,6 +738,8 @@ class Zone(BASE, NovaBase):
     api_url = Column(String(255))
     username = Column(String(255))
     password = Column(String(255))
+    weight_offset = Column(Float(), default=0.0)
+    weight_scale = Column(Float(), default=1.0)
 
 
 class AgentBuild(BASE, NovaBase):
