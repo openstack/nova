@@ -104,6 +104,7 @@ class ViewBuilderV11(ViewBuilder):
         """Return a standardized image structure for display by the API."""
         image = ViewBuilder.build(self, image_obj, detail)
         href = self.generate_href(image_obj["id"])
+        bookmark = self.generate_bookmark(image_obj["id"])
 
         image["links"] = [{
             "rel": "self",
@@ -111,13 +112,15 @@ class ViewBuilderV11(ViewBuilder):
         },
         {
             "rel": "bookmark",
-            "type": "application/json",
-            "href": href,
-        },
-        {
-            "rel": "bookmark",
-            "type": "application/xml",
-            "href": href,
+            "href": bookmark,
         }]
 
         return image
+
+    def generate_bookmark(self, image_id):
+        """Create an url that refers to a specific flavor id."""
+        return os.path.join(self._remove_version(self._url),
+            "images", str(image_id))
+
+    def _remove_version(self, base_url):
+        return base_url.rsplit('/', 1).pop(0)
