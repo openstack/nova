@@ -71,7 +71,7 @@ class WrapExceptionTestCase(test.TestCase):
 
         # Note that Exception is converted to Error ...
         self.assertRaises(exception.Error, wrapped(bad_function_exception))
-        
+
     def test_wrap_exception_with_notifier(self):
         notifier = FakeNotifier()
         wrapped = exception.wrap_exception(notifier, "publisher", "event",
