@@ -82,7 +82,8 @@ def wrap_db_error(f):
     _wrap.func_name = f.func_name
 
 
-def wrap_exception(notifier=None, publisher_id=None, event_type=None, level=None):
+def wrap_exception(notifier=None, publisher_id=None, event_type=None,
+                   level=None):
     """This decorator wraps a method to catch any exceptions that may
     get thrown. It logs the exception as well as optionally sending
     it to the notification system.
