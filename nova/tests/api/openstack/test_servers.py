@@ -290,13 +290,7 @@ class ServersTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/servers/1",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/servers/1",
+                "href": "http://localhost/servers/1",
             },
         ]
 
@@ -514,13 +508,7 @@ class ServersTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
+                "href": "http://localhost/servers/%d" % (i,),
             },
         ]
 
