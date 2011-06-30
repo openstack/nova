@@ -772,6 +772,17 @@ def is_uuid_like(val):
     return (len(val) == 36) and (val.count('-') == 4)
 
 
+def bool_from_str(val):
+    """Convert a string representation of a bool into a bool value"""
+
+    if not val:
+        return False
+    try:
+        return True if int(val) else False
+    except ValueError:
+        return val.lower() == 'true'
+
+
 class Bootstrapper(object):
     """Provides environment bootstrapping capabilities for entry points."""
 
