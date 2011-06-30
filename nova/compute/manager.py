@@ -50,7 +50,6 @@ import nova.image
 from nova import log as logging
 from nova import manager
 from nova import network
-from nova import notifier
 from nova import rpc
 from nova import utils
 from nova import volume
@@ -1153,7 +1152,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # Getting instance info
         instance_ref = self.db.instance_get(context, instance_id)
-        ec2_id = instance_ref['hostname']
+        hostname = instance_ref['hostname']
 
         # Getting fixed ips
         fixed_ips = self.db.instance_get_fixed_addresses(context, instance_id)
@@ -1162,7 +1161,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:
-            LOG.info(_("%s has no volume."), ec2_id)
+            LOG.info(_("%s has no volume."), hostname)
         else:
             for v in instance_ref['volumes']:
                 self.volume_manager.setup_compute_volume(context, v['id'])
@@ -1185,7 +1184,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     raise
                 else:
                     LOG.warn(_("setup_compute_network() failed %(cnt)d."
-                               "Retry up to %(max_retry)d for %(ec2_id)s.")
+                               "Retry up to %(max_retry)d for %(hostname)s.")
                                % locals())
                     time.sleep(1)
 

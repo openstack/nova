@@ -3042,7 +3042,7 @@ def zone_update(context, zone_id, values):
     if not zone:
         raise exception.ZoneNotFound(zone_id=zone_id)
     zone.update(values)
-    zone.save()
+    zone.save(session=session)
     return zone
 
 

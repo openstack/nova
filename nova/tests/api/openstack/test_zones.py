@@ -34,7 +34,7 @@ FLAGS.verbose = True
 
 def zone_get(context, zone_id):
     return dict(id=1, api_url='http://example.com', username='bob',
-                password='xxx')
+                password='xxx', weight_scale=1.0, weight_offset=0.0)
 
 
 def zone_create(context, values):
@@ -57,9 +57,9 @@ def zone_delete(context, zone_id):
 def zone_get_all_scheduler(*args):
     return [
         dict(id=1, api_url='http://example.com', username='bob',
-                 password='xxx'),
+                 password='xxx', weight_scale=1.0, weight_offset=0.0),
         dict(id=2, api_url='http://example.org', username='alice',
-                 password='qwerty'),
+                 password='qwerty', weight_scale=1.0, weight_offset=0.0),
     ]
 
 
@@ -70,9 +70,9 @@ def zone_get_all_scheduler_empty(*args):
 def zone_get_all_db(context):
     return [
         dict(id=1, api_url='http://example.com', username='bob',
-                 password='xxx'),
+                 password='xxx', weight_scale=1.0, weight_offset=0.0),
         dict(id=2, api_url='http://example.org', username='alice',
-                 password='qwerty'),
+                 password='qwerty', weight_scale=1.0, weight_offset=0.0),
     ]
 
 

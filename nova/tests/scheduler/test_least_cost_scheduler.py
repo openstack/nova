@@ -122,15 +122,16 @@ class LeastCostSchedulerTestCase(test.TestCase):
                     for hostname, caps in hosts]
         self.assertWeights(expected, num, request_spec, hosts)
 
-    def test_fill_first_cost_fn(self):
+    def test_compute_fill_first_cost_fn(self):
         FLAGS.least_cost_scheduler_cost_functions = [
-            'nova.scheduler.least_cost.fill_first_cost_fn',
+            'nova.scheduler.least_cost.compute_fill_first_cost_fn',
         ]
-        FLAGS.fill_first_cost_fn_weight = 1
+        FLAGS.compute_fill_first_cost_fn_weight = 1
 
         num = 1
-        request_spec = {}
-        hosts = self.sched.filter_hosts(num, request_spec)
+        instance_type = {'memory_mb': 1024}
+        request_spec = {'instance_type': instance_type}
+        hosts = self.sched.filter_hosts('compute', request_spec, None)
 
         expected = []
         for idx, (hostname, caps) in enumerate(hosts):
