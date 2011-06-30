@@ -428,6 +428,29 @@ def certificate_update(context, certificate_id, values):
 
 
 ###################
+@require_context
+def floating_ip_get(context, id):
+    session = get_session()
+    result = None
+    if is_admin_context(context):
+        result = session.query(models.FloatingIp).\
+                         options(joinedload('fixed_ip')).\
+                         options(joinedload_all('fixed_ip.instance')).\
+                         filter_by(id=id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.FloatingIp).\
+                         options(joinedload('fixed_ip')).\
+                         options(joinedload_all('fixed_ip.instance')).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.FloatingIpNotFoundForFixedAddress()
+
+    return result
 
 
 @require_context
@@ -582,7 +605,23 @@ def floating_ip_get_by_address(context, address, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.FloatingIpNotFound(fixed_ip=address)
+        raise exception.FloatingIpNotFoundForFixedAddress(fixed_ip=address)
+
+    return result
+
+
+@require_context
+def floating_ip_get_by_ip(context, ip, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.FloatingIp).\
+                filter_by(address=ip).\
+                filter_by(deleted=can_read_deleted(context)).\
+                first()
+
+    if not result:
+        raise exception.FloatingIpNotFound(floating_ip=ip)
 
     return result
 
@@ -722,7 +761,7 @@ def fixed_ip_get_by_address(context, address, session=None):
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.FloatingIpNotFound(fixed_ip=address)
+        raise exception.FloatingIpNotFoundForFixedAddress(fixed_ip=address)
 
     if is_user_context(context):
         authorize_project_context(context, result.instance.project_id)
@@ -914,6 +953,24 @@ def instance_get_all(context):
                    options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
+
+
+@require_admin_context
+def instance_get_active_by_window(context, begin, end=None):
+    """Return instances that were continuously active over the given window"""
+    session = get_session()
+    query = session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('instance_type')).\
+                   filter(models.Instance.launched_at < begin)
+    if end:
+        query = query.filter(or_(models.Instance.terminated_at == None,
+                                 models.Instance.terminated_at > end))
+    else:
+        query = query.filter(models.Instance.terminated_at == None)
+    return query.all()
 
 
 @require_admin_context
@@ -2180,6 +2237,46 @@ def security_group_rule_destroy(context, security_group_rule_id):
 
 ###################
 
+
+@require_admin_context
+def provider_fw_rule_create(context, rule):
+    fw_rule_ref = models.ProviderFirewallRule()
+    fw_rule_ref.update(rule)
+    fw_rule_ref.save()
+    return fw_rule_ref
+
+
+@require_admin_context
+def provider_fw_rule_get_all(context):
+    session = get_session()
+    return session.query(models.ProviderFirewallRule).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_admin_context
+def provider_fw_rule_get_all_by_cidr(context, cidr):
+    session = get_session()
+    return session.query(models.ProviderFirewallRule).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(cidr=cidr).\
+                   all()
+
+
+@require_admin_context
+def provider_fw_rule_destroy(context, rule_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.ProviderFirewallRule).\
+                filter_by(id=rule_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+###################
+
+
 @require_admin_context
 def user_get(context, id, session=None):
     if not session:
@@ -2557,13 +2654,47 @@ def console_get(context, console_id, instance_id=None):
 
 @require_admin_context
 def instance_type_create(_context, values):
+    """Create a new instance type. In order to pass in extra specs,
+    the values dict should contain a 'extra_specs' key/value pair:
+
+    {'extra_specs' : {'k1': 'v1', 'k2': 'v2', ...}}
+
+    """
     try:
+        specs = values.get('extra_specs')
+        specs_refs = []
+        if specs:
+            for k, v in specs.iteritems():
+                specs_ref = models.InstanceTypeExtraSpecs()
+                specs_ref['key'] = k
+                specs_ref['value'] = v
+                specs_refs.append(specs_ref)
+        values['extra_specs'] = specs_refs
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
         instance_type_ref.save()
     except Exception, e:
         raise exception.DBError(e)
     return instance_type_ref
+
+
+def _dict_with_extra_specs(inst_type_query):
+    """Takes an instance type query returned by sqlalchemy
+    and returns it as a dictionary, converting the extra_specs
+    entry from a list of dicts:
+
+    'extra_specs' : [{'key': 'k1', 'value': 'v1', ...}, ...]
+
+    to a single dict:
+
+    'extra_specs' : {'k1': 'v1'}
+
+    """
+    inst_type_dict = dict(inst_type_query)
+    extra_specs = dict([(x['key'], x['value']) for x in \
+                        inst_type_query['extra_specs']])
+    inst_type_dict['extra_specs'] = extra_specs
+    return inst_type_dict
 
 
 @require_context
@@ -2574,17 +2705,19 @@ def instance_type_get_all(context, inactive=False):
     session = get_session()
     if inactive:
         inst_types = session.query(models.InstanceTypes).\
+                        options(joinedload('extra_specs')).\
                         order_by("name").\
                         all()
     else:
         inst_types = session.query(models.InstanceTypes).\
+                        options(joinedload('extra_specs')).\
                         filter_by(deleted=False).\
                         order_by("name").\
                         all()
     inst_dict = {}
     if inst_types:
         for i in inst_types:
-            inst_dict[i['name']] = dict(i)
+            inst_dict[i['name']] = _dict_with_extra_specs(i)
     return inst_dict
 
 
@@ -2593,12 +2726,14 @@ def instance_type_get_by_id(context, id):
     """Returns a dict describing specific instance_type"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
+                    options(joinedload('extra_specs')).\
                     filter_by(id=id).\
                     first()
+
     if not inst_type:
         raise exception.InstanceTypeNotFound(instance_type=id)
     else:
-        return dict(inst_type)
+        return _dict_with_extra_specs(inst_type)
 
 
 @require_context
@@ -2606,12 +2741,13 @@ def instance_type_get_by_name(context, name):
     """Returns a dict describing specific instance_type"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
+                    options(joinedload('extra_specs')).\
                     filter_by(name=name).\
                     first()
     if not inst_type:
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
     else:
-        return dict(inst_type)
+        return _dict_with_extra_specs(inst_type)
 
 
 @require_context
@@ -2619,12 +2755,13 @@ def instance_type_get_by_flavor_id(context, id):
     """Returns a dict describing specific flavor_id"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
+                                    options(joinedload('extra_specs')).\
                                     filter_by(flavorid=int(id)).\
                                     first()
     if not inst_type:
         raise exception.FlavorNotFound(flavor_id=id)
     else:
-        return dict(inst_type)
+        return _dict_with_extra_specs(inst_type)
 
 
 @require_admin_context
@@ -2792,6 +2929,9 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
     return metadata
 
 
+####################
+
+
 @require_admin_context
 def agent_build_create(context, values):
     agent_build_ref = models.AgentBuild()
@@ -2841,3 +2981,70 @@ def agent_build_update(context, agent_build_id, values):
                    first()
         agent_build_ref.update(values)
         agent_build_ref.save(session=session)
+
+
+####################
+
+
+@require_context
+def instance_type_extra_specs_get(context, instance_type_id):
+    session = get_session()
+
+    spec_results = session.query(models.InstanceTypeExtraSpecs).\
+                    filter_by(instance_type_id=instance_type_id).\
+                    filter_by(deleted=False).\
+                    all()
+
+    spec_dict = {}
+    for i in spec_results:
+        spec_dict[i['key']] = i['value']
+    return spec_dict
+
+
+@require_context
+def instance_type_extra_specs_delete(context, instance_type_id, key):
+    session = get_session()
+    session.query(models.InstanceTypeExtraSpecs).\
+        filter_by(instance_type_id=instance_type_id).\
+        filter_by(key=key).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': utils.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def instance_type_extra_specs_get_item(context, instance_type_id, key):
+    session = get_session()
+
+    sppec_result = session.query(models.InstanceTypeExtraSpecs).\
+                    filter_by(instance_type_id=instance_type_id).\
+                    filter_by(key=key).\
+                    filter_by(deleted=False).\
+                    first()
+
+    if not spec_result:
+        raise exception.\
+           InstanceTypeExtraSpecsNotFound(extra_specs_key=key,
+                                        instance_type_id=instance_type_id)
+    return spec_result
+
+
+@require_context
+def instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                               specs):
+    session = get_session()
+    spec_ref = None
+    for key, value in specs.iteritems():
+        try:
+            spec_ref = instance_type_extra_specs_get_item(context,
+                                                          instance_type_id,
+                                                          key,
+                                                          session)
+        except:
+            spec_ref = models.InstanceTypeExtraSpecs()
+        spec_ref.update({"key": key, "value": value,
+                         "instance_type_id": instance_type_id,
+                         "deleted": 0})
+        spec_ref.save(session=session)
+    return specs

@@ -180,18 +180,22 @@ class ZoneAwareScheduler(driver.Scheduler):
                                     request_spec, kwargs)
             return None
 
+        num_instances = request_spec.get('num_instances', 1)
+        LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
+                locals())
+
         # Create build plan and provision ...
         build_plan = self.select(context, request_spec)
         if not build_plan:
             raise driver.NoValidHost(_('No hosts were available'))
 
-        for num in xrange(request_spec['num_instances']):
+        for num in xrange(num_instances):
             if not build_plan:
                 break
 
-            item = build_plan.pop(0)
-            self._provision_resource(context, item, instance_id, request_spec,
-                                    kwargs)
+            build_plan_item = build_plan.pop(0)
+            self._provision_resource(context, build_plan_item, instance_id,
+                                     request_spec, kwargs)
 
         # Returning None short-circuits the routing to Compute (since
         # we've already done it here)
@@ -224,18 +228,36 @@ class ZoneAwareScheduler(driver.Scheduler):
             raise NotImplemented(_("Zone Aware Scheduler only understands "
                                    "Compute nodes (for now)"))
 
-        #TODO(sandy): how to infer this from OS API params?
-        num_instances = 1
+        num_instances = request_spec.get('num_instances', 1)
+        instance_type = request_spec['instance_type']
 
-        # Filter local hosts based on requirements ...
-        host_list = self.filter_hosts(num_instances, request_spec)
+        weighted = []
+        host_list = None
 
-        # TODO(sirp): weigh_hosts should also be a function of 'topic' or
-        # resources, so that we can apply different objective functions to it
+        for i in xrange(num_instances):
+            # Filter local hosts based on requirements ...
+            #
+            # The first pass through here will pass 'None' as the
+            # host_list.. which tells the filter to build the full
+            # list of hosts.
+            # On a 2nd pass, the filter can modify the host_list with
+            # any updates it needs to make based on resources that
+            # may have been consumed from a previous build..
+            host_list = self.filter_hosts(topic, request_spec, host_list)
+            if not host_list:
+                LOG.warn(_("Filter returned no hosts after processing "
+                        "%(i)d of %(num_instances)d instances") % locals())
+                break
 
-        # then weigh the selected hosts.
-        # weighted = [{weight=weight, name=hostname}, ...]
-        weighted = self.weigh_hosts(num_instances, request_spec, host_list)
+            # then weigh the selected hosts.
+            # weighted = [{weight=weight, hostname=hostname,
+            #              capabilities=capabs}, ...]
+            weights = self.weigh_hosts(topic, request_spec, host_list)
+            weights.sort(key=operator.itemgetter('weight'))
+            best_weight = weights[0]
+            weighted.append(best_weight)
+            self.consume_resources(topic, best_weight['capabilities'],
+                    instance_type)
 
         # Next, tack on the best weights from the child zones ...
         json_spec = json.dumps(request_spec)
@@ -254,18 +276,65 @@ class ZoneAwareScheduler(driver.Scheduler):
         weighted.sort(key=operator.itemgetter('weight'))
         return weighted
 
-    def filter_hosts(self, num, request_spec):
-        """Derived classes must override this method and return
-           a list of hosts in [(hostname, capability_dict)] format.
+    def compute_filter(self, hostname, capabilities, request_spec):
+        """Return whether or not we can schedule to this compute node.
+        Derived classes should override this and return True if the host
+        is acceptable for scheduling.
         """
-        # NOTE(sirp): The default logic is the equivalent to AllHostsFilter
-        service_states = self.zone_manager.service_states
-        return [(host, services)
-                for host, services in service_states.iteritems()]
+        instance_type = request_spec['instance_type']
+        requested_mem = instance_type['memory_mb'] * 1024 * 1024
+        return capabilities['host_memory_free'] >= requested_mem
 
-    def weigh_hosts(self, num, request_spec, hosts):
+    def filter_hosts(self, topic, request_spec, host_list=None):
+        """Return a list of hosts which are acceptable for scheduling.
+        Return value should be a list of (hostname, capability_dict)s.
+        Derived classes may override this, but may find the
+        '<topic>_filter' function more appropriate.
+        """
+
+        def _default_filter(self, hostname, capabilities, request_spec):
+            """Default filter function if there's no <topic>_filter"""
+            # NOTE(sirp): The default logic is the equivalent to
+            # AllHostsFilter
+            return True
+
+        filter_func = getattr(self, '%s_filter' % topic, _default_filter)
+
+        if host_list is None:
+            first_run = True
+            host_list = self.zone_manager.service_states.iteritems()
+        else:
+            first_run = False
+
+        filtered_hosts = []
+        for host, services in host_list:
+            if first_run:
+                if topic not in services:
+                    continue
+                services = services[topic]
+            if filter_func(host, services, request_spec):
+                filtered_hosts.append((host, services))
+        return filtered_hosts
+
+    def weigh_hosts(self, topic, request_spec, hosts):
         """Derived classes may override this to provide more sophisticated
         scheduling objectives
         """
         # NOTE(sirp): The default logic is the same as the NoopCostFunction
-        return [dict(weight=1, hostname=host) for host, caps in hosts]
+        return [dict(weight=1, hostname=hostname, capabilities=capabilities)
+                for hostname, capabilities in hosts]
+
+    def compute_consume(self, capabilities, instance_type):
+        """Consume compute resources for selected host"""
+
+        requested_mem = max(instance_type['memory_mb'], 0) * 1024 * 1024
+        capabilities['host_memory_free'] -= requested_mem
+
+    def consume_resources(self, topic, capabilities, instance_type):
+        """Consume resources for a specific host.  'host' is a tuple
+        of the hostname and the services"""
+
+        consume_func = getattr(self, '%s_consume' % topic, None)
+        if not consume_func:
+            return
+        consume_func(capabilities, instance_type)

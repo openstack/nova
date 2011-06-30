@@ -25,6 +25,7 @@ import M2Crypto
 import os
 import pickle
 import subprocess
+import time
 import uuid
 
 from nova import context
@@ -44,7 +45,11 @@ from nova.virt.xenapi.vm_utils import ImageType
 
 XenAPI = None
 LOG = logging.getLogger("nova.virt.xenapi.vmops")
+
 FLAGS = flags.FLAGS
+flags.DEFINE_integer('windows_version_timeout', 300,
+                     'number of seconds to wait for windows agent to be '
+                     'fully operational')
 
 
 def cmp_version(a, b):
@@ -247,7 +252,15 @@ class VMOps(object):
                         'architecture': instance.architecture})
 
         def _check_agent_version():
-            version = self.get_agent_version(instance)
+            if instance.os_type == 'windows':
+                # Windows will generally perform a setup process on first boot
+                # that can take a couple of minutes and then reboot. So we
+                # need to be more patient than normal as well as watch for
+                # domid changes
+                version = self.get_agent_version(instance,
+                                  timeout=FLAGS.windows_version_timeout)
+            else:
+                version = self.get_agent_version(instance)
             if not version:
                 LOG.info(_('No agent version returned by instance'))
                 return
@@ -502,18 +515,41 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
         self._session.wait_for_task(task, instance.id)
 
-    def get_agent_version(self, instance):
+    def get_agent_version(self, instance, timeout=None):
         """Get the version of the agent running on the VM instance."""
 
-        # Send the encrypted password
-        transaction_id = str(uuid.uuid4())
-        args = {'id': transaction_id}
-        resp = self._make_agent_call('version', instance, '', args)
-        if resp is None:
-            # No response from the agent
-            return
-        resp_dict = json.loads(resp)
-        return resp_dict['message']
+        def _call():
+            # Send the encrypted password
+            transaction_id = str(uuid.uuid4())
+            args = {'id': transaction_id}
+            resp = self._make_agent_call('version', instance, '', args)
+            if resp is None:
+                # No response from the agent
+                return
+            resp_dict = json.loads(resp)
+            return resp_dict['message']
+
+        if timeout:
+            vm_ref = self._get_vm_opaque_ref(instance)
+            vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+
+            domid = vm_rec['domid']
+
+            expiration = time.time() + timeout
+            while time.time() < expiration:
+                ret = _call()
+                if ret:
+                    return ret
+
+                vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+                if vm_rec['domid'] != domid:
+                    LOG.info(_('domid changed from %(olddomid)s to '
+                               '%(newdomid)s') % {
+                                   'olddomid': domid,
+                                    'newdomid': vm_rec['domid']})
+                    domid = vm_rec['domid']
+        else:
+            return _call()
 
     def agent_update(self, instance, url, md5sum):
         """Update agent on the VM instance."""

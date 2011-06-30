@@ -191,6 +191,10 @@ class ComputeDriver(object):
     def refresh_security_group_members(self, security_group_id):
         raise NotImplementedError()
 
+    def refresh_provider_fw_rules(self, security_group_id):
+        """See: nova/virt/fake.py for docs."""
+        raise NotImplementedError()
+
     def reset_network(self, instance):
         """reset networking for specified instance"""
         raise NotImplementedError()

@@ -799,7 +799,9 @@ class IptablesFirewallTestCase(test.TestCase):
         self.network = utils.import_object(FLAGS.network_manager)
 
         class FakeLibvirtConnection(object):
-            pass
+            def nwfilterDefineXML(*args, **kwargs):
+                """setup_basic_rules in nwfilter calls this."""
+                pass
         self.fake_libvirt_connection = FakeLibvirtConnection()
         self.fw = firewall.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
@@ -1035,7 +1037,6 @@ class IptablesFirewallTestCase(test.TestCase):
                                fakefilter.filterDefineXMLMock
         self.fw.nwfilter._conn.nwfilterLookupByName =\
                                fakefilter.nwfilterLookupByName
-
         instance_ref = self._create_instance_ref()
         inst_id = instance_ref['id']
         instance = db.instance_get(self.context, inst_id)
@@ -1056,6 +1057,70 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])
+
+    def test_provider_firewall_rules(self):
+        # setup basic instance data
+        instance_ref = self._create_instance_ref()
+        nw_info = _create_network_info(1)
+        ip = '10.11.12.13'
+        network_ref = db.project_get_network(self.context, 'fake')
+        admin_ctxt = context.get_admin_context()
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': instance_ref['id']})
+        # FRAGILE: peeks at how the firewall names chains
+        chain_name = 'inst-%s' % instance_ref['id']
+
+        # create a firewall via setup_basic_filtering like libvirt_conn.spawn
+        # should have a chain with 0 rules
+        self.fw.setup_basic_filtering(instance_ref, network_info=nw_info)
+        self.assertTrue('provider' in self.fw.iptables.ipv4['filter'].chains)
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(0, len(rules))
+
+        # add a rule and send the update message, check for 1 rule
+        provider_fw0 = db.provider_fw_rule_create(admin_ctxt,
+                                                  {'protocol': 'tcp',
+                                                   'cidr': '10.99.99.99/32',
+                                                   'from_port': 1,
+                                                   'to_port': 65535})
+        self.fw.refresh_provider_fw_rules()
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(1, len(rules))
+
+        # Add another, refresh, and make sure number of rules goes to two
+        provider_fw1 = db.provider_fw_rule_create(admin_ctxt,
+                                                  {'protocol': 'udp',
+                                                   'cidr': '10.99.99.99/32',
+                                                   'from_port': 1,
+                                                   'to_port': 65535})
+        self.fw.refresh_provider_fw_rules()
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(2, len(rules))
+
+        # create the instance filter and make sure it has a jump rule
+        self.fw.prepare_instance_filter(instance_ref, network_info=nw_info)
+        self.fw.apply_instance_filter(instance_ref)
+        inst_rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                           if rule.chain == chain_name]
+        jump_rules = [rule for rule in inst_rules if '-j' in rule.rule]
+        provjump_rules = []
+        # IptablesTable doesn't make rules unique internally
+        for rule in jump_rules:
+            if 'provider' in rule.rule and rule not in provjump_rules:
+                provjump_rules.append(rule)
+        self.assertEqual(1, len(provjump_rules))
+
+        # remove a rule from the db, cast to compute to refresh rule
+        db.provider_fw_rule_destroy(admin_ctxt, provider_fw1['id'])
+        self.fw.refresh_provider_fw_rules()
+        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
+                      if rule.chain == 'provider']
+        self.assertEqual(1, len(rules))
 
 
 class NWFilterTestCase(test.TestCase):

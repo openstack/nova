@@ -69,7 +69,6 @@ from nose import core
 from nose import result
 
 from nova import log as logging
-from nova.tests import fake_flags
 
 
 class _AnsiColorizer(object):
@@ -211,11 +210,11 @@ class NovaTestResult(result.TextTestResult):
                 break
         sys.stdout = stdout
 
-        # NOTE(lorinh): Initialize start_time in case a sqlalchemy-migrate 
-        # error results in it failing to be initialized later. Otherwise, 
+        # NOTE(lorinh): Initialize start_time in case a sqlalchemy-migrate
+        # error results in it failing to be initialized later. Otherwise,
         # _handleElapsedTime will fail, causing the wrong error message to
         # be outputted.
-        self.start_time = time.time() 
+        self.start_time = time.time()
 
     def getDescription(self, test):
         return str(test)
