@@ -17,7 +17,9 @@ import uuid
 
 from nova import flags
 from nova import utils
+from nova import log as logging
 
+LOG = logging.getLogger('nova.exception')
 
 FLAGS = flags.FLAGS
 
@@ -47,8 +49,9 @@ def safe_notify(publisher_id, event_type, priority, payload):
     try:
         notify(publisher_id, event_type, notification_level, payload)
     except Exception, e:
-        LOG.exception(_("Problem '%(e)' attempting to "
+        LOG.exception(_("Problem '%(e)s' attempting to "
                         "send to notification system." % locals()))
+
 
 def notify(publisher_id, event_type, priority, payload):
     """

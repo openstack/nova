@@ -394,4 +394,5 @@ class Resource(wsgi.Application):
         """Find action-spefic method on controller and call it."""
 
         controller_method = getattr(self.controller, action)
+        print "DISPATCHING", self.controller, action
         return controller_method(req=request, **action_args)
