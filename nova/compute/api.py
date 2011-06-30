@@ -48,9 +48,27 @@ flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
 
 
-def generate_default_hostname(instance_id):
+def generate_default_hostname(instance):
     """Default function to generate a hostname given an instance reference."""
-    return str(instance_id)
+    display_name = instance['display_name']
+    if display_name is None:
+        return 'server_%d' % (instance['id'],)
+    table = ''
+    deletions = ''
+    for i in xrange(256):
+        c = chr(i)
+        if ('a' <= c <= 'z') or ('0' <= c <= '9') or (c == '-'):
+            table += c
+        elif c == ' ':
+            table += '_'
+        elif ('A' <= c <= 'Z'):
+            table += c.lower()
+        else:
+            table += '\0'
+            deletions += c
+    if isinstance(display_name, unicode):
+        display_name = display_name.encode('latin-1', 'ignore')
+    return display_name.translate(table, deletions)
 
 
 def _is_able_to_shutdown(instance, instance_id):
@@ -143,7 +161,7 @@ class API(base.Base):
 
     def _check_create_parameters(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
@@ -154,6 +172,10 @@ class API(base.Base):
 
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
+        if not min_count:
+            min_count = 1
+        if not max_count:
+            max_count = min_count
 
         num_instances = quota.allowed_instances(context, max_count,
                                                 instance_type)
@@ -290,10 +312,12 @@ class API(base.Base):
             self.db.block_device_mapping_create(elevated, values)
 
         # Set sane defaults if not specified
-        updates = dict(hostname=self.hostname_factory(instance_id))
+        updates = {}
         if (not hasattr(instance, 'display_name') or
                 instance.display_name is None):
             updates['display_name'] = "Server %s" % instance_id
+            instance['display_name'] = updates['display_name']
+        updates['hostname'] = self.hostname_factory(instance)
 
         instance = self.update(context, instance_id, **updates)
 
@@ -338,7 +362,7 @@ class API(base.Base):
 
     def create_all_at_once(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
@@ -368,7 +392,7 @@ class API(base.Base):
 
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
@@ -613,17 +637,53 @@ class API(base.Base):
         """
         return self.get(context, instance_id)
 
-    def get_all_across_zones(self, context, reservation_id):
-        """Get all instances with this reservation_id, across
-        all available Zones (if any).
-        """
-        context = context.elevated()
-        instances = self.db.instance_get_all_by_reservation(
-                                    context, reservation_id)
+    def get_all(self, context, project_id=None, reservation_id=None,
+                fixed_ip=None, recurse_zones=False):
+        """Get all instances filtered by one of the given parameters.
 
-        children = scheduler_api.call_zone_method(context, "list",
-                                novaclient_collection_name="servers",
-                                reservation_id=reservation_id)
+        If there is no filter and the context is an admin, it will retreive
+        all instances in the system.
+        """
+
+        if reservation_id is not None:
+            recurse_zones = True
+            instances = self.db.instance_get_all_by_reservation(
+                                    context, reservation_id)
+        elif fixed_ip is not None:
+            try:
+                instances = self.db.fixed_ip_get_instance(context, fixed_ip)
+            except exception.FloatingIpNotFound, e:
+                if not recurse_zones:
+                    raise
+                instances = None
+        elif project_id or not context.is_admin:
+            if not context.project:
+                instances = self.db.instance_get_all_by_user(
+                    context, context.user_id)
+            else:
+                if project_id is None:
+                    project_id = context.project_id
+                instances = self.db.instance_get_all_by_project(
+                    context, project_id)
+        else:
+            instances = self.db.instance_get_all(context)
+
+        if instances is None:
+            instances = []
+        elif not isinstance(instances, list):
+            instances = [instances]
+
+        if not recurse_zones:
+            return instances
+
+        admin_context = context.elevated()
+        children = scheduler_api.call_zone_method(admin_context,
+                "list",
+                novaclient_collection_name="servers",
+                reservation_id=reservation_id,
+                project_id=project_id,
+                fixed_ip=fixed_ip,
+                recurse_zones=True)
 
         for zone, servers in children:
             for server in servers:
@@ -631,32 +691,6 @@ class API(base.Base):
                 server._info['_is_precooked'] = True
                 instances.append(server._info)
         return instances
-
-    def get_all(self, context, project_id=None, reservation_id=None,
-                fixed_ip=None):
-        """Get all instances filtered by one of the given parameters.
-
-        If there is no filter and the context is an admin, it will retreive
-        all instances in the system.
-        """
-        if reservation_id is not None:
-            return self.get_all_across_zones(context, reservation_id)
-
-        if fixed_ip is not None:
-            return self.db.fixed_ip_get_instance(context, fixed_ip)
-
-        if project_id or not context.is_admin:
-            if not context.project:
-                return self.db.instance_get_all_by_user(
-                    context, context.user_id)
-
-            if project_id is None:
-                project_id = context.project_id
-
-            return self.db.instance_get_all_by_project(
-                context, project_id)
-
-        return self.db.instance_get_all(context)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):

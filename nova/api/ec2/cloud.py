@@ -86,8 +86,7 @@ class CloudController(object):
         self.volume_api = volume.API()
         self.compute_api = compute.API(
                 network_api=self.network_api,
-                volume_api=self.volume_api,
-                hostname_factory=ec2utils.id_to_ec2_id)
+                volume_api=self.volume_api)
         self.setup()
 
     def __str__(self):
@@ -152,7 +151,7 @@ class CloudController(object):
 
         # This ensures that all attributes of the instance
         # are populated.
-        instance_ref = db.instance_get(ctxt, instance_ref['id'])
+        instance_ref = db.instance_get(ctxt, instance_ref[0]['id'])
 
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         if instance_ref['key_name']:

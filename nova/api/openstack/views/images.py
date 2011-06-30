@@ -106,6 +106,9 @@ class ViewBuilderV11(ViewBuilder):
         href = self.generate_href(image_obj["id"])
         bookmark = self.generate_bookmark(image_obj["id"])
 
+        if detail:
+            image["metadata"] = image_obj.get("properties", {})
+
         image["links"] = [{
             "rel": "self",
             "href": href,
