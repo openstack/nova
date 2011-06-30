@@ -171,7 +171,7 @@ class ComputeTestCase(test.TestCase):
                 self.assertEqual(ref[0]['hostname'], hostname)
             finally:
                 db.instance_destroy(self.context, ref[0]['id'])
-        
+
     def test_destroy_instance_disassociates_security_groups(self):
         """Make sure destroying disassociates security groups"""
         group = self._create_group()
