@@ -30,7 +30,6 @@ from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
-from nova.notifier import api as notifier_api
 
 
 FLAGS = flags.FLAGS
@@ -47,10 +46,6 @@ class NoValidHost(exception.Error):
 class WillNotSchedule(exception.Error):
     """The specified host is not up or doesn't exist."""
     pass
-
-
-def publisher_id(host=None):
-    return notifier_api.publisher_id("scheduler", host)
 
 
 class Scheduler(object):

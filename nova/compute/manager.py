@@ -1183,7 +1183,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :returns: See driver.update_available_resource()
 
         """
-        print "UPDATE AVAILABLE"
         return self.driver.update_available_resource(context, self.host)
 
     def pre_live_migration(self, context, instance_id, time=None):
