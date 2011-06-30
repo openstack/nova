@@ -109,6 +109,7 @@ class ZoneManager(object):
         self.last_zone_db_check = datetime.datetime.min
         self.zone_states = {}  # { <zone_id> : ZoneState }
         self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
+        self.service_time_stamp = {}  # reported time
         self.green_pool = greenpool.GreenPool()
 
     def get_zone_list(self):
@@ -125,14 +126,18 @@ class ZoneManager(object):
         # But it's likely to change once we understand what the Best-Match
         # code will need better.
         combined = {}  # { <service>_<cap> : (min, max), ... }
+        allowed_time_diff = FLAGS.periodic_interval * 3
         for host, host_dict in hosts_dict.iteritems():
-            for service_name, service_dict in host_dict.iteritems():
-                for cap, value in service_dict.iteritems():
-                    key = "%s_%s" % (service_name, cap)
-                    min_value, max_value = combined.get(key, (value, value))
-                    min_value = min(min_value, value)
-                    max_value = max(max_value, value)
-                    combined[key] = (min_value, max_value)
+            if (utils.utcnow() - self.service_time_stamp[host]) <= \
+                datetime.timedelta(seconds=allowed_time_diff):
+                for service_name, service_dict in host_dict.iteritems():
+                    for cap, value in service_dict.iteritems():
+                        key = "%s_%s" % (service_name, cap)
+                        min_value, max_value = combined.get(key, \
+                            (value, value))
+                        min_value = min(min_value, value)
+                        max_value = max(max_value, value)
+                        combined[key] = (min_value, max_value)
 
         return combined
 
@@ -174,3 +179,4 @@ class ZoneManager(object):
         service_caps = self.service_states.get(host, {})
         service_caps[service_name] = capabilities
         self.service_states[host] = service_caps
+        self.service_time_stamp[host] = utils.utcnow()
