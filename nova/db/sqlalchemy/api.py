@@ -2581,13 +2581,11 @@ def instance_type_get_all(context, inactive=False):
                         filter_by(deleted=False).\
                         order_by("name").\
                         all()
+    inst_dict = {}
     if inst_types:
-        inst_dict = {}
         for i in inst_types:
             inst_dict[i['name']] = dict(i)
-        return inst_dict
-    else:
-        raise exception.NoInstanceTypesFound()
+    return inst_dict
 
 
 @require_context

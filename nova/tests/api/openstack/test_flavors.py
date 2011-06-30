@@ -88,11 +88,10 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavors, expected)
 
     def test_get_empty_flavor_list_v1_0(self):
-        def _throw_NoInstanceTypesFound(self):
-            raise exception.NoInstanceTypesFound
-
+        def _return_empty(self):
+            return {}
         self.stubs.Set(nova.db.api, "instance_type_get_all",
-                       _throw_NoInstanceTypesFound)
+                       _return_empty)
 
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
@@ -277,11 +276,10 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_empty_flavor_list_v1_1(self):
-        def _throw_NoInstanceTypesFound(self):
-            raise exception.NoInstanceTypesFound
-
+        def _return_empty(self):
+            return {}
         self.stubs.Set(nova.db.api, "instance_type_get_all",
-                       _throw_NoInstanceTypesFound)
+                       _return_empty)
 
         req = webob.Request.blank('/v1.1/flavors')
         res = req.get_response(fakes.wsgi_app())

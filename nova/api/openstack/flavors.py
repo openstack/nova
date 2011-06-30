@@ -42,10 +42,7 @@ class Controller(object):
     def _get_flavors(self, req, is_detail=True):
         """Helper function that returns a list of flavor dicts."""
         ctxt = req.environ['nova.context']
-        try:
-            flavors = db.api.instance_type_get_all(ctxt)
-        except exception.NoInstanceTypesFound:
-            flavors = {}
+        flavors = db.api.instance_type_get_all(ctxt)
         builder = self._get_view_builder(req)
         items = [builder.build(flavor, is_detail=is_detail)
                  for flavor in flavors.values()]
