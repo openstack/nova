@@ -173,7 +173,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "metadata": metadata,
         "uuid": uuid}
 
-    instance["fixed_ip"] = {
+    instance["fixed_ips"] = {
         "address": private_address,
         "floating_ips": [{"address":ip} for ip in public_addresses]}
 
