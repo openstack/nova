@@ -131,7 +131,7 @@ class ComputeTestCase(test.TestCase):
         instance_ref = models.Instance()
         instance_ref['id'] = 1
         instance_ref['volumes'] = [vol1, vol2]
-        instance_ref['hostname'] = 'i-00000001'
+        instance_ref['hostname'] = 'hostname-1'
         instance_ref['host'] = 'dummy'
         return instance_ref
 
@@ -162,6 +162,18 @@ class ComputeTestCase(test.TestCase):
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_default_hostname_generator(self):
+        cases = [(None, 'server_1'), ('Hello, Server!', 'hello_server'),
+                 ('<}\x1fh\x10e\x08l\x02l\x05o\x12!{>', 'hello')]
+        for display_name, hostname in cases:
+            ref = self.compute_api.create(self.context,
+                instance_types.get_default_instance_type(), None,
+                display_name=display_name)
+            try:
+                self.assertEqual(ref[0]['hostname'], hostname)
+            finally:
+                db.instance_destroy(self.context, ref[0]['id'])
 
     def test_destroy_instance_disassociates_security_groups(self):
         """Make sure destroying disassociates security groups"""
