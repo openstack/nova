@@ -120,8 +120,8 @@ class CloudController(object):
         result = {}
         for instance in self.compute_api.get_all(context,
                                                  project_id=project_id):
-            if instance['fixed_ip']:
-                line = '%s slots=%d' % (instance['fixed_ip']['address'],
+            if instance['fixed_ips']:
+                line = '%s slots=%d' % (instance['fixed_ips'][0]['address'],
                                         instance['vcpus'])
                 key = str(instance['key_name'])
                 if key in result:
@@ -792,15 +792,15 @@ class CloudController(object):
                 'name': instance['state_description']}
             fixed_addr = None
             floating_addr = None
-            if instance['fixed_ip']:
-                fixed_addr = instance['fixed_ip']['address']
-                if instance['fixed_ip']['floating_ips']:
-                    fixed = instance['fixed_ip']
+            if instance['fixed_ips']:
+                fixed = instance['fixed_ips'][0]
+                fixed_addr = fixed['address']
+                if fixed['floating_ips']:
                     floating_addr = fixed['floating_ips'][0]['address']
-                if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
+                if fixed['network'] and 'use_v6' in kwargs:
                     i['dnsNameV6'] = ipv6.to_global(
-                        instance['fixed_ip']['network']['cidr_v6'],
-                        instance['mac_address'],
+                        fixed['network']['cidr_v6'],
+                        fixed['virtual_interface']['address'],
                         instance['project_id'])
 
             i['privateDnsName'] = fixed_addr
@@ -876,7 +876,8 @@ class CloudController(object):
             public_ip = self.network_api.allocate_floating_ip(context)
             return {'publicIp': public_ip}
         except rpc.RemoteError as ex:
-            if ex.exc_type == 'NoMoreAddresses':
+            # NOTE(tr3buchet) - why does this block exist?
+            if ex.exc_type == 'NoMoreFloatingIps':
                 raise exception.NoMoreFloatingIps()
             else:
                 raise

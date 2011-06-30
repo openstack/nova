@@ -85,7 +85,8 @@ class FloatingIPController(object):
             address = self.network_api.allocate_floating_ip(context)
             ip = self.network_api.get_floating_ip_by_ip(context, address)
         except rpc.RemoteError as ex:
-            if ex.exc_type == 'NoMoreAddresses':
+            # NOTE(tr3buchet) - why does this block exist?
+            if ex.exc_type == 'NoMoreFloatingIps':
                 raise exception.NoMoreFloatingIps()
             else:
                 raise

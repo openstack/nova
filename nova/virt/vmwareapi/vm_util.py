@@ -61,8 +61,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.numCPUs = int(instance.vcpus)
     config_spec.memoryMB = int(instance.memory_mb)
 
+    mac_address = None
+    if instance['mac_addresses']:
+        mac_address = instance['mac_addresses'][0]['address']
+
     nic_spec = create_network_spec(client_factory,
-                                    network_name, instance.mac_address)
+                                    network_name, mac_address)
 
     device_config_spec = [nic_spec]
 

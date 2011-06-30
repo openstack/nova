@@ -172,17 +172,23 @@ class VpnCommands(object):
     def change(self, project_id, ip, port):
         """Change the ip and port for a vpn.
 
+        this will update all networks associated with a project
+        not sure if that's the desired behavior or not, patches accepted
+
         args: project, ip, port"""
+        # TODO(tr3buchet): perhaps this shouldn't update all networks
+        # associated with a project in the future
         project = self.manager.get_project(project_id)
         if not project:
             print 'No project %s' % (project_id)
             return
-        admin = context.get_admin_context()
-        network_ref = db.project_get_network(admin, project_id)
-        db.network_update(admin,
-                          network_ref['id'],
-                          {'vpn_public_address': ip,
-                           'vpn_public_port': int(port)})
+        admin_context = context.get_admin_context()
+        networks = db.project_get_networks(admin_context, project_id)
+        for network in networks:
+            db.network_update(admin_context,
+                              network['id'],
+                              {'vpn_public_address': ip,
+                               'vpn_public_port': int(port)})
 
 
 class ShellCommands(object):
@@ -446,12 +452,13 @@ class ProjectCommands(object):
     def scrub(self, project_id):
         """Deletes data associated with project
         arguments: project_id"""
-        ctxt = context.get_admin_context()
-        network_ref = db.project_get_network(ctxt, project_id)
-        db.network_disassociate(ctxt, network_ref['id'])
-        groups = db.security_group_get_by_project(ctxt, project_id)
+        admin_context = context.get_admin_context()
+        networks = db.project_get_networks(admin_context, project_id)
+        for network in networks:
+            db.network_disassociate(admin_context, network['id'])
+        groups = db.security_group_get_by_project(admin_context, project_id)
         for group in groups:
-            db.security_group_destroy(ctxt, group['id'])
+            db.security_group_destroy(admin_context, group['id'])
 
     def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file
@@ -505,7 +512,7 @@ class FixedIpCommands(object):
                 instance = fixed_ip['instance']
                 hostname = instance['hostname']
                 host = instance['host']
-                mac_address = instance['mac_address']
+                mac_address = fixed_ip['mac_address']['address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
                     fixed_ip['network']['cidr'],
                     fixed_ip['address'],
@@ -515,13 +522,12 @@ class FixedIpCommands(object):
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
-    def create(self, host, range):
-        """Creates floating ips for host by range
-        arguments: host ip_range"""
+    def create(self, range):
+        """Creates floating ips for zone by range
+        arguments: ip_range"""
         for address in netaddr.IPNetwork(range):
             db.floating_ip_create(context.get_admin_context(),
-                                  {'address': str(address),
-                                   'host': host})
+                                  {'address': str(address)})
 
     def delete(self, ip_range):
         """Deletes floating ips by range
@@ -532,7 +538,8 @@ class FloatingIpCommands(object):
 
     def list(self, host=None):
         """Lists all floating ips (optionally by host)
-        arguments: [host]"""
+        arguments: [host]
+        Note: if host is given, only active floating IPs are returned"""
         ctxt = context.get_admin_context()
         if host is None:
             floating_ips = db.floating_ip_get_all(ctxt)
@@ -550,10 +557,23 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
-    def create(self, fixed_range=None, num_networks=None, network_size=None,
-            vlan_start=None, vpn_start=None, fixed_range_v6=None,
-            gateway_v6=None, label='public'):
-        """Creates fixed ips for host by range"""
+    def create(self, label=None, fixed_range=None, num_networks=None,
+               network_size=None, vlan_start=None,
+               vpn_start=None, fixed_range_v6=None, gateway_v6=None,
+               flat_network_bridge=None, bridge_interface=None):
+        """Creates fixed ips for host by range
+        arguments: label, fixed_range, [num_networks=FLAG],
+                   [network_size=FLAG], [vlan_start=FLAG],
+                   [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
+                   [flat_network_bridge=FLAG], [bridge_interface=FLAG]
+        If you wish to use a later argument fill in the gaps with 0s
+        Ex: network create private 10.0.0.0/8 1 15 0 0 0 0 xenbr1 eth1
+            network create private 10.0.0.0/8 1 15
+        """
+        if not label:
+            msg = _('a label (ex: public) is required to create networks.')
+            print msg
+            raise TypeError(msg)
         if not fixed_range:
             msg = _('Fixed range in the form of 10.0.0.0/8 is '
                     'required to create networks.')
@@ -569,11 +589,17 @@ class NetworkCommands(object):
             vpn_start = FLAGS.vpn_start
         if not fixed_range_v6:
             fixed_range_v6 = FLAGS.fixed_range_v6
+        if not flat_network_bridge:
+            flat_network_bridge = FLAGS.flat_network_bridge
+        if not bridge_interface:
+            bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
         if not gateway_v6:
             gateway_v6 = FLAGS.gateway_v6
         net_manager = utils.import_object(FLAGS.network_manager)
+
         try:
             net_manager.create_networks(context.get_admin_context(),
+                                        label=label,
                                         cidr=fixed_range,
                                         num_networks=int(num_networks),
                                         network_size=int(network_size),
@@ -581,7 +607,8 @@ class NetworkCommands(object):
                                         vpn_start=int(vpn_start),
                                         cidr_v6=fixed_range_v6,
                                         gateway_v6=gateway_v6,
-                                        label=label)
+                                        bridge=flat_network_bridge,
+                                        bridge_interface=bridge_interface)
         except ValueError, e:
             print e
             raise e
