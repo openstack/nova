@@ -46,6 +46,7 @@ from eventlet import greenthread
 
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import manager
 from nova import network
@@ -505,8 +506,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
-    def snapshot_instance(self, context, instance_id, image_id):
-        """Snapshot an instance on this host."""
+    def snapshot_instance(self, context, instance_id, image_id,
+                          image_type='snapshot', backup_type=None,
+                          rotation=None):
+        """Snapshot an instance on this host.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param image_id: glance.db.sqlalchemy.models.Image.Id
+        :param image_type: snapshot | backup
+        :param backup_type: daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        """
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
@@ -525,6 +537,65 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
+
+        if image_type == 'snapshot':
+            if rotation:
+                raise exception.ImageRotationNotAllowed()
+        elif image_type == 'backup':
+            if rotation:
+                instance_uuid = instance_ref['uuid']
+                self.rotate_backups(context, instance_uuid, backup_type,
+                                    rotation)
+            else:
+                raise exception.RotationRequiredForBackup()
+        else:
+            raise Exception(_('Image type not recognized %s') % image_type)
+
+    def rotate_backups(self, context, instance_uuid, backup_type, rotation):
+        """Delete excess backups associated to an instance.
+
+        Instances are allowed a fixed number of backups (the rotation number);
+        this method deletes the oldest backups that exceed the rotation
+        threshold.
+
+        :param context: security context
+        :param instance_uuid: string representing uuid of instance
+        :param backup_type: daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        """
+        # NOTE(jk0): Eventually extract this out to the ImageService?
+        def fetch_images():
+            images = []
+            marker = None
+            while True:
+                batch = image_service.detail(context, filters=filters,
+                        marker=marker, sort_key='created_at', sort_dir='desc')
+                if not batch:
+                    break
+                images += batch
+                marker = batch[-1]['id']
+            return images
+
+        image_service = nova.image.get_default_image_service()
+        filters = {'property-image_type': 'backup',
+                   'property-backup_type': backup_type,
+                   'property-instance_uuid': instance_uuid}
+
+        images = fetch_images()
+        num_images = len(images)
+        LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)"
+                    % locals()))
+        if num_images > rotation:
+            # NOTE(sirp): this deletes all backups that exceed the rotation
+            # limit
+            excess = len(images) - rotation
+            LOG.debug(_("Rotating out %d backups" % excess))
+            for i in xrange(excess):
+                image = images.pop()
+                image_id = image['id']
+                LOG.debug(_("Deleting image %d" % image_id))
+                image_service.delete(context, image_id)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -1122,7 +1193,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # Getting instance info
         instance_ref = self.db.instance_get(context, instance_id)
-        ec2_id = instance_ref['hostname']
+        hostname = instance_ref['hostname']
 
         # Getting fixed ips
         fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
@@ -1131,7 +1202,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:
-            LOG.info(_("%s has no volume."), ec2_id)
+            LOG.info(_("%s has no volume."), hostname)
         else:
             for v in instance_ref['volumes']:
                 self.volume_manager.setup_compute_volume(context, v['id'])
@@ -1154,7 +1225,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     raise
                 else:
                     LOG.warn(_("setup_compute_network() failed %(cnt)d."
-                               "Retry up to %(max_retry)d for %(ec2_id)s.")
+                               "Retry up to %(max_retry)d for %(hostname)s.")
                                % locals())
                     time.sleep(1)
 

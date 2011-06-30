@@ -57,29 +57,21 @@ def fake_zone_manager_service_states(num_hosts):
 
 
 class FakeZoneAwareScheduler(zone_aware_scheduler.ZoneAwareScheduler):
-    def filter_hosts(self, num, specs):
-        # NOTE(sirp): this is returning [(hostname, services)]
-        return self.zone_manager.service_states.items()
-
-    def weigh_hosts(self, num, specs, hosts):
-        fake_weight = 99
-        weighted = []
-        for hostname, caps in hosts:
-            weighted.append(dict(weight=fake_weight, name=hostname))
-        return weighted
+    # No need to stub anything at the moment
+    pass
 
 
 class FakeZoneManager(zone_manager.ZoneManager):
     def __init__(self):
         self.service_states = {
             'host1': {
-                'compute': {'ram': 1000},
+                'compute': {'host_memory_free': 1073741824},
             },
             'host2': {
-                'compute': {'ram': 2000},
+                'compute': {'host_memory_free': 2147483648},
             },
             'host3': {
-                'compute': {'ram': 3000},
+                'compute': {'host_memory_free': 3221225472},
             },
         }
 
@@ -170,8 +162,8 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
 
     def test_zone_aware_scheduler(self):
         """
-        Create a nested set of FakeZones, ensure that a select call returns the
-        appropriate build plan.
+        Create a nested set of FakeZones, try to build multiple instances
+        and ensure that a select call returns the appropriate build plan.
         """
         sched = FakeZoneAwareScheduler()
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
@@ -181,13 +173,17 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         sched.set_zone_manager(zm)
 
         fake_context = {}
-        build_plan = sched.select(fake_context, {})
+        build_plan = sched.select(fake_context,
+                {'instance_type': {'memory_mb': 512},
+                    'num_instances': 4})
 
-        self.assertEqual(15, len(build_plan))
+        # 4 from local zones, 12 from remotes
+        self.assertEqual(16, len(build_plan))
 
-        hostnames = [plan_item['name']
-                     for plan_item in build_plan if 'name' in plan_item]
-        self.assertEqual(3, len(hostnames))
+        hostnames = [plan_item['hostname']
+                     for plan_item in build_plan if 'hostname' in plan_item]
+        # 4 local hosts
+        self.assertEqual(4, len(hostnames))
 
     def test_adjust_child_weights(self):
         """Make sure the weights returned by child zones are
@@ -223,8 +219,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         fake_context = {}
         self.assertRaises(driver.NoValidHost, sched.schedule_run_instance,
                           fake_context, 1,
-                          dict(host_filter=None,
-                               request_spec={'instance_type': {}}))
+                          dict(host_filter=None, instance_type={}))
 
     def test_schedule_do_not_schedule_with_hint(self):
         """
