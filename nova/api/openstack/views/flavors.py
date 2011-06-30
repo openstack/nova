@@ -71,6 +71,7 @@ class ViewBuilderV11(ViewBuilder):
     def _build_links(self, flavor_obj):
         """Generate a container of links that refer to the provided flavor."""
         href = self.generate_href(flavor_obj["id"])
+        bookmark = self.generate_bookmark(flavor_obj["id"])
 
         links = [
             {
@@ -79,11 +80,7 @@ class ViewBuilderV11(ViewBuilder):
             },
             {
                 "rel": "bookmark",
-                "href": href,
-            },
-            {
-                "rel": "bookmark",
-                "href": href,
+                "href": bookmark,
             },
         ]
 
@@ -92,3 +89,11 @@ class ViewBuilderV11(ViewBuilder):
     def generate_href(self, flavor_id):
         """Create an url that refers to a specific flavor id."""
         return "%s/flavors/%s" % (self.base_url, flavor_id)
+
+    def generate_bookmark(self, flavor_id):
+        """Create an url that refers to a specific flavor id."""
+        return "%s/flavors/%s" % (self._remove_version(self.base_url),
+            flavor_id)
+
+    def _remove_version(self, base_url):
+        return base_url.rsplit('/', 1).pop(0)
