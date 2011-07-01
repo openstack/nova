@@ -113,8 +113,8 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                         # propagated.
                         temp_type = f.__name__
 
-                    notifier.safe_notify(publisher_id, temp_type, temp_level,
-                                         payload)
+                    notifier.notify(publisher_id, temp_type, temp_level,
+                                    payload)
 
                 if not isinstance(e, Error):
                     #exc_type, exc_value, exc_traceback = sys.exc_info()

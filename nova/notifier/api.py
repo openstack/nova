@@ -45,14 +45,6 @@ def publisher_id(service, host=None):
     return "%s.%s" % (service, host)
 
 
-def safe_notify(publisher_id, event_type, priority, payload):
-    try:
-        notify(publisher_id, event_type, notification_level, payload)
-    except Exception, e:
-        LOG.exception(_("Problem '%(e)s' attempting to "
-                        "send to notification system." % locals()))
-
-
 def notify(publisher_id, event_type, priority, payload):
     """
     Sends a notification using the specified driver
@@ -95,4 +87,8 @@ def notify(publisher_id, event_type, priority, payload):
                    priority=priority,
                    payload=payload,
                    timestamp=str(utils.utcnow()))
-    driver.notify(msg)
+    try:
+        driver.notify(msg)
+    except Exception, e:
+        LOG.exception(_("Problem '%(e)s' attempting to "
+                        "send to notification system." % locals()))

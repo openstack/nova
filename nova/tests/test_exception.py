@@ -64,11 +64,16 @@ def bad_function_exception():
 
 
 class WrapExceptionTestCase(test.TestCase):
-    def test_wrap_exception(self):
+    def test_wrap_exception_good_return(self):
         wrapped = exception.wrap_exception()
         self.assertEquals(99, wrapped(good_function)())
+
+    def test_wrap_exception_throws_error(self):
+        wrapped = exception.wrap_exception()
         self.assertRaises(exception.Error, wrapped(bad_function_error))
 
+    def test_wrap_exception_throws_exception(self):
+        wrapped = exception.wrap_exception()
         # Note that Exception is converted to Error ...
         self.assertRaises(exception.Error, wrapped(bad_function_exception))
 
