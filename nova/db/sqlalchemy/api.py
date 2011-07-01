@@ -1237,7 +1237,7 @@ def instance_get_project_vpn(context, project_id):
                    options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
