@@ -706,18 +706,24 @@ class VMWareVMOps(object):
         Set the machine id of the VM for guest tools to pick up and change
         the IP.
         """
+        admin_context = context.get_admin_context()
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance.id)
         network = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])
-        mac_addr = instance.mac_address
+        mac_address = None
+        if instance['mac_addresses']:
+            mac_address = instance['mac_addresses'][0]['address']
+
         net_mask = network["netmask"]
         gateway = network["gateway"]
-        ip_addr = db.instance_get_fixed_address(context.get_admin_context(),
-                                            instance['id'])
+        addresses = db.instance_get_fixed_addresses(admin_context,
+                                                    instance['id'])
+        ip_addr = addresses[0] if addresses else None
+
         machine_id_chanfge_spec = \
-            vm_util.get_machine_id_change_spec(client_factory, mac_addr,
+            vm_util.get_machine_id_change_spec(client_factory, mac_address,
                                         ip_addr, net_mask, gateway)
         LOG.debug(_("Reconfiguring VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %

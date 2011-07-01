@@ -23,6 +23,7 @@ include nova/compute/interfaces.template
 include nova/console/xvp.conf.template
 include nova/db/sqlalchemy/migrate_repo/migrate.cfg
 include nova/db/sqlalchemy/migrate_repo/README
+include nova/db/sqlalchemy/migrate_repo/versions/*.sql
 include nova/virt/interfaces.template
 include nova/virt/libvirt*.xml.template
 include nova/virt/cpuinfo.xml.template

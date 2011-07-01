@@ -33,6 +33,7 @@ from nova import flags
 from nova import log as logging
 from nova import rpc
 
+from nova.compute import api as compute_api
 from nova.scheduler import api
 from nova.scheduler import driver
 
@@ -48,14 +49,25 @@ class InvalidBlob(exception.NovaException):
 class ZoneAwareScheduler(driver.Scheduler):
     """Base class for creating Zone Aware Schedulers."""
 
-    def _call_zone_method(self, context, method, specs):
+    def _call_zone_method(self, context, method, specs, zones):
         """Call novaclient zone method. Broken out for testing."""
-        return api.call_zone_method(context, method, specs=specs)
+        return api.call_zone_method(context, method, specs=specs, zones=zones)
 
-    def _provision_resource_locally(self, context, item, instance_id, kwargs):
+    def _provision_resource_locally(self, context, build_plan_item,
+                                    request_spec, kwargs):
         """Create the requested resource in this Zone."""
-        host = item['hostname']
+        host = build_plan_item['hostname']
+        base_options = request_spec['instance_properties']
+
+        # TODO(sandy): I guess someone needs to add block_device_mapping
+        # support at some point? Also, OS API has no concept of security
+        # groups.
+        instance = compute_api.API().create_db_entry_for_new_instance(context,
+            base_options, None, [])
+
+        instance_id = instance['id']
         kwargs['instance_id'] = instance_id
+
         rpc.cast(context,
                  db.queue_get_for(context, "compute", host),
                  {"method": "run_instance",
@@ -115,8 +127,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         nova.servers.create(name, image_ref, flavor_id, ipgroup, meta, files,
                             child_blob, reservation_id=reservation_id)
 
-    def _provision_resource_from_blob(self, context, item, instance_id,
-                                          request_spec, kwargs):
+    def _provision_resource_from_blob(self, context, build_plan_item,
+                                      instance_id, request_spec, kwargs):
         """Create the requested resource locally or in a child zone
            based on what is stored in the zone blob info.
 
@@ -132,12 +144,12 @@ class ZoneAwareScheduler(driver.Scheduler):
            request."""
 
         host_info = None
-        if "blob" in item:
+        if "blob" in build_plan_item:
             # Request was passed in from above. Is it for us?
-            host_info = self._decrypt_blob(item['blob'])
-        elif "child_blob" in item:
+            host_info = self._decrypt_blob(build_plan_item['blob'])
+        elif "child_blob" in build_plan_item:
             # Our immediate child zone provided this info ...
-            host_info = item
+            host_info = build_plan_item
 
         if not host_info:
             raise InvalidBlob()
@@ -147,19 +159,44 @@ class ZoneAwareScheduler(driver.Scheduler):
             self._ask_child_zone_to_create_instance(context, host_info,
                                                     request_spec, kwargs)
         else:
-            self._provision_resource_locally(context, host_info,
-                                             instance_id, kwargs)
+            self._provision_resource_locally(context, host_info, request_spec,
+                                             kwargs)
 
-    def _provision_resource(self, context, item, instance_id, request_spec,
-                           kwargs):
+    def _provision_resource(self, context, build_plan_item, instance_id,
+                            request_spec, kwargs):
         """Create the requested resource in this Zone or a child zone."""
-        if "hostname" in item:
-            self._provision_resource_locally(context, item, instance_id,
-                            kwargs)
+        if "hostname" in build_plan_item:
+            self._provision_resource_locally(context, build_plan_item,
+                                             request_spec, kwargs)
             return
 
-        self._provision_resource_from_blob(context, item, instance_id,
-                                               request_spec, kwargs)
+        self._provision_resource_from_blob(context, build_plan_item,
+                                           instance_id, request_spec, kwargs)
+
+    def _adjust_child_weights(self, child_results, zones):
+        """Apply the Scale and Offset values from the Zone definition
+        to adjust the weights returned from the child zones. Alters
+        child_results in place.
+        """
+        for zone, result in child_results:
+            if not result:
+                continue
+
+            for zone_rec in zones:
+                if zone_rec['api_url'] != zone:
+                    continue
+
+                for item in result:
+                    try:
+                        offset = zone_rec['weight_offset']
+                        scale = zone_rec['weight_scale']
+                        raw_weight = item['weight']
+                        cooked_weight = offset + scale * raw_weight
+                        item['weight'] = cooked_weight
+                        item['raw_weight'] = raw_weight
+                    except KeyError:
+                        LOG.exception(_("Bad child zone scaling values "
+                                        "for Zone: %(zone)s") % locals())
 
     def schedule_run_instance(self, context, instance_id, request_spec,
                               *args, **kwargs):
@@ -261,8 +298,10 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         # Next, tack on the best weights from the child zones ...
         json_spec = json.dumps(request_spec)
+        all_zones = db.zone_get_all(context)
         child_results = self._call_zone_method(context, "select",
-                specs=json_spec)
+                specs=json_spec, zones=all_zones)
+        self._adjust_child_weights(child_results, all_zones)
         for child_zone, result in child_results:
             for weighting in result:
                 # Remember the child_zone so we can get back to

@@ -130,8 +130,7 @@ class Scheduler(object):
         # Checking instance is running.
         if (power_state.RUNNING != instance_ref['state'] or \
            'running' != instance_ref['state_description']):
-            ec2_id = instance_ref['hostname']
-            raise exception.InstanceNotRunning(instance_id=ec2_id)
+            raise exception.InstanceNotRunning(instance_id=instance_ref['id'])
 
         # Checing volume node is running when any volumes are mounted
         # to the instance.
@@ -169,9 +168,9 @@ class Scheduler(object):
         # and dest is not same.
         src = instance_ref['host']
         if dest == src:
-            ec2_id = instance_ref['hostname']
-            raise exception.UnableToMigrateToSelf(instance_id=ec2_id,
-                                                  host=dest)
+            raise exception.UnableToMigrateToSelf(
+                    instance_id=instance_ref['id'],
+                    host=dest)
 
         # Checking dst host still has enough capacities.
         self.assert_compute_node_has_enough_resources(context,
@@ -246,7 +245,7 @@ class Scheduler(object):
         """
 
         # Getting instance information
-        ec2_id = instance_ref['hostname']
+        hostname = instance_ref['hostname']
 
         # Getting host information
         service_refs = db.service_get_all_compute_by_host(context, dest)
@@ -257,8 +256,9 @@ class Scheduler(object):
         mem_avail = mem_total - mem_used
         mem_inst = instance_ref['memory_mb']
         if mem_avail <= mem_inst:
-            reason = _("Unable to migrate %(ec2_id)s to destination: %(dest)s "
-                       "(host:%(mem_avail)s <= instance:%(mem_inst)s)")
+            reason = _("Unable to migrate %(hostname)s to destination: "
+                       "%(dest)s (host:%(mem_avail)s <= instance:"
+                       "%(mem_inst)s)")
             raise exception.MigrationError(reason=reason % locals())
 
     def mounted_on_same_shared_storage(self, context, instance_ref, dest):
