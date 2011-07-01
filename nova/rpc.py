@@ -348,7 +348,6 @@ class TopicPublisher(Publisher):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
         self.durable = False
-        self.auto_delete = True
         super(TopicPublisher, self).__init__(connection=connection)
 
 
