@@ -44,7 +44,7 @@ class FakeNotifier(object):
         self.provided_priority = None
         self.provided_payload = None
 
-    def safe_notify(self, publisher, event, priority, payload):
+    def notify(self, publisher, event, priority, payload):
         self.provided_publisher = publisher
         self.provided_event = event
         self.provided_priority = priority
