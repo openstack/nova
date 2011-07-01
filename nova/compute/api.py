@@ -912,15 +912,10 @@ class API(base.Base):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
 
-    def disable_host(self, context, instance_id=None, host=None):
-        """Sets the specified to not receive new instances."""
-        return self._call_compute_message("disable_host", context,
-                instance_id=None, host=host)
-
-    def enable_host(self, context, instance_id=None, host=None):
-        """Sets the specified to receive new instances."""
-        return self._call_compute_message("enable_host", context,
-                instance_id=None, host=host)
+    def set_host_enabled(self, context, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        return self._call_compute_message("set_host_enabled", context,
+                instance_id=None, host=host, enabled=enabled)
 
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):

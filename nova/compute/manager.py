@@ -875,14 +875,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        result))
 
     @exception.wrap_exception
-    def disable_host(self, context, instance_id=None, host=None):
-        """Set a host so that it can not accept new instances."""
-        return self.driver.disable_host(host)
-
-    @exception.wrap_exception
-    def enable_host(self, context, instance_id=None, host=None):
-        """Set a host so that it can accept new instances."""
-        return self.driver.enable_host(host)
+    def set_host_enabled(self, context, instance_id=None, host=None,
+            enabled=None):
+        """Sets the specified host's ability to accept new instances."""
+        return self.driver.set_host_enabled(host, enabled)
 
     @exception.wrap_exception
     def get_diagnostics(self, context, instance_id):
