@@ -615,15 +615,19 @@ class NetworkCommands(object):
 
     def list(self):
         """List all created networks"""
-        print "%-18s\t%-15s\t%-15s\t%-15s" % (_('network'),
-                                              _('netmask'),
-                                              _('start address'),
-                                              'DNS')
+        print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (_('network'),
+                                                  _('netmask'),
+                                                  _('start address'),
+                                                  _('DNS'),
+                                                  _('VlanID'),
+                                                  'project')
         for network in db.network_get_all(context.get_admin_context()):
-            print "%-18s\t%-15s\t%-15s\t%-15s" % (network.cidr,
-                                network.netmask,
-                                network.dhcp_start,
-                                network.dns)
+            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+                                        network.netmask,
+                                        network.dhcp_start,
+                                        network.dns,
+                                        network.vlan,
+                                        network.project_id)
 
     def delete(self, fixed_range):
         """Deletes a network"""
@@ -810,6 +814,28 @@ class ServiceCommands(object):
         rpc.call(ctxt,
                  db.queue_get_for(ctxt, FLAGS.compute_topic, host),
                  {"method": "update_available_resource"})
+
+
+class ServerCommands(object):
+    """List servers"""
+
+    def list(self, zone=None):
+        """Show a list of all servers. Filter by zone.
+        args: [zone]"""
+        print "%-25s\t%-15s" % (_('host'),
+                                _('zone'))
+        ctxt = context.get_admin_context()
+        now = utils.utcnow()
+        services = db.service_get_all(ctxt)
+        if zone:
+            services = [s for s in services if s['availability_zone'] == zone]
+        servers = []
+        for srv in services:
+            if not [s for s in servers if s['host'] == srv['host']]:
+                servers.append(srv)
+
+        for srv in servers:
+            print "%-25s\t%-15s" % (srv['host'], srv['availability_zone'])
 
 
 class DbCommands(object):
@@ -1191,6 +1217,7 @@ CATEGORIES = [
     ('project', ProjectCommands),
     ('role', RoleCommands),
     ('service', ServiceCommands),
+    ('server', ServerCommands),
     ('shell', ShellCommands),
     ('user', UserCommands),
     ('version', VersionCommands),
