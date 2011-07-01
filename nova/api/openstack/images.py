@@ -220,7 +220,6 @@ class ControllerV11(Controller):
         host_ok = passed.hostname == expected.hostname
         port_ok = (passed.port == expected.port or
                    passed.port == FLAGS.osapi_port)
-        LOG.warn(locals())
         if not (scheme_ok and port_ok and host_ok and server_id):
             msg = _("serverRef must match request url")
             raise webob.exc.HTTPBadRequest(explanation=msg)
