@@ -161,12 +161,12 @@ class PaginationParamsTest(test.TestCase):
     def test_no_params(self):
         """ Test no params. """
         req = Request.blank('/')
-        self.assertEqual(common.get_pagination_params(req), (0, 0))
+        self.assertEqual(common.get_pagination_params(req), {})
 
     def test_valid_marker(self):
         """ Test valid marker param. """
         req = Request.blank('/?marker=1')
-        self.assertEqual(common.get_pagination_params(req), (1, 0))
+        self.assertEqual(common.get_pagination_params(req), {'marker': 1})
 
     def test_invalid_marker(self):
         """ Test invalid marker param. """
@@ -177,10 +177,16 @@ class PaginationParamsTest(test.TestCase):
     def test_valid_limit(self):
         """ Test valid limit param. """
         req = Request.blank('/?limit=10')
-        self.assertEqual(common.get_pagination_params(req), (0, 10))
+        self.assertEqual(common.get_pagination_params(req), {'limit': 10})
 
     def test_invalid_limit(self):
         """ Test invalid limit param. """
         req = Request.blank('/?limit=-2')
         self.assertRaises(
             webob.exc.HTTPBadRequest, common.get_pagination_params, req)
+
+    def test_valid_limit_and_marker(self):
+        """ Test valid limit and marker parameters. """
+        req = Request.blank('/?limit=20&marker=40')
+        self.assertEqual(common.get_pagination_params(req),
+                         {'marker': 40, 'limit': 20})

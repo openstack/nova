@@ -86,8 +86,7 @@ class CloudController(object):
         self.volume_api = volume.API()
         self.compute_api = compute.API(
                 network_api=self.network_api,
-                volume_api=self.volume_api,
-                hostname_factory=ec2utils.id_to_ec2_id)
+                volume_api=self.volume_api)
         self.setup()
 
     def __str__(self):
@@ -121,8 +120,8 @@ class CloudController(object):
         result = {}
         for instance in self.compute_api.get_all(context,
                                                  project_id=project_id):
-            if instance['fixed_ip']:
-                line = '%s slots=%d' % (instance['fixed_ip']['address'],
+            if instance['fixed_ips']:
+                line = '%s slots=%d' % (instance['fixed_ips'][0]['address'],
                                         instance['vcpus'])
                 key = str(instance['key_name'])
                 if key in result:
@@ -152,7 +151,7 @@ class CloudController(object):
 
         # This ensures that all attributes of the instance
         # are populated.
-        instance_ref = db.instance_get(ctxt, instance_ref['id'])
+        instance_ref = db.instance_get(ctxt, instance_ref[0]['id'])
 
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         if instance_ref['key_name']:
@@ -391,15 +390,21 @@ class CloudController(object):
             pass
         return True
 
-    def describe_security_groups(self, context, group_name=None, **kwargs):
+    def describe_security_groups(self, context, group_name=None, group_id=None,
+                                 **kwargs):
         self.compute_api.ensure_default_security_group(context)
-        if group_name:
+        if group_name or group_id:
             groups = []
-            for name in group_name:
-                group = db.security_group_get_by_name(context,
-                                                      context.project_id,
-                                                      name)
-                groups.append(group)
+            if group_name:
+                for name in group_name:
+                    group = db.security_group_get_by_name(context,
+                                                          context.project_id,
+                                                          name)
+                    groups.append(group)
+            if group_id:
+                for gid in group_id:
+                    group = db.security_group_get(context, gid)
+                    groups.append(group)
         elif context.is_admin:
             groups = db.security_group_get_all(context)
         else:
@@ -497,13 +502,26 @@ class CloudController(object):
                     return True
         return False
 
-    def revoke_security_group_ingress(self, context, group_name, **kwargs):
-        LOG.audit(_("Revoke security group ingress %s"), group_name,
-                  context=context)
+    def revoke_security_group_ingress(self, context, group_name=None,
+                                      group_id=None, **kwargs):
+        if not group_name and not group_id:
+            err = "Not enough parameters, need group_name or group_id"
+            raise exception.ApiError(_(err))
         self.compute_api.ensure_default_security_group(context)
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       group_name)
+        notfound = exception.SecurityGroupNotFound
+        if group_name:
+            security_group = db.security_group_get_by_name(context,
+                                                           context.project_id,
+                                                           group_name)
+            if not security_group:
+                raise notfound(security_group_id=group_name)
+        if group_id:
+            security_group = db.security_group_get(context, group_id)
+            if not security_group:
+                raise notfound(security_group_id=group_id)
+
+        msg = "Revoke security group ingress %s"
+        LOG.audit(_(msg), security_group['name'], context=context)
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
         if criteria is None:
@@ -518,7 +536,7 @@ class CloudController(object):
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
                 self.compute_api.trigger_security_group_rules_refresh(context,
-                                                          security_group['id'])
+                                        security_group_id=security_group['id'])
                 return True
         raise exception.ApiError(_("No rule for the specified parameters."))
 
@@ -526,14 +544,26 @@ class CloudController(object):
     #              Unfortunately, it seems Boto is using an old API
     #              for these operations, so support for newer API versions
     #              is sketchy.
-    def authorize_security_group_ingress(self, context, group_name, **kwargs):
-        LOG.audit(_("Authorize security group ingress %s"), group_name,
-                  context=context)
+    def authorize_security_group_ingress(self, context, group_name=None,
+                                         group_id=None, **kwargs):
+        if not group_name and not group_id:
+            err = "Not enough parameters, need group_name or group_id"
+            raise exception.ApiError(_(err))
         self.compute_api.ensure_default_security_group(context)
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       group_name)
+        notfound = exception.SecurityGroupNotFound
+        if group_name:
+            security_group = db.security_group_get_by_name(context,
+                                                           context.project_id,
+                                                           group_name)
+            if not security_group:
+                raise notfound(security_group_id=group_name)
+        if group_id:
+            security_group = db.security_group_get(context, group_id)
+            if not security_group:
+                raise notfound(security_group_id=group_id)
 
+        msg = "Authorize security group ingress %s"
+        LOG.audit(_(msg), security_group['name'], context=context)
         values = self._revoke_rule_args_to_dict(context, **kwargs)
         if values is None:
             raise exception.ApiError(_("Not enough parameters to build a "
@@ -547,7 +577,7 @@ class CloudController(object):
         security_group_rule = db.security_group_rule_create(context, values)
 
         self.compute_api.trigger_security_group_rules_refresh(context,
-                                                          security_group['id'])
+                                      security_group_id=security_group['id'])
 
         return True
 
@@ -583,11 +613,23 @@ class CloudController(object):
         return {'securityGroupSet': [self._format_security_group(context,
                                                                  group_ref)]}
 
-    def delete_security_group(self, context, group_name, **kwargs):
+    def delete_security_group(self, context, group_name=None, group_id=None,
+                              **kwargs):
+        if not group_name and not group_id:
+            err = "Not enough parameters, need group_name or group_id"
+            raise exception.ApiError(_(err))
+        notfound = exception.SecurityGroupNotFound
+        if group_name:
+            security_group = db.security_group_get_by_name(context,
+                                                           context.project_id,
+                                                           group_name)
+            if not security_group:
+                raise notfound(security_group_id=group_name)
+        elif group_id:
+            security_group = db.security_group_get(context, group_id)
+            if not security_group:
+                raise notfound(security_group_id=group_id)
         LOG.audit(_("Delete security group %s"), group_name, context=context)
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       group_name)
         db.security_group_destroy(context, security_group.id)
         return True
 
@@ -793,15 +835,15 @@ class CloudController(object):
                 'name': instance['state_description']}
             fixed_addr = None
             floating_addr = None
-            if instance['fixed_ip']:
-                fixed_addr = instance['fixed_ip']['address']
-                if instance['fixed_ip']['floating_ips']:
-                    fixed = instance['fixed_ip']
+            if instance['fixed_ips']:
+                fixed = instance['fixed_ips'][0]
+                fixed_addr = fixed['address']
+                if fixed['floating_ips']:
                     floating_addr = fixed['floating_ips'][0]['address']
-                if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
+                if fixed['network'] and 'use_v6' in kwargs:
                     i['dnsNameV6'] = ipv6.to_global(
-                        instance['fixed_ip']['network']['cidr_v6'],
-                        instance['mac_address'],
+                        fixed['network']['cidr_v6'],
+                        fixed['virtual_interface']['address'],
                         instance['project_id'])
 
             i['privateDnsName'] = fixed_addr
@@ -877,7 +919,8 @@ class CloudController(object):
             public_ip = self.network_api.allocate_floating_ip(context)
             return {'publicIp': public_ip}
         except rpc.RemoteError as ex:
-            if ex.exc_type == 'NoMoreAddresses':
+            # NOTE(tr3buchet) - why does this block exist?
+            if ex.exc_type == 'NoMoreFloatingIps':
                 raise exception.NoMoreFloatingIps()
             else:
                 raise
