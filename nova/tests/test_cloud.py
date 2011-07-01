@@ -200,11 +200,21 @@ class CloudTestCase(test.TestCase):
                                        {'project_id': self.context.project_id,
                                         'name': 'test'})
         delete = self.cloud.delete_security_group
+        self.assertTrue(delete(self.context, group_id=sec['id']))
+
+    def test_delete_security_group_with_bad_name(self):
+        delete = self.cloud.delete_security_group
         notfound = exception.SecurityGroupNotFound
         self.assertRaises(notfound, delete, self.context, 'badname')
+
+    def test_delete_security_group_with_bad_group_id(self):
+        delete = self.cloud.delete_security_group
+        notfound = exception.SecurityGroupNotFound
         self.assertRaises(notfound, delete, self.context, group_id=999)
+
+    def test_delete_security_group_no_params(self):
+        delete = self.cloud.delete_security_group
         self.assertRaises(exception.ApiError, delete, self.context)
-        self.assertTrue(delete(self.context, group_id=sec['id']))
 
     def test_authorize_revoke_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
@@ -215,15 +225,25 @@ class CloudTestCase(test.TestCase):
         revoke = self.cloud.revoke_security_group_ingress
         self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
 
-    def test_authorize_security_group_ingress_missing_protocol_params(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
+    def test_authorize_revoke_security_group_ingress_by_id(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
         authz = self.cloud.authorize_security_group_ingress
-        self.assertRaises(exception.ApiError, authz, self.context, sec['name'])
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        authz(self.context, group_id=sec['id'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
+
+    def test_authorize_security_group_ingress_missing_protocol_params(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        authz = self.cloud.authorize_security_group_ingress
+        self.assertRaises(exception.ApiError, authz, self.context, 'test')
 
     def test_authorize_security_group_ingress_missing_group_name_or_id(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         self.assertRaises(exception.ApiError, authz, self.context, **kwargs)
 
@@ -237,23 +257,9 @@ class CloudTestCase(test.TestCase):
                           group_name=sec['name'], **kwargs)
 
     def test_revoke_security_group_ingress_missing_group_name_or_id(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
-        authz = self.cloud.authorize_security_group_ingress
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        authz(self.context, group_name=sec['name'], **kwargs)
         revoke = self.cloud.revoke_security_group_ingress
         self.assertRaises(exception.ApiError, revoke, self.context, **kwargs)
-
-    def test_authorize_revoke_security_group_ingress_by_id(self):
-        sec = db.security_group_create(self.context,
-                                       {'project_id': self.context.project_id,
-                                        'name': 'test'})
-        authz = self.cloud.authorize_security_group_ingress
-        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        authz(self.context, group_id=sec['id'], **kwargs)
-        revoke = self.cloud.revoke_security_group_ingress
-        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
 
     def test_describe_volumes(self):
         """Makes sure describe_volumes works and filters results."""
