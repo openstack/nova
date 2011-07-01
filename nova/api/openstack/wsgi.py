@@ -362,6 +362,7 @@ class Resource(wsgi.Application):
                                           "url": request.url})
 
         try:
+            print "BODY: >%s<"%request.body
             action, action_args, accept = self.deserializer.deserialize(
                                                                       request)
         except exception.InvalidContentType:

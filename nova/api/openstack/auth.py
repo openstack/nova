@@ -100,6 +100,7 @@ class AuthMiddleware(wsgi.Middleware):
 
         token, user = self._authorize_user(username, key, req)
         if user and token:
+            print "TOKEN:", token['token_hash']
             res = webob.Response()
             res.headers['X-Auth-Token'] = token['token_hash']
             res.headers['X-Server-Management-Url'] = \
