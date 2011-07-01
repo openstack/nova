@@ -842,7 +842,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.inject_network_info(context, instance_id)
         self.reset_network(context, instance_id)
 
-    @exception.wrap_exception
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     def pause_instance(self, context, instance_id):
         """Pause an instance on this host."""
