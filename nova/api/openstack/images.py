@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import urlparse
 import os.path
 
 import webob.exc
@@ -22,7 +23,6 @@ from nova import exception
 from nova import flags
 import nova.image
 from nova import log
-from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import images as images_view
@@ -208,18 +208,24 @@ class ControllerV11(Controller):
             msg = _("Expected serverRef attribute on server entity.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        head, _sep, tail = server_ref.rpartition('/')
+        if not server_ref.startswith('http'):
+            return server_ref
 
-        url, _sep, version = req.application_url.rpartition('/')
-        long_url = '%s:%s/%s' % (url, FLAGS.osapi_port, version)
-        valid_urls = ['%s/servers' % req.application_url,
-                      '%s/servers' % long_url]
-        if head and head not in valid_urls:
-            LOG.warn(head)
+        passed = urlparse.urlparse(server_ref)
+        expected = urlparse.urlparse(req.application_url)
+        version = expected.path.split('/')[1]
+        expected_prefix = "/%s/servers/" % version
+        _empty, _sep, server_id = passed.path.partition(expected_prefix)
+        scheme_ok = passed.scheme == expected.scheme
+        host_ok = passed.hostname == expected.hostname
+        port_ok = (passed.port == expected.port or
+                   passed.port == FLAGS.osapi_port)
+        LOG.warn(locals())
+        if not (scheme_ok and port_ok and host_ok and server_id):
             msg = _("serverRef must match request url")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        return tail
+        return server_id
 
     def _get_extra_properties(self, req, data):
         server_ref = data['image']['serverRef']
