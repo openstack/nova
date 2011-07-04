@@ -33,5 +33,6 @@
 
 import gettext
 
+from nova import test
 
 gettext.install("nova", unicode=1)

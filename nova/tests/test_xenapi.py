@@ -450,7 +450,7 @@ class XenAPIVMTestCase(test.TestCase):
         self._check_vdis(vdi_recs_start, vdi_recs_end)
 
     def test_spawn_fail_cleanup_2(self):
-        """Simulates an error while creating VM record. 
+        """Simulates an error while creating VM record.
 
         It verifies that VDIs created are properly cleaned up.
 
