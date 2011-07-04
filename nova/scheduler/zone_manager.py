@@ -116,8 +116,9 @@ class ZoneManager(object):
         return [zone.to_dict() for zone in self.zone_states.values()]
 
     def get_host_list(self):
-        """Returns a list of all the host names that the Zone Manager
-        knows about.
+        """Returns a list of dicts for each host that the Zone Manager
+        knows about. Each dict contains the host_name and the service
+        for that host.
         """
         all_hosts = self.service_states.keys()
         ret = []
