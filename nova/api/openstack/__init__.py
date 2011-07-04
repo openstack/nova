@@ -144,9 +144,6 @@ class APIRouterV10(APIRouter):
 
     def _setup_routes(self, mapper):
         super(APIRouterV10, self)._setup_routes(mapper, '1.0')
-        mapper.resource("image", "images",
-                        controller=images.create_resource('1.0'),
-                        collection={'detail': 'GET'})
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
@@ -157,8 +154,8 @@ class APIRouterV10(APIRouter):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("ip", "ips", controller=ips.create_resource(),
-                        collection=dict(public='GET', private='GET'),
+        mapper.resource("ip", "ips", controller=ips.create_resource('1.0'),
+                        member=dict(public='GET', private='GET'),
                         parent_resource=dict(member_name='server',
                                              collection_name='servers'))
 
@@ -177,3 +174,7 @@ class APIRouterV11(APIRouter):
                         controller=server_metadata.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
+
+        mapper.resource("ip", "ips", controller=ips.create_resource('1.1'),
+                        parent_resource=dict(member_name='server',
+                                             collection_name='servers'))

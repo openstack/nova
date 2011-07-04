@@ -118,6 +118,20 @@ def require_context(f):
     return wrapper
 
 
+def require_instance_exists(f):
+    """Decorator to require the specified instance to exist.
+
+    Requres the wrapped function to use context and instance_id as
+    their first two arguments.
+    """
+
+    def wrapper(context, instance_id, *args, **kwargs):
+        db.api.instance_get(context, instance_id)
+        return f(context, instance_id, *args, **kwargs)
+    return wrapper
+
+
+
 ###################
 
 @require_admin_context
@@ -921,6 +935,7 @@ def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
 
 
 @require_context
+@require_instance_exists
 def virtual_interface_get_by_instance(context, instance_id):
     """Gets all virtual interfaces for instance.
 
@@ -3069,14 +3084,6 @@ def zone_get_all(context):
 
 
 ####################
-
-
-def require_instance_exists(func):
-    def new_func(context, instance_id, *args, **kwargs):
-        db.api.instance_get(context, instance_id)
-        return func(context, instance_id, *args, **kwargs)
-    new_func.__name__ = func.__name__
-    return new_func
 
 
 @require_context

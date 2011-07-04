@@ -23,6 +23,7 @@ import nova
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 from nova.api.openstack import wsgi
+from nova import db
 
 
 class Controller(object):
@@ -30,7 +31,6 @@ class Controller(object):
 
     def __init__(self):
         self.compute_api = nova.compute.API()
-        self.builder = nova.api.openstack.views.addresses.ViewBuilderV10()
 
     def _get_instance(self, req, server_id):
         try:
@@ -40,21 +40,6 @@ class Controller(object):
             return faults.Fault(exc.HTTPNotFound())
         return instance
 
-    def index(self, req, server_id):
-        instance = self._get_instance(req, server_id)
-        return {'addresses': self.builder.build(instance)}
-
-    def public(self, req, server_id):
-        instance = self._get_instance(req, server_id)
-        return {'public': self.builder.build_public_parts(instance)}
-
-    def private(self, req, server_id):
-        instance = self._get_instance(req, server_id)
-        return {'private': self.builder.build_private_parts(instance)}
-
-    def show(self, req, server_id, id):
-        return faults.Fault(exc.HTTPNotImplemented())
-
     def create(self, req, server_id, body):
         return faults.Fault(exc.HTTPNotImplemented())
 
@@ -62,7 +47,71 @@ class Controller(object):
         return faults.Fault(exc.HTTPNotImplemented())
 
 
-def create_resource():
+class ControllerV10(Controller):
+
+    def index(self, req, server_id):
+        instance = self._get_instance(req, server_id)
+        builder = nova.api.openstack.views.addresses.ViewBuilderV10()
+        return {'addresses': builder.build(instance)}
+
+    def show(self, req, server_id, id):
+        instance = self._get_instance(req, server_id)
+        builder = self._get_view_builder(req)
+        if id == 'private':
+            view = builder.build_private_parts(instance)
+        elif id == 'public':
+            view = builder.build_public_parts(instance)
+        else:
+            msg = _("Only private and public networks available")
+            return faults.Fault(exc.HTTPNotFound(explanation=msg))
+
+        return {id: view}
+
+    def _get_view_builder(self, req):
+        return nova.api.openstack.views.addresses.ViewBuilderV10()
+
+
+class ControllerV11(Controller):
+
+    def index(self, req, server_id):
+        context = req.environ['nova.context']
+        interfaces = self._get_virtual_interfaces(context, server_id)
+        networks = self._get_view_builder(req).build(interfaces)
+        return {'addresses': networks}
+
+    def show(self, req, server_id, id):
+        context = req.environ['nova.context']
+        interfaces = self._get_virtual_interfaces(context, server_id)
+        network = self._get_view_builder(req).build_network(interfaces, id)
+
+        if network is None:
+            msg = _("Instance is not a member of specified network")
+            return faults.Fault(exc.HTTPNotFound(explanation=msg))
+
+        return network
+
+    def _get_virtual_interfaces(self, context, server_id):
+        try:
+            return db.api.virtual_interface_get_by_instance(context, server_id)
+        except exception.InstanceNotFound:
+            msg = _("Instance does not exist")
+            raise exc.HTTPNotFound(explanation=msg)
+
+    def _get_view_builder(self, req):
+        return nova.api.openstack.views.addresses.ViewBuilderV11()
+
+
+def create_resource(version):
+    controller = {
+        '1.0': ControllerV10,
+        '1.1': ControllerV11,
+    }[version]()
+
+    xmlns = {
+        '1.0': wsgi.XMLNS_V10,
+        '1.1': wsgi.XMLNS_V11,
+    }[version]
+
     metadata = {
         'list_collections': {
             'public':  {'item_name': 'ip', 'item_key': 'addr'},
@@ -72,7 +121,7 @@ def create_resource():
 
     serializers = {
         'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                  xmlns=wsgi.XMLNS_V10),
+                                                  xmlns=xmlns),
     }
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    return wsgi.Resource(controller, serializers=serializers)
