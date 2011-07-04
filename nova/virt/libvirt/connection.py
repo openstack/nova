@@ -971,6 +971,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 return True
         return False
 
+    @exception.wrap_exception
     def _prepare_xml_info(self, instance, rescue=False, network_info=None,
                           block_device_mapping=None):
         block_device_mapping = block_device_mapping or []
@@ -993,6 +994,16 @@ class LibvirtConnection(driver.ComputeDriver):
 
         for vol in block_device_mapping:
             vol['mount_device'] = _strip_dev(vol['mount_device'])
+            if vol['device_path'].startswith('/dev/'):
+                vol['type'] = 'block'
+            elif ':' in vol['device_path']:
+                (protocol, name) = vol['device_path'].split(':')
+                vol['type'] = 'network'
+                vol['protocol'] = protocol
+                vol['device_path'] = name
+            else:
+                raise exception.InvalidDevicePath(path=vol['device_path'])
+
         ebs_root = self._volume_in_mapping(self.root_mount_device,
                                            block_device_mapping)
         if self._volume_in_mapping(self.local_mount_device,

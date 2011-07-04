@@ -82,9 +82,13 @@
             </disk>
         #end if
         #for $vol in $volumes
-            <disk type='block'>
+            <disk type='${vol.type}'>
                 <driver type='raw'/>
+                #if $vol.type == 'network'
+                <source protocol='${vol.protocol}' name='${vol.device_path}'/>
+                #else
                 <source dev='${vol.device_path}'/>
+                #end if
                 <target dev='${vol.mount_device}' bus='${disk_bus}'/>
             </disk>
         #end for
