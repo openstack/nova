@@ -24,6 +24,7 @@ Starts both the EC2 and OpenStack APIs in separate processes.
 """
 
 import os
+import signal
 import sys
 
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(
@@ -34,11 +35,15 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 import nova.service
 import nova.utils
 
+def create_kill_handler(launcher):
+    def handle(signal, frame):
+        launcher.stop()
+    return handle
 
 def main():
     """Launch EC2 and OSAPI services."""
     nova.utils.Bootstrapper.bootstrap_binary(sys.argv)
-
+    
     ec2 = nova.service.WSGIService("ec2")
     osapi = nova.service.WSGIService("osapi")
 
@@ -46,10 +51,9 @@ def main():
     launcher.launch_service(ec2)
     launcher.launch_service(osapi)
 
-    try:
-        launcher.wait()
-    except KeyboardInterrupt:
-        launcher.stop()
+    signal.signal(signal.SIGTERM, create_kill_handler(launcher))
+
+    launcher.wait()
 
 
 if __name__ == '__main__':
