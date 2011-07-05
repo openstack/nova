@@ -36,10 +36,11 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 import nova.service
 import nova.utils
 
+
 def main():
     """Launch EC2 and OSAPI services."""
     nova.utils.Bootstrapper.bootstrap_binary(sys.argv)
-    
+
     ec2 = nova.service.WSGIService("ec2")
     osapi = nova.service.WSGIService("osapi")
 
@@ -48,7 +49,7 @@ def main():
     launcher.launch_service(osapi)
 
     signal.signal(signal.SIGTERM, lambda *_: launcher.stop())
-    
+
     try:
         launcher.wait()
     except KeyboardInterrupt:
