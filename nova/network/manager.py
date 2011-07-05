@@ -378,8 +378,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Set the network hosts for any networks which are unset."""
         networks = self.db.network_get_all(context)
         for network in networks:
-            host = network['host']
-            if not host:
+            if not network['multi_host'] and not network['host']:
                 # return so worker will only grab 1 (to help scale flatter)
                 return self.set_network_host(context, network['id'])
 
