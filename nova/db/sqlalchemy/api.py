@@ -683,7 +683,6 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
         if host:
             fixed_ip_ref.host = host
         session.add(fixed_ip_ref)
-    LOG.warn("gave address %s to %s, %s", fixed_ip_ref['address'], instance_id, host)
     return fixed_ip_ref['address']
 
 

@@ -86,6 +86,8 @@ flags.DEFINE_integer('num_networks', 1, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', '$my_ip',
                     'Public IP for the cloudpipe VPN servers')
 flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
+flags.DEFINE_bool('multi_host', False,
+                  'Default value for multi_host in networks')
 flags.DEFINE_integer('network_size', 256,
                         'Number of addresses in each private subnet')
 flags.DEFINE_string('floating_range', '4.4.4.0/24',
@@ -360,7 +362,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 LOG.debug(_('Dissassociated %s stale fixed ip(s)'), num)
 
         # setup any new networks which have been created
-        #self.set_network_hosts(context)
+        self.set_network_hosts(context)
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
@@ -585,7 +587,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
                 self._update_dhcp(context, network_ref)
 
-    def create_networks(self, context, label, cidr, num_networks,
+    def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, **kwargs):
         """Create networks based on parameters."""
@@ -604,6 +606,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             net['bridge_interface'] = bridge_interface
             net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
+            net['multi_host'] = multi_host
             net['netmask'] = str(project_net.netmask)
             net['gateway'] = str(project_net[1])
             net['broadcast'] = str(project_net.broadcast)
@@ -641,7 +644,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                 #             robust solution would be to make them uniq per ip
                 net['vpn_public_port'] = kwargs['vpn_start'] + index
 
-            net['multi_host'] = True
             # None if network with cidr or cidr_v6 already exists
             network = self.db.network_create_safe(context, net)
 
