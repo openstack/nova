@@ -104,7 +104,8 @@ class API(base.Base):
                                        '(%(project)s)') %
                                         {'address': floating_ip['address'],
                                         'project': context.project_id})
-        if fixed_ip['network']['multi_gateway']:
+        # NOTE(vish): if we are multi_host, send to the instances host
+        if fixed_ip['network']['multi_host']:
             host = fixed_ip['instance']['host']
         else:
             host = fixed_ip['network']['host']
@@ -122,7 +123,8 @@ class API(base.Base):
             return
         if not floating_ip.get('fixed_ip'):
             raise exception.ApiError('Address is not associated.')
-        if floating_ip['fixed_ip']['network']['multi_gateway']:
+        # NOTE(vish): if we are multi_host, send to the instances host
+        if floating_ip['fixed_ip']['network']['multi_host']:
             host = floating_ip['fixed_ip']['instance']['host']
         else:
             host = floating_ip['fixed_ip']['network']['host']

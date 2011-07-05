@@ -49,7 +49,6 @@ import datetime
 import math
 import netaddr
 import socket
-import pickle
 from eventlet import greenpool
 
 from nova import context
@@ -129,8 +128,8 @@ class RPCAllocateFixedIP(object):
         green_pool = greenpool.GreenPool()
 
         for network in networks:
-            # NOTE(vish): if we are multi_gateway pass to the specified host
-            if not network['multi_gateway']:
+            # NOTE(vish): if we are not multi_host pass to the network host
+            if not network['multi_host']:
                 host = network['host']
             if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
