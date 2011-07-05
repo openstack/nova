@@ -665,6 +665,7 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
                                filter_by(reserved=False).\
                                filter_by(deleted=False).\
                                filter_by(instance=None).\
+                               filter_by(host=None).\
                                with_lockmode('update').\
                                first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,

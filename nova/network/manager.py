@@ -310,7 +310,18 @@ class NetworkManager(manager.SchedulerDependentManager):
         If it is a multi_host network, get the ip assigned to this host,
         otherwise, assume that dhcp is listening on the gateway."""
         if network_ref['multi_host']:
-            return self.db.network_get_host_ip(context, FLAGS.host)
+
+            @utils.synchronized('get_dhcp')
+            def _sync_get_dhcp_ip():
+                try:
+                    return self.db.fixed_ip_get_by_network_host(context,
+                                                                FLAGS.host)
+                except exception.FixedIpNotFoundForNetworkHost:
+                    return  self.db.fixed_ip_associate_pool(context.elevated(),
+                                                            network_ref['id'],
+                                                            host=FLAGS.host)
+            return _sync_get_dhcp_ip()
+
         else:
             return network_ref['gateway']
 
