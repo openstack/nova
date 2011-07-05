@@ -842,6 +842,20 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
+    def remove_fixed_ip_from_instance(self, context, instance_id, network_id):
+        """Calls network_api to remove existing fixed_ip from instance
+        by injecting the altered network info and resetting
+        instance networking.
+
+        """
+        self.network_api.remove_fixed_ip_from_instance(context, instance_id,
+                                                       network_id)
+        self.inject_network_info(context, instance_id)
+        self.reset_network(context, instance_id)
+
+
+    @exception.wrap_exception
+    @checks_instance_lock
     def pause_instance(self, context, instance_id):
         """Pause an instance on this host."""
         context = context.elevated()

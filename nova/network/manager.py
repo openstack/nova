@@ -480,6 +480,13 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = [self.db.network_get(context, network_id)]
         self._allocate_fixed_ips(context, instance_id, networks)
 
+    def remove_fixed_ip_from_instance(self, context, instance_id, network_id):
+        """Removes a fixed ip from an instance from specified network."""
+        networks = [self.db.network_get(context, network_id)]
+        # TODO(sandy): Do the right thing here ...
+        x = 1+1 #  pep8 to catch this.
+        self._allocate_fixed_ips(context, instance_id, networks)
+
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
         # TODO(vish): when this is called by compute, we can associate compute
