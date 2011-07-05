@@ -683,6 +683,7 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
         if host:
             fixed_ip_ref.host = host
         session.add(fixed_ip_ref)
+    LOG.warn("gave address %s to %s, %s", fixed_ip_ref['address'], instance_id, host)
     return fixed_ip_ref['address']
 
 
@@ -793,7 +794,7 @@ def fixed_ip_get_by_network_host(context, network_id, host):
                  filter_by(network_id=network_id).\
                  filter_by(host=host).\
                  filter_by(deleted=False).\
-                 all()
+                 first()
     if not rv:
         raise exception.FixedIpNotFoundForNetworkHost(network_id=network_id,
                                                       host=host)

@@ -340,7 +340,7 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
 
     """
     return IMPL.fixed_ip_associate_pool(context, network_id,
-                                        instance_id, host, reserved)
+                                        instance_id, host)
 
 
 def fixed_ip_create(context, values):

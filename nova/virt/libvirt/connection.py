@@ -928,7 +928,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _get_nic_for_xml(self, network, mapping):
         # Assume that the gateway also acts as the dhcp server.
-        dhcp_server = mapping['gateway']
         gateway6 = mapping.get('gateway6')
         mac_id = mapping['mac'].replace(':', '')
 
@@ -951,7 +950,7 @@ class LibvirtConnection(driver.ComputeDriver):
             'bridge_name': network['bridge'],
             'mac_address': mapping['mac'],
             'ip_address': mapping['ips'][0]['ip'],
-            'dhcp_server': dhcp_server,
+            'dhcp_server': mapping['dhcp_server'],
             'extra_params': extra_params,
         }
 

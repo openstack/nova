@@ -602,6 +602,7 @@ class FixedIp(BASE, NovaBase):
     # leased means dhcp bridge has leased the ip
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
+    host = Column(String(255))
 
 
 class FloatingIp(BASE, NovaBase):

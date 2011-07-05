@@ -103,7 +103,8 @@ flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
 flags.DEFINE_integer('create_unique_mac_address_attempts', 5,
                      'Number of attempts to create unique mac address')
-
+flags.DEFINE_bool('auto_assign_floating_ip', False,
+                  'Autoassigning floating ip to VM')
 flags.DEFINE_bool('use_ipv6', False,
                   'use the ipv6')
 flags.DEFINE_string('network_host', socket.gethostname(),
@@ -192,7 +193,7 @@ class FloatingIP(object):
         # which is currently the NetworkManager version
         # do this first so fixed ip is already allocated
         ips = super(FloatingIP, self).allocate_for_instance(context, **kwargs)
-        if hasattr(FLAGS, 'auto_assign_floating_ip'):
+        if FLAGS.auto_assign_floating_ip:
             # allocate a floating ip (public_ip is just the address string)
             public_ip = self.allocate_floating_ip(context, project_id)
             # set auto_assigned column to true for the floating ip
@@ -299,9 +300,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         super(NetworkManager, self).__init__(service_name='network',
                                                 *args, **kwargs)
 
-    def _update_dchp(self, context, network_ref):
+    def _update_dhcp(self, context, network_ref):
         """Sets the listen address before sending update to the driver."""
-        network_ref['dhcp_listen'] = self._get_dhcp_ip()
+        network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
         return self.driver.update_dhcp(context, network_ref)
 
     def _get_dhcp_ip(self, context, network_ref):
@@ -313,13 +314,18 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             @utils.synchronized('get_dhcp')
             def _sync_get_dhcp_ip():
+                network_id = network_ref['id']
                 try:
-                    return self.db.fixed_ip_get_by_network_host(context,
-                                                                FLAGS.host)
+                    fip = self.db.fixed_ip_get_by_network_host(context,
+                                                               network_id,
+                                                               self.host)
+                    return fip['address']
                 except exception.FixedIpNotFoundForNetworkHost:
-                    return  self.db.fixed_ip_associate_pool(context.elevated(),
-                                                            network_ref['id'],
-                                                            host=FLAGS.host)
+                    addr = self.db.fixed_ip_associate_pool(context.elevated(),
+                                                           network_id,
+                                                           host=self.host)
+                    return addr
+
             return _sync_get_dhcp_ip()
 
         else:
@@ -334,6 +340,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         ctxt = context.get_admin_context()
         for network in self.db.network_get_all_by_host(ctxt, self.host):
             self._on_set_network_host(ctxt, network['id'])
+        for network in self.db.network_get_all(ctxt):
+            # NOTE(vish): multi_host networks need to be set on all boxes
+            if network['multi_host']:
+                self._on_set_network_host(ctxt, network['id'])
+
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
@@ -349,7 +360,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 LOG.debug(_('Dissassociated %s stale fixed ip(s)'), num)
 
         # setup any new networks which have been created
-        self.set_network_hosts(context)
+        #self.set_network_hosts(context)
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
@@ -378,8 +389,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = self.db.network_get_all(context)
 
         # return only networks which are not vlan networks and have host set
-        return [network for network in networks if
-                not network['vlan'] and network['host']]
+        return [network for network in networks if not network['vlan']
+                and network['host'] or network['multi_host']]
 
     def allocate_for_instance(self, context, **kwargs):
         """Handles allocating the various network resources for an instance.
@@ -395,6 +406,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                             context=context)
         networks = self._get_networks_for_instance(admin_context, instance_id,
                                                                   project_id)
+        LOG.warn(networks)
         self._allocate_mac_addresses(context, instance_id, networks)
         self._allocate_fixed_ips(admin_context, instance_id, host, networks)
         return self.get_instance_nw_info(context, instance_id, type_id)
@@ -464,6 +476,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
+                'dhcp_server': self._get_dhcp_ip(context, network),
                 'broadcast': network['broadcast'],
                 'mac': vif['address'],
                 'rxtx_cap': flavor['rxtx_cap'],
@@ -569,7 +582,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             #             the code below will update the file if necessary
             if FLAGS.update_dhcp_on_disassociate:
                 network_ref = self.db.fixed_ip_get_network(context, address)
-                network_ref['dhcp_listen'] = self._get_dhcp_ip(context, network_ref)
+                network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
                 self._update_dhcp(context, network_ref)
 
     def create_networks(self, context, label, cidr, num_networks,
@@ -628,6 +641,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 #             robust solution would be to make them uniq per ip
                 net['vpn_public_port'] = kwargs['vpn_start'] + index
 
+            net['multi_host'] = True
             # None if network with cidr or cidr_v6 already exists
             network = self.db.network_create_safe(context, net)
 
@@ -785,6 +799,7 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
         net['dhcp_start'] = FLAGS.flat_network_dhcp_start
         self.db.network_update(context, network_id, net)
         network = db.network_get(context, network_id)
+        network['dhcp_server'] = self._get_dhcp_ip(context, network)
         self.driver.ensure_bridge(network['bridge'],
                                   network['bridge_interface'],
                                   network)
@@ -866,8 +881,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         # get networks associated with project
         networks = self.db.project_get_networks(context, project_id)
 
-        # return only networks which have host set
-        return [network for network in networks if network['host']]
+        # return only networks which have host set or are multi_host
+        return [network for network in networks
+                if network['host'] or network['multi_host']]
 
     def create_networks(self, context, **kwargs):
         """Create networks based on parameters."""
@@ -896,6 +912,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             db.network_update(context, network_id, net)
         else:
             address = network['vpn_public_address']
+        network['dhcp_server'] = self._get_dhcp_ip(context, network)
         self.driver.ensure_vlan_bridge(network['vlan'],
                                        network['bridge'],
                                        network['bridge_interface'],

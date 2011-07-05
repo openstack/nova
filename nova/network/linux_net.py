@@ -497,7 +497,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         suffix = net_attrs['cidr'].rpartition('/')[2]
         out, err = _execute('sudo', 'ip', 'addr', 'add',
                             '%s/%s' %
-                            (net_attrs['gateway'], suffix),
+                            (net_attrs['dhcp_server'], suffix),
                             'brd',
                             net_attrs['broadcast'],
                             'dev',
@@ -697,7 +697,7 @@ def _dnsmasq_cmd(net):
            '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
-           '--listen-address=%s' % net['dhcp_listen'],
+           '--listen-address=%s' % net['dhcp_server'],
            '--except-interface=lo',
            '--dhcp-range=%s,static,120s' % net['dhcp_start'],
            '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(net['cidr'])),
