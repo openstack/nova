@@ -573,18 +573,16 @@ def get_dhcp_hosts(context, network_id):
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
 @utils.synchronized('dnsmasq_start')
-def update_dhcp(context, network_id):
+def update_dhcp(context, network_ref):
     """(Re)starts a dnsmasq server for a given network.
 
     If a dnsmasq instance is already running then send a HUP
     signal causing it to reload, otherwise spawn a new instance.
 
     """
-    network_ref = db.network_get(context, network_id)
-
     conffile = _dhcp_file(network_ref['bridge'], 'conf')
     with open(conffile, 'w') as f:
-        f.write(get_dhcp_hosts(context, network_id))
+        f.write(get_dhcp_hosts(context, network_ref['id']))
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
@@ -612,9 +610,7 @@ def update_dhcp(context, network_id):
 
 
 @utils.synchronized('radvd_start')
-def update_ra(context, network_id):
-    network_ref = db.network_get(context, network_id)
-
+def update_ra(context, network_ref):
     conffile = _ra_file(network_ref['bridge'], 'conf')
     with open(conffile, 'w') as f:
         conf_str = """
@@ -650,9 +646,6 @@ interface %s
             LOG.debug(_('Pid %d is stale, relaunching radvd'), pid)
     command = _ra_cmd(network_ref)
     _execute(*command)
-    db.network_update(context, network_id,
-                      {'gateway_v6':
-                       utils.get_my_linklocal(network_ref['bridge'])})
 
 
 def _host_lease(fixed_ip_ref):
@@ -704,7 +697,7 @@ def _dnsmasq_cmd(net):
            '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
-           '--listen-address=%s' % net['gateway'],
+           '--listen-address=%s' % net['dhcp_listen'],
            '--except-interface=lo',
            '--dhcp-range=%s,static,120s' % net['dhcp_start'],
            '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(net['cidr'])),

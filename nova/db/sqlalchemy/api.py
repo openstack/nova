@@ -18,7 +18,6 @@
 """
 Implementation of SQLAlchemy backend.
 """
-import traceback
 import warnings
 
 from nova import db
@@ -33,7 +32,6 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import exists
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import literal_column
 
@@ -657,7 +655,7 @@ def fixed_ip_associate(context, address, instance_id):
 
 
 @require_admin_context
-def fixed_ip_associate_pool(context, network_id, instance_id):
+def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
@@ -677,9 +675,12 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
             fixed_ip_ref.network = network_get(context,
                                            network_id,
                                            session=session)
-        fixed_ip_ref.instance = instance_get(context,
-                                             instance_id,
-                                             session=session)
+        if instance_id:
+            fixed_ip_ref.instance = instance_get(context,
+                                                 instance_id,
+                                                 session=session)
+        if host:
+            fixed_ip_ref.host = host
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
@@ -735,7 +736,7 @@ def fixed_ip_get_all(context, session=None):
 
 
 @require_admin_context
-def fixed_ip_get_all_by_host(context, host=None):
+def fixed_ip_get_all_by_instance_host(context, host=None):
     session = get_session()
 
     result = session.query(models.FixedIp).\
@@ -781,6 +782,20 @@ def fixed_ip_get_by_instance(context, instance_id):
                  all()
     if not rv:
         raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+    return rv
+
+
+@require_context
+def fixed_ip_get_by_network_host(context, network_id, host):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(network_id=network_id).\
+                 filter_by(host=host).\
+                 filter_by(deleted=False).\
+                 all()
+    if not rv:
+        raise exception.FixedIpNotFoundForNetworkHost(network_id=network_id,
+                                                      host=host)
     return rv
 
 

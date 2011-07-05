@@ -377,6 +377,11 @@ class FixedIpNotFoundForInstance(FixedIpNotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
 
 
+class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
+    message = _("Network host %(host)s has zero fixed ips "
+                "in network %(network_id)s.")
+
+
 class FixedIpNotFoundForVirtualInterface(FixedIpNotFound):
     message = _("Virtual interface %(vif_id)s has zero associated fixed ips.")
 

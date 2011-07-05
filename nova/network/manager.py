@@ -124,15 +124,17 @@ class RPCAllocateFixedIP(object):
     used since they share code to RPC.call allocate_fixed_ip on the
     correct network host to configure dnsmasq
     """
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, host, networks):
         """Calls allocate_fixed_ip once for each network."""
         green_pool = greenpool.GreenPool()
 
         for network in networks:
-            if network['host'] != self.host:
+            # NOTE(vish): if we are multi_gateway pass to the specified host
+            if not network['multi_gateway']:
+                host = network['host']
+            if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
-                topic = self.db.queue_get_for(context, FLAGS.network_topic,
-                                                           network['host'])
+                topic = self.db.queue_get_for(context, FLAGS.network_topic, host)
                 args = {}
                 args['instance_id'] = instance_id
                 args['network_id'] = network['id']
@@ -298,6 +300,21 @@ class NetworkManager(manager.SchedulerDependentManager):
         super(NetworkManager, self).__init__(service_name='network',
                                                 *args, **kwargs)
 
+    def _update_dchp(self, context, network_ref):
+        """Sets the listen address before sending update to the driver."""
+        network_ref['dhcp_listen'] = self._get_dhcp_ip()
+        return self.driver.update_dhcp(context, network_ref)
+
+    def _get_dhcp_ip(self, context, network_ref):
+        """Get the proper dhcp address to listen on.
+
+        If it is a multi_host network, get the ip assigned to this host,
+        otherwise, assume that dhcp is listening on the gateway."""
+        if network_ref['multi_host']:
+            return self.db.network_get_host_ip(context, FLAGS.host)
+        else:
+            return network_ref['gateway']
+
     def init_host(self):
         """Do any initialization that needs to be run if this is a
         standalone service.
@@ -360,6 +377,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         rpc.called by network_api
         """
         instance_id = kwargs.pop('instance_id')
+        host = kwargs.pop('host')
         project_id = kwargs.pop('project_id')
         type_id = kwargs.pop('instance_type_id')
         admin_context = context.elevated()
@@ -368,7 +386,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = self._get_networks_for_instance(admin_context, instance_id,
                                                                   project_id)
         self._allocate_mac_addresses(context, instance_id, networks)
-        self._allocate_fixed_ips(admin_context, instance_id, networks)
+        self._allocate_fixed_ips(admin_context, instance_id, host, networks)
         return self.get_instance_nw_info(context, instance_id, type_id)
 
     def deallocate_for_instance(self, context, **kwargs):
@@ -475,10 +493,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                random.randint(0x00, 0xff)]
         return ':'.join(map(lambda x: "%02x" % x, mac))
 
-    def add_fixed_ip_to_instance(self, context, instance_id, network_id):
+    def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
         """Adds a fixed ip to an instance from specified network."""
         networks = [self.db.network_get(context, network_id)]
-        self._allocate_fixed_ips(context, instance_id, networks)
+        self._allocate_fixed_ips(context, instance_id, host, networks)
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -540,8 +558,9 @@ class NetworkManager(manager.SchedulerDependentManager):
             #             means there will stale entries in the conf file
             #             the code below will update the file if necessary
             if FLAGS.update_dhcp_on_disassociate:
-                network = self.db.fixed_ip_get_network(context, address)
-                self.driver.update_dhcp(context, network['id'])
+                network_ref = self.db.fixed_ip_get_network(context, address)
+                network_ref['dhcp_listen'] = self._get_dhcp_ip(context, network_ref)
+                self._update_dhcp(context, network_ref)
 
     def create_networks(self, context, label, cidr, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
@@ -637,7 +656,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                               'address': address,
                                               'reserved': reserved})
 
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, host, networks):
         """Calls allocate_fixed_ip once for each network."""
         raise NotImplementedError()
 
@@ -684,7 +703,7 @@ class FlatManager(NetworkManager):
 
     timeout_fixed_ips = False
 
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, host, networks):
         """Calls allocate_fixed_ip once for each network."""
         for network in networks:
             self.allocate_fixed_ip(context, instance_id, network)
@@ -738,8 +757,9 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
         """
         networks = db.network_get_all_by_instance(context, instance_id)
         for network in networks:
-            self.driver.ensure_bridge(network['bridge'],
-                                      network['bridge_interface'])
+            if not network['multi_host']:
+                self.driver.ensure_bridge(network['bridge'],
+                                          network['bridge_interface'])
 
     def allocate_fixed_ip(self, context, instance_id, network):
         """Allocate flat_network fixed_ip, then setup dhcp for this network."""
@@ -747,7 +767,7 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
                                                                  instance_id,
                                                                  network)
         if not FLAGS.fake_network:
-            self.driver.update_dhcp(context, network['id'])
+            self._update_dhcp(context, network)
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project."""
@@ -759,9 +779,13 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
                                   network['bridge_interface'],
                                   network)
         if not FLAGS.fake_network:
-            self.driver.update_dhcp(context, network_id)
+            network_ref = self.db.network_get(context, network_id)
+            self._update_dhcp(context, network_ref)
             if(FLAGS.use_ipv6):
-                self.driver.update_ra(context, network_id)
+                self.driver.update_ra(context, network_ref)
+                gateway = utils.get_my_linklocal(network_ref['bridge'])
+                self.db.network_update(context, network_id,
+                                       {'gateway_v6': gateway})
 
 
 class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
@@ -810,7 +834,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                   'virtual_interface_id': vif['id']}
         self.db.fixed_ip_update(context, address, values)
         if not FLAGS.fake_network:
-            self.driver.update_dhcp(context, network['id'])
+            self._update_dhcp(context, network)
 
     def add_network_to_project(self, context, project_id):
         """Force adds another network to a project."""
@@ -822,9 +846,10 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """
         networks = self.db.network_get_all_by_instance(context, instance_id)
         for network in networks:
-            self.driver.ensure_vlan_bridge(network['vlan'],
-                                           network['bridge'],
-                                           network['bridge_interface'])
+            if not network['multi_host']:
+                self.driver.ensure_vlan_bridge(network['vlan'],
+                                               network['bridge'],
+                                               network['bridge_interface'])
 
     def _get_networks_for_instance(self, context, instance_id, project_id):
         """Determine which networks an instance should connect to."""
@@ -874,9 +899,13 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                             network['vpn_public_port'],
                                             network['vpn_private_address'])
         if not FLAGS.fake_network:
-            self.driver.update_dhcp(context, network_id)
+            network_ref = self.db.network_get(context, network_id)
+            self._update_dhcp(context, network_ref)
             if(FLAGS.use_ipv6):
-                self.driver.update_ra(context, network_id)
+                self.driver.update_ra(context, network_ref)
+                gateway = utils.get_my_linklocal(network_ref['bridge'])
+                self.db.network_update(context, network_id,
+                                       {'gateway_v6': gateway})
 
     @property
     def _bottom_reserved_ips(self):

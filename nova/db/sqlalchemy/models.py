@@ -543,6 +543,7 @@ class Network(BASE, NovaBase):
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)
     cidr_v6 = Column(String(255), unique=True)
+    multi_host = Column(Boolean, default=False)
 
     gateway_v6 = Column(String(255))
     netmask_v6 = Column(String(255))
