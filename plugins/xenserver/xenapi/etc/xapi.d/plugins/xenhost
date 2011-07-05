@@ -95,7 +95,11 @@ def set_host_enabled(self, arg_dict):
     cmd = "xe host-param-list uuid=%s | grep enabled" % host_uuid
     resp = _run_command(cmd)
     # Response should be in the format: "enabled ( RO): true"
-    status = resp.strip().split()[-1]
+    host_enabled = resp.strip().split()[-1]
+    if host_enabled == "true":
+        status = "enabled"
+    else:
+        status = "disabled"
     return {"status": status}
 
 
