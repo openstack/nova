@@ -183,7 +183,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                 continue
 
             for zone_rec in zones:
-                if zone_rec['api_url'] != zone:
+                if zone_rec['id'] != zone:
                     continue
 
                 for item in result:
