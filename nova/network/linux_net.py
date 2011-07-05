@@ -551,21 +551,27 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                                              bridge)
 
 
-def get_dhcp_leases(context, network_id):
+def get_dhcp_leases(context, network_ref):
     """Return a network's hosts config in dnsmasq leasefile format."""
     hosts = []
-    for fixed_ip_ref in db.network_get_associated_fixed_ips(context,
-                                                            network_id):
-        hosts.append(_host_lease(fixed_ip_ref))
+    for fixed_ref in db.network_get_associated_fixed_ips(context,
+                                                         network_ref['id']):
+        host = fixed_ref['instance']['host']
+        if network_ref['multi_host'] and FLAGS.host != host:
+            continue
+        hosts.append(_host_lease(fixed_ref))
     return '\n'.join(hosts)
 
 
-def get_dhcp_hosts(context, network_id):
+def get_dhcp_hosts(context, network_ref):
     """Get network's hosts config in dhcp-host format."""
     hosts = []
-    for fixed_ip_ref in db.network_get_associated_fixed_ips(context,
-                                                            network_id):
-        hosts.append(_host_dhcp(fixed_ip_ref))
+    for fixed_ref in db.network_get_associated_fixed_ips(context,
+                                                         network_ref['id']):
+        host = fixed_ref['instance']['host']
+        if network_ref['multi_host'] and FLAGS.host != host:
+            continue
+        hosts.append(_host_dhcp(fixed_ref))
     return '\n'.join(hosts)
 
 
@@ -582,7 +588,7 @@ def update_dhcp(context, network_ref):
     """
     conffile = _dhcp_file(network_ref['bridge'], 'conf')
     with open(conffile, 'w') as f:
-        f.write(get_dhcp_hosts(context, network_ref['id']))
+        f.write(get_dhcp_hosts(context, network_ref))
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
