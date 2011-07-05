@@ -223,6 +223,9 @@ def certificate_update(context, certificate_id, values):
 
 ###################
 
+def floating_ip_get(context, floating_ip_id):
+    return IMPL.floating_ip_get(context, floating_ip_id)
+
 
 def floating_ip_allocate_address(context, host, project_id):
     """Allocate free floating ip and return the address.
@@ -287,6 +290,11 @@ def floating_ip_get_all_by_project(context, project_id):
 def floating_ip_get_by_address(context, address):
     """Get a floating ip by address or raise if it doesn't exist."""
     return IMPL.floating_ip_get_by_address(context, address)
+
+
+def floating_ip_get_by_ip(context, ip):
+    """Get a floating ip by floating address."""
+    return IMPL.floating_ip_get_by_ip(context, ip)
 
 
 def floating_ip_update(context, address, values):
@@ -419,6 +427,11 @@ def instance_stop(context, instance_id):
     return IMPL.instance_stop(context, instance_id)
 
 
+def instance_get_by_uuid(context, uuid):
+    """Get an instance or raise if it does not exist."""
+    return IMPL.instance_get_by_uuid(context, uuid)
+
+
 def instance_get(context, instance_id):
     """Get an instance or raise if it does not exist."""
     return IMPL.instance_get(context, instance_id)
@@ -427,6 +440,11 @@ def instance_get(context, instance_id):
 def instance_get_all(context):
     """Get all instances."""
     return IMPL.instance_get_all(context)
+
+
+def instance_get_active_by_window(context, begin, end=None):
+    """Get instances active during a certain time window."""
+    return IMPL.instance_get_active_by_window(context, begin, end)
 
 
 def instance_get_all_by_user(context, user_id):
@@ -1008,6 +1026,29 @@ def security_group_rule_destroy(context, security_group_rule_id):
 ###################
 
 
+def provider_fw_rule_create(context, rule):
+    """Add a firewall rule at the provider level (all hosts & instances)."""
+    return IMPL.provider_fw_rule_create(context, rule)
+
+
+def provider_fw_rule_get_all(context):
+    """Get all provider-level firewall rules."""
+    return IMPL.provider_fw_rule_get_all(context)
+
+
+def provider_fw_rule_get_all_by_cidr(context, cidr):
+    """Get all provider-level firewall rules."""
+    return IMPL.provider_fw_rule_get_all_by_cidr(context, cidr)
+
+
+def provider_fw_rule_destroy(context, rule_id):
+    """Delete a provider firewall rule from the database."""
+    return IMPL.provider_fw_rule_destroy(context, rule_id)
+
+
+###################
+
+
 def user_get(context, id):
     """Get user by id."""
     return IMPL.user_get(context, id)
@@ -1261,3 +1302,53 @@ def instance_metadata_delete(context, instance_id, key):
 def instance_metadata_update_or_create(context, instance_id, metadata):
     """Create or update instance metadata."""
     IMPL.instance_metadata_update_or_create(context, instance_id, metadata)
+
+
+####################
+
+
+def agent_build_create(context, values):
+    """Create a new agent build entry."""
+    return IMPL.agent_build_create(context, values)
+
+
+def agent_build_get_by_triple(context, hypervisor, os, architecture):
+    """Get agent build by hypervisor/OS/architecture triple."""
+    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
+            architecture)
+
+
+def agent_build_get_all(context):
+    """Get all agent builds."""
+    return IMPL.agent_build_get_all(context)
+
+
+def agent_build_destroy(context, agent_update_id):
+    """Destroy agent build entry."""
+    IMPL.agent_build_destroy(context, agent_update_id)
+
+
+def agent_build_update(context, agent_build_id, values):
+    """Update agent build entry."""
+    IMPL.agent_build_update(context, agent_build_id, values)
+
+
+####################
+
+
+def instance_type_extra_specs_get(context, instance_type_id):
+    """Get all extra specs for an instance type."""
+    return IMPL.instance_type_extra_specs_get(context, instance_type_id)
+
+
+def instance_type_extra_specs_delete(context, instance_type_id, key):
+    """Delete the given extra specs item."""
+    IMPL.instance_type_extra_specs_delete(context, instance_type_id, key)
+
+
+def instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                               extra_specs):
+    """Create or update instance type extra specs. This adds or modifies the
+    key/value pairs specified in the extra specs dict argument"""
+    IMPL.instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                                    extra_specs)

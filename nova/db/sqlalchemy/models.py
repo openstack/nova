@@ -232,7 +232,9 @@ class Instance(BASE, NovaBase):
     locked = Column(Boolean)
 
     os_type = Column(String(255))
+    architecture = Column(String(255))
     vm_mode = Column(String(255))
+    uuid = Column(String(36))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -491,6 +493,17 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     group_id = Column(Integer, ForeignKey('security_groups.id'))
 
 
+class ProviderFirewallRule(BASE, NovaBase):
+    """Represents a rule in a security group."""
+    __tablename__ = 'provider_fw_rules'
+    id = Column(Integer, primary_key=True)
+
+    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(String(255))
+
+
 class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh."""
     __tablename__ = 'key_pairs'
@@ -703,6 +716,21 @@ class InstanceMetadata(BASE, NovaBase):
                                 'InstanceMetadata.deleted == False)')
 
 
+class InstanceTypeExtraSpecs(BASE, NovaBase):
+    """Represents additional specs as key/value pairs for an instance_type"""
+    __tablename__ = 'instance_type_extra_specs'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
+                              nullable=False)
+    instance_type = relationship(InstanceTypes, backref="extra_specs",
+                 foreign_keys=instance_type_id,
+                 primaryjoin='and_('
+                 'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
+                 'InstanceTypeExtraSpecs.deleted == False)')
+
+
 class Zone(BASE, NovaBase):
     """Represents a child zone of this zone."""
     __tablename__ = 'zones'
@@ -710,6 +738,18 @@ class Zone(BASE, NovaBase):
     api_url = Column(String(255))
     username = Column(String(255))
     password = Column(String(255))
+
+
+class AgentBuild(BASE, NovaBase):
+    """Represents an agent build."""
+    __tablename__ = 'agent_builds'
+    id = Column(Integer, primary_key=True)
+    hypervisor = Column(String(255))
+    os = Column(String(255))
+    architecture = Column(String(255))
+    version = Column(String(255))
+    url = Column(String(255))
+    md5hash = Column(String(255))
 
 
 def register_models():
@@ -725,7 +765,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata, Migration)
+              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

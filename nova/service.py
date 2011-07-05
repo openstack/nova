@@ -19,9 +19,11 @@
 
 """Generic Node baseclass for all workers that run on hosts."""
 
-import greenlet
 import inspect
+import multiprocessing
 import os
+
+import greenlet
 
 from eventlet import greenthread
 
@@ -35,6 +37,8 @@ from nova import utils
 from nova import version
 from nova import wsgi
 
+
+LOG = logging.getLogger('nova.service')
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('report_interval', 10,
@@ -51,6 +55,63 @@ flags.DEFINE_string('osapi_listen', "0.0.0.0",
 flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
 flags.DEFINE_string('api_paste_config', "api-paste.ini",
                     'File name for the paste.deploy config for nova-api')
+
+
+class Launcher(object):
+    """Launch one or more services and wait for them to complete."""
+
+    def __init__(self):
+        """Initialize the service launcher.
+
+        :returns: None
+
+        """
+        self._services = []
+
+    @staticmethod
+    def run_service(service):
+        """Start and wait for a service to finish.
+
+        :param service: Service to run and wait for.
+        :returns: None
+
+        """
+        service.start()
+        try:
+            service.wait()
+        except KeyboardInterrupt:
+            service.stop()
+
+    def launch_service(self, service):
+        """Load and start the given service.
+
+        :param service: The service you would like to start.
+        :returns: None
+
+        """
+        process = multiprocessing.Process(target=self.run_service,
+                                          args=(service,))
+        process.start()
+        self._services.append(process)
+
+    def stop(self):
+        """Stop all services which are currently running.
+
+        :returns: None
+
+        """
+        for service in self._services:
+            if service.is_alive():
+                service.terminate()
+
+    def wait(self):
+        """Waits until all services have been stopped, and then returns.
+
+        :returns: None
+
+        """
+        for service in self._services:
+            service.join()
 
 
 class Service(object):
@@ -232,45 +293,54 @@ class Service(object):
                 logging.exception(_('model server went away'))
 
 
-class WsgiService(object):
-    """Base class for WSGI based services.
+class WSGIService(object):
+    """Provides ability to launch API from a 'paste' configuration."""
 
-    For each api you define, you must also define these flags:
-    :<api>_listen: The address on which to listen
-    :<api>_listen_port: The port on which to listen
+    def __init__(self, name, loader=None):
+        """Initialize, but do not start the WSGI service.
 
-    """
+        :param name: The name of the WSGI service given to the loader.
+        :param loader: Loads the WSGI application using the given name.
+        :returns: None
 
-    def __init__(self, conf, apis):
-        self.conf = conf
-        self.apis = apis
-        self.wsgi_app = None
+        """
+        self.name = name
+        self.loader = loader or wsgi.Loader()
+        self.app = self.loader.load_app(name)
+        self.host = getattr(FLAGS, '%s_listen' % name, "0.0.0.0")
+        self.port = getattr(FLAGS, '%s_listen_port' % name, 0)
+        self.server = wsgi.Server(name,
+                                  self.app,
+                                  host=self.host,
+                                  port=self.port)
 
     def start(self):
-        self.wsgi_app = _run_wsgi(self.conf, self.apis)
+        """Start serving this service using loaded configuration.
+
+        Also, retrieve updated port number in case '0' was passed in, which
+        indicates a random port should be used.
+
+        :returns: None
+
+        """
+        self.server.start()
+        self.port = self.server.port
+
+    def stop(self):
+        """Stop serving this API.
+
+        :returns: None
+
+        """
+        self.server.stop()
 
     def wait(self):
-        self.wsgi_app.wait()
+        """Wait for the service to stop serving this API.
 
-    def get_socket_info(self, api_name):
-        """Returns the (host, port) that an API was started on."""
-        return self.wsgi_app.socket_info[api_name]
+        :returns: None
 
-
-class ApiService(WsgiService):
-    """Class for our nova-api service."""
-
-    @classmethod
-    def create(cls, conf=None):
-        if not conf:
-            conf = wsgi.paste_config_file(FLAGS.api_paste_config)
-            if not conf:
-                message = (_('No paste configuration found for: %s'),
-                           FLAGS.api_paste_config)
-                raise exception.Error(message)
-        api_endpoints = ['ec2', 'osapi']
-        service = cls(conf, api_endpoints)
-        return service
+        """
+        self.server.wait()
 
 
 def serve(*services):
@@ -302,48 +372,3 @@ def serve(*services):
 def wait():
     while True:
         greenthread.sleep(5)
-
-
-def serve_wsgi(cls, conf=None):
-    try:
-        service = cls.create(conf)
-    except Exception:
-        logging.exception('in WsgiService.create()')
-        raise
-    finally:
-        # After we've loaded up all our dynamic bits, check
-        # whether we should print help
-        flags.DEFINE_flag(flags.HelpFlag())
-        flags.DEFINE_flag(flags.HelpshortFlag())
-        flags.DEFINE_flag(flags.HelpXMLFlag())
-        FLAGS.ParseNewFlags()
-
-    service.start()
-
-    return service
-
-
-def _run_wsgi(paste_config_file, apis):
-    logging.debug(_('Using paste.deploy config at: %s'), paste_config_file)
-    apps = []
-    for api in apis:
-        config = wsgi.load_paste_configuration(paste_config_file, api)
-        if config is None:
-            logging.debug(_('No paste configuration for app: %s'), api)
-            continue
-        logging.debug(_('App Config: %(api)s\n%(config)r') % locals())
-        logging.info(_('Running %s API'), api)
-        app = wsgi.load_paste_app(paste_config_file, api)
-        apps.append((app,
-                     getattr(FLAGS, '%s_listen_port' % api),
-                     getattr(FLAGS, '%s_listen' % api),
-                     api))
-    if len(apps) == 0:
-        logging.error(_('No known API applications configured in %s.'),
-                      paste_config_file)
-        return
-
-    server = wsgi.Server()
-    for app in apps:
-        server.start(*app)
-    return server

@@ -38,6 +38,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 import hashlib
 import multiprocessing
+import netaddr
 import os
 import random
 import re
@@ -52,8 +53,6 @@ from xml.etree import ElementTree
 
 from eventlet import greenthread
 from eventlet import tpool
-
-import IPy
 
 from nova import context
 from nova import db
@@ -190,6 +189,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             if state != power_state.RUNNING:
                 continue
+            self.firewall_driver.setup_basic_filtering(instance)
             self.firewall_driver.prepare_instance_filter(instance)
             self.firewall_driver.apply_instance_filter(instance)
 
@@ -295,10 +295,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 # NOTE(justinsb): We remove the domain definition. We probably
                 # would do better to keep it if cleanup=False (e.g. volumes?)
                 # (e.g. #2 - not losing machines on failure)
-                # NOTE(masumotok): Migrated instances does not have domain
-                # definitions.
-                if instance.name in self._conn.listDefinedDomains():
-                    virt_dom.undefine()
+                virt_dom.undefine()
             except libvirt.libvirtError as e:
                 errcode = e.get_error_code()
                 LOG.warning(_("Error from libvirt during undefine of "
@@ -337,13 +334,6 @@ class LibvirtConnection(driver.ComputeDriver):
             disk.destroy_container(target, instance, nbd=FLAGS.use_cow_images)
         if os.path.exists(target):
             shutil.rmtree(target)
-
-    def cleanup(self, instance):
-        """ Cleaning up image directory that is created pre_live_migration.
-
-        :param instance: nova.db.sqlalchemy.models.Instance
-        """
-        self._cleanup(instance)
 
     @exception.wrap_exception
     def attach_volume(self, instance_name, device_path, mountpoint):
@@ -1398,6 +1388,9 @@ class LibvirtConnection(driver.ComputeDriver):
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
+    def refresh_provider_fw_rules(self):
+        self.firewall_driver.refresh_provider_fw_rules()
+
     def update_available_resource(self, ctxt, host):
         """Updates compute manager resource info on ComputeNode table.
 
@@ -1571,7 +1564,7 @@ class LibvirtConnection(driver.ComputeDriver):
                              FLAGS.live_migration_bandwidth)
 
         except Exception:
-            recover_method(ctxt, instance_ref, dest=dest)
+            recover_method(ctxt, instance_ref, dest, block_migration)
             raise
 
         # Waiting for completion of live_migration.
@@ -1583,7 +1576,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 self.get_info(instance_ref.name)['state']
             except exception.NotFound:
                 timer.stop()
-                post_method(ctxt, instance_ref, dest)
+                post_method(ctxt, instance_ref, dest, block_migration)
 
         timer.f = wait_for_live_migration
         timer.start(interval=0.5, now=True)
@@ -1630,12 +1623,34 @@ class LibvirtConnection(driver.ComputeDriver):
                                   user,
                                   project)
 
-        # block migration does not migrate libvirt.xml,
-        # to avoid any confusion of admins, create it now.
-        xml = self.to_xml(instance_ref)
-        f = open(os.path.join(instance_dir, 'libvirt.xml'), 'w+')
-        f.write(xml)
-        f.close()
+    def post_live_migration_at_destination(self, ctxt, instance_ref,
+                                           block_migration):
+        """Post operation of live migration at destination host.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params : block_migration: if true, post operation of block_migraiton.
+        """
+        # Define migrated instance, otherwise, suspend/destroy does not work.
+        dom_list = self._conn.listDefinedDomains()
+        if instance_ref.name not in dom_list:
+            instance_dir = os.path.join(FLAGS.instances_path,
+                                        instance_ref.name)
+            xml_path = os.path.join(instance_dir, 'libvirt.xml')
+            # In case of block migration, destination does not have
+            # libvirt.xml
+            if not os.path.isfile(xml_path):
+                xml = self.to_xml(instance_ref)
+                f = open(os.path.join(instance_dir, 'libvirt.xml'), 'w+')
+                f.write(xml)
+                f.close()
+            # libvirt.xml should be made by to_xml(), but libvirt
+            # does not accept to_xml() result, since uuid is not
+            # included in to_xml() result.
+            dom = self._lookup_by_name(instance_ref.name)
+            self._conn.defineXML(dom.XMLDesc(0))
 
     def get_instance_disk_info(self, ctxt, instance_ref):
         """Preparation block migration.

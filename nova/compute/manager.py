@@ -46,13 +46,16 @@ from eventlet import greenthread
 
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import manager
 from nova import network
+from nova import notifier
 from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import power_state
+from nova.notifier import api as notifier_api
 from nova.compute.utils import terminate_volumes
 from nova.virt import driver
 
@@ -215,6 +218,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
+    @exception.wrap_exception
+    def refresh_provider_fw_rules(self, context, **_kwargs):
+        """This call passes straight through to the virtualization driver."""
+        return self.driver.refresh_provider_fw_rules()
+
     def _setup_block_device_mapping(self, context, instance_id):
         """setup volumes for block device mapping"""
         self.db.instance_set_state(context,
@@ -291,50 +299,64 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'networking')
 
         is_vpn = instance_ref['image_ref'] == str(FLAGS.vpn_image_id)
-        # NOTE(vish): This could be a cast because we don't do anything
-        #             with the address currently, but I'm leaving it as
-        #             a call to ensure that network setup completes.  We
-        #             will eventually also need to save the address here.
-        if not FLAGS.stub_network:
-            address = rpc.call(context,
-                               self.get_network_topic(context),
-                               {"method": "allocate_fixed_ip",
-                                "args": {"instance_id": instance_id,
-                                         "vpn": is_vpn}})
-
-            self.network_manager.setup_compute_network(context,
-                                                       instance_id)
-
-        block_device_mapping = self._setup_block_device_mapping(context,
-                                                                instance_id)
-
-        # TODO(vish) check to make sure the availability zone matches
-        self._update_state(context, instance_id, power_state.BUILDING)
-
         try:
-            self.driver.spawn(instance_ref,
-                              block_device_mapping=block_device_mapping)
-        except Exception as ex:  # pylint: disable=W0702
-            msg = _("Instance '%(instance_id)s' failed to spawn. Is "
-                    "virtualization enabled in the BIOS? Details: "
-                    "%(ex)s") % locals()
-            LOG.exception(msg)
+            # NOTE(vish): This could be a cast because we don't do anything
+            #             with the address currently, but I'm leaving it as
+            #             a call to ensure that network setup completes.  We
+            #             will eventually also need to save the address here.
+            if not FLAGS.stub_network:
+                address = rpc.call(context,
+                                   self.get_network_topic(context),
+                                   {"method": "allocate_fixed_ip",
+                                    "args": {"instance_id": instance_id,
+                                             "vpn": is_vpn}})
 
-        if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
-            public_ip = self.network_api.allocate_floating_ip(context)
+                self.network_manager.setup_compute_network(context,
+                                                           instance_id)
 
-            self.db.floating_ip_set_auto_assigned(context, public_ip)
-            fixed_ip = self.db.fixed_ip_get_by_address(context, address)
-            floating_ip = self.db.floating_ip_get_by_address(context,
-                                                             public_ip)
+            block_device_mapping = self._setup_block_device_mapping(
+                context,
+                instance_id)
 
-            self.network_api.associate_floating_ip(context,
-                                                   floating_ip,
-                                                   fixed_ip,
-                                                   affect_auto_assigned=True)
+            # TODO(vish) check to make sure the availability zone matches
+            self._update_state(context, instance_id, power_state.BUILDING)
 
-        self._update_launched_at(context, instance_id)
-        self._update_state(context, instance_id)
+            try:
+                self.driver.spawn(instance_ref,
+                                  block_device_mapping=block_device_mapping)
+            except Exception as ex:  # pylint: disable=W0702
+                msg = _("Instance '%(instance_id)s' failed to spawn. Is "
+                        "virtualization enabled in the BIOS? Details: "
+                        "%(ex)s") % locals()
+                LOG.exception(msg)
+
+            if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
+                public_ip = self.network_api.allocate_floating_ip(context)
+
+                self.db.floating_ip_set_auto_assigned(context, public_ip)
+                fixed_ip = self.db.fixed_ip_get_by_address(context, address)
+                floating_ip = self.db.floating_ip_get_by_address(context,
+                                                                 public_ip)
+
+                self.network_api.associate_floating_ip(
+                    context,
+                    floating_ip,
+                    fixed_ip,
+                    affect_auto_assigned=True)
+
+            self._update_launched_at(context, instance_id)
+            self._update_state(context, instance_id)
+            usage_info = utils.usage_from_instance(instance_ref)
+            notifier_api.notify('compute.%s' % self.host,
+                                'compute.instance.create',
+                                notifier_api.INFO,
+                                usage_info)
+        except exception.InstanceNotFound:
+            # FIXME(wwolf): We are just ignoring InstanceNotFound
+            # exceptions here in case the instance was immediately
+            # deleted before it actually got created.  This should
+            # be fixed once we have no-db-messaging
+            pass
 
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **kwargs):
@@ -407,9 +429,15 @@ class ComputeManager(manager.SchedulerDependentManager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
+        instance_ref = self.db.instance_get(context.elevated(), instance_id)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.delete',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -446,6 +474,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
+        usage_info = utils.usage_from_instance(instance_ref,
+                                               image_ref=image_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.rebuild',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -473,8 +507,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
-    def snapshot_instance(self, context, instance_id, image_id):
-        """Snapshot an instance on this host."""
+    def snapshot_instance(self, context, instance_id, image_id,
+                          image_type='snapshot', backup_type=None,
+                          rotation=None):
+        """Snapshot an instance on this host.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param image_id: glance.db.sqlalchemy.models.Image.Id
+        :param image_type: snapshot | backup
+        :param backup_type: daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        """
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
@@ -493,6 +538,65 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
+
+        if image_type == 'snapshot':
+            if rotation:
+                raise exception.ImageRotationNotAllowed()
+        elif image_type == 'backup':
+            if rotation:
+                instance_uuid = instance_ref['uuid']
+                self.rotate_backups(context, instance_uuid, backup_type,
+                                    rotation)
+            else:
+                raise exception.RotationRequiredForBackup()
+        else:
+            raise Exception(_('Image type not recognized %s') % image_type)
+
+    def rotate_backups(self, context, instance_uuid, backup_type, rotation):
+        """Delete excess backups associated to an instance.
+
+        Instances are allowed a fixed number of backups (the rotation number);
+        this method deletes the oldest backups that exceed the rotation
+        threshold.
+
+        :param context: security context
+        :param instance_uuid: string representing uuid of instance
+        :param backup_type: daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        """
+        # NOTE(jk0): Eventually extract this out to the ImageService?
+        def fetch_images():
+            images = []
+            marker = None
+            while True:
+                batch = image_service.detail(context, filters=filters,
+                        marker=marker, sort_key='created_at', sort_dir='desc')
+                if not batch:
+                    break
+                images += batch
+                marker = batch[-1]['id']
+            return images
+
+        image_service = nova.image.get_default_image_service()
+        filters = {'property-image_type': 'backup',
+                   'property-backup_type': backup_type,
+                   'property-instance_uuid': instance_uuid}
+
+        images = fetch_images()
+        num_images = len(images)
+        LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)"
+                    % locals()))
+        if num_images > rotation:
+            # NOTE(sirp): this deletes all backups that exceed the rotation
+            # limit
+            excess = len(images) - rotation
+            LOG.debug(_("Rotating out %d backups" % excess))
+            for i in xrange(excess):
+                image = images.pop()
+                image_id = image['id']
+                LOG.debug(_("Deleting image %d" % image_id))
+                image_service.delete(context, image_id)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -562,6 +666,24 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
+    def agent_update(self, context, instance_id, url, md5hash):
+        """Update agent running on an instance on this host."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        instance_id = instance_ref['id']
+        instance_state = instance_ref['state']
+        expected_state = power_state.RUNNING
+        if instance_state != expected_state:
+            LOG.warn(_('trying to update agent on a non-running '
+                    'instance: %(instance_id)s (state: %(instance_state)s '
+                    'expected: %(expected_state)s)') % locals())
+        nm = instance_ref['name']
+        msg = _('instance %(nm)s: updating agent to %(url)s') % locals()
+        LOG.audit(msg)
+        self.driver.agent_update(instance_ref, url, md5hash)
+
+    @exception.wrap_exception
+    @checks_instance_lock
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this host."""
         context = context.elevated()
@@ -605,6 +727,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.destroy(instance_ref)
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.confirm',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -652,6 +779,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.revert_resize(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.revert',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -688,6 +820,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'migration_id': migration_ref['id'],
                        'instance_id': instance_id, },
                 })
+        usage_info = utils.usage_from_instance(instance_ref,
+                              new_instance_type=instance_type['name'],
+                              new_instance_type_id=instance_type['id'])
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.prep',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -783,7 +922,6 @@ class ComputeManager(manager.SchedulerDependentManager):
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get(context, instance_id)
-
         if instance_ref["state"] == power_state.RUNNING:
             LOG.audit(_("instance %s: retrieving diagnostics"), instance_id,
                       context=context)
@@ -1147,7 +1285,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             i_name = instance_ref.name
             msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
             LOG.error(msg % locals())
-            self.recover_live_migration(context, instance_ref)
+            self.rollback_live_migration(context, instance_ref,
+                                         dest, block_migration)
             raise
 
         # Executing live migration
@@ -1155,7 +1294,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # nothing must be recovered in this version.
         self.driver.live_migration(context, instance_ref, dest,
                                    self.post_live_migration,
-                                   self.recover_live_migration,
+                                   self.rollback_live_migration,
                                    block_migration)
 
     def post_live_migration(self, ctxt, instance_ref,
@@ -1168,6 +1307,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param ctxt: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param dest: destination host
+        :param block_migration: if true, do block migration
 
         """
 
@@ -1208,8 +1348,25 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.error(_("Live migration: Unexpected error:"
                         "%s cannot inherit floating ip..") % i_name)
 
-        # Restore instance/volume state
-        self.recover_live_migration(ctxt, instance_ref, dest)
+        # Define domain at destination host, without doing it,
+        # pause/suspend/terminate do not work.
+        rpc.call(ctxt,
+                 self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
+                     {"method": "post_live_migration_at_destination",
+                      "args": {'instance_id': instance_ref.id,
+                               'block_migration': block_migration}})
+
+        # Restore instance state
+        self.db.instance_update(ctxt,
+                                instance_ref['id'],
+                                {'state_description': 'running',
+                                 'state': power_state.RUNNING,
+                                 'host': dest})
+        # Restore volume state
+        for volume_ref in instance_ref['volumes']:
+            volume_id = volume_ref['id']
+            self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
+
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration
         if block_migration:
@@ -1221,53 +1378,62 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
 
-    def recover_live_migration(self, ctxt, instance_ref, host=None, dest=None):
+    def post_live_migration_at_destination(self, context,
+                                instance_id, block_migration=False):
+        """Post operations for live migration .
+
+        :param ctxt: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param block_migration: block_migration
+        :param xml: libvirt.xml
+
+        """
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.info(_('Post operation of migraton started for %s .')
+                 % instance_ref.name)
+        self.driver.post_live_migration_at_destination(context,
+                                                       instance_ref,
+                                                       block_migration)
+
+    def rollback_live_migration(self, ctxt, instance_ref,
+                                dest, block_migration):
         """Recovers Instance/volume state from migrating -> running.
 
         :param ctxt: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
-        :param host: DB column value is updated by this hostname.
-                     If none, the host instance currently running is selected.
         :param dest:
             This method is called from live migration src host.
             This param specifies destination host.
         """
-        if not host:
-            host = instance_ref['host']
-
+        host = instance_ref['host']
         self.db.instance_update(ctxt,
                                 instance_ref['id'],
                                 {'state_description': 'running',
                                  'state': power_state.RUNNING,
                                  'host': host})
 
-        if dest:
-            volume_api = volume.API()
         for volume_ref in instance_ref['volumes']:
             volume_id = volume_ref['id']
             self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
-            if dest:
-                volume_api.remove_from_compute(ctxt, volume_id, dest)
+            volume.API().remove_from_compute(ctxt, volume_id, dest)
 
         # Block migration needs empty image at destination host
         # before migration starts, so if any failure occurs,
         # any empty images has to be deleted.
-        # In current version argument dest != None means this method is
-        # called for error recovering
-        if dest:
+        if block_migration:
             rpc.cast(ctxt,
                      self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
-                     {"method": "cleanup",
+                     {"method": "rollback_live_migration_at_destination",
                       "args": {'instance_id': instance_ref['id']}})
 
-    def cleanup(self, ctxt, instance_id):
+    def rollback_live_migration_at_destination(self, ctxt, instance_id):
         """ Cleaning up image directory that is created pre_live_migration.
 
         :param ctxt: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         """
         instances_ref = self.db.instance_get(ctxt, instance_id)
-        self.driver.cleanup(instance_ref)
+        self.driver.destroy(instance_ref)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""

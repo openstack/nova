@@ -143,7 +143,7 @@ class API(base.Base):
 
     def _check_create_parameters(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
@@ -154,6 +154,10 @@ class API(base.Base):
 
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
+        if not min_count:
+            min_count = 1
+        if not max_count:
+            max_count = min_count
 
         num_instances = quota.allowed_instances(context, max_count,
                                                 instance_type)
@@ -178,6 +182,9 @@ class API(base.Base):
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
             os_type = image['properties']['os_type']
+        architecture = None
+        if 'properties' in image and 'arch' in image['properties']:
+            architecture = image['properties']['arch']
         vm_mode = None
         if 'properties' in image and 'vm_mode' in image['properties']:
             vm_mode = image['properties']['vm_mode']
@@ -243,6 +250,7 @@ class API(base.Base):
             'metadata': metadata,
             'availability_zone': availability_zone,
             'os_type': os_type,
+            'architecture': architecture,
             'vm_mode': vm_mode}
 
         return (num_instances, base_options, security_groups)
@@ -334,7 +342,7 @@ class API(base.Base):
 
     def create_all_at_once(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
@@ -364,7 +372,7 @@ class API(base.Base):
 
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
@@ -492,6 +500,16 @@ class API(base.Base):
                      {"method": "refresh_security_group_members",
                       "args": {"security_group_id": group_id}})
 
+    def trigger_provider_fw_rules_refresh(self, context):
+        """Called when a rule is added to or removed from a security_group"""
+
+        hosts = [x['host'] for (x, idx)
+                           in db.service_get_all_compute_sorted(context)]
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {'method': 'refresh_provider_fw_rules', 'args': {}})
+
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
@@ -579,8 +597,15 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
-        rv = self.db.instance_get(context, instance_id)
-        return dict(rv.iteritems())
+        # NOTE(sirp): id used to be exclusively integer IDs; now we're
+        # accepting both UUIDs and integer IDs. The handling of this
+        # is done in db/sqlalchemy/api/instance_get
+        if utils.is_uuid_like(instance_id):
+            uuid = instance_id
+            instance = self.db.instance_get_by_uuid(context, uuid)
+        else:
+            instance = self.db.instance_get(context, instance_id)
+        return dict(instance.iteritems())
 
     @scheduler_api.reroute_compute("get")
     def routing_get(self, context, instance_id):
@@ -592,17 +617,53 @@ class API(base.Base):
         """
         return self.get(context, instance_id)
 
-    def get_all_across_zones(self, context, reservation_id):
-        """Get all instances with this reservation_id, across
-        all available Zones (if any).
-        """
-        context = context.elevated()
-        instances = self.db.instance_get_all_by_reservation(
-                                    context, reservation_id)
+    def get_all(self, context, project_id=None, reservation_id=None,
+                fixed_ip=None, recurse_zones=False):
+        """Get all instances filtered by one of the given parameters.
 
-        children = scheduler_api.call_zone_method(context, "list",
-                                novaclient_collection_name="servers",
-                                reservation_id=reservation_id)
+        If there is no filter and the context is an admin, it will retreive
+        all instances in the system.
+        """
+
+        if reservation_id is not None:
+            recurse_zones = True
+            instances = self.db.instance_get_all_by_reservation(
+                                    context, reservation_id)
+        elif fixed_ip is not None:
+            try:
+                instances = self.db.fixed_ip_get_instance(context, fixed_ip)
+            except exception.FloatingIpNotFound, e:
+                if not recurse_zones:
+                    raise
+                instances = None
+        elif project_id or not context.is_admin:
+            if not context.project:
+                instances = self.db.instance_get_all_by_user(
+                    context, context.user_id)
+            else:
+                if project_id is None:
+                    project_id = context.project_id
+                instances = self.db.instance_get_all_by_project(
+                    context, project_id)
+        else:
+            instances = self.db.instance_get_all(context)
+
+        if instances is None:
+            instances = []
+        elif not isinstance(instances, list):
+            instances = [instances]
+
+        if not recurse_zones:
+            return instances
+
+        admin_context = context.elevated()
+        children = scheduler_api.call_zone_method(admin_context,
+                "list",
+                novaclient_collection_name="servers",
+                reservation_id=reservation_id,
+                project_id=project_id,
+                fixed_ip=fixed_ip,
+                recurse_zones=True)
 
         for zone, servers in children:
             for server in servers:
@@ -610,32 +671,6 @@ class API(base.Base):
                 server._info['_is_precooked'] = True
                 instances.append(server._info)
         return instances
-
-    def get_all(self, context, project_id=None, reservation_id=None,
-                fixed_ip=None):
-        """Get all instances filtered by one of the given parameters.
-
-        If there is no filter and the context is an admin, it will retreive
-        all instances in the system.
-        """
-        if reservation_id is not None:
-            return self.get_all_across_zones(context, reservation_id)
-
-        if fixed_ip is not None:
-            return self.db.fixed_ip_get_instance(context, fixed_ip)
-
-        if project_id or not context.is_admin:
-            if not context.project:
-                return self.db.instance_get_all_by_user(
-                    context, context.user_id)
-
-            if project_id is None:
-                project_id = context.project_id
-
-            return self.db.instance_get_all_by_project(
-                context, project_id)
-
-        return self.db.instance_get_all(context)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):
@@ -690,18 +725,60 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-    def snapshot(self, context, instance_id, name):
+    def backup(self, context, instance_id, name, backup_type, rotation,
+               extra_properties=None):
+        """Backup the given instance
+
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: name of the backup or snapshot
+            name = backup_type  # daily backups are called 'daily'
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        :param extra_properties: dict of extra image properties to include
+        """
+        recv_meta = self._create_image(context, instance_id, name, 'backup',
+                            backup_type=backup_type, rotation=rotation,
+                            extra_properties=extra_properties)
+        return recv_meta
+
+    def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
+
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: name of the backup or snapshot
+        :param extra_properties: dict of extra image properties to include
 
         :returns: A dict containing image metadata
         """
-        properties = {'instance_id': str(instance_id),
+        return self._create_image(context, instance_id, name, 'snapshot',
+                                  extra_properties=extra_properties)
+
+    def _create_image(self, context, instance_id, name, image_type,
+                      backup_type=None, rotation=None, extra_properties=None):
+        """Create snapshot or backup for an instance on this host.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: string for name of the snapshot
+        :param image_type: snapshot | backup
+        :param backup_type: daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        :param extra_properties: dict of extra image properties to include
+
+        """
+        instance = db.api.instance_get(context, instance_id)
+        properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
-                      'image_state': 'creating'}
+                      'image_state': 'creating',
+                      'image_type': image_type,
+                      'backup_type': backup_type}
+        properties.update(extra_properties or {})
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
-        params = {'image_id': recv_meta['id']}
+        params = {'image_id': recv_meta['id'], 'image_type': image_type,
+                  'backup_type': backup_type, 'rotation': rotation}
         self._cast_compute_message('snapshot_instance', context, instance_id,
                                    params=params)
         return recv_meta
