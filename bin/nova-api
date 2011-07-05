@@ -35,11 +35,6 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 import nova.service
 import nova.utils
 
-def create_kill_handler(launcher):
-    def handle(signal, frame):
-        launcher.stop()
-    return handle
-
 def main():
     """Launch EC2 and OSAPI services."""
     nova.utils.Bootstrapper.bootstrap_binary(sys.argv)
@@ -51,9 +46,12 @@ def main():
     launcher.launch_service(ec2)
     launcher.launch_service(osapi)
 
-    signal.signal(signal.SIGTERM, create_kill_handler(launcher))
-
-    launcher.wait()
+    signal.signal(signal.SIGTERM, lambda *_: launcher.stop())
+    
+    try:
+        launcher.wait()
+    except KeyboardInterrupt:
+        launcher.stop()
 
 
 if __name__ == '__main__':
