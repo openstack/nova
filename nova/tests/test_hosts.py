@@ -89,13 +89,13 @@ class HostTestCase(test.TestCase):
 
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update, self.req,
-                "host_c1", body=bad_body)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                self.req, "host_c1", body=bad_body)
 
     def test_bad_update_key(self):
         bad_body = {"crazy": "bad"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update, self.req,
-                "host_c1", body=bad_body)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                self.req, "host_c1", body=bad_body)
 
     def test_bad_host(self):
         self.assertRaises(exception.HostNotFound, self.controller.update,
