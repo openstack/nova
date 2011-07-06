@@ -35,6 +35,7 @@ def _parse_image_ref(image_href):
 
     :param image_href: href of an image
     :returns: a tuple of the form (image_id, host, port)
+    :raises ValueError
 
     """
     o = urlparse(image_href)
@@ -72,7 +73,7 @@ def get_glance_client(image_href):
 
     try:
         (image_id, host, port) = _parse_image_ref(image_href)
-    except:
+    except ValueError:
         raise exception.InvalidImageRef(image_href=image_href)
     glance_client = GlanceClient(host, port)
     return (glance_client, image_id)

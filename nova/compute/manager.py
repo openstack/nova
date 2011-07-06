@@ -748,7 +748,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'finish_revert_resize',
-                 'args': {'migration_id': migration_ref['id']},
+                 'args': {'instance_id': instance_ref['uuid'],
+                          'migration_id': migration_ref['id']},
                 })
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -957,8 +958,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        result))
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def set_host_enabled(self, context, instance_id=None, host=None,
-            enabled=None):
+    def host_power_action(self, context, host=None, action=None):
+        """Reboots, shuts down or powers up the host."""
+        return self.driver.host_power_action(host, action)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def set_host_enabled(self, context, host=None, enabled=None):
         """Sets the specified host's ability to accept new instances."""
         return self.driver.set_host_enabled(host, enabled)
 

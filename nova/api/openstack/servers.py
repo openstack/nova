@@ -277,6 +277,7 @@ class Controller(object):
         resp.headers['Location'] = image_ref
         return resp
 
+    @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
 
@@ -304,10 +305,16 @@ class Controller(object):
 
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
-            reboot_type = input_dict['reboot']['type']
+            valid_reboot_types = ['HARD', 'SOFT']
+            reboot_type = input_dict['reboot']['type'].upper()
+            if not valid_reboot_types.count(reboot_type):
+                msg = _("Argument 'type' for reboot is not HARD or SOFT")
+                LOG.exception(msg)
+                raise exc.HTTPBadRequest(explanation=msg)
         else:
-            LOG.exception(_("Missing argument 'type' for reboot"))
-            raise exc.HTTPUnprocessableEntity()
+            msg = _("Missing argument 'type' for reboot")
+            LOG.exception(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
@@ -327,7 +334,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.lock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::lock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -343,7 +350,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.unlock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unlock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -358,7 +365,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.get_lock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::get_lock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -373,7 +380,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.reset_network(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -388,7 +395,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.inject_network_info(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::inject_network_info %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -400,7 +407,7 @@ class Controller(object):
         ctxt = req.environ['nova.context']
         try:
             self.compute_api.pause(ctxt, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -412,7 +419,7 @@ class Controller(object):
         ctxt = req.environ['nova.context']
         try:
             self.compute_api.unpause(ctxt, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -424,7 +431,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.suspend(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -436,7 +443,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.resume(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -457,7 +464,7 @@ class Controller(object):
         context = req.environ["nova.context"]
         try:
             self.compute_api.rescue(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::rescue %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -469,7 +476,7 @@ class Controller(object):
         context = req.environ["nova.context"]
         try:
             self.compute_api.unrescue(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::unrescue %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -689,6 +696,9 @@ class ControllerV11(Controller):
         """ Resizes a given instance to the flavor size requested """
         try:
             flavor_ref = input_dict["resize"]["flavorRef"]
+            if not flavor_ref:
+                msg = _("Resize request has invalid 'flavorRef' attribute.")
+                raise exc.HTTPBadRequest(explanation=msg)
         except (KeyError, TypeError):
             msg = _("Resize requests require 'flavorRef' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -723,6 +733,7 @@ class ControllerV11(Controller):
 
         return webob.Response(status_int=202)
 
+    @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
         """Snapshot a server instance."""
         entity = input_dict.get("createImage", {})
@@ -939,8 +950,13 @@ def create_resource(version='1.0'):
         'application/xml': xml_serializer,
     }
 
+    xml_deserializer = {
+        '1.0': helper.ServerXMLDeserializer(),
+        '1.1': helper.ServerXMLDeserializerV11(),
+    }[version]
+
     body_deserializers = {
-        'application/xml': helper.ServerXMLDeserializer(),
+        'application/xml': xml_deserializer,
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)

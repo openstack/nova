@@ -261,6 +261,9 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
         if header.lower().startswith("x-image-meta-property-"):
             headers[header.lower()] = value
 
+    # Toss body so connection state-machine is ready for next request/response
+    resp.read()
+
     # NOTE(sirp): httplib under python2.4 won't accept a file-like object
     # to request
     conn.putrequest('PUT', '/v1/images/%s' % image_id)

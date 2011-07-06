@@ -103,6 +103,45 @@ def set_host_enabled(self, arg_dict):
     return {"status": status}
 
 
+def _power_action(action):
+    host_uuid = _get_host_uuid()
+    # Host must be disabled first
+    result = _run_command("xe host-disable")
+    if result:
+        raise pluginlib.PluginError(result)
+    # All running VMs must be shutdown
+    result = _run_command("xe vm-shutdown --multiple power-state=running")
+    if result:
+        raise pluginlib.PluginError(result)
+    cmds = {"reboot": "xe host-reboot", "startup": "xe host-power-on",
+            "shutdown": "xe host-shutdown"}
+    result = _run_command(cmds[action])
+    # Should be empty string
+    if result:
+        raise pluginlib.PluginError(result)
+    return {"power_action": action}
+
+
+@jsonify
+def host_reboot(self, arg_dict):
+    """Reboots the host."""
+    return _power_action("reboot")
+
+
+@jsonify
+def host_shutdown(self, arg_dict):
+    """Reboots the host."""
+    return _power_action("shutdown")
+
+
+@jsonify
+def host_start(self, arg_dict):
+    """Starts the host. Currently not feasible, since the host
+    runs on the same machine as Xen.
+    """
+    return _power_action("startup")
+
+
 @jsonify
 def host_data(self, arg_dict):
     """Runs the commands on the xenstore host to return the current status
@@ -217,4 +256,7 @@ def cleanup(dct):
 if __name__ == "__main__":
     XenAPIPlugin.dispatch(
             {"host_data": host_data,
-            "set_host_enabled": set_host_enabled})
+            "set_host_enabled": set_host_enabled,
+            "host_shutdown": host_shutdown,
+            "host_reboot": host_reboot,
+            "host_start": host_start})

@@ -379,6 +379,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "ACTIVE",
+                "progress": 100,
             },
         }
 
@@ -402,6 +403,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "QUEUED",
+                "progress": 0,
                 'server': {
                     'id': 42,
                     "links": [{
@@ -444,6 +446,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
                     status="ACTIVE"
+                    progress="100"
                     xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
@@ -463,6 +466,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
                     status="ACTIVE"
+                    progress="100"
                     xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
@@ -587,6 +591,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
         },
         {
             'id': 124,
@@ -594,6 +599,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
+            'progress': 0,
         },
         {
             'id': 125,
@@ -608,7 +614,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'active snapshot',
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
-            'status': 'ACTIVE'
+            'status': 'ACTIVE',
+            'progress': 100,
         },
         {
             'id': 127,
@@ -616,6 +623,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
+            'progress': 0,
         },
         {
             'id': 129,
@@ -623,6 +631,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
         }]
 
         self.assertDictListMatch(expected, response_list)
@@ -643,6 +652,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/123",
@@ -662,6 +672,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
+            'progress': 0,
             'server': {
                 'id': 42,
                 "links": [{
@@ -723,6 +734,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
             'server': {
                 'id': 42,
                 "links": [{
@@ -753,6 +765,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
+            'progress': 0,
             'server': {
                 'id': 42,
                 "links": [{
@@ -780,6 +793,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/129",
@@ -1001,7 +1015,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_meta = json.loads(res.body)['image']
         expected = {'id': 123, 'name': 'public image',
                     'updated': self.NOW_API_FORMAT,
-                    'created': self.NOW_API_FORMAT, 'status': 'ACTIVE'}
+                    'created': self.NOW_API_FORMAT, 'status': 'ACTIVE',
+                    'progress': 100}
         self.assertDictMatch(image_meta, expected)
 
     def test_get_image_non_existent(self):
@@ -1042,6 +1057,16 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def test_create_image_no_server_id(self):
 
         body = dict(image=dict(name='Snapshot 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_snapshots_disabled(self):
+        self.flags(allow_instance_snapshots=False)
+        body = dict(image=dict(serverId='123', name='Snapshot 1'))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)
