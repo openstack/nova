@@ -1170,8 +1170,8 @@ class ServersTest(test.TestCase):
         def fake_get_all(compute_self, context, search_opts=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('state' in search_opts)
-            self.assertEqual(search_opts['state'],
-                    [power_state.RUNNING, power_state.BLOCKED])
+            self.assertEqual(set(search_opts['state']),
+                    set([power_state.RUNNING, power_state.BLOCKED]))
             return [stub_instance(100)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
