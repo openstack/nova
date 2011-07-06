@@ -262,34 +262,60 @@ class ControllerV11(Controller):
         return {'instance_ref': server_ref}
 
 
-class ImageXMLSerializer(wsgi.XMLDictSerializer):
+class ImageXMLSerializer(wsgi.DictSerializer):
 
-    metadata = {
-        "attributes": {
-            "image": ["id", "name", "updated", "created", "status",
-                      "serverId", "progress"],
-            "link": ["rel", "href"],
-            "server": ["name", "id"],
-        },
-    }
-
-    xmlns = wsgi.XMLNS_V11
+    xmlns = {'': wsgi.XMLNS_V11, 'atom': "http://www.w3.org/2005/Atom"}
 
     def __init__(self):
         self.metadata_serializer = image_metadata.ImageMetadataXMLSerializer()
 
-    def _image_to_xml(self, xml_doc, image):
-        try:
-            metadata = image.pop('metadata').items()
-        except Exception:
-            LOG.debug(_("Image object missing metadata attribute"))
-            metadata = {}
+    def _add_xmlns(self, node):
+        for key, ns in self.xmlns.iteritems():
+            if key is not '':
+                name = 'xmlns:%s' % key
+            else:
+                name = 'xmlns'
+            node.setAttribute(name, ns)
 
-        node = self._to_xml_node(xml_doc, self.metadata, 'image', image)
-        metadata_node = self.metadata_serializer.meta_list_to_xml(xml_doc,
-                                                                  metadata)
-        node.appendChild(metadata_node)
-        return node
+    def _image_to_xml(self, xml_doc, image):
+        image_node = xml_doc.createElement('image')
+        self._add_image_attributes(image_node, image)
+
+        server_node = self._create_server_node(xml_doc, image['server'])
+        image_node.appendChild(server_node)
+
+        metadata = image.get('metadata', {})
+        metadata_node = self._create_metadata_node(xml_doc, metadata.items())
+        image_node.appendChild(metadata_node)
+
+        self._add_atom_links(xml_doc, image_node, image['links'])
+
+        return image_node
+
+    def _add_image_attributes(self, node, image):
+        node.setAttribute('id', str(image['id']))
+        node.setAttribute('name', image['name'])
+        node.setAttribute('created', image['created'])
+        node.setAttribute('updated', image['updated'])
+        node.setAttribute('status', image['status'])
+        node.setAttribute('progress', str(image['progress']))
+
+    def _create_server_node(self, xml_doc, server):
+        server_node = xml_doc.createElement('server')
+        server_node.setAttribute('id', str(server['id']))
+        server_node.setAttribute('name', server['name'])
+        self._add_atom_links(xml_doc, server_node, server['links'])
+        return server_node
+
+    def _create_metadata_node(self, xml_doc, metadata):
+        return self.metadata_serializer.meta_list_to_xml(xml_doc, metadata)
+
+    def _add_atom_links(self, xml_doc, node, links):
+        for link in links:
+            link_node = xml_doc.createElement('atom:link')
+            link_node.setAttribute('rel', link['rel'])
+            link_node.setAttribute('href', link['href'])
+            node.appendChild(link_node)
 
     def _image_list_to_xml(self, xml_doc, images):
         container_node = xml_doc.createElement('images')
@@ -307,7 +333,7 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
     def _image_list_to_xml_string(self, images):
         xml_doc = minidom.Document()
         container_node = self._image_list_to_xml(xml_doc, images)
-        self._add_xmlns(container_node)
+        self._add_xmlns(item_node)
         return container_node.toprettyxml(indent='    ')
 
     def detail(self, images_dict):

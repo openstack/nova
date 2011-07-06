@@ -1177,17 +1177,18 @@ class ImageXMLSerializationTest(test.TestCase):
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 'status': 'ACTIVE',
+                'progress': 80,
                 'server': {
                     'id': 1,
                     'name': 'Server1',
                     'links': [
                         {
-                            'href': self.SERVER_BOOKMARK,
-                            'rel': 'bookmark',
-                        },
-                        {
                             'href': self.SERVER_HREF,
                             'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
                         },
                     ],
                 },
@@ -1197,11 +1198,11 @@ class ImageXMLSerializationTest(test.TestCase):
                 'links': [
                     {
                         'href': self.IMAGE_HREF % (1,),
-                        'rel': 'bookmark',
+                        'rel': 'self',
                     },
                     {
                         'href': self.IMAGE_BOOKMARK % (1,),
-                        'rel': 'self',
+                        'rel': 'bookmark',
                     },
                 ],
             },
@@ -1225,19 +1226,21 @@ class ImageXMLSerializationTest(test.TestCase):
                 status="ACTIVE"
                 progress="80">
             <server name="Server1" id="1">
-                <atom:link rel="bookmark" href="%(expected_server_href)s"/>
-                <atom:link rel="self" href="%(expected_server_bookmark)s"/>
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
             </server>
-            <atom:link href="%(expected_href)s" rel="self"/>
-            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
             <metadata>
                 <meta key="key1">
                     value1
                 </meta>
             </metadata>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
         """.replace("  ", "") % (locals()))
 
+        print expected.toxml()
+        print '---'
         print actual.toxml()
         self.assertEqual(expected.toxml(), actual.toxml())
 
