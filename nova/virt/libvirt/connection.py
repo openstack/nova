@@ -1,4 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+o# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -96,9 +96,6 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
-flags.DEFINE_bool('allow_project_net_traffic',
-                  True,
-                  'Whether to allow in project network traffic')
 flags.DEFINE_bool('use_cow_images',
                   True,
                   'Whether to use cow images')
@@ -123,6 +120,11 @@ flags.DEFINE_string('qemu_img', 'qemu-img',
                     'binary to use for qemu-img commands')
 flags.DEFINE_bool('start_guests_on_host_boot', False,
                   'Whether to restart guests when the host reboots')
+flags.DEFINE_string('libvirt_vif_type', 'bridge',
+                    'Type of VIF to create.')
+flags.DEFINE_string('libvirt_vif_driver',
+                    'nova.virt.libvirt.vif_drivers.BridgeDriver',
+                    'The VIF driver to configure the VIFs.')
 
 
 def get_connection(read_only):
@@ -165,6 +167,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         fw_class = utils.import_class(FLAGS.firewall_driver)
         self.firewall_driver = fw_class(get_connection=self._get_connection)
+        self.vif_driver = utils.import_object(FLAGS.libvirt_vif_driver)
 
     def init_host(self, host):
         # Adopt existing VM's running here
@@ -926,40 +929,6 @@ class LibvirtConnection(driver.ComputeDriver):
         if FLAGS.libvirt_type == 'uml':
             utils.execute('sudo', 'chown', 'root', basepath('disk'))
 
-    def _get_nic_for_xml(self, network, mapping):
-        # Assume that the gateway also acts as the dhcp server.
-        dhcp_server = mapping['gateway']
-        gateway6 = mapping.get('gateway6')
-        mac_id = mapping['mac'].replace(':', '')
-
-        if FLAGS.allow_project_net_traffic:
-            template = "<parameter name=\"%s\"value=\"%s\" />\n"
-            net, mask = netutils.get_net_and_mask(network['cidr'])
-            values = [("PROJNET", net), ("PROJMASK", mask)]
-            if FLAGS.use_ipv6:
-                net_v6, prefixlen_v6 = netutils.get_net_and_prefixlen(
-                                           network['cidr_v6'])
-                values.extend([("PROJNETV6", net_v6),
-                               ("PROJMASKV6", prefixlen_v6)])
-
-            extra_params = "".join([template % value for value in values])
-        else:
-            extra_params = "\n"
-
-        result = {
-            'id': mac_id,
-            'bridge_name': network['bridge'],
-            'mac_address': mapping['mac'],
-            'ip_address': mapping['ips'][0]['ip'],
-            'dhcp_server': dhcp_server,
-            'extra_params': extra_params,
-        }
-
-        if gateway6:
-            result['gateway6'] = gateway6 + "/128"
-
-        return result
-
     root_mount_device = 'vda'  # FIXME for now. it's hard coded.
     local_mount_device = 'vdb'  # FIXME for now. it's hard coded.
 
@@ -981,7 +950,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         nics = []
         for (network, mapping) in network_info:
-            nics.append(self._get_nic_for_xml(network, mapping))
+            nics.append(self.vif_driver(instance, network, mapping))
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
@@ -1010,6 +979,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     'rescue': rescue,
                     'local': local_gb,
                     'driver_type': driver_type,
+                    'vif_type': FLAGS.libvirt_vif_type,
                     'nics': nics,
                     'ebs_root': ebs_root,
                     'volumes': block_device_mapping}
