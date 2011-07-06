@@ -26,7 +26,7 @@ class L2Driver(object):
         """Create a bridge unless it already exists."""
         raise NotImplementedError()
 
-    def ensure_vlan(vlan_num, bridge_interface):
+    def ensure_vlan(vlan_num, bridge_interface, net_attrs=None):
         """Create a vlan unless it already exists."""
         raise NotImplementedError()
 
@@ -38,9 +38,9 @@ class LinuxBridgeDriver(L2Driver):
         """Create a Linux bridge unless it already eixsts."""
         linux_net.ensure_bridge(bridge, interface, net_attrs)
 
-    def ensure_vlan(vlan_num, bridge_interface):
+    def ensure_vlan(vlan_num, bridge_interface, net_attrs=None):
         """Create a vlan unless it already exists."""
-        return linux_net.ensure_vlan(vlan_num, bridge_interface)
+        return linux_net.ensure_vlan(vlan_num, bridge_interface, net_attrs)
 
 
 class QuantumDriver(L2Driver):
@@ -50,7 +50,7 @@ class QuantumDriver(L2Driver):
         """Do nothing."""
         pass
 
-    def ensure_vlan(vlan_num, bridge_interface):
+    def ensure_vlan(vlan_num, bridge_interface, net_attrs=None):
         """Return None."""
         return None
     
