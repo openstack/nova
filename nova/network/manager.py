@@ -480,12 +480,23 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = [self.db.network_get(context, network_id)]
         self._allocate_fixed_ips(context, instance_id, networks)
 
-    def remove_fixed_ip_from_instance(self, context, instance_id, network_id):
+
+    #TODO(sandy) - PEP8 until this is checked ...
+    def remove_fixed_ip_from_instance(self, context, instance_id, network_id,
+                                      ip):
         """Removes a fixed ip from an instance from specified network."""
         networks = [self.db.network_get(context, network_id)]
-        # TODO(sandy): Do the right thing here ...
-        x = 1+1 #  pep8 to catch this.
-        self._allocate_fixed_ips(context, instance_id, networks)
+        # Find the network that contains this IP ...
+        network = None
+        for n in networks:
+            if ip in n:
+                network = n
+                break
+        if not network:
+            raise exception.InvalidIP(ip=ip)
+
+        self.deallocate_fixed_ips(context, ip)
+
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -696,10 +707,14 @@ class FlatManager(NetworkManager):
         for network in networks:
             self.allocate_fixed_ip(context, instance_id, network)
 
-    def deallocate_fixed_ip(self, context, address, **kwargs):
-        """Returns a fixed ip to the pool."""
-        super(FlatManager, self).deallocate_fixed_ip(context, address,
-                                                              **kwargs)
+
+    # TODO(sandy): Switched to multi-IP support
+    def deallocate_fixed_ip(self, context, networks, **kwargs):
+        """Returns a list of fixed ips to the pool."""
+        for network in networks:
+            address = network['address']
+            super(FlatManager, self).deallocate_fixed_ip(context, address,
+                                                         **kwargs)
         self.db.fixed_ip_disassociate(context, address)
 
     def setup_compute_network(self, context, instance_id):

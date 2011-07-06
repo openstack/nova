@@ -156,13 +156,18 @@ class API(base.Base):
                  {'method': 'add_fixed_ip_to_instance',
                   'args': args})
 
-    def remove_fixed_ip_from_instance(self, context, instance_id, network_id):
+
+    # TODO(sandy) pep8 until checked
+    def remove_fixed_ip_from_instance(self, context, instance_id, network_id,
+                                      ip):
         """Removes a fixed ip from instance from specified network."""
         args = {'instance_id': instance_id,
-                'network_id': network_id}
+                'network_id': network_id,
+                'ip': ip}
         rpc.cast(context, FLAGS.network_topic,
                  {'method': 'remove_fixed_ip_from_instance',
                   'args': args})
+
 
     def add_network_to_project(self, context, project_id):
         """Force adds another network to a project."""
