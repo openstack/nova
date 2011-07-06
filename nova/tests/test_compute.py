@@ -949,23 +949,32 @@ class ComputeTestCase(test.TestCase):
         instance_id2 = self._create_instance({'id': 20})
         instance_id3 = self._create_instance({'id': 30})
 
+        vif_ref1 = db.virtual_interface_create(c,
+                {'address': '12:34:56:78:90:12',
+                 'instance_id': instance_id1,
+                 'network_id': 1})
+        vif_ref2 = db.virtual_interface_create(c,
+                {'address': '90:12:34:56:78:90',
+                 'instance_id': instance_id2,
+                 'network_id': 1})
+
         db.fixed_ip_create(c,
                 {'address': '1.1.1.1',
-                 'instance_id': instance_id1})
+                 'instance_id': instance_id1,
+                 'virtual_interface_id': vif_ref1['id']})
         db.fixed_ip_create(c,
                 {'address': '1.1.2.1',
-                 'instance_id': instance_id2})
+                 'instance_id': instance_id2,
+                 'virtual_interface_id': vif_ref2['id']})
 
         # regex not allowed
-        self.assertRaises(exception.NotFound,
-                self.compute_api.get_all,
-                c,
+        instances = self.compute_api.get_all(c,
                 search_opts={'fixed_ip': '.*'})
+        self.assertEqual(len(instances), 0)
 
-        self.assertRaises(exception.NotFound,
-                self.compute_api.get_all,
-                c,
+        instances = self.compute_api.get_all(c,
                 search_opts={'fixed_ip': '1.1.3.1'})
+        self.assertEqual(len(instances), 0)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'fixed_ip': '1.1.1.1'})
@@ -977,6 +986,8 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0].id, instance_id2)
 
+        db.virtual_interface_delete(c, vif_ref1['id'])
+        db.virtual_interface_delete(c, vif_ref2['id'])
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
 

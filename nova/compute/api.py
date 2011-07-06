@@ -683,44 +683,49 @@ class API(base.Base):
         LOG.debug(_("Searching by: %s") % str(search_opts))
 
         # Fixups for the DB call
-        filters = search_opts.copy()
-        recurse_zones = filters.pop('recurse_zones', False)
-        if 'image' in filters:
-            filters['image_ref'] = filters['image']
-            del filters['image']
-        invalid_flavor = False
-        if 'flavor' in filters:
-            instance_type = self.db.instance_type_get_by_flavor_id(
-                    context, filters['flavor'])
-            filters['instance_type_id'] = instance_type['id']
-            del filters['flavor']
-        # 'name' means Instance.display_name
-        # 'instance_name' means Instance.name
-        if 'name' in filters:
-            filters['display_name'] = filters['name']
-            del filters['name']
-        if 'instance_name' in filters:
-            filters['name'] = filters['instance_name']
-            del filters['instance_name']
+        filters = {}
 
+        def _remap_flavor_filter(flavor_id):
+            instance_type = self.db.instance_type_get_by_flavor_id(
+                    context, flavor_id)
+            filters['instance_type_id'] = instance_type['id']
+
+        def _remap_fixed_ip_filter(fixed_ip):
+            # Turn fixed_ip into a regexp match. Since '.' matches
+            # any character, we need to use regexp escaping for it.
+            filters['ip'] = '^%s$' % fixed_ip.replace('.', '\\.')
+
+        # search_option to filter_name mapping.
+        filter_mapping = {
+                'image': 'image_ref',
+                'name': 'display_name',
+                'instance_name': 'name',
+                'recurse_zones': None,
+                'flavor': _remap_flavor_filter,
+                'fixed_ip': _remap_fixed_ip_filter}
+
+        # copy from search_opts, doing various remappings as necessary
+        for opt, value in search_opts.iteritems():
+            # Do remappings.
+            # Values not in the filter_mapping table are copied as-is.
+            # If remapping is None, option is not copied
+            # If the remapping is a string, it is the filter_name to use
+            try:
+                remap_object = filter_mapping[opt]
+            except KeyError:
+                filters[opt] = value
+            else:
+                if remap_object:
+                    if isinstance(remap_object, basestring):
+                        filters[remap_object] = value
+                    else:
+                        remap_object(value)
+
+        recurse_zones = search_opts.get('recurse_zones', False)
         if 'reservation_id' in filters:
             recurse_zones = True
 
-        if 'fixed_ip' in search_opts:
-            # special cased for ec2.  we end up ignoring all other
-            # search options.
-            try:
-                instance = self.db.instance_get_by_fixed_ip(context,
-                        search_opts['fixed_ip'])
-            except exception.FloatingIpNotFound, e:
-                if not recurse_zones:
-                    raise
-            if instance:
-                return [instance]
-            instances = []
-            # fall through
-        else:
-            instances = self.db.instance_get_all_by_filters(context, filters)
+        instances = self.db.instance_get_all_by_filters(context, filters)
 
         if not recurse_zones:
             return instances
@@ -742,12 +747,6 @@ class API(base.Base):
                 # Results are ready to send to user. No need to scrub.
                 server._info['_is_precooked'] = True
                 instances.append(server._info)
-
-        # fixed_ip searching should return a FixedIpNotFound exception
-        # when an instance is not found...
-        fixed_ip = search_opts.get('fixed_ip', None)
-        if fixed_ip and not instances:
-            raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
 
         return instances
 

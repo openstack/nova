@@ -242,7 +242,7 @@ class CloudController(object):
                     search_opts=search_opts)
         except exception.NotFound:
             instance_ref = None
-        if instance_ref is None:
+        if not instance_ref:
             return None
 
         # This ensures that all attributes of the instance
