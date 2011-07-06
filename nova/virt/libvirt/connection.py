@@ -38,8 +38,10 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 import hashlib
 import multiprocessing
+import netaddr
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -51,8 +53,6 @@ from xml.etree import ElementTree
 
 from eventlet import greenthread
 from eventlet import tpool
-
-import IPy
 
 from nova import context
 from nova import db
@@ -148,6 +148,10 @@ def _late_load_cheetah():
         Template = t.Template
 
 
+def _strip_dev(mount_path):
+        return re.sub(r'^/dev/', '', mount_path)
+
+
 class LibvirtConnection(driver.ComputeDriver):
 
     def __init__(self, read_only):
@@ -181,6 +185,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             if state != power_state.RUNNING:
                 continue
+            self.firewall_driver.setup_basic_filtering(instance)
             self.firewall_driver.prepare_instance_filter(instance)
             self.firewall_driver.apply_instance_filter(instance)
 
@@ -575,11 +580,14 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception
-    def spawn(self, instance, network_info=None):
-        xml = self.to_xml(instance, False, network_info)
+    def spawn(self, instance, network_info=None, block_device_mapping=None):
+        xml = self.to_xml(instance, False, network_info=network_info,
+                          block_device_mapping=block_device_mapping)
+        block_device_mapping = block_device_mapping or []
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_image(instance, xml, network_info=network_info)
+        self._create_image(instance, xml, network_info=network_info,
+                           block_device_mapping=block_device_mapping)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
@@ -761,9 +769,8 @@ class LibvirtConnection(driver.ComputeDriver):
         # TODO(vish): should we format disk by default?
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
-                        network_info=None):
-        if not network_info:
-            network_info = netutils.get_network_info(inst)
+                        network_info=None, block_device_mapping=None):
+        block_device_mapping = block_device_mapping or []
 
         if not suffix:
             suffix = ''
@@ -824,16 +831,19 @@ class LibvirtConnection(driver.ComputeDriver):
             size = None
             root_fname += "_sm"
 
-        self._cache_image(fn=self._fetch_image,
-                          target=basepath('disk'),
-                          fname=root_fname,
-                          cow=FLAGS.use_cow_images,
-                          image_id=disk_images['image_id'],
-                          user=user,
-                          project=project,
-                          size=size)
+        if not self._volume_in_mapping(self.root_mount_device,
+                                       block_device_mapping):
+            self._cache_image(fn=self._fetch_image,
+                              target=basepath('disk'),
+                              fname=root_fname,
+                              cow=FLAGS.use_cow_images,
+                              image_id=disk_images['image_id'],
+                              user=user,
+                              project=project,
+                              size=size)
 
-        if inst_type['local_gb']:
+        if inst_type['local_gb'] and not self._volume_in_mapping(
+            self.local_mount_device, block_device_mapping):
             self._cache_image(fn=self._create_local,
                               target=basepath('disk.local'),
                               fname="local_%s" % inst_type['local_gb'],
@@ -869,18 +879,20 @@ class LibvirtConnection(driver.ComputeDriver):
 
             have_injected_networks = True
             address = mapping['ips'][0]['ip']
+            netmask = mapping['ips'][0]['netmask']
             address_v6 = None
             if FLAGS.use_ipv6:
                 address_v6 = mapping['ip6s'][0]['ip']
+                netmask_v6 = mapping['ip6s'][0]['netmask']
             net_info = {'name': 'eth%d' % ifc_num,
                    'address': address,
-                   'netmask': network_ref['netmask'],
-                   'gateway': network_ref['gateway'],
-                   'broadcast': network_ref['broadcast'],
-                   'dns': network_ref['dns'],
+                   'netmask': netmask,
+                   'gateway': mapping['gateway'],
+                   'broadcast': mapping['broadcast'],
+                   'dns': mapping['dns'],
                    'address_v6': address_v6,
-                   'gateway_v6': network_ref['gateway_v6'],
-                   'netmask_v6': network_ref['netmask_v6']}
+                   'gateway6': mapping['gateway6'],
+                   'netmask_v6': netmask_v6}
             nets.append(net_info)
 
         if have_injected_networks:
@@ -916,8 +928,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _get_nic_for_xml(self, network, mapping):
         # Assume that the gateway also acts as the dhcp server.
-        dhcp_server = network['gateway']
-        gateway_v6 = network['gateway_v6']
+        dhcp_server = mapping['gateway']
+        gateway6 = mapping.get('gateway6')
         mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_project_net_traffic:
@@ -943,12 +955,25 @@ class LibvirtConnection(driver.ComputeDriver):
             'extra_params': extra_params,
         }
 
-        if gateway_v6:
-            result['gateway_v6'] = gateway_v6 + "/128"
+        if gateway6:
+            result['gateway6'] = gateway6 + "/128"
 
         return result
 
-    def _prepare_xml_info(self, instance, rescue=False, network_info=None):
+    root_mount_device = 'vda'  # FIXME for now. it's hard coded.
+    local_mount_device = 'vdb'  # FIXME for now. it's hard coded.
+
+    def _volume_in_mapping(self, mount_device, block_device_mapping):
+        mount_device_ = _strip_dev(mount_device)
+        for vol in block_device_mapping:
+            vol_mount_device = _strip_dev(vol['mount_device'])
+            if vol_mount_device == mount_device_:
+                return True
+        return False
+
+    def _prepare_xml_info(self, instance, rescue=False, network_info=None,
+                          block_device_mapping=None):
+        block_device_mapping = block_device_mapping or []
         # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
         if not network_info:
@@ -966,6 +991,16 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             driver_type = 'raw'
 
+        for vol in block_device_mapping:
+            vol['mount_device'] = _strip_dev(vol['mount_device'])
+        ebs_root = self._volume_in_mapping(self.root_mount_device,
+                                           block_device_mapping)
+        if self._volume_in_mapping(self.local_mount_device,
+                                   block_device_mapping):
+            local_gb = False
+        else:
+            local_gb = inst_type['local_gb']
+
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
@@ -973,9 +1008,11 @@ class LibvirtConnection(driver.ComputeDriver):
                     'memory_kb': inst_type['memory_mb'] * 1024,
                     'vcpus': inst_type['vcpus'],
                     'rescue': rescue,
-                    'local': inst_type['local_gb'],
+                    'local': local_gb,
                     'driver_type': driver_type,
-                    'nics': nics}
+                    'nics': nics,
+                    'ebs_root': ebs_root,
+                    'volumes': block_device_mapping}
 
         if FLAGS.vnc_enabled:
             if FLAGS.libvirt_type != 'lxc':
@@ -991,10 +1028,13 @@ class LibvirtConnection(driver.ComputeDriver):
             xml_info['disk'] = xml_info['basepath'] + "/disk"
         return xml_info
 
-    def to_xml(self, instance, rescue=False, network_info=None):
+    def to_xml(self, instance, rescue=False, network_info=None,
+               block_device_mapping=None):
+        block_device_mapping = block_device_mapping or []
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-        xml_info = self._prepare_xml_info(instance, rescue, network_info)
+        xml_info = self._prepare_xml_info(instance, rescue, network_info,
+                                          block_device_mapping)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
         LOG.debug(_('instance %s: finished toXML method'), instance['name'])
         return xml
@@ -1342,6 +1382,9 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
+
+    def refresh_provider_fw_rules(self):
+        self.firewall_driver.refresh_provider_fw_rules()
 
     def update_available_resource(self, ctxt, host):
         """Updates compute manager resource info on ComputeNode table.

@@ -34,6 +34,7 @@ from nova import utils
 from nova import volume
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute.utils import terminate_volumes
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
@@ -47,9 +48,39 @@ flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
 
 
-def generate_default_hostname(instance_id):
+def generate_default_hostname(instance):
     """Default function to generate a hostname given an instance reference."""
-    return str(instance_id)
+    display_name = instance['display_name']
+    if display_name is None:
+        return 'server_%d' % (instance['id'],)
+    table = ''
+    deletions = ''
+    for i in xrange(256):
+        c = chr(i)
+        if ('a' <= c <= 'z') or ('0' <= c <= '9') or (c == '-'):
+            table += c
+        elif c == ' ':
+            table += '_'
+        elif ('A' <= c <= 'Z'):
+            table += c.lower()
+        else:
+            table += '\0'
+            deletions += c
+    if isinstance(display_name, unicode):
+        display_name = display_name.encode('latin-1', 'ignore')
+    return display_name.translate(table, deletions)
+
+
+def _is_able_to_shutdown(instance, instance_id):
+    states = {'terminating': "Instance %s is already being terminated",
+              'migrating': "Instance %s is being migrated",
+              'stopping': "Instance %s is being stopped"}
+    msg = states.get(instance['state_description'])
+    if msg:
+        LOG.warning(_(msg), instance_id)
+        return False
+
+    return True
 
 
 class API(base.Base):
@@ -113,16 +144,21 @@ class API(base.Base):
 
     def _check_create_parameters(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, admin_password=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None,
+               reservation_id=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
+        if not min_count:
+            min_count = 1
+        if not max_count:
+            max_count = min_count
 
         num_instances = quota.allowed_instances(context, max_count,
                                                 instance_type)
@@ -147,6 +183,12 @@ class API(base.Base):
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
             os_type = image['properties']['os_type']
+        architecture = None
+        if 'properties' in image and 'arch' in image['properties']:
+            architecture = image['properties']['arch']
+        vm_mode = None
+        if 'properties' in image and 'vm_mode' in image['properties']:
+            vm_mode = image['properties']['vm_mode']
 
         if kernel_id is None:
             kernel_id = image['properties'].get('kernel_id', None)
@@ -166,25 +208,17 @@ class API(base.Base):
         if ramdisk_id:
             image_service.show(context, ramdisk_id)
 
-        if security_group is None:
-            security_group = ['default']
-        if not type(security_group) is list:
-            security_group = [security_group]
-
-        security_groups = []
         self.ensure_default_security_group(context)
-        for security_group_name in security_group:
-            group = db.security_group_get_by_name(context,
-                                                  context.project_id,
-                                                  security_group_name)
-            security_groups.append(group['id'])
 
         if key_data is None and key_name:
             key_pair = db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
 
+        if reservation_id is None:
+            reservation_id = utils.generate_uid('r')
+
         base_options = {
-            'reservation_id': utils.generate_uid('r'),
+            'reservation_id': reservation_id,
             'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
@@ -205,36 +239,70 @@ class API(base.Base):
             'locked': False,
             'metadata': metadata,
             'availability_zone': availability_zone,
-            'os_type': os_type}
+            'os_type': os_type,
+            'architecture': architecture,
+            'vm_mode': vm_mode}
 
-        return (num_instances, base_options, security_groups)
+        return (num_instances, base_options)
 
     def create_db_entry_for_new_instance(self, context, base_options,
-             security_groups, num=1):
+             security_group, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
-        including any related table updates (such as security
-        groups, MAC address, etc). This will called by create()
-        in the majority of situations, but all-at-once style
-        Schedulers may initiate the call."""
-        instance = dict(mac_address=utils.generate_mac(),
-                        launch_index=num,
-                        **base_options)
+        including any related table updates (such as security group,
+        etc).
+
+        This will called by create() in the majority of situations,
+        but create_all_at_once() style Schedulers may initiate the call.
+        If you are changing this method, be sure to update both
+        call paths.
+        """
+        instance = dict(launch_index=num, **base_options)
         instance = self.db.instance_create(context, instance)
         instance_id = instance['id']
 
         elevated = context.elevated()
-        if not security_groups:
-            security_groups = []
+        if security_group is None:
+            security_group = ['default']
+        if not isinstance(security_group, list):
+            security_group = [security_group]
+
+        security_groups = []
+        for security_group_name in security_group:
+            group = db.security_group_get_by_name(context,
+                                                  context.project_id,
+                                                  security_group_name)
+            security_groups.append(group['id'])
+
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
                                                 instance_id,
                                                 security_group_id)
 
+        block_device_mapping = block_device_mapping or []
+        # NOTE(yamahata)
+        # tell vm driver to attach volume at boot time by updating
+        # BlockDeviceMapping
+        for bdm in block_device_mapping:
+            LOG.debug(_('bdm %s'), bdm)
+            assert 'device_name' in bdm
+            values = {
+                'instance_id': instance_id,
+                'device_name': bdm['device_name'],
+                'delete_on_termination': bdm.get('delete_on_termination'),
+                'virtual_name': bdm.get('virtual_name'),
+                'snapshot_id': bdm.get('snapshot_id'),
+                'volume_id': bdm.get('volume_id'),
+                'volume_size': bdm.get('volume_size'),
+                'no_device': bdm.get('no_device')}
+            self.db.block_device_mapping_create(elevated, values)
+
         # Set sane defaults if not specified
-        updates = dict(hostname=self.hostname_factory(instance_id))
+        updates = {}
         if (not hasattr(instance, 'display_name') or
                 instance.display_name is None):
             updates['display_name'] = "Server %s" % instance_id
+            instance['display_name'] = updates['display_name']
+        updates['hostname'] = self.hostname_factory(instance)
 
         instance = self.update(context, instance_id, **updates)
 
@@ -264,7 +332,7 @@ class API(base.Base):
             'instance_type': instance_type,
             'filter': filter_class,
             'blob': zone_blob,
-            'num_instances': num_instances
+            'num_instances': num_instances,
         }
 
         rpc.cast(context,
@@ -279,23 +347,24 @@ class API(base.Base):
 
     def create_all_at_once(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, admin_password=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None,
+               reservation_id=None, block_device_mapping=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
-        num_instances, base_options, security_groups = \
-                    self._check_create_parameters(
+        num_instances, base_options = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
                                display_name, display_description,
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
-                               injected_files, admin_password, zone_blob)
+                               injected_files, admin_password, zone_blob,
+                               reservation_id)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
@@ -307,35 +376,40 @@ class API(base.Base):
 
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, admin_password=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None,
+               reservation_id=None, block_device_mapping=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
         Scheduler drivers, but may remove the effectiveness of the
         more complicated drivers.
 
+        NOTE: If you change this method, be sure to change
+        create_all_at_once() at the same time!
+
         Returns a list of instance dicts.
         """
 
-        num_instances, base_options, security_groups = \
-                    self._check_create_parameters(
+        num_instances, base_options = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
                                display_name, display_description,
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
-                               injected_files, admin_password, zone_blob)
+                               injected_files, admin_password, zone_blob,
+                               reservation_id)
 
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = self.create_db_entry_for_new_instance(context,
-                                    base_options, security_groups, num=num)
+                                    base_options, security_group,
+                                    block_device_mapping, num=num)
             instances.append(instance)
             instance_id = instance['id']
 
@@ -431,6 +505,16 @@ class API(base.Base):
                      {"method": "refresh_security_group_members",
                       "args": {"security_group_id": group_id}})
 
+    def trigger_provider_fw_rules_refresh(self, context):
+        """Called when a rule is added to or removed from a security_group"""
+
+        hosts = [x['host'] for (x, idx)
+                           in db.service_get_all_compute_sorted(context)]
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {'method': 'refresh_provider_fw_rules', 'args': {}})
+
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
@@ -445,24 +529,22 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 
+    def _get_instance(self, context, instance_id, action_str):
+        try:
+            return self.get(context, instance_id)
+        except exception.NotFound:
+            LOG.warning(_("Instance %(instance_id)s was not found during "
+                          "%(action_str)s") %
+                        {'instance_id': instance_id, 'action_str': action_str})
+            raise
+
     @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate %s"), instance_id)
-        try:
-            instance = self.get(context, instance_id)
-        except exception.NotFound:
-            LOG.warning(_("Instance %s was not found during terminate"),
-                        instance_id)
-            raise
+        instance = self._get_instance(context, instance_id, 'terminating')
 
-        if instance['state_description'] == 'terminating':
-            LOG.warning(_("Instance %s is already being terminated"),
-                        instance_id)
-            return
-
-        if instance['state_description'] == 'migrating':
-            LOG.warning(_("Instance %s is being migrated"), instance_id)
+        if not _is_able_to_shutdown(instance, instance_id):
             return
 
         self.update(context,
@@ -476,12 +558,59 @@ class API(base.Base):
             self._cast_compute_message('terminate_instance', context,
                     instance_id, host)
         else:
+            terminate_volumes(self.db, context, instance_id)
             self.db.instance_destroy(context, instance_id)
+
+    @scheduler_api.reroute_compute("stop")
+    def stop(self, context, instance_id):
+        """Stop an instance."""
+        LOG.debug(_("Going to try to stop %s"), instance_id)
+
+        instance = self._get_instance(context, instance_id, 'stopping')
+        if not _is_able_to_shutdown(instance, instance_id):
+            return
+
+        self.update(context,
+                    instance['id'],
+                    state_description='stopping',
+                    state=power_state.NOSTATE,
+                    terminated_at=utils.utcnow())
+
+        host = instance['host']
+        if host:
+            self._cast_compute_message('stop_instance', context,
+                    instance_id, host)
+
+    def start(self, context, instance_id):
+        """Start an instance."""
+        LOG.debug(_("Going to try to start %s"), instance_id)
+        instance = self._get_instance(context, instance_id, 'starting')
+        if instance['state_description'] != 'stopped':
+            _state_description = instance['state_description']
+            LOG.warning(_("Instance %(instance_id)s is not "
+                          "stopped(%(_state_description)s)") % locals())
+            return
+
+        # TODO(yamahata): injected_files isn't supported right now.
+        #                 It is used only for osapi. not for ec2 api.
+        #                 availability_zone isn't used by run_instance.
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "start_instance",
+                  "args": {"topic": FLAGS.compute_topic,
+                           "instance_id": instance_id}})
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
-        rv = self.db.instance_get(context, instance_id)
-        return dict(rv.iteritems())
+        # NOTE(sirp): id used to be exclusively integer IDs; now we're
+        # accepting both UUIDs and integer IDs. The handling of this
+        # is done in db/sqlalchemy/api/instance_get
+        if utils.is_uuid_like(instance_id):
+            uuid = instance_id
+            instance = self.db.instance_get_by_uuid(context, uuid)
+        else:
+            instance = self.db.instance_get(context, instance_id)
+        return dict(instance.iteritems())
 
     @scheduler_api.reroute_compute("get")
     def routing_get(self, context, instance_id):
@@ -494,31 +623,59 @@ class API(base.Base):
         return self.get(context, instance_id)
 
     def get_all(self, context, project_id=None, reservation_id=None,
-                fixed_ip=None):
+                fixed_ip=None, recurse_zones=False):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retreive
         all instances in the system.
         """
+
         if reservation_id is not None:
-            return self.db.instance_get_all_by_reservation(
-                context, reservation_id)
-
-        if fixed_ip is not None:
-            return self.db.fixed_ip_get_instance(context, fixed_ip)
-
-        if project_id or not context.is_admin:
+            recurse_zones = True
+            instances = self.db.instance_get_all_by_reservation(
+                                    context, reservation_id)
+        elif fixed_ip is not None:
+            try:
+                instances = self.db.fixed_ip_get_instance(context, fixed_ip)
+            except exception.FloatingIpNotFound, e:
+                if not recurse_zones:
+                    raise
+                instances = None
+        elif project_id or not context.is_admin:
             if not context.project:
-                return self.db.instance_get_all_by_user(
+                instances = self.db.instance_get_all_by_user(
                     context, context.user_id)
+            else:
+                if project_id is None:
+                    project_id = context.project_id
+                instances = self.db.instance_get_all_by_project(
+                    context, project_id)
+        else:
+            instances = self.db.instance_get_all(context)
 
-            if project_id is None:
-                project_id = context.project_id
+        if instances is None:
+            instances = []
+        elif not isinstance(instances, list):
+            instances = [instances]
 
-            return self.db.instance_get_all_by_project(
-                context, project_id)
+        if not recurse_zones:
+            return instances
 
-        return self.db.instance_get_all(context)
+        admin_context = context.elevated()
+        children = scheduler_api.call_zone_method(admin_context,
+                "list",
+                novaclient_collection_name="servers",
+                reservation_id=reservation_id,
+                project_id=project_id,
+                fixed_ip=fixed_ip,
+                recurse_zones=True)
+
+        for zone, servers in children:
+            for server in servers:
+                # Results are ready to send to user. No need to scrub.
+                server._info['_is_precooked'] = True
+                instances.append(server._info)
+        return instances
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):
@@ -573,18 +730,60 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-    def snapshot(self, context, instance_id, name):
+    def backup(self, context, instance_id, name, backup_type, rotation,
+               extra_properties=None):
+        """Backup the given instance
+
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: name of the backup or snapshot
+            name = backup_type  # daily backups are called 'daily'
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        :param extra_properties: dict of extra image properties to include
+        """
+        recv_meta = self._create_image(context, instance_id, name, 'backup',
+                            backup_type=backup_type, rotation=rotation,
+                            extra_properties=extra_properties)
+        return recv_meta
+
+    def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
+
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: name of the backup or snapshot
+        :param extra_properties: dict of extra image properties to include
 
         :returns: A dict containing image metadata
         """
-        properties = {'instance_id': str(instance_id),
+        return self._create_image(context, instance_id, name, 'snapshot',
+                                  extra_properties=extra_properties)
+
+    def _create_image(self, context, instance_id, name, image_type,
+                      backup_type=None, rotation=None, extra_properties=None):
+        """Create snapshot or backup for an instance on this host.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param name: string for name of the snapshot
+        :param image_type: snapshot | backup
+        :param backup_type: daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        :param extra_properties: dict of extra image properties to include
+
+        """
+        instance = db.api.instance_get(context, instance_id)
+        properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
-                      'image_state': 'creating'}
+                      'image_state': 'creating',
+                      'image_type': image_type,
+                      'backup_type': backup_type}
+        properties.update(extra_properties or {})
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
-        params = {'image_id': recv_meta['id']}
+        params = {'image_id': recv_meta['id'], 'image_type': image_type,
+                  'backup_type': backup_type, 'rotation': rotation}
         self._cast_compute_message('snapshot_instance', context, instance_id,
                                    params=params)
         return recv_meta
@@ -688,14 +887,14 @@ class API(base.Base):
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):
-        """add fixed_ip from specified network to given instance"""
+        """Add fixed_ip from specified network to given instance."""
         self._cast_compute_message('add_fixed_ip_to_instance', context,
                                                               instance_id,
                                                               network_id)
 
     #TODO(tr3buchet): how to run this in the correct zone?
     def add_network_to_project(self, context, project_id):
-        """force adds a network to the project"""
+        """Force adds a network to the project."""
         # this will raise if zone doesn't know about project so the decorator
         # can catch it and pass it down
         self.db.project_get(context, project_id)
@@ -845,9 +1044,9 @@ class API(base.Base):
         return instance
 
     def associate_floating_ip(self, context, instance_id, address):
-        """makes calls to network_api to associate_floating_ip
+        """Makes calls to network_api to associate_floating_ip.
 
-        address is a string floating ip address
+        :param address: is a string floating ip address
         """
         instance = self.get(context, instance_id)
 
@@ -868,7 +1067,8 @@ class API(base.Base):
                     "unable to associate floating ip") % instance_id
             raise exception.ApiError(msg)
         if len(fixed_ip_addrs) > 1:
-            LOG.warning(_("multiple fixed_ips exist, using the first"))
+            LOG.warning(_("multiple fixed_ips exist, using the first: %s"),
+                                                         fixed_ip_addrs[0])
         self.network_api.associate_floating_ip(context,
                                                floating_ip=address,
                                                fixed_ip=fixed_ip_addrs[0])

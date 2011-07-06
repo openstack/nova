@@ -10,13 +10,13 @@ from nova.api.openstack import wsgi
 
 class RequestTest(test.TestCase):
     def test_content_type_missing(self):
-        request = wsgi.Request.blank('/tests/123')
+        request = wsgi.Request.blank('/tests/123', method='POST')
         request.body = "<body />"
         self.assertRaises(exception.InvalidContentType,
                           request.get_content_type)
 
     def test_content_type_unsupported(self):
-        request = wsgi.Request.blank('/tests/123')
+        request = wsgi.Request.blank('/tests/123', method='POST')
         request.headers["Content-Type"] = "text/html"
         request.body = "asdf<br />"
         self.assertRaises(exception.InvalidContentType,
@@ -89,6 +89,12 @@ class DictSerializerTest(test.TestCase):
         serializer.default = lambda x: 'trousers'
         self.assertEqual(serializer.serialize({}, 'update'), 'trousers')
 
+    def test_dispatch_action_None(self):
+        serializer = wsgi.DictSerializer()
+        serializer.create = lambda x: 'pants'
+        serializer.default = lambda x: 'trousers'
+        self.assertEqual(serializer.serialize({}, None), 'trousers')
+
 
 class XMLDictSerializerTest(test.TestCase):
     def test_xml(self):
@@ -122,6 +128,12 @@ class TextDeserializerTest(test.TestCase):
         deserializer.create = lambda x: 'pants'
         deserializer.default = lambda x: 'trousers'
         self.assertEqual(deserializer.deserialize({}, 'update'), 'trousers')
+
+    def test_dispatch_action_None(self):
+        deserializer = wsgi.TextDeserializer()
+        deserializer.create = lambda x: 'pants'
+        deserializer.default = lambda x: 'trousers'
+        self.assertEqual(deserializer.deserialize({}, None), 'trousers')
 
 
 class JSONDeserializerTest(test.TestCase):
@@ -171,11 +183,11 @@ class XMLDeserializerTest(test.TestCase):
 class ResponseSerializerTest(test.TestCase):
     def setUp(self):
         class JSONSerializer(object):
-            def serialize(self, data):
+            def serialize(self, data, action='default'):
                 return 'pew_json'
 
         class XMLSerializer(object):
-            def serialize(self, data):
+            def serialize(self, data, action='default'):
                 return 'pew_xml'
 
         self.serializers = {
@@ -211,11 +223,11 @@ class ResponseSerializerTest(test.TestCase):
 class RequestDeserializerTest(test.TestCase):
     def setUp(self):
         class JSONDeserializer(object):
-            def deserialize(self, data):
+            def deserialize(self, data, action='default'):
                 return 'pew_json'
 
         class XMLDeserializer(object):
-            def deserialize(self, data):
+            def deserialize(self, data, action='default'):
                 return 'pew_xml'
 
         self.deserializers = {

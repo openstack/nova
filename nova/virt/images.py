@@ -23,6 +23,7 @@ Handling of VM disk images.
 
 from nova import context
 from nova import flags
+from nova.image import glance as glance_image_service
 import nova.image
 from nova import log as logging
 from nova import utils
@@ -42,13 +43,3 @@ def fetch(image_href, path, _user, _project):
         elevated = context.get_admin_context()
         metadata = image_service.get(elevated, image_id, image_file)
     return metadata
-
-
-# TODO(vish): xenapi should use the glance client code directly instead
-#             of retrieving the image using this method.
-def image_url(image):
-    if FLAGS.image_service == "nova.image.glance.GlanceImageService":
-        return "http://%s:%s/images/%s" % (FLAGS.glance_host,
-            FLAGS.glance_port, image)
-    return "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
-                                              image)

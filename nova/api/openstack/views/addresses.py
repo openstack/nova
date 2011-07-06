@@ -33,14 +33,15 @@ class ViewBuilderV10(ViewBuilder):
         return dict(public=public_ips, private=private_ips)
 
     def build_public_parts(self, inst):
-        return utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+        return utils.get_from_path(inst, 'fixed_ips/floating_ips/address')
 
     def build_private_parts(self, inst):
-        return utils.get_from_path(inst, 'fixed_ip/address')
+        return utils.get_from_path(inst, 'fixed_ips/address')
 
 
 class ViewBuilderV11(ViewBuilder):
     def build(self, inst):
+        # TODO(tr3buchet) - this shouldn't be hard coded to 4...
         private_ips = utils.get_from_path(inst, 'fixed_ips/address')
         private_ips = [dict(version=4, addr=a) for a in private_ips]
         public_ips = utils.get_from_path(inst,

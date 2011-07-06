@@ -59,14 +59,12 @@ def add_lease(mac, ip_address, _hostname, _interface):
         LOG.debug(_("leasing ip"))
         network_manager = utils.import_object(FLAGS.network_manager)
         network_manager.lease_fixed_ip(context.get_admin_context(),
-                                       mac,
                                        ip_address)
     else:
         rpc.cast(context.get_admin_context(),
                  "%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "lease_fixed_ip",
-                  "args": {"mac": mac,
-                           "address": ip_address}})
+                  "args": {"address": ip_address}})
 
 
 def old_lease(mac, ip_address, hostname, interface):
@@ -81,14 +79,12 @@ def del_lease(mac, ip_address, _hostname, _interface):
         LOG.debug(_("releasing ip"))
         network_manager = utils.import_object(FLAGS.network_manager)
         network_manager.release_fixed_ip(context.get_admin_context(),
-                                         mac,
                                          ip_address)
     else:
         rpc.cast(context.get_admin_context(),
                  "%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "release_fixed_ip",
-                  "args": {"mac": mac,
-                           "address": ip_address}})
+                  "args": {"address": ip_address}})
 
 
 def init_leases(interface):

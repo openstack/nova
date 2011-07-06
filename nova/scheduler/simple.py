@@ -39,7 +39,7 @@ flags.DEFINE_integer("max_networks", 1000,
 class SimpleScheduler(chance.ChanceScheduler):
     """Implements Naive Scheduler that tries to find least loaded host."""
 
-    def schedule_run_instance(self, context, instance_id, *_args, **_kwargs):
+    def _schedule_instance(self, context, instance_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest running instances."""
         instance_ref = db.instance_get(context, instance_id)
         if (instance_ref['availability_zone']
@@ -74,6 +74,12 @@ class SimpleScheduler(chance.ChanceScheduler):
         raise driver.NoValidHost(_("Scheduler was unable to locate a host"
                                    " for this request. Is the appropriate"
                                    " service running?"))
+
+    def schedule_run_instance(self, context, instance_id, *_args, **_kwargs):
+        return self._schedule_instance(context, instance_id, *_args, **_kwargs)
+
+    def schedule_start_instance(self, context, instance_id, *_args, **_kwargs):
+        return self._schedule_instance(context, instance_id, *_args, **_kwargs)
 
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""

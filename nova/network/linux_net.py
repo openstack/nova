@@ -20,6 +20,7 @@
 
 import calendar
 import inspect
+import netaddr
 import os
 
 from nova import db
@@ -27,7 +28,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from IPy import IP
 
 
 LOG = logging.getLogger("nova.linux_net")
@@ -190,6 +190,13 @@ class IptablesTable(object):
                         ' %(chain)r %(rule)r %(wrap)r %(top)r'),
                       {'chain': chain, 'rule': rule,
                        'top': top, 'wrap': wrap})
+
+    def empty_chain(self, chain, wrap=True):
+        """Remove all rules from a chain."""
+        chained_rules = [rule for rule in self.rules
+                              if rule.chain == chain and rule.wrap == wrap]
+        for rule in chained_rules:
+            self.rules.remove(rule)
 
 
 class IptablesManager(object):
@@ -445,14 +452,14 @@ def floating_forward_rules(floating_ip, fixed_ip):
 
 
 def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
-    """Create a vlan and bridge unless they already exist"""
+    """Create a vlan and bridge unless they already exist."""
     interface = ensure_vlan(vlan_num, bridge_interface)
     ensure_bridge(bridge, interface, net_attrs)
 
 
 @utils.synchronized('ensure_vlan', external=True)
 def ensure_vlan(vlan_num, bridge_interface):
-    """Create a vlan unless it already exists"""
+    """Create a vlan unless it already exists."""
     interface = 'vlan%s' % vlan_num
     if not _device_exists(interface):
         LOG.debug(_('Starting VLAN inteface %s'), interface)
@@ -700,7 +707,7 @@ def _dnsmasq_cmd(net):
            '--listen-address=%s' % net['gateway'],
            '--except-interface=lo',
            '--dhcp-range=%s,static,120s' % net['dhcp_start'],
-           '--dhcp-lease-max=%s' % IP(net['cidr']).len(),
+           '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(net['cidr'])),
            '--dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
            '--dhcp-script=%s' % FLAGS.dhcpbridge,
            '--leasefile-ro']

@@ -22,21 +22,22 @@ Tests For Compute
 import mox
 import stubout
 
+from nova.auth import manager
 from nova import compute
+from nova.compute import instance_types
+from nova.compute import manager as compute_manager
+from nova.compute import power_state
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import models
 from nova import exception
 from nova import flags
+import nova.image.fake
 from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
-from nova.auth import manager
-from nova.compute import instance_types
-from nova.compute import manager as compute_manager
-from nova.compute import power_state
-from nova.db.sqlalchemy import models
-from nova.image import local
+from nova.notifier import test_notifier
 
 LOG = logging.getLogger('nova.tests.compute')
 FLAGS = flags.FLAGS
@@ -62,6 +63,7 @@ class ComputeTestCase(test.TestCase):
         super(ComputeTestCase, self).setUp()
         self.flags(connection_type='fake',
                    stub_network=True,
+                   notification_driver='nova.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_api = compute.API()
@@ -69,11 +71,12 @@ class ComputeTestCase(test.TestCase):
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.RequestContext('fake', 'fake', False)
+        test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(nova.image.fake._FakeImageService, 'show', fake_show)
 
     def tearDown(self):
         self.manager.delete_user(self.user)
@@ -127,7 +130,7 @@ class ComputeTestCase(test.TestCase):
         instance_ref = models.Instance()
         instance_ref['id'] = 1
         instance_ref['volumes'] = [vol1, vol2]
-        instance_ref['hostname'] = 'i-00000001'
+        instance_ref['hostname'] = 'hostname-1'
         instance_ref['host'] = 'dummy'
         return instance_ref
 
@@ -158,6 +161,18 @@ class ComputeTestCase(test.TestCase):
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_default_hostname_generator(self):
+        cases = [(None, 'server_1'), ('Hello, Server!', 'hello_server'),
+                 ('<}\x1fh\x10e\x08l\x02l\x05o\x12!{>', 'hello')]
+        for display_name, hostname in cases:
+            ref = self.compute_api.create(self.context,
+                instance_types.get_default_instance_type(), None,
+                display_name=display_name)
+            try:
+                self.assertEqual(ref[0]['hostname'], hostname)
+            finally:
+                db.instance_destroy(self.context, ref[0]['id'])
 
     def test_destroy_instance_disassociates_security_groups(self):
         """Make sure destroying disassociates security groups"""
@@ -227,6 +242,21 @@ class ComputeTestCase(test.TestCase):
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)
 
+    def test_stop(self):
+        """Ensure instance can be stopped"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_start(self):
+        """Ensure instance can be started"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance_id)
+        self.compute.start_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_pause(self):
         """Ensure instance can be paused"""
         instance_id = self._create_instance()
@@ -263,6 +293,14 @@ class ComputeTestCase(test.TestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.inject_file(self.context, instance_id, "/tmp/test",
                 "File Contents")
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_agent_update(self):
+        """Ensure instance can have its agent updated"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.agent_update(self.context, instance_id,
+                'http://127.0.0.1/agent', '00112233445566778899aabbccddeeff')
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_snapshot(self):
@@ -303,6 +341,50 @@ class ComputeTestCase(test.TestCase):
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_run_instance_usage_notification(self):
+        """Ensure run instance generates apropriate usage notification"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'compute.instance.create')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], self.project.id)
+        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('created_at' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertEquals(payload['image_ref'], '1')
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_terminate_usage_notification(self):
+        """Ensure terminate_instance generates apropriate usage notification"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        test_notifier.NOTIFICATIONS = []
+        self.compute.terminate_instance(self.context, instance_id)
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'compute.instance.delete')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], self.project.id)
+        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('created_at' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertEquals(payload['image_ref'], '1')
+
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
         instance_id = self._create_instance()
@@ -339,6 +421,7 @@ class ComputeTestCase(test.TestCase):
             pass
 
         self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
         context = self.context.elevated()
         instance_id = self._create_instance()
         self.compute.prep_resize(context, instance_id, 1)
@@ -353,6 +436,36 @@ class ComputeTestCase(test.TestCase):
             self.fail()
 
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_resize_instance_notification(self):
+        """Ensure notifications on instance migrate/resize"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+
+        self.compute.run_instance(self.context, instance_id)
+        test_notifier.NOTIFICATIONS = []
+
+        db.instance_update(self.context, instance_id, {'host': 'foo'})
+        self.compute.prep_resize(context, instance_id, 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'compute.instance.resize.prep')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], self.project.id)
+        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('created_at' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertEquals(payload['image_ref'], '1')
+        self.compute.terminate_instance(context, instance_id)
 
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""

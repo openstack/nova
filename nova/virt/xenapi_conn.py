@@ -194,7 +194,7 @@ class XenAPIConnection(driver.ComputeDriver):
     def list_instances_detail(self):
         return self._vmops.list_instances_detail()
 
-    def spawn(self, instance, network_info):
+    def spawn(self, instance, network_info, block_device_mapping=None):
         """Create VM instance"""
         self._vmops.spawn(instance, network_info)
 
@@ -202,9 +202,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """Reverts a resize, powering back on the instance"""
         self._vmops.revert_resize(instance)
 
-    def finish_resize(self, instance, disk_info):
+    def finish_resize(self, instance, disk_info, network_info):
         """Completes a resize, turning on the migrated instance"""
-        self._vmops.finish_resize(instance, disk_info)
+        self._vmops.finish_resize(instance, disk_info, network_info)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
