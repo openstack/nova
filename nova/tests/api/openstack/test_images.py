@@ -1161,7 +1161,9 @@ class ImageXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_HREF = 'http://localhost/v1.1/servers/123'
+    SERVER_BOOKMARK = 'http://localhost/servers/123'
     IMAGE_HREF = 'http://localhost/v1.1/images/%s'
+    IMAGE_BOOKMARK = 'http://localhost/images/%s'
 
     def test_show(self):
         serializer = images.ImageXMLSerializer()
@@ -1181,7 +1183,6 @@ class ImageXMLSerializationTest(test.TestCase):
                     {
                         'href': self.IMAGE_HREF % (1,),
                         'rel': 'bookmark',
-                        'type': 'application/json',
                     },
                 ],
             },
@@ -1191,24 +1192,27 @@ class ImageXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
+        expected_server_bookmark = self.SERVER_BOOKMARK_
         expected_href = self.IMAGE_HREF % (1, )
+        expected_bookmark = self.IMAGE_BOOKMARK % (1, )
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <image id="1"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
                 name="Image1"
-                serverRef="%(expected_server_href)s"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 status="ACTIVE"
-                xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <links>
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/json" />
-            </links>
+                progress="80">
+            <server name="" id="">
+                <atom:link rel="bookmark" href="%(expected_server_href)s"/>
+                <atom:link rel="self" href="%(expected_server_bookmark)s"/>
+            </server>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
             <metadata>
-                <meta key="key1">
-                    value1
-                </meta>
+                <meta key="key1">value1</meta>
             </metadata>
         </image>
         """.replace("  ", "") % (locals()))
