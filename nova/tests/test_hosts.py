@@ -14,6 +14,7 @@
 #    under the License.
 
 import stubout
+import webob.exc
 
 from nova import context
 from nova import exception
@@ -88,12 +89,12 @@ class HostTestCase(test.TestCase):
 
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}
-        self.assertRaises(ValueError, self.controller.update, self.req,
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update, self.req,
                 "host_c1", body=bad_body)
 
     def test_bad_update_key(self):
         bad_body = {"crazy": "bad"}
-        self.assertRaises(ValueError, self.controller.update, self.req,
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update, self.req,
                 "host_c1", body=bad_body)
 
     def test_bad_host(self):

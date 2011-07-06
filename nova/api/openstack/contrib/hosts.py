@@ -15,7 +15,7 @@
 
 """The hosts admin extension."""
 
-from webob import exc
+import webob.exc
 
 from nova import compute
 from nova import exception
@@ -72,13 +72,15 @@ class HostController(object):
             # NOTE: (dabo) Right now only 'status' can be set, but other
             # actions may follow.
             if key == "status":
-                if val in ("enable", "disable"):
+                if val[:6] in ("enable", "disabl"):
                     return self._set_enabled_status(req, id,
-                            enabled=(val == "enable"))
+                            enabled=(val.startswith("enable")))
                 else:
-                    raise ValueError(_("Invalid status: '%s'") % raw_val)
+                    explanation = _("Invalid status: '%s'") % raw_val
+                    raise webob.exc.HTTPBadRequest(explanation=explanation)
             else:
-                raise ValueError(_("Invalid update setting: '%s'") % raw_key)
+                explanation = _("Invalid update setting: '%s'") % raw_key
+                raise webob.exc.HTTPBadRequest(explanation=explanation)
 
     def _set_enabled_status(self, req, host, enabled):
         """Sets the specified host's ability to accept new instances."""
