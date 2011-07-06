@@ -22,11 +22,11 @@ from nova.network import linux_net
 class L2Driver(object):
     """Base class that defines interfaces for L2 drivers."""
 
-    def ensure_bridge(bridge, interface, net_attrs=None):
+    def ensure_bridge(self, bridge, interface, net_attrs=None):
         """Create a bridge unless it already exists."""
         raise NotImplementedError()
 
-    def ensure_vlan(vlan_num, bridge_interface, net_attrs=None):
+    def ensure_vlan(self, vlan_num, bridge_interface, net_attrs=None):
         """Create a vlan unless it already exists."""
         raise NotImplementedError()
 
@@ -34,11 +34,11 @@ class L2Driver(object):
 class LinuxBridgeDriver(L2Driver):
     """L2 driver based on Linux Bridge."""
     
-    def ensure_bridge(bridge, interface, net_attrs=None):
+    def ensure_bridge(self, bridge, interface, net_attrs=None):
         """Create a Linux bridge unless it already eixsts."""
         linux_net.ensure_bridge(bridge, interface, net_attrs)
 
-    def ensure_vlan(vlan_num, bridge_interface, net_attrs=None):
+    def ensure_vlan(self, vlan_num, bridge_interface, net_attrs=None):
         """Create a vlan unless it already exists."""
         return linux_net.ensure_vlan(vlan_num, bridge_interface, net_attrs)
 
@@ -46,11 +46,11 @@ class LinuxBridgeDriver(L2Driver):
 class QuantumDriver(L2Driver):
     """L2 driver based on Quantum network service."""
 
-    def ensure_bridge(bridge, interface, net_attrs=None):
+    def ensure_bridge(self, bridge, interface, net_attrs=None):
         """Do nothing."""
         pass
 
-    def ensure_vlan(vlan_num, bridge_interface, net_attrs=None):
+    def ensure_vlan(self, vlan_num, bridge_interface, net_attrs=None):
         """Return None."""
         return None
     
