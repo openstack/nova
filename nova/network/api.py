@@ -158,12 +158,10 @@ class API(base.Base):
 
 
     # TODO(sandy) pep8 until checked
-    def remove_fixed_ip_from_instance(self, context, instance_id, network_id,
-                                      ip):
+    def remove_fixed_ip_from_instance(self, context, instance_id, address):
         """Removes a fixed ip from instance from specified network."""
         args = {'instance_id': instance_id,
-                'network_id': network_id,
-                'ip': ip}
+                'address': address}
         rpc.cast(context, FLAGS.network_topic,
                  {'method': 'remove_fixed_ip_from_instance',
                   'args': args})

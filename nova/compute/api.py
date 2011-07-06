@@ -892,10 +892,10 @@ class API(base.Base):
                                    instance_id, network_id)
                                                               
     @scheduler_api.reroute_compute("remove_fixed_ip")
-    def remove_fixed_ip(self, context, instance_id, network_id, ip):
+    def remove_fixed_ip(self, context, instance_id, address):
         """Remove fixed_ip from specified network to given instance."""
         self._cast_compute_message('remove_fixed_ip_from_instance', context,
-                                   instance_id, network_id, ip)
+                                   instance_id, address)
 
 
     #TODO(tr3buchet): how to run this in the correct zone?
