@@ -59,6 +59,7 @@ def setup():
     network.create_networks(ctxt,
                             label='test',
                             cidr=FLAGS.fixed_range,
+                            multi_host=FLAGS.multi_host,
                             num_networks=FLAGS.num_networks,
                             network_size=FLAGS.network_size,
                             cidr_v6=FLAGS.fixed_range_v6,

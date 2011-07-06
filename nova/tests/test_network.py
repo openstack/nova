@@ -44,6 +44,7 @@ class FakeModel(dict):
 networks = [{'id': 0,
              'label': 'test0',
              'injected': False,
+             'multi_host': False,
              'cidr': '192.168.0.0/24',
              'cidr_v6': '2001:db8::/64',
              'gateway_v6': '2001:db8::1',
@@ -61,6 +62,7 @@ networks = [{'id': 0,
             {'id': 1,
              'label': 'test1',
              'injected': False,
+             'multi_host': False,
              'cidr': '192.168.1.0/24',
              'cidr_v6': '2001:db9::/64',
              'gateway_v6': '2001:db9::1',
@@ -163,6 +165,7 @@ class FlatNetworkTestCase(test.TestCase):
             self.assertDictMatch(nw[0], check)
 
             check = {'broadcast': '192.168.%s.255' % i,
+                     'dhcp_server': '192.168.%s.1' % i,
                      'dns': 'DONTCARE',
                      'gateway': '192.168.%s.1' % i,
                      'gateway6': '2001:db%s::1' % i8,
