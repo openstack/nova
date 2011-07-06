@@ -46,34 +46,14 @@ FLAGS = flags.FLAGS
 class Controller(object):
     """ The Server API base controller class for the OpenStack API """
 
-    # These are a list of possible query string paramters to the
-    # /servers query that a user should be able to do.  Specify this
-    # in your subclasses.  When admin api is off, unknown options will
-    # get filtered out without error.
-    servers_search_options = []
-
     def __init__(self):
         self.compute_api = compute.API()
         self.helper = helper.CreateInstanceHelper(self)
 
-    def _remove_invalid_options(self, context, search_options):
-        if FLAGS.allow_admin_api and context.is_admin:
-            # Allow all options
-            return
-        # Otherwise, strip out all unknown options
-        unknown_options = [opt for opt in search_options
-                if opt not in self.servers_search_options]
-        unk_opt_str = ", ".join(unknown_options)
-        log_msg = _("Stripping out options '%(unk_opt_str)s' from servers "
-                "query") % locals()
-        LOG.debug(log_msg)
-        for opt in unknown_options:
-            search_options.pop(opt, None)
-
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
         try:
-            servers = self._servers_from_request(req, is_detail=False)
+            servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
             return exc.HTTPBadRequest(explanation=str(err))
         except exception.NotFound:
@@ -83,7 +63,7 @@ class Controller(object):
     def detail(self, req):
         """ Returns a list of server details for a given user """
         try:
-            servers = self._servers_from_request(req, is_detail=True)
+            servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
             return exc.HTTPBadRequest(explanation=str(err))
         except exception.NotFound as err:
@@ -99,13 +79,21 @@ class Controller(object):
     def _action_rebuild(self, info, request, instance_id):
         raise NotImplementedError()
 
-    def _servers_search(self, context, req, is_detail, search_opts=None):
+    def _get_servers(self, req, is_detail):
         """Returns a list of servers, taking into account any search
         options specified.
         """
 
-        if search_opts is None:
-            search_opts = {}
+        search_opts = {}
+        search_opts.update(req.str_GET)
+
+        context = req.environ['nova.context']
+        remove_invalid_options(context, search_opts,
+                self._get_server_search_options())
+
+        # Convert recurse_zones into a boolean
+        search_opts['recurse_zones'] = utils.bool_from_str(
+                search_opts.get('recurse_zones', False))
 
         # If search by 'status', we need to convert it to 'state'
         # If the status is unknown, bail.
@@ -144,26 +132,6 @@ class Controller(object):
         servers = [self._build_view(req, inst, is_detail)['server']
                 for inst in limited_list]
         return dict(servers=servers)
-
-    def _servers_from_request(self, req, is_detail):
-        """Returns a list of servers based on the request.
-
-        Checks for search options and strips out options that should
-        not be available to non-admins.
-        """
-
-        search_opts = {}
-        search_opts.update(req.str_GET)
-
-        context = req.environ['nova.context']
-        self._remove_invalid_options(context, search_opts)
-
-        # Convert recurse_zones into a boolean
-        search_opts['recurse_zones'] = utils.bool_from_str(
-                search_opts.get('recurse_zones', False))
-
-        return self._servers_search(context, req, is_detail,
-                search_opts=search_opts)
 
     @scheduler_api.redirect_handler
     def show(self, req, id):
@@ -569,12 +537,6 @@ class Controller(object):
 class ControllerV10(Controller):
     """v1.0 OpenStack API controller"""
 
-    # These are a list of possible query string paramters to the
-    # /servers query that a user should be able to do. When admin api
-    # is off, unknown options will get filtered out without error.
-    servers_search_options = ["reservation_id", "fixed_ip",
-            "name", "recurse_zones"]
-
     @scheduler_api.redirect_handler
     def delete(self, req, id):
         """ Destroys a server """
@@ -636,15 +598,13 @@ class ControllerV10(Controller):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_old_style(server)
 
+    def _get_server_search_options(self):
+        """Return server search options allowed by non-admin"""
+        return 'reservation_id', 'fixed_ip', 'name', 'recurse_zones'
+
 
 class ControllerV11(Controller):
     """v1.1 OpenStack API controller"""
-
-    # These are a list of possible query string paramters to the
-    # /servers query that a user should be able to do. When admin api
-    # is off, unknown options will get filtered out without error.
-    servers_search_options = ["reservation_id", "name", "recurse_zones",
-            "status", "image", "flavor", "changes-since"]
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -811,6 +771,11 @@ class ControllerV11(Controller):
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_new_style(server)
+
+    def _get_server_search_options(self):
+        """Return server search options allowed by non-admin"""
+        return ('reservation_id', 'name', 'recurse_zones',
+                'status', 'image', 'flavor', 'changes-since')
 
 
 class HeadersSerializer(wsgi.ResponseHeadersSerializer):
@@ -982,3 +947,18 @@ def create_resource(version='1.0'):
     deserializer = wsgi.RequestDeserializer(body_deserializers)
 
     return wsgi.Resource(controller, deserializer, serializer)
+
+
+def remove_invalid_options(context, search_options, allowed_search_options):
+    """Remove search options that are not valid for non-admin API/context"""
+    if FLAGS.allow_admin_api and context.is_admin:
+        # Allow all options
+        return
+    # Otherwise, strip out all unknown options
+    unknown_options = [opt for opt in search_options
+            if opt not in allowed_search_options]
+    unk_opt_str = ", ".join(unknown_options)
+    log_msg = _("Removing options '%(unk_opt_str)s' from query") % locals()
+    LOG.debug(log_msg)
+    for opt in unknown_options:
+        search_options.pop(opt, None)
