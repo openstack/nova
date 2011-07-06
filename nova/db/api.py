@@ -335,7 +335,6 @@ def fixed_ip_associate(context, address, instance_id):
 def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
     """Find free ip in network and associate it to instance or host.
 
-    If reserved is true, it will pull the ip from the reserved pool.
     Raises if one is not available.
 
     """
