@@ -1395,33 +1395,29 @@ def instance_get_fixed_addresses(context, instance_id):
         return [fixed_ip.address for fixed_ip in fixed_ips]
 
 
-def _ipv6_get_by_instance_ref(context, instance_ref):
-    # assume instance has 1 mac for each network associated with it
-    # get networks associated with instance
-    network_refs = network_get_all_by_instance(context, instance_id)
-    # compile a list of cidr_v6 prefixes sorted by network id
-    prefixes = [ref.cidr_v6 for ref in
-            sorted(network_refs, key=lambda ref: ref.id)]
-    # get vifs associated with instance
-    vif_refs = virtual_interface_get_by_instance(context, instance_ref.id)
-    # compile list of the mac_addresses for vifs sorted by network id
-    macs = [vif_ref['address'] for vif_ref in
-            sorted(vif_refs, key=lambda vif_ref: vif_ref['network_id'])]
-    # get project id from instance
-    project_id = instance_ref.project_id
-    # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
-    prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
-    # return list containing ipv6 address for each tuple
-    return [ipv6.to_global(*t) for t in prefix_mac_tuples]
-
-
 @require_context
 def instance_get_fixed_addresses_v6(context, instance_id):
     session = get_session()
     with session.begin():
         # get instance
         instance_ref = instance_get(context, instance_id, session=session)
-        return _ipv6_get_by_instance_ref(context, instance_ref)
+        # assume instance has 1 mac for each network associated with it
+        # get networks associated with instance
+        network_refs = network_get_all_by_instance(context, instance_id)
+        # compile a list of cidr_v6 prefixes sorted by network id
+        prefixes = [ref.cidr_v6 for ref in
+                sorted(network_refs, key=lambda ref: ref.id)]
+        # get vifs associated with instance
+        vif_refs = virtual_interface_get_by_instance(context, instance_ref.id)
+        # compile list of the mac_addresses for vifs sorted by network id
+        macs = [vif_ref['address'] for vif_ref in
+                sorted(vif_refs, key=lambda vif_ref: vif_ref['network_id'])]
+        # get project id from instance
+        project_id = instance_ref.project_id
+        # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
+        prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
+        # return list containing ipv6 address for each tuple
+        return [ipv6.to_global(*t) for t in prefix_mac_tuples]
 
 
 @require_context
