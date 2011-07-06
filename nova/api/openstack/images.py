@@ -267,8 +267,9 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
     metadata = {
         "attributes": {
             "image": ["id", "name", "updated", "created", "status",
-                      "serverId", "progress", "serverRef"],
-            "link": ["rel", "type", "href"],
+                      "serverId", "progress"],
+            "link": ["rel", "href"],
+            "server": ["name", "id"],
         },
     }
 

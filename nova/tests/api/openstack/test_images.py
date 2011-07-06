@@ -1168,14 +1168,29 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_show(self):
         serializer = images.ImageXMLSerializer()
 
+        #so we can see the full diff in the output
+        self.maxDiff = None
         fixture = {
             'image': {
                 'id': 1,
                 'name': 'Image1',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
-                'serverRef': self.SERVER_HREF,
                 'status': 'ACTIVE',
+                'server': {
+                    'id': 1,
+                    'name': 'Server1',
+                    'links': [
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                    ],
+                },
                 'metadata': {
                     'key1': 'value1',
                 },
@@ -1183,6 +1198,10 @@ class ImageXMLSerializationTest(test.TestCase):
                     {
                         'href': self.IMAGE_HREF % (1,),
                         'rel': 'bookmark',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % (1,),
+                        'rel': 'self',
                     },
                 ],
             },
@@ -1192,7 +1211,7 @@ class ImageXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK_
+        expected_server_bookmark = self.SERVER_BOOKMARK
         expected_href = self.IMAGE_HREF % (1, )
         expected_bookmark = self.IMAGE_BOOKMARK % (1, )
         expected_now = self.TIMESTAMP
@@ -1205,18 +1224,21 @@ class ImageXMLSerializationTest(test.TestCase):
                 created="%(expected_now)s"
                 status="ACTIVE"
                 progress="80">
-            <server name="" id="">
+            <server name="Server1" id="1">
                 <atom:link rel="bookmark" href="%(expected_server_href)s"/>
                 <atom:link rel="self" href="%(expected_server_bookmark)s"/>
             </server>
             <atom:link href="%(expected_href)s" rel="self"/>
             <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
             <metadata>
-                <meta key="key1">value1</meta>
+                <meta key="key1">
+                    value1
+                </meta>
             </metadata>
         </image>
         """.replace("  ", "") % (locals()))
 
+        print actual.toxml()
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_show_zero_metadata(self):
