@@ -269,7 +269,6 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
 
     def __init__(self):
         self.metadata_serializer = image_metadata.ImageMetadataXMLSerializer()
-        self.server_serializer = servers.ServerXMLSerializer()
 
     def _image_to_xml(self, xml_doc, image):
         image_node = xml_doc.createElement('image')
@@ -308,7 +307,11 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
         return self.metadata_serializer.meta_list_to_xml(xml_doc, metadata)
 
     def _create_server_node(self, xml_doc, server):
-        return self.server_serializer.server_to_xml(xml_doc, server)
+        server_node = xml_doc.createElement('server')
+        server_node.setAttribute('id', str(server['id']))
+        #server_node.setAttribute('name', server['name'])
+        #self._create_link_nodes(xml_doc, server_node, server['links'])
+        return server_node
 
     def _image_list_to_xml(self, xml_doc, images, detailed):
         container_node = xml_doc.createElement('images')
