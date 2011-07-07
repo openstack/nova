@@ -232,18 +232,19 @@ class XMLDictSerializer(DictSerializer):
         doc = minidom.Document()
         node = self._to_xml_node(doc, self.metadata, root_key, data[root_key])
 
-        self._add_xmlns(node)
+        return self.xml_string(node)
 
-        return node.toprettyxml(indent='    ', encoding='utf-8')
-
-    def xml_string(self, node):
-        self._add_xmlns(node)
+    def xml_string(self, node, has_atom=False):
+        self._add_xmlns(node, has_atom)
         return node.toprettyxml(indent='    ', encoding='UTF-8')
 
-    def _add_xmlns(self, node):
+    #NOTE (ameade): the has_atom should be removed after all of the
+    # xml serializers and view builders have been updated
+    def _add_xmlns(self, node, has_atom=False):
         if self.xmlns is not None:
             node.setAttribute('xmlns', self.xmlns)
-        node.setAttribute('xmlns:atom', "http://www.w3.org/2005/Atom")
+        if has_atom:
+            node.setAttribute('xmlns:atom', "http://www.w3.org/2005/Atom")
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""

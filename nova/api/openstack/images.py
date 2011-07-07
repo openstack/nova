@@ -327,26 +327,26 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
         node = self._image_list_to_xml(xml_doc,
                                        images_dict['images'],
                                        detailed=False)
-        return self.xml_string(node)
+        return self.xml_string(node, True)
 
     def detail(self, images_dict):
         xml_doc = minidom.Document()
         node = self._image_list_to_xml(xml_doc,
                                        images_dict['images'],
                                        detailed=True)
-        return self.xml_string(node)
+        return self.xml_string(node, True)
 
     def show(self, image_dict):
         xml_doc = minidom.Document()
         node = self._image_to_xml_detailed(xml_doc,
                                        image_dict['image'])
-        return self.xml_string(node)
+        return self.xml_string(node, True)
 
     def create(self, image_dict):
         xml_doc = minidom.Document()
         node = self._image_to_xml_detailed(xml_doc,
                                        image_dict['image'])
-        return self.xml_string(node)
+        return self.xml_string(node, True)
 
 
 def create_resource(version='1.0'):
