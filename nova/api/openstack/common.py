@@ -134,3 +134,6 @@ def get_id_from_href(href):
     except:
         LOG.debug(_("Error extracting id from href: %s") % href)
         raise webob.exc.HTTPBadRequest(_('could not parse id from href'))
+
+def remove_version(base_url):
+    return base_url.rsplit('/', 1).pop(0)

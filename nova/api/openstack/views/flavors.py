@@ -92,8 +92,5 @@ class ViewBuilderV11(ViewBuilder):
 
     def generate_bookmark(self, flavor_id):
         """Create an url that refers to a specific flavor id."""
-        return "%s/flavors/%s" % (self._remove_version(self.base_url),
+        return "%s/flavors/%s" % (common.remove_version(self.base_url),
             flavor_id)
-
-    def _remove_version(self, base_url):
-        return base_url.rsplit('/', 1).pop(0)

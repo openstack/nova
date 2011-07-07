@@ -17,6 +17,8 @@
 
 import os.path
 
+from nova.api.openstack import common
+
 
 class ViewBuilder(object):
     """Base class for generating responses to OpenStack API image requests."""
@@ -122,8 +124,5 @@ class ViewBuilderV11(ViewBuilder):
 
     def generate_bookmark(self, image_id):
         """Create an url that refers to a specific flavor id."""
-        return os.path.join(self._remove_version(self._url),
+        return os.path.join(common.remove_version(self._url),
             "images", str(image_id))
-
-    def _remove_version(self, base_url):
-        return base_url.rsplit('/', 1).pop(0)
