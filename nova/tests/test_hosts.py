@@ -103,23 +103,23 @@ class HostTestCase(test.TestCase):
         en_body = {"power_state": "reboot"}
         result_c1 = self.controller.update(self.req, "host_c1", body=en_body)
         self.assertEqual(result_c1["power_state"], "reboot")
-        result_c2 = self.controller.update(self.req, "host_c2", body=en_body)
-        self.assertEqual(result_c2["power_state"], "fail")
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                self.req, "host_c2", body=en_body)
 
     def test_bad_power_state_value(self):
         bad_body = {"power_state": "bad"}
-        result = self.controller.update(self.req, "host_c1", body=bad_body)
-        self.assertEqual(str(result.wrapped_exc)[:15], "400 Bad Request")
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                self.req, "host_c1", body=bad_body)
 
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}
-        result = self.controller.update(self.req, "host_c1", body=bad_body)
-        self.assertEqual(str(result.wrapped_exc)[:15], "400 Bad Request")
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                self.req, "host_c1", body=bad_body)
 
     def test_bad_update_key(self):
         bad_body = {"crazy": "bad"}
-        result = self.controller.update(self.req, "host_c1", body=bad_body)
-        self.assertEqual(str(result.wrapped_exc)[:15], "400 Bad Request")
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                self.req, "host_c1", body=bad_body)
 
     def test_bad_host(self):
         self.assertRaises(exception.HostNotFound, self.controller.update,

@@ -941,7 +941,7 @@ class VMOps(object):
             resp = json.loads(xenapi_resp)
         except TypeError  as e:
             # Already logged; return the message
-             return xenapi_resp.details[-1]
+            return xenapi_resp.details[-1]
         return resp["status"]
 
     def set_power_state(self, host, power_state):
@@ -952,7 +952,7 @@ class VMOps(object):
             resp = json.loads(xenapi_resp)
         except TypeError  as e:
             # Already logged; return the message
-             return xenapi_resp.details[-1]
+            return xenapi_resp.details[-1]
         return resp["power_state"]
 
     def _call_xenhost(self, method, arg_dict):
