@@ -115,6 +115,18 @@ class ZoneManager(object):
         """Return the list of zones we know about."""
         return [zone.to_dict() for zone in self.zone_states.values()]
 
+    def get_host_list(self):
+        """Returns a list of dicts for each host that the Zone Manager
+        knows about. Each dict contains the host_name and the service
+        for that host.
+        """
+        all_hosts = self.service_states.keys()
+        ret = []
+        for host in self.service_states:
+            for svc in self.service_states[host]:
+                ret.append({"service": svc, "host_name": host})
+        return ret
+
     def get_zone_capabilities(self, context):
         """Roll up all the individual host info to generic 'service'
            capabilities. Each capability is aggregated into
@@ -128,6 +140,9 @@ class ZoneManager(object):
         stale_host_services = {}  # { host1 : [svc1, svc2], host2 :[svc1]}
         for host, host_dict in hosts_dict.iteritems():
             for service_name, service_dict in host_dict.iteritems():
+                if not service_dict.get("enabled", True):
+                    # Service is disabled; do no include it
+                    continue
 
                 #Check if the service capabilities became stale
                 if self.host_service_caps_stale(host, service_name):

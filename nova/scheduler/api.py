@@ -51,6 +51,11 @@ def _call_scheduler(method, context, params=None):
     return rpc.call(context, queue, kwargs)
 
 
+def get_host_list(context):
+    """Return a list of hosts associated with this zone."""
+    return _call_scheduler('get_host_list', context)
+
+
 def get_zone_list(context):
     """Return a list of zones assoicated with this zone."""
     items = _call_scheduler('get_zone_list', context)
@@ -114,7 +119,8 @@ def _process(func, zone):
 
 
 def call_zone_method(context, method_name, errors_to_ignore=None,
-                     novaclient_collection_name='zones', *args, **kwargs):
+                     novaclient_collection_name='zones', zones=None,
+                     *args, **kwargs):
     """Returns a list of (zone, call_result) objects."""
     if not isinstance(errors_to_ignore, (list, tuple)):
         # This will also handle the default None
@@ -122,7 +128,9 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
 
     pool = greenpool.GreenPool()
     results = []
-    for zone in db.zone_get_all(context):
+    if zones is None:
+        zones = db.zone_get_all(context)
+    for zone in zones:
         try:
             nova = novaclient.OpenStack(zone.username, zone.password, None,
                     zone.api_url)

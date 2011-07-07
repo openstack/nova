@@ -101,23 +101,6 @@ class API(base.Base):
         self.hostname_factory = hostname_factory
         super(API, self).__init__(**kwargs)
 
-    def get_network_topic(self, context, instance_id):
-        """Get the network topic for an instance."""
-        try:
-            instance = self.get(context, instance_id)
-        except exception.NotFound:
-            LOG.warning(_("Instance %d was not found in get_network_topic"),
-                        instance_id)
-            raise
-
-        host = instance['host']
-        if not host:
-            raise exception.Error(_("Instance %d has no host") % instance_id)
-        topic = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        return rpc.call(context,
-                        topic,
-                        {"method": "get_network_topic", "args": {'fake': 1}})
-
     def _check_injected_file_quota(self, context, injected_files):
         """Enforce quota limits on injected files.
 
@@ -225,18 +208,7 @@ class API(base.Base):
         if ramdisk_id:
             image_service.show(context, ramdisk_id)
 
-        if security_group is None:
-            security_group = ['default']
-        if not type(security_group) is list:
-            security_group = [security_group]
-
-        security_groups = []
         self.ensure_default_security_group(context)
-        for security_group_name in security_group:
-            group = db.security_group_get_by_name(context,
-                                                  context.project_id,
-                                                  security_group_name)
-            security_groups.append(group['id'])
 
         if key_data is None and key_name:
             key_pair = db.key_pair_get(context, context.user_id, key_name)
@@ -271,29 +243,42 @@ class API(base.Base):
             'architecture': architecture,
             'vm_mode': vm_mode}
 
-        return (num_instances, base_options, security_groups)
+        return (num_instances, base_options)
 
     def create_db_entry_for_new_instance(self, context, base_options,
-             security_groups, block_device_mapping, num=1):
+             security_group, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
-        including any related table updates (such as security
-        groups, MAC address, etc). This will called by create()
-        in the majority of situations, but all-at-once style
-        Schedulers may initiate the call."""
-        instance = dict(mac_address=utils.generate_mac(),
-                        launch_index=num,
-                        **base_options)
+        including any related table updates (such as security group,
+        etc).
+
+        This will called by create() in the majority of situations,
+        but create_all_at_once() style Schedulers may initiate the call.
+        If you are changing this method, be sure to update both
+        call paths.
+        """
+        instance = dict(launch_index=num, **base_options)
         instance = self.db.instance_create(context, instance)
         instance_id = instance['id']
 
         elevated = context.elevated()
-        if not security_groups:
-            security_groups = []
+        if security_group is None:
+            security_group = ['default']
+        if not isinstance(security_group, list):
+            security_group = [security_group]
+
+        security_groups = []
+        for security_group_name in security_group:
+            group = db.security_group_get_by_name(context,
+                                                  context.project_id,
+                                                  security_group_name)
+            security_groups.append(group['id'])
+
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
                                                 instance_id,
                                                 security_group_id)
 
+        block_device_mapping = block_device_mapping or []
         # NOTE(yamahata)
         # tell vm driver to attach volume at boot time by updating
         # BlockDeviceMapping
@@ -367,12 +352,11 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, block_device_mapping=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
-        num_instances, base_options, security_groups = \
-                    self._check_create_parameters(
+        num_instances, base_options = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -404,11 +388,13 @@ class API(base.Base):
         Scheduler drivers, but may remove the effectiveness of the
         more complicated drivers.
 
+        NOTE: If you change this method, be sure to change
+        create_all_at_once() at the same time!
+
         Returns a list of instance dicts.
         """
 
-        num_instances, base_options, security_groups = \
-                    self._check_create_parameters(
+        num_instances, base_options = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -418,12 +404,11 @@ class API(base.Base):
                                injected_files, admin_password, zone_blob,
                                reservation_id)
 
-        block_device_mapping = block_device_mapping or []
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = self.create_db_entry_for_new_instance(context,
-                                    base_options, security_groups,
+                                    base_options, security_group,
                                     block_device_mapping, num=num)
             instances.append(instance)
             instance_id = instance['id']
@@ -724,7 +709,7 @@ class API(base.Base):
             params = {}
         if not host:
             instance = self.get(context, instance_id)
-            host = instance["host"]
+            host = instance['host']
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         params['instance_id'] = instance_id
         kwargs = {'method': method, 'args': params}
@@ -900,6 +885,23 @@ class API(base.Base):
                               "instance_id": instance_id,
                               "flavor_id": flavor_id}})
 
+    @scheduler_api.reroute_compute("add_fixed_ip")
+    def add_fixed_ip(self, context, instance_id, network_id):
+        """Add fixed_ip from specified network to given instance."""
+        self._cast_compute_message('add_fixed_ip_to_instance', context,
+                                                              instance_id,
+                                                              network_id)
+
+    #TODO(tr3buchet): how to run this in the correct zone?
+    def add_network_to_project(self, context, project_id):
+        """Force adds a network to the project."""
+        # this will raise if zone doesn't know about project so the decorator
+        # can catch it and pass it down
+        self.db.project_get(context, project_id)
+
+        # didn't raise so this is the correct zone
+        self.network_api.add_network_to_project(context, project_id)
+
     @scheduler_api.reroute_compute("pause")
     def pause(self, context, instance_id):
         """Pause the given instance."""
@@ -909,6 +911,11 @@ class API(base.Base):
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
+
+    def set_host_enabled(self, context, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        return self._call_compute_message("set_host_enabled", context,
+                instance_id=None, host=host, params={"enabled": enabled})
 
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
@@ -1042,11 +1049,34 @@ class API(base.Base):
         return instance
 
     def associate_floating_ip(self, context, instance_id, address):
-        """Associate a floating ip with an instance."""
+        """Makes calls to network_api to associate_floating_ip.
+
+        :param address: is a string floating ip address
+        """
         instance = self.get(context, instance_id)
+
+        # TODO(tr3buchet): currently network_info doesn't contain floating IPs
+        # in its info, if this changes, the next few lines will need to
+        # accomodate the info containing floating as well as fixed ip addresses
+        fixed_ip_addrs = []
+        for info in self.network_api.get_instance_nw_info(context,
+                                                          instance):
+            ips = info[1]['ips']
+            fixed_ip_addrs.extend([ip_dict['ip'] for ip_dict in ips])
+
+        # TODO(tr3buchet): this will associate the floating IP with the first
+        # fixed_ip (lowest id) an instance has. This should be changed to
+        # support specifying a particular fixed_ip if multiple exist.
+        if not fixed_ip_addrs:
+            msg = _("instance |%s| has no fixed_ips. "
+                    "unable to associate floating ip") % instance_id
+            raise exception.ApiError(msg)
+        if len(fixed_ip_addrs) > 1:
+            LOG.warning(_("multiple fixed_ips exist, using the first: %s"),
+                                                         fixed_ip_addrs[0])
         self.network_api.associate_floating_ip(context,
                                                floating_ip=address,
-                                               fixed_ip=instance['fixed_ip'])
+                                               fixed_ip=fixed_ip_addrs[0])
 
     def get_instance_metadata(self, context, instance_id):
         """Get all metadata associated with an instance."""

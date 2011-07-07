@@ -262,14 +262,6 @@ def generate_uid(topic, size=8):
     return '%s-%s' % (topic, ''.join(choices))
 
 
-def generate_mac():
-    mac = [0x02, 0x16, 0x3e,
-           random.randint(0x00, 0x7f),
-           random.randint(0x00, 0xff),
-           random.randint(0x00, 0xff)]
-    return ':'.join(map(lambda x: '%02x' % x, mac))
-
-
 # Default symbols to use for passwords. Avoids visually confusing characters.
 # ~6 bits per symbol
 DEFAULT_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0,1
