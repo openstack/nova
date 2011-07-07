@@ -177,5 +177,5 @@ class ViewBuilderV11(ViewBuilder):
 
     def generate_bookmark(self, server_id):
         """Create an url that refers to a specific flavor id."""
-        return os.path.join(common.remove_version(self.base_url),
+        return os.path.join(common.remove_version_from_href(self.base_url),
             "servers", str(server_id))
