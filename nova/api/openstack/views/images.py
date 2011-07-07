@@ -98,7 +98,9 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_server(self, image, image_obj):
         try:
-            image['serverRef'] = image_obj['properties']['instance_ref']
+            serverRef = image_obj['properties']['instance_ref']
+            #TODO (ameade)  get the server information
+            #image['server'] = ?
         except KeyError:
             return
 

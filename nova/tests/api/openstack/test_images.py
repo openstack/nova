@@ -401,12 +401,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         href = "http://localhost/v1.1/images/124"
         bookmark = "http://localhost/images/124"
+        server_href = "http://localhost/v1.1/servers/42"
+        server_bookmark = "http://localhost/servers/42"
 
         expected_image = {
             "image": {
                 "id": 124,
                 "name": "queued snapshot",
-                "serverRef": "http://localhost/v1.1/servers/42",
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "QUEUED",
@@ -648,7 +649,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
                 u'user_id': u'1',
             },
-            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -668,7 +668,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
                 u'user_id': u'1',
             },
-            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -689,7 +688,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
                 u'user_id': u'1',
             },
-            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -709,7 +707,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
                 u'user_id': u'1',
             },
-            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -1028,30 +1025,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
-
-    def test_create_image_v1_1_actual_server_ref(self):
-
-        serverRef = 'http://localhost/v1.1/servers/1'
-        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
-        req = webob.Request.blank('/v1.1/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(200, response.status_int)
-        result = json.loads(response.body)
-        self.assertEqual(result['image']['serverRef'], serverRef)
-
-    def test_create_image_v1_1_server_ref_bad_hostname(self):
-
-        serverRef = 'http://asdf/v1.1/servers/1'
-        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
-        req = webob.Request.blank('/v1.1/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
 
     def test_create_image_v1_1_no_server_ref(self):
 
@@ -1441,8 +1414,6 @@ class ImageXMLSerializationTest(test.TestCase):
         output = serializer.serialize(fixtures, 'index')
         actual = minidom.parseString(output.replace("  ", ""))
 
-        expected_serverRef = self.SERVER_HREF
-        expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <images
                 xmlns="http://docs.openstack.org/compute/api/v1.1"
