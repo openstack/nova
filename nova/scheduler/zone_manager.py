@@ -109,7 +109,6 @@ class ZoneManager(object):
         self.last_zone_db_check = datetime.datetime.min
         self.zone_states = {}  # { <zone_id> : ZoneState }
         self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
-        self.service_time_stamp = {}  # reported time
         self.green_pool = greenpool.GreenPool()
 
     def get_zone_list(self):
@@ -126,19 +125,28 @@ class ZoneManager(object):
         # But it's likely to change once we understand what the Best-Match
         # code will need better.
         combined = {}  # { <service>_<cap> : (min, max), ... }
-        allowed_time_diff = FLAGS.periodic_interval * 3
+        stale_host_services = {} # { host1 : [svc1, svc2], host2 :[svc1]}
         for host, host_dict in hosts_dict.iteritems():
-            if (utils.utcnow() - self.service_time_stamp[host]) <= \
-                datetime.timedelta(seconds=allowed_time_diff):
-                for service_name, service_dict in host_dict.iteritems():
-                    for cap, value in service_dict.iteritems():
-                        key = "%s_%s" % (service_name, cap)
-                        min_value, max_value = combined.get(key, \
-                            (value, value))
-                        min_value = min(min_value, value)
-                        max_value = max(max_value, value)
-                        combined[key] = (min_value, max_value)
+            for service_name, service_dict in host_dict.iteritems():
 
+                #Check if the service capabilities became stale
+                if self.host_service_caps_stale(host, service_name):
+                    if host not in stale_host_services:
+                        stale_host_services[host] = []  # Adding host key once
+                    stale_host_services[host].append(service_name)
+                    continue
+                for cap, value in service_dict.iteritems():
+                    if cap == "timestamp": # Timestamp is not needed
+                        continue
+                    key = "%s_%s" % (service_name, cap)
+                    min_value, max_value = combined.get(key, \
+                        (value, value))
+                    min_value = min(min_value, value)
+                    max_value = max(max_value, value)
+                    combined[key] = (min_value, max_value)
+
+        # Delete the expired host services
+        self.delete_expired_host_services(stale_host_services)
         return combined
 
     def _refresh_from_db(self, context):
@@ -177,6 +185,25 @@ class ZoneManager(object):
         logging.debug(_("Received %(service_name)s service update from "
                             "%(host)s: %(capabilities)s") % locals())
         service_caps = self.service_states.get(host, {})
+        capabilities["timestamp"] = utils.utcnow() # Reported time
         service_caps[service_name] = capabilities
         self.service_states[host] = service_caps
-        self.service_time_stamp[host] = utils.utcnow()
+
+    def host_service_caps_stale(self, host, service):
+        """Check if host service capabilites are not recent enough."""
+        allowed_time_diff = FLAGS.periodic_interval * 3
+        caps = self.service_states[host][service]
+        if (utils.utcnow() - caps["timestamp"]) <= \
+            datetime.timedelta(seconds=allowed_time_diff):
+            return False
+        return True
+
+    def delete_expired_host_services(self, host_services_dict):
+        """Delete all the inactive host services information."""
+        for host, services in host_services_dict.iteritems():
+            service_caps = self.service_states[host]
+            for service in services:
+                del service_caps[service]
+                if len(service_caps) == 0: # Delete host if no services
+                    del self.service_states[host]
+
