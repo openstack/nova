@@ -62,14 +62,17 @@ flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
 
+
 def handle_flash_socket_policy(socket):
     LOG.info(_("Received connection on flash socket policy port"))
 
     fd = socket.makefile('rw')
     expected_command = "<policy-file-request/>"
-    if expected_command in fd.read(len(expected_command)+1):
-    	LOG.info(_("Received valid flash socket policy request"))
-        fd.write('<?xml version="1.0"?><cross-domain-policy><allow-access-from domain="*" to-ports="%d" /></cross-domain-policy>' % (FLAGS.vncproxy_port))
+    if expected_command in fd.read(len(expected_command) + 1):
+        LOG.info(_("Received valid flash socket policy request"))
+        fd.write('<?xml version="1.0"?><cross-domain-policy><allow-'
+                 'access-from domain="*" to-ports="%d" /></cross-'
+                 'domain-policy>' % (FLAGS.vncproxy_port))
         fd.flush()
     socket.close()
 

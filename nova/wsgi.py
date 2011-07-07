@@ -114,7 +114,8 @@ class Server(object):
     def start_tcp(self, listener, port, host='0.0.0.0', key=None, backlog=128):
         """Run a raw TCP server with the given application."""
         arg0 = sys.argv[0]
-        LOG.info(_('Starting TCP server %(arg0)s on %(host)s:%(port)s') % locals())
+        LOG.info(_('Starting TCP server %(arg0)s on %(host)s:%(port)s')
+                 % locals())
         socket = eventlet.listen((host, port), backlog=backlog)
         self._tcp_server = self._pool.spawn_n(self._run_tcp, listener, socket)
 
