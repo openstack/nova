@@ -936,9 +936,24 @@ class VMOps(object):
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         args = {"enabled": json.dumps(enabled)}
-        json_resp = self._call_xenhost("set_host_enabled", args)
-        resp = json.loads(json_resp)
+        xenapi_resp = self._call_xenhost("set_host_enabled", args)
+        try:
+            resp = json.loads(xenapi_resp)
+        except TypeError  as e:
+            # Already logged; return the message
+             return xenapi_resp.details[-1]
         return resp["status"]
+
+    def set_power_state(self, host, power_state):
+        """Reboots, shuts down or starts up the host."""
+        args = {"power_state": power_state}
+        xenapi_resp = self._call_xenhost("set_power_state", args)
+        try:
+            resp = json.loads(xenapi_resp)
+        except TypeError  as e:
+            # Already logged; return the message
+             return xenapi_resp.details[-1]
+        return resp["power_state"]
 
     def _call_xenhost(self, method, arg_dict):
         """There will be several methods that will need this general
@@ -953,7 +968,7 @@ class VMOps(object):
                     #args={"params": arg_dict})
             ret = self._session.wait_for_task(task, task_id)
         except self.XenAPI.Failure as e:
-            ret = None
+            ret = e
             LOG.error(_("The call to %(method)s returned an error: %(e)s.")
                     % locals())
         return ret

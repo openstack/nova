@@ -48,6 +48,16 @@ def stub_set_host_enabled(context, host, enabled):
     return status
 
 
+def stub_set_power_state(context, host, power_state):
+    # We'll simulate success and failure by assuming
+    # that 'host_c1' always succeeds, and 'host_c2'
+    # always fails
+    if host == "host_c1":
+        return power_state
+    else:
+        return "fail"
+
+
 class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
 
@@ -62,6 +72,8 @@ class HostTestCase(test.TestCase):
         self.stubs.Set(scheduler_api, 'get_host_list', stub_get_host_list)
         self.stubs.Set(self.controller.compute_api, 'set_host_enabled',
                 stub_set_host_enabled)
+        self.stubs.Set(self.controller.compute_api, 'set_power_state',
+                stub_set_power_state)
 
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
@@ -87,15 +99,27 @@ class HostTestCase(test.TestCase):
         result_c2 = self.controller.update(self.req, "host_c2", body=en_body)
         self.assertEqual(result_c2["status"], "disabled")
 
+    def test_power_state(self):
+        en_body = {"power_state": "reboot"}
+        result_c1 = self.controller.update(self.req, "host_c1", body=en_body)
+        self.assertEqual(result_c1["power_state"], "reboot")
+        result_c2 = self.controller.update(self.req, "host_c2", body=en_body)
+        self.assertEqual(result_c2["power_state"], "fail")
+
+    def test_bad_power_state_value(self):
+        bad_body = {"power_state": "bad"}
+        result = self.controller.update(self.req, "host_c1", body=bad_body)
+        self.assertEqual(str(result.wrapped_exc)[:15], "400 Bad Request")
+
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", body=bad_body)
+        result = self.controller.update(self.req, "host_c1", body=bad_body)
+        self.assertEqual(str(result.wrapped_exc)[:15], "400 Bad Request")
 
     def test_bad_update_key(self):
         bad_body = {"crazy": "bad"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", body=bad_body)
+        result = self.controller.update(self.req, "host_c1", body=bad_body)
+        self.assertEqual(str(result.wrapped_exc)[:15], "400 Bad Request")
 
     def test_bad_host(self):
         self.assertRaises(exception.HostNotFound, self.controller.update,

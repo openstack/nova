@@ -881,6 +881,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.set_host_enabled(host, enabled)
 
     @exception.wrap_exception
+    def set_power_state(self, context, instance_id=None, host=None,
+            power_state=None):
+        """Turns the specified host on/off, or reboots the host."""
+        return self.driver.set_power_state(host, power_state)
+
+    @exception.wrap_exception
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get(context, instance_id)
