@@ -279,6 +279,13 @@ class ImageXMLSerializer(wsgi.DictSerializer):
 
     def _image_to_xml(self, xml_doc, image):
         image_node = xml_doc.createElement('image')
+        image_node.setAttribute('id', str(image['id']))
+        image_node.setAttribute('name', image['name'])
+        self._add_atom_links(xml_doc, image_node, image['links'])
+        return image_node
+
+    def _image_to_xml_detailed(self, xml_doc, image):
+        image_node = xml_doc.createElement('image')
         self._add_image_attributes(image_node, image)
 
         if 'server' in image:
@@ -320,33 +327,49 @@ class ImageXMLSerializer(wsgi.DictSerializer):
             link_node.setAttribute('href', link['href'])
             node.appendChild(link_node)
 
-    def _image_list_to_xml(self, xml_doc, images):
+    def _image_list_to_xml(self, xml_doc, images, image_to_xml):
         container_node = xml_doc.createElement('images')
         for image in images:
-            item_node = self._image_to_xml(xml_doc, image)
+            item_node = image_to_xml(xml_doc, image)
             container_node.appendChild(item_node)
         return container_node
 
-    def _image_to_xml_string(self, image):
+    def _image_to_xml_string(self, image, detailed):
         xml_doc = minidom.Document()
-        item_node = self._image_to_xml(xml_doc, image)
+        if detailed:
+            image_to_xml = self._image_to_xml_detailed
+        else:
+            image_to_xml = self._image_to_xml
+        item_node = image_to_xml(xml_doc, image)
         self._add_xmlns(item_node)
         return item_node.toprettyxml(indent='    ')
 
-    def _image_list_to_xml_string(self, images):
+    def _image_list_to_xml_string(self, images, detailed):
         xml_doc = minidom.Document()
-        container_node = self._image_list_to_xml(xml_doc, images)
+        if detailed:
+            image_to_xml = self._image_to_xml_detailed
+        else:
+            image_to_xml = self._image_to_xml
+        container_node = self._image_list_to_xml(xml_doc, images, image_to_xml)
+
         self._add_xmlns(container_node)
         return container_node.toprettyxml(indent='    ')
 
+    def index(self, images_dict):
+        return self._image_list_to_xml_string(images_dict['images'],
+                                              detailed=False)
+
     def detail(self, images_dict):
-        return self._image_list_to_xml_string(images_dict['images'])
+        return self._image_list_to_xml_string(images_dict['images'],
+                                              detailed=True)
 
     def show(self, image_dict):
-        return self._image_to_xml_string(image_dict['image'])
+        return self._image_to_xml_string(image_dict['image'],
+                                              detailed=True)
 
     def create(self, image_dict):
-        return self._image_to_xml_string(image_dict['image'])
+        return self._image_to_xml_string(image_dict['image'],
+                                              detailed=True)
 
 
 def create_resource(version='1.0'):

@@ -1383,70 +1383,53 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_index(self):
         serializer = images.ImageXMLSerializer()
 
-        fixtures = {
+        #so we can see the full diff in the output
+        self.maxDiff = None
+        fixture = {
             'images': [
                 {
                     'id': 1,
                     'name': 'Image1',
-                    'created': self.TIMESTAMP,
-                    'updated': self.TIMESTAMP,
-                    'serverRef': self.SERVER_HREF,
-                    'status': 'ACTIVE',
                     'links': [
                         {
-                            'href': 'http://localhost/v1.1/images/1',
-                            'rel': 'bookmark',
-                            'type': 'application/json',
+                            'href': self.IMAGE_HREF % 1,
+                            'rel': 'self',
                         },
                     ],
                 },
                 {
                     'id': 2,
-                    'name': 'queued image',
-                    'created': self.TIMESTAMP,
-                    'updated': self.TIMESTAMP,
-                    'serverRef': self.SERVER_HREF,
-                    'status': 'QUEUED',
+                    'name': 'Image2',
                     'links': [
                         {
-                            'href': 'http://localhost/v1.1/images/2',
-                            'rel': 'bookmark',
-                            'type': 'application/json',
+                            'href': self.IMAGE_HREF % 2,
+                            'rel': 'self',
                         },
                     ],
                 },
-            ],
+            ]
         }
 
-        output = serializer.serialize(fixtures, 'index')
+        output = serializer.serialize(fixture, 'index')
         actual = minidom.parseString(output.replace("  ", ""))
 
-        expected_serverRef = self.SERVER_HREF
+        expected_server_href = self.SERVER_HREF
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
+        expected_href_two = self.IMAGE_HREF % 2
+        expected_bookmark_two = self.IMAGE_BOOKMARK % 2
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
-        <images xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <image id="1"
-                    name="Image1"
-                    serverRef="%(expected_serverRef)s"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="ACTIVE">
-                <links>
-                    <link href="http://localhost/v1.1/images/1" rel="bookmark"
-                        type="application/json" />
-                </links>
-            </image>
-            <image id="2"
-                    name="queued image"
-                    serverRef="%(expected_serverRef)s"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="QUEUED">
-                <links>
-                    <link href="http://localhost/v1.1/images/2" rel="bookmark"
-                        type="application/json" />
-                </links>
-            </image>
+        <images
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom">
+        <image id="1" name="Image1">
+            <atom:link href="%(expected_href)s" rel="self"/>
+        </image>
+        <image id="2" name="Image2">
+            <atom:link href="%(expected_href_two)s" rel="self"/>
+        </image>
         </images>
         """.replace("  ", "") % (locals()))
 
@@ -1465,7 +1448,9 @@ class ImageXMLSerializationTest(test.TestCase):
         expected_serverRef = self.SERVER_HREF
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
-        <images xmlns="http://docs.openstack.org/compute/api/v1.1" />
+        <images
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom" />
         """.replace("  ", "") % (locals()))
 
         self.assertEqual(expected.toxml(), actual.toxml())
