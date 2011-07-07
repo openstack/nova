@@ -486,10 +486,10 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Removes a fixed ip from an instance from specified network."""
         addresses = self.db.fixed_ip_get_by_instance(context, instance_id)
         for addr in addresses:
-            if addr == address:
+            if addr['address'] == address:
                 self.deallocate_fixed_ip(context, address)
                 return
-        raise exception.NoSuchAddress(address=address)
+        raise exception.FixedIpNotFound(id=address)
 
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):

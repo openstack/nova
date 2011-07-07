@@ -890,7 +890,8 @@ class API(base.Base):
         """Add fixed_ip from specified network to given instance."""
         self._cast_compute_message('add_fixed_ip_to_instance', context,
                                    instance_id, network_id)
-                                                              
+
+
     @scheduler_api.reroute_compute("remove_fixed_ip")
     def remove_fixed_ip(self, context, instance_id, address):
         """Remove fixed_ip from specified network to given instance."""
