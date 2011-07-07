@@ -274,7 +274,10 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
         image_node = xml_doc.createElement('image')
         image_node.setAttribute('id', str(image['id']))
         image_node.setAttribute('name', image['name'])
-        self._create_link_nodes(xml_doc, image_node, image['links'])
+        link_nodes = self._create_link_nodes(xml_doc,
+                                             image['links'])
+        for link_node in link_nodes:
+            image_node.appendChild(link_node)
         return image_node
 
     def _image_to_xml_detailed(self, xml_doc, image):
@@ -290,7 +293,10 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
             metadata_node = self._create_metadata_node(xml_doc, metadata)
             image_node.appendChild(metadata_node)
 
-        self._create_link_nodes(xml_doc, image_node, image['links'])
+        link_nodes = self._create_link_nodes(xml_doc,
+                                             image['links'])
+        for link_node in link_nodes:
+            image_node.appendChild(link_node)
 
         return image_node
 
@@ -310,7 +316,10 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
         server_node = xml_doc.createElement('server')
         server_node.setAttribute('id', str(server['id']))
         #server_node.setAttribute('name', server['name'])
-        #self._create_link_nodes(xml_doc, server_node, server['links'])
+        #link_nodes = self._create_link_nodes(xml_doc,
+        #                                     image['links'])
+        #for link_node in link_nodes:
+        #    server_node.appendChild(link_node)
         return server_node
 
     def _image_list_to_xml(self, xml_doc, images, detailed):

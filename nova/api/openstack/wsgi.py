@@ -300,12 +300,14 @@ class XMLDictSerializer(DictSerializer):
             result.appendChild(node)
         return result
 
-    def _create_link_nodes(self, xml_doc, node, links):
+    def _create_link_nodes(self, xml_doc, links):
+        link_nodes = []
         for link in links:
             link_node = xml_doc.createElement('atom:link')
             link_node.setAttribute('rel', link['rel'])
             link_node.setAttribute('href', link['href'])
-            node.appendChild(link_node)
+            link_nodes.append(link_node)
+        return link_nodes
 
 
 class ResponseSerializer(object):
