@@ -232,9 +232,9 @@ class XMLDictSerializer(DictSerializer):
         doc = minidom.Document()
         node = self._to_xml_node(doc, self.metadata, root_key, data[root_key])
 
-        return self.xml_string(node)
+        return self.to_xml_string(node)
 
-    def xml_string(self, node, has_atom=False):
+    def to_xml_string(self, node, has_atom=False):
         self._add_xmlns(node, has_atom)
         return node.toprettyxml(indent='    ', encoding='UTF-8')
 
