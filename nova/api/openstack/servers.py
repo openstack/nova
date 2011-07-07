@@ -627,3 +627,15 @@ def create_resource(version='1.0'):
 
     return wsgi.Resource(controller, serializers=serializers,
                          deserializers=deserializers)
+
+
+class ServerXMLSerializer(wsgi.XMLDictSerializer):
+    def __init__(self, xmlns=wsgi.XMLNS_V11):
+        super(ServerXMLSerializer, self).__init__(xmlns=xmlns)
+
+    def server_to_xml(self, xml_doc, server):
+        server_node = xml_doc.createElement('server')
+        server_node.setAttribute('id', str(server['id']))
+        server_node.setAttribute('name', server['name'])
+        self._create_link_nodes(xml_doc, server_node, server['links'])
+        return server_node

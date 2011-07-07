@@ -236,9 +236,14 @@ class XMLDictSerializer(DictSerializer):
 
         return node.toprettyxml(indent='    ', encoding='utf-8')
 
+    def xml_string(self, node):
+        self._add_xmlns(node)
+        return node.toprettyxml(indent='    ', encoding='UTF-8')
+
     def _add_xmlns(self, node):
         if self.xmlns is not None:
             node.setAttribute('xmlns', self.xmlns)
+        node.setAttribute('xmlns:atom', "http://www.w3.org/2005/Atom")
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""
@@ -293,6 +298,13 @@ class XMLDictSerializer(DictSerializer):
             node = doc.createTextNode(str(data))
             result.appendChild(node)
         return result
+
+    def _create_link_nodes(self, xml_doc, node, links):
+        for link in links:
+            link_node = xml_doc.createElement('atom:link')
+            link_node.setAttribute('rel', link['rel'])
+            link_node.setAttribute('href', link['href'])
+            node.appendChild(link_node)
 
 
 class ResponseSerializer(object):

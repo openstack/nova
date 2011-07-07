@@ -27,6 +27,7 @@ from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack import image_metadata
+from nova.api.openstack import servers
 from nova.api.openstack.views import images as images_view
 from nova.api.openstack import wsgi
 
@@ -262,26 +263,19 @@ class ControllerV11(Controller):
         return {'instance_ref': server_ref}
 
 
-class ImageXMLSerializer(wsgi.DictSerializer):
+class ImageXMLSerializer(wsgi.XMLDictSerializer):
 
-    xmlns = {'': wsgi.XMLNS_V11, 'atom': "http://www.w3.org/2005/Atom"}
+    xmlns = wsgi.XMLNS_V11
 
     def __init__(self):
         self.metadata_serializer = image_metadata.ImageMetadataXMLSerializer()
-
-    def _add_xmlns(self, node):
-        for key, ns in self.xmlns.iteritems():
-            if key is not '':
-                name = 'xmlns:%s' % key
-            else:
-                name = 'xmlns'
-            node.setAttribute(name, ns)
+        self.server_serializer = servers.ServerXMLSerializer()
 
     def _image_to_xml(self, xml_doc, image):
         image_node = xml_doc.createElement('image')
         image_node.setAttribute('id', str(image['id']))
         image_node.setAttribute('name', image['name'])
-        self._add_atom_links(xml_doc, image_node, image['links'])
+        self._create_link_nodes(xml_doc, image_node, image['links'])
         return image_node
 
     def _image_to_xml_detailed(self, xml_doc, image):
@@ -297,7 +291,7 @@ class ImageXMLSerializer(wsgi.DictSerializer):
             metadata_node = self._create_metadata_node(xml_doc, metadata)
             image_node.appendChild(metadata_node)
 
-        self._add_atom_links(xml_doc, image_node, image['links'])
+        self._create_link_nodes(xml_doc, image_node, image['links'])
 
         return image_node
 
@@ -310,25 +304,19 @@ class ImageXMLSerializer(wsgi.DictSerializer):
         if 'progress' in image:
             node.setAttribute('progress', str(image['progress']))
 
-    def _create_server_node(self, xml_doc, server):
-        server_node = xml_doc.createElement('server')
-        server_node.setAttribute('id', str(server['id']))
-        server_node.setAttribute('name', server['name'])
-        self._add_atom_links(xml_doc, server_node, server['links'])
-        return server_node
-
     def _create_metadata_node(self, xml_doc, metadata):
         return self.metadata_serializer.meta_list_to_xml(xml_doc, metadata)
 
-    def _add_atom_links(self, xml_doc, node, links):
-        for link in links:
-            link_node = xml_doc.createElement('atom:link')
-            link_node.setAttribute('rel', link['rel'])
-            link_node.setAttribute('href', link['href'])
-            node.appendChild(link_node)
+    def _create_server_node(self, xml_doc, server):
+        return self.server_serializer.server_to_xml(xml_doc, server)
 
-    def _image_list_to_xml(self, xml_doc, images, image_to_xml):
+    def _image_list_to_xml(self, xml_doc, images, detailed):
         container_node = xml_doc.createElement('images')
+        if detailed:
+            image_to_xml = self._image_to_xml_detailed
+        else:
+            image_to_xml = self._image_to_xml
+
         for image in images:
             item_node = image_to_xml(xml_doc, image)
             container_node.appendChild(item_node)
@@ -342,34 +330,34 @@ class ImageXMLSerializer(wsgi.DictSerializer):
             image_to_xml = self._image_to_xml
         item_node = image_to_xml(xml_doc, image)
         self._add_xmlns(item_node)
-        return item_node.toprettyxml(indent='    ')
-
-    def _image_list_to_xml_string(self, images, detailed):
-        xml_doc = minidom.Document()
-        if detailed:
-            image_to_xml = self._image_to_xml_detailed
-        else:
-            image_to_xml = self._image_to_xml
-        container_node = self._image_list_to_xml(xml_doc, images, image_to_xml)
-
-        self._add_xmlns(container_node)
-        return container_node.toprettyxml(indent='    ')
+        self._add_atom_xmlns(item_node)
+        return item_node.toprettyxml(indent='    ', encoding='UTF-8')
 
     def index(self, images_dict):
-        return self._image_list_to_xml_string(images_dict['images'],
-                                              detailed=False)
+        xml_doc = minidom.Document()
+        node = self._image_list_to_xml(xml_doc,
+                                       images_dict['images'],
+                                       detailed=False)
+        return self.xml_string(node)
 
     def detail(self, images_dict):
-        return self._image_list_to_xml_string(images_dict['images'],
-                                              detailed=True)
+        xml_doc = minidom.Document()
+        node = self._image_list_to_xml(xml_doc,
+                                       images_dict['images'],
+                                       detailed=True)
+        return self.xml_string(node)
 
     def show(self, image_dict):
-        return self._image_to_xml_string(image_dict['image'],
-                                              detailed=True)
+        xml_doc = minidom.Document()
+        node = self._image_to_xml_detailed(xml_doc,
+                                       image_dict['image'])
+        return self.xml_string(node)
 
     def create(self, image_dict):
-        return self._image_to_xml_string(image_dict['image'],
-                                              detailed=True)
+        xml_doc = minidom.Document()
+        node = self._image_to_xml_detailed(xml_doc,
+                                       image_dict['image'])
+        return self.xml_string(node)
 
 
 def create_resource(version='1.0'):
