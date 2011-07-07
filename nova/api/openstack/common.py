@@ -134,3 +134,13 @@ def get_id_from_href(href):
     except:
         LOG.debug(_("Error extracting id from href: %s") % href)
         raise webob.exc.HTTPBadRequest(_('could not parse id from href'))
+
+
+def remove_version_from_href(base_url):
+    """Removes the api version from the href.
+
+    Given: 'http://www.nova.com/v1.1/123'
+    Returns: 'http://www.nova.com/123'
+
+    """
+    return base_url.rsplit('/', 1).pop(0)
