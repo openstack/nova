@@ -285,9 +285,10 @@ class ImageXMLSerializer(wsgi.DictSerializer):
             server_node = self._create_server_node(xml_doc, image['server'])
             image_node.appendChild(server_node)
 
-        metadata = image.get('metadata', {})
-        metadata_node = self._create_metadata_node(xml_doc, metadata.items())
-        image_node.appendChild(metadata_node)
+        metadata = image.get('metadata', {}).items()
+        if len(metadata) > 0:
+            metadata_node = self._create_metadata_node(xml_doc, metadata)
+            image_node.appendChild(metadata_node)
 
         self._add_atom_links(xml_doc, image_node, image['links'])
 

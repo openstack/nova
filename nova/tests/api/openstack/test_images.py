@@ -1197,11 +1197,11 @@ class ImageXMLSerializationTest(test.TestCase):
                 },
                 'links': [
                     {
-                        'href': self.IMAGE_HREF % (1,),
+                        'href': self.IMAGE_HREF % 1,
                         'rel': 'self',
                     },
                     {
-                        'href': self.IMAGE_BOOKMARK % (1,),
+                        'href': self.IMAGE_BOOKMARK % 1,
                         'rel': 'bookmark',
                     },
                 ],
@@ -1213,8 +1213,8 @@ class ImageXMLSerializationTest(test.TestCase):
 
         expected_server_href = self.SERVER_HREF
         expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_href = self.IMAGE_HREF % (1, )
-        expected_bookmark = self.IMAGE_BOOKMARK % (1, )
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <image id="1"
@@ -1239,28 +1239,42 @@ class ImageXMLSerializationTest(test.TestCase):
         </image>
         """.replace("  ", "") % (locals()))
 
-        print expected.toxml()
-        print '---'
-        print actual.toxml()
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_show_zero_metadata(self):
         serializer = images.ImageXMLSerializer()
 
+        self.maxDiff = None
         fixture = {
             'image': {
                 'id': 1,
                 'name': 'Image1',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
-                'serverRef': self.SERVER_HREF,
                 'status': 'ACTIVE',
+                'server': {
+                    'id': 1,
+                    'name': 'Server1',
+                    'links': [
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
                 'metadata': {},
                 'links': [
                     {
-                        'href': self.IMAGE_HREF % (1,),
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
                         'rel': 'bookmark',
-                        'type': 'application/json',
                     },
                 ],
             },
@@ -1270,21 +1284,24 @@ class ImageXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
-        expected_href = self.IMAGE_HREF % (1, )
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <image id="1"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
                 name="Image1"
-                serverRef="%(expected_server_href)s"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE"
-                xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <links>
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/json" />
-            </links>
-            <metadata />
+                status="ACTIVE">
+            <server name="Server1" id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
         """.replace("  ", "") % (locals()))
 
@@ -1293,22 +1310,38 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_show_image_no_metadata_key(self):
         serializer = images.ImageXMLSerializer()
 
+        self.maxDiff = None
         fixture = {
             'image': {
                 'id': 1,
                 'name': 'Image1',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
-                'serverRef': self.SERVER_HREF,
                 'status': 'ACTIVE',
+                'server': {
+                    'id': 1,
+                    'name': 'Server1',
+                    'links': [
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
                 'links': [
                     {
-                        'href': self.IMAGE_HREF % (1,),
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
                         'rel': 'bookmark',
-                        'type': 'application/json',
                     },
                 ],
-
             },
         }
 
@@ -1316,21 +1349,78 @@ class ImageXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
-        expected_href = self.IMAGE_HREF % (1, )
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <image id="1"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
                 name="Image1"
-                serverRef="%(expected_server_href)s"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE"
-                xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <links>
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/json" />
-            </links>
-            <metadata />
+                status="ACTIVE">
+            <server name="Server1" id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
+        </image>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_show_no_server(self):
+        serializer = images.ImageXMLSerializer()
+
+        #so we can see the full diff in the output
+        self.maxDiff = None
+        fixture = {
+            'image': {
+                'id': 1,
+                'name': 'Image1',
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                'status': 'ACTIVE',
+                'metadata': {
+                    'key1': 'value1',
+                },
+                'links': [
+                    {
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
+        expected_now = self.TIMESTAMP
+        expected = minidom.parseString("""
+        <image id="1"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                name="Image1"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                status="ACTIVE">
+            <metadata>
+                <meta key="key1">
+                    value1
+                </meta>
+            </metadata>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
         """.replace("  ", "") % (locals()))
 
@@ -1528,7 +1618,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 },
                 'links': [
                     {
-                        'href': self.IMAGE_HREF % (1,),
+                        'href': self.IMAGE_HREF % 1,
                         'rel': 'bookmark',
                         'type': 'application/json',
                     },
@@ -1540,7 +1630,7 @@ class ImageXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
-        expected_href = self.IMAGE_HREF % (1, )
+        expected_href = self.IMAGE_HREF % 1
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <image id="1"
