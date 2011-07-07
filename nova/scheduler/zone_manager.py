@@ -125,7 +125,7 @@ class ZoneManager(object):
         # But it's likely to change once we understand what the Best-Match
         # code will need better.
         combined = {}  # { <service>_<cap> : (min, max), ... }
-        stale_host_services = {} # { host1 : [svc1, svc2], host2 :[svc1]}
+        stale_host_services = {}  # { host1 : [svc1, svc2], host2 :[svc1]}
         for host, host_dict in hosts_dict.iteritems():
             for service_name, service_dict in host_dict.iteritems():
 
@@ -136,11 +136,10 @@ class ZoneManager(object):
                     stale_host_services[host].append(service_name)
                     continue
                 for cap, value in service_dict.iteritems():
-                    if cap == "timestamp": # Timestamp is not needed
+                    if cap == "timestamp":  # Timestamp is not needed
                         continue
                     key = "%s_%s" % (service_name, cap)
-                    min_value, max_value = combined.get(key, \
-                        (value, value))
+                    min_value, max_value = combined.get(key, (value, value))
                     min_value = min(min_value, value)
                     max_value = max(max_value, value)
                     combined[key] = (min_value, max_value)
@@ -185,7 +184,7 @@ class ZoneManager(object):
         logging.debug(_("Received %(service_name)s service update from "
                             "%(host)s: %(capabilities)s") % locals())
         service_caps = self.service_states.get(host, {})
-        capabilities["timestamp"] = utils.utcnow() # Reported time
+        capabilities["timestamp"] = utils.utcnow()  # Reported time
         service_caps[service_name] = capabilities
         self.service_states[host] = service_caps
 
@@ -204,6 +203,5 @@ class ZoneManager(object):
             service_caps = self.service_states[host]
             for service in services:
                 del service_caps[service]
-                if len(service_caps) == 0: # Delete host if no services
+                if len(service_caps) == 0:  # Delete host if no services
                     del self.service_states[host]
-
