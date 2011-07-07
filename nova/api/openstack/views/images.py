@@ -99,8 +99,9 @@ class ViewBuilderV11(ViewBuilder):
     def _build_server(self, image, image_obj):
         try:
             serverRef = image_obj['properties']['instance_ref']
-            #TODO (ameade)  get the server information
-            #image['server'] = ?
+            image['server'] = {
+                "id": common.get_id_from_href(serverRef),
+            }
         except KeyError:
             return
 

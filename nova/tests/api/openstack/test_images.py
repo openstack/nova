@@ -411,6 +411,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "QUEUED",
+                'server': {
+                    'id': 42,
+                },
                 "metadata": {
                     "instance_ref": "http://localhost/v1.1/servers/42",
                     "user_id": "1",
@@ -652,6 +655,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
+            'server': {
+                'id': 42,
+            },
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/124",
@@ -672,6 +678,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
             'progress': 0,
+            'server': {
+                'id': 42,
+            },
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/125",
@@ -691,6 +700,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'server': {
+                'id': 42,
+            },
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/126",
@@ -710,6 +722,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
+            'server': {
+                'id': 42,
+            },
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/127",
