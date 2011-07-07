@@ -281,8 +281,9 @@ class ImageXMLSerializer(wsgi.DictSerializer):
         image_node = xml_doc.createElement('image')
         self._add_image_attributes(image_node, image)
 
-        server_node = self._create_server_node(xml_doc, image['server'])
-        image_node.appendChild(server_node)
+        if 'server' in image:
+            server_node = self._create_server_node(xml_doc, image['server'])
+            image_node.appendChild(server_node)
 
         metadata = image.get('metadata', {})
         metadata_node = self._create_metadata_node(xml_doc, metadata.items())
@@ -298,7 +299,8 @@ class ImageXMLSerializer(wsgi.DictSerializer):
         node.setAttribute('created', image['created'])
         node.setAttribute('updated', image['updated'])
         node.setAttribute('status', image['status'])
-        node.setAttribute('progress', str(image['progress']))
+        if 'progress' in image:
+            node.setAttribute('progress', str(image['progress']))
 
     def _create_server_node(self, xml_doc, server):
         server_node = xml_doc.createElement('server')
@@ -333,7 +335,7 @@ class ImageXMLSerializer(wsgi.DictSerializer):
     def _image_list_to_xml_string(self, images):
         xml_doc = minidom.Document()
         container_node = self._image_list_to_xml(xml_doc, images)
-        self._add_xmlns(item_node)
+        self._add_xmlns(container_node)
         return container_node.toprettyxml(indent='    ')
 
     def detail(self, images_dict):
