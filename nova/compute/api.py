@@ -912,6 +912,11 @@ class API(base.Base):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
 
+    def set_host_enabled(self, context, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        return self._call_compute_message("set_host_enabled", context,
+                instance_id=None, host=host, params={"enabled": enabled})
+
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
