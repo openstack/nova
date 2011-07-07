@@ -1473,84 +1473,105 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_detail(self):
         serializer = images.ImageXMLSerializer()
 
-        fixtures = {
+        #so we can see the full diff in the output
+        self.maxDiff = None
+        fixture = {
             'images': [
                 {
                     'id': 1,
                     'name': 'Image1',
                     'created': self.TIMESTAMP,
                     'updated': self.TIMESTAMP,
-                    'serverRef': self.SERVER_HREF,
                     'status': 'ACTIVE',
-                    'metadata': {
-                        'key1': 'value1',
-                        'key2': 'value2',
+                    'server': {
+                        'id': 1,
+                        'name': 'Server1',
+                        'links': [
+                            {
+                                'href': self.SERVER_HREF,
+                                'rel': 'self',
+                            },
+                            {
+                                'href': self.SERVER_BOOKMARK,
+                                'rel': 'bookmark',
+                            },
+                        ],
                     },
                     'links': [
                         {
-                            'href': 'http://localhost/v1.1/images/1',
+                            'href': self.IMAGE_HREF % 1,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.IMAGE_BOOKMARK % 1,
                             'rel': 'bookmark',
-                            'type': 'application/json',
                         },
                     ],
                 },
                 {
                     'id': 2,
-                    'name': 'queued image',
+                    'name': 'Image2',
                     'created': self.TIMESTAMP,
                     'updated': self.TIMESTAMP,
-                    'serverRef': self.SERVER_HREF,
-                    'metadata': {},
-                    'status': 'QUEUED',
+                    'status': 'SAVING',
+                    'progress': 80,
+                    'metadata': {
+                        'key1': 'value1',
+                    },
                     'links': [
                         {
-                            'href': 'http://localhost/v1.1/images/2',
+                            'href': self.IMAGE_HREF % 2,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.IMAGE_BOOKMARK % 2,
                             'rel': 'bookmark',
-                            'type': 'application/json',
                         },
                     ],
                 },
-            ],
+            ]
         }
 
-        output = serializer.serialize(fixtures, 'detail')
+        output = serializer.serialize(fixture, 'detail')
         actual = minidom.parseString(output.replace("  ", ""))
 
-        expected_serverRef = self.SERVER_HREF
+        expected_server_href = self.SERVER_HREF
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
+        expected_href_two = self.IMAGE_HREF % 2
+        expected_bookmark_two = self.IMAGE_BOOKMARK % 2
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
-        <images xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <image id="1"
-                    name="Image1"
-                    serverRef="%(expected_serverRef)s"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="ACTIVE">
-                <links>
-                    <link href="http://localhost/v1.1/images/1" rel="bookmark"
-                        type="application/json" />
-                </links>
-                <metadata>
-                    <meta key="key2">
-                        value2
-                    </meta>
-                    <meta key="key1">
-                        value1
-                    </meta>
-                </metadata>
-            </image>
-            <image id="2"
-                    name="queued image"
-                    serverRef="%(expected_serverRef)s"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="QUEUED">
-                <links>
-                    <link href="http://localhost/v1.1/images/2" rel="bookmark"
-                        type="application/json" />
-                </links>
-                <metadata />
-            </image>
+        <images
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom">
+        <image id="1"
+                name="Image1"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                status="ACTIVE">
+            <server name="Server1" id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
+        </image>
+        <image id="2"
+                name="Image2"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                status="SAVING"
+                progress="80">
+            <metadata>
+                <meta key="key1">
+                    value1
+                </meta>
+            </metadata>
+            <atom:link href="%(expected_href_two)s" rel="self"/>
+            <atom:link href="%(expected_bookmark_two)s" rel="bookmark"/>
+        </image>
         </images>
         """.replace("  ", "") % (locals()))
 
