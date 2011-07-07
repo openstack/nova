@@ -24,6 +24,7 @@ import json
 import M2Crypto
 import os
 import pickle
+import random
 import subprocess
 import time
 import uuid
@@ -931,6 +932,31 @@ class VMOps(object):
         """Return link to instance's ajax console."""
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        args = {"enabled": json.dumps(enabled)}
+        json_resp = self._call_xenhost("set_host_enabled", args)
+        resp = json.loads(json_resp)
+        return resp["status"]
+
+    def _call_xenhost(self, method, arg_dict):
+        """There will be several methods that will need this general
+        handling for interacting with the xenhost plugin, so this abstracts
+        out that behavior.
+        """
+        # Create a task ID as something that won't match any instance ID
+        task_id = random.randint(-80000, -70000)
+        try:
+            task = self._session.async_call_plugin("xenhost", method,
+                    args=arg_dict)
+                    #args={"params": arg_dict})
+            ret = self._session.wait_for_task(task, task_id)
+        except self.XenAPI.Failure as e:
+            ret = None
+            LOG.error(_("The call to %(method)s returned an error: %(e)s.")
+                    % locals())
+        return ret
 
     def inject_network_info(self, instance, network_info, vm_ref=None):
         """

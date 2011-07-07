@@ -1591,3 +1591,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def get_host_stats(self, refresh=False):
         """See xenapi_conn.py implementation."""
         pass
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        pass
