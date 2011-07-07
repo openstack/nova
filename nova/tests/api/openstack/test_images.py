@@ -559,10 +559,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "links": [{
                     "rel": "self",
                     "href": href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": bookmark,
                 }],
             }
             self.assertTrue(test_image in response_list)
