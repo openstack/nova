@@ -322,17 +322,6 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
             container_node.appendChild(item_node)
         return container_node
 
-    def _image_to_xml_string(self, image, detailed):
-        xml_doc = minidom.Document()
-        if detailed:
-            image_to_xml = self._image_to_xml_detailed
-        else:
-            image_to_xml = self._image_to_xml
-        item_node = image_to_xml(xml_doc, image)
-        self._add_xmlns(item_node)
-        self._add_atom_xmlns(item_node)
-        return item_node.toprettyxml(indent='    ', encoding='UTF-8')
-
     def index(self, images_dict):
         xml_doc = minidom.Document()
         node = self._image_list_to_xml(xml_doc,
