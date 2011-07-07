@@ -26,6 +26,7 @@ import os
 import pickle
 import random
 import subprocess
+import sys
 import time
 import uuid
 
@@ -138,9 +139,18 @@ class VMOps(object):
         return vdis
 
     def spawn(self, instance, network_info):
-        vdis = self._create_disks(instance)
-        vm_ref = self._create_vm(instance, vdis, network_info)
-        self._spawn(instance, vm_ref)
+        vdis = None
+        try:
+            vdis = self._create_disks(instance)
+            vm_ref = self._create_vm(instance, vdis, network_info)
+            self._spawn(instance, vm_ref)
+        except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
+            LOG.exception(_("instance %s: Failed to spawn"),
+                          instance.id, exc_info=sys.exc_info())
+            LOG.debug(_('Instance %s failed to spawn - performing clean-up'),
+                      instance.id)
+            self._handle_spawn_error(vdis, spawn_error)
+            raise spawn_error
 
     def spawn_rescue(self, instance):
         """Spawn a rescue instance."""
@@ -166,42 +176,64 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
 
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-
         kernel = None
-        if instance.kernel_id:
-            kernel = VMHelper.fetch_image(self._session, instance.id,
-                    instance.kernel_id, user, project,
-                    ImageType.KERNEL_RAMDISK)
-
         ramdisk = None
-        if instance.ramdisk_id:
-            ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                    instance.ramdisk_id, user, project,
-                    ImageType.KERNEL_RAMDISK)
+        try:
+            if instance.kernel_id:
+                kernel = VMHelper.fetch_image(self._session, instance.id,
+                        instance.kernel_id, user, project,
+                        ImageType.KERNEL)[0]
+            if instance.ramdisk_id:
+                ramdisk = VMHelper.fetch_image(self._session, instance.id,
+                        instance.ramdisk_id, user, project,
+                        ImageType.RAMDISK)[0]
+            # Create the VM ref and attach the first disk
+            first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                    vdis[0]['vdi_uuid'])
 
-        # Create the VM ref and attach the first disk
-        first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                vdis[0]['vdi_uuid'])
+            vm_mode = instance.vm_mode and instance.vm_mode.lower()
+            if vm_mode == 'pv':
+                use_pv_kernel = True
+            elif vm_mode in ('hv', 'hvm'):
+                use_pv_kernel = False
+                vm_mode = 'hvm'  # Normalize
+            else:
+                use_pv_kernel = VMHelper.determine_is_pv(self._session,
+                        instance.id, first_vdi_ref, disk_image_type,
+                        instance.os_type)
+                vm_mode = use_pv_kernel and 'pv' or 'hvm'
 
-        vm_mode = instance.vm_mode and instance.vm_mode.lower()
-        if vm_mode == 'pv':
-            use_pv_kernel = True
-        elif vm_mode in ('hv', 'hvm'):
-            use_pv_kernel = False
-            vm_mode = 'hvm'  # Normalize
-        else:
-            use_pv_kernel = VMHelper.determine_is_pv(self._session,
-                    instance.id, first_vdi_ref, disk_image_type,
-                    instance.os_type)
-            vm_mode = use_pv_kernel and 'pv' or 'hvm'
+            if instance.vm_mode != vm_mode:
+                # Update database with normalized (or determined) value
+                db.instance_update(context.get_admin_context(),
+                                   instance['id'], {'vm_mode': vm_mode})
+            vm_ref = VMHelper.create_vm(self._session, instance,
+                    kernel and kernel.get('file', None) or None,
+                    ramdisk and ramdisk.get('file', None) or None,
+                    use_pv_kernel)
+        except (self.XenAPI.Failure, OSError, IOError) as vm_create_error:
+            # Collect VDI/file resources to clean up;
+            # These resources will be removed by _handle_spawn_error.
+            LOG.exception(_("instance %s: Failed to spawn - " +
+                            "Unable to create VM"),
+                          instance.id, exc_info=sys.exc_info())
+            last_arg = None
+            resources = []
 
-        if instance.vm_mode != vm_mode:
-            # Update database with normalized (or determined) value
-            db.instance_update(context.get_admin_context(),
-                               instance['id'], {'vm_mode': vm_mode})
+            if vm_create_error.args:
+                last_arg = vm_create_error.args[-1]
+            if isinstance(last_arg, list):
+                resources = last_arg
+            else:
+                vm_create_error.args = vm_create_error.args + (resources,)
 
-        vm_ref = VMHelper.create_vm(self._session, instance,
-                kernel, ramdisk, use_pv_kernel)
+            if kernel:
+                resources.append(kernel)
+            if ramdisk:
+                resources.append(ramdisk)
+
+            raise vm_create_error
+
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=first_vdi_ref, userdevice=0, bootable=True)
 
@@ -321,6 +353,47 @@ class VMOps(object):
         self.reset_network(instance, vm_ref)
 
         return timer.start(interval=0.5, now=True)
+
+    def _handle_spawn_error(self, vdis, spawn_error):
+        # Extract resource list from spawn_error.
+        resources = []
+        if spawn_error.args:
+            last_arg = spawn_error.args[-1]
+            resources = last_arg
+        if vdis:
+            for vdi in vdis:
+                resources.append(dict(vdi_type=vdi['vdi_type'],
+                                      vdi_uuid=vdi['vdi_uuid'],
+                                      file=None))
+
+        LOG.debug(_("Resources to remove:%s"), resources)
+        kernel_file = None
+        ramdisk_file = None
+
+        for item in resources:
+            vdi_type = item['vdi_type']
+            vdi_to_remove = item['vdi_uuid']
+            if vdi_to_remove:
+                try:
+                    vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                            vdi_to_remove)
+                    LOG.debug(_('Removing VDI %(vdi_ref)s' +
+                                '(uuid:%(vdi_to_remove)s)'), locals())
+                    VMHelper.destroy_vdi(self._session, vdi_ref)
+                except self.XenAPI.Failure:
+                    # Vdi has already been deleted
+                    LOG.debug(_("Skipping VDI destroy for %s"), vdi_to_remove)
+            if item['file']:
+                # There is also a file to remove.
+                if vdi_type == ImageType.KERNEL_STR:
+                    kernel_file = item['file']
+                elif vdi_type == ImageType.RAMDISK_STR:
+                    ramdisk_file = item['file']
+
+        if kernel_file or ramdisk_file:
+            LOG.debug(_("Removing kernel/ramdisk files from dom0"))
+            self._destroy_kernel_ramdisk_plugin_call(kernel_file,
+                                                     ramdisk_file)
 
     def _get_vm_opaque_ref(self, instance_or_vm):
         """
@@ -699,6 +772,16 @@ class VMOps(object):
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
+    def _destroy_kernel_ramdisk_plugin_call(self, kernel, ramdisk):
+        args = {}
+        if kernel:
+            args['kernel-file'] = kernel
+        if ramdisk:
+            args['ramdisk-file'] = ramdisk
+        task = self._session.async_call_plugin(
+            'glance', 'remove_kernel_ramdisk', args)
+        self._session.wait_for_task(task)
+
     def _destroy_kernel_ramdisk(self, instance, vm_ref):
         """Three situations can occur:
 
@@ -728,13 +811,7 @@ class VMOps(object):
         (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(self._session,
                                                            vm_ref)
 
-        LOG.debug(_("Removing kernel/ramdisk files"))
-
-        args = {'kernel-file': kernel, 'ramdisk-file': ramdisk}
-        task = self._session.async_call_plugin(
-            'glance', 'remove_kernel_ramdisk', args)
-        self._session.wait_for_task(task, instance.id)
-
+        self._destroy_kernel_ramdisk_plugin_call(kernel, ramdisk)
         LOG.debug(_("kernel/ramdisk files removed"))
 
     def _destroy_vm(self, instance, vm_ref):
