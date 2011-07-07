@@ -840,8 +840,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.inject_network_info(context, instance_id)
         self.reset_network(context, instance_id)
 
-
-    # TODO(sandy) pep8 until checked ...
     @exception.wrap_exception
     @checks_instance_lock
     def remove_fixed_ip_from_instance(self, context, instance_id, address):
@@ -853,7 +851,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        address)
         self.inject_network_info(context, instance_id)
         self.reset_network(context, instance_id)
-
 
     @exception.wrap_exception
     @checks_instance_lock

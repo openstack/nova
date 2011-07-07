@@ -480,8 +480,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = [self.db.network_get(context, network_id)]
         self._allocate_fixed_ips(context, instance_id, networks)
 
-
-    #TODO(sandy) - PEP8 until this is checked ...
     def remove_fixed_ip_from_instance(self, context, instance_id, address):
         """Removes a fixed ip from an instance from specified network."""
         addresses = self.db.fixed_ip_get_by_instance(context, instance_id)
@@ -490,7 +488,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                 self.deallocate_fixed_ip(context, address)
                 return
         raise exception.FixedIpNotFound(id=address)
-
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
