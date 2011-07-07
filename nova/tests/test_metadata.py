@@ -44,6 +44,7 @@ class MetadataTestCase(test.TestCase):
                          'user_data': '',
                          'image_ref': 7,
                          'fixed_ips': [],
+                         'root_device_name': '/dev/sda1',
                          'hostname': 'test'})
 
         def instance_get(*args, **kwargs):

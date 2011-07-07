@@ -255,13 +255,14 @@ class Controller(object):
         props = {'instance_ref': server_ref}
 
         metadata = entity.get('metadata', {})
+        context = req.environ["nova.context"]
+        common.check_img_metadata_quota_limit(context, metadata)
         try:
             props.update(metadata)
         except ValueError:
             msg = _("Invalid metadata")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        context = req.environ["nova.context"]
         image = self.compute_api.backup(context,
                                         instance_id,
                                         image_name,
@@ -756,13 +757,14 @@ class ControllerV11(Controller):
         props = {'instance_ref': server_ref}
 
         metadata = entity.get('metadata', {})
+        context = req.environ['nova.context']
+        common.check_img_metadata_quota_limit(context, metadata)
         try:
             props.update(metadata)
         except ValueError:
             msg = _("Invalid metadata")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        context = req.environ['nova.context']
         image = self.compute_api.snapshot(context,
                                           instance_id,
                                           image_name,
@@ -790,6 +792,9 @@ class ControllerV11(Controller):
 
 
 class HeadersSerializer(wsgi.ResponseHeadersSerializer):
+
+    def create(self, response, data):
+        response.status_int = 202
 
     def delete(self, response, data):
         response.status_int = 204

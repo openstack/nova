@@ -184,8 +184,8 @@ class XenAPIConnection(driver.ComputeDriver):
     def list_instances_detail(self):
         return self._vmops.list_instances_detail()
 
-    def spawn(self, context, instance, network_info,
-              block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """Create VM instance"""
         self._vmops.spawn(context, instance, network_info)
 

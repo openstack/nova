@@ -169,6 +169,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'project_id':    'fake',
                      'bridge':        'br101',
                      'image_ref':     '123456',
+                     'local_gb':      20,
                      'instance_type_id': '5'}  # m1.small
 
     def lazy_load_library_exists(self):
@@ -743,6 +744,42 @@ class LibvirtConnTestCase(test.TestCase):
         conn = connection.LibvirtConnection(False)
         ip = conn.get_host_ip_addr()
         self.assertEquals(ip, FLAGS.my_ip)
+
+    def test_volume_in_mapping(self):
+        conn = connection.LibvirtConnection(False)
+        swap = {'device_name': '/dev/sdb',
+                'swap_size': 1}
+        ephemerals = [{'num': 0,
+                       'virtual_name': 'ephemeral0',
+                       'device_name': '/dev/sdc1',
+                       'size': 1},
+                      {'num': 2,
+                       'virtual_name': 'ephemeral2',
+                       'device_name': '/dev/sdd',
+                       'size': 1}]
+        block_device_mapping = [{'mount_device': '/dev/sde',
+                                 'device_path': 'fake_device'},
+                                {'mount_device': '/dev/sdf',
+                                 'device_path': 'fake_device'}]
+        block_device_info = {
+                'root_device_name': '/dev/sda',
+                'swap': swap,
+                'ephemerals': ephemerals,
+                'block_device_mapping': block_device_mapping}
+
+        def _assert_volume_in_mapping(device_name, true_or_false):
+            self.assertEquals(conn._volume_in_mapping(device_name,
+                                                      block_device_info),
+                              true_or_false)
+
+        _assert_volume_in_mapping('sda', False)
+        _assert_volume_in_mapping('sdb', True)
+        _assert_volume_in_mapping('sdc1', True)
+        _assert_volume_in_mapping('sdd', True)
+        _assert_volume_in_mapping('sde', True)
+        _assert_volume_in_mapping('sdf', True)
+        _assert_volume_in_mapping('sdg', False)
+        _assert_volume_in_mapping('sdh1', False)
 
 
 class NWFilterFakes:
