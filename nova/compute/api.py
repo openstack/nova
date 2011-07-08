@@ -622,34 +622,71 @@ class API(base.Base):
         """
         return self.get(context, instance_id)
 
-    def get_all(self, context, project_id=None, reservation_id=None,
-                fixed_ip=None, recurse_zones=False):
+    def _get_all_by_reservation_id(self, context, search_opts):
+        search_opts['recurse_zones'] = True
+        return self.db.instance_get_all_by_reservation(
+                context, reservation_id)
+
+    def _get_all_by_fixed_ip(self, context, search_opts):
+        try:
+            instances = self.db.fixed_ip_get_instance(context, fixed_ip)
+        except exception.FloatingIpNotFound, e:
+            instances = None
+        return instances
+
+    def _get_all_by_project_id(self, context, search_opts):
+        return self.db.instance_get_all_by_project(
+                context, project_id)
+
+    def _get_all_by_ip(self, context, search_opts):
+        pass
+
+    def _get_all_by_ip6(self, context, search_opts):
+        pass
+
+    def _get_all_by_name(self, context, search_opts):
+        pass
+
+    def get_all(self, context, search_opts=None):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retreive
         all instances in the system.
         """
 
-        if reservation_id is not None:
-            recurse_zones = True
-            instances = self.db.instance_get_all_by_reservation(
-                                    context, reservation_id)
-        elif fixed_ip is not None:
-            try:
-                instances = self.db.fixed_ip_get_instance(context, fixed_ip)
-            except exception.FloatingIpNotFound, e:
-                if not recurse_zones:
+        if search_opts is None:
+            search_opts = {}
+
+        exclusive_opts = ['reservation_id',
+                          'project_id',
+                          'fixed_ip',
+                          'ip',
+                          'ip6',
+                          'name']
+
+        # See if a valud search option was passed in.
+        # Ignore unknown search options for possible forward compatability.
+        # Raise an exception if more than 1 search option is specified
+        option = None
+        for k in exclusive_opts.iterkeys():
+            v = search_opts.get(k, None)
+            if v:
+                if option is None:
+                    option = k
+                else:
                     raise
-                instances = None
-        elif project_id or not context.is_admin:
-            if not context.project:
+
+        if option:
+            method_name = '_get_all_by_%s' % option
+            method = getattr(self, method_name, None)
+            instances = method(context, search_opts)
+        elif not context.is_admin:
+            if context.project:
+                instances = self.db.instance_get_all_by_project(
+                    context, context.project_id)
+            else:
                 instances = self.db.instance_get_all_by_user(
                     context, context.user_id)
-            else:
-                if project_id is None:
-                    project_id = context.project_id
-                instances = self.db.instance_get_all_by_project(
-                    context, project_id)
         else:
             instances = self.db.instance_get_all(context)
 
@@ -658,17 +695,15 @@ class API(base.Base):
         elif not isinstance(instances, list):
             instances = [instances]
 
-        if not recurse_zones:
+        if not search_opts.get('recurse_zones', False):
             return instances
 
+        # Recurse zones.  Need admin context for this.
         admin_context = context.elevated()
         children = scheduler_api.call_zone_method(admin_context,
                 "list",
                 novaclient_collection_name="servers",
-                reservation_id=reservation_id,
-                project_id=project_id,
-                fixed_ip=fixed_ip,
-                recurse_zones=True)
+                **search_opts)
 
         for zone, servers in children:
             for server in servers:
