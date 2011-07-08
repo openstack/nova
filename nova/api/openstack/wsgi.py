@@ -176,14 +176,8 @@ class RequestDeserializer(object):
                 LOG.debug(_("No Content-Type provided in request"))
                 return {}
 
-            if 'Content-Length' not in request.headers:
-                msg = _("No Content-Length provided in request")
-                LOG.debug(msg)
-                return {}
-
-            if not request.content_length > 0:
-                msg = _("Request has Content-Length of zero")
-                LOG.debug(msg)
+            if not len(request.body) > 0:
+                LOG.debug(_("Empty body provided in request"))
                 return {}
 
             deserializer = self.get_body_deserializer(content_type)
