@@ -176,7 +176,7 @@ class Controller(object):
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,
-            }
+            'migrate': self._action_migrate}
 
         for key in actions.keys():
             if key in body:
@@ -218,6 +218,14 @@ class Controller(object):
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
             return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def _action_migrate(self, input_dict, req, id):
+        try:
+            self.compute_api.resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in migrate %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
