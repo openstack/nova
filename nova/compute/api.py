@@ -856,7 +856,12 @@ class API(base.Base):
                 {'host': migration_ref['dest_compute'], })
 
     def resize(self, context, instance_id, flavor_id=None):
-        """Resize a running instance."""
+        """Resize (ie, migrate) a running instance.
+
+        If flavor_id is None, the process is considered a migration, keeping
+        the original flavor_id. If flavor_id is not None, the instance should
+        be migrated to a new host and resized to the new flavor_id.
+        """
         instance = self.db.instance_get(context, instance_id)
         current_instance_type = instance['instance_type']
 
