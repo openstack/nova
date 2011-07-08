@@ -248,7 +248,7 @@ class API(base.Base):
             'vm_mode': vm_mode,
             'root_device_name': root_device_name}
 
-        return (num_instances, base_options, security_groups, image)
+        return (num_instances, base_options, image)
 
     def _update_image_block_device_mapping(self, elevated_context, instance_id,
                                            mappings):
@@ -300,7 +300,7 @@ class API(base.Base):
                                                           values)
 
     def create_db_entry_for_new_instance(self, context, image, base_options,
-             security_groups, block_device_mapping, num=1):
+             security_group, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         etc).
@@ -401,8 +401,7 @@ class API(base.Base):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
-        num_instances, base_options, security_groups, image = \
-                    self._check_create_parameters(
+        num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -440,8 +439,7 @@ class API(base.Base):
         Returns a list of instance dicts.
         """
 
-        num_instances, base_options, security_groups, image = \
-                    self._check_create_parameters(
+        num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -451,11 +449,12 @@ class API(base.Base):
                                injected_files, admin_password, zone_blob,
                                reservation_id)
 
+        block_device_mapping = block_device_mapping or []
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = self.create_db_entry_for_new_instance(context, image,
-                                    base_options, security_groups,
+                                    base_options, security_group,
                                     block_device_mapping, num=num)
             instances.append(instance)
             instance_id = instance['id']
