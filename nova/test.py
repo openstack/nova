@@ -31,6 +31,7 @@ import unittest
 
 import mox
 import nose.plugins.skip
+import nova.image.fake
 import shutil
 import stubout
 from eventlet import greenthread
@@ -118,6 +119,9 @@ class TestCase(unittest.TestCase):
             if FLAGS.connection_type == 'fake':
                 if hasattr(fake.FakeConnection, '_instance'):
                     del fake.FakeConnection._instance
+
+            if FLAGS.image_service == 'nova.image.fake.FakeImageService':
+                nova.image.fake.FakeImageService_reset()
 
             # Reset any overriden flags
             self.reset_flags()
