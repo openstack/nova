@@ -1095,7 +1095,7 @@ class CloudController(object):
             except exception.NotFound:
                 raise exception.ImageNotFound(image_id=ec2_id)
         image_type = ec2_id.split('-')[0]
-        if image.get('container_format') != image_type:
+        if self._image_type(image.get('container_format')) != image_type:
             raise exception.ImageNotFound(image_id=ec2_id)
         return image
 
