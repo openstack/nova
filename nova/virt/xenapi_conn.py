@@ -336,6 +336,10 @@ class XenAPIConnection(driver.ComputeDriver):
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
 
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        return self._vmops.set_host_enabled(host, enabled)
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""

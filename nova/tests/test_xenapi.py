@@ -381,6 +381,18 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEquals(self.vm['HVM_boot_params'], {})
         self.assertEquals(self.vm['HVM_boot_policy'], '')
 
+    def _list_vdis(self):
+        url = FLAGS.xenapi_connection_url
+        username = FLAGS.xenapi_connection_username
+        password = FLAGS.xenapi_connection_password
+        session = xenapi_conn.XenAPISession(url, username, password)
+        return session.call_xenapi('VDI.get_all')
+
+    def _check_vdis(self, start_list, end_list):
+        for vdi_ref in end_list:
+            if not vdi_ref in start_list:
+                self.fail('Found unexpected VDI:%s' % vdi_ref)
+
     def _test_spawn(self, image_ref, kernel_id, ramdisk_id,
                     instance_type_id="3", os_type="linux",
                     architecture="x86-64", instance_id=1,
@@ -421,6 +433,36 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertRaises(Exception,
                           self._test_spawn,
                           1, 2, 3, "4")  # m1.xlarge
+
+    def test_spawn_fail_cleanup_1(self):
+        """Simulates an error while downloading an image.
+
+        Verifies that VDIs created are properly cleaned up.
+
+        """
+        vdi_recs_start = self._list_vdis()
+        FLAGS.xenapi_image_service = 'glance'
+        stubs.stubout_fetch_image_glance_disk(self.stubs)
+        self.assertRaises(xenapi_fake.Failure,
+                          self._test_spawn, 1, 2, 3)
+        # No additional VDI should be found.
+        vdi_recs_end = self._list_vdis()
+        self._check_vdis(vdi_recs_start, vdi_recs_end)
+
+    def test_spawn_fail_cleanup_2(self):
+        """Simulates an error while creating VM record.
+
+        It verifies that VDIs created are properly cleaned up.
+
+        """
+        vdi_recs_start = self._list_vdis()
+        FLAGS.xenapi_image_service = 'glance'
+        stubs.stubout_create_vm(self.stubs)
+        self.assertRaises(xenapi_fake.Failure,
+                          self._test_spawn, 1, 2, 3)
+        # No additional VDI should be found.
+        vdi_recs_end = self._list_vdis()
+        self._check_vdis(vdi_recs_start, vdi_recs_end)
 
     def test_spawn_raw_objectstore(self):
         FLAGS.xenapi_image_service = 'objectstore'

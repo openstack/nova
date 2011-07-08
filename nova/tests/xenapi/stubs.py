@@ -98,6 +98,42 @@ def stubout_is_vdi_pv(stubs):
     stubs.Set(vm_utils, '_is_vdi_pv', f)
 
 
+def stubout_determine_is_pv_objectstore(stubs):
+    """Assumes VMs never have PV kernels"""
+
+    @classmethod
+    def f(cls, *args):
+        return False
+    stubs.Set(vm_utils.VMHelper, '_determine_is_pv_objectstore', f)
+
+
+def stubout_lookup_image(stubs):
+    """Simulates a failure in lookup image."""
+    def f(_1, _2, _3, _4):
+        raise Exception("Test Exception raised by fake lookup_image")
+    stubs.Set(vm_utils, 'lookup_image', f)
+
+
+def stubout_fetch_image_glance_disk(stubs):
+    """Simulates a failure in fetch image_glance_disk."""
+
+    @classmethod
+    def f(cls, *args):
+        raise fake.Failure("Test Exception raised by " +
+                           "fake fetch_image_glance_disk")
+    stubs.Set(vm_utils.VMHelper, '_fetch_image_glance_disk', f)
+
+
+def stubout_create_vm(stubs):
+    """Simulates a failure in create_vm."""
+
+    @classmethod
+    def f(cls, *args):
+        raise fake.Failure("Test Exception raised by " +
+                           "fake create_vm")
+    stubs.Set(vm_utils.VMHelper, 'create_vm', f)
+
+
 def stubout_loopingcall_start(stubs):
     def fake_start(self, interval, now=True):
         self.f(*self.args, **self.kw)
@@ -120,6 +156,9 @@ class FakeSessionForVMTests(fake.SessionBase):
         super(FakeSessionForVMTests, self).__init__(uri)
 
     def host_call_plugin(self, _1, _2, plugin, method, _5):
+        # If the call is for 'copy_kernel_vdi' return None.
+        if method == 'copy_kernel_vdi':
+            return
         sr_ref = fake.get_all('SR')[0]
         vdi_ref = fake.create_vdi('', False, sr_ref, False)
         vdi_rec = fake.get_record('VDI', vdi_ref)
