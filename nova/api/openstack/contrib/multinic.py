@@ -26,6 +26,8 @@ from nova.api.openstack import faults
 LOG = logging.getLogger("nova.api.multinic")
 
 
+# Note: The class name is as it has to be for this to be loaded as an
+# extension--only first character capitalized.
 class Multinic(extensions.ExtensionDescriptor):
     def __init__(self, *args, **kwargs):
         super(Multinic, self).__init__(*args, **kwargs)
@@ -79,5 +81,19 @@ class Multinic(extensions.ExtensionDescriptor):
         return exc.HTTPAccepted()
 
     def _remove_fixed_ip(self, input_dict, req, id):
-        # Not yet implemented
-        raise faults.Fault(exc.HTTPNotImplemented())
+        """Removes an IP from an instance."""
+        try:
+            # Validate the input entity
+            if 'address' not in input_dict['removeFixedIp']:
+                LOG.exception(_("Missing 'address' argument for "
+                                "removeFixedIp"))
+                return faults.Fault(exc.HTTPUnprocessableEntity())
+
+            # Remove the fixed IP
+            address = input_dict['removeFixedIp']['address']
+            self.compute_api.remove_fixed_ip(req.environ['nova.context'], id,
+                                             address)
+        except Exception, e:
+            LOG.exception(_("Error in removeFixedIp %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPAccepted()

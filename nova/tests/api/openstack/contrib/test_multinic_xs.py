@@ -1,4 +1,4 @@
-# Copyright 2011 Eldar Nugaev
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,12 +24,19 @@ from nova.tests.api.openstack import fakes
 
 
 last_add_fixed_ip = (None, None)
+last_remove_fixed_ip = (None, None)
 
 
 def compute_api_add_fixed_ip(self, context, instance_id, network_id):
     global last_add_fixed_ip
 
     last_add_fixed_ip = (instance_id, network_id)
+
+
+def compute_api_remove_fixed_ip(self, context, instance_id, address):
+    global last_remove_fixed_ip
+
+    last_remove_fixed_ip = (instance_id, address)
 
 
 class FixedIpTest(test.TestCase):
@@ -43,6 +50,9 @@ class FixedIpTest(test.TestCase):
         fakes.stub_out_auth(self.stubs)
         self.stubs.Set(compute.api.API, "add_fixed_ip",
                        compute_api_add_fixed_ip)
+        # TODO(Vek): Fails until remove_fixed_ip() added
+        # self.stubs.Set(compute.api.API, "remove_fixed_ip",
+        #                compute_api_remove_fixed_ip)
         self.context = context.get_admin_context()
 
     def tearDown(self):
@@ -61,7 +71,7 @@ class FixedIpTest(test.TestCase):
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
-        self.assertNotEqual(last_add_fixed_ip, (None, None))
+        self.assertEqual(last_add_fixed_ip, ('test_inst', 'test_net'))
 
     def test_add_fixed_ip_no_network(self):
         global last_add_fixed_ip
@@ -78,6 +88,9 @@ class FixedIpTest(test.TestCase):
         self.assertEqual(last_add_fixed_ip, (None, None))
 
     def test_remove_fixed_ip(self):
+        global last_remove_fixed_ip
+        last_remove_fixed_ip = (None, None)
+
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
         req = webob.Request.blank('/v1.1/servers/test_inst/action')
         req.method = 'POST'
@@ -85,4 +98,20 @@ class FixedIpTest(test.TestCase):
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 501)
+        # TODO(Vek): Fails until remove_fixed_ip() added
+        self.assertEqual(resp.status_int, 202)
+        self.assertEqual(last_remove_fixed_ip, ('test_inst', '10.10.10.1'))
+
+    def test_remove_fixed_ip_no_address(self):
+        global last_remove_fixed_ip
+        last_remove_fixed_ip = (None, None)
+
+        body = dict(removeFixedIp=dict())
+        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['content-type'] = 'application/json'
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 422)
+        self.assertEqual(last_remove_fixed_ip, (None, None))
