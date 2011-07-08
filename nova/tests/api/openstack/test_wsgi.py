@@ -18,8 +18,7 @@ class RequestTest(test.TestCase):
         request = wsgi.Request.blank('/tests/123', method='POST')
         request.headers["Content-Type"] = "text/html"
         request.body = "asdf<br />"
-        self.assertRaises(exception.InvalidContentType,
-                          request.get_content_type)
+        self.assertEqual(request.get_content_type(), None)
 
     def test_content_type_with_charset(self):
         request = wsgi.Request.blank('/tests/123')

@@ -52,7 +52,7 @@ class Request(webob.Request):
         content_type = self.content_type
 
         if content_type not in allowed_types:
-            raise exception.InvalidContentType(content_type=content_type)
+            return None
         else:
             return content_type
 
