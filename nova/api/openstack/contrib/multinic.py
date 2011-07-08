@@ -29,26 +29,50 @@ LOG = logging.getLogger("nova.api.multinic")
 # Note: The class name is as it has to be for this to be loaded as an
 # extension--only first character capitalized.
 class Multinic(extensions.ExtensionDescriptor):
+    """The multinic extension.
+
+    Exposes addFixedIp and removeFixedIp actions on servers.
+
+    """
+
     def __init__(self, *args, **kwargs):
+        """Initialize the extension.
+
+        Gets a compute.API object so we can call the back-end
+        add_fixed_ip() and remove_fixed_ip() methods.
+        """
+
         super(Multinic, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
     def get_name(self):
+        """Return the extension name, as required by contract."""
+
         return "Multinic"
 
     def get_alias(self):
+        """Return the extension alias, as required by contract."""
+
         return "NMN"
 
     def get_description(self):
+        """Return the extension description, as required by contract."""
+
         return "Multiple network support"
 
     def get_namespace(self):
+        """Return the namespace, as required by contract."""
+
         return "http://docs.openstack.org/ext/multinic/api/v1.1"
 
     def get_updated(self):
+        """Return the last updated timestamp, as required by contract."""
+
         return "2011-06-09T00:00:00+00:00"
 
     def get_actions(self):
+        """Return the actions the extension adds, as required by contract."""
+
         actions = []
 
         # Add the add_fixed_ip action
@@ -65,6 +89,7 @@ class Multinic(extensions.ExtensionDescriptor):
 
     def _add_fixed_ip(self, input_dict, req, id):
         """Adds an IP on a given network to an instance."""
+
         try:
             # Validate the input entity
             if 'networkId' not in input_dict['addFixedIp']:
@@ -82,6 +107,7 @@ class Multinic(extensions.ExtensionDescriptor):
 
     def _remove_fixed_ip(self, input_dict, req, id):
         """Removes an IP from an instance."""
+
         try:
             # Validate the input entity
             if 'address' not in input_dict['removeFixedIp']:
