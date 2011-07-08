@@ -52,9 +52,9 @@ class Request(webob.Request):
         content_type = self.content_type
 
         if content_type not in allowed_types:
-            return None
-        else:
-            return content_type
+            raise exception.InvalidContentType(content_type=content_type)
+
+        return content_type
 
 
 class TextDeserializer(object):
@@ -171,19 +171,22 @@ class RequestDeserializer(object):
     def deserialize_body(self, request, action):
         try:
             content_type = request.get_content_type()
-
-            if content_type is None:
-                LOG.debug(_("No Content-Type provided in request"))
-                return {}
-
-            if not len(request.body) > 0:
-                LOG.debug(_("Empty body provided in request"))
-                return {}
-
-            deserializer = self.get_body_deserializer(content_type)
-
         except exception.InvalidContentType:
-            LOG.debug(_("Unable to read body as provided Content-Type"))
+            LOG.debug(_("Unrecognized Content-Type provided in request"))
+            return {}
+
+        if content_type is None:
+            LOG.debug(_("No Content-Type provided in request"))
+            return {}
+
+        if not len(request.body) > 0:
+            LOG.debug(_("Empty body provided in request"))
+            return {}
+
+        try:
+            deserializer = self.get_body_deserializer(content_type)
+        except exception.InvalidContentType:
+            LOG.debug(_("Unable to deserialize body as provided Content-Type"))
             raise
 
         return deserializer.deserialize(request.body, action)
