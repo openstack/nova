@@ -51,6 +51,11 @@ def _call_scheduler(method, context, params=None):
     return rpc.call(context, queue, kwargs)
 
 
+def get_host_list(context):
+    """Return a list of hosts associated with this zone."""
+    return _call_scheduler('get_host_list', context)
+
+
 def get_zone_list(context):
     """Return a list of zones assoicated with this zone."""
     items = _call_scheduler('get_zone_list', context)
@@ -114,7 +119,8 @@ def _process(func, zone):
 
 
 def call_zone_method(context, method_name, errors_to_ignore=None,
-                     novaclient_collection_name='zones', *args, **kwargs):
+                     novaclient_collection_name='zones', zones=None,
+                     *args, **kwargs):
     """Returns a list of (zone, call_result) objects."""
     if not isinstance(errors_to_ignore, (list, tuple)):
         # This will also handle the default None
@@ -122,7 +128,9 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
 
     pool = greenpool.GreenPool()
     results = []
-    for zone in db.zone_get_all(context):
+    if zones is None:
+        zones = db.zone_get_all(context)
+    for zone in zones:
         try:
             nova = novaclient.OpenStack(zone.username, zone.password, None,
                     zone.api_url)
@@ -162,32 +170,53 @@ def child_zone_helper(zone_list, func):
                     _wrap_method(_process, func), zone_list)]
 
 
-def _issue_novaclient_command(nova, zone, collection, method_name, item_id):
+def _issue_novaclient_command(nova, zone, collection,
+        method_name, *args, **kwargs):
     """Use novaclient to issue command to a single child zone.
-       One of these will be run in parallel for each child zone."""
+       One of these will be run in parallel for each child zone.
+    """
     manager = getattr(nova, collection)
-    result = None
-    try:
+
+    # NOTE(comstud): This is not ideal, but we have to do this based on
+    # how novaclient is implemented right now.
+    # 'find' is special cased as novaclient requires kwargs for it to
+    # filter on a 'get_all'.
+    # Every other method first needs to do a 'get' on the first argument
+    # passed, which should be a UUID.  If it's 'get' itself that we want,
+    # we just return the result.  Otherwise, we next call the real method
+    # that's wanted... passing other arguments that may or may not exist.
+    if method_name in ['find', 'findall']:
         try:
-            result = manager.get(int(item_id))
-        except ValueError, e:
-            result = manager.find(name=item_id)
+            return getattr(manager, method_name)(**kwargs)
+        except novaclient.NotFound:
+            url = zone.api_url
+            LOG.debug(_("%(collection)s.%(method_name)s didn't find "
+                    "anything matching '%(kwargs)s' on '%(url)s'" %
+                    locals()))
+            return None
+
+    args = list(args)
+    # pop off the UUID to look up
+    item = args.pop(0)
+    try:
+        result = manager.get(item)
     except novaclient.NotFound:
         url = zone.api_url
-        LOG.debug(_("%(collection)s '%(item_id)s' not found on '%(url)s'" %
+        LOG.debug(_("%(collection)s '%(item)s' not found on '%(url)s'" %
                                                 locals()))
         return None
 
-    if method_name.lower() not in ['get', 'find']:
-        result = getattr(result, method_name)()
+    if method_name.lower() != 'get':
+        # if we're doing something other than 'get', call it passing args.
+        result = getattr(result, method_name)(*args, **kwargs)
     return result
 
 
-def wrap_novaclient_function(f, collection, method_name, item_id):
-    """Appends collection, method_name and item_id to the incoming
+def wrap_novaclient_function(f, collection, method_name, *args, **kwargs):
+    """Appends collection, method_name and arguments to the incoming
     (nova, zone) call from child_zone_helper."""
     def inner(nova, zone):
-        return f(nova, zone, collection, method_name, item_id)
+        return f(nova, zone, collection, method_name, *args, **kwargs)
 
     return inner
 
@@ -220,7 +249,7 @@ class reroute_compute(object):
            the wrapped method. (This ensures that zone-local code can
            continue to use integer IDs).
 
-        4. If the item was not found, we delgate the call to a child zone
+        4. If the item was not found, we delegate the call to a child zone
            using the UUID.
     """
     def __init__(self, method_name):

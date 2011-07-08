@@ -30,15 +30,17 @@ import uuid
 import unittest
 
 import mox
+import nose.plugins.skip
+import shutil
 import stubout
 from eventlet import greenthread
 
 from nova import fakerabbit
 from nova import flags
+from nova import log
 from nova import rpc
 from nova import utils
 from nova import service
-from nova import wsgi
 from nova.virt import fake
 
 
@@ -47,6 +49,22 @@ flags.DEFINE_string('sqlite_clean_db', 'clean.sqlite',
                     'File name of clean sqlite db')
 flags.DEFINE_bool('fake_tests', True,
                   'should we use everything for testing')
+
+LOG = log.getLogger('nova.tests')
+
+
+class skip_test(object):
+    """Decorator that skips a test."""
+    def __init__(self, msg):
+        self.message = msg
+
+    def __call__(self, func):
+        def _skipper(*args, **kw):
+            """Wrapped skipper function."""
+            raise nose.SkipTest(self.message)
+        _skipper.__name__ = func.__name__
+        _skipper.__doc__ = func.__doc__
+        return _skipper
 
 
 def skip_if_fake(func):
@@ -81,7 +99,6 @@ class TestCase(unittest.TestCase):
         self.injected = []
         self._services = []
         self._monkey_patch_attach()
-        self._monkey_patch_wsgi()
         self._original_flags = FLAGS.FlagValuesDict()
         rpc.ConnectionPool = rpc.Pool(max_size=FLAGS.rpc_conn_pool_size)
 
@@ -107,7 +124,6 @@ class TestCase(unittest.TestCase):
 
             # Reset our monkey-patches
             rpc.Consumer.attach_to_eventlet = self.original_attach
-            wsgi.Server.start = self.original_start
 
             # Stop any timers
             for x in self.injected:
@@ -162,26 +178,6 @@ class TestCase(unittest.TestCase):
 
         _wrapped.func_name = self.original_attach.func_name
         rpc.Consumer.attach_to_eventlet = _wrapped
-
-    def _monkey_patch_wsgi(self):
-        """Allow us to kill servers spawned by wsgi.Server."""
-        self.original_start = wsgi.Server.start
-
-        @functools.wraps(self.original_start)
-        def _wrapped_start(inner_self, *args, **kwargs):
-            original_spawn_n = inner_self.pool.spawn_n
-
-            @functools.wraps(original_spawn_n)
-            def _wrapped_spawn_n(*args, **kwargs):
-                rv = greenthread.spawn(*args, **kwargs)
-                self._services.append(rv)
-
-            inner_self.pool.spawn_n = _wrapped_spawn_n
-            self.original_start(inner_self, *args, **kwargs)
-            inner_self.pool.spawn_n = original_spawn_n
-
-        _wrapped_start.func_name = self.original_start.func_name
-        wsgi.Server.start = _wrapped_start
 
     # Useful assertions
     def assertDictMatch(self, d1, d2, approx_equal=False, tolerance=0.001):
