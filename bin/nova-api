@@ -24,7 +24,9 @@ Starts both the EC2 and OpenStack APIs in separate processes.
 """
 
 import os
+import signal
 import sys
+
 
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(
         sys.argv[0]), os.pardir, os.pardir))
@@ -45,6 +47,8 @@ def main():
     launcher = nova.service.Launcher()
     launcher.launch_service(ec2)
     launcher.launch_service(osapi)
+
+    signal.signal(signal.SIGTERM, lambda *_: launcher.stop())
 
     try:
         launcher.wait()
