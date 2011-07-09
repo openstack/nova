@@ -876,6 +876,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        result))
 
     @exception.wrap_exception
+    def set_host_enabled(self, context, instance_id=None, host=None,
+            enabled=None):
+        """Sets the specified host's ability to accept new instances."""
+        return self.driver.set_host_enabled(host, enabled)
+
+    @exception.wrap_exception
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get(context, instance_id)
