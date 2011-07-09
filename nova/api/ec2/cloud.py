@@ -1088,12 +1088,16 @@ class CloudController(object):
     def _get_image(self, context, ec2_id):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
-            return self.image_service.show(context, internal_id)
+            image = self.image_service.show(context, internal_id)
         except (exception.InvalidEc2Id, exception.ImageNotFound):
             try:
                 return self.image_service.show_by_name(context, ec2_id)
             except exception.NotFound:
                 raise exception.ImageNotFound(image_id=ec2_id)
+        image_type = ec2_id.split('-')[0]
+        if self._image_type(image.get('container_format')) != image_type:
+            raise exception.ImageNotFound(image_id=ec2_id)
+        return image
 
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
