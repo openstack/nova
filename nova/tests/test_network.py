@@ -123,20 +123,6 @@ class FlatNetworkTestCase(test.TestCase):
         self.network = network_manager.FlatManager(host=HOST)
         self.network.db = db
 
-    def test_set_network_hosts(self):
-        self.mox.StubOutWithMock(db, 'network_get_all')
-        self.mox.StubOutWithMock(db, 'network_set_host')
-        self.mox.StubOutWithMock(db, 'network_update')
-
-        db.network_get_all(mox.IgnoreArg()).AndReturn([networks[0]])
-        db.network_set_host(mox.IgnoreArg(),
-                            networks[0]['id'],
-                            mox.IgnoreArg()).AndReturn(HOST)
-        db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-
-        self.network.set_network_hosts(None)
-
     def test_get_instance_nw_info(self):
         self.mox.StubOutWithMock(db, 'fixed_ip_get_by_instance')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
@@ -150,7 +136,7 @@ class FlatNetworkTestCase(test.TestCase):
                                    mox.IgnoreArg()).AndReturn(flavor)
         self.mox.ReplayAll()
 
-        nw_info = self.network.get_instance_nw_info(None, 0, 0)
+        nw_info = self.network.get_instance_nw_info(None, 0, 0, None)
 
         self.assertTrue(nw_info)
 

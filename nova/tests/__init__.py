@@ -69,7 +69,7 @@ def setup():
                             vpn_start=FLAGS.vpn_start,
                             vlan_start=FLAGS.vlan_start)
     for net in db.network_get_all(ctxt):
-        network.set_network_host(ctxt, net['id'])
+        network.set_network_host(ctxt, net)
 
     cleandb = os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db)
     shutil.copyfile(testdb, cleandb)
