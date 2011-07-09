@@ -1706,7 +1706,9 @@ def network_get_all_by_host(context, host):
     with session.begin():
         return session.query(models.Network).\
                        filter_by(deleted=False).\
+                       join(models.Network.fixed_ips).\
                        filter_by(host=host).\
+                       filter_by(deleted=False).\
                        all()
 
 

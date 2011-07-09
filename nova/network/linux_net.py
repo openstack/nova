@@ -700,6 +700,7 @@ def _dnsmasq_cmd(net):
     cmd = ['sudo', '-E', 'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
+           '--interface=%s' % net['bridge'],
            '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),

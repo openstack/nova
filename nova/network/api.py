@@ -174,7 +174,8 @@ class API(base.Base):
     def get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
         args = {'instance_id': instance['id'],
-                'instance_type_id': instance['instance_type_id']}
+                'instance_type_id': instance['instance_type_id'],
+                'host': instance['host']}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_instance_nw_info',
                          'args': args})
