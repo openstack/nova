@@ -1704,10 +1704,15 @@ def network_get_all_by_instance(_context, instance_id):
 def network_get_all_by_host(context, host):
     session = get_session()
     with session.begin():
+        # NOTE(vish): return networks that have host set
+        #             or that have a fixed ip with host set
+        host_filter = or_(models.Network.host == host,
+                          models.FixedIp.host == host)
+
         return session.query(models.Network).\
                        filter_by(deleted=False).\
                        join(models.Network.fixed_ips).\
-                       filter_by(host=host).\
+                       filter(host_filter).\
                        filter_by(deleted=False).\
                        all()
 

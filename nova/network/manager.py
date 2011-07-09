@@ -307,6 +307,10 @@ class NetworkManager(manager.SchedulerDependentManager):
     @utils.synchronized('get_dhcp')
     def _get_dhcp_ip(self, context, network_ref, host=None):
         """Get the proper dhcp address to listen on."""
+        # NOTE(vish): this is for compatibility
+        if not network_ref['multi_host']:
+            return network_ref['gateway']
+
         if not host:
             host = self.host
         network_id = network_ref['id']
@@ -317,11 +321,9 @@ class NetworkManager(manager.SchedulerDependentManager):
             return fip['address']
         except exception.FixedIpNotFoundForNetworkHost:
             elevated = context.elevated()
-            addr = self.db.fixed_ip_associate_pool(elevated,
+            return self.db.fixed_ip_associate_pool(elevated,
                                                    network_id,
                                                    host=host)
-            return addr
-
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
