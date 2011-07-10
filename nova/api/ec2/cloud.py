@@ -1037,7 +1037,7 @@ class CloudController(object):
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        self._do_instance(self.compute_api.rescue, contect, instnace_id)
+        self._do_instance(self.compute_api.rescue, context, instance_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
