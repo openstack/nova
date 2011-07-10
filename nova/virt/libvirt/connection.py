@@ -123,8 +123,8 @@ flags.DEFINE_bool('start_guests_on_host_boot', False,
 flags.DEFINE_string('libvirt_vif_type', 'bridge',
                     'Type of VIF to create.')
 flags.DEFINE_string('libvirt_vif_driver',
-                    'nova.virt.libvirt.vif_drivers.BridgeDriver',
-                    'The VIF driver to configure the VIFs.')
+                    'nova.virt.libvirt.vif.LibvirtVlanBridgeDriver',
+                    'The libvirt VIF driver to configure the VIFs.')
 
 
 def get_connection(read_only):
@@ -258,6 +258,12 @@ class LibvirtConnection(driver.ComputeDriver):
             info = self._map_to_instance_info(domain)
             infos.append(info)
         return infos
+
+    def setup_vif_network(self, ctxt, instance_id):
+        """Set up VIF networking on the host."""
+        networks = db.network_get_all_by_instance(ctxt, instance_id)
+        for network in networks:
+            self.vif_driver.plug(network)
 
     def destroy(self, instance, cleanup=True):
         instance_name = instance['name']
@@ -950,7 +956,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         nics = []
         for (network, mapping) in network_info:
-            nics.append(self.vif_driver(instance, network, mapping))
+            nics.append(self.vif_driver.get_configurations(instance, network,
+                                                           mapping))
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)

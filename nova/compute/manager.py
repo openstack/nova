@@ -293,8 +293,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 network_info = self.network_api.allocate_for_instance(context,
                                                          instance, vpn=is_vpn)
                 LOG.debug(_("instance network_info: |%s|"), network_info)
-                self.network_manager.setup_compute_network(context,
-                                                           instance_id)
+                self.driver.setup_vif_network(context, instance, network_info)
             else:
                 # TODO(tr3buchet) not really sure how this should be handled.
                 # virt requires network_info to be passed in but stub_network
@@ -444,7 +443,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rebooting')
-        self.network_manager.setup_compute_network(context, instance_id)
         self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
@@ -635,7 +633,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rescuing')
-        self.network_manager.setup_compute_network(context, instance_id)
+        self.driver.setup_vif_network(context, instance_id)
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
         self.driver.rescue(instance_ref, _update_state)
@@ -1176,14 +1174,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         max_retry = FLAGS.live_migration_retry_count
         for cnt in range(max_retry):
             try:
-                self.network_manager.setup_compute_network(context,
-                                                           instance_id)
+                self.driver.setup_vif_network(context, instance_id)
                 break
             except exception.ProcessExecutionError:
                 if cnt == max_retry - 1:
                     raise
                 else:
-                    LOG.warn(_("setup_compute_network() failed %(cnt)d."
+                    LOG.warn(_("setup_vif_network() failed %(cnt)d."
                                "Retry up to %(max_retry)d for %(hostname)s.")
                                % locals())
                     time.sleep(1)

@@ -111,8 +111,6 @@ flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
 flags.DEFINE_bool('fake_call', False,
                   'If True, skip using the queue and make local calls')
-flags.DEFINE_string('l2_driver', 'nova.network.l2_drivers.LinuxBridgeDriver',
-                    'L2 network connectivity driver.')
 
 
 class AddressAlreadyAllocated(exception.Error):
@@ -296,7 +294,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not network_driver:
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
-        self.l2_driver = utils.import_object(FLAGS.l2_driver)
         self.network_api = network_api.API()
         super(NetworkManager, self).__init__(service_name='network',
                                                 *args, **kwargs)
@@ -648,14 +645,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Called when this host becomes the host for a network."""
         raise NotImplementedError()
 
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching network for compute hosts.
-
-        this code is run on and by the compute host, not on network
-        hosts
-        """
-        raise NotImplementedError()
-
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
@@ -698,13 +687,6 @@ class FlatManager(NetworkManager):
                                                               **kwargs)
         self.db.fixed_ip_disassociate(context, address)
 
-    def setup_compute_network(self, context, instance_id):
-        """Network is created manually.
-
-        this code is run on and by the compute host, not on network hosts
-        """
-        pass
-
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""
         net = {}
@@ -734,16 +716,6 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
 
         self.driver.metadata_forward()
 
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching networks for compute hosts.
-
-        this code is run on and by the compute host, not on network hosts
-        """
-        networks = db.network_get_all_by_instance(context, instance_id)
-        for network in networks:
-            self.l2_driver.ensure_bridge(network['bridge'],
-                                         network['bridge_interface'])
-
     def allocate_fixed_ip(self, context, instance_id, network):
         """Allocate flat_network fixed_ip, then setup dhcp for this network."""
         address = super(FlatDHCPManager, self).allocate_fixed_ip(context,
@@ -758,9 +730,9 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
         net['dhcp_start'] = FLAGS.flat_network_dhcp_start
         self.db.network_update(context, network_id, net)
         network = db.network_get(context, network_id)
-        self.l2_driver.ensure_bridge(network['bridge'],
-                                     network['bridge_interface'],
-                                     network)
+        self.driver.ensure_bridge(network['bridge'],
+                                  network['bridge_interface'],
+                                  network)
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network_id)
             if(FLAGS.use_ipv6):
@@ -819,18 +791,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Force adds another network to a project."""
         self.db.network_associate(context, project_id, force=True)
 
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching network for compute hosts.
-        this code is run on and by the compute host, not on network hosts
-        """
-        networks = self.db.network_get_all_by_instance(context, instance_id)
-        for network in networks:
-            interface = self.l2_driver.ensure_vlan(network['vlan'],
-                                                   network['bridge_interface'])
-            if interface:
-                self.l2_driver.ensure_bridge(network['bridge'], interface,
-                                             network['bridge_interface'])
-
     def _get_networks_for_instance(self, context, instance_id, project_id):
         """Determine which networks an instance should connect to."""
         # get networks associated with project
@@ -867,12 +827,10 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         else:
             address = network['vpn_public_address']
 
-        interface = self.l2_driver.ensure_vlan(network['vlan'],
-                                               network['bridge_interface'])
-        if interface:
-            self.l2_driver.ensure_bridge(network['bridge'], interface,
-                                         network['bridge_interface'],
-                                         network)
+        self.driver.ensure_vlan_bridge(network['vlan'],
+                                       network['bridge'],
+                                       network['bridge_interface'],
+                                       network)
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.

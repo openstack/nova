@@ -1,9 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (C) 2011 Midokura KK
-# Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
-# Copyright (c) 2010 Citrix Systems, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -17,10 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Drivers responsible for VIF creation in libvirt."""
+"""VIF drivers for libvirt."""
 
 from nova import flags
+from nova.network import linux_net
 from nova.virt.libvirt import netutils
+from nova.virt.vif import VIFDriver
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool('allow_project_net_traffic',
@@ -28,18 +28,18 @@ flags.DEFINE_bool('allow_project_net_traffic',
                   'Whether to allow in project network traffic')
 
 
-class VIFDriver(object):
-    """Base class that defines generic interfaces for VIF drivers."""
+class LibvirtVIF(object):
+    """VIF class for libvirt"""
 
-    def get_configuration(self, instance, network, mapping):
+    def get_configurations(self, instance, network, mapping):
         """Get a dictionary of VIF configuration for libvirt interfaces."""
         raise NotImplementedError()
 
 
-class BridgeDriver(VIFDriver):
-    """Class that generates VIF configuration of bridge interface type."""
+class LibvirtBridge(LibvirtVIF):
+    """Linux bridge VIF for Libvirt."""
 
-    def get_configuration(self, instance, network, mapping):
+    def get_configurations(self, instance, network, mapping):
         """Get a dictionary of VIF configurations for bridge type."""
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = mapping['gateway']
@@ -73,4 +73,27 @@ class BridgeDriver(VIFDriver):
             result['gateway6'] = gateway6 + "/128"
 
         return result
-        
+
+    
+class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
+    """VIF driver for Linux bridge."""
+
+    def plug(self, network):
+        """Ensure that the bridge exists, and add VIF to it."""
+        linux_net.ensure_bridge(network['bridge'],
+                                network['bridge_interface'])
+
+    def unplug(self, network):
+        pass
+
+
+class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
+    """VIF driver for Linux bridge with VLAN."""
+
+    def plug(self, network):
+        """Ensure that VLAN and bridge exist and add VIF to the bridge."""
+        linux_net.ensure_vlan_bridge(network['vlan'], network['bridge'],
+                                     network['bridge_interface'])
+
+    def unplug(self, network):
+        pass

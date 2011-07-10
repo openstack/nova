@@ -455,6 +455,7 @@ def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
     """Create a vlan and bridge unless they already exist."""
     interface = ensure_vlan(vlan_num, bridge_interface)
     ensure_bridge(bridge, interface, net_attrs)
+    return interface
 
 
 @utils.synchronized('ensure_vlan', external=True)
