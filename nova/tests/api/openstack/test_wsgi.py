@@ -75,24 +75,48 @@ class RequestTest(test.TestCase):
         self.assertEqual(result, "application/json")
 
 
-class DictSerializerTest(test.TestCase):
+class ActionDispatcherTest(test.TestCase):
     def test_dispatch(self):
-        serializer = wsgi.DictSerializer()
+        serializer = wsgi.ActionDispatcher()
         serializer.create = lambda x: 'pants'
-        serializer.default = lambda x: 'trousers'
-        self.assertEqual(serializer.serialize({}, 'create'), 'pants')
-
-    def test_dispatch_default(self):
-        serializer = wsgi.DictSerializer()
-        serializer.create = lambda x: 'pants'
-        serializer.default = lambda x: 'trousers'
-        self.assertEqual(serializer.serialize({}, 'update'), 'trousers')
+        self.assertEqual(serializer.dispatch({}, action='create'), 'pants')
 
     def test_dispatch_action_None(self):
-        serializer = wsgi.DictSerializer()
+        serializer = wsgi.ActionDispatcher()
         serializer.create = lambda x: 'pants'
         serializer.default = lambda x: 'trousers'
-        self.assertEqual(serializer.serialize({}, None), 'trousers')
+        self.assertEqual(serializer.dispatch({}, action=None), 'trousers')
+
+    def test_dispatch_default(self):
+        serializer = wsgi.ActionDispatcher()
+        serializer.create = lambda x: 'pants'
+        serializer.default = lambda x: 'trousers'
+        self.assertEqual(serializer.dispatch({}, action='update'), 'trousers')
+
+
+class ResponseHeadersSerializerTest(test.TestCase):
+    def test_default(self):
+        serializer = wsgi.ResponseHeadersSerializer()
+        response = webob.Response()
+        serializer.serialize(response, {'v': '123'}, 'asdf')
+        self.assertEqual(response.status_int, 200)
+
+    def test_custom(self):
+        class Serializer(wsgi.ResponseHeadersSerializer):
+            def update(self, response, data):
+                response.status_int = 404
+                response.headers['X-Custom-Header'] = data['v']
+        serializer = Serializer()
+        response = webob.Response()
+        serializer.serialize(response, {'v': '123'}, 'update')
+        self.assertEqual(response.status_int, 404)
+        self.assertEqual(response.headers['X-Custom-Header'], '123')
+
+
+class DictSerializerTest(test.TestCase):
+    def test_dispatch_default(self):
+        serializer = wsgi.DictSerializer()
+        self.assertEqual(serializer.serialize({}, 'update'), '')
 
 
 class XMLDictSerializerTest(test.TestCase):
@@ -116,23 +140,9 @@ class JSONDictSerializerTest(test.TestCase):
 
 
 class TextDeserializerTest(test.TestCase):
-    def test_dispatch(self):
-        deserializer = wsgi.TextDeserializer()
-        deserializer.create = lambda x: 'pants'
-        deserializer.default = lambda x: 'trousers'
-        self.assertEqual(deserializer.deserialize({}, 'create'), 'pants')
-
     def test_dispatch_default(self):
         deserializer = wsgi.TextDeserializer()
-        deserializer.create = lambda x: 'pants'
-        deserializer.default = lambda x: 'trousers'
-        self.assertEqual(deserializer.deserialize({}, 'update'), 'trousers')
-
-    def test_dispatch_action_None(self):
-        deserializer = wsgi.TextDeserializer()
-        deserializer.create = lambda x: 'pants'
-        deserializer.default = lambda x: 'trousers'
-        self.assertEqual(deserializer.deserialize({}, None), 'trousers')
+        self.assertEqual(deserializer.deserialize({}, 'update'), {})
 
 
 class JSONDeserializerTest(test.TestCase):
@@ -189,6 +199,22 @@ class XMLDeserializerTest(test.TestCase):
         self.assertEqual(deserializer.deserialize(xml), as_dict)
 
 
+class RequestHeadersDeserializerTest(test.TestCase):
+    def test_default(self):
+        deserializer = wsgi.RequestHeadersDeserializer()
+        req = wsgi.Request.blank('/')
+        self.assertEqual(deserializer.deserialize(req, 'asdf'), {})
+
+    def test_custom(self):
+        class Deserializer(wsgi.RequestHeadersDeserializer):
+            def update(self, request):
+                return {'a': request.headers['X-Custom-Header']}
+        deserializer = Deserializer()
+        req = wsgi.Request.blank('/')
+        req.headers['X-Custom-Header'] = 'b'
+        self.assertEqual(deserializer.deserialize(req, 'update'), {'a': 'b'})
+
+
 class ResponseSerializerTest(test.TestCase):
     def setUp(self):
         class JSONSerializer(object):
@@ -199,12 +225,17 @@ class ResponseSerializerTest(test.TestCase):
             def serialize(self, data, action='default'):
                 return 'pew_xml'
 
+        class HeadersSerializer(object):
+            def serialize(self, response, data, action):
+                response.status_int = 404
+
         self.body_serializers = {
             'application/json': JSONSerializer(),
             'application/XML': XMLSerializer(),
         }
 
-        self.serializer = wsgi.ResponseSerializer(self.body_serializers)
+        self.serializer = wsgi.ResponseSerializer(self.body_serializers,
+                                                  HeadersSerializer())
 
     def tearDown(self):
         pass
@@ -223,6 +254,7 @@ class ResponseSerializerTest(test.TestCase):
         response = self.serializer.serialize({}, 'application/json')
         self.assertEqual(response.headers['Content-Type'], 'application/json')
         self.assertEqual(response.body, 'pew_json')
+        self.assertEqual(response.status_int, 404)
 
     def test_serialize_response_dict_to_unknown_content_type(self):
         self.assertRaises(exception.InvalidContentType,
