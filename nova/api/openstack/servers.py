@@ -104,15 +104,6 @@ class Controller(object):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-    @scheduler_api.redirect_handler
-    def delete(self, req, id):
-        """ Destroys a server """
-        try:
-            self.compute_api.delete(req.environ['nova.context'], id)
-        except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
-
     def create(self, req, body):
         """ Creates a new server for a given user """
         extra_values = None
@@ -420,6 +411,15 @@ class Controller(object):
 
 class ControllerV10(Controller):
 
+    @scheduler_api.redirect_handler
+    def delete(self, req, id):
+        """ Destroys a server """
+        try:
+            self.compute_api.delete(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
@@ -482,6 +482,15 @@ class ControllerV10(Controller):
 
 
 class ControllerV11(Controller):
+
+    @scheduler_api.redirect_handler
+    def delete(self, req, id):
+        """ Destroys a server """
+        try:
+            self.compute_api.delete(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageRef']
 
@@ -597,6 +606,12 @@ class ControllerV11(Controller):
         return self.helper._get_server_admin_password_new_style(server)
 
 
+class HeadersSerializer(wsgi.ResponseHeadersSerializer):
+
+    def delete(self, response, data):
+        response.status_int = 204
+
+
 def create_resource(version='1.0'):
     controller = {
         '1.0': ControllerV10,
@@ -624,6 +639,8 @@ def create_resource(version='1.0'):
         '1.1': wsgi.XMLNS_V11,
     }[version]
 
+    headers_serializer = HeadersSerializer()
+
     body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
                                                   xmlns=xmlns),
@@ -633,7 +650,7 @@ def create_resource(version='1.0'):
         'application/xml': helper.ServerXMLDeserializer(),
     }
 
-    serializer = wsgi.ResponseSerializer(body_serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
     deserializer = wsgi.RequestDeserializer(body_deserializers)
 
     return wsgi.Resource(controller, deserializer, serializer)
