@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """Unit Tests for network code."""
-import IPy
+
 import os
 
 from nova import test

@@ -67,7 +67,8 @@ class CloudTestCase(test.TestCase):
         host = self.network.host
 
         def fake_show(meh, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return {'id': 1, 'container_format': 'ami',
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine', 'image_state': 'available'}}
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
@@ -186,6 +187,102 @@ class CloudTestCase(test.TestCase):
                 result['securityGroupInfo'][0]['groupName'],
                 sec['name'])
         db.security_group_destroy(self.context, sec['id'])
+
+    def test_describe_security_groups_by_id(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        result = self.cloud.describe_security_groups(self.context,
+                      group_id=[sec['id']])
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        self.assertEqual(
+                result['securityGroupInfo'][0]['groupName'],
+                sec['name'])
+        default = db.security_group_get_by_name(self.context,
+                                                self.context.project_id,
+                                                'default')
+        result = self.cloud.describe_security_groups(self.context,
+                      group_id=[default['id']])
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        self.assertEqual(
+                result['securityGroupInfo'][0]['groupName'],
+                'default')
+        db.security_group_destroy(self.context, sec['id'])
+
+    def test_create_delete_security_group(self):
+        descript = 'test description'
+        create = self.cloud.create_security_group
+        result = create(self.context, 'testgrp', descript)
+        group_descript = result['securityGroupSet'][0]['groupDescription']
+        self.assertEqual(descript, group_descript)
+        delete = self.cloud.delete_security_group
+        self.assertTrue(delete(self.context, 'testgrp'))
+
+    def test_delete_security_group_by_id(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        delete = self.cloud.delete_security_group
+        self.assertTrue(delete(self.context, group_id=sec['id']))
+
+    def test_delete_security_group_with_bad_name(self):
+        delete = self.cloud.delete_security_group
+        notfound = exception.SecurityGroupNotFound
+        self.assertRaises(notfound, delete, self.context, 'badname')
+
+    def test_delete_security_group_with_bad_group_id(self):
+        delete = self.cloud.delete_security_group
+        notfound = exception.SecurityGroupNotFound
+        self.assertRaises(notfound, delete, self.context, group_id=999)
+
+    def test_delete_security_group_no_params(self):
+        delete = self.cloud.delete_security_group
+        self.assertRaises(exception.ApiError, delete, self.context)
+
+    def test_authorize_revoke_security_group_ingress(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        authz(self.context, group_name=sec['name'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
+
+    def test_authorize_revoke_security_group_ingress_by_id(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        authz(self.context, group_id=sec['id'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
+
+    def test_authorize_security_group_ingress_missing_protocol_params(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        authz = self.cloud.authorize_security_group_ingress
+        self.assertRaises(exception.ApiError, authz, self.context, 'test')
+
+    def test_authorize_security_group_ingress_missing_group_name_or_id(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        authz = self.cloud.authorize_security_group_ingress
+        self.assertRaises(exception.ApiError, authz, self.context, **kwargs)
+
+    def test_authorize_security_group_ingress_already_exists(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        authz(self.context, group_name=sec['name'], **kwargs)
+        self.assertRaises(exception.ApiError, authz, self.context,
+                          group_name=sec['name'], **kwargs)
+
+    def test_revoke_security_group_ingress_missing_group_name_or_id(self):
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertRaises(exception.ApiError, revoke, self.context, **kwargs)
 
     def test_describe_volumes(self):
         """Makes sure describe_volumes works and filters results."""
@@ -322,7 +419,8 @@ class CloudTestCase(test.TestCase):
         describe_images = self.cloud.describe_images
 
         def fake_detail(meh, context):
-            return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return [{'id': 1, 'container_format': 'ami',
+                     'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}}]
 
         def fake_show_none(meh, context, id):
@@ -352,7 +450,8 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}, 'is_public': True}
+                    'type': 'machine'}, 'container_format': 'ami',
+                    'is_public': True}
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
         self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
@@ -364,7 +463,8 @@ class CloudTestCase(test.TestCase):
         modify_image_attribute = self.cloud.modify_image_attribute
 
         def fake_show(meh, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return {'id': 1, 'container_format': 'ami',
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}, 'is_public': False}
 
         def fake_update(meh, context, image_id, metadata, data=None):
@@ -397,6 +497,16 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(fake._FakeImageService, 'detail', fake_detail_empty)
         self.assertRaises(exception.ImageNotFound, deregister_image,
                           self.context, 'ami-bad001')
+
+    def test_deregister_image_wrong_container_type(self):
+        deregister_image = self.cloud.deregister_image
+
+        def fake_delete(self, context, id):
+            return None
+
+        self.stubs.Set(fake._FakeImageService, 'delete', fake_delete)
+        self.assertRaises(exception.NotFound, deregister_image, self.context,
+                          'aki-00000001')
 
     def _run_instance(self, **kwargs):
         rv = self.cloud.run_instances(self.context, **kwargs)
@@ -513,7 +623,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show_no_state(self, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}}
+                    'type': 'machine'}, 'container_format': 'ami'}
 
         self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_no_state)
@@ -527,7 +637,8 @@ class CloudTestCase(test.TestCase):
         run_instances = self.cloud.run_instances
 
         def fake_show_decrypt(self, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return {'id': 1, 'container_format': 'ami',
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine', 'image_state': 'decrypting'}}
 
         self.stubs.UnsetAll()
@@ -542,7 +653,8 @@ class CloudTestCase(test.TestCase):
         run_instances = self.cloud.run_instances
 
         def fake_show_stat_active(self, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return {'id': 1, 'container_format': 'ami',
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}, 'status': 'active'}
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_stat_active)

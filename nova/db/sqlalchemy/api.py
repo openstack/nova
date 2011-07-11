@@ -713,9 +713,9 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      filter(models.FixedIp.network_id.in_(inner_q)).\
                      filter(models.FixedIp.updated_at < time).\
                      filter(models.FixedIp.instance_id != None).\
-                     filter_by(allocated=0).\
+                     filter_by(allocated=False).\
                      update({'instance_id': None,
-                             'leased': 0,
+                             'leased': False,
                              'updated_at': utils.utcnow()},
                              synchronize_session='fetch')
     return result
@@ -2944,13 +2944,11 @@ def instance_type_get_all(context, inactive=False):
                         filter_by(deleted=False).\
                         order_by("name").\
                         all()
+    inst_dict = {}
     if inst_types:
-        inst_dict = {}
         for i in inst_types:
             inst_dict[i['name']] = _dict_with_extra_specs(i)
-        return inst_dict
-    else:
-        raise exception.NoInstanceTypesFound()
+    return inst_dict
 
 
 @require_context

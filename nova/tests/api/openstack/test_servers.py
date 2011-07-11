@@ -290,13 +290,7 @@ class ServersTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/servers/1",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/servers/1",
+                "href": "http://localhost/servers/1",
             },
         ]
 
@@ -515,13 +509,7 @@ class ServersTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
+                "href": "http://localhost/servers/%d" % (i,),
             },
         ]
 
@@ -1568,6 +1556,23 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_migrate_server(self):
+        """This is basically the same as resize, only we provide the `migrate`
+        attribute in the body's dict.
+        """
+        req = self.webreq('/1/action', 'POST', dict(migrate=None))
+
+        self.resize_called = False
+
+        def resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
 
     def test_shutdown_status(self):
         new_server = return_server_with_power_state(power_state.SHUTDOWN)

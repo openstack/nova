@@ -400,6 +400,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         actual_image = json.loads(response.body)
 
         href = "http://localhost/v1.1/images/124"
+        bookmark = "http://localhost/images/124"
 
         expected_image = {
             "image": {
@@ -419,13 +420,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 },
                 {
                     "rel": "bookmark",
-                    "type": "application/json",
-                    "href": href,
-                },
-                {
-                    "rel": "bookmark",
-                    "type": "application/xml",
-                    "href": href,
+                    "href": bookmark,
                 }],
             },
         }
@@ -557,22 +552,17 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 continue
 
             href = "http://localhost/v1.1/images/%s" % image["id"]
+            bookmark = "http://localhost/images/%s" % image["id"]
             test_image = {
                 "id": image["id"],
                 "name": image["name"],
                 "links": [{
                     "rel": "self",
-                    "href": "http://localhost/v1.1/images/%s" % image["id"],
-                },
-                {
-                    "rel": "bookmark",
-                    "type": "application/json",
                     "href": href,
                 },
                 {
                     "rel": "bookmark",
-                    "type": "application/xml",
-                    "href": href,
+                    "href": bookmark,
                 }],
             }
             self.assertTrue(test_image in response_list)
@@ -652,13 +642,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/images/123",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/images/123",
+                "href": "http://localhost/images/123",
             }],
         },
         {
@@ -678,13 +662,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/images/124",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/images/124",
+                "href": "http://localhost/images/124",
             }],
         },
         {
@@ -705,13 +683,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/images/125",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/images/125",
+                "href": "http://localhost/images/125",
             }],
         },
         {
@@ -731,13 +703,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/images/126",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/images/126",
+                "href": "http://localhost/images/126",
             }],
         },
         {
@@ -757,13 +723,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/images/127",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/images/127",
+                "href": "http://localhost/images/127",
             }],
         },
         {
@@ -779,13 +739,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/images/129",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/images/129",
+                "href": "http://localhost/images/129",
             }],
         },
         ]
@@ -1082,6 +1036,19 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def test_create_image_v1_1_actual_server_ref(self):
 
         serverRef = 'http://localhost/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+        result = json.loads(response.body)
+        self.assertEqual(result['image']['serverRef'], serverRef)
+
+    def test_create_image_v1_1_actual_server_ref_port(self):
+
+        serverRef = 'http://localhost:8774/v1.1/servers/1'
         body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
