@@ -427,7 +427,7 @@ class Resource(wsgi.Application):
         action_result = self.dispatch(request, action, args)
 
         #TODO(bcwaldon): find a more elegant way to pass through non-dict types
-        if type(action_result) is dict:
+        if type(action_result) is dict or action_result is None:
             response = self.serializer.serialize(action_result,
                                                  accept,
                                                  action=action)
