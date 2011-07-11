@@ -30,6 +30,7 @@ from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
+from nova.api.ec2 import ec2utils
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('service_down_time', 60,
@@ -87,7 +88,6 @@ class Scheduler(object):
         :return:
             The host where instance is running currently.
             Then scheduler send request that host.
-
         """
         # Whether instance exists and is running.
         instance_ref = db.instance_get(context, instance_id)
@@ -98,7 +98,6 @@ class Scheduler(object):
         # Checking destination host.
         self._live_migration_dest_check(context, instance_ref,
                                         dest, block_migration)
-
         # Common checking.
         self._live_migration_common_check(context, instance_ref,
                                           dest, block_migration)
@@ -131,8 +130,8 @@ class Scheduler(object):
         # Checking instance is running.
         if (power_state.RUNNING != instance_ref['state'] or \
            'running' != instance_ref['state_description']):
-            ec2_id = instance_ref['hostname']
-            raise exception.InstanceNotRunning(instance_id=ec2_id)
+            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+            raise exception.InstanceNotRunning(instance_id=instance_id)
 
         # Checing volume node is running when any volumes are mounted
         # to the instance.
@@ -171,8 +170,8 @@ class Scheduler(object):
         # and dest is not same.
         src = instance_ref['host']
         if dest == src:
-            ec2_id = instance_ref['hostname']
-            raise exception.UnableToMigrateToSelf(instance_id=ec2_id,
+            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+            raise exception.UnableToMigrateToSelf(instance_id=instance_id,
                                                   host=dest)
 
         # Checking dst host still has enough capacities.
@@ -245,6 +244,7 @@ class Scheduler(object):
 
     def assert_compute_node_has_enough_resources(self, context, instance_ref,
                                                  dest, block_migration):
+
         """Checks if destination host has enough resource for live migration.
 
         :param context: security context
@@ -261,6 +261,7 @@ class Scheduler(object):
     def assert_compute_node_has_enough_memory(self, context,
                                               instance_ref, dest):
         """Checks if destination host has enough memory for live migration.
+
 
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
@@ -283,9 +284,9 @@ class Scheduler(object):
         mem_inst = instance_ref['memory_mb']
         avail = avail - used
         if avail <= mem_inst:
-            ec2_id = instance_ref['hostname']
-            reason = _("Unable to migrate %(ec2_id)s to %(dest)s: Lack of  "
-                       "disk(host:%(avail)s <= instance:%(mem_inst)s)")
+            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+            reason = _("Unable to migrate %(instance_id)s to %(dest)s: "
+                       "Lack of disk(host:%(avail)s <= instance:%(mem_inst)s)")
             raise exception.MigrationError(reason=reason % locals())
 
     def assert_compute_node_has_enough_disk(self, context,
@@ -313,9 +314,10 @@ class Scheduler(object):
         disk_inst = instance_ref['local_gb']
         avail = avail - used
         if avail <= disk_inst:
-            ec2_id = instance_ref['hostname']
-            reason = _("Unable to migrate %(ec2_id)s to %(dest)s: Lack of  "
-                       "disk(host:%(avail)s <= instance:%(disk_inst)s)")
+            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+            reason = _("Unable to migrate %(instance_id)s to %(dest)s: "
+                       "Lack of disk(host:%(avail)s "
+                       "<= instance:%(disk_inst)s)")
             raise exception.MigrationError(reason=reason % locals())
 
     def _get_compute_info(self, context, host, key):

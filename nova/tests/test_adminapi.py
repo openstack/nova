@@ -56,7 +56,6 @@ class AdminApiTestCase(test.TestCase):
         self.project = self.manager.create_project('proj', 'admin', 'proj')
         self.context = context.RequestContext(user=self.user,
                                               project=self.project)
-        host = self.network.get_network_host(self.context.elevated())
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
@@ -75,9 +74,6 @@ class AdminApiTestCase(test.TestCase):
         self.stubs.Set(rpc, 'cast', finish_cast)
 
     def tearDown(self):
-        network_ref = db.project_get_network(self.context,
-                                             self.project.id)
-        db.network_disassociate(self.context, network_ref['id'])
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
         super(AdminApiTestCase, self).tearDown()

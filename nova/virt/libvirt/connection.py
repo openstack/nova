@@ -776,8 +776,6 @@ class LibvirtConnection(driver.ComputeDriver):
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
                         network_info=None, block_device_mapping=None):
         block_device_mapping = block_device_mapping or []
-        if not network_info:
-            network_info = netutils.get_network_info(inst)
 
         if not suffix:
             suffix = ''
@@ -886,18 +884,20 @@ class LibvirtConnection(driver.ComputeDriver):
 
             have_injected_networks = True
             address = mapping['ips'][0]['ip']
+            netmask = mapping['ips'][0]['netmask']
             address_v6 = None
             if FLAGS.use_ipv6:
                 address_v6 = mapping['ip6s'][0]['ip']
+                netmask_v6 = mapping['ip6s'][0]['netmask']
             net_info = {'name': 'eth%d' % ifc_num,
                    'address': address,
-                   'netmask': network_ref['netmask'],
-                   'gateway': network_ref['gateway'],
-                   'broadcast': network_ref['broadcast'],
-                   'dns': network_ref['dns'],
+                   'netmask': netmask,
+                   'gateway': mapping['gateway'],
+                   'broadcast': mapping['broadcast'],
+                   'dns': mapping['dns'],
                    'address_v6': address_v6,
-                   'gateway_v6': network_ref['gateway_v6'],
-                   'netmask_v6': network_ref['netmask_v6']}
+                   'gateway6': mapping['gateway6'],
+                   'netmask_v6': netmask_v6}
             nets.append(net_info)
 
         if have_injected_networks:
@@ -933,8 +933,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _get_nic_for_xml(self, network, mapping):
         # Assume that the gateway also acts as the dhcp server.
-        dhcp_server = network['gateway']
-        gateway_v6 = network['gateway_v6']
+        dhcp_server = mapping['gateway']
+        gateway6 = mapping.get('gateway6')
         mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_project_net_traffic:
@@ -960,8 +960,8 @@ class LibvirtConnection(driver.ComputeDriver):
             'extra_params': extra_params,
         }
 
-        if gateway_v6:
-            result['gateway_v6'] = gateway_v6 + "/128"
+        if gateway6:
+            result['gateway6'] = gateway6 + "/128"
 
         return result
 

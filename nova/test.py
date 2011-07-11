@@ -30,11 +30,14 @@ import uuid
 import unittest
 
 import mox
+import nose.plugins.skip
+import shutil
 import stubout
 from eventlet import greenthread
 
 from nova import fakerabbit
 from nova import flags
+from nova import log
 from nova import rpc
 from nova import utils
 from nova import service
@@ -46,6 +49,22 @@ flags.DEFINE_string('sqlite_clean_db', 'clean.sqlite',
                     'File name of clean sqlite db')
 flags.DEFINE_bool('fake_tests', True,
                   'should we use everything for testing')
+
+LOG = log.getLogger('nova.tests')
+
+
+class skip_test(object):
+    """Decorator that skips a test."""
+    def __init__(self, msg):
+        self.message = msg
+
+    def __call__(self, func):
+        def _skipper(*args, **kw):
+            """Wrapped skipper function."""
+            raise nose.SkipTest(self.message)
+        _skipper.__name__ = func.__name__
+        _skipper.__doc__ = func.__doc__
+        return _skipper
 
 
 def skip_if_fake(func):

@@ -50,7 +50,6 @@ import nova.image
 from nova import log as logging
 from nova import manager
 from nova import network
-from nova import notifier
 from nova import rpc
 from nova import utils
 from nova import volume
@@ -132,9 +131,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.error(_("Unable to load the virtualization driver: %s") % (e))
             sys.exit(1)
 
+        self.network_api = network.API()
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
-        self.network_api = network.API()
         self._last_host_check = 0
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -180,20 +179,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.db.queue_get_for(context,
                                      FLAGS.console_topic,
                                      FLAGS.console_host)
-
-    def get_network_topic(self, context, **kwargs):
-        """Retrieves the network host for a project on this host."""
-        # TODO(vish): This method should be memoized. This will make
-        #             the call to get_network_host cheaper, so that
-        #             it can pas messages instead of checking the db
-        #             locally.
-        if FLAGS.stub_network:
-            host = FLAGS.network_host
-        else:
-            host = self.network_manager.get_network_host(context)
-        return self.db.queue_get_for(context,
-                                     FLAGS.network_topic,
-                                     host)
 
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
@@ -282,10 +267,10 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        instance_ref.injected_files = kwargs.get('injected_files', [])
-        instance_ref.admin_pass = kwargs.get('admin_password', None)
-        if instance_ref['name'] in self.driver.list_instances():
+        instance = self.db.instance_get(context, instance_id)
+        instance.injected_files = kwargs.get('injected_files', [])
+        instance.admin_pass = kwargs.get('admin_password', None)
+        if instance['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
                   context=context)
@@ -298,55 +283,41 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    power_state.NOSTATE,
                                    'networking')
 
-        is_vpn = instance_ref['image_ref'] == str(FLAGS.vpn_image_id)
+        is_vpn = instance['image_ref'] == str(FLAGS.vpn_image_id)
         try:
             # NOTE(vish): This could be a cast because we don't do anything
             #             with the address currently, but I'm leaving it as
             #             a call to ensure that network setup completes.  We
             #             will eventually also need to save the address here.
             if not FLAGS.stub_network:
-                address = rpc.call(context,
-                                   self.get_network_topic(context),
-                                   {"method": "allocate_fixed_ip",
-                                    "args": {"instance_id": instance_id,
-                                             "vpn": is_vpn}})
-
+                network_info = self.network_api.allocate_for_instance(context,
+                                                         instance, vpn=is_vpn)
+                LOG.debug(_("instance network_info: |%s|"), network_info)
                 self.network_manager.setup_compute_network(context,
                                                            instance_id)
+            else:
+                # TODO(tr3buchet) not really sure how this should be handled.
+                # virt requires network_info to be passed in but stub_network
+                # is enabled. Setting to [] for now will cause virt to skip
+                # all vif creation and network injection, maybe this is correct
+                network_info = []
 
-            block_device_mapping = self._setup_block_device_mapping(
-                context,
-                instance_id)
+            bd_mapping = self._setup_block_device_mapping(context, instance_id)
 
             # TODO(vish) check to make sure the availability zone matches
             self._update_state(context, instance_id, power_state.BUILDING)
 
             try:
-                self.driver.spawn(instance_ref,
-                                  block_device_mapping=block_device_mapping)
+                self.driver.spawn(instance, network_info, bd_mapping)
             except Exception as ex:  # pylint: disable=W0702
                 msg = _("Instance '%(instance_id)s' failed to spawn. Is "
                         "virtualization enabled in the BIOS? Details: "
                         "%(ex)s") % locals()
                 LOG.exception(msg)
 
-            if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
-                public_ip = self.network_api.allocate_floating_ip(context)
-
-                self.db.floating_ip_set_auto_assigned(context, public_ip)
-                fixed_ip = self.db.fixed_ip_get_by_address(context, address)
-                floating_ip = self.db.floating_ip_get_by_address(context,
-                                                                 public_ip)
-
-                self.network_api.associate_floating_ip(
-                    context,
-                    floating_ip,
-                    fixed_ip,
-                    affect_auto_assigned=True)
-
             self._update_launched_at(context, instance_id)
             self._update_state(context, instance_id)
-            usage_info = utils.usage_from_instance(instance_ref)
+            usage_info = utils.usage_from_instance(instance)
             notifier_api.notify('compute.%s' % self.host,
                                 'compute.instance.create',
                                 notifier_api.INFO,
@@ -373,53 +344,24 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _shutdown_instance(self, context, instance_id, action_str):
         """Shutdown an instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         LOG.audit(_("%(action_str)s instance %(instance_id)s") %
                   {'action_str': action_str, 'instance_id': instance_id},
                   context=context)
 
-        fixed_ip = instance_ref.get('fixed_ip')
-        if not FLAGS.stub_network and fixed_ip:
-            floating_ips = fixed_ip.get('floating_ips') or []
-            for floating_ip in floating_ips:
-                address = floating_ip['address']
-                LOG.debug("Disassociating address %s", address,
-                          context=context)
-                # NOTE(vish): Right now we don't really care if the ip is
-                #             disassociated.  We may need to worry about
-                #             checking this later.
-                self.network_api.disassociate_floating_ip(context,
-                                                          address,
-                                                          True)
-                if (FLAGS.auto_assign_floating_ip
-                        and floating_ip.get('auto_assigned')):
-                    LOG.debug(_("Deallocating floating ip %s"),
-                              floating_ip['address'],
-                              context=context)
-                    self.network_api.release_floating_ip(context,
-                                                         address,
-                                                         True)
+        if not FLAGS.stub_network:
+            self.network_api.deallocate_for_instance(context, instance)
 
-            address = fixed_ip['address']
-            if address:
-                LOG.debug(_("Deallocating address %s"), address,
-                          context=context)
-                # NOTE(vish): Currently, nothing needs to be done on the
-                #             network node until release. If this changes,
-                #             we will need to cast here.
-                self.network_manager.deallocate_fixed_ip(context.elevated(),
-                                                         address)
-
-        volumes = instance_ref.get('volumes') or []
+        volumes = instance.get('volumes') or []
         for volume in volumes:
             self._detach_volume(context, instance_id, volume['id'], False)
 
-        if (instance_ref['state'] == power_state.SHUTOFF and
-            instance_ref['state_description'] != 'stopped'):
+        if (instance['state'] == power_state.SHUTOFF and
+            instance['state_description'] != 'stopped'):
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
                                     ' instance: %s') % instance_id)
-        self.driver.destroy(instance_ref)
+        self.driver.destroy(instance)
 
         if action_str == 'Terminating':
             terminate_volumes(self.db, context, instance_id)
@@ -429,11 +371,11 @@ class ComputeManager(manager.SchedulerDependentManager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
-        instance_ref = self.db.instance_get(context.elevated(), instance_id)
+        instance = self.db.instance_get(context.elevated(), instance_id)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
-        usage_info = utils.usage_from_instance(instance_ref)
+        usage_info = utils.usage_from_instance(instance)
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.delete',
                             notifier_api.INFO,
@@ -878,11 +820,25 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # reload the updated instance ref
         # FIXME(mdietz): is there reload functionality?
-        instance_ref = self.db.instance_get(context, instance_id)
-        self.driver.finish_resize(instance_ref, disk_info)
+        instance = self.db.instance_get(context, instance_id)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance)
+        self.driver.finish_resize(instance, disk_info, network_info)
 
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def add_fixed_ip_to_instance(self, context, instance_id, network_id):
+        """Calls network_api to add new fixed_ip to instance
+        then injects the new network info and resets instance networking.
+
+        """
+        self.network_api.add_fixed_ip_to_instance(context, instance_id,
+                                                           network_id)
+        self.inject_network_info(context, instance_id)
+        self.reset_network(context, instance_id)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -987,20 +943,22 @@ class ComputeManager(manager.SchedulerDependentManager):
     @checks_instance_lock
     def reset_network(self, context, instance_id):
         """Reset networking on the given instance."""
-        context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         LOG.debug(_('instance %s: reset network'), instance_id,
                                                    context=context)
-        self.driver.reset_network(instance_ref)
+        self.driver.reset_network(instance)
 
     @checks_instance_lock
     def inject_network_info(self, context, instance_id):
         """Inject network info for the given instance."""
-        context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
         LOG.debug(_('instance %s: inject network info'), instance_id,
                                                          context=context)
-        self.driver.inject_network_info(instance_ref)
+        instance = self.db.instance_get(context, instance_id)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance)
+        LOG.debug(_("network_info to inject: |%s|"), network_info)
+
+        self.driver.inject_network_info(instance, network_info)
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
@@ -1196,16 +1154,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # Getting instance info
         instance_ref = self.db.instance_get(context, instance_id)
-        ec2_id = instance_ref['hostname']
+        hostname = instance_ref['hostname']
 
         # Getting fixed ips
-        fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
-        if not fixed_ip:
-            raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
+        fixed_ips = self.db.instance_get_fixed_addresses(context, instance_id)
+        if not fixed_ips:
+            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
 
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:
-            LOG.info(_("%s has no volume."), ec2_id)
+            LOG.info(_("%s has no volume."), hostname)
         else:
             for v in instance_ref['volumes']:
                 self.volume_manager.setup_compute_volume(context, v['id'])
@@ -1228,7 +1186,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     raise
                 else:
                     LOG.warn(_("setup_compute_network() failed %(cnt)d."
-                               "Retry up to %(max_retry)d for %(ec2_id)s.")
+                               "Retry up to %(max_retry)d for %(hostname)s.")
                                % locals())
                     time.sleep(1)
 
@@ -1344,9 +1302,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            {'host': dest})
         except exception.NotFound:
             LOG.info(_('No floating_ip is found for %s.'), i_name)
-        except:
-            LOG.error(_("Live migration: Unexpected error:"
-                        "%s cannot inherit floating ip..") % i_name)
+        except Exception, e:
+            LOG.error(_("Live migration: Unexpected error: "
+                        "%(i_name)s cannot inherit floating "
+                        "ip.\n%(e)s") % (locals()))
 
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
