@@ -1046,6 +1046,19 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         result = json.loads(response.body)
         self.assertEqual(result['image']['serverRef'], serverRef)
 
+    def test_create_image_v1_1_actual_server_ref_port(self):
+
+        serverRef = 'http://localhost:8774/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+        result = json.loads(response.body)
+        self.assertEqual(result['image']['serverRef'], serverRef)
+
     def test_create_image_v1_1_server_ref_bad_hostname(self):
 
         serverRef = 'http://asdf/v1.1/servers/1'
