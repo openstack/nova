@@ -57,16 +57,26 @@ class Request(webob.Request):
         return content_type
 
 
-class TextDeserializer(object):
-    """Custom request body deserialization based on controller action name."""
+class ActionDispatcher(object):
+    """Maps method name to local methods through action name."""
+
+    def dispatch(self, *args, **kwargs):
+        """Find and call local method."""
+        action = kwargs.pop('action', 'default')
+        action_method = getattr(self, str(action), self.default)
+        return action_method(*args, **kwargs)
+
+    def default(self, data):
+        raise NotImplementedError()
+
+
+class TextDeserializer(ActionDispatcher):
+    """Default request body deserialization"""
 
     def deserialize(self, datastring, action='default'):
-        """Find local deserialization method and parse request body."""
-        action_method = getattr(self, str(action), self.default)
-        return action_method(datastring)
+        return self.dispatch(datastring, action=action)
 
     def default(self, datastring):
-        """Default deserialization code should live here"""
         return {}
 
 
@@ -128,8 +138,13 @@ class XMLDeserializer(TextDeserializer):
         return {'body': self._from_xml(datastring)}
 
 
-class RequestHeadersDeserializer(object):
+class RequestHeadersDeserializer(ActionDispatcher):
+    """Default request headers deserializer"""
+
     def deserialize(self, request, action):
+        return self.dispatch(request, action=action)
+
+    def default(self, request):
         return {}
 
 
@@ -220,20 +235,18 @@ class RequestDeserializer(object):
         return args
 
 
-class DictSerializer(object):
-    """Custom response body serialization based on controller action name."""
+class DictSerializer(ActionDispatcher):
+    """Default request body serialization"""
 
     def serialize(self, data, action='default'):
-        """Find local serialization method and encode response body."""
-        action_method = getattr(self, str(action), self.default)
-        return action_method(data)
+        return self.dispatch(data, action=action)
 
     def default(self, data):
-        """Default serialization code should live here"""
-        raise NotImplementedError()
+        return ""
 
 
 class JSONDictSerializer(DictSerializer):
+    """Default JSON request body serialization"""
 
     def default(self, data):
         return utils.dumps(data)
@@ -320,8 +333,13 @@ class XMLDictSerializer(DictSerializer):
         return result
 
 
-class ResponseHeadersSerializer(object):
+class ResponseHeadersSerializer(ActionDispatcher):
+    """Default response headers serialization"""
+
     def serialize(self, response, data, action):
+        self.dispatch(response, data, action=action)
+
+    def default(self, response, data):
         response.status_int = 200
 
 
@@ -410,7 +428,9 @@ class Resource(wsgi.Application):
 
         #TODO(bcwaldon): find a more elegant way to pass through non-dict types
         if type(action_result) is dict:
-            response = self.serializer.serialize(action_result, accept, action)
+            response = self.serializer.serialize(action_result,
+                                                 accept,
+                                                 action=action)
         else:
             response = action_result
 
