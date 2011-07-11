@@ -56,6 +56,10 @@ class SchedulerManager(manager.Manager):
         """Poll child zones periodically to get status."""
         self.zone_manager.ping(context)
 
+    def get_host_list(self, context=None):
+        """Get a list of hosts from the ZoneManager."""
+        return self.zone_manager.get_host_list()
+
     def get_zone_list(self, context=None):
         """Get a list of zones from the ZoneManager."""
         return self.zone_manager.get_zone_list()
