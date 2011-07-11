@@ -336,7 +336,12 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def set_network_hosts(self, context):
         """Set the network hosts for any networks which are unset."""
-        networks = self.db.network_get_all(context)
+        try:
+            networks = self.db.network_get_all(context)
+        except Exception.NoNetworksFound:
+            # we don't care if no networks are found
+            pass
+
         for network in networks:
             host = network['host']
             if not host:
@@ -348,7 +353,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         # TODO(tr3buchet) maybe this needs to be updated in the future if
         #                 there is a better way to determine which networks
         #                 a non-vlan instance should connect to
-        networks = self.db.network_get_all(context)
+        try:
+            networks = self.db.network_get_all(context)
+        except Exception.NoNetworksFound:
+            # we don't care if no networks are found
+            pass
 
         # return only networks which are not vlan networks and have host set
         return [network for network in networks if
