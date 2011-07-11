@@ -262,7 +262,6 @@ class ResponseSerializerTest(test.TestCase):
                           {}, 'application/unknown')
 
 
-
 class RequestDeserializerTest(test.TestCase):
     def setUp(self):
         class JSONDeserializer(object):
