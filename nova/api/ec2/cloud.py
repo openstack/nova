@@ -118,8 +118,9 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
+        search_opts = {'project_id': project_id}
         for instance in self.compute_api.get_all(context,
-                                                 project_id=project_id):
+                search_opts=search_opts):
             if instance['fixed_ips']:
                 line = '%s slots=%d' % (instance['fixed_ips'][0]['address'],
                                         instance['vcpus'])
@@ -145,7 +146,12 @@ class CloudController(object):
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
-        instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
+        search_opts = {'fixed_ip': address}
+        try:
+            instance_ref = self.compute_api.get_all(ctxt,
+                    search_opts=search_opts)
+        except exception.NotFound:
+            instance_ref = None
         if instance_ref is None:
             return None
 
@@ -816,11 +822,18 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
-                instance = self.compute_api.get(context,
-                                                instance_id=internal_id)
+                try:
+                    instance = self.compute_api.get(context,
+                            instance_id=internal_id)
+                except exception.NotFound:
+                    continue
                 instances.append(instance)
         else:
-            instances = self.compute_api.get_all(context, **kwargs)
+            try:
+                instances = self.compute_api.get_all(context,
+                        search_opts=kwargs)
+            except exception.NotFound:
+                instances = []
         for instance in instances:
             if not context.is_admin:
                 if instance['image_ref'] == str(FLAGS.vpn_image_id):

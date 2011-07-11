@@ -381,15 +381,6 @@ def fixed_ip_get_by_virtual_interface(context, vif_id):
     return IMPL.fixed_ip_get_by_virtual_interface(context, vif_id)
 
 
-def fixed_ip_get_instance(context, address):
-    """Get an instance for a fixed ip by address."""
-    return IMPL.fixed_ip_get_instance(context, address)
-
-
-def fixed_ip_get_instance_v6(context, address):
-    return IMPL.fixed_ip_get_instance_v6(context, address)
-
-
 def fixed_ip_get_network(context, address):
     """Get a network for a fixed ip by address."""
     return IMPL.fixed_ip_get_network(context, address)
@@ -515,8 +506,41 @@ def instance_get_all_by_host(context, host):
 
 
 def instance_get_all_by_reservation(context, reservation_id):
-    """Get all instance belonging to a reservation."""
+    """Get all instances belonging to a reservation."""
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
+
+
+def instance_get_by_fixed_ip(context, address):
+    """Get an instance for a fixed ip by address."""
+    return IMPL.instance_get_by_fixed_ip(context, address)
+
+
+def instance_get_by_fixed_ipv6(context, address):
+    """Get an instance for a fixed ip by IPv6 address."""
+    return IMPL.instance_get_by_fixed_ipv6(context, address)
+
+
+def instance_get_all_by_column_regexp(context, column, column_regexp):
+    """Get all instances by using regular expression matching against
+    a particular DB column
+    """
+    return IMPL.instance_get_all_by_column_regexp(context,
+            column,
+            column_regexp)
+
+
+def instance_get_all_by_ip_regexp(context, ip_regexp):
+    """Get all instances by using regular expression matching against
+    Floating and Fixed IP Addresses
+    """
+    return IMPL.instance_get_all_by_ip_regexp(context, ip_regexp)
+
+
+def instance_get_all_by_ipv6_regexp(context, ipv6_regexp):
+    """Get all instances by using regular expression matching against
+    IPv6 Addresses
+    """
+    return IMPL.instance_get_all_by_ipv6_regexp(context, ipv6_regexp)
 
 
 def instance_get_fixed_addresses(context, instance_id):

@@ -625,27 +625,34 @@ class API(base.Base):
     def _get_all_by_reservation_id(self, context, search_opts):
         search_opts['recurse_zones'] = True
         return self.db.instance_get_all_by_reservation(
-                context, reservation_id)
-
-    def _get_all_by_fixed_ip(self, context, search_opts):
-        try:
-            instances = self.db.fixed_ip_get_instance(context, fixed_ip)
-        except exception.FloatingIpNotFound, e:
-            instances = None
-        return instances
+                context, search_opts['reservation_id'])
 
     def _get_all_by_project_id(self, context, search_opts):
         return self.db.instance_get_all_by_project(
-                context, project_id)
+                context, search_opts['project_id'])
+
+    def _get_all_by_fixed_ip(self, context, search_opts):
+        fixed_ip = search_opts['fixed_ip']
+        try:
+            instances = self.db.instance_get_by_fixed_ip(context, fixed_ip)
+        except exception.FixedIpNotFound, e:
+            raise
+        if not instances:
+            raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
+        return instances
+
 
     def _get_all_by_ip(self, context, search_opts):
-        pass
+        return self.db.instance_get_all_by_ip_regexp(
+                context, search_opts['ip'])
 
     def _get_all_by_ip6(self, context, search_opts):
-        pass
+        return self.db.instance_get_all_by_ipv6_regexp(
+                context, search_opts['ip6'])
 
-    def _get_all_by_name(self, context, search_opts):
-        pass
+    def _get_all_by_column(self, context, column, search_opts):
+        return self.db.instance_get_all_by_column_regexp(
+                context, column, search_opts[column])
 
     def get_all(self, context, search_opts=None):
         """Get all instances filtered by one of the given parameters.
@@ -657,29 +664,45 @@ class API(base.Base):
         if search_opts is None:
             search_opts = {}
 
+        LOG.debug(_("Searching by: %s") % str(search_opts))
+
+        # Columns we can do a generic search on
+        search_columns = ['display_name',
+                          'server_name']
+
+        # Options that are mutually exclusive
         exclusive_opts = ['reservation_id',
                           'project_id',
                           'fixed_ip',
                           'ip',
-                          'ip6',
-                          'name']
+                          'ip6'] + search_columns
 
-        # See if a valud search option was passed in.
+        # See if a valid search option was passed in.
         # Ignore unknown search options for possible forward compatability.
         # Raise an exception if more than 1 search option is specified
-        option = None
-        for k in exclusive_opts.iterkeys():
-            v = search_opts.get(k, None)
+        found_opt = None
+        for opt in exclusive_opts:
+            v = search_opts.get(opt, None)
             if v:
-                if option is None:
-                    option = k
+                if found_opt is None:
+                    found_opt = opt
                 else:
-                    raise
+                    LOG.error(_("More than 1 mutually exclusive "
+                            "search option specified (%(found_opt)s and "
+                            "%(opt)s were both specified") % locals())
+                    raise exception.InvalidInput(reason=
+                            _("More than 1 mutually exclusive "
+                            "search option specified (%(found_opt)s and "
+                            "%(opt)s were both specified") % locals())
 
-        if option:
-            method_name = '_get_all_by_%s' % option
-            method = getattr(self, method_name, None)
-            instances = method(context, search_opts)
+        if found_opt:
+            if found_opt in search_columns:
+                instances = self._get_all_by_column(context,
+                        found_opt, search_opts)
+            else:
+                method_name = '_get_all_by_%s' % found_opt
+                method = getattr(self, method_name, None)
+                instances = method(context, search_opts)
         elif not context.is_admin:
             if context.project:
                 instances = self.db.instance_get_all_by_project(
@@ -703,7 +726,7 @@ class API(base.Base):
         children = scheduler_api.call_zone_method(admin_context,
                 "list",
                 novaclient_collection_name="servers",
-                **search_opts)
+                search_opts=search_opts)
 
         for zone, servers in children:
             for server in servers:

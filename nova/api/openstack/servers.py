@@ -52,6 +52,8 @@ class Controller(object):
             servers = self._items(req, is_detail=False)
         except exception.Invalid as err:
             return exc.HTTPBadRequest(explanation=str(err))
+        except exception.NotFound:
+            return exc.HTTPNotFound()
         return servers
 
     def detail(self, req):
@@ -60,6 +62,8 @@ class Controller(object):
             servers = self._items(req, is_detail=True)
         except exception.Invalid as err:
             return exc.HTTPBadRequest(explanation=str(err))
+        except exception.NotFound as err:
+            return exc.HTTPNotFound()
         return servers
 
     def _get_view_builder(self, req):
@@ -77,16 +81,14 @@ class Controller(object):
         builder - the response model builder
         """
         query_str = req.str_GET
-        reservation_id = query_str.get('reservation_id')
-        project_id = query_str.get('project_id')
-        fixed_ip = query_str.get('fixed_ip')
-        recurse_zones = utils.bool_from_str(query_str.get('recurse_zones'))
+        recurse_zones = utils.bool_from_str(
+                query_str.get('recurse_zones', False))
+        # Pass all of the options on to compute's 'get_all'
+        search_opts = query_str
+        # Reset this after converting from string to bool
+        search_opts['recurse_zones'] = recurse_zones
         instance_list = self.compute_api.get_all(
-                req.environ['nova.context'],
-                reservation_id=reservation_id,
-                project_id=project_id,
-                fixed_ip=fixed_ip,
-                recurse_zones=recurse_zones)
+                req.environ['nova.context'], search_opts=search_opts)
         limited_list = self._limit_items(instance_list, req)
         builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']

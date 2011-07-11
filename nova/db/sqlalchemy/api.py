@@ -18,6 +18,7 @@
 """
 Implementation of SQLAlchemy backend.
 """
+import re
 import traceback
 import warnings
 
@@ -797,28 +798,6 @@ def fixed_ip_get_by_virtual_interface(context, vif_id):
     return rv
 
 
-@require_context
-def fixed_ip_get_instance(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    return fixed_ip_ref.instance
-
-
-@require_context
-def fixed_ip_get_instance_v6(context, address):
-    session = get_session()
-
-    # convert IPv6 address to mac
-    mac = ipv6.to_mac(address)
-
-    # get virtual interface
-    vif_ref = virtual_interface_get_by_address(context, mac)
-
-    # look up instance based on instance_id from vif row
-    result = session.query(models.Instance).\
-                     filter_by(id=vif_ref['instance_id'])
-    return result
-
-
 @require_admin_context
 def fixed_ip_get_network(context, address):
     fixed_ip_ref = fixed_ip_get_by_address(context, address)
@@ -1204,30 +1183,166 @@ def instance_get_all_by_project(context, project_id):
 @require_context
 def instance_get_all_by_reservation(context, reservation_id):
     session = get_session()
+    query = session.query(models.Instance).\
+                    filter_by(reservation_id=reservation_id).\
+                    options(joinedload_all('fixed_ips.floating_ips')).\
+                    options(joinedload('virtual_interfaces')).\
+                    options(joinedload('security_groups')).\
+                    options(joinedload_all('fixed_ips.network')).\
+                    options(joinedload('metadata')).\
+                    options(joinedload('instance_type'))
 
     if is_admin_context(context):
-        return session.query(models.Instance).\
-                       options(joinedload_all('fixed_ips.floating_ips')).\
-                       options(joinedload('virtual_interfaces')).\
-                       options(joinedload('security_groups')).\
-                       options(joinedload_all('fixed_ips.network')).\
-                       options(joinedload('metadata')).\
-                       options(joinedload('instance_type')).\
-                       filter_by(reservation_id=reservation_id).\
-                       filter_by(deleted=can_read_deleted(context)).\
-                       all()
+        return query.\
+                filter_by(deleted=can_read_deleted(context)).\
+                all()
     elif is_user_context(context):
-        return session.query(models.Instance).\
-                       options(joinedload_all('fixed_ips.floating_ips')).\
-                       options(joinedload('virtual_interfaces')).\
-                       options(joinedload('security_groups')).\
-                       options(joinedload_all('fixed_ips.network')).\
-                       options(joinedload('metadata')).\
-                       options(joinedload('instance_type')).\
-                       filter_by(project_id=context.project_id).\
-                       filter_by(reservation_id=reservation_id).\
-                       filter_by(deleted=False).\
-                       all()
+        return query.\
+                filter_by(project_id=context.project_id).\
+                filter_by(deleted=False).\
+                all()
+
+
+@require_context
+def instance_get_by_fixed_ip(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.instance
+
+
+@require_context
+def instance_get_by_fixed_ipv6(context, address):
+    session = get_session()
+
+    # convert IPv6 address to mac
+    mac = ipv6.to_mac(address)
+
+    # get virtual interface
+    vif_ref = virtual_interface_get_by_address(context, mac)
+
+    # look up instance based on instance_id from vif row
+    result = session.query(models.Instance).\
+                     filter_by(id=vif_ref['instance_id'])
+    return result
+
+
+@require_context
+def instance_get_all_by_column_regexp(context, column, column_regexp):
+    """Get all instances by using regular expression matching against
+    a particular DB column
+    """
+    session = get_session()
+
+    # MySQL 'regexp' is not portable, so we must do our own matching.
+    # First... grab all Instances.
+    query = session.query(models.Instance).\
+                    options(joinedload('metadata'))
+    if is_admin_context(context):
+        all_instances = query.\
+                filter_by(deleted=can_read_deleted(context)).\
+                all()
+    elif is_user_context(context):
+        all_instances = query.\
+                filter_by(project_id=context.project_id).\
+                filter_by(deleted=False).\
+                all()
+    else:
+        return []
+
+    if all_instances is None:
+        all_instances = []
+
+    # Now do the regexp matching
+    compiled_regexp = re.compile(column_regexp)
+    instances = []
+
+    for instance in all_instances:
+        v = getattr(instance, column)
+        if v and compiled_regexp.match(v):
+            instances.append(instance)
+    return instances
+
+
+@require_context
+def instance_get_all_by_ip_regexp(context, ip_regexp):
+    """Get all instances by using regular expression matching against
+    Floating and Fixed IP Addresses
+    """
+    session = get_session()
+
+    fixed_ip_query = session.query(models.FixedIp).\
+            options(joinedload('instance.metadata'))
+    floating_ip_query = session.query(models.FloatingIp).\
+            options(joinedload_all('fixed_ip.instance.metadata'))
+
+    # Query both FixedIp and FloatingIp tables to get matches.
+    # Since someone could theoretically search for something that matches
+    # instances in both tables... we need to use a dictionary keyed
+    # on instance ID to make sure we return only 1.  We can't key off
+    # of 'instance' because it's just a reference and will be different
+    # addresses even though they might point to the same instance ID.
+    instances = {}
+
+    # MySQL 'regexp' is not portable, so we must do our own matching.
+    # First... grab all of the IP entries.
+    if is_admin_context(context):
+        fixed_ips = fixed_ip_query.\
+                filter_by(deleted=can_read_deleted(context)).\
+                all()
+        floating_ips = floating_ip_query.\
+                filter_by(deleted=can_read_deleted(context)).\
+                all()
+    elif is_user_context(context):
+        fixed_ips = fixed_ip_query.filter_by(deleted=False).all()
+        floating_ips = floating_ip_query.filter_by(deleted=False).all()
+    else:
+        return None
+
+    if fixed_ips is None:
+        fixed_ips = []
+    if floating_ips is None:
+        floating_ips = []
+
+    compiled_regexp = re.compile(ip_regexp)
+    instances = {}
+
+    # Now do the regexp matching
+    for fixed_ip in fixed_ips:
+        if fixed_ip.instance and compiled_regexp.match(fixed_ip.address):
+            instances[fixed_ip.instance.uuid] = fixed_ip.instance
+    for floating_ip in floating_ips:
+        fixed_ip = floating_ip.fixed_ip
+        if fixed_ip and fixed_ip.instance and\
+                compiled_regexp.match(floating_ip.address):
+            instances[fixed_ip.instance.uuid] = fixed_ip.instance
+
+    return instances.values()
+
+@require_context
+def instance_get_all_by_ipv6_regex(context, ipv6_regexp):
+    """Get all instances by using regular expression matching against
+    IPv6 Addresses
+    """
+
+    session = get_session()
+    with session.begin():
+        # get instances
+
+        all_instances = session.query(models.Instance).\
+                options(joinedload('metadata')).\
+                filter_by(deleted=can_read_deleted(context)).\
+                all()
+        if not all_instances:
+            return []
+
+        instances = []
+        compiled_regexp = re.compile(ipv6_regexp)
+        for instance in all_instances:
+            ipv6_addrs = _ipv6_get_by_instance_ref(context, instance)
+            for ipv6 in ipv6_addrs:
+                if compiled_regexp.match(ipv6):
+                    instances.append(instance)
+                    break
+        return instances
 
 
 @require_admin_context
@@ -1258,29 +1373,33 @@ def instance_get_fixed_addresses(context, instance_id):
         return [fixed_ip.address for fixed_ip in fixed_ips]
 
 
+def _ipv6_get_by_instance_ref(context, instance_ref):
+    # assume instance has 1 mac for each network associated with it
+    # get networks associated with instance
+    network_refs = network_get_all_by_instance(context, instance_id)
+    # compile a list of cidr_v6 prefixes sorted by network id
+    prefixes = [ref.cidr_v6 for ref in
+            sorted(network_refs, key=lambda ref: ref.id)]
+    # get vifs associated with instance
+    vif_refs = virtual_interface_get_by_instance(context, instance_ref.id)
+    # compile list of the mac_addresses for vifs sorted by network id
+    macs = [vif_ref['address'] for vif_ref in
+            sorted(vif_refs, key=lambda vif_ref: vif_ref['network_id'])]
+    # get project id from instance
+    project_id = instance_ref.project_id
+    # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
+    prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
+    # return list containing ipv6 address for each tuple
+    return [ipv6.to_global_ipv6(*t) for t in prefix_mac_tuples]
+
+
 @require_context
 def instance_get_fixed_addresses_v6(context, instance_id):
     session = get_session()
     with session.begin():
         # get instance
         instance_ref = instance_get(context, instance_id, session=session)
-        # assume instance has 1 mac for each network associated with it
-        # get networks associated with instance
-        network_refs = network_get_all_by_instance(context, instance_id)
-        # compile a list of cidr_v6 prefixes sorted by network id
-        prefixes = [ref.cidr_v6 for ref in
-                    sorted(network_refs, key=lambda ref: ref.id)]
-        # get vifs associated with instance
-        vif_refs = virtual_interface_get_by_instance(context, instance_ref.id)
-        # compile list of the mac_addresses for vifs sorted by network id
-        macs = [vif_ref['address'] for vif_ref in
-                sorted(vif_refs, key=lambda vif_ref: vif_ref['network_id'])]
-        # get project id from instance
-        project_id = instance_ref.project_id
-        # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
-        prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
-        # return list containing ipv6 address for each tuple
-        return [ipv6.to_global_ipv6(*t) for t in prefix_mac_tuples]
+        return _ipv6_get_by_instance_ref(context, instance_ref)
 
 
 @require_context
