@@ -95,6 +95,7 @@ class API(base.Base):
         if not network_api:
             network_api = network.API()
         self.network_api = network_api
+        self.network_manager = utils.import_object(FLAGS.network_manager)
         if not volume_api:
             volume_api = volume.API()
         self.volume_api = volume_api
@@ -142,6 +143,16 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
+    def _check_requested_networks(self, context, requested_networks):
+        """ Check if the networks requested belongs to the project
+            and the fixed IP address for each network provided is within
+            same the network block
+        """
+        if requested_networks is None:
+            return
+
+        self.network_api.validate_networks(context, requested_networks)
+
     def _check_create_parameters(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
                min_count=None, max_count=None,
@@ -149,7 +160,7 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, requested_networks=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -176,6 +187,7 @@ class API(base.Base):
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
+        self._check_requested_networks(context, requested_networks)
 
         (image_service, image_id) = nova.image.get_image_service(image_href)
         image = image_service.show(context, image_id)
@@ -315,7 +327,8 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
-                                          instance_id=None, num_instances=1):
+                                          instance_id=None, num_instances=1,
+                                          requested_networks=None):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
         uid = context.user_id
@@ -343,7 +356,8 @@ class API(base.Base):
                            "request_spec": request_spec,
                            "availability_zone": availability_zone,
                            "admin_password": admin_password,
-                           "injected_files": injected_files}})
+                           "injected_files": injected_files,
+                           "requested_networks": requested_networks}})
 
     def create_all_at_once(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
@@ -381,7 +395,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               requested_networks=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -402,7 +417,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, requested_networks)
 
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -414,10 +429,11 @@ class API(base.Base):
             instance_id = instance['id']
 
             self._ask_scheduler_to_create_instance(context, base_options,
-                                          instance_type, zone_blob,
-                                          availability_zone, injected_files,
-                                          admin_password,
-                                          instance_id=instance_id)
+                                        instance_type, zone_blob,
+                                        availability_zone, injected_files,
+                                        admin_password,
+                                        instance_id=instance_id,
+                                        requested_networks=requested_networks)
 
         return [dict(x.iteritems()) for x in instances]
 

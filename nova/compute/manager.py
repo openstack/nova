@@ -269,6 +269,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
         instance.injected_files = kwargs.get('injected_files', [])
+        requested_networks = kwargs.get('requested_networks', None)
         instance.admin_pass = kwargs.get('admin_password', None)
         if instance['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
@@ -291,7 +292,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             #             will eventually also need to save the address here.
             if not FLAGS.stub_network:
                 network_info = self.network_api.allocate_for_instance(context,
-                                                         instance, vpn=is_vpn)
+                                    instance, vpn=is_vpn,
+                                    requested_networks=requested_networks)
                 LOG.debug(_("instance network_info: |%s|"), network_info)
                 self.network_manager.setup_compute_network(context,
                                                            instance_id)

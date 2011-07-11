@@ -169,3 +169,12 @@ class API(base.Base):
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_instance_nw_info',
                          'args': args})
+
+    def validate_networks(self, context, requested_networks):
+        """validate the networks passed at the time of creating
+        the server
+        """
+        args = {'networks': requested_networks}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'validate_networks',
+                         'args': args})

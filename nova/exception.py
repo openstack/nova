@@ -142,6 +142,10 @@ class Invalid(NovaException):
     message = _("Unacceptable parameters.")
 
 
+class AlreadyInUse(NovaException):
+    message = _("Already is in use.")
+
+
 class InvalidSignature(Invalid):
     message = _("Invalid signature %(signature)s for user %(user)s.")
 
@@ -361,6 +365,15 @@ class NoNetworksFound(NotFound):
     message = _("No networks defined.")
 
 
+class NetworkNotFoundForProject(NotFound):
+    message = _("Either Network %(network_id)s is not present or "
+                "is not assigned to the project %(project_id)s.")
+
+
+class NetworkHostNotSet(NovaException):
+    message = _("Host is not set to the network (%(network_id)s).")
+
+
 class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
@@ -383,6 +396,19 @@ class FixedIpNotFoundForVirtualInterface(FixedIpNotFound):
 
 class FixedIpNotFoundForHost(FixedIpNotFound):
     message = _("Host %(host)s has zero fixed ips.")
+
+
+class FixedIpNotFoundForNetwork(FixedIpNotFound):
+    message = _("Fixed IP address (%(address)s) does not exist in "
+                "network (%(network_id)s).")
+
+
+class FixedIpAlreadyInUse(AlreadyInUse):
+    message = _("Fixed IP address %(address)s is already in use.")
+
+
+class FixedIpInvalid(Invalid):
+    message = _("Fixed IP address %(address)s is invalid.")
 
 
 class NoMoreFixedIps(Error):

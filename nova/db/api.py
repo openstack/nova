@@ -341,6 +341,14 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
     return IMPL.fixed_ip_associate_pool(context, network_id, instance_id)
 
 
+def fixed_ip_associate_by_address(context, network_id, instance_id, address):
+    """check if the address is free and is in the network
+    and it is not associated to any instance.
+    """
+    return IMPL.fixed_ip_associate_by_address(context, network_id,
+                                              instance_id, address)
+
+
 def fixed_ip_create(context, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_create(context, values)
@@ -398,6 +406,13 @@ def fixed_ip_get_network(context, address):
 def fixed_ip_update(context, address, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_update(context, address, values)
+
+
+def fixed_ip_validate_by_network_address(context, network_id,
+                                         address):
+    """validates if the address belongs to the network"""
+    return IMPL.fixed_ip_validate_by_network_address(context, network_id,
+                                                     address)
 
 
 ####################
@@ -689,7 +704,14 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
+def network_get_requested_networks(context, requested_networks):
+    """Return all defined networks."""
+    return IMPL.network_get_requested_networks(context, requested_networks)
+
+
 # pylint: disable=C0103
+
+
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
     return IMPL.network_get_associated_fixed_ips(context, network_id)
@@ -1226,6 +1248,16 @@ def project_get_networks(context, project_id, associate=True):
 
     """
     return IMPL.project_get_networks(context, project_id, associate)
+
+
+def project_get_requested_networks(context, requested_networks):
+    """Return the network associated with the project.
+
+    If associate is true, it will attempt to associate a new
+    network if one is not found, otherwise it returns None.
+
+    """
+    return IMPL.project_get_requested_networks(context, requested_networks)
 
 
 def project_get_networks_v6(context, project_id):

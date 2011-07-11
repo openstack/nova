@@ -124,11 +124,18 @@ class RPCAllocateFixedIP(object):
     used since they share code to RPC.call allocate_fixed_ip on the
     correct network host to configure dnsmasq
     """
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, networks,
+                            requested_networks=None):
         """Calls allocate_fixed_ip once for each network."""
         green_pool = greenpool.GreenPool()
-
         for network in networks:
+            address = None
+            if requested_networks is not None:
+                for id, fixed_ip in requested_networks:
+                    if (network['id'] == id):
+                        address = fixed_ip
+                        break
+
             if network['host'] != self.host:
                 # need to call allocate_fixed_ip to correct network host
                 topic = self.db.queue_get_for(context, FLAGS.network_topic,
@@ -136,23 +143,25 @@ class RPCAllocateFixedIP(object):
                 args = {}
                 args['instance_id'] = instance_id
                 args['network_id'] = network['id']
-
+                args['address'] = address
                 green_pool.spawn_n(rpc.call, context, topic,
                                    {'method': '_rpc_allocate_fixed_ip',
                                     'args': args})
             else:
                 # i am the correct host, run here
-                self.allocate_fixed_ip(context, instance_id, network)
+                self.allocate_fixed_ip(context, instance_id, network,
+                                       address=address)
 
         # wait for all of the allocates (if any) to finish
         green_pool.waitall()
 
-    def _rpc_allocate_fixed_ip(self, context, instance_id, network_id):
+    def _rpc_allocate_fixed_ip(self, context, instance_id, network_id,
+                               address=None):
         """Sits in between _allocate_fixed_ips and allocate_fixed_ip to
         perform network lookup on the far side of rpc.
         """
         network = self.db.network_get(context, network_id)
-        self.allocate_fixed_ip(context, instance_id, network)
+        self.allocate_fixed_ip(context, instance_id, network, address=address)
 
 
 class FloatingIP(object):
@@ -185,6 +194,7 @@ class FloatingIP(object):
         """
         instance_id = kwargs.get('instance_id')
         project_id = kwargs.get('project_id')
+        requested_networks = kwargs.get('requested_networks')
         LOG.debug(_("floating IP allocation for instance |%s|"), instance_id,
                                                                context=context)
         # call the next inherited class's allocate_for_instance()
@@ -339,16 +349,21 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = self.db.network_get_all(context)
         for network in networks:
             host = network['host']
-            if not host:
+            if host:
                 # return so worker will only grab 1 (to help scale flatter)
                 return self.set_network_host(context, network['id'])
 
-    def _get_networks_for_instance(self, context, instance_id, project_id):
+    def _get_networks_for_instance(self, context, instance_id, project_id,
+                                   requested_networks=None):
         """Determine & return which networks an instance should connect to."""
         # TODO(tr3buchet) maybe this needs to be updated in the future if
         #                 there is a better way to determine which networks
         #                 a non-vlan instance should connect to
-        networks = self.db.network_get_all(context)
+        if requested_networks:
+            networks = self.db.network_get_requested_networks(context,
+                                                    requested_networks)
+        else:
+            networks = self.db.network_get_all(context)
 
         # return only networks which are not vlan networks and have host set
         return [network for network in networks if
@@ -362,13 +377,19 @@ class NetworkManager(manager.SchedulerDependentManager):
         instance_id = kwargs.pop('instance_id')
         project_id = kwargs.pop('project_id')
         type_id = kwargs.pop('instance_type_id')
+        requested_networks = kwargs.pop('requested_networks')
+        LOG.debug(requested_networks)
         admin_context = context.elevated()
         LOG.debug(_("network allocations for instance %s"), instance_id,
                                                             context=context)
-        networks = self._get_networks_for_instance(admin_context, instance_id,
-                                                                  project_id)
+        networks = self._get_networks_for_instance(admin_context,
+                                                   instance_id,
+                                                   project_id,
+                                                   requested_networks)
         self._allocate_mac_addresses(context, instance_id, networks)
-        self._allocate_fixed_ips(admin_context, instance_id, networks)
+        self._allocate_fixed_ips(admin_context, instance_id,
+                                networks,
+                                requested_networks=requested_networks)
         return self.get_instance_nw_info(context, instance_id, type_id)
 
     def deallocate_for_instance(self, context, **kwargs):
@@ -486,9 +507,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
         #             network_get_by_compute_host
-        address = self.db.fixed_ip_associate_pool(context.elevated(),
+        address = kwargs.get('address', None)
+        address = self.db.fixed_ip_associate_by_address(context.elevated(),
                                                   network['id'],
-                                                  instance_id)
+                                                  instance_id,
+                                                  address)
         vif = self.db.virtual_interface_get_by_instance_and_network(context,
                                                                 instance_id,
                                                                 network['id'])
@@ -637,7 +660,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                                               'address': address,
                                               'reserved': reserved})
 
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, networks,
+                            requested_networks=None):
         """Calls allocate_fixed_ip once for each network."""
         raise NotImplementedError()
 
@@ -652,6 +676,25 @@ class NetworkManager(manager.SchedulerDependentManager):
         hosts
         """
         raise NotImplementedError()
+
+    def validate_networks(self, context, networks):
+        """check if the networks exists and host
+        is set to each network.
+        """
+        if networks is None:
+            return
+
+        result = self.db.network_get_requested_networks(context, networks)
+        for network_id, fixed_ip in networks:
+            # check if the fixed IP address is valid and
+            # it actually belongs to the network
+            if fixed_ip is not None:
+                if not utils.is_valid_ipv4(fixed_ip):
+                    raise exception.FixedIpInvalid(address=fixed_ip)
+
+                self.db.fixed_ip_validate_by_network_address(context,
+                                                             network_id,
+                                                             fixed_ip)
 
 
 class FlatManager(NetworkManager):
@@ -684,10 +727,18 @@ class FlatManager(NetworkManager):
 
     timeout_fixed_ips = False
 
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, networks,
+                            requested_networks=None):
         """Calls allocate_fixed_ip once for each network."""
         for network in networks:
-            self.allocate_fixed_ip(context, instance_id, network)
+            address = None
+            if requested_networks is not None:
+                for id, fixed_ip in requested_networks:
+                    if (network['id'] == id):
+                        address = fixed_ip
+                        break
+            self.allocate_fixed_ip(context, instance_id,
+                                   network, address=address)
 
     def deallocate_fixed_ip(self, context, address, **kwargs):
         """Returns a fixed ip to the pool."""
@@ -741,11 +792,13 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
             self.driver.ensure_bridge(network['bridge'],
                                       network['bridge_interface'])
 
-    def allocate_fixed_ip(self, context, instance_id, network):
+    def allocate_fixed_ip(self, context, instance_id, network,
+                          address=None):
         """Allocate flat_network fixed_ip, then setup dhcp for this network."""
         address = super(FlatDHCPManager, self).allocate_fixed_ip(context,
                                                                  instance_id,
-                                                                 network)
+                                                                 network,
+                                                                 address)
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network['id'])
 
@@ -794,15 +847,17 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
+        address = kwargs.get('address', None)
         if kwargs.get('vpn', None):
             address = network['vpn_private_address']
             self.db.fixed_ip_associate(context,
                                        address,
                                        instance_id)
         else:
-            address = self.db.fixed_ip_associate_pool(context,
+            address = self.db.fixed_ip_associate_by_address(context,
                                                       network['id'],
-                                                      instance_id)
+                                                      instance_id,
+                                                      address)
         vif = self.db.virtual_interface_get_by_instance_and_network(context,
                                                                  instance_id,
                                                                  network['id'])
@@ -826,10 +881,15 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                            network['bridge'],
                                            network['bridge_interface'])
 
-    def _get_networks_for_instance(self, context, instance_id, project_id):
+    def _get_networks_for_instance(self, context, instance_id, project_id,
+                                   requested_networks=None):
         """Determine which networks an instance should connect to."""
         # get networks associated with project
-        networks = self.db.project_get_networks(context, project_id)
+        if requested_networks is not None:
+            networks = self.db.project_get_requested_networks(context,
+                                                    requested_networks)
+        else:
+            networks = self.db.project_get_networks(context, project_id)
 
         # return only networks which have host set
         return [network for network in networks if network['host']]
@@ -877,6 +937,25 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             self.driver.update_dhcp(context, network_id)
             if(FLAGS.use_ipv6):
                 self.driver.update_ra(context, network_id)
+
+    def validate_networks(self, context, networks):
+        """check if the networks exists and host
+        is set to each network.
+        """
+        if networks is None:
+            return
+
+        result = self.db.project_get_requested_networks(context, networks)
+        for network_id, fixed_ip in networks:
+            # check if the fixed IP address is valid and
+            # it actually belongs to the network
+            if fixed_ip is not None:
+                if not utils.is_valid_ipv4(fixed_ip):
+                    raise exception.FixedIpInvalid(address=fixed_ip)
+
+                self.db.fixed_ip_validate_by_network_address(context,
+                                                             network_id,
+                                                             fixed_ip)
 
     @property
     def _bottom_reserved_ips(self):

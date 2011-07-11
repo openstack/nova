@@ -251,7 +251,7 @@ def service_get_all_network_sorted(context):
     session = get_session()
     with session.begin():
         topic = 'network'
-        label = 'network_count'
+        label = 'network_'
         subq = session.query(models.Network.host,
                              func.count(models.Network.id).label(label)).\
                        filter_by(deleted=False).\
@@ -684,6 +684,40 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
     return fixed_ip_ref['address']
 
 
+@require_admin_context
+def fixed_ip_associate_by_address(context, network_id, instance_id,
+                                  address):
+    if address is None:
+        return fixed_ip_associate_pool(context, network_id, instance_id)
+
+    session = get_session()
+    with session.begin():
+        fixed_ip_ref = session.query(models.FixedIp).\
+                               filter_by(reserved=False).\
+                               filter_by(deleted=False).\
+                               filter_by(network_id=network_id).\
+                               filter_by(address=address).\
+                               with_lockmode('update').\
+                               first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if fixed_ip_ref is None:
+            raise exception.FixedIpNotFoundForNetwork(address=address,
+                                            network_id=network_id)
+        if fixed_ip_ref.instance is not None:
+            raise exception.FixedIpAlreadyInUse(address=address)
+
+        if not fixed_ip_ref.network:
+            fixed_ip_ref.network = network_get(context,
+                                           network_id,
+                                           session=session)
+        fixed_ip_ref.instance = instance_get(context,
+                                             instance_id,
+                                             session=session)
+        session.add(fixed_ip_ref)
+    return fixed_ip_ref['address']
+
+
 @require_context
 def fixed_ip_create(_context, values):
     fixed_ip_ref = models.FixedIp()
@@ -769,6 +803,26 @@ def fixed_ip_get_by_address(context, address, session=None):
         authorize_project_context(context, result.instance.project_id)
 
     return result
+
+
+@require_context
+def fixed_ip_validate_by_network_address(context, network_id,
+                                         address):
+    session = get_session()
+    fixed_ip_ref = session.query(models.FixedIp).\
+                     filter_by(address=address).\
+                     filter_by(reserved=False).\
+                     filter_by(network_id=network_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+
+    if fixed_ip_ref is None:
+        raise exception.FixedIpNotFoundForNetwork(address=address,
+                                            network_id=network_id)
+    if fixed_ip_ref.instance is not None:
+            raise exception.FixedIpAlreadyInUse(address=address)
+
+    return fixed_ip_ref
 
 
 @require_context
@@ -1612,6 +1666,39 @@ def network_get_all(context):
         raise exception.NoNetworksFound()
     return result
 
+
+@require_admin_context
+def network_get_requested_networks(context, requested_networks):
+    session = get_session()
+
+    network_ids = []
+    for id, fixed_ip in requested_networks:
+        network_ids.append(id)
+
+    result = session.query(models.Network).\
+                 filter(models.Network.id.in_(network_ids)).\
+                 filter_by(deleted=False).all()
+    if not result:
+        raise exception.NoNetworksFound()
+
+    #check if host is set to all of the networks
+    # returned in the result
+    for network in result:
+            if network['host'] is None:
+                raise exception.NetworkHostNotSet(network_id=network['id'])
+
+    #check if the result contains all the networks
+    #we are looking for
+    for network_id in network_ids:
+        found = False
+        for network in result:
+            if network['id'] == network_id:
+                found = True
+                break
+        if not found:
+            raise exception.NetworkNotFound(network_id=network_id)
+
+    return result
 
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
@@ -2724,6 +2811,42 @@ def project_get_networks(context, project_id, associate=True):
         if not associate:
             return []
         return [network_associate(context, project_id)]
+    return result
+
+
+@require_context
+def project_get_requested_networks(context, requested_networks):
+    session = get_session()
+
+    network_ids = []
+    for id, fixed_ip in requested_networks:
+        network_ids.append(id)
+
+    result = session.query(models.Network).\
+                 filter(models.Network.id.in_(network_ids)).\
+                 filter_by(deleted=False).\
+                 filter_by(project_id=context.project_id).all()
+
+    if not result:
+        raise exception.NoNetworksFound()
+
+    #check if host is set to all of the networks
+    # returned in the result
+    for network in result:
+            if network['host'] is None:
+                raise exception.NetworkHostNotSet(network_id=network['id'])
+
+    #check if the result contains all the networks
+    #we are looking for
+    for network_id in network_ids:
+        found = False
+        for network in result:
+            if network['id'] == network_id:
+                found = True
+                break
+        if not found:
+            raise exception.NetworkNotFoundForProject(network_id=network_id,
+                                              project_id=context.project_id)
     return result
 
 
