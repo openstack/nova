@@ -268,6 +268,6 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_remove_fixed_ip_from_instance_bad_input(self):
         manager = self.FakeNetworkManager()
-        self.assertRaises(exception.FixedIpNotFound,
+        self.assertRaises(exception.FixedIpNotFoundForSpecificInstance,
                           manager.remove_fixed_ip_from_instance,
                           None, 99, 'bad input')

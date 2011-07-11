@@ -482,12 +482,13 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def remove_fixed_ip_from_instance(self, context, instance_id, address):
         """Removes a fixed ip from an instance from specified network."""
-        addresses = self.db.fixed_ip_get_by_instance(context, instance_id)
-        for addr in addresses:
-            if addr['address'] == address:
+        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        for fixed_ip in fixed_ips:
+            if fixed_ip['address'] == address:
                 self.deallocate_fixed_ip(context, address)
                 return
-        raise exception.FixedIpNotFound(id=address)
+        raise exception.FixedIpNotFoundForSpecificInstance(
+                                    instance_id=instance_id, ip=address)
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
