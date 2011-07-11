@@ -104,15 +104,6 @@ class Controller(object):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-    @scheduler_api.redirect_handler
-    def delete(self, req, id):
-        """ Destroys a server """
-        try:
-            self.compute_api.delete(req.environ['nova.context'], id)
-        except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
-
     def create(self, req, body):
         """ Creates a new server for a given user """
         extra_values = None
@@ -420,6 +411,15 @@ class Controller(object):
 
 class ControllerV10(Controller):
 
+    @scheduler_api.redirect_handler
+    def delete(self, req, id):
+        """ Destroys a server """
+        try:
+            self.compute_api.delete(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
@@ -482,6 +482,15 @@ class ControllerV10(Controller):
 
 
 class ControllerV11(Controller):
+
+    @scheduler_api.redirect_handler
+    def delete(self, req, id):
+        """ Destroys a server """
+        try:
+            self.compute_api.delete(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageRef']
 
@@ -595,6 +604,12 @@ class ControllerV11(Controller):
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_new_style(server)
+
+
+class ServersHTTPSerializer(wsgi.DictSerializer):
+
+    def delete(self, response):
+        response.status_int = 204
 
 
 def create_resource(version='1.0'):
