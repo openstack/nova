@@ -1463,11 +1463,10 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers/1/rescue')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
 
-        self.assertEqual(res.status_int, 400)
+        self.assertEqual(res.status_int, 422)
 
     def test_delete_server_instance_v1_1(self):
         req = webob.Request.blank('/v1.1/servers/1')
