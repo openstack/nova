@@ -211,12 +211,13 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.allocate_fixed_ip(None, 0, network, vpn=True)
 
     def test_allocate_fixed_ip(self):
-        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
+        self.mox.StubOutWithMock(db, 'fixed_ip_associate_by_address')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
 
-        db.fixed_ip_associate_pool(mox.IgnoreArg(),
+        db.fixed_ip_associate_by_address(mox.IgnoreArg(),
+                                   mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.1')
         db.fixed_ip_update(mox.IgnoreArg(),
