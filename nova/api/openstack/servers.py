@@ -606,7 +606,7 @@ class ControllerV11(Controller):
         return self.helper._get_server_admin_password_new_style(server)
 
 
-class ServersHTTPSerializer(wsgi.DictSerializer):
+class HeadersSerializer(wsgi.DictSerializer):
 
     def delete(self, response):
         response.status_int = 204
@@ -639,6 +639,8 @@ def create_resource(version='1.0'):
         '1.1': wsgi.XMLNS_V11,
     }[version]
 
+    headers_serializer = HeadersSerializer()
+
     body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
                                                   xmlns=xmlns),
@@ -648,7 +650,7 @@ def create_resource(version='1.0'):
         'application/xml': helper.ServerXMLDeserializer(),
     }
 
-    serializer = wsgi.ResponseSerializer(body_serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
     deserializer = wsgi.RequestDeserializer(body_deserializers)
 
     return wsgi.Resource(controller, deserializer, serializer)
