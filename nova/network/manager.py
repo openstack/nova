@@ -349,7 +349,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = self.db.network_get_all(context)
         for network in networks:
             host = network['host']
-            if host:
+            if not host:
                 # return so worker will only grab 1 (to help scale flatter)
                 return self.set_network_host(context, network['id'])
 
