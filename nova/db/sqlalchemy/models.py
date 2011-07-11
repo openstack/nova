@@ -21,7 +21,7 @@ SQLAlchemy models for nova data.
 
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, String, schema
-from sqlalchemy import ForeignKey, DateTime, Boolean, Text
+from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import ForeignKeyConstraint
@@ -209,12 +209,12 @@ class Instance(BASE, NovaBase):
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
+    # aka flavor_id
     instance_type_id = Column(Integer)
 
     user_data = Column(Text)
 
     reservation_id = Column(String(255))
-    mac_address = Column(String(255))
 
     scheduled_at = Column(DateTime)
     launched_at = Column(DateTime)
@@ -548,6 +548,7 @@ class Network(BASE, NovaBase):
     netmask_v6 = Column(String(255))
     netmask = Column(String(255))
     bridge = Column(String(255))
+    bridge_interface = Column(String(255))
     gateway = Column(String(255))
     broadcast = Column(String(255))
     dns = Column(String(255))
@@ -558,11 +559,65 @@ class Network(BASE, NovaBase):
     vpn_private_address = Column(String(255))
     dhcp_start = Column(String(255))
 
-    # NOTE(vish): The unique constraint below helps avoid a race condition
-    #             when associating a network, but it also means that we
-    #             can't associate two networks with one project.
-    project_id = Column(String(255), unique=True)
+    project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+
+
+class VirtualInterface(BASE, NovaBase):
+    """Represents a virtual interface on an instance."""
+    __tablename__ = 'virtual_interfaces'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255), unique=True)
+    network_id = Column(Integer, ForeignKey('networks.id'))
+    network = relationship(Network, backref=backref('virtual_interfaces'))
+
+    # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance = relationship(Instance, backref=backref('virtual_interfaces'))
+
+
+# TODO(vish): can these both come from the same baseclass?
+class FixedIp(BASE, NovaBase):
+    """Represents a fixed ip for an instance."""
+    __tablename__ = 'fixed_ips'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
+    network = relationship(Network, backref=backref('fixed_ips'))
+    virtual_interface_id = Column(Integer, ForeignKey('virtual_interfaces.id'),
+                                                                 nullable=True)
+    virtual_interface = relationship(VirtualInterface,
+                                     backref=backref('fixed_ips'))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance = relationship(Instance,
+                            backref=backref('fixed_ips'),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_('
+                                'FixedIp.instance_id == Instance.id,'
+                                'FixedIp.deleted == False)')
+    # associated means that a fixed_ip has its instance_id column set
+    # allocated means that a fixed_ip has a its virtual_interface_id column set
+    allocated = Column(Boolean, default=False)
+    # leased means dhcp bridge has leased the ip
+    leased = Column(Boolean, default=False)
+    reserved = Column(Boolean, default=False)
+
+
+class FloatingIp(BASE, NovaBase):
+    """Represents a floating ip that dynamically forwards to a fixed ip."""
+    __tablename__ = 'floating_ips'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
+    fixed_ip = relationship(FixedIp,
+                            backref=backref('floating_ips'),
+                            foreign_keys=fixed_ip_id,
+                            primaryjoin='and_('
+                                'FloatingIp.fixed_ip_id == FixedIp.id,'
+                                'FloatingIp.deleted == False)')
+    project_id = Column(String(255))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    auto_assigned = Column(Boolean, default=False, nullable=False)
 
 
 class AuthToken(BASE, NovaBase):
@@ -578,26 +633,6 @@ class AuthToken(BASE, NovaBase):
     server_management_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
-
-
-# TODO(vish): can these both come from the same baseclass?
-class FixedIp(BASE, NovaBase):
-    """Represents a fixed ip for an instance."""
-    __tablename__ = 'fixed_ips'
-    id = Column(Integer, primary_key=True)
-    address = Column(String(255))
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
-    network = relationship(Network, backref=backref('fixed_ips'))
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance,
-                            backref=backref('fixed_ip', uselist=False),
-                            foreign_keys=instance_id,
-                            primaryjoin='and_('
-                                'FixedIp.instance_id == Instance.id,'
-                                'FixedIp.deleted == False)')
-    allocated = Column(Boolean, default=False)
-    leased = Column(Boolean, default=False)
-    reserved = Column(Boolean, default=False)
 
 
 class User(BASE, NovaBase):
@@ -660,23 +695,6 @@ class UserProjectAssociation(BASE, NovaBase):
     project_id = Column(String(255), ForeignKey(Project.id), primary_key=True)
 
 
-class FloatingIp(BASE, NovaBase):
-    """Represents a floating ip that dynamically forwards to a fixed ip."""
-    __tablename__ = 'floating_ips'
-    id = Column(Integer, primary_key=True)
-    address = Column(String(255))
-    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp,
-                            backref=backref('floating_ips'),
-                            foreign_keys=fixed_ip_id,
-                            primaryjoin='and_('
-                                'FloatingIp.fixed_ip_id == FixedIp.id,'
-                                'FloatingIp.deleted == False)')
-    project_id = Column(String(255))
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
-    auto_assigned = Column(Boolean, default=False, nullable=False)
-
-
 class ConsolePool(BASE, NovaBase):
     """Represents pool of consoles on the same physical node."""
     __tablename__ = 'console_pools'
@@ -716,6 +734,21 @@ class InstanceMetadata(BASE, NovaBase):
                                 'InstanceMetadata.deleted == False)')
 
 
+class InstanceTypeExtraSpecs(BASE, NovaBase):
+    """Represents additional specs as key/value pairs for an instance_type"""
+    __tablename__ = 'instance_type_extra_specs'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
+                              nullable=False)
+    instance_type = relationship(InstanceTypes, backref="extra_specs",
+                 foreign_keys=instance_type_id,
+                 primaryjoin='and_('
+                 'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
+                 'InstanceTypeExtraSpecs.deleted == False)')
+
+
 class Zone(BASE, NovaBase):
     """Represents a child zone of this zone."""
     __tablename__ = 'zones'
@@ -723,6 +756,8 @@ class Zone(BASE, NovaBase):
     api_url = Column(String(255))
     username = Column(String(255))
     password = Column(String(255))
+    weight_offset = Column(Float(), default=0.0)
+    weight_scale = Column(Float(), default=1.0)
 
 
 class AgentBuild(BASE, NovaBase):
@@ -750,7 +785,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              AgentBuild, InstanceMetadata, Migration)
+              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

@@ -37,6 +37,7 @@ from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
+from nova.notifier import test_notifier
 
 LOG = logging.getLogger('nova.tests.compute')
 FLAGS = flags.FLAGS
@@ -62,6 +63,7 @@ class ComputeTestCase(test.TestCase):
         super(ComputeTestCase, self).setUp()
         self.flags(connection_type='fake',
                    stub_network=True,
+                   notification_driver='nova.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_api = compute.API()
@@ -69,6 +71,7 @@ class ComputeTestCase(test.TestCase):
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.RequestContext('fake', 'fake', False)
+        test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
@@ -90,7 +93,6 @@ class ComputeTestCase(test.TestCase):
         inst['project_id'] = self.project.id
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
-        inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         inst.update(params)
         return db.instance_create(self.context, inst)['id']
@@ -128,7 +130,7 @@ class ComputeTestCase(test.TestCase):
         instance_ref = models.Instance()
         instance_ref['id'] = 1
         instance_ref['volumes'] = [vol1, vol2]
-        instance_ref['hostname'] = 'i-00000001'
+        instance_ref['hostname'] = 'hostname-1'
         instance_ref['host'] = 'dummy'
         return instance_ref
 
@@ -159,6 +161,18 @@ class ComputeTestCase(test.TestCase):
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_default_hostname_generator(self):
+        cases = [(None, 'server_1'), ('Hello, Server!', 'hello_server'),
+                 ('<}\x1fh\x10e\x08l\x02l\x05o\x12!{>', 'hello')]
+        for display_name, hostname in cases:
+            ref = self.compute_api.create(self.context,
+                instance_types.get_default_instance_type(), None,
+                display_name=display_name)
+            try:
+                self.assertEqual(ref[0]['hostname'], hostname)
+            finally:
+                db.instance_destroy(self.context, ref[0]['id'])
 
     def test_destroy_instance_disassociates_security_groups(self):
         """Make sure destroying disassociates security groups"""
@@ -327,6 +341,50 @@ class ComputeTestCase(test.TestCase):
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_run_instance_usage_notification(self):
+        """Ensure run instance generates apropriate usage notification"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'compute.instance.create')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], self.project.id)
+        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('created_at' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertEquals(payload['image_ref'], '1')
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_terminate_usage_notification(self):
+        """Ensure terminate_instance generates apropriate usage notification"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        test_notifier.NOTIFICATIONS = []
+        self.compute.terminate_instance(self.context, instance_id)
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'compute.instance.delete')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], self.project.id)
+        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('created_at' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertEquals(payload['image_ref'], '1')
+
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
         instance_id = self._create_instance()
@@ -363,6 +421,7 @@ class ComputeTestCase(test.TestCase):
             pass
 
         self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
         context = self.context.elevated()
         instance_id = self._create_instance()
         self.compute.prep_resize(context, instance_id, 1)
@@ -377,6 +436,36 @@ class ComputeTestCase(test.TestCase):
             self.fail()
 
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_resize_instance_notification(self):
+        """Ensure notifications on instance migrate/resize"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+
+        self.compute.run_instance(self.context, instance_id)
+        test_notifier.NOTIFICATIONS = []
+
+        db.instance_update(self.context, instance_id, {'host': 'foo'})
+        self.compute.prep_resize(context, instance_id, 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'compute.instance.resize.prep')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], self.project.id)
+        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('created_at' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertEquals(payload['image_ref'], '1')
+        self.compute.terminate_instance(context, instance_id)
 
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
@@ -443,6 +532,14 @@ class ComputeTestCase(test.TestCase):
                 self.context, instance_id, 1)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_migrate(self):
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        # Migrate simply calls resize() without a flavor_id.
+        self.compute_api.resize(context, instance_id, None)
+        self.compute.terminate_instance(context, instance_id)
+
     def _setup_other_managers(self):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self.network_manager = utils.import_object(FLAGS.network_manager)
@@ -456,7 +553,7 @@ class ComputeTestCase(test.TestCase):
 
         dbmock = self.mox.CreateMock(db)
         dbmock.instance_get(c, i_id).AndReturn(instance_ref)
-        dbmock.instance_get_fixed_address(c, i_id).AndReturn(None)
+        dbmock.instance_get_fixed_addresses(c, i_id).AndReturn(None)
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -476,7 +573,7 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
+        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
@@ -504,7 +601,7 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
+        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
         compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
         netmock.setup_compute_network(c, i_ref['id'])
@@ -534,7 +631,7 @@ class ComputeTestCase(test.TestCase):
         volmock = self.mox.CreateMock(self.volume_manager)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
+        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             volmock.setup_compute_volume(c, i_ref['volumes'][i]['id'])
         for i in range(FLAGS.live_migration_retry_count):

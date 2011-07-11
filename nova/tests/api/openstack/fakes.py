@@ -16,7 +16,6 @@
 #    under the License.
 
 import copy
-import json
 import random
 import string
 
@@ -29,11 +28,11 @@ from glance.common import exception as glance_exc
 
 from nova import context
 from nova import exception as exc
-from nova import flags
 from nova import utils
 import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
+from nova.api.openstack import extensions
 from nova.api.openstack import versions
 from nova.api.openstack import limits
 from nova.auth.manager import User, Project
@@ -82,7 +81,8 @@ def wsgi_app(inner_app10=None, inner_app11=None):
     api10 = openstack.FaultWrapper(auth.AuthMiddleware(
               limits.RateLimitingMiddleware(inner_app10)))
     api11 = openstack.FaultWrapper(auth.AuthMiddleware(
-              limits.RateLimitingMiddleware(inner_app11)))
+              limits.RateLimitingMiddleware(
+                  extensions.ExtensionMiddleware(inner_app11))))
     mapper['/v1.0'] = api10
     mapper['/v1.1'] = api11
     mapper['/'] = openstack.FaultWrapper(versions.Versions())
@@ -145,6 +145,16 @@ def stub_out_compute_api_snapshot(stubs):
         props.update(extra_properties or {})
         return dict(id='123', status='ACTIVE', name=name, properties=props)
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
+
+
+def stub_out_compute_api_backup(stubs):
+    def backup(self, context, instance_id, name, backup_type, rotation,
+               extra_properties=None):
+        props = dict(instance_id=instance_id, instance_ref=instance_id,
+                     backup_type=backup_type, rotation=rotation)
+        props.update(extra_properties or {})
+        return dict(id='123', status='ACTIVE', name=name, properties=props)
+    stubs.Set(nova.compute.API, 'backup', backup)
 
 
 def stub_out_glance_add_image(stubs, sent_to_glance):

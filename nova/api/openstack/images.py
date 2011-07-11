@@ -13,18 +13,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import urlparse
 import os.path
 
 import webob.exc
+from xml.dom import minidom
 
 from nova import compute
 from nova import exception
 from nova import flags
 import nova.image
 from nova import log
-from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack import image_metadata
 from nova.api.openstack.views import images as images_view
 from nova.api.openstack import wsgi
 
@@ -90,31 +92,67 @@ class Controller(object):
         return webob.exc.HTTPNoContent()
 
     def create(self, req, body):
-        """Snapshot a server instance and save the image.
+        """Snapshot or backup a server instance and save the image.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
 
         :param req: `wsgi.Request` object
         """
+        def get_param(param):
+            try:
+                return body["image"][param]
+            except KeyError:
+                raise webob.exc.HTTPBadRequest(explanation="Missing required "
+                        "param: %s" % param)
+
         context = req.environ['nova.context']
         content_type = req.get_content_type()
 
         if not body:
             raise webob.exc.HTTPBadRequest()
 
+        image_type = body["image"].get("image_type", "snapshot")
+
         try:
             server_id = self._server_id_from_req(req, body)
-            image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
 
+        image_name = get_param("name")
         props = self._get_extra_properties(req, body)
 
-        image = self._compute_service.snapshot(context, server_id,
-                                               image_name, props)
+        if image_type == "snapshot":
+            image = self._compute_service.snapshot(
+                        context, server_id, image_name,
+                        extra_properties=props)
+        elif image_type == "backup":
+            # NOTE(sirp): Unlike snapshot, backup is not a customer facing
+            # API call; rather, it's used by the internal backup scheduler
+            if not FLAGS.allow_admin_api:
+                raise webob.exc.HTTPBadRequest(
+                        explanation="Admin API Required")
+
+            backup_type = get_param("backup_type")
+            rotation = int(get_param("rotation"))
+
+            image = self._compute_service.backup(
+                        context, server_id, image_name,
+                        backup_type, rotation, extra_properties=props)
+        else:
+            LOG.error(_("Invalid image_type '%s' passed") % image_type)
+            raise webob.exc.HTTPBadRequest(explanation="Invalue image_type: "
+                   "%s" % image_type)
+
         return dict(image=self.get_builder(req).build(image, detail=True))
 
     def get_builder(self, request):
         """Indicates that you must use a Controller subclass."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _server_id_from_req(self, req, data):
         raise NotImplementedError()
@@ -181,9 +219,9 @@ class ControllerV11(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        (marker, limit) = common.get_pagination_params(req)
-        images = self._image_service.index(
-            context, filters=filters, marker=marker, limit=limit)
+        page_params = common.get_pagination_params(req)
+        images = self._image_service.index(context, filters=filters,
+                                           **page_params)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
 
@@ -195,9 +233,9 @@ class ControllerV11(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        (marker, limit) = common.get_pagination_params(req)
-        images = self._image_service.detail(
-            context, filters=filters, marker=marker, limit=limit)
+        page_params = common.get_pagination_params(req)
+        images = self._image_service.detail(context, filters=filters,
+                                            **page_params)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
@@ -208,13 +246,23 @@ class ControllerV11(Controller):
             msg = _("Expected serverRef attribute on server entity.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        head, tail = os.path.split(server_ref)
+        if not server_ref.startswith('http'):
+            return server_ref
 
-        if head and head != os.path.join(req.application_url, 'servers'):
+        passed = urlparse.urlparse(server_ref)
+        expected = urlparse.urlparse(req.application_url)
+        version = expected.path.split('/')[1]
+        expected_prefix = "/%s/servers/" % version
+        _empty, _sep, server_id = passed.path.partition(expected_prefix)
+        scheme_ok = passed.scheme == expected.scheme
+        host_ok = passed.hostname == expected.hostname
+        port_ok = (passed.port == expected.port or
+                   passed.port == FLAGS.osapi_port)
+        if not (scheme_ok and port_ok and host_ok and server_id):
             msg = _("serverRef must match request url")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        return tail
+        return server_id
 
     def _get_extra_properties(self, req, data):
         server_ref = data['image']['serverRef']
@@ -224,16 +272,7 @@ class ControllerV11(Controller):
         return {'instance_ref': server_ref}
 
 
-def create_resource(version='1.0'):
-    controller = {
-        '1.0': ControllerV10,
-        '1.1': ControllerV11,
-    }[version]()
-
-    xmlns = {
-        '1.0': wsgi.XMLNS_V10,
-        '1.1': wsgi.XMLNS_V11,
-    }[version]
+class ImageXMLSerializer(wsgi.XMLDictSerializer):
 
     metadata = {
         "attributes": {
@@ -243,9 +282,76 @@ def create_resource(version='1.0'):
         },
     }
 
-    serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns,
-                                                  metadata=metadata),
+    xmlns = wsgi.XMLNS_V11
+
+    def __init__(self):
+        self.metadata_serializer = image_metadata.ImageMetadataXMLSerializer()
+
+    def _image_to_xml(self, xml_doc, image):
+        try:
+            metadata = image.pop('metadata').items()
+        except Exception:
+            LOG.debug(_("Image object missing metadata attribute"))
+            metadata = {}
+
+        node = self._to_xml_node(xml_doc, self.metadata, 'image', image)
+        metadata_node = self.metadata_serializer.meta_list_to_xml(xml_doc,
+                                                                  metadata)
+        node.appendChild(metadata_node)
+        return node
+
+    def _image_list_to_xml(self, xml_doc, images):
+        container_node = xml_doc.createElement('images')
+        for image in images:
+            item_node = self._image_to_xml(xml_doc, image)
+            container_node.appendChild(item_node)
+        return container_node
+
+    def _image_to_xml_string(self, image):
+        xml_doc = minidom.Document()
+        item_node = self._image_to_xml(xml_doc, image)
+        self._add_xmlns(item_node)
+        return item_node.toprettyxml(indent='    ')
+
+    def _image_list_to_xml_string(self, images):
+        xml_doc = minidom.Document()
+        container_node = self._image_list_to_xml(xml_doc, images)
+        self._add_xmlns(container_node)
+        return container_node.toprettyxml(indent='    ')
+
+    def detail(self, images_dict):
+        return self._image_list_to_xml_string(images_dict['images'])
+
+    def show(self, image_dict):
+        return self._image_to_xml_string(image_dict['image'])
+
+    def create(self, image_dict):
+        return self._image_to_xml_string(image_dict['image'])
+
+
+def create_resource(version='1.0'):
+    controller = {
+        '1.0': ControllerV10,
+        '1.1': ControllerV11,
+    }[version]()
+
+    metadata = {
+        "attributes": {
+            "image": ["id", "name", "updated", "created", "status",
+                      "serverId", "progress", "serverRef"],
+            "link": ["rel", "type", "href"],
+        },
     }
 
-    return wsgi.Resource(controller, serializers=serializers)
+    xml_serializer = {
+        '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
+        '1.1': ImageXMLSerializer(),
+    }[version]
+
+    body_serializers = {
+        'application/xml': xml_serializer,
+    }
+
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(controller, serializer=serializer)

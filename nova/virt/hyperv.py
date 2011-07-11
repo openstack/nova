@@ -157,7 +157,12 @@ class HyperVConnection(driver.ComputeDriver):
             self._create_vm(instance)
 
             self._create_disk(instance['name'], vhdfile)
-            self._create_nic(instance['name'], instance['mac_address'])
+
+            mac_address = None
+            if instance['mac_addresses']:
+                mac_address = instance['mac_addresses'][0]['address']
+
+            self._create_nic(instance['name'], mac_address)
 
             LOG.debug(_('Starting VM %s '), instance.name)
             self._set_vm_state(instance['name'], 'Enabled')
@@ -493,4 +498,8 @@ class HyperVConnection(driver.ComputeDriver):
 
     def get_host_stats(self, refresh=False):
         """See xenapi_conn.py implementation."""
+        pass
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
         pass

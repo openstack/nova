@@ -20,6 +20,7 @@
 
 import calendar
 import inspect
+import netaddr
 import os
 
 from nova import db
@@ -27,7 +28,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from IPy import IP
 
 
 LOG = logging.getLogger("nova.linux_net")
@@ -451,20 +451,20 @@ def floating_forward_rules(floating_ip, fixed_ip):
              '-s %s -j SNAT --to %s' % (fixed_ip, floating_ip))]
 
 
-def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
+def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
     """Create a vlan and bridge unless they already exist."""
-    interface = ensure_vlan(vlan_num)
+    interface = ensure_vlan(vlan_num, bridge_interface)
     ensure_bridge(bridge, interface, net_attrs)
 
 
 @utils.synchronized('ensure_vlan', external=True)
-def ensure_vlan(vlan_num):
+def ensure_vlan(vlan_num, bridge_interface):
     """Create a vlan unless it already exists."""
     interface = 'vlan%s' % vlan_num
     if not _device_exists(interface):
         LOG.debug(_('Starting VLAN inteface %s'), interface)
         _execute('sudo', 'vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD')
-        _execute('sudo', 'vconfig', 'add', FLAGS.vlan_interface, vlan_num)
+        _execute('sudo', 'vconfig', 'add', bridge_interface, vlan_num)
         _execute('sudo', 'ip', 'link', 'set', interface, 'up')
     return interface
 
@@ -666,7 +666,7 @@ def _host_lease(fixed_ip_ref):
     seconds_since_epoch = calendar.timegm(timestamp.utctimetuple())
 
     return '%d %s %s %s *' % (seconds_since_epoch + FLAGS.dhcp_lease_time,
-                              instance_ref['mac_address'],
+                              fixed_ip_ref['virtual_interface']['address'],
                               fixed_ip_ref['address'],
                               instance_ref['hostname'] or '*')
 
@@ -674,7 +674,7 @@ def _host_lease(fixed_ip_ref):
 def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address in dhcp-host format."""
     instance_ref = fixed_ip_ref['instance']
-    return '%s,%s.%s,%s' % (instance_ref['mac_address'],
+    return '%s,%s.%s,%s' % (fixed_ip_ref['virtual_interface']['address'],
                                    instance_ref['hostname'],
                                    FLAGS.dhcp_domain,
                                    fixed_ip_ref['address'])
@@ -707,7 +707,7 @@ def _dnsmasq_cmd(net):
            '--listen-address=%s' % net['gateway'],
            '--except-interface=lo',
            '--dhcp-range=%s,static,120s' % net['dhcp_start'],
-           '--dhcp-lease-max=%s' % IP(net['cidr']).len(),
+           '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(net['cidr'])),
            '--dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
            '--dhcp-script=%s' % FLAGS.dhcpbridge,
            '--leasefile-ro']
