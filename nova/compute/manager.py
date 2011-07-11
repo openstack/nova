@@ -1341,10 +1341,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 instance_id, block_migration=False):
         """Post operations for live migration .
 
-        :param ctxt: security context
+        :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param block_migration: block_migration
-        :param xml: libvirt.xml
 
         """
         instance_ref = self.db.instance_get(context, instance_id)
