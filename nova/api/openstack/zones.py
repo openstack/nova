@@ -196,14 +196,15 @@ def create_resource(version):
         },
     }
 
-    serializers = {
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V10,
                                                   metadata=metadata),
     }
+    serializer = wsgi.ResponseSerializer(body_serializers)
 
-    deserializers = {
+    body_deserializers = {
         'application/xml': helper.ServerXMLDeserializer(),
     }
+    deserializer = wsgi.RequestDeserializer(body_deserializers)
 
-    return wsgi.Resource(controller, serializers=serializers,
-                         deserializers=deserializers)
+    return wsgi.Resource(controller, deserializer, serializer)

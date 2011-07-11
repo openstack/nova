@@ -85,8 +85,10 @@ def create_resource(version='1.0'):
         '1.1': wsgi.XMLNS_V11,
     }[version]
 
-    serializers = {
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns),
     }
 
-    return wsgi.Resource(controller, serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(controller, serializer=serializer)
