@@ -606,9 +606,9 @@ class ControllerV11(Controller):
         return self.helper._get_server_admin_password_new_style(server)
 
 
-class HeadersSerializer(wsgi.DictSerializer):
+class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
-    def delete(self, response):
+    def delete(self, response, data):
         response.status_int = 204
 
 

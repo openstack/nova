@@ -174,7 +174,7 @@ class TestOpenStackClient(object):
 
     def api_delete(self, relative_uri, **kwargs):
         kwargs['method'] = 'DELETE'
-        kwargs.setdefault('check_response_status', [200, 202])
+        kwargs.setdefault('check_response_status', [200, 202, 204])
         return self.api_request(relative_uri, **kwargs)
 
     def get_server(self, server_id):
