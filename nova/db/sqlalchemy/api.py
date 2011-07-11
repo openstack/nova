@@ -1317,6 +1317,7 @@ def instance_get_all_by_ip_regexp(context, ip_regexp):
 
     return instances.values()
 
+
 @require_context
 def instance_get_all_by_ipv6_regex(context, ipv6_regexp):
     """Get all instances by using regular expression matching against
