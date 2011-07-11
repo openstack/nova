@@ -166,6 +166,9 @@ class CloudController(object):
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
         image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
+        security_groups = db.security_group_get_by_instance(ctxt,
+                                                            instance_ref['id'])
+        security_groups = [x['name'] for x in security_groups]
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -189,7 +192,7 @@ class CloudController(object):
                 'public-ipv4': floating_ip or '',
                 'public-keys': keys,
                 'reservation-id': instance_ref['reservation_id'],
-                'security-groups': '',
+                'security-groups': security_groups,
                 'mpi': mpi}}
 
         for image_type in ['kernel', 'ramdisk']:
