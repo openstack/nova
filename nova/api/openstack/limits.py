@@ -97,12 +97,14 @@ def create_resource(version='1.0'):
         },
     }
 
-    serializers = {
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns,
                                                   metadata=metadata),
     }
 
-    return wsgi.Resource(controller, serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(controller, serializer=serializer)
 
 
 class Limit(object):

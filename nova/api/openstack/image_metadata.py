@@ -160,8 +160,9 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
 
 
 def create_resource():
-    serializers = {
+    body_serializers = {
         'application/xml': ImageMetadataXMLSerializer(),
     }
+    serializer = wsgi.ResponseSerializer(body_serializers)
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    return wsgi.Resource(Controller(), serializer=serializer)
