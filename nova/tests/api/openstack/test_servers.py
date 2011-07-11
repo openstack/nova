@@ -1433,6 +1433,42 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
 
+    def test_rescue_accepted(self):
+        FLAGS.allow_admin_api = True
+        body = {}
+
+        self.called = False
+
+        def rescue_mock(*args, **kwargs):
+            self.called = True
+
+        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
+        req = webob.Request.blank('/v1.0/servers/1/rescue')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(self.called, True)
+        self.assertEqual(res.status_int, 202)
+
+    def test_rescue_raises_handled(self):
+        FLAGS.allow_admin_api = True
+        body = {}
+
+        def rescue_mock(*args, **kwargs):
+            raise Exception('Who cares?')
+
+        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
+        req = webob.Request.blank('/v1.0/servers/1/rescue')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 400)
+
     def test_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(flavorId=3)))
 
