@@ -51,6 +51,11 @@ def _call_scheduler(method, context, params=None):
     return rpc.call(context, queue, kwargs)
 
 
+def get_host_list(context):
+    """Return a list of hosts associated with this zone."""
+    return _call_scheduler('get_host_list', context)
+
+
 def get_zone_list(context):
     """Return a list of zones assoicated with this zone."""
     items = _call_scheduler('get_zone_list', context)

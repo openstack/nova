@@ -340,7 +340,7 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         """Deserialize an xml-formatted server create request"""
         dom = minidom.parseString(string)
         server = self._extract_server(dom)
-        return {'server': server}
+        return {'body': {'server': server}}
 
     def _extract_server(self, node):
         """Marshal the server attribute of a parsed request"""

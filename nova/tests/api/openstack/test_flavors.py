@@ -159,13 +159,7 @@ class FlavorsTest(test.TestCase):
                 },
                 {
                     "rel": "bookmark",
-                    "type": "application/json",
-                    "href": "http://localhost/v1.1/flavors/12",
-                },
-                {
-                    "rel": "bookmark",
-                    "type": "application/xml",
-                    "href": "http://localhost/v1.1/flavors/12",
+                    "href": "http://localhost/flavors/12",
                 },
             ],
         }
@@ -188,13 +182,7 @@ class FlavorsTest(test.TestCase):
                     },
                     {
                         "rel": "bookmark",
-                        "type": "application/json",
-                        "href": "http://localhost/v1.1/flavors/1",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "type": "application/xml",
-                        "href": "http://localhost/v1.1/flavors/1",
+                        "href": "http://localhost/flavors/1",
                     },
                 ],
             },
@@ -208,13 +196,7 @@ class FlavorsTest(test.TestCase):
                     },
                     {
                         "rel": "bookmark",
-                        "type": "application/json",
-                        "href": "http://localhost/v1.1/flavors/2",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "type": "application/xml",
-                        "href": "http://localhost/v1.1/flavors/2",
+                        "href": "http://localhost/flavors/2",
                     },
                 ],
             },
@@ -240,13 +222,7 @@ class FlavorsTest(test.TestCase):
                     },
                     {
                         "rel": "bookmark",
-                        "type": "application/json",
-                        "href": "http://localhost/v1.1/flavors/1",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "type": "application/xml",
-                        "href": "http://localhost/v1.1/flavors/1",
+                        "href": "http://localhost/flavors/1",
                     },
                 ],
             },
@@ -262,13 +238,7 @@ class FlavorsTest(test.TestCase):
                     },
                     {
                         "rel": "bookmark",
-                        "type": "application/json",
-                        "href": "http://localhost/v1.1/flavors/2",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "type": "application/xml",
-                        "href": "http://localhost/v1.1/flavors/2",
+                        "href": "http://localhost/flavors/2",
                     },
                 ],
             },
