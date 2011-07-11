@@ -348,8 +348,10 @@ def create_resource(version='1.0'):
         '1.1': ImageXMLSerializer(),
     }[version]
 
-    serializers = {
+    body_serializers = {
         'application/xml': xml_serializer,
     }
 
-    return wsgi.Resource(controller, serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(controller, serializer=serializer)
