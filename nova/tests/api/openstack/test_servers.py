@@ -1469,6 +1469,22 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 400)
 
+    def test_delete_server_instance_v1_1(self):
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'DELETE'
+
+        self.server_delete_called = False
+
+        def instance_destroy_mock(context, id):
+            self.server_delete_called = True
+
+        self.stubs.Set(nova.db.api, 'instance_destroy',
+            instance_destroy_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
+        self.assertEqual(self.server_delete_called, True)
+
     def test_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(flavorId=3)))
 
