@@ -172,6 +172,9 @@ class CloudController(object):
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
         image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
+        security_groups = db.security_group_get_by_instance(ctxt,
+                                                            instance_ref['id'])
+        security_groups = [x['name'] for x in security_groups]
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -195,7 +198,7 @@ class CloudController(object):
                 'public-ipv4': floating_ip or '',
                 'public-keys': keys,
                 'reservation-id': instance_ref['reservation_id'],
-                'security-groups': '',
+                'security-groups': security_groups,
                 'mpi': mpi}}
 
         for image_type in ['kernel', 'ramdisk']:
@@ -1101,12 +1104,16 @@ class CloudController(object):
     def _get_image(self, context, ec2_id):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
-            return self.image_service.show(context, internal_id)
+            image = self.image_service.show(context, internal_id)
         except (exception.InvalidEc2Id, exception.ImageNotFound):
             try:
                 return self.image_service.show_by_name(context, ec2_id)
             except exception.NotFound:
                 raise exception.ImageNotFound(image_id=ec2_id)
+        image_type = ec2_id.split('-')[0]
+        if self._image_type(image.get('container_format')) != image_type:
+            raise exception.ImageNotFound(image_id=ec2_id)
+        return image
 
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""

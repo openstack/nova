@@ -533,6 +533,14 @@ class ComputeTestCase(test.TestCase):
                 self.context, instance_id, 1)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_migrate(self):
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        # Migrate simply calls resize() without a flavor_id.
+        self.compute_api.resize(context, instance_id, None)
+        self.compute.terminate_instance(context, instance_id)
+
     def _setup_other_managers(self):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self.network_manager = utils.import_object(FLAGS.network_manager)

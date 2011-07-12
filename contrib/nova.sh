@@ -17,7 +17,7 @@ if [ ! -n "$HOST_IP" ]; then
     HOST_IP=`LC_ALL=C ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
 
-USE_MYSQL=${USE_MYSQL:-0}
+USE_MYSQL=${USE_MYSQL:-1}
 INTERFACE=${INTERFACE:-eth0}
 FLOATING_RANGE=${FLOATING_RANGE:-10.6.0.0/27}
 FIXED_RANGE=${FIXED_RANGE:-10.0.0.0/24}
@@ -159,10 +159,6 @@ NOVA_CONF_EOF
     mkdir -p $NOVA_DIR/instances
     rm -rf $NOVA_DIR/networks
     mkdir -p $NOVA_DIR/networks
-    if [ ! -d "$NOVA_DIR/images" ]; then
-        ln -s $DIR/images $NOVA_DIR/images
-    fi
-
     if [ "$TEST" == 1 ]; then
         cd $NOVA_DIR
         python $NOVA_DIR/run_tests.py
@@ -181,8 +177,18 @@ NOVA_CONF_EOF
     # create some floating ips
     $NOVA_DIR/bin/nova-manage floating create `hostname` $FLOATING_RANGE
 
-    # convert old images
-    $NOVA_DIR/bin/nova-manage image convert $DIR/images
+    if [ ! -d "$NOVA_DIR/images" ]; then
+        if [ ! -d "$DIR/converted-images" ]; then
+            # convert old images
+            mkdir $DIR/converted-images
+            ln -s $DIR/converted-images $NOVA_DIR/images
+            $NOVA_DIR/bin/nova-manage image convert $DIR/images
+        else
+            ln -s $DIR/converted-images $NOVA_DIR/images
+        fi
+
+    fi
+
 
     # nova api crashes if we start it with a regular screen command,
     # so send the start command by forcing text into the window.
