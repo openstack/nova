@@ -325,11 +325,10 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
     def _create_server_node(self, xml_doc, server):
         server_node = xml_doc.createElement('server')
         server_node.setAttribute('id', str(server['id']))
-        #server_node.setAttribute('name', server['name'])
-        #link_nodes = self._create_link_nodes(xml_doc,
-        #                                     image['links'])
-        #for link_node in link_nodes:
-        #    server_node.appendChild(link_node)
+        link_nodes = self._create_link_nodes(xml_doc,
+                                             server['links'])
+        for link_node in link_nodes:
+            server_node.appendChild(link_node)
         return server_node
 
     def _image_list_to_xml(self, xml_doc, images, detailed):

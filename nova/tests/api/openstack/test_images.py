@@ -1225,7 +1225,6 @@ class ImageXMLSerializationTest(test.TestCase):
                 'progress': 80,
                 'server': {
                     'id': 1,
-                    'name': 'Server1',
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1270,7 +1269,10 @@ class ImageXMLSerializationTest(test.TestCase):
                 created="%(expected_now)s"
                 status="ACTIVE"
                 progress="80">
-            <server id="1" />
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
             <metadata>
                 <meta key="key1">
                     value1
@@ -1296,7 +1298,6 @@ class ImageXMLSerializationTest(test.TestCase):
                 'status': 'ACTIVE',
                 'server': {
                     'id': 1,
-                    'name': 'Server1',
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1338,7 +1339,10 @@ class ImageXMLSerializationTest(test.TestCase):
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 status="ACTIVE">
-            <server id="1" />
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
             <atom:link href="%(expected_href)s" rel="self"/>
             <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
@@ -1359,7 +1363,6 @@ class ImageXMLSerializationTest(test.TestCase):
                 'status': 'ACTIVE',
                 'server': {
                     'id': 1,
-                    'name': 'Server1',
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1400,7 +1403,10 @@ class ImageXMLSerializationTest(test.TestCase):
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 status="ACTIVE">
-            <server id="1" />
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
             <atom:link href="%(expected_href)s" rel="self"/>
             <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
@@ -1550,7 +1556,6 @@ class ImageXMLSerializationTest(test.TestCase):
                     'status': 'ACTIVE',
                     'server': {
                         'id': 1,
-                        'name': 'Server1',
                         'links': [
                             {
                                 'href': self.SERVER_HREF,
@@ -1616,7 +1621,10 @@ class ImageXMLSerializationTest(test.TestCase):
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 status="ACTIVE">
-            <server id="1" />
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
             <atom:link href="%(expected_href)s" rel="self"/>
             <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
@@ -1654,7 +1662,6 @@ class ImageXMLSerializationTest(test.TestCase):
                 'progress': 80,
                 'server': {
                     'id': 1,
-                    'name': 'Server1',
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1699,7 +1706,10 @@ class ImageXMLSerializationTest(test.TestCase):
                 created="%(expected_now)s"
                 status="SAVING"
                 progress="80">
-            <server id="1" />
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
             <metadata>
                 <meta key="key1">
                     value1
