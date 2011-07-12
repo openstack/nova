@@ -391,7 +391,8 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         if networks_node is None:
             return None
         networks = []
-        for network_node in self._find_children_named(networks_node, "network"):
+        for network_node in self._find_children_named(networks_node,
+                                                      "network"):
             item = {}
             if network_node.hasAttribute("id"):
                 item["id"] = network_node.getAttribute("id")
