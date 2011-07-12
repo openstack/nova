@@ -198,3 +198,178 @@ class ZoneManagerTestCase(test.TestCase):
         self.assertEquals(zone_state.attempt, 3)
         self.assertFalse(zone_state.is_active)
         self.assertEquals(zone_state.name, None)
+
+    def test_host_service_caps_stale_no_stale_service(self):
+        zm = zone_manager.ZoneManager()
+
+        # services just updated capabilities
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc2", "host1", dict(a=3, b=4))
+        self.assertFalse(zm.host_service_caps_stale("host1", "svc1"))
+        self.assertFalse(zm.host_service_caps_stale("host1", "svc2"))
+
+    def test_host_service_caps_stale_all_stale_services(self):
+        zm = zone_manager.ZoneManager()
+        expiry_time = (FLAGS.periodic_interval * 3) + 1
+
+        # Both services became stale
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc2", "host1", dict(a=3, b=4))
+        time_future = utils.utcnow() + datetime.timedelta(seconds=expiry_time)
+        utils.set_time_override(time_future)
+        self.assertTrue(zm.host_service_caps_stale("host1", "svc1"))
+        self.assertTrue(zm.host_service_caps_stale("host1", "svc2"))
+        utils.clear_time_override()
+
+    def test_host_service_caps_stale_one_stale_service(self):
+        zm = zone_manager.ZoneManager()
+        expiry_time = (FLAGS.periodic_interval * 3) + 1
+
+        # One service became stale
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc2", "host1", dict(a=3, b=4))
+        caps = zm.service_states["host1"]["svc1"]
+        caps["timestamp"] = utils.utcnow() - \
+                               datetime.timedelta(seconds=expiry_time)
+        self.assertTrue(zm.host_service_caps_stale("host1", "svc1"))
+        self.assertFalse(zm.host_service_caps_stale("host1", "svc2"))
+
+    def test_delete_expired_host_services_del_one_service(self):
+        zm = zone_manager.ZoneManager()
+
+        # Delete one service in a host
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc2", "host1", dict(a=3, b=4))
+        stale_host_services = {"host1": ["svc1"]}
+        zm.delete_expired_host_services(stale_host_services)
+        self.assertFalse("svc1" in zm.service_states["host1"])
+        self.assertTrue("svc2" in zm.service_states["host1"])
+
+    def test_delete_expired_host_services_del_all_hosts(self):
+        zm = zone_manager.ZoneManager()
+
+        # Delete all services in a host
+        zm.update_service_capabilities("svc2", "host1", dict(a=3, b=4))
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        stale_host_services = {"host1": ["svc1", "svc2"]}
+        zm.delete_expired_host_services(stale_host_services)
+        self.assertFalse("host1" in zm.service_states)
+
+    def test_delete_expired_host_services_del_one_service_per_host(self):
+        zm = zone_manager.ZoneManager()
+
+        # Delete one service per host
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc1", "host2", dict(a=3, b=4))
+        stale_host_services = {"host1": ["svc1"], "host2": ["svc1"]}
+        zm.delete_expired_host_services(stale_host_services)
+        self.assertFalse("host1" in zm.service_states)
+        self.assertFalse("host2" in zm.service_states)
+
+    def test_get_zone_capabilities_one_host(self):
+        zm = zone_manager.ZoneManager()
+
+        # Service capabilities recent
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        caps = zm.get_zone_capabilities(None)
+        self.assertEquals(caps, dict(svc1_a=(1, 1), svc1_b=(2, 2)))
+
+    def test_get_zone_capabilities_expired_host(self):
+        zm = zone_manager.ZoneManager()
+        expiry_time = (FLAGS.periodic_interval * 3) + 1
+
+        # Service capabilities stale
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        time_future = utils.utcnow() + datetime.timedelta(seconds=expiry_time)
+        utils.set_time_override(time_future)
+        caps = zm.get_zone_capabilities(None)
+        self.assertEquals(caps, {})
+        utils.clear_time_override()
+
+    def test_get_zone_capabilities_multiple_hosts(self):
+        zm = zone_manager.ZoneManager()
+
+        # Both host service capabilities recent
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc1", "host2", dict(a=3, b=4))
+        caps = zm.get_zone_capabilities(None)
+        self.assertEquals(caps, dict(svc1_a=(1, 3), svc1_b=(2, 4)))
+
+    def test_get_zone_capabilities_one_stale_host(self):
+        zm = zone_manager.ZoneManager()
+        expiry_time = (FLAGS.periodic_interval * 3) + 1
+
+        # One host service capabilities become stale
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc1", "host2", dict(a=3, b=4))
+        serv_caps = zm.service_states["host1"]["svc1"]
+        serv_caps["timestamp"] = utils.utcnow() - \
+                               datetime.timedelta(seconds=expiry_time)
+        caps = zm.get_zone_capabilities(None)
+        self.assertEquals(caps, dict(svc1_a=(3, 3), svc1_b=(4, 4)))
+
+    def test_get_zone_capabilities_multiple_service_per_host(self):
+        zm = zone_manager.ZoneManager()
+
+        # Multiple services per host
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc1", "host2", dict(a=3, b=4))
+        zm.update_service_capabilities("svc2", "host1", dict(a=5, b=6))
+        zm.update_service_capabilities("svc2", "host2", dict(a=7, b=8))
+        caps = zm.get_zone_capabilities(None)
+        self.assertEquals(caps, dict(svc1_a=(1, 3), svc1_b=(2, 4),
+                                     svc2_a=(5, 7), svc2_b=(6, 8)))
+
+    def test_get_zone_capabilities_one_stale_service_per_host(self):
+        zm = zone_manager.ZoneManager()
+        expiry_time = (FLAGS.periodic_interval * 3) + 1
+
+        # Two host services among four become stale
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc1", "host2", dict(a=3, b=4))
+        zm.update_service_capabilities("svc2", "host1", dict(a=5, b=6))
+        zm.update_service_capabilities("svc2", "host2", dict(a=7, b=8))
+        serv_caps_1 = zm.service_states["host1"]["svc2"]
+        serv_caps_1["timestamp"] = utils.utcnow() - \
+                               datetime.timedelta(seconds=expiry_time)
+        serv_caps_2 = zm.service_states["host2"]["svc1"]
+        serv_caps_2["timestamp"] = utils.utcnow() - \
+                               datetime.timedelta(seconds=expiry_time)
+        caps = zm.get_zone_capabilities(None)
+        self.assertEquals(caps, dict(svc1_a=(1, 1), svc1_b=(2, 2),
+                                     svc2_a=(7, 7), svc2_b=(8, 8)))
+
+    def test_get_zone_capabilities_three_stale_host_services(self):
+        zm = zone_manager.ZoneManager()
+        expiry_time = (FLAGS.periodic_interval * 3) + 1
+
+        # Three host services among four become stale
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc1", "host2", dict(a=3, b=4))
+        zm.update_service_capabilities("svc2", "host1", dict(a=5, b=6))
+        zm.update_service_capabilities("svc2", "host2", dict(a=7, b=8))
+        serv_caps_1 = zm.service_states["host1"]["svc2"]
+        serv_caps_1["timestamp"] = utils.utcnow() - \
+                               datetime.timedelta(seconds=expiry_time)
+        serv_caps_2 = zm.service_states["host2"]["svc1"]
+        serv_caps_2["timestamp"] = utils.utcnow() - \
+                               datetime.timedelta(seconds=expiry_time)
+        serv_caps_3 = zm.service_states["host2"]["svc2"]
+        serv_caps_3["timestamp"] = utils.utcnow() - \
+                               datetime.timedelta(seconds=expiry_time)
+        caps = zm.get_zone_capabilities(None)
+        self.assertEquals(caps, dict(svc1_a=(1, 1), svc1_b=(2, 2)))
+
+    def test_get_zone_capabilities_all_stale_host_services(self):
+        zm = zone_manager.ZoneManager()
+        expiry_time = (FLAGS.periodic_interval * 3) + 1
+
+        # All the host services  become stale
+        zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
+        zm.update_service_capabilities("svc1", "host2", dict(a=3, b=4))
+        zm.update_service_capabilities("svc2", "host1", dict(a=5, b=6))
+        zm.update_service_capabilities("svc2", "host2", dict(a=7, b=8))
+        time_future = utils.utcnow() + datetime.timedelta(seconds=expiry_time)
+        utils.set_time_override(time_future)
+        caps = zm.get_zone_capabilities(None)
+        self.assertEquals(caps, {})
