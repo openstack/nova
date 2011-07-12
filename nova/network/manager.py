@@ -143,7 +143,8 @@ class RPCAllocateFixedIP(object):
                                     'args': args})
             else:
                 # i am the correct host, run here
-                self.allocate_fixed_ip(context, instance_id, network, vpn=kwargs.pop('vpn'))
+                self.allocate_fixed_ip(context, instance_id, network,
+                                       vpn=kwargs.pop('vpn'))
 
         # wait for all of the allocates (if any) to finish
         green_pool.waitall()
