@@ -1234,27 +1234,20 @@ def instance_get_all_by_column_regexp(context, column, column_regexp):
 
     # MySQL 'regexp' is not portable, so we must do our own matching.
     # First... grab all Instances.
-    query = session.query(models.Instance).\
-                    options(joinedload('metadata'))
-    if is_admin_context(context):
-        all_instances = query.\
-                filter_by(deleted=can_read_deleted(context)).\
-                all()
-    elif is_user_context(context):
-        all_instances = query.\
-                filter_by(project_id=context.project_id).\
-                filter_by(deleted=False).\
-                all()
-    else:
+    all_instances = session.query(models.Instance).\
+            options(joinedload_all('fixed_ips.floating_ips')).\
+            options(joinedload('virtual_interfaces')).\
+            options(joinedload('security_groups')).\
+            options(joinedload_all('fixed_ips.network')).\
+            options(joinedload('metadata')).\
+            options(joinedload('instance_type')).\
+            filter_by(deleted=can_read_deleted(context)).\
+            all()
+    if not all_instances:
         return []
-
-    if all_instances is None:
-        all_instances = []
-
     # Now do the regexp matching
     compiled_regexp = re.compile(column_regexp)
     instances = []
-
     for instance in all_instances:
         v = getattr(instance, column)
         if v and compiled_regexp.match(v):
@@ -1269,19 +1262,24 @@ def instance_get_all_by_name_regexp(context, ipv6_regexp):
     """
 
     session = get_session()
-    with session.begin():
-        # get instances
 
-        all_instances = session.query(models.Instance).\
-                options(joinedload('metadata')).\
-                filter_by(deleted=can_read_deleted(context)).\
-                all()
-        if not all_instances:
-            return []
-
-        compiled_regexp = re.compile(ipv6_regexp)
-        return [instance for instance in all_instances
-                if compiled_regexp.match(instance.name)]
+    # MySQL 'regexp' is not portable, so we must do our own matching.
+    # First... grab all Instances.
+    all_instances = session.query(models.Instance).\
+            options(joinedload_all('fixed_ips.floating_ips')).\
+            options(joinedload('virtual_interfaces')).\
+            options(joinedload('security_groups')).\
+            options(joinedload_all('fixed_ips.network')).\
+            options(joinedload('metadata')).\
+            options(joinedload('instance_type')).\
+            filter_by(deleted=can_read_deleted(context)).\
+            all()
+    if not all_instances:
+        return []
+    # Now do the regexp matching
+    compiled_regexp = re.compile(ipv6_regexp)
+    return [instance for instance in all_instances
+        if compiled_regexp.match(instance.name)]
 
 
 @require_context
@@ -1291,11 +1289,6 @@ def instance_get_all_by_ip_regexp(context, ip_regexp):
     """
     session = get_session()
 
-    fixed_ip_query = session.query(models.FixedIp).\
-            options(joinedload('instance.metadata'))
-    floating_ip_query = session.query(models.FloatingIp).\
-            options(joinedload_all('fixed_ip.instance.metadata'))
-
     # Query both FixedIp and FloatingIp tables to get matches.
     # Since someone could theoretically search for something that matches
     # instances in both tables... we need to use a dictionary keyed
@@ -1304,20 +1297,26 @@ def instance_get_all_by_ip_regexp(context, ip_regexp):
     # addresses even though they might point to the same instance ID.
     instances = {}
 
-    # MySQL 'regexp' is not portable, so we must do our own matching.
-    # First... grab all of the IP entries.
-    if is_admin_context(context):
-        fixed_ips = fixed_ip_query.\
-                filter_by(deleted=can_read_deleted(context)).\
-                all()
-        floating_ips = floating_ip_query.\
-                filter_by(deleted=can_read_deleted(context)).\
-                all()
-    elif is_user_context(context):
-        fixed_ips = fixed_ip_query.filter_by(deleted=False).all()
-        floating_ips = floating_ip_query.filter_by(deleted=False).all()
-    else:
-        return None
+    fixed_ips = session.query(models.FixedIp).\
+            options(joinedload_all('instance.fixed_ips.floating_ips')).\
+            options(joinedload('instance.virtual_interfaces')).\
+            options(joinedload('instance.security_groups')).\
+            options(joinedload_all('instance.fixed_ips.network')).\
+            options(joinedload('instance.metadata')).\
+            options(joinedload('instance.instance_type')).\
+            filter_by(deleted=can_read_deleted(context)).\
+            all()
+    floating_ips = session.query(models.FloatingIp).\
+            options(joinedload_all(
+                    'fixed_ip.instance.fixed_ips.floating_ips')).\
+            options(joinedload('fixed_ip.instance.virtual_interfaces')).\
+            options(joinedload('fixed_ip.instance.security_groups')).\
+            options(joinedload_all(
+                    'fixed_ip.instance.fixed_ips.network')).\
+            options(joinedload('fixed_ip.instance.metadata')).\
+            options(joinedload('fixed_ip.instance.instance_type')).\
+            filter_by(deleted=can_read_deleted(context)).\
+            all()
 
     if fixed_ips is None:
         fixed_ips = []
@@ -1348,10 +1347,13 @@ def instance_get_all_by_ipv6_regexp(context, ipv6_regexp):
 
     session = get_session()
     with session.begin():
-        # get instances
-
         all_instances = session.query(models.Instance).\
+                options(joinedload_all('fixed_ips.floating_ips')).\
+                options(joinedload('virtual_interfaces')).\
+                options(joinedload('security_groups')).\
+                options(joinedload_all('fixed_ips.network')).\
                 options(joinedload('metadata')).\
+                options(joinedload('instance_type')).\
                 filter_by(deleted=can_read_deleted(context)).\
                 all()
         if not all_instances:

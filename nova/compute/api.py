@@ -19,6 +19,7 @@
 """Handles all requests relating to instances (guest vms)."""
 
 import eventlet
+import novaclient
 import re
 import time
 
@@ -636,7 +637,10 @@ class API(base.Base):
         try:
             instances = self.db.instance_get_by_fixed_ip(context, fixed_ip)
         except exception.FixedIpNotFound, e:
-            raise
+            if search_opts['recurse_zones']:
+                return []
+            else:
+                raise
         if not instances:
             raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
         return instances
@@ -729,14 +733,25 @@ class API(base.Base):
         admin_context = context.elevated()
         children = scheduler_api.call_zone_method(admin_context,
                 "list",
+                errors_to_ignore=[novaclient.exceptions.NotFound],
                 novaclient_collection_name="servers",
                 search_opts=search_opts)
 
         for zone, servers in children:
+            # 'servers' can be None if a 404 was returned by a zone
+            if servers is None:
+                continue
             for server in servers:
                 # Results are ready to send to user. No need to scrub.
                 server._info['_is_precooked'] = True
                 instances.append(server._info)
+
+        # Fixed IP returns a FixedIpNotFound when an instance is not
+        # found...
+        fixed_ip = search_opts.get('fixed_ip', None)
+        if fixed_ip and not instances:
+            raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
+
         return instances
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
