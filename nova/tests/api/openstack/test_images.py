@@ -413,6 +413,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "status": "QUEUED",
                 'server': {
                     'id': 42,
+                    "links": [{
+                        "rel": "self",
+                        "href": server_href,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": server_bookmark,
+                    }],
                 },
                 "metadata": {
                     "instance_ref": "http://localhost/v1.1/servers/42",
@@ -628,6 +636,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         response_dict = json.loads(response.body)
         response_list = response_dict["images"]
+        server_href = "http://localhost/v1.1/servers/42"
+        server_bookmark = "http://localhost/servers/42"
 
         expected = [{
             'id': 123,
@@ -657,6 +667,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'QUEUED',
             'server': {
                 'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
             },
             "links": [{
                 "rel": "self",
@@ -680,6 +698,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'progress': 0,
             'server': {
                 'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
             },
             "links": [{
                 "rel": "self",
@@ -702,6 +728,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'ACTIVE',
             'server': {
                 'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
             },
             "links": [{
                 "rel": "self",
@@ -724,6 +758,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'FAILED',
             'server': {
                 'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
             },
             "links": [{
                 "rel": "self",
@@ -1044,6 +1086,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def test_create_image_v1_1_actual_server_ref(self):
 
         serverRef = 'http://localhost/v1.1/servers/1'
+        serverBookmark = 'http://localhost/servers/1'
         body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
@@ -1052,11 +1095,25 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
         result = json.loads(response.body)
-        self.assertEqual(result['image']['serverRef'], serverRef)
+        expected = {
+            'id': '1',
+            'links': [
+                {
+                    'rel': 'self',
+                    'href': serverRef,
+                },
+                {
+                    'rel': 'bookmark',
+                    'href': serverBookmark,
+                },
+            ]
+        }
+        self.assertEqual(result['image']['server'], expected)
 
     def test_create_image_v1_1_actual_server_ref_port(self):
 
         serverRef = 'http://localhost:8774/v1.1/servers/1'
+        serverBookmark = 'http://localhost:8774/servers/1'
         body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
@@ -1065,7 +1122,20 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
         result = json.loads(response.body)
-        self.assertEqual(result['image']['serverRef'], serverRef)
+        expected = {
+            'id': '1',
+            'links': [
+                {
+                    'rel': 'self',
+                    'href': serverRef,
+                },
+                {
+                    'rel': 'bookmark',
+                    'href': serverBookmark,
+                },
+            ]
+        }
+        self.assertEqual(result['image']['server'], expected)
 
     def test_create_image_v1_1_server_ref_bad_hostname(self):
 
