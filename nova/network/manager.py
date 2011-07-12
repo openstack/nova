@@ -696,7 +696,7 @@ class FlatManager(NetworkManager):
 
     timeout_fixed_ips = False
 
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
         """Calls allocate_fixed_ip once for each network."""
         for network in networks:
             self.allocate_fixed_ip(context, instance_id, network)
