@@ -249,3 +249,7 @@ class ComputeDriver(object):
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
         raise NotImplementedError()
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        raise NotImplementedError()

@@ -67,7 +67,8 @@ class CloudTestCase(test.TestCase):
         host = self.network.host
 
         def fake_show(meh, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return {'id': 1, 'container_format': 'ami',
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine', 'image_state': 'available'}}
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
@@ -418,7 +419,8 @@ class CloudTestCase(test.TestCase):
         describe_images = self.cloud.describe_images
 
         def fake_detail(meh, context):
-            return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return [{'id': 1, 'container_format': 'ami',
+                     'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}}]
 
         def fake_show_none(meh, context, id):
@@ -448,7 +450,8 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}, 'is_public': True}
+                    'type': 'machine'}, 'container_format': 'ami',
+                    'is_public': True}
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
         self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
@@ -460,7 +463,8 @@ class CloudTestCase(test.TestCase):
         modify_image_attribute = self.cloud.modify_image_attribute
 
         def fake_show(meh, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return {'id': 1, 'container_format': 'ami',
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}, 'is_public': False}
 
         def fake_update(meh, context, image_id, metadata, data=None):
@@ -493,6 +497,16 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(fake._FakeImageService, 'detail', fake_detail_empty)
         self.assertRaises(exception.ImageNotFound, deregister_image,
                           self.context, 'ami-bad001')
+
+    def test_deregister_image_wrong_container_type(self):
+        deregister_image = self.cloud.deregister_image
+
+        def fake_delete(self, context, id):
+            return None
+
+        self.stubs.Set(fake._FakeImageService, 'delete', fake_delete)
+        self.assertRaises(exception.NotFound, deregister_image, self.context,
+                          'aki-00000001')
 
     def _run_instance(self, **kwargs):
         rv = self.cloud.run_instances(self.context, **kwargs)
@@ -609,7 +623,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show_no_state(self, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}}
+                    'type': 'machine'}, 'container_format': 'ami'}
 
         self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_no_state)
@@ -623,7 +637,8 @@ class CloudTestCase(test.TestCase):
         run_instances = self.cloud.run_instances
 
         def fake_show_decrypt(self, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return {'id': 1, 'container_format': 'ami',
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine', 'image_state': 'decrypting'}}
 
         self.stubs.UnsetAll()
@@ -638,7 +653,8 @@ class CloudTestCase(test.TestCase):
         run_instances = self.cloud.run_instances
 
         def fake_show_stat_active(self, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+            return {'id': 1, 'container_format': 'ami',
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}, 'status': 'active'}
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_stat_active)

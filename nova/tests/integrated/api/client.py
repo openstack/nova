@@ -71,8 +71,8 @@ class TestOpenStackClient(object):
         self.auth_uri = auth_uri
 
     def request(self, url, method='GET', body=None, headers=None):
-        if headers is None:
-            headers = {}
+        _headers = {'Content-Type': 'application/json'}
+        _headers.update(headers or {})
 
         parsed_url = urlparse.urlparse(url)
         port = parsed_url.port
@@ -94,9 +94,8 @@ class TestOpenStackClient(object):
         LOG.info(_("Doing %(method)s on %(relative_url)s") % locals())
         if body:
             LOG.info(_("Body: %s") % body)
-            headers.setdefault('Content-Type', 'application/json')
 
-        conn.request(method, relative_url, body, headers)
+        conn.request(method, relative_url, body, _headers)
         response = conn.getresponse()
         return response
 
@@ -175,7 +174,7 @@ class TestOpenStackClient(object):
 
     def api_delete(self, relative_uri, **kwargs):
         kwargs['method'] = 'DELETE'
-        kwargs.setdefault('check_response_status', [200, 202])
+        kwargs.setdefault('check_response_status', [200, 202, 204])
         return self.api_request(relative_uri, **kwargs)
 
     def get_server(self, server_id):
