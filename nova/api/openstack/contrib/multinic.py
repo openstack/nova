@@ -96,7 +96,6 @@ class Multinic(extensions.ExtensionDescriptor):
                 LOG.exception(_("Missing 'networkId' argument for addFixedIp"))
                 return faults.Fault(exc.HTTPUnprocessableEntity())
 
-            LOG.exception("ADD FIXED IP")
             # Add the fixed IP
             network_id = input_dict['addFixedIp']['networkId']
             self.compute_api.add_fixed_ip(req.environ['nova.context'], id,
