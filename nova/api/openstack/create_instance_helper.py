@@ -25,6 +25,7 @@ from nova import flags
 from nova import log as logging
 import nova.image
 from nova import quota
+from nova import rpc
 from nova import utils
 
 from nova.compute import instance_types
@@ -104,9 +105,6 @@ class CreateInstanceHelper(object):
         requested_networks = body['server'].get('networks')
 
         if requested_networks is not None:
-            if len(requested_networks) == 0:
-                msg = _("No networks found")
-                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
             requested_networks = self._get_requested_networks(
                                                     requested_networks)
 
@@ -163,9 +161,9 @@ class CreateInstanceHelper(object):
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
-        except exception.NovaException as ex:
-            LOG.error(ex)
-            msg = _("Failed to create server: %s") % ex
+        except rpc.RemoteError as err:
+            LOG.error(err)
+            msg = _("%s:%s") % (err.exc_type, err.value)
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
         # Let the caller deal with unhandled exceptions.
@@ -355,6 +353,9 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         personality = self._extract_personality(server_node)
         if personality is not None:
             server["personality"] = personality
+        networks = self._extract_networks(server_node)
+        if networks is not None:
+            server["networks"] = networks
         return server
 
     def _extract_metadata(self, server_node):
@@ -382,6 +383,22 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
             item["contents"] = self._extract_text(file_node)
             personality.append(item)
         return personality
+
+    def _extract_networks(self, server_node):
+        """Marshal the networks attribute of a parsed request"""
+        networks_node = \
+                self._find_first_child_named(server_node, "networks")
+        if networks_node is None:
+            return None
+        networks = []
+        for network_node in self._find_children_named(networks_node, "network"):
+            item = {}
+            if network_node.hasAttribute("id"):
+                item["id"] = network_node.getAttribute("id")
+            if network_node.hasAttribute("fixed_ip"):
+                item["fixed_ip"] = network_node.getAttribute("fixed_ip")
+            networks.append(item)
+        return networks
 
     def _find_first_child_named(self, parent, name):
         """Search a nodes children for the first child with a given name"""

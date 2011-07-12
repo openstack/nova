@@ -359,7 +359,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         # TODO(tr3buchet) maybe this needs to be updated in the future if
         #                 there is a better way to determine which networks
         #                 a non-vlan instance should connect to
-        if requested_networks:
+        if requested_networks is not None and len(requested_networks) != 0:
             networks = self.db.network_get_requested_networks(context,
                                                     requested_networks)
         else:
@@ -885,7 +885,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                    requested_networks=None):
         """Determine which networks an instance should connect to."""
         # get networks associated with project
-        if requested_networks is not None:
+        if requested_networks is not None and len(requested_networks) != 0:
             networks = self.db.project_get_requested_networks(context,
                                                     requested_networks)
         else:

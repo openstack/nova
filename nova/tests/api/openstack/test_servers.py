@@ -1902,6 +1902,20 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         self.assertEquals(request['body']["server"]["imageRef"],
                           "http://localhost:8774/v1.1/images/1")
 
+    def test_request_with_empty_networks(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <networks/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "networks": [],
+                }}
+        self.assertEquals(request['body'], expected)
 
 class TestServerInstanceCreation(test.TestCase):
 
