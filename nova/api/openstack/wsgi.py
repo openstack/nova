@@ -277,7 +277,9 @@ class XMLDictSerializer(DictSerializer):
         return node.toprettyxml(indent='    ', encoding='UTF-8')
 
     #NOTE (ameade): the has_atom should be removed after all of the
-    # xml serializers and view builders have been updated
+    # xml serializers and view builders have been updated to the current
+    # spec that required all responses include the xmlns:atom, the has_atom
+    # flag is to prevent current tests from breaking
     def _add_xmlns(self, node, has_atom=False):
         if self.xmlns is not None:
             node.setAttribute('xmlns', self.xmlns)

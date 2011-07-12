@@ -1213,8 +1213,6 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_show(self):
         serializer = images.ImageXMLSerializer()
 
-        #so we can see the full diff in the output
-        self.maxDiff = None
         fixture = {
             'image': {
                 'id': 1,
@@ -1288,7 +1286,6 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_show_zero_metadata(self):
         serializer = images.ImageXMLSerializer()
 
-        self.maxDiff = None
         fixture = {
             'image': {
                 'id': 1,
@@ -1353,7 +1350,6 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_show_image_no_metadata_key(self):
         serializer = images.ImageXMLSerializer()
 
-        self.maxDiff = None
         fixture = {
             'image': {
                 'id': 1,
@@ -1417,8 +1413,6 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_show_no_server(self):
         serializer = images.ImageXMLSerializer()
 
-        #so we can see the full diff in the output
-        self.maxDiff = None
         fixture = {
             'image': {
                 'id': 1,
@@ -1471,8 +1465,6 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_index(self):
         serializer = images.ImageXMLSerializer()
 
-        #so we can see the full diff in the output
-        self.maxDiff = None
         fixture = {
             'images': [
                 {
@@ -1544,8 +1536,6 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_detail(self):
         serializer = images.ImageXMLSerializer()
 
-        #so we can see the full diff in the output
-        self.maxDiff = None
         fixture = {
             'images': [
                 {
@@ -1650,8 +1640,6 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_create(self):
         serializer = images.ImageXMLSerializer()
 
-        #so we can see the full diff in the output
-        self.maxDiff = None
         fixture = {
             'image': {
                 'id': 1,
