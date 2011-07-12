@@ -320,12 +320,10 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
 
         image = {}
         image_id = image_node.getAttribute('id')
-        if image_id:
+        if image_id is not None:
             image['id'] = image_id
 
-        image_links = self._extract_links_from_node(image_node)
-        if len(image_links) > 0:
-            image['links'] = image_links
+        image['links'] = self._extract_links_from_node(image_node)
 
         return image
 
@@ -340,9 +338,7 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         if flavor_id:
             flavor['id'] = flavor_id
 
-        flavor_links = self._extract_links_from_node(flavor_node)
-        if len(flavor_links) > 0:
-            flavor['links'] = flavor_links
+        flavor['links'] = self._extract_links_from_node(flavor_node)
 
         return flavor
 
@@ -351,14 +347,12 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         links = []
 
         for link_node in self._find_children_named(parent_node, 'atom:link'):
-            link = {}
-            link_rel = link_node.getAttribute('rel')
-            if link_rel is not None:
-                link['rel'] = link_rel
-            link_href = link_node.getAttribute('href')
-            if link_href is not None:
-                link['href'] = link_href
-            links.append(link)
+            link = {
+                'rel': link_node.getAttribute('rel'),
+                'href': link_node.getAttribute('href'),
+            }
+            if link['rel'] is not None and link['href'] is not None:
+                links.append(link)
 
         return links
 

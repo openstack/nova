@@ -491,10 +491,21 @@ class ControllerV11(Controller):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
+    def _href_from_bookmark_links(self, links)
+        for link in links:
+            try:
+                if link.get('rel') == 'bookmark':
+                    href = link.get('href')
+                    if href is not None:
+                        return href
+            except AttributeError:
+                msg = _("Malformed link entity")
+                raise exc.HTTPBadRequest(explanation=msg)
+
     def _image_ref_from_req_data(self, data):
         try:
             image = data['server']['image']
-        except (AttributeError, KeyError):
+        except (TypeError, KeyError):
             msg = _("Missing image entity")
             raise exc.HTTPBadRequest(explanation=msg)
 
@@ -504,29 +515,21 @@ class ControllerV11(Controller):
             msg = _("Malformed image entity")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        image_ref = None
-        for link in links:
-            try:
-                if link.get('rel') == 'bookmark':
-                    image_ref = link.get('href')
-                    break
-            except AttributeError:
-                msg = _("Malformed image link")
-                raise exc.HTTPBadRequest(explanation=msg)
+        image_ref = self._href_from_bookmark_links(links)
 
         if image_ref is None:
             try:
-                image_ref = image['id']
+                return image['id']
             except KeyError:
                 msg = _("Missing id attribute on image entity")
                 raise exc.HTTPBadRequest(explanation=msg)
-
-        return image_ref
+        else:
+            return image_ref
 
     def _flavor_id_from_req_data(self, data):
         try:
             flavor = data['server']['flavor']
-        except (AttributeError, KeyError):
+        except (TypeError, KeyError):
             msg = _("Missing flavor entity")
             raise exc.HTTPBadRequest(explanation=msg)
 
@@ -536,15 +539,7 @@ class ControllerV11(Controller):
             msg = _("Malformed flavor entity")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        flavor_ref = None
-        for link in links:
-            try:
-                if link.get('rel') == 'bookmark':
-                    flavor_ref = link.get('href')
-                    break
-            except AttributeError:
-                msg = _("Malformed flavor link")
-                raise exc.HTTPBadRequest(explanation=msg)
+        flavor_ref = self._href_from_bookmark_links(links)
 
         if flavor_ref is None:
             try:

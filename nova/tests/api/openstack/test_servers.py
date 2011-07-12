@@ -612,7 +612,7 @@ class ServersTest(test.TestCase):
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
-    def test_create_instance(self):
+    def _test_create_instance_helper(self):
         self._setup_for_create_instance()
 
         body = dict(server=dict(
@@ -634,6 +634,9 @@ class ServersTest(test.TestCase):
         self.assertEqual(2, server['flavorId'])
         self.assertEqual(3, server['imageId'])
         self.assertEqual(FAKE_UUID, server['uuid'])
+
+    def test_create_instance(self):
+        self._test_create_instance_helper()
 
     def test_create_instance_has_uuid(self):
         """Tests at the db-layer instead of API layer since that's where the
@@ -689,27 +692,7 @@ class ServersTest(test.TestCase):
 
     def test_create_instance_no_key_pair(self):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
-        self._setup_for_create_instance()
-
-        body = dict(server=dict(
-            name='server_test', imageId=3, flavorId=2,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req = webob.Request.blank('/v1.0/servers')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        res = req.get_response(fakes.wsgi_app())
-
-        server = json.loads(res.body)['server']
-        self.assertEqual(16, len(server['adminPass']))
-        self.assertEqual('server_test', server['name'])
-        self.assertEqual(1, server['id'])
-        self.assertEqual(2, server['flavorId'])
-        self.assertEqual(3, server['imageId'])
-        self.assertEqual(FAKE_UUID, server['uuid'])
-        self.assertEqual(res.status_int, 200)
+        self._test_create_instance_helper()
 
     def test_create_instance_no_name(self):
         self._setup_for_create_instance()
@@ -782,20 +765,20 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/3'
-        flavor_href = 'http://localhost/v1.1/flavors/2'
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_href = 'http://localhost/v1.1/flavors/3'
 
         body = {
             'server': {
                 'name': 'server_test',
                 'image': {
-                    'id': 3,
+                    'id': 2,
                     'links': [
                         {'rel': 'bookmark', 'href': image_href},
                     ],
                 },
                 'flavor': {
-                    'id': 2,
+                    'id': 3,
                     'links': [
                         {'rel': 'bookmark', 'href': flavor_href},
                     ],
@@ -1793,7 +1776,7 @@ class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
     def test_minimal_request(self):
         serial_request = """
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1" />"""
+ name="new-server-test" imageId="1" flavorId="1"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
