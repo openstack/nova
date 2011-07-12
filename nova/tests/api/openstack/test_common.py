@@ -190,3 +190,42 @@ class PaginationParamsTest(test.TestCase):
         req = Request.blank('/?limit=20&marker=40')
         self.assertEqual(common.get_pagination_params(req),
                          {'marker': 40, 'limit': 20})
+
+
+class MiscFunctionsTest(test.TestCase):
+
+    def test_remove_version_from_href(self):
+        
+        fixture = 'http://www.testsite.com/v1.1/images'
+        expected = 'http://www.testsite.com/images'
+        actual = common.remove_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
+    def test_remove_version_from_href_2(self):
+        
+        fixture = 'http://www.testsite.com/v1.1/'
+        expected = 'http://www.testsite.com/'
+        actual = common.remove_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
+    def test_remove_version_from_href_bad_request(self):
+        
+        fixture = 'http://www.testsite.com/1.1/images'
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          common.remove_version_from_href,
+                          fixture)
+
+    def test_get_id_from_href(self):
+        
+        fixture = 'http://www.testsite.com/dir/45'
+        actual = common.get_id_from_href(fixture)
+        expected = 45
+        self.assertEqual(actual, expected)
+
+    def test_get_id_from_href_bad_request(self):
+        
+        fixture = 'http://45'
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          common.get_id_from_href,
+                          fixture)
+
