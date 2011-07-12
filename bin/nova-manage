@@ -816,11 +816,11 @@ class ServiceCommands(object):
                  {"method": "update_available_resource"})
 
 
-class ServerCommands(object):
-    """List servers"""
+class HostCommands(object):
+    """List hosts"""
 
     def list(self, zone=None):
-        """Show a list of all servers. Filter by zone.
+        """Show a list of all physical hosts. Filter by zone.
         args: [zone]"""
         print "%-25s\t%-15s" % (_('host'),
                                 _('zone'))
@@ -829,13 +829,13 @@ class ServerCommands(object):
         services = db.service_get_all(ctxt)
         if zone:
             services = [s for s in services if s['availability_zone'] == zone]
-        servers = []
+        hosts = []
         for srv in services:
-            if not [s for s in servers if s['host'] == srv['host']]:
-                servers.append(srv)
+            if not [h for h in hosts if h['host'] == srv['host']]:
+                hosts.append(srv)
 
-        for srv in servers:
-            print "%-25s\t%-15s" % (srv['host'], srv['availability_zone'])
+        for h in hosts:
+            print "%-25s\t%-15s" % (h['host'], h['availability_zone'])
 
 
 class DbCommands(object):
@@ -1211,13 +1211,13 @@ CATEGORIES = [
     ('fixed', FixedIpCommands),
     ('flavor', InstanceTypeCommands),
     ('floating', FloatingIpCommands),
+    ('host', HostCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
     ('network', NetworkCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
     ('service', ServiceCommands),
-    ('server', ServerCommands),
     ('shell', ShellCommands),
     ('user', UserCommands),
     ('version', VersionCommands),
