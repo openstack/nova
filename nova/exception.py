@@ -220,7 +220,7 @@ class DestinationHypervisorTooOld(Invalid):
                 "has been provided.")
 
 
-class DestinatioinDiskExists(Invalid):
+class DestinationDiskExists(Invalid):
     message = _("The supplied disk path (%(path)s) already exists, "
                 "it is expected not to exist.")
 

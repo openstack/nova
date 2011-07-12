@@ -90,14 +90,4 @@ class Controller(object):
 
 
 def create_resource():
-    metadata = {
-        'attributes': {
-            'console': [],
-        },
-    }
-
-    serializers = {
-        'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
-    }
-
-    return wsgi.Resource(Controller(), serializers=serializers)
+    return wsgi.Resource(Controller())

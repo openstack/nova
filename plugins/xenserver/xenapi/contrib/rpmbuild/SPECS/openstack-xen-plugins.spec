@@ -5,6 +5,7 @@ Summary:        Files for XenAPI support.
 License:        ASL 2.0
 Group:          Applications/Utilities
 Source0:        openstack-xen-plugins.tar.gz
+BuildArch:      noarch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires:       parted
 

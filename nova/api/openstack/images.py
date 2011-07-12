@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import urlparse
 import os.path
 
 import webob.exc
@@ -23,7 +24,6 @@ from nova import exception
 from nova import flags
 import nova.image
 from nova import log
-from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack import image_metadata
@@ -246,13 +246,23 @@ class ControllerV11(Controller):
             msg = _("Expected serverRef attribute on server entity.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        head, tail = os.path.split(server_ref)
+        if not server_ref.startswith('http'):
+            return server_ref
 
-        if head and head != os.path.join(req.application_url, 'servers'):
+        passed = urlparse.urlparse(server_ref)
+        expected = urlparse.urlparse(req.application_url)
+        version = expected.path.split('/')[1]
+        expected_prefix = "/%s/servers/" % version
+        _empty, _sep, server_id = passed.path.partition(expected_prefix)
+        scheme_ok = passed.scheme == expected.scheme
+        host_ok = passed.hostname == expected.hostname
+        port_ok = (passed.port == expected.port or
+                   passed.port == FLAGS.osapi_port)
+        if not (scheme_ok and port_ok and host_ok and server_id):
             msg = _("serverRef must match request url")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        return tail
+        return server_id
 
     def _get_extra_properties(self, req, data):
         server_ref = data['image']['serverRef']
@@ -338,8 +348,10 @@ def create_resource(version='1.0'):
         '1.1': ImageXMLSerializer(),
     }[version]
 
-    serializers = {
+    body_serializers = {
         'application/xml': xml_serializer,
     }
 
-    return wsgi.Resource(controller, serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(controller, serializer=serializer)

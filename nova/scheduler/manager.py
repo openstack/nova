@@ -56,6 +56,10 @@ class SchedulerManager(manager.Manager):
         """Poll child zones periodically to get status."""
         self.zone_manager.ping(context)
 
+    def get_host_list(self, context=None):
+        """Get a list of hosts from the ZoneManager."""
+        return self.zone_manager.get_host_list()
+
     def get_zone_list(self, context=None):
         """Get a list of zones from the ZoneManager."""
         return self.zone_manager.get_zone_list()
@@ -115,7 +119,7 @@ class SchedulerManager(manager.Manager):
         :returns:
             example format is below.
             {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
-            D: {'vcpus':3, 'memory_mb':2048, 'local_gb':2048
+            D: {'vcpus':3, 'memory_mb':2048, 'local_gb':2048,
                 'vcpus_used': 12, 'memory_mb': 10240,
                 'local_gb': 64}
 

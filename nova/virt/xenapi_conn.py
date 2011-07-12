@@ -318,7 +318,7 @@ class XenAPIConnection(driver.ComputeDriver):
         return
 
     def live_migration(self, context, instance_ref, dest,
-                       post_method, recover_method):
+                       post_method, recover_method, block_migration=False):
         """This method is supported only by libvirt."""
         return
 
@@ -335,6 +335,10 @@ class XenAPIConnection(driver.ComputeDriver):
         """Return the current state of the host. If 'refresh' is
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        return self._vmops.set_host_enabled(host, enabled)
 
 
 class XenAPISession(object):

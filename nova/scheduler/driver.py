@@ -199,7 +199,8 @@ class Scheduler(object):
         try:
             self.mounted_on_same_shared_storage(context, instance_ref, dest)
             if block_migration:
-                reason = "Block migration can not be used with shared storage."
+                reason = _("Block migration can not be used "
+                           "with shared storage.")
                 raise exception.InvalidSharedStorage(reason=reason, path=dest)
         except rpc.RemoteError:
             if not block_migration:
