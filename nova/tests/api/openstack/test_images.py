@@ -1158,6 +1158,28 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
 
+    def test_create_image_v1_1_server_ref_missing_version(self):
+
+        serverRef = 'http://localhost/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_v1_1_server_ref_missing_id(self):
+
+        serverRef = 'http://localhost/v1.1/servers'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     @classmethod
     def _make_image_fixtures(cls):
         image_id = 123

@@ -133,7 +133,7 @@ def get_id_from_href(href):
         return int(urlparse(href).path.split('/')[-1])
     except:
         LOG.debug(_("Error extracting id from href: %s") % href)
-        raise webob.exc.HTTPBadRequest(_('could not parse id from href'))
+        raise ValueError(_('could not parse id from href'))
 
 
 def remove_version_from_href(href):
@@ -146,11 +146,12 @@ def remove_version_from_href(href):
     try:
         #matches /v#.#
         new_href = re.sub(r'[/][v][0-9]*.[0-9]*', '', href)
-        if new_href == href:
-            msg = _('href does not contain version')
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        return new_href
     except:
         LOG.debug(_("Error removing version from href: %s") % href)
         msg = _('could not parse version from href')
-        raise webob.exc.HTTPBadRequest(explanation=msg)
+        raise ValueError(msg)
+
+    if new_href == href:
+        msg = _('href does not contain version')
+        raise ValueError(msg)
+    return new_href

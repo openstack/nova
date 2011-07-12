@@ -208,7 +208,7 @@ class MiscFunctionsTest(test.TestCase):
 
     def test_remove_version_from_href_bad_request(self):
         fixture = 'http://www.testsite.com/1.1/images'
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(ValueError,
                           common.remove_version_from_href,
                           fixture)
 
@@ -220,6 +220,6 @@ class MiscFunctionsTest(test.TestCase):
 
     def test_get_id_from_href_bad_request(self):
         fixture = 'http://45'
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(ValueError,
                           common.get_id_from_href,
                           fixture)
