@@ -101,6 +101,16 @@ class ViewBuilderV11(ViewBuilder):
             serverRef = image_obj['properties']['instance_ref']
             image['server'] = {
                 "id": common.get_id_from_href(serverRef),
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": serverRef,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": common.remove_version_from_href(serverRef),
+                    },
+                ]
             }
         except KeyError:
             return

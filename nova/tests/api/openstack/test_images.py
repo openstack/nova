@@ -1096,7 +1096,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(200, response.status_int)
         result = json.loads(response.body)
         expected = {
-            'id': '1',
+            'id': 1,
             'links': [
                 {
                     'rel': 'self',
@@ -1123,7 +1123,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(200, response.status_int)
         result = json.loads(response.body)
         expected = {
-            'id': '1',
+            'id': 1,
             'links': [
                 {
                     'rel': 'self',
