@@ -1263,6 +1263,28 @@ def instance_get_all_by_column_regexp(context, column, column_regexp):
 
 
 @require_context
+def instance_get_all_by_name_regexp(context, ipv6_regexp):
+    """Get all instances by using regular expression matching against
+    its name
+    """
+
+    session = get_session()
+    with session.begin():
+        # get instances
+
+        all_instances = session.query(models.Instance).\
+                options(joinedload('metadata')).\
+                filter_by(deleted=can_read_deleted(context)).\
+                all()
+        if not all_instances:
+            return []
+
+        compiled_regexp = re.compile(ipv6_regexp)
+        return [instance for instance in all_instances
+                if compiled_regexp.match(instance.name)]
+
+
+@require_context
 def instance_get_all_by_ip_regexp(context, ip_regexp):
     """Get all instances by using regular expression matching against
     Floating and Fixed IP Addresses
@@ -1319,7 +1341,7 @@ def instance_get_all_by_ip_regexp(context, ip_regexp):
 
 
 @require_context
-def instance_get_all_by_ipv6_regex(context, ipv6_regexp):
+def instance_get_all_by_ipv6_regexp(context, ipv6_regexp):
     """Get all instances by using regular expression matching against
     IPv6 Addresses
     """

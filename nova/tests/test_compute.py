@@ -30,6 +30,7 @@ from nova.compute import power_state
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
+from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova import flags
 import nova.image.fake
@@ -810,3 +811,267 @@ class ComputeTestCase(test.TestCase):
         LOG.info(_("After force-killing instances: %s"), instances)
         self.assertEqual(len(instances), 1)
         self.assertEqual(power_state.SHUTOFF, instances[0]['state'])
+
+    def test_get_all_by_display_name_regexp(self):
+        """Test searching instances by display_name"""
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'display_name': 'woot'})
+        instance_id2 = self._create_instance({
+            'display_name': 'woo',
+            'id': 20})
+        instance_id3 = self._create_instance({
+            'display_name': 'not-woot',
+            'id': 30})
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'display_name': 'woo.*'})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id1 in instance_ids)
+        self.assertTrue(instance_id2 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'display_name': 'woot.*'})
+        instance_ids = [instance.id for instance in instances]
+        self.assertEqual(len(instances), 1)
+        self.assertTrue(instance_id1 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'display_name': '.*oot.*'})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id1 in instance_ids)
+        self.assertTrue(instance_id3 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'display_name': 'n.*'})
+        self.assertEqual(len(instances), 1)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id3 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'display_name': 'noth.*'})
+        self.assertEqual(len(instances), 0)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+
+    def test_get_all_by_server_name_regexp(self):
+        """Test searching instances by server_name"""
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'server_name': 'woot'})
+        instance_id2 = self._create_instance({
+            'server_name': 'woo',
+            'id': 20})
+        instance_id3 = self._create_instance({
+            'server_name': 'not-woot',
+            'id': 30})
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'server_name': 'woo.*'})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id1 in instance_ids)
+        self.assertTrue(instance_id2 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'server_name': 'woot.*'})
+        instance_ids = [instance.id for instance in instances]
+        self.assertEqual(len(instances), 1)
+        self.assertTrue(instance_id1 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'server_name': '.*oot.*'})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id1 in instance_ids)
+        self.assertTrue(instance_id3 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'server_name': 'n.*'})
+        self.assertEqual(len(instances), 1)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id3 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'server_name': 'noth.*'})
+        self.assertEqual(len(instances), 0)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+
+    def test_get_all_by_name_regexp(self):
+        """Test searching instances by name"""
+        self.flags(instance_name_template='instance-%d')
+
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance()
+        instance_id2 = self._create_instance({'id': 2})
+        instance_id3 = self._create_instance({'id': 10})
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'name': 'instance.*'})
+        self.assertEqual(len(instances), 3)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'name': '.*\-\d$'})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id1 in instance_ids)
+        self.assertTrue(instance_id2 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'name': 'i.*2'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id2)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+
+    def test_get_by_fixed_ip(self):
+        """Test getting 1 instance by Fixed IP"""
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'server_name': 'woot'})
+        instance_id2 = self._create_instance({
+            'server_name': 'woo',
+            'id': 20})
+        instance_id3 = self._create_instance({
+            'server_name': 'not-woot',
+            'id': 30})
+
+        db.fixed_ip_create(c,
+                {'address': '1.1.1.1',
+                 'instance_id': instance_id1})
+        db.fixed_ip_create(c,
+                {'address': '1.1.2.1',
+                 'instance_id': instance_id2})
+
+        # regex not allowed
+        self.assertRaises(exception.NotFound,
+                self.compute_api.get_all,
+                c,
+                search_opts={'fixed_ip': '.*'})
+
+        self.assertRaises(exception.NotFound,
+                self.compute_api.get_all,
+                c,
+                search_opts={'fixed_ip': '1.1.3.1'})
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'fixed_ip': '1.1.1.1'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id1)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'fixed_ip': '1.1.2.1'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id2)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+
+    def test_get_all_by_ip_regex(self):
+        """Test searching by Floating and Fixed IP"""
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'server_name': 'woot'})
+        instance_id2 = self._create_instance({
+            'server_name': 'woo',
+            'id': 20})
+        instance_id3 = self._create_instance({
+            'server_name': 'not-woot',
+            'id': 30})
+
+        db.fixed_ip_create(c,
+                {'address': '1.1.1.1',
+                 'instance_id': instance_id1})
+        db.fixed_ip_create(c,
+                {'address': '1.1.2.1',
+                 'instance_id': instance_id2})
+        fix_addr = db.fixed_ip_create(c,
+                {'address': '1.1.3.1',
+                 'instance_id': instance_id3})
+        fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
+        flo_ref = db.floating_ip_create(c,
+                {'address': '10.0.0.2',
+                'fixed_ip_id': fix_ref['id']})
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '.*\.1'})
+        self.assertEqual(len(instances), 3)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '1.*'})
+        self.assertEqual(len(instances), 3)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '.*\.1.\d+$'})
+        self.assertEqual(len(instances), 1)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id1 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '.*\.2.+'})
+        self.assertEqual(len(instances), 1)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id2 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '10.*'})
+        self.assertEqual(len(instances), 1)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id3 in instance_ids)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+        db.floating_ip_destroy(c, '10.0.0.2')
+
+    def test_get_all_by_ipv6_regex(self):
+        """Test searching by IPv6 address"""
+        def fake_ipv6_get_by_instance_ref(context, instance):
+            if instance.id == 1:
+                return ['ffff:ffff::1']
+            if instance.id == 20:
+                return ['dddd:dddd::1']
+            if instance.id == 30:
+                return ['cccc:cccc::1', 'eeee:eeee::1', 'dddd:dddd::1']
+
+        self.stubs.Set(sqlalchemy_api, '_ipv6_get_by_instance_ref',
+                fake_ipv6_get_by_instance_ref)
+
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'server_name': 'woot'})
+        instance_id2 = self._create_instance({
+            'server_name': 'woo',
+            'id': 20})
+        instance_id3 = self._create_instance({
+            'server_name': 'not-woot',
+            'id': 30})
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip6': 'ff.*'})
+        self.assertEqual(len(instances), 1)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id1 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip6': '.*::1'})
+        self.assertEqual(len(instances), 3)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id1 in instance_ids)
+        self.assertTrue(instance_id2 in instance_ids)
+        self.assertTrue(instance_id3 in instance_ids)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip6': '.*dd:.*'})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id2 in instance_ids)
+        self.assertTrue(instance_id3 in instance_ids)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)

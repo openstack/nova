@@ -641,6 +641,10 @@ class API(base.Base):
             raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
         return instances
 
+    def _get_all_by_name(self, context, search_opts):
+        return self.db.instance_get_all_by_name_regexp(
+                context, search_opts['name'])
+
     def _get_all_by_ip(self, context, search_opts):
         return self.db.instance_get_all_by_ip_regexp(
                 context, search_opts['ip'])
@@ -673,6 +677,7 @@ class API(base.Base):
         exclusive_opts = ['reservation_id',
                           'project_id',
                           'fixed_ip',
+                          'name',
                           'ip',
                           'ip6'] + search_columns
 

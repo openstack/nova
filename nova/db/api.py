@@ -529,6 +529,13 @@ def instance_get_all_by_column_regexp(context, column, column_regexp):
             column_regexp)
 
 
+def instance_get_all_by_name_regexp(context, name_regexp):
+    """Get all instances by using regular expression matching against
+    its name
+    """
+    return IMPL.instance_get_all_by_name_regexp(context, name_regexp)
+
+
 def instance_get_all_by_ip_regexp(context, ip_regexp):
     """Get all instances by using regular expression matching against
     Floating and Fixed IP Addresses
