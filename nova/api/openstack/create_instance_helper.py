@@ -180,7 +180,7 @@ class CreateInstanceHelper(object):
         Overrides normal behavior in the case of xml content
         """
         if request.content_type == "application/xml":
-            deserializer = ServerCreateRequestXMLDeserializer()
+            deserializer = ServerXMLDeserializer()
             return deserializer.deserialize(request.body)
         else:
             return self._deserialize(request.body, request.get_content_type())
@@ -295,9 +295,15 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         """Marshal the server attribute of a parsed request"""
         server = {}
         server_node = self._find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
+        for attr in ["name", "imageId", "flavorId"]:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
+        image = self._extract_image(server_node)
+        if image is not None:
+            server["image"] = image
+        flavor = self._extract_flavor(server_node)
+        if flavor is not None:
+            server["flavor"] = flavor
         metadata = self._extract_metadata(server_node)
         if metadata is not None:
             server["metadata"] = metadata
@@ -305,6 +311,56 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         if personality is not None:
             server["personality"] = personality
         return server
+
+    def _extract_image(self, server_node):
+        """Retrieve an image entity from the server node"""
+        image_node = self._find_first_child_named(server_node, "image")
+        if image_node is None:
+            return  None
+
+        image = {}
+        image_id = image_node.getAttribute('id')
+        if image_id:
+            image['id'] = image_id
+
+        image_links = self._extract_links_from_node(image_node)
+        if len(image_links) > 0:
+            image['links'] = image_links
+
+        return image
+
+    def _extract_flavor(self, server_node):
+        """Retrieve a flavor entity from the server node"""
+        flavor_node = self._find_first_child_named(server_node, "flavor")
+        if flavor_node is None:
+            return  None
+
+        flavor = {}
+        flavor_id = flavor_node.getAttribute('id')
+        if flavor_id:
+            flavor['id'] = flavor_id
+
+        flavor_links = self._extract_links_from_node(flavor_node)
+        if len(flavor_links) > 0:
+            flavor['links'] = flavor_links
+
+        return flavor
+
+    def _extract_links_from_node(self, parent_node):
+        """Retrieve link entities from a links container provided node"""
+        links = []
+
+        for link_node in self._find_children_named(parent_node, 'atom:link'):
+            link = {}
+            link_rel = link_node.getAttribute('rel')
+            if link_rel is not None:
+                link['rel'] = link_rel
+            link_href = link_node.getAttribute('href')
+            if link_href is not None:
+                link['href'] = link_href
+            links.append(link)
+
+        return links
 
     def _extract_metadata(self, server_node):
         """Marshal the metadata attribute of a parsed request"""
@@ -331,24 +387,3 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
             item["contents"] = self._extract_text(file_node)
             personality.append(item)
         return personality
-
-    def _find_first_child_named(self, parent, name):
-        """Search a nodes children for the first child with a given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                return node
-        return None
-
-    def _find_children_named(self, parent, name):
-        """Return all of a nodes children who have the given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                yield node
-
-    def _extract_text(self, node):
-        """Get the text field contained by the given node"""
-        if len(node.childNodes) == 1:
-            child = node.childNodes[0]
-            if child.nodeType == child.TEXT_NODE:
-                return child.nodeValue
-        return ""

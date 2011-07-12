@@ -612,7 +612,7 @@ class ServersTest(test.TestCase):
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
-    def _test_create_instance_helper(self):
+    def test_create_instance(self):
         self._setup_for_create_instance()
 
         body = dict(server=dict(
@@ -626,6 +626,7 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
@@ -633,10 +634,6 @@ class ServersTest(test.TestCase):
         self.assertEqual(2, server['flavorId'])
         self.assertEqual(3, server['imageId'])
         self.assertEqual(FAKE_UUID, server['uuid'])
-        self.assertEqual(res.status_int, 200)
-
-    def test_create_instance(self):
-        self._test_create_instance_helper()
 
     def test_create_instance_has_uuid(self):
         """Tests at the db-layer instead of API layer since that's where the
@@ -692,7 +689,27 @@ class ServersTest(test.TestCase):
 
     def test_create_instance_no_key_pair(self):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
-        self._test_create_instance_helper()
+        self._setup_for_create_instance()
+
+        body = dict(server=dict(
+            name='server_test', imageId=3, flavorId=2,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        server = json.loads(res.body)['server']
+        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual('server_test', server['name'])
+        self.assertEqual(1, server['id'])
+        self.assertEqual(2, server['flavorId'])
+        self.assertEqual(3, server['imageId'])
+        self.assertEqual(FAKE_UUID, server['uuid'])
+        self.assertEqual(res.status_int, 200)
 
     def test_create_instance_no_name(self):
         self._setup_for_create_instance()
@@ -765,18 +782,34 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_href = 'http://localhost/v1.1/images/3'
+        flavor_href = 'http://localhost/v1.1/flavors/2'
+
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
+                'image': {
+                    'id': 3,
+                    'links': [
+                        {'rel': 'bookmark', 'href': image_href},
+                    ],
+                },
+                'flavor': {
+                    'id': 2,
+                    'links': [
+                        {'rel': 'bookmark', 'href': flavor_href},
+                    ],
+                },
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
+                'personality': [
+                    {
+                        "path" : "/etc/banner.txt",
+                        "contents" : "MQ==",
+                    },
+                ],
             },
         }
 
@@ -787,31 +820,16 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
-        self.assertEqual(flavor_ref, server['flavorRef'])
+        self.assertEqual(flavor_href, server['flavorRef'])
         self.assertEqual(image_href, server['imageRef'])
-        self.assertEqual(res.status_int, 200)
+        self.assertFalse('personality' in server)
 
-    def test_create_instance_v1_1_bad_href(self):
-        self._setup_for_create_instance()
-
-        image_href = 'http://localhost/v1.1/images/asdf'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
-        req = webob.Request.blank('/v1.1/servers')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_create_instance_v1_1_local_href(self):
+    def test_create_instance_v1_1_image_id(self):
         self._setup_for_create_instance()
 
         image_id = 2
@@ -819,8 +837,8 @@ class ServersTest(test.TestCase):
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_id,
-                'flavorRef': flavor_ref,
+                'image': {'id': image_id},
+                'flavor': {'id': 3},
             },
         }
 
@@ -831,11 +849,132 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
-        server = json.loads(res.body)['server']
-        self.assertEqual(1, server['id'])
-        self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_id, server['imageRef'])
         self.assertEqual(res.status_int, 200)
+        server = json.loads(res.body)['server']
+        self.assertEqual(flavor_ref, server['flavorRef'])
+
+    def test_create_instance_v1_1_image_link(self):
+        self._setup_for_create_instance()
+
+        image_ref = 'http://localhost/v1.1/image/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'image': {
+                    'links':[
+                        {'rel': 'self', 'href': 'http://google.com'},
+                        {'rel': 'bookmark', 'href': image_ref},
+                    ],
+                },
+                'flavor': {'id': 3},
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 200)
+        server = json.loads(res.body)['server']
+        self.assertEqual(image_ref, server['imageRef'])
+
+    def test_create_instance_v1_1_no_valid_image(self):
+        self._setup_for_create_instance()
+
+        body = {
+            'server': {
+                'name': 'server_test',
+                'image': {},
+                'flavor': {'id': 3},
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_flavor_link(self):
+        self._setup_for_create_instance()
+
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
+
+        body = {
+            'server': {
+                'name': 'server_test',
+                'image': {'id': 3},
+                'flavor': {
+                    'id': 2,
+                    'links': [
+                        {'rel': 'bookmark', 'href': flavor_ref},
+                    ],
+                },
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 200)
+        server = json.loads(res.body)['server']
+        self.assertEqual(flavor_ref, server['flavorRef'])
+
+    def test_create_instance_v1_1_flavor_id(self):
+        self._setup_for_create_instance()
+
+        flavor_ref = 'http://localhost/v1.1/flavors/2'
+
+        body = {
+            'server': {
+                'name': 'server_test',
+                'image': {'id': 3},
+                'flavor': {'id': 2},
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 200)
+        server = json.loads(res.body)['server']
+        self.assertEqual(flavor_ref, server['flavorRef'])
+
+    def test_create_instance_v1_1_no_valid_flavor(self):
+        self._setup_for_create_instance()
+
+        body = {
+            'server': {
+                'name': 'server_test',
+                'image': {'id': 3},
+                'flavor': {},
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 400)
+
+
 
     def test_create_instance_with_admin_pass_v1_0(self):
         self._setup_for_create_instance()
@@ -858,7 +997,7 @@ class ServersTest(test.TestCase):
         self.assertNotEqual(res['server']['adminPass'],
                             body['server']['adminPass'])
 
-    def test_create_instance_with_admin_pass_v1_1(self):
+    def test_create_instance_v1_1_admin_pass(self):
         self._setup_for_create_instance()
 
         image_href = 'http://localhost/v1.1/images/2'
@@ -866,8 +1005,8 @@ class ServersTest(test.TestCase):
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
+                'image': {'id': 3},
+                'flavor': {'id': 3},
                 'adminPass': 'testpass',
             },
         }
@@ -876,20 +1015,22 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
+
         res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 200)
+
         server = json.loads(res.body)['server']
         self.assertEqual(server['adminPass'], body['server']['adminPass'])
 
-    def test_create_instance_with_empty_admin_pass_v1_1(self):
+    def test_create_instance_v1_1_admin_pass_empty(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
+                'image': {'id': 3},
+                'flavor': {'id': 3},
                 'adminPass': '',
             },
         }
@@ -1644,7 +1785,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
 
 
-class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
+class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
 
     def setUp(self):
         self.deserializer = create_instance_helper.ServerXMLDeserializer()
@@ -1652,7 +1793,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
     def test_minimal_request(self):
         serial_request = """
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1"/>"""
+ name="new-server-test" imageId="1" flavorId="1" />"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
@@ -1924,19 +2065,202 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         request = self.deserializer.deserialize(serial_request, 'create')
         self.assertEqual(request['body'], expected)
 
-    def test_request_xmlser_with_flavor_image_href(self):
-        serial_request = """
-                <server xmlns="http://docs.openstack.org/compute/api/v1.1"
-                    name="new-server-test"
-                    imageRef="http://localhost:8774/v1.1/images/1"
-                    flavorRef="http://localhost:8774/v1.1/flavors/1">
-                </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        self.assertEquals(request['body']["server"]["flavorRef"],
-                          "http://localhost:8774/v1.1/flavors/1")
-        self.assertEquals(request['body']["server"]["imageRef"],
-                          "http://localhost:8774/v1.1/images/1")
 
+class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
+
+    def setUp(self):
+        self.deserializer = create_instance_helper.ServerXMLDeserializer()
+
+    def test_minimal_request(self):
+        serial_request = """
+<server name="new-server-test">
+    <image id="1"/>
+    <flavor id="2"/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "image": {"id": "1"},
+                "flavor": {"id": "2"},
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_image_link(self):
+        serial_request = """
+<server xmlns:atom="http://www.w3.org/2005/Atom" name="new-server-test">
+    <image id="1">
+        <atom:link rel="bookmark" href="http://localhost:8774/v1.1/images/2"/>
+    </image>
+    <flavor id="3"/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "image": {
+                    "id": "1",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost:8774/v1.1/images/2",
+                        },
+                    ],
+                },
+                "flavor": {"id": "3"},
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_flavor_link(self):
+        serial_request = """
+<server xmlns:atom="http://www.w3.org/2005/Atom" name="new-server-test">
+    <image id="1"/>
+    <flavor id="2">
+        <atom:link rel="bookmark" href="http://localhost:8774/v1.1/flavors/3"/>
+    </flavor>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "image": {"id": "1"},
+                "flavor": {
+                    "id": "2",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost:8774/v1.1/flavors/3",
+                        },
+                    ],
+                },
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_empty_metadata_personality(self):
+        serial_request = """
+<server name="new-server-test">
+    <image id="1"/>
+    <flavor id="2"/>
+    <metadata/>
+    <personality/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "image": {"id": "1"},
+                "flavor": {"id": "2"},
+                "metadata": {},
+                "personality": [],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_multiple_metadata_items(self):
+        serial_request = """
+<server name="new-server-test">
+    <image id="1"/>
+    <flavor id="2"/>
+    <metadata>
+        <meta key="one">two</meta>
+        <meta key="open">snack</meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "image": {"id": "1"},
+                "flavor": {"id": "2"},
+                "metadata": {"one": "two", "open": "snack"},
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_multiple_personality_files(self):
+        serial_request = """
+<server name="new-server-test">
+    <image id="1"/>
+    <flavor id="2"/>
+    <personality>
+        <file path="/etc/banner.txt">MQ==</file>
+        <file path="/etc/hosts">Mg==</file>
+    </personality>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "image": {"id": "1"},
+                "flavor": {"id": "2"},
+                "personality": [
+                    {"path": "/etc/banner.txt", "contents": "MQ=="},
+                    {"path": "/etc/hosts", "contents": "Mg=="},
+                ],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_spec_request(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        xmlns:atom="http://www.w3.org/2005/Atom"
+        name="new-server-test">
+  <image id="52415800-8b69-11e0-9b19-734f6f006e54"
+         name="CentOS 5.2"
+         updated="2010-10-10T12:00:00Z"
+         created="2010-08-10T12:00:00Z"
+         status="ACTIVE">
+      <atom:link
+          rel="self"
+          href="http://servers.api.openstack.org/v1.1/1234/images/52415800-8b69-11e0-9b19-734f6f006e54"/>
+      <atom:link
+          rel="bookmark"
+          href="http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54"/>
+  </image>
+  <flavor id="52415800-8b69-11e0-9b19-734f1195ff37" />
+  <metadata>
+    <meta key="My Server Name">Apache1</meta>
+  </metadata>
+  <personality>
+    <file path="/etc/banner.txt">Mg==</file>
+  </personality>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "image": {
+                    "id": "52415800-8b69-11e0-9b19-734f6f006e54",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://servers.api.openstack.org/" + \
+                                    "v1.1/1234/images/52415800-8b69-11" + \
+                                    "e0-9b19-734f6f006e54",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://servers.api.openstack.org/" + \
+                                    "1234/images/52415800-8b69-11e0-9b" + \
+                                    "19-734f6f006e54",
+                        },
+                    ],
+                },
+                "flavor": {"id": "52415800-8b69-11e0-9b19-734f1195ff37"},
+                "metadata": {"My Server Name": "Apache1"},
+                "personality": [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "Mg==",
+                    },
+                ],
+            },
+        }
+        self.assertEquals(request['body'], expected)
 
 class TestServerInstanceCreation(test.TestCase):
 
