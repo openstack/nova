@@ -1361,7 +1361,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             error_list.append(ex)
 
         try:
-            pass #self._poll_instance_states(context)
+            self._poll_instance_states(context)
         except Exception as ex:
             LOG.warning(_("Error during instance poll: %s"),
                         unicode(ex))
