@@ -162,8 +162,7 @@ class CreateInstanceHelper(object):
             msg = _("Can not find requested image")
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
         except rpc.RemoteError as err:
-            LOG.error(err)
-            msg = _("%s:%s") % (err.exc_type, err.value)
+            msg = _("%(err.exc_type)s:%(err.value)s")
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
         # Let the caller deal with unhandled exceptions.
@@ -203,6 +202,15 @@ class CreateInstanceHelper(object):
 
         if value.strip() == '':
             msg = _("Server name is an empty string")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+    def _validate_fixed_ip(self, value):
+        if not isinstance(value, basestring):
+            msg = _("Fixed IP is not a string or unicode")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        if value.strip() == '':
+            msg = _("Fixed IP is an empty string")
             raise exc.HTTPBadRequest(explanation=msg)
 
     def _get_kernel_ramdisk_from_image(self, req, image_id):
@@ -298,9 +306,10 @@ class CreateInstanceHelper(object):
                 network_id = int(network_id)
                 #fixed IP address is optional
                 #if the fixed IP address is not provided then
-                #it will used one of the available IP address from the network
+                #it will use one of the available IP address from the network
                 fixed_ip = network.get('fixed_ip', None)
-
+                if fixed_ip is not None:
+                    self._validate_fixed_ip(fixed_ip)
                 # check if the network id is already present in the list,
                 # we don't want duplicate networks to be passed
                 # at the boot time
@@ -404,6 +413,7 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
     def _find_first_child_named(self, parent, name):
         """Search a nodes children for the first child with a given name"""
         for node in parent.childNodes:
+            LOG.debug(node.nodeName)
             if node.nodeName == name:
                 return node
         return None

@@ -588,6 +588,11 @@ class ServersTest(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
+        def project_get_requested_networks(context, requested_networks):
+            return [{'id': 1, 'host': 'localhost1'},
+                    {'id': 2, 'host': 'localhost2'},
+                   ]
+
         def queue_get_for(context, *args):
             return 'network_topic'
 
@@ -599,6 +604,8 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.db.api, 'project_get_networks',
                        project_get_networks)
+        self.stubs.Set(nova.db.api, 'project_get_requested_networks',
+                       project_get_requested_networks)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
         self.stubs.Set(nova.rpc, 'call', fake_method)
@@ -898,6 +905,29 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_whitespace_name(self):
+        self._setup_for_create_instance()
+
+        body = {
+            'server': {
+                'name': '    ',
+                'imageId': 3,
+                'flavorId': 1,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
@@ -2078,18 +2108,24 @@ class TestServerInstanceCreation(test.TestCase):
         FLAGS.allow_admin_api = self.allow_admin
         super(TestServerInstanceCreation, self).tearDown()
 
-    def _setup_mock_compute_api_for_personality(self):
+    def _setup_mock_compute_api(self):
 
         class MockComputeAPI(nova.compute.API):
 
             def __init__(self):
                 self.injected_files = None
+                self.networks = None
 
             def create(self, *args, **kwargs):
                 if 'injected_files' in kwargs:
                     self.injected_files = kwargs['injected_files']
                 else:
                     self.injected_files = None
+
+                if 'requested_networks' in kwargs:
+                    self.networks = kwargs['requested_networks']
+                else:
+                    self.networks = None
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'uuid': FAKE_UUID}]
 
@@ -2120,6 +2156,18 @@ class TestServerInstanceCreation(test.TestCase):
             server['personality'] = personalities
         return {'server': server}
 
+    def _create_networks_request_dict(self, networks):
+        server = {}
+        server['name'] = 'new-server-test'
+        server['imageId'] = 1
+        server['flavorId'] = 1
+        if networks is not None:
+            network_list = []
+            for id, fixed_ip in networks:
+                network_list.append({'id': id, 'fixed_ip': fixed_ip})
+            server['networks'] = network_list
+        return {'server': server}
+
     def _get_create_request_json(self, body_dict):
         req = webob.Request.blank('/v1.0/servers')
         req.headers['Content-Type'] = 'application/json'
@@ -2128,7 +2176,7 @@ class TestServerInstanceCreation(test.TestCase):
         return req
 
     def _run_create_instance_with_mock_compute_api(self, request):
-        compute_api = self._setup_mock_compute_api_for_personality()
+        compute_api = self._setup_mock_compute_api()
         response = request.get_response(fakes.wsgi_app())
         return compute_api, response
 
@@ -2153,6 +2201,14 @@ class TestServerInstanceCreation(test.TestCase):
                 item = (file['path'], file['contents'])
                 body_parts.append('<file path="%s">%s</file>' % item)
             body_parts.append('</personality>')
+        if 'networks' in server:
+            networks = server['networks']
+            body_parts.append('<networks>')
+            for network in networks:
+                item = (network['id'], network['fixed_ip'])
+                body_parts.append('<network id="%s" fixed_ip="%s"></network>'
+                                  % item)
+            body_parts.append('</networks>')
         body_parts.append('</server>')
         return ''.join(body_parts)
 
@@ -2177,6 +2233,20 @@ class TestServerInstanceCreation(test.TestCase):
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         return request, response, compute_api.injected_files
+
+    def _create_instance_with_networks_json(self, networks):
+        body_dict = self._create_networks_request_dict(networks)
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        return request, response, compute_api.networks
+
+    def _create_instance_with_networks_xml(self, networks):
+        body_dict = self._create_networks_request_dict(networks)
+        request = self._get_create_request_xml(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        return request, response, compute_api.networks
 
     def test_create_instance_with_no_personality(self):
         request, response, injected_files = \
@@ -2311,6 +2381,132 @@ class TestServerInstanceCreation(test.TestCase):
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
         self.assertEqual(16, len(server.getAttribute('adminPass')))
+
+    def test_create_instance_with_no_networks(self):
+        request, response, networks = \
+                self._create_instance_with_networks_json(networks=None)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(networks, None)
+
+    def test_create_instance_with_no_networks_xml(self):
+        request, response, networks = \
+                self._create_instance_with_networks_xml(networks=None)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(networks, None)
+
+    def test_create_instance_with_one_network(self):
+        id = 1
+        fixed_ip = '10.0.1.12'
+        networks = [(id, fixed_ip)]
+        request, response, networks = \
+            self._create_instance_with_networks_json(networks)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(networks, [(id, fixed_ip)])
+
+    def test_create_instance_with_one_network_xml(self):
+        id = 1
+        fixed_ip = '10.0.1.12'
+        networks = [(id, fixed_ip)]
+        request, response, networks = \
+            self._create_instance_with_networks_xml(networks)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(networks, [(id, fixed_ip)])
+
+    def test_create_instance_with_two_networks(self):
+        networks = [(1, '10.0.1.12'), (2, '10.0.2.12')]
+        request, response, networks = \
+            self._create_instance_with_networks_json(networks)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(networks, [(1, '10.0.1.12'), (2, '10.0.2.12')])
+
+    def test_create_instance_with_two_networks_xml(self):
+        networks = [(1, '10.0.1.12'), (2, '10.0.2.12')]
+        request, response, networks = \
+            self._create_instance_with_networks_xml(networks)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(networks, [(1, '10.0.1.12'), (2, '10.0.2.12')])
+
+    def test_create_instance_with_duplicate_networks(self):
+        networks = [(1, '10.0.1.12'), (1, '10.0.2.12')]
+        request, response, networks = \
+            self._create_instance_with_networks_json(networks)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(networks, None)
+
+    def test_create_instance_with_duplicate_networks_xml(self):
+        networks = [(1, '10.0.1.12'), (1, '10.0.2.12')]
+        request, response, networks = \
+            self._create_instance_with_networks_xml(networks)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(networks, None)
+
+    def test_create_instance_with_network_no_id(self):
+        networks = [(1, '10.0.1.12')]
+        body_dict = self._create_networks_request_dict(networks)
+        del body_dict['server']['networks'][0]['id']
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.networks, None)
+
+    def test_create_instance_with_network_no_id_xml(self):
+        networks = [(1, '10.0.1.12')]
+        body_dict = self._create_networks_request_dict(networks)
+        request = self._get_create_request_xml(body_dict)
+        request.body = request.body.replace(' id="1"', '')
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.networks, None)
+
+    def test_create_instance_with_network_invalid_id(self):
+        networks = [('asd123', '10.0.1.12')]
+        request, response, networks = \
+            self._create_instance_with_networks_json(networks)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(networks, None)
+
+    def test_create_instance_with_network_invalid_id_xml(self):
+        networks = [('asd123', '10.0.1.12')]
+        request, response, networks = \
+            self._create_instance_with_networks_xml(networks)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(networks, None)
+
+    def test_create_instance_with_network_empty_fixed_ip(self):
+        networks = [('1', '')]
+        request, response, networks = \
+            self._create_instance_with_networks_json(networks)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(networks, None)
+
+    def test_create_instance_with_network_empty_fixed_ip_xml(self):
+        networks = [('1', '')]
+        request, response, networks = \
+            self._create_instance_with_networks_xml(networks)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(networks, None)
+
+    def test_create_instance_with_network_no_fixed_ip(self):
+        networks = [(1, '10.0.1.12')]
+        body_dict = self._create_networks_request_dict(networks)
+        del body_dict['server']['networks'][0]['fixed_ip']
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(compute_api.networks, [(1, None)])
+
+    def test_create_instance_with_network_no_fixed_ip_xml(self):
+        networks = [(1, '10.0.1.12')]
+        body_dict = self._create_networks_request_dict(networks)
+        request = self._get_create_request_xml(body_dict)
+        request.body = request.body.replace(' fixed_ip="10.0.1.12"', '')
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(compute_api.networks, [(1, None)])
 
 
 class TestGetKernelRamdiskFromImage(test.TestCase):
