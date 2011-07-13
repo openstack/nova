@@ -400,6 +400,10 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         self._test_index_absolute_limits_json(expected)
 
 
+class TestLimiter(limits.Limiter):
+    pass
+
+
 class LimitMiddlewareTest(BaseLimitTestSuite):
     """
     Tests for the `limits.RateLimitingMiddleware` class.
@@ -413,10 +417,14 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
     def setUp(self):
         """Prepare middleware for use through fake WSGI app."""
         BaseLimitTestSuite.setUp(self)
-        _limits = [
-            limits.Limit("GET", "*", ".*", 1, 60),
-        ]
-        self.app = limits.RateLimitingMiddleware(self._empty_app, _limits)
+        _limits = '(GET, *, .*, 1, MINUTE)'
+        self.app = limits.RateLimitingMiddleware(self._empty_app, _limits,
+                                                 "%s.TestLimiter" %
+                                                 self.__class__.__module__)
+
+    def test_limit_class(self):
+        """Test that middleware selected correct limiter class."""
+        assert isinstance(self.app._limiter, TestLimiter)
 
     def test_good_request(self):
         """Test successful GET request through middleware."""
@@ -500,7 +508,8 @@ class LimiterTest(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.limiter = limits.Limiter(TEST_LIMITS)
+        userlimits = {'user:user3': ''}
+        self.limiter = limits.Limiter(TEST_LIMITS, **userlimits)
 
     def _check(self, num, verb, url, username=None):
         """Check and yield results from checks."""
@@ -605,6 +614,12 @@ class LimiterTest(BaseLimitTestSuite):
         results = list(self._check(10, "PUT", "/anything"))
         self.assertEqual(expected, results)
 
+    def test_user_limit(self):
+        """
+        Test user-specific limits.
+        """
+        self.assertEqual(self.limiter.levels['user3'], [])
+
     def test_multiple_users(self):
         """
         Tests involving multiple users.
@@ -617,6 +632,11 @@ class LimiterTest(BaseLimitTestSuite):
         # User2
         expected = [None] * 10 + [6.0] * 5
         results = list(self._check(15, "PUT", "/anything", "user2"))
+        self.assertEqual(expected, results)
+
+        # User3
+        expected = [None] * 20
+        results = list(self._check(20, "PUT", "/anything", "user3"))
         self.assertEqual(expected, results)
 
         self.time += 1.0
