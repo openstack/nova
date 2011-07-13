@@ -789,8 +789,8 @@ class ServersTest(test.TestCase):
                 },
                 'personality': [
                     {
-                        "path" : "/etc/banner.txt",
-                        "contents" : "MQ==",
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
                     },
                 ],
             },
@@ -844,7 +844,7 @@ class ServersTest(test.TestCase):
             'server': {
                 'name': 'server_test',
                 'image': {
-                    'links':[
+                    'links': [
                         {'rel': 'self', 'href': 'http://google.com'},
                         {'rel': 'bookmark', 'href': image_ref},
                     ],
@@ -956,8 +956,6 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(res.status_int, 400)
-
-
 
     def test_create_instance_with_admin_pass_v1_0(self):
         self._setup_for_create_instance()
@@ -2064,8 +2062,8 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1"},
-                "flavor": {"id": "2"},
+                "image": {"id": "1", "links": []},
+                "flavor": {"id": "2", "links": []},
             },
         }
         self.assertEquals(request['body'], expected)
@@ -2091,7 +2089,7 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
                         },
                     ],
                 },
-                "flavor": {"id": "3"},
+                "flavor": {"id": "3", "links": []},
             },
         }
         self.assertEquals(request['body'], expected)
@@ -2108,7 +2106,7 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1"},
+                "image": {"id": "1", "links": []},
                 "flavor": {
                     "id": "2",
                     "links": [
@@ -2134,8 +2132,8 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1"},
-                "flavor": {"id": "2"},
+                "image": {"id": "1", "links": []},
+                "flavor": {"id": "2", "links": []},
                 "metadata": {},
                 "personality": [],
             },
@@ -2156,8 +2154,8 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1"},
-                "flavor": {"id": "2"},
+                "image": {"id": "1", "links": []},
+                "flavor": {"id": "2", "links": []},
                 "metadata": {"one": "two", "open": "snack"},
             },
         }
@@ -2177,8 +2175,8 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1"},
-                "flavor": {"id": "2"},
+                "image": {"id": "1", "links": []},
+                "flavor": {"id": "2", "links": []},
                 "personality": [
                     {"path": "/etc/banner.txt", "contents": "MQ=="},
                     {"path": "/etc/hosts", "contents": "Mg=="},
@@ -2188,6 +2186,10 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         self.assertEquals(request['body'], expected)
 
     def test_spec_request(self):
+        image_self_link = "http://servers.api.openstack.org/v1.1/1234/" + \
+                          "images/52415800-8b69-11e0-9b19-734f6f006e54"
+        image_bookmark_link = "http://servers.api.openstack.org/1234/" + \
+                              "images/52415800-8b69-11e0-9b19-734f6f006e54"
         serial_request = """
 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
         xmlns:atom="http://www.w3.org/2005/Atom"
@@ -2199,10 +2201,10 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
          status="ACTIVE">
       <atom:link
           rel="self"
-          href="http://servers.api.openstack.org/v1.1/1234/images/52415800-8b69-11e0-9b19-734f6f006e54"/>
+          href="%s"/>
       <atom:link
           rel="bookmark"
-          href="http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54"/>
+          href="%s"/>
   </image>
   <flavor id="52415800-8b69-11e0-9b19-734f1195ff37" />
   <metadata>
@@ -2211,7 +2213,7 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
   <personality>
     <file path="/etc/banner.txt">Mg==</file>
   </personality>
-</server>"""
+</server>""" % (image_self_link, image_bookmark_link)
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
@@ -2233,7 +2235,10 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
                         },
                     ],
                 },
-                "flavor": {"id": "52415800-8b69-11e0-9b19-734f1195ff37"},
+                "flavor": {
+                    "id": "52415800-8b69-11e0-9b19-734f1195ff37",
+                    "links": [],
+                },
                 "metadata": {"My Server Name": "Apache1"},
                 "personality": [
                     {
@@ -2244,6 +2249,7 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
+
 
 class TestServerInstanceCreation(test.TestCase):
 

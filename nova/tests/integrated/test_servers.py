@@ -49,31 +49,30 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         post = {'server': server}
 
-        # Without an imageRef, this throws 500.
+        # Without an image, this throws 400.
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        # With an invalid imageRef, this throws 500.
-        server['imageRef'] = self.user.get_invalid_image()
+        # With an invalid image entity, this throws 400.
+        bookmark = {'rel': 'bookmark', 'href': self.user.get_invalid_image()}
+        server['image'] = {'links': [bookmark]}
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        # Add a valid imageId/imageRef
-        server['imageId'] = good_server.get('imageId')
-        server['imageRef'] = good_server.get('imageRef')
+        # Add a valid image entity
+        server['image'] = good_server.get('image', {})
 
-        # Without flavorId, this throws 500
+        # Without a flavor entity, this throws 400
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        # Set a valid flavorId/flavorRef
-        server['flavorRef'] = good_server.get('flavorRef')
-        server['flavorId'] = good_server.get('flavorId')
+        # Set a valid flavor etity
+        server['flavor'] = good_server.get('flavor', {})
 
-        # Without a name, this throws 500
+        # Without a name, this throws 400
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)

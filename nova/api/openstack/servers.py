@@ -491,7 +491,7 @@ class ControllerV11(Controller):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-    def _href_from_bookmark_links(self, links)
+    def _href_from_bookmark_links(self, links):
         for link in links:
             try:
                 if link.get('rel') == 'bookmark':
