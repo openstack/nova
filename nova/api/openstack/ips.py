@@ -93,7 +93,7 @@ class ControllerV11(Controller):
     def _get_virtual_interfaces(self, context, server_id):
         try:
             return db.api.virtual_interface_get_by_instance(context, server_id)
-        except exception.InstanceNotFound:
+        except nova.exception.InstanceNotFound:
             msg = _("Instance does not exist")
             raise exc.HTTPNotFound(explanation=msg)
 

@@ -492,9 +492,10 @@ class ControllerV11(Controller):
         context = req.environ['nova.context']
         interfaces = db.api.virtual_interface_get_by_instance(context,
                                                               instance['id'])
-        instance['virtual_interfaces'] = interfaces
+        _instance = dict(instance)
+        _instance['virtual_interfaces'] = interfaces
 
-        return builder.build(instance, is_detail=is_detail)
+        return builder.build(_instance, is_detail=is_detail)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']

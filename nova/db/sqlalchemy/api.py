@@ -128,6 +128,7 @@ def require_instance_exists(f):
     def wrapper(context, instance_id, *args, **kwargs):
         db.api.instance_get(context, instance_id)
         return f(context, instance_id, *args, **kwargs)
+    wrapper.__name__ = f.__name__
     return wrapper
 
 

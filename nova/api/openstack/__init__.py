@@ -125,6 +125,10 @@ class APIRouter(base_wsgi.Router):
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
+        mapper.resource("ip", "ips", controller=ips.create_resource(version),
+                        parent_resource=dict(member_name='server',
+                                             collection_name='servers'))
+
         mapper.resource("image", "images",
                         controller=images.create_resource(version),
                         collection={'detail': 'GET'})
@@ -154,11 +158,6 @@ class APIRouterV10(APIRouter):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("ip", "ips", controller=ips.create_resource('1.0'),
-                        member=dict(public='GET', private='GET'),
-                        parent_resource=dict(member_name='server',
-                                             collection_name='servers'))
-
 
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
@@ -174,7 +173,3 @@ class APIRouterV11(APIRouter):
                         controller=server_metadata.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
-
-        mapper.resource("ip", "ips", controller=ips.create_resource('1.1'),
-                        parent_resource=dict(member_name='server',
-                                             collection_name='servers'))

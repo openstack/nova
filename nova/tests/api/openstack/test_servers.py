@@ -71,6 +71,12 @@ def return_virtual_interface_by_instance(interfaces):
     return _return_virtual_interface_by_instance
 
 
+def return_virtual_interface_instance_nonexistant(interfaces):
+    def _return_virtual_interface_by_instance(context, instance_id):
+        raise exception.InstanceNotFound(instance_id=instance_id)
+    return _return_virtual_interface_by_instance
+
+
 def return_server_with_addresses(private, public):
     def _return_server(context, id):
         return stub_instance(id, private_address=private,
@@ -549,6 +555,16 @@ class ServersTest(test.TestCase):
                        _return_vifs)
 
         req = webob.Request.blank('/v1.1/servers/1/ips/network_0')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    def test_get_server_addresses_nonexistant_server_v1_1(self):
+        _return_vifs = return_virtual_interface_instance_nonexistant([])
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/600/ips')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
