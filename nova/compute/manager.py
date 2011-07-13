@@ -844,6 +844,18 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    def remove_fixed_ip_from_instance(self, context, instance_id, address):
+        """Calls network_api to remove existing fixed_ip from instance
+        by injecting the altered network info and resetting
+        instance networking.
+        """
+        self.network_api.remove_fixed_ip_from_instance(context, instance_id,
+                                                       address)
+        self.inject_network_info(context, instance_id)
+        self.reset_network(context, instance_id)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
     def pause_instance(self, context, instance_id):
         """Pause an instance on this host."""
         context = context.elevated()
@@ -875,6 +887,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        context,
                                                        instance_id,
                                                        result))
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def set_host_enabled(self, context, instance_id=None, host=None,
+            enabled=None):
+        """Sets the specified host's ability to accept new instances."""
+        return self.driver.set_host_enabled(host, enabled)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def get_diagnostics(self, context, instance_id):
