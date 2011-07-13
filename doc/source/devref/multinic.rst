@@ -29,11 +29,11 @@ FlatDHCP Manager
 
     .. image:: /images/multinic_dhcp.png
 
-FlatDHCP manager builds on the the Flat manager adding dnsmask (DNS and DHCP) and radvd (Router Advertisement) servers on the bridge for that network. The services run on the host that is assigned to that nework. The FlatDHCP manager will create its bridge as specified when the network was created on the network-host when the network host starts up or when a new network gets allocated to that host. Compute nodes will also create the bridges as necessary and connect instance VIFs to them.
+FlatDHCP manager builds on the the Flat manager adding dnsmask (DNS and DHCP) and radvd (Router Advertisement) servers on the bridge for that network. The services run on the host that is assigned to that network. The FlatDHCP manager will create its bridge as specified when the network was created on the network-host when the network host starts up or when a new network gets allocated to that host. Compute nodes will also create the bridges as necessary and connect instance VIFs to them.
 
 VLAN Manager
 ------------
 
     .. image:: /images/multinic_vlan.png
 
-The VLAN manager sets up forwarding to/from a cloudpipe instance in addition to providing dnsmask (DNS and DHCP) and radvd (Router Advertisement) services for each network. The manager will create its bridge as specified when the network was created on the network-host when the network host starts up or when a new network gets allocated to that host. Compute nodes will also create the bridges as necessary and conenct instance VIFs to them.
+The VLAN manager sets up forwarding to/from a cloudpipe instance in addition to providing dnsmask (DNS and DHCP) and radvd (Router Advertisement) services for each network. The manager will create its bridge as specified when the network was created on the network-host when the network host starts up or when a new network gets allocated to that host. Compute nodes will also create the bridges as necessary and connect instance VIFs to them.
