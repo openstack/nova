@@ -50,7 +50,7 @@ class ViewBuilder(object):
             else:
                 server = self._build_simple(inst)
 
-            self._build_extra(server, inst)
+            self._build_extra(server['server'], inst)
 
         return server
 
@@ -99,7 +99,6 @@ class ViewBuilder(object):
         self._build_image(inst_dict, inst)
         self._build_flavor(inst_dict, inst)
 
-        inst_dict['uuid'] = inst['uuid']
         return dict(server=inst_dict)
 
     def _build_image(self, response, inst):
@@ -116,6 +115,9 @@ class ViewBuilder(object):
 
 class ViewBuilderV10(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
+
+    def _build_extra(self, response, inst):
+        response['uuid'] = inst['uuid']
 
     def _build_image(self, response, inst):
         if 'image_ref' in dict(inst):
@@ -143,16 +145,31 @@ class ViewBuilderV11(ViewBuilder):
             image_href = inst['image_ref']
             if str(image_href).isdigit():
                 image_href = int(image_href)
-            response['imageRef'] = image_href
+            response['image'] = {
+                "id": common.get_uuid_from_href(image_href),
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": image_href,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": common.remove_version_from_href(image_href),
+                    },
+                ]
+            }
 
     def _build_flavor(self, response, inst):
         if "instance_type" in dict(inst):
             flavor_id = inst["instance_type"]['flavorid']
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
-            response["flavorRef"] = flavor_ref
+            response["flavor"] = {
+                "id": common.get_uuid_from_href(flavor_ref),
+            }
 
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
+        response['id'] = inst['uuid']
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
@@ -169,7 +186,7 @@ class ViewBuilderV11(ViewBuilder):
             },
         ]
 
-        response["server"]["links"] = links
+        response["links"] = links
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""

@@ -136,6 +136,29 @@ def get_id_from_href(href):
         raise ValueError(_('could not parse id from href'))
 
 
+def get_uuid_from_href(href):
+    """Return the uuid portion of a url.
+
+    Given: 'http://www.foo.com/bar/123?q=4'
+    Returns: '123'
+
+    In order to support local hrefs, the href argument can be just an id:
+    Given: '123'
+    Returns: '123'
+
+    """
+    if not '/' in href:
+        return href
+    try:
+        href = urlparse(href).path.split('/')[-1]
+        if href == '':
+            raise Exception
+        return href
+    except:
+        LOG.debug(_("Error extracting uuid from href: %s") % href)
+        raise ValueError(_('could not parse uuid from href'))
+
+
 def remove_version_from_href(href):
     """Removes the api version from the href.
 

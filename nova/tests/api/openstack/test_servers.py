@@ -124,11 +124,11 @@ def instance_addresses(context, instance_id):
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
                   host=None, power_state=0, reservation_id="",
-                  uuid=FAKE_UUID):
+                  uuid=FAKE_UUID, image_ref="10", flavor_ref="1"):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
-    inst_type = instance_types.get_instance_type_by_flavor_id(1)
+    inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_ref))
 
     if public_addresses is None:
         public_addresses = list()
@@ -146,7 +146,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
-        "image_ref": "10",
+        "image_ref": image_ref,
         "kernel_id": "",
         "ramdisk_id": "",
         "launch_index": 0,
@@ -277,24 +277,93 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_v1_1(self):
+        self.maxDiff = None
+        image_ref = "http://localhost/v1.1/images/10"
+        image_bookmark = "http://localhost/images/10"
+        #flavor_ref = "http://localhost/v1.1/flavors/1"
+        flavor_ref = "1"
+        flavor_bookmark = "http://localhost/flavors/1"
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        def _return_server(context, id):
+
+            return  stub_instance(1,
+                                  private_address=private, 
+                                  public_addresses=public, 
+                                  power_state=0,
+                                  image_ref=image_ref,
+                                  flavor_ref=flavor_ref,
+                                  )
+        self.stubs.Set(nova.db.api, 'instance_get', _return_server)
+
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], 1)
-        self.assertEqual(res_dict['server']['name'], 'server1')
+        expected_server = {
+            "server": {
+                "id": FAKE_UUID,
+                #"updated": "FIXME",
+                #"created": "FIXME",
+                "name": "server1",
+                "status": "BUILD",
+                "hostId": '',
+                "image": {
+                    "id": "10",
+                  "links": [
+                      {
+                          "rel": "self",
+                          "href": image_ref,
+                      },
+                      {
+                          "rel": "bookmark",
+                          "href": image_bookmark,
+                      },
+                  ],
+                },
+                "flavor": {
+                    "id": "1",
+                  #"links": [
+                      #{
+                          #"rel": "self",
+                          #"href": flavor_ref,
+                      #},
+                      #{
+                          #"rel": "bookmark",
+                          #"href": flavor_bookmark,
+                      #},
+                  #],
+                },
+                "addresses": {
+                    "public": [
+                        {
+                            "version": 4,
+                            "addr": public[0],
+                        },
+                    ],
+                    "private":[
+                        {
+                            "version": 4,
+                            "addr": private,
+                        },
+                    ],
+                },
+                "metadata": {
+                    "seq": "1",
+                },
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
 
-        expected_links = [
-            {
-                "rel": "self",
-                "href": "http://localhost/v1.1/servers/1",
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/servers/1",
-            },
-        ]
-
-        self.assertEqual(res_dict['server']['links'], expected_links)
+        self.assertDictEqual(res_dict, expected_server)
 
     def test_get_server_by_id_with_addresses_xml(self):
         private = "192.168.0.3"

@@ -223,3 +223,15 @@ class MiscFunctionsTest(test.TestCase):
         self.assertRaises(ValueError,
                           common.get_id_from_href,
                           fixture)
+
+    def test_get_uuid_from_href(self):
+        fixture = 'http://www.testsite.com/dir/45'
+        actual = common.get_uuid_from_href(fixture)
+        expected = '45'
+        self.assertEqual(actual, expected)
+
+    def test_get_uuid_from_href_bad_request(self):
+        fixture = 'http://'
+        self.assertRaises(ValueError,
+                          common.get_uuid_from_href,
+                          fixture)
