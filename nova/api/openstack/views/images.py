@@ -98,7 +98,20 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_server(self, image, image_obj):
         try:
-            image['serverRef'] = image_obj['properties']['instance_ref']
+            serverRef = image_obj['properties']['instance_ref']
+            image['server'] = {
+                "id": common.get_id_from_href(serverRef),
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": serverRef,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": common.remove_version_from_href(serverRef),
+                    },
+                ]
+            }
         except KeyError:
             return
 
@@ -108,17 +121,16 @@ class ViewBuilderV11(ViewBuilder):
         href = self.generate_href(image_obj["id"])
         bookmark = self.generate_bookmark(image_obj["id"])
 
-        if detail:
-            image["metadata"] = image_obj.get("properties", {})
-
         image["links"] = [{
             "rel": "self",
             "href": href,
-        },
-        {
-            "rel": "bookmark",
-            "href": bookmark,
         }]
+
+        if detail:
+            image["metadata"] = image_obj.get("properties", {})
+            image["links"].append({"rel": "bookmark",
+                                   "href": bookmark,
+            })
 
         return image
 
