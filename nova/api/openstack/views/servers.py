@@ -163,8 +163,19 @@ class ViewBuilderV11(ViewBuilder):
         if "instance_type" in dict(inst):
             flavor_id = inst["instance_type"]['flavorid']
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
+            flavor_bookmark = self.flavor_builder.generate_bookmark(flavor_id)
             response["flavor"] = {
                 "id": common.get_uuid_from_href(flavor_ref),
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": flavor_ref,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": flavor_bookmark,
+                    },
+                ]
             }
 
     def _build_extra(self, response, inst):

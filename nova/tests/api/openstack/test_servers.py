@@ -124,11 +124,12 @@ def instance_addresses(context, instance_id):
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
                   host=None, power_state=0, reservation_id="",
-                  uuid=FAKE_UUID, image_ref="10", flavor_ref="1"):
+                  uuid=FAKE_UUID, image_ref="10", flavor_id="1"):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
-    inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_ref))
+    
+    inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
 
     if public_addresses is None:
         public_addresses = list()
@@ -280,8 +281,8 @@ class ServersTest(test.TestCase):
         self.maxDiff = None
         image_ref = "http://localhost/v1.1/images/10"
         image_bookmark = "http://localhost/images/10"
-        #flavor_ref = "http://localhost/v1.1/flavors/1"
-        flavor_ref = "1"
+        flavor_ref = "http://localhost/v1.1/flavors/1"
+        flavor_id = "1"
         flavor_bookmark = "http://localhost/flavors/1"
         private = "192.168.0.3"
         public = ["1.2.3.4"]
@@ -292,7 +293,7 @@ class ServersTest(test.TestCase):
                                   public_addresses=public, 
                                   power_state=0,
                                   image_ref=image_ref,
-                                  flavor_ref=flavor_ref,
+                                  flavor_id=flavor_id,
                                   )
         self.stubs.Set(nova.db.api, 'instance_get', _return_server)
 
@@ -322,16 +323,16 @@ class ServersTest(test.TestCase):
                 },
                 "flavor": {
                     "id": "1",
-                  #"links": [
-                      #{
-                          #"rel": "self",
-                          #"href": flavor_ref,
-                      #},
-                      #{
-                          #"rel": "bookmark",
-                          #"href": flavor_bookmark,
-                      #},
-                  #],
+                  "links": [
+                      {
+                          "rel": "self",
+                          "href": flavor_ref,
+                      },
+                      {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
                 },
                 "addresses": {
                     "public": [
