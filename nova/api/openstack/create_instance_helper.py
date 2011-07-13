@@ -162,7 +162,8 @@ class CreateInstanceHelper(object):
             msg = _("Can not find requested image")
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
         except rpc.RemoteError as err:
-            msg = _("%(err.exc_type)s:%(err.value)s")
+            msg = "%(err_type)s: %(err_msg)s" % \
+                    {'err_type': err.exc_type, 'err_msg': err.value}
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
         # Let the caller deal with unhandled exceptions.
