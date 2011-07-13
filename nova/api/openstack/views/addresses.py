@@ -67,4 +67,3 @@ class ViewBuilderV11(ViewBuilder):
             ip = {'addr': fixed_ip['address'], 'version': 4}
             fixed_ips.append(ip)
         return fixed_ips
-

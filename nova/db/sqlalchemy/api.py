@@ -132,8 +132,8 @@ def require_instance_exists(f):
     return wrapper
 
 
-
 ###################
+
 
 @require_admin_context
 def service_destroy(context, service_id):

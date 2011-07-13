@@ -84,6 +84,12 @@ def return_server_with_addresses(private, public):
     return _return_server
 
 
+def return_server_with_interfaces(interfaces):
+    def _return_server(context, id):
+        return stub_instance(id, interfaces=interfaces)
+    return _return_server
+
+
 def return_server_with_power_state(power_state):
     def _return_server(context, id):
         return stub_instance(id, power_state=power_state)
@@ -136,9 +142,12 @@ def instance_addresses(context, instance_id):
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
                   host=None, power_state=0, reservation_id="",
-                  uuid=FAKE_UUID):
+                  uuid=FAKE_UUID, interfaces=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
+
+    if interfaces is None:
+        interfaces = []
 
     inst_type = instance_types.get_instance_type_by_flavor_id(1)
 
@@ -183,7 +192,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "display_description": "",
         "locked": False,
         "metadata": metadata,
-        "uuid": uuid}
+        "uuid": uuid,
+        "virtual_interfaces": interfaces}
 
     instance["fixed_ips"] = {
         "address": private_address,
@@ -445,12 +455,8 @@ class ServersTest(test.TestCase):
                 ],
             },
         ]
-
-        _return_vifs = return_virtual_interface_by_instance(interfaces)
-        self.stubs.Set(nova.db.api,
-                       'virtual_interface_get_by_instance',
-                       _return_vifs)
-
+        new_return_server = return_server_with_interfaces(interfaces)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
@@ -932,13 +938,13 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
         self.assertEqual(flavor_ref, server['flavorRef'])
         self.assertEqual(image_href, server['imageRef'])
-        self.assertEqual(res.status_int, 200)
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()

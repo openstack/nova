@@ -489,13 +489,7 @@ class ControllerV11(Controller):
         builder = nova.api.openstack.views.servers.ViewBuilderV11(
             addresses_builder, flavor_builder, image_builder, base_url)
 
-        context = req.environ['nova.context']
-        interfaces = db.api.virtual_interface_get_by_instance(context,
-                                                              instance['id'])
-        _instance = dict(instance)
-        _instance['virtual_interfaces'] = interfaces
-
-        return builder.build(_instance, is_detail=is_detail)
+        return builder.build(instance, is_detail=is_detail)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']
