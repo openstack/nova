@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# pylint: disable=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -18,44 +17,48 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Starter script for Nova API."""
+"""Starter script for Nova API.
 
-import gettext
+Starts both the EC2 and OpenStack APIs in separate processes.
+
+"""
+
 import os
+import signal
 import sys
 
-# If ../nova/__init__.py exists, add ../ to Python search path, so that
-# it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                   os.pardir,
-                                   os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(
+        sys.argv[0]), os.pardir, os.pardir))
+if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
     sys.path.insert(0, possible_topdir)
 
-gettext.install('nova', unicode=1)
+import nova.service
+import nova.utils
 
 from nova import flags
-from nova import log as logging
-from nova import service
-from nova import utils
-from nova import version
-from nova import wsgi
 
-
-LOG = logging.getLogger('nova.api')
 
 FLAGS = flags.FLAGS
 
-if __name__ == '__main__':
-    utils.default_flagfile()
-    FLAGS(sys.argv)
-    logging.setup()
-    LOG.audit(_("Starting nova-api node (version %s)"),
-              version.version_string_with_vcs())
-    LOG.debug(_("Full set of FLAGS:"))
-    for flag in FLAGS:
-        flag_get = FLAGS.get(flag, None)
-        LOG.debug("%(flag)s : %(flag_get)s" % locals())
 
-    service = service.serve_wsgi(service.ApiService)
-    service.wait()
+def main():
+    """Launch EC2 and OSAPI services."""
+    nova.utils.Bootstrapper.bootstrap_binary(sys.argv)
+
+    launcher = nova.service.Launcher()
+
+    for api in FLAGS.enabled_apis:
+        service = nova.service.WSGIService(api)
+        launcher.launch_service(service)
+
+    signal.signal(signal.SIGTERM, lambda *_: launcher.stop())
+
+    try:
+        launcher.wait()
+    except KeyboardInterrupt:
+        launcher.stop()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

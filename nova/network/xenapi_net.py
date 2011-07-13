@@ -34,7 +34,7 @@ LOG = logging.getLogger("nova.xenapi_net")
 FLAGS = flags.FLAGS
 
 
-def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
+def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
     """Create a vlan and bridge unless they already exist."""
     # Open xenapi session
     LOG.debug('ENTERING ensure_vlan_bridge in xenapi net')
@@ -56,14 +56,16 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
                        'other_config': {}}
         network_ref = session.call_xenapi('network.create', network_rec)
         # 2 - find PIF for VLAN
-        expr = "field 'device' = '%s' and \
-                field 'VLAN' = '-1'" % FLAGS.vlan_interface
+        # NOTE(salvatore-orlando): using double quotes inside single quotes
+        # as xapi filter only support tokens in double quotes
+        expr = 'field "device" = "%s" and \
+                field "VLAN" = "-1"' % bridge_interface
         pifs = session.call_xenapi('PIF.get_all_records_where', expr)
         pif_ref = None
         # Multiple PIF are ok: we are dealing with a pool
         if len(pifs) == 0:
             raise Exception(
-                  _('Found no PIF for device %s') % FLAGS.vlan_interface)
+                  _('Found no PIF for device %s') % bridge_interface)
         # 3 - create vlan for network
         for pif_ref in pifs.keys():
             session.call_xenapi('VLAN.create',

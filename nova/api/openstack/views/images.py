@@ -17,6 +17,8 @@
 
 import os.path
 
+from nova.api.openstack import common
+
 
 class ViewBuilder(object):
     """Base class for generating responses to OpenStack API image requests."""
@@ -46,13 +48,9 @@ class ViewBuilder(object):
         except KeyError:
             image['status'] = image['status'].upper()
 
-    def _build_server(self, image, instance_id):
+    def _build_server(self, image, image_obj):
         """Indicates that you must use a ViewBuilder subclass."""
-        raise NotImplementedError
-
-    def generate_server_ref(self, server_id):
-        """Return an href string pointing to this server."""
-        return os.path.join(self._url, "servers", str(server_id))
+        raise NotImplementedError()
 
     def generate_href(self, image_id):
         """Return an href string pointing to this object."""
@@ -60,8 +58,6 @@ class ViewBuilder(object):
 
     def build(self, image_obj, detail=False):
         """Return a standardized image structure for display by the API."""
-        properties = image_obj.get("properties", {})
-
         self._format_dates(image_obj)
 
         if "status" in image_obj:
@@ -72,11 +68,7 @@ class ViewBuilder(object):
             "name": image_obj.get("name"),
         }
 
-        if "instance_id" in properties:
-            try:
-                self._build_server(image, int(properties["instance_id"]))
-            except ValueError:
-                pass
+        self._build_server(image, image_obj)
 
         if detail:
             image.update({
@@ -94,20 +86,30 @@ class ViewBuilder(object):
 class ViewBuilderV10(ViewBuilder):
     """OpenStack API v1.0 Image Builder"""
 
-    def _build_server(self, image, instance_id):
-        image["serverId"] = instance_id
+    def _build_server(self, image, image_obj):
+        try:
+            image['serverId'] = int(image_obj['properties']['instance_id'])
+        except (KeyError, ValueError):
+            pass
 
 
 class ViewBuilderV11(ViewBuilder):
     """OpenStack API v1.1 Image Builder"""
 
-    def _build_server(self, image, instance_id):
-        image["serverRef"] = self.generate_server_ref(instance_id)
+    def _build_server(self, image, image_obj):
+        try:
+            image['serverRef'] = image_obj['properties']['instance_ref']
+        except KeyError:
+            return
 
     def build(self, image_obj, detail=False):
         """Return a standardized image structure for display by the API."""
         image = ViewBuilder.build(self, image_obj, detail)
         href = self.generate_href(image_obj["id"])
+        bookmark = self.generate_bookmark(image_obj["id"])
+
+        if detail:
+            image["metadata"] = image_obj.get("properties", {})
 
         image["links"] = [{
             "rel": "self",
@@ -115,13 +117,12 @@ class ViewBuilderV11(ViewBuilder):
         },
         {
             "rel": "bookmark",
-            "type": "application/json",
-            "href": href,
-        },
-        {
-            "rel": "bookmark",
-            "type": "application/xml",
-            "href": href,
+            "href": bookmark,
         }]
 
         return image
+
+    def generate_bookmark(self, image_id):
+        """Create an url that refers to a specific flavor id."""
+        return os.path.join(common.remove_version_from_href(self._url),
+            "images", str(image_id))

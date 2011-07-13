@@ -100,6 +100,11 @@ class OBJECT_CLASS_VIOLATION(Exception):  # pylint: disable=C0103
     pass
 
 
+class SERVER_DOWN(Exception):  # pylint: disable=C0103
+    """Duplicate exception class from real LDAP module."""
+    pass
+
+
 def initialize(_uri):
     """Opens a fake connection with an LDAP server."""
     return FakeLDAP()
@@ -202,25 +207,38 @@ def _to_json(unencoded):
     return json.dumps(list(unencoded))
 
 
+server_fail = False
+
+
 class FakeLDAP(object):
     """Fake LDAP connection."""
 
     def simple_bind_s(self, dn, password):
         """This method is ignored, but provided for compatibility."""
+        if server_fail:
+            raise SERVER_DOWN
         pass
 
     def unbind_s(self):
         """This method is ignored, but provided for compatibility."""
+        if server_fail:
+            raise SERVER_DOWN
         pass
 
     def add_s(self, dn, attr):
         """Add an object with the specified attributes at dn."""
+        if server_fail:
+            raise SERVER_DOWN
+
         key = "%s%s" % (self.__prefix, dn)
         value_dict = dict([(k, _to_json(v)) for k, v in attr])
         Store.instance().hmset(key, value_dict)
 
     def delete_s(self, dn):
         """Remove the ldap object at specified dn."""
+        if server_fail:
+            raise SERVER_DOWN
+
         Store.instance().delete("%s%s" % (self.__prefix, dn))
 
     def modify_s(self, dn, attrs):
@@ -232,6 +250,9 @@ class FakeLDAP(object):
             ([MOD_ADD | MOD_DELETE | MOD_REPACE], attribute, value)
 
         """
+        if server_fail:
+            raise SERVER_DOWN
+
         store = Store.instance()
         key = "%s%s" % (self.__prefix, dn)
 
@@ -255,6 +276,9 @@ class FakeLDAP(object):
         fields -- fields to return. Returns all fields if not specified
 
         """
+        if server_fail:
+            raise SERVER_DOWN
+
         if scope != SCOPE_BASE and scope != SCOPE_SUBTREE:
             raise NotImplementedError(str(scope))
         store = Store.instance()

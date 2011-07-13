@@ -42,12 +42,15 @@ class ViewBuilder(object):
 
     def build(self, inst, is_detail):
         """Return a dict that represenst a server."""
-        if is_detail:
-            server = self._build_detail(inst)
+        if inst.get('_is_precooked', False):
+            server = dict(server=inst)
         else:
-            server = self._build_simple(inst)
+            if is_detail:
+                server = self._build_detail(inst)
+            else:
+                server = self._build_simple(inst)
 
-        self._build_extra(server, inst)
+            self._build_extra(server, inst)
 
         return server
 
@@ -72,13 +75,14 @@ class ViewBuilder(object):
         }
 
         inst_dict = {
-            'id': int(inst['id']),
+            'id': inst['id'],
             'name': inst['display_name'],
             'addresses': self.addresses_builder.build(inst),
             'status': power_mapping[inst.get('state')]}
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
+
         if compute_api.has_finished_migration(ctxt, inst['id']):
             inst_dict['status'] = 'RESIZE-CONFIRM'
 
@@ -95,6 +99,7 @@ class ViewBuilder(object):
         self._build_image(inst_dict, inst)
         self._build_flavor(inst_dict, inst)
 
+        inst_dict['uuid'] = inst['uuid']
         return dict(server=inst_dict)
 
     def _build_image(self, response, inst):
@@ -151,6 +156,7 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
+        bookmark = self.generate_bookmark(inst["id"])
 
         links = [
             {
@@ -159,13 +165,7 @@ class ViewBuilderV11(ViewBuilder):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": href,
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": href,
+                "href": bookmark,
             },
         ]
 
@@ -174,3 +174,8 @@ class ViewBuilderV11(ViewBuilder):
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""
         return os.path.join(self.base_url, "servers", str(server_id))
+
+    def generate_bookmark(self, server_id):
+        """Create an url that refers to a specific flavor id."""
+        return os.path.join(common.remove_version_from_href(self.base_url),
+            "servers", str(server_id))

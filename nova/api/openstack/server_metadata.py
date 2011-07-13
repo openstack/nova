@@ -18,9 +18,10 @@
 from webob import exc
 
 from nova import compute
-from nova import quota
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
+from nova import exception
+from nova import quota
 
 
 class Controller(object):
@@ -37,23 +38,39 @@ class Controller(object):
             meta_dict[key] = value
         return dict(metadata=meta_dict)
 
+    def _check_body(self, body):
+        if body == None or body == "":
+            expl = _('No Request Body')
+            raise exc.HTTPBadRequest(explanation=expl)
+
     def index(self, req, server_id):
         """ Returns the list of metadata for a given instance """
         context = req.environ['nova.context']
-        return self._get_metadata(context, server_id)
+        try:
+            return self._get_metadata(context, server_id)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
 
     def create(self, req, server_id, body):
+        self._check_body(body)
         context = req.environ['nova.context']
         metadata = body.get('metadata')
         try:
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
                                                                 metadata)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
+
         except quota.QuotaError as error:
             self._handle_quota_error(error)
-        return req.body
+
+        return body
 
     def update(self, req, server_id, id, body):
+        self._check_body(body)
         context = req.environ['nova.context']
         if not id in body:
             expl = _('Request body and URI mismatch')
@@ -65,24 +82,38 @@ class Controller(object):
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
                                                                 body)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
+
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
-        return req.body
+        return body
 
     def show(self, req, server_id, id):
         """ Return a single metadata item """
         context = req.environ['nova.context']
-        data = self._get_metadata(context, server_id)
-        if id in data['metadata']:
+        try:
+            data = self._get_metadata(context, server_id)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
+
+        try:
             return {id: data['metadata'][id]}
-        else:
-            return faults.Fault(exc.HTTPNotFound())
+        except KeyError:
+            msg = _("metadata item %s was not found" % (id))
+            raise exc.HTTPNotFound(explanation=msg)
 
     def delete(self, req, server_id, id):
         """ Deletes an existing metadata """
         context = req.environ['nova.context']
-        self.compute_api.delete_instance_metadata(context, server_id, id)
+        try:
+            self.compute_api.delete_instance_metadata(context, server_id, id)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
 
     def _handle_quota_error(self, error):
         """Reraise quota errors as api-specific http exceptions."""
@@ -92,8 +123,10 @@ class Controller(object):
 
 
 def create_resource():
-    serializers = {
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11),
     }
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(Controller(), serializer=serializer)

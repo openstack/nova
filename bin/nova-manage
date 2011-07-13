@@ -56,6 +56,7 @@
 import gettext
 import glob
 import json
+import netaddr
 import os
 import sys
 import time
@@ -98,7 +99,6 @@ flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
 flags.DECLARE('gateway_v6', 'nova.network.manager')
-flags.DECLARE('images_path', 'nova.image.local')
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
@@ -184,17 +184,23 @@ class VpnCommands(object):
     def change(self, project_id, ip, port):
         """Change the ip and port for a vpn.
 
+        this will update all networks associated with a project
+        not sure if that's the desired behavior or not, patches accepted
+
         args: project, ip, port"""
+        # TODO(tr3buchet): perhaps this shouldn't update all networks
+        # associated with a project in the future
         project = self.manager.get_project(project_id)
         if not project:
             print 'No project %s' % (project_id)
             return
-        admin = context.get_admin_context()
-        network_ref = db.project_get_network(admin, project_id)
-        db.network_update(admin,
-                          network_ref['id'],
-                          {'vpn_public_address': ip,
-                           'vpn_public_port': int(port)})
+        admin_context = context.get_admin_context()
+        networks = db.project_get_networks(admin_context, project_id)
+        for network in networks:
+            db.network_update(admin_context,
+                              network['id'],
+                              {'vpn_public_address': ip,
+                               'vpn_public_port': int(port)})
 
 
 class ShellCommands(object):
@@ -274,6 +280,11 @@ class RoleCommands(object):
         """adds role to user
         if project is specified, adds project specific role
         arguments: user, role [project]"""
+        if project:
+            projobj = self.manager.get_project(project)
+            if not projobj.has_member(user):
+                print "%s not a member of %s" % (user, project)
+                return
         self.manager.add_role(user, role, project)
 
     @args('--user', dest="user", metavar='<user name>', help='User name')
@@ -497,12 +508,13 @@ class ProjectCommands(object):
     def scrub(self, project_id):
         """Deletes data associated with project
         arguments: project_id"""
-        ctxt = context.get_admin_context()
-        network_ref = db.project_get_network(ctxt, project_id)
-        db.network_disassociate(ctxt, network_ref['id'])
-        groups = db.security_group_get_by_project(ctxt, project_id)
+        admin_context = context.get_admin_context()
+        networks = db.project_get_networks(admin_context, project_id)
+        for network in networks:
+            db.network_disassociate(admin_context, network['id'])
+        groups = db.security_group_get_by_project(admin_context, project_id)
         for group in groups:
-            db.security_group_destroy(ctxt, group['id'])
+            db.security_group_destroy(admin_context, group['id'])
 
     @args('--project', dest="project_id", metavar='<Project name>', help='Project name')
     @args('--user', dest="user_id", metavar='<name>', help='User name')
@@ -560,7 +572,7 @@ class FixedIpCommands(object):
                 instance = fixed_ip['instance']
                 hostname = instance['hostname']
                 host = instance['host']
-                mac_address = instance['mac_address']
+                mac_address = fixed_ip['mac_address']['address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
                     fixed_ip['network']['cidr'],
                     fixed_ip['address'],
@@ -570,28 +582,27 @@ class FixedIpCommands(object):
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
-    @args('--host', dest="host", metavar='<host>', help='Host')
     @args('--ip_range', dest="range", metavar='<range>', help='IP range')
-    def create(self, host, range):
-        """Creates floating ips for host by range
-        arguments: host ip_range"""
-        for address in IPy.IP(range):
+    def create(self, range):
+        """Creates floating ips for zone by range
+        arguments: ip_range"""
+        for address in netaddr.IPNetwork(range):
             db.floating_ip_create(context.get_admin_context(),
-                                  {'address': str(address),
-                                   'host': host})
+                                  {'address': str(address)})
 
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     def delete(self, ip_range):
         """Deletes floating ips by range
         arguments: range"""
-        for address in IPy.IP(ip_range):
+        for address in netaddr.IPNetwork(ip_range):
             db.floating_ip_destroy(context.get_admin_context(),
                                    str(address))
 
     @args('--host', dest="host", metavar='<host>', help='Host')
     def list(self, host=None):
         """Lists all floating ips (optionally by host)
-        arguments: [host]"""
+        arguments: [host]
+        Note: if host is given, only active floating IPs are returned"""
         ctxt = context.get_admin_context()
         if host is None:
             floating_ips = db.floating_ip_get_all(ctxt)
@@ -609,6 +620,7 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
+    @args('--label', dest="label", metavar='<label>', help='Label (ex: public)')
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>', help='Network')
     @args('--num_networks', dest="num_networks", metavar='<number>', help='How many networks create')
     @args('--network_size', dest="network_size", metavar='<number>', help='How many hosts in network')
@@ -616,12 +628,25 @@ class NetworkCommands(object):
     @args('--vpn', dest="vpn_start", help='vpn start')
     @args('--fixed_range_v6', dest="fixed_range_v6", help='fixed ipv6 range')
     @args('--gateway_v6', dest="gateway_v6", help='ipv6 gateway')
-    @args('--project', dest="project_id", metavar='<Project name>', help='Project for network')
-    def create(self, fixed_range=None, num_networks=None, network_size=None,
-            vlan_start=None, vpn_start=None, fixed_range_v6=None,
-            gateway_v6=None, label='public'):
-        """Creates fixed ips for host by range"""
-
+    @args('--flat_network_bridge', dest="flat_network_bridge", metavar='<flat network bridge>', help='Flat_network_bridge')
+    @args('--bridge', dest="bridge_interface", metavar='<bridge interface>', help='Bridge_interface')
+    def create(self, label=None, fixed_range=None, num_networks=None,
+               network_size=None, vlan_start=None,
+               vpn_start=None, fixed_range_v6=None, gateway_v6=None,
+               flat_network_bridge=None, bridge_interface=None):
+        """Creates fixed ips for host by range
+        arguments: label, fixed_range, [num_networks=FLAG],
+                   [network_size=FLAG], [vlan_start=FLAG],
+                   [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
+                   [flat_network_bridge=FLAG], [bridge_interface=FLAG]
+        If you wish to use a later argument fill in the gaps with 0s
+        Ex: network create private 10.0.0.0/8 1 15 0 0 0 0 xenbr1 eth1
+            network create private 10.0.0.0/8 1 15
+        """
+        if not label:
+            msg = _('a label (ex: public) is required to create networks.')
+            print msg
+            raise TypeError(msg)
         if not fixed_range:
             msg = _('Fixed range in the form of 10.0.0.0/8 is '
                     'required to create networks.')
@@ -637,11 +662,17 @@ class NetworkCommands(object):
             vpn_start = FLAGS.vpn_start
         if not fixed_range_v6:
             fixed_range_v6 = FLAGS.fixed_range_v6
+        if not flat_network_bridge:
+            flat_network_bridge = FLAGS.flat_network_bridge
+        if not bridge_interface:
+            bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
         if not gateway_v6:
             gateway_v6 = FLAGS.gateway_v6
         net_manager = utils.import_object(FLAGS.network_manager)
+
         try:
             net_manager.create_networks(context.get_admin_context(),
+                                        label=label,
                                         cidr=fixed_range,
                                         num_networks=int(num_networks),
                                         network_size=int(network_size),
@@ -649,7 +680,8 @@ class NetworkCommands(object):
                                         vpn_start=int(vpn_start),
                                         cidr_v6=fixed_range_v6,
                                         gateway_v6=gateway_v6,
-                                        label=label)
+                                        bridge=flat_network_bridge,
+                                        bridge_interface=bridge_interface)
         except ValueError, e:
             print e
             raise e
@@ -689,7 +721,7 @@ class VmCommands(object):
         :param host: show all instance on specified host.
         :param instance: show specificed instance.
         """
-        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+        print "%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s" \
               "  %-10s %-10s %-10s %-5s" % (
             _('instance'),
             _('node'),
@@ -711,14 +743,14 @@ class VmCommands(object):
                            context.get_admin_context(), host)
 
         for instance in instances:
-            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+            print "%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s" \
                   "  %-10s %-10s %-10s %-5d" % (
                 instance['hostname'],
                 instance['host'],
-                instance['instance_type'],
+                instance['instance_type'].name,
                 instance['state_description'],
                 instance['launched_at'],
-                instance['image_id'],
+                instance['image_ref'],
                 instance['kernel_id'],
                 instance['ramdisk_id'],
                 instance['project_id'],
@@ -971,7 +1003,7 @@ class InstanceTypeCommands(object):
         try:
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
-        except exception.InvalidInputException:
+        except exception.InvalidInput, e:
             print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
@@ -1182,16 +1214,6 @@ class ImageCommands(object):
         machine_images = {}
         other_images = {}
         directory = os.path.abspath(directory)
-        # NOTE(vish): If we're importing from the images path dir, attempt
-        #             to move the files out of the way before importing
-        #             so we aren't writing to the same directory. This
-        #             may fail if the dir was a mointpoint.
-        if (FLAGS.image_service == 'nova.image.local.LocalImageService'
-            and directory == os.path.abspath(FLAGS.images_path)):
-            new_dir = "%s_bak" % directory
-            os.rename(directory, new_dir)
-            os.mkdir(directory)
-            directory = new_dir
         for fn in glob.glob("%s/*/info.json" % directory):
             try:
                 image_path = os.path.join(fn.rpartition('/')[0], 'image')
@@ -1208,6 +1230,70 @@ class ImageCommands(object):
         self._convert_images(machine_images)
 
 
+class AgentBuildCommands(object):
+    """Class for managing agent builds."""
+
+    def create(self, os, architecture, version, url, md5hash,
+                hypervisor='xen'):
+        """Creates a new agent build.
+        arguments: os architecture version url md5hash [hypervisor='xen']"""
+        ctxt = context.get_admin_context()
+        agent_build = db.agent_build_create(ctxt,
+                                            {'hypervisor': hypervisor,
+                                             'os': os,
+                                             'architecture': architecture,
+                                             'version': version,
+                                             'url': url,
+                                             'md5hash': md5hash})
+
+    def delete(self, os, architecture, hypervisor='xen'):
+        """Deletes an existing agent build.
+        arguments: os architecture [hypervisor='xen']"""
+        ctxt = context.get_admin_context()
+        agent_build_ref = db.agent_build_get_by_triple(ctxt,
+                                  hypervisor, os, architecture)
+        db.agent_build_destroy(ctxt, agent_build_ref['id'])
+
+    def list(self, hypervisor=None):
+        """Lists all agent builds.
+        arguments: <none>"""
+        fmt = "%-10s  %-8s  %12s  %s"
+        ctxt = context.get_admin_context()
+        by_hypervisor = {}
+        for agent_build in db.agent_build_get_all(ctxt):
+            buildlist = by_hypervisor.get(agent_build.hypervisor)
+            if not buildlist:
+                buildlist = by_hypervisor[agent_build.hypervisor] = []
+
+            buildlist.append(agent_build)
+
+        for key, buildlist in by_hypervisor.iteritems():
+            if hypervisor and key != hypervisor:
+                continue
+
+            print "Hypervisor: %s" % key
+            print fmt % ('-' * 10, '-' * 8, '-' * 12, '-' * 32)
+            for agent_build in buildlist:
+                print fmt % (agent_build.os, agent_build.architecture,
+                             agent_build.version, agent_build.md5hash)
+                print '    %s' % agent_build.url
+
+            print
+
+    def modify(self, os, architecture, version, url, md5hash,
+               hypervisor='xen'):
+        """Update an existing agent build.
+        arguments: os architecture version url md5hash [hypervisor='xen']
+        """
+        ctxt = context.get_admin_context()
+        agent_build_ref = db.agent_build_get_by_triple(ctxt,
+                                  hypervisor, os, architecture)
+        db.agent_build_update(ctxt, agent_build_ref['id'],
+                              {'version': version,
+                               'url': url,
+                               'md5hash': md5hash})
+
+
 class ConfigCommands(object):
     """Class for exposing the flags defined by flag_file(s)."""
 
@@ -1220,6 +1306,7 @@ class ConfigCommands(object):
 
 CATEGORIES = [
     ('account', AccountCommands),
+    ('agent', AgentBuildCommands),
     ('config', ConfigCommands),
     ('db', DbCommands),
     ('fixed', FixedIpCommands),

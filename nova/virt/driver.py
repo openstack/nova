@@ -61,7 +61,7 @@ class ComputeDriver(object):
         """Return a list of InstanceInfo for all registered VMs"""
         raise NotImplementedError()
 
-    def spawn(self, instance, network_info=None):
+    def spawn(self, instance, network_info=None, block_device_mapping=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
@@ -191,9 +191,13 @@ class ComputeDriver(object):
     def refresh_security_group_members(self, security_group_id):
         raise NotImplementedError()
 
+    def refresh_provider_fw_rules(self, security_group_id):
+        """See: nova/virt/fake.py for docs."""
+        raise NotImplementedError()
+
     def reset_network(self, instance):
         """reset networking for specified instance"""
-        raise NotImplementedError()
+        pass
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
         """Setting up filtering rules and waiting for its completion.
@@ -234,10 +238,18 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def inject_network_info(self, instance):
-        """inject network info for specified instance"""
+    def agent_update(self, instance, url, md5hash):
+        """Update agent on the VM instance."""
         raise NotImplementedError()
+
+    def inject_network_info(self, instance, nw_info):
+        """inject network info for specified instance"""
+        pass
 
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
+        raise NotImplementedError()
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
         raise NotImplementedError()

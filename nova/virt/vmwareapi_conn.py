@@ -124,7 +124,7 @@ class VMWareESXConnection(driver.ComputeDriver):
         """List VM instances."""
         return self._vmops.list_instances()
 
-    def spawn(self, instance):
+    def spawn(self, instance, network_info=None, block_device_mapping=None):
         """Create VM instance."""
         self._vmops.spawn(instance)
 
@@ -189,6 +189,10 @@ class VMWareESXConnection(driver.ComputeDriver):
     def update_available_resource(self, ctxt, host):
         """This method is supported only by libvirt."""
         return
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        pass
 
 
 class VMWareAPISession(object):

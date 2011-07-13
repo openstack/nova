@@ -17,24 +17,20 @@ import base64
 import traceback
 
 from webob import exc
-from xml.dom import minidom
 
 from nova import compute
 from nova import exception
 from nova import flags
-import nova.image
 from nova import log as logging
-from nova import quota
 from nova import utils
 from nova.api.openstack import common
+from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
 from nova.api.openstack import wsgi
-from nova.auth import manager as auth_manager
-from nova.compute import instance_types
 import nova.api.openstack
 from nova.scheduler import api as scheduler_api
 
@@ -48,14 +44,14 @@ class Controller(object):
 
     def __init__(self):
         self.compute_api = compute.API()
-        self._image_service = utils.import_object(FLAGS.image_service)
+        self.helper = helper.CreateInstanceHelper(self)
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
         try:
             servers = self._items(req, is_detail=False)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(str(err))
+            return exc.HTTPBadRequest(explanation=str(err))
         return servers
 
     def detail(self, req):
@@ -63,14 +59,8 @@ class Controller(object):
         try:
             servers = self._items(req, is_detail=True)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(str(err))
+            return exc.HTTPBadRequest(explanation=str(err))
         return servers
-
-    def _image_ref_from_req_data(self, data):
-        raise NotImplementedError()
-
-    def _flavor_id_from_req_data(self, data):
-        raise NotImplementedError()
 
     def _get_view_builder(self, req):
         raise NotImplementedError()
@@ -86,7 +76,17 @@ class Controller(object):
 
         builder - the response model builder
         """
-        instance_list = self.compute_api.get_all(req.environ['nova.context'])
+        query_str = req.str_GET
+        reservation_id = query_str.get('reservation_id')
+        project_id = query_str.get('project_id')
+        fixed_ip = query_str.get('fixed_ip')
+        recurse_zones = utils.bool_from_str(query_str.get('recurse_zones'))
+        instance_list = self.compute_api.get_all(
+                req.environ['nova.context'],
+                reservation_id=reservation_id,
+                project_id=project_id,
+                fixed_ip=fixed_ip,
+                recurse_zones=recurse_zones)
         limited_list = self._limit_items(instance_list, req)
         builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
@@ -104,138 +104,27 @@ class Controller(object):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-    @scheduler_api.redirect_handler
-    def delete(self, req, id):
-        """ Destroys a server """
-        try:
-            self.compute_api.delete(req.environ['nova.context'], id)
-        except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
-
     def create(self, req, body):
         """ Creates a new server for a given user """
-        if not body:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-
-        context = req.environ['nova.context']
-
-        password = self._get_server_admin_password(body['server'])
-
-        key_name = None
-        key_data = None
-        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
-        if key_pairs:
-            key_pair = key_pairs[0]
-            key_name = key_pair['name']
-            key_data = key_pair['public_key']
-
-        image_href = self._image_ref_from_req_data(body)
+        extra_values = None
+        result = None
         try:
-            image_service, image_id = nova.image.get_image_service(image_href)
-            kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
-                req, image_service, image_id)
-            images = set([str(x['id']) for x in image_service.index(context)])
-            assert str(image_id) in images
-        except:
-            msg = _("Cannot find requested image %s") % image_href
-            return faults.Fault(exc.HTTPBadRequest(msg))
+            extra_values, instances = self.helper.create_instance(
+                    req, body, self.compute_api.create)
+        except faults.Fault, f:
+            return f
 
-        personality = body['server'].get('personality')
-
-        injected_files = []
-        if personality:
-            injected_files = self._get_injected_files(personality)
-
-        flavor_id = self._flavor_id_from_req_data(body)
-
-        if not 'name' in body['server']:
-            msg = _("Server name is not defined")
-            return exc.HTTPBadRequest(msg)
-
-        zone_blob = body['server'].get('blob')
-        name = body['server']['name']
-        self._validate_server_name(name)
-        name = name.strip()
-
-        try:
-            inst_type = \
-                instance_types.get_instance_type_by_flavor_id(flavor_id)
-            (inst,) = self.compute_api.create(
-                context,
-                inst_type,
-                image_href,
-                kernel_id=kernel_id,
-                ramdisk_id=ramdisk_id,
-                display_name=name,
-                display_description=name,
-                key_name=key_name,
-                key_data=key_data,
-                metadata=body['server'].get('metadata', {}),
-                injected_files=injected_files,
-                admin_password=password,
-                zone_blob=zone_blob)
-        except quota.QuotaError as error:
-            self._handle_quota_error(error)
-        except exception.ImageNotFound as error:
-            msg = _("Can not find requested image")
-            return faults.Fault(exc.HTTPBadRequest(msg))
-
-        inst['instance_type'] = inst_type
-        inst['image_ref'] = image_href
+        # We can only return 1 instance via the API, if we happen to
+        # build more than one...  instances is a list, so we'll just
+        # use the first one..
+        inst = instances[0]
+        for key in ['instance_type', 'image_ref']:
+            inst[key] = extra_values[key]
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        server['server']['adminPass'] = password
+        server['server']['adminPass'] = extra_values['password']
         return server
-
-    def _get_injected_files(self, personality):
-        """
-        Create a list of injected files from the personality attribute
-
-        At this time, injected_files must be formatted as a list of
-        (file_path, file_content) pairs for compatibility with the
-        underlying compute service.
-        """
-        injected_files = []
-
-        for item in personality:
-            try:
-                path = item['path']
-                contents = item['contents']
-            except KeyError as key:
-                expl = _('Bad personality format: missing %s') % key
-                raise exc.HTTPBadRequest(explanation=expl)
-            except TypeError:
-                expl = _('Bad personality format')
-                raise exc.HTTPBadRequest(explanation=expl)
-            try:
-                contents = base64.b64decode(contents)
-            except TypeError:
-                expl = _('Personality content for %s cannot be decoded') % path
-                raise exc.HTTPBadRequest(explanation=expl)
-            injected_files.append((path, contents))
-        return injected_files
-
-    def _handle_quota_error(self, error):
-        """
-        Reraise quota errors as api-specific http exceptions
-        """
-        if error.code == "OnsetFileLimitExceeded":
-            expl = _("Personality file limit exceeded")
-            raise exc.HTTPBadRequest(explanation=expl)
-        if error.code == "OnsetFilePathLimitExceeded":
-            expl = _("Personality file path too long")
-            raise exc.HTTPBadRequest(explanation=expl)
-        if error.code == "OnsetFileContentLimitExceeded":
-            expl = _("Personality file content too long")
-            raise exc.HTTPBadRequest(explanation=expl)
-        # if the original error is okay, just reraise it
-        raise error
-
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        return utils.generate_password(16)
 
     @scheduler_api.redirect_handler
     def update(self, req, id, body):
@@ -251,7 +140,7 @@ class Controller(object):
 
         if 'name' in body['server']:
             name = body['server']['name']
-            self._validate_server_name(name)
+            self.helper._validate_server_name(name)
             update_dict['display_name'] = name.strip()
 
         self._parse_update(ctxt, id, body, update_dict)
@@ -262,15 +151,6 @@ class Controller(object):
             return faults.Fault(exc.HTTPNotFound())
 
         return exc.HTTPNoContent()
-
-    def _validate_server_name(self, value):
-        if not isinstance(value, basestring):
-            msg = _("Server name is not a string or unicode")
-            raise exc.HTTPBadRequest(msg)
-
-        if value.strip() == '':
-            msg = _("Server name is an empty string")
-            raise exc.HTTPBadRequest(msg)
 
     def _parse_update(self, context, id, inst_dict, update_dict):
         pass
@@ -287,7 +167,7 @@ class Controller(object):
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,
-            }
+            'migrate': self._action_migrate}
 
         for key in actions.keys():
             if key in body:
@@ -329,6 +209,14 @@ class Controller(object):
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
             return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def _action_migrate(self, input_dict, req, id):
+        try:
+            self.compute_api.resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in migrate %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
@@ -520,45 +408,18 @@ class Controller(object):
                 error=item.error))
         return dict(actions=actions)
 
-    def _get_kernel_ramdisk_from_image(self, req, image_service, image_id):
-        """Fetch an image from the ImageService, then if present, return the
-        associated kernel and ramdisk image IDs.
-        """
-        context = req.environ['nova.context']
-        image_meta = image_service.show(context, image_id)
-        # NOTE(sirp): extracted to a separate method to aid unit-testing, the
-        # new method doesn't need a request obj or an ImageService stub
-        return self._do_get_kernel_ramdisk_from_image(image_meta)
-
-    @staticmethod
-    def  _do_get_kernel_ramdisk_from_image(image_meta):
-        """Given an ImageService image_meta, return kernel and ramdisk image
-        ids if present.
-
-        This is only valid for `ami` style images.
-        """
-        image_id = image_meta['id']
-        if image_meta['status'] != 'active':
-            raise exception.ImageUnacceptable(image_id=image_id,
-                                              reason=_("status is not active"))
-
-        if image_meta.get('container_format') != 'ami':
-            return None, None
-
-        try:
-            kernel_id = image_meta['properties']['kernel_id']
-        except KeyError:
-            raise exception.KernelNotFoundForImage(image_id=image_id)
-
-        try:
-            ramdisk_id = image_meta['properties']['ramdisk_id']
-        except KeyError:
-            raise exception.RamdiskNotFoundForImage(image_id=image_id)
-
-        return kernel_id, ramdisk_id
-
 
 class ControllerV10(Controller):
+
+    @scheduler_api.redirect_handler
+    def delete(self, req, id):
+        """ Destroys a server """
+        try:
+            self.compute_api.delete(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
@@ -615,8 +476,21 @@ class ControllerV10(Controller):
         response.empty_body = True
         return response
 
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return self.helper._get_server_admin_password_old_style(server)
+
 
 class ControllerV11(Controller):
+
+    @scheduler_api.redirect_handler
+    def delete(self, req, id):
+        """ Destroys a server """
+        try:
+            self.compute_api.delete(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageRef']
 
@@ -639,11 +513,11 @@ class ControllerV11(Controller):
         if (not 'changePassword' in input_dict
             or not 'adminPass' in input_dict['changePassword']):
             msg = _("No adminPass was specified")
-            return exc.HTTPBadRequest(msg)
+            return exc.HTTPBadRequest(explanation=msg)
         password = input_dict['changePassword']['adminPass']
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
-            return exc.HTTPBadRequest(msg)
+            return exc.HTTPBadRequest(explanation=msg)
         self.compute_api.set_admin_password(context, id, password)
         return exc.HTTPAccepted()
 
@@ -724,92 +598,18 @@ class ControllerV11(Controller):
         response.empty_body = True
         return response
 
+    def get_default_xmlns(self, req):
+        return common.XML_NS_V11
+
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
-        password = server.get('adminPass')
-        if password is None:
-            return utils.generate_password(16)
-        if not isinstance(password, basestring) or password == '':
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(msg)
-        return password
+        return self.helper._get_server_admin_password_new_style(server)
 
 
-class ServerXMLDeserializer(wsgi.XMLDeserializer):
-    """
-    Deserializer to handle xml-formatted server create requests.
+class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
-    Handles standard server attributes as well as optional metadata
-    and personality attributes
-    """
-
-    def create(self, string):
-        """Deserialize an xml-formatted server create request"""
-        dom = minidom.parseString(string)
-        server = self._extract_server(dom)
-        return {'server': server}
-
-    def _extract_server(self, node):
-        """Marshal the server attribute of a parsed request"""
-        server = {}
-        server_node = self._find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
-            if server_node.getAttribute(attr):
-                server[attr] = server_node.getAttribute(attr)
-        metadata = self._extract_metadata(server_node)
-        if metadata is not None:
-            server["metadata"] = metadata
-        personality = self._extract_personality(server_node)
-        if personality is not None:
-            server["personality"] = personality
-        return server
-
-    def _extract_metadata(self, server_node):
-        """Marshal the metadata attribute of a parsed request"""
-        metadata_node = self._find_first_child_named(server_node, "metadata")
-        if metadata_node is None:
-            return None
-        metadata = {}
-        for meta_node in self._find_children_named(metadata_node, "meta"):
-            key = meta_node.getAttribute("key")
-            metadata[key] = self._extract_text(meta_node)
-        return metadata
-
-    def _extract_personality(self, server_node):
-        """Marshal the personality attribute of a parsed request"""
-        personality_node = \
-                self._find_first_child_named(server_node, "personality")
-        if personality_node is None:
-            return None
-        personality = []
-        for file_node in self._find_children_named(personality_node, "file"):
-            item = {}
-            if file_node.hasAttribute("path"):
-                item["path"] = file_node.getAttribute("path")
-            item["contents"] = self._extract_text(file_node)
-            personality.append(item)
-        return personality
-
-    def _find_first_child_named(self, parent, name):
-        """Search a nodes children for the first child with a given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                return node
-        return None
-
-    def _find_children_named(self, parent, name):
-        """Return all of a nodes children who have the given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                yield node
-
-    def _extract_text(self, node):
-        """Get the text field contained by the given node"""
-        if len(node.childNodes) == 1:
-            child = node.childNodes[0]
-            if child.nodeType == child.TEXT_NODE:
-                return child.nodeValue
-        return ""
+    def delete(self, response, data):
+        response.status_int = 204
 
 
 def create_resource(version='1.0'):
@@ -839,14 +639,18 @@ def create_resource(version='1.0'):
         '1.1': wsgi.XMLNS_V11,
     }[version]
 
-    serializers = {
+    headers_serializer = HeadersSerializer()
+
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
                                                   xmlns=xmlns),
     }
 
-    deserializers = {
-        'application/xml': ServerXMLDeserializer(),
+    body_deserializers = {
+        'application/xml': helper.ServerXMLDeserializer(),
     }
 
-    return wsgi.Resource(controller, serializers=serializers,
-                         deserializers=deserializers)
+    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
+    deserializer = wsgi.RequestDeserializer(body_deserializers)
+
+    return wsgi.Resource(controller, deserializer, serializer)

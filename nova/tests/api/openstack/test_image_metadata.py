@@ -19,10 +19,12 @@ import json
 import stubout
 import unittest
 import webob
+import xml.dom.minidom as minidom
 
 
 from nova import flags
 from nova.api import openstack
+from nova import test
 from nova.tests.api.openstack import fakes
 import nova.wsgi
 
@@ -30,13 +32,14 @@ import nova.wsgi
 FLAGS = flags.FLAGS
 
 
-class ImageMetaDataTest(unittest.TestCase):
+class ImageMetaDataTest(test.TestCase):
 
     IMAGE_FIXTURES = [
         {'status': 'active',
         'name': 'image1',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -52,6 +55,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'name': 'image2',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -67,6 +71,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'name': 'image3',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -103,7 +108,10 @@ class ImageMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
-        self.assertEqual('value1', res_dict['metadata']['key1'])
+        expected = self.IMAGE_FIXTURES[0]['properties']
+        self.assertEqual(len(expected), len(res_dict['metadata']))
+        for (key, value) in res_dict['metadata'].items():
+            self.assertEqual(value, res_dict['metadata'][key])
 
     def test_show(self):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
@@ -111,13 +119,14 @@ class ImageMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
-        self.assertEqual('value1', res_dict['key1'])
+        self.assertTrue('meta' in res_dict)
+        self.assertEqual(len(res_dict['meta']), 1)
+        self.assertEqual('value1', res_dict['meta']['key1'])
 
     def test_show_not_found(self):
         req = webob.Request.blank('/v1.1/images/1/meta/key9')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
         self.assertEqual(404, res.status_int)
 
     def test_create(self):
@@ -139,18 +148,29 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"key1": "zz"}'
+        req.body = '{"meta": {"key1": "zz"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
-        self.assertEqual('zz', res_dict['key1'])
+        self.assertTrue('meta' in res_dict)
+        self.assertEqual(len(res_dict['meta']), 1)
+        self.assertEqual('zz', res_dict['meta']['key1'])
+
+    def test_update_item_bad_body(self):
+        req = webob.Request.blank('/v1.1/images/1/meta/key1')
+        req.environ['api.version'] = '1.1'
+        req.method = 'PUT'
+        req.body = '{"key1": "zz"}'
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, res.status_int)
 
     def test_update_item_too_many_keys(self):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"key1": "value1", "key2": "value2"}'
+        req.body = '{"meta": {"key1": "value1", "key2": "value2"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
@@ -159,7 +179,7 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/bad')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"key1": "value1"}'
+        req.body = '{"meta": {"key1": "value1"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
@@ -195,7 +215,138 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/3/meta/blah')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"blah": "blah"}'
+        req.body = '{"meta": {"blah": "blah"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
+
+
+class ImageMetadataXMLSerializationTest(test.TestCase):
+
+    def test_index_xml(self):
+        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                'one': 'two',
+                'three': 'four',
+            },
+        }
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="three">
+                    four
+                </meta>
+                <meta key="one">
+                    two
+                </meta>
+            </metadata>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index_xml_null(self):
+        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                None: None,
+            },
+        }
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="None">
+                    None
+                </meta>
+            </metadata>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index_xml_unicode(self):
+        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                u'three': u'Jos\xe9',
+            },
+        }
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString(u"""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="three">
+                    Jos\xe9
+                </meta>
+            </metadata>
+        """.encode("UTF-8").replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_show_xml(self):
+        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
+        fixture = {
+            'meta': {
+                'one': 'two',
+            },
+        }
+        output = serializer.serialize(fixture, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <meta xmlns="http://docs.openstack.org/compute/api/v1.1" key="one">
+                two
+            </meta>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_update_item_xml(self):
+        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
+        fixture = {
+            'meta': {
+                'one': 'two',
+            },
+        }
+        output = serializer.serialize(fixture, 'update')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <meta xmlns="http://docs.openstack.org/compute/api/v1.1" key="one">
+                two
+            </meta>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_create_xml(self):
+        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                'key9': 'value9',
+                'key2': 'value2',
+                'key1': 'value1',
+            },
+        }
+        output = serializer.serialize(fixture, 'create')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="key2">
+                    value2
+                </meta>
+                <meta key="key9">
+                    value9
+                </meta>
+                <meta key="key1">
+                    value1
+                </meta>
+            </metadata>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())

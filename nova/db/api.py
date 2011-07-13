@@ -55,11 +55,6 @@ IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')
 
 
-class NoMoreAddresses(exception.Error):
-    """No more available addresses."""
-    pass
-
-
 class NoMoreBlades(exception.Error):
     """No more available blades."""
     pass
@@ -223,14 +218,17 @@ def certificate_update(context, certificate_id, values):
 
 ###################
 
+def floating_ip_get(context, id):
+    return IMPL.floating_ip_get(context, id)
 
-def floating_ip_allocate_address(context, host, project_id):
+
+def floating_ip_allocate_address(context, project_id):
     """Allocate free floating ip and return the address.
 
     Raises if one is not available.
 
     """
-    return IMPL.floating_ip_allocate_address(context, host, project_id)
+    return IMPL.floating_ip_allocate_address(context, project_id)
 
 
 def floating_ip_create(context, values):
@@ -321,6 +319,7 @@ def migration_get_by_instance_and_status(context, instance_id, status):
     return IMPL.migration_get_by_instance_and_status(context, instance_id,
             status)
 
+
 ####################
 
 
@@ -372,9 +371,14 @@ def fixed_ip_get_by_address(context, address):
     return IMPL.fixed_ip_get_by_address(context, address)
 
 
-def fixed_ip_get_all_by_instance(context, instance_id):
+def fixed_ip_get_by_instance(context, instance_id):
     """Get fixed ips by instance or raise if none exist."""
-    return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
+    return IMPL.fixed_ip_get_by_instance(context, instance_id)
+
+
+def fixed_ip_get_by_virtual_interface(context, vif_id):
+    """Get fixed ips by virtual interface or raise if none exist."""
+    return IMPL.fixed_ip_get_by_virtual_interface(context, vif_id)
 
 
 def fixed_ip_get_instance(context, address):
@@ -399,6 +403,62 @@ def fixed_ip_update(context, address, values):
 ####################
 
 
+def virtual_interface_create(context, values):
+    """Create a virtual interface record in the database."""
+    return IMPL.virtual_interface_create(context, values)
+
+
+def virtual_interface_update(context, vif_id, values):
+    """Update a virtual interface record in the database."""
+    return IMPL.virtual_interface_update(context, vif_id, values)
+
+
+def virtual_interface_get(context, vif_id):
+    """Gets a virtual interface from the table,"""
+    return IMPL.virtual_interface_get(context, vif_id)
+
+
+def virtual_interface_get_by_address(context, address):
+    """Gets a virtual interface from the table filtering on address."""
+    return IMPL.virtual_interface_get_by_address(context, address)
+
+
+def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
+    """Gets the virtual interface fixed_ip is associated with."""
+    return IMPL.virtual_interface_get_by_fixed_ip(context, fixed_ip_id)
+
+
+def virtual_interface_get_by_instance(context, instance_id):
+    """Gets all virtual_interfaces for instance."""
+    return IMPL.virtual_interface_get_by_instance(context, instance_id)
+
+
+def virtual_interface_get_by_instance_and_network(context, instance_id,
+                                                           network_id):
+    """Gets all virtual interfaces for instance."""
+    return IMPL.virtual_interface_get_by_instance_and_network(context,
+                                                              instance_id,
+                                                              network_id)
+
+
+def virtual_interface_get_by_network(context, network_id):
+    """Gets all virtual interfaces on network."""
+    return IMPL.virtual_interface_get_by_network(context, network_id)
+
+
+def virtual_interface_delete(context, vif_id):
+    """Delete virtual interface record from the database."""
+    return IMPL.virtual_interface_delete(context, vif_id)
+
+
+def virtual_interface_delete_by_instance(context, instance_id):
+    """Delete virtual interface records associated with instance."""
+    return IMPL.virtual_interface_delete_by_instance(context, instance_id)
+
+
+####################
+
+
 def instance_create(context, values):
     """Create an instance from the values dictionary."""
     return IMPL.instance_create(context, values)
@@ -414,6 +474,16 @@ def instance_destroy(context, instance_id):
     return IMPL.instance_destroy(context, instance_id)
 
 
+def instance_stop(context, instance_id):
+    """Stop the instance or raise if it does not exist."""
+    return IMPL.instance_stop(context, instance_id)
+
+
+def instance_get_by_uuid(context, uuid):
+    """Get an instance or raise if it does not exist."""
+    return IMPL.instance_get_by_uuid(context, uuid)
+
+
 def instance_get(context, instance_id):
     """Get an instance or raise if it does not exist."""
     return IMPL.instance_get(context, instance_id)
@@ -422,6 +492,11 @@ def instance_get(context, instance_id):
 def instance_get_all(context):
     """Get all instances."""
     return IMPL.instance_get_all(context)
+
+
+def instance_get_active_by_window(context, begin, end=None):
+    """Get instances active during a certain time window."""
+    return IMPL.instance_get_active_by_window(context, begin, end)
 
 
 def instance_get_all_by_user(context, user_id):
@@ -444,13 +519,13 @@ def instance_get_all_by_reservation(context, reservation_id):
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
 
 
-def instance_get_fixed_address(context, instance_id):
+def instance_get_fixed_addresses(context, instance_id):
     """Get the fixed ip address of an instance."""
-    return IMPL.instance_get_fixed_address(context, instance_id)
+    return IMPL.instance_get_fixed_addresses(context, instance_id)
 
 
-def instance_get_fixed_address_v6(context, instance_id):
-    return IMPL.instance_get_fixed_address_v6(context, instance_id)
+def instance_get_fixed_addresses_v6(context, instance_id):
+    return IMPL.instance_get_fixed_addresses_v6(context, instance_id)
 
 
 def instance_get_floating_address(context, instance_id):
@@ -545,9 +620,9 @@ def key_pair_get_all_by_user(context, user_id):
 ####################
 
 
-def network_associate(context, project_id):
+def network_associate(context, project_id, force=False):
     """Associate a free network to a project."""
-    return IMPL.network_associate(context, project_id)
+    return IMPL.network_associate(context, project_id, force)
 
 
 def network_count(context):
@@ -640,6 +715,11 @@ def network_get_all_by_instance(context, instance_id):
     return IMPL.network_get_all_by_instance(context, instance_id)
 
 
+def network_get_all_by_host(context, host):
+    """All networks for which the given host is the network host."""
+    return IMPL.network_get_all_by_host(context, host)
+
+
 def network_get_index(context, network_id):
     """Get non-conflicting index for network."""
     return IMPL.network_get_index(context, network_id)
@@ -667,23 +747,6 @@ def network_update(context, network_id, values):
 
     """
     return IMPL.network_update(context, network_id, values)
-
-
-###################
-
-
-def project_get_network(context, project_id, associate=True):
-    """Return the network associated with the project.
-
-    If associate is true, it will attempt to associate a new
-    network if one is not found, otherwise it returns None.
-
-    """
-    return IMPL.project_get_network(context, project_id, associate)
-
-
-def project_get_network_v6(context, project_id):
-    return IMPL.project_get_network_v6(context, project_id)
 
 
 ###################
@@ -920,6 +983,36 @@ def snapshot_update(context, snapshot_id, values):
 ####################
 
 
+def block_device_mapping_create(context, values):
+    """Create an entry of block device mapping"""
+    return IMPL.block_device_mapping_create(context, values)
+
+
+def block_device_mapping_update(context, bdm_id, values):
+    """Create an entry of block device mapping"""
+    return IMPL.block_device_mapping_update(context, bdm_id, values)
+
+
+def block_device_mapping_get_all_by_instance(context, instance_id):
+    """Get all block device mapping belonging to a instance"""
+    return IMPL.block_device_mapping_get_all_by_instance(context, instance_id)
+
+
+def block_device_mapping_destroy(context, bdm_id):
+    """Destroy the block device mapping."""
+    return IMPL.block_device_mapping_destroy(context, bdm_id)
+
+
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+                                                        volume_id):
+    """Destroy the block device mapping or raise if it does not exist."""
+    return IMPL.block_device_mapping_destroy_by_instance_and_volume(
+        context, instance_id, volume_id)
+
+
+####################
+
+
 def security_group_get_all(context):
     """Get all security groups."""
     return IMPL.security_group_get_all(context)
@@ -994,6 +1087,29 @@ def security_group_rule_destroy(context, security_group_rule_id):
 ###################
 
 
+def provider_fw_rule_create(context, rule):
+    """Add a firewall rule at the provider level (all hosts & instances)."""
+    return IMPL.provider_fw_rule_create(context, rule)
+
+
+def provider_fw_rule_get_all(context):
+    """Get all provider-level firewall rules."""
+    return IMPL.provider_fw_rule_get_all(context)
+
+
+def provider_fw_rule_get_all_by_cidr(context, cidr):
+    """Get all provider-level firewall rules."""
+    return IMPL.provider_fw_rule_get_all_by_cidr(context, cidr)
+
+
+def provider_fw_rule_destroy(context, rule_id):
+    """Delete a provider firewall rule from the database."""
+    return IMPL.provider_fw_rule_destroy(context, rule_id)
+
+
+###################
+
+
 def user_get(context, id):
     """Get user by id."""
     return IMPL.user_get(context, id)
@@ -1059,6 +1175,9 @@ def user_update(context, user_id, values):
     return IMPL.user_update(context, user_id, values)
 
 
+###################
+
+
 def project_get(context, id):
     """Get project by id."""
     return IMPL.project_get(context, id)
@@ -1099,15 +1218,21 @@ def project_delete(context, project_id):
     return IMPL.project_delete(context, project_id)
 
 
+def project_get_networks(context, project_id, associate=True):
+    """Return the network associated with the project.
+
+    If associate is true, it will attempt to associate a new
+    network if one is not found, otherwise it returns None.
+
+    """
+    return IMPL.project_get_networks(context, project_id, associate)
+
+
+def project_get_networks_v6(context, project_id):
+    return IMPL.project_get_networks_v6(context, project_id)
+
+
 ###################
-
-
-def host_get_networks(context, host):
-    """All networks for which the given host is the network host."""
-    return IMPL.host_get_networks(context, host)
-
-
-##################
 
 
 def console_pool_create(context, values):
@@ -1213,7 +1338,7 @@ def zone_create(context, values):
 
 def zone_update(context, zone_id, values):
     """Update a child Zone entry."""
-    return IMPL.zone_update(context, values)
+    return IMPL.zone_update(context, zone_id, values)
 
 
 def zone_delete(context, zone_id):
@@ -1247,3 +1372,53 @@ def instance_metadata_delete(context, instance_id, key):
 def instance_metadata_update_or_create(context, instance_id, metadata):
     """Create or update instance metadata."""
     IMPL.instance_metadata_update_or_create(context, instance_id, metadata)
+
+
+####################
+
+
+def agent_build_create(context, values):
+    """Create a new agent build entry."""
+    return IMPL.agent_build_create(context, values)
+
+
+def agent_build_get_by_triple(context, hypervisor, os, architecture):
+    """Get agent build by hypervisor/OS/architecture triple."""
+    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
+            architecture)
+
+
+def agent_build_get_all(context):
+    """Get all agent builds."""
+    return IMPL.agent_build_get_all(context)
+
+
+def agent_build_destroy(context, agent_update_id):
+    """Destroy agent build entry."""
+    IMPL.agent_build_destroy(context, agent_update_id)
+
+
+def agent_build_update(context, agent_build_id, values):
+    """Update agent build entry."""
+    IMPL.agent_build_update(context, agent_build_id, values)
+
+
+####################
+
+
+def instance_type_extra_specs_get(context, instance_type_id):
+    """Get all extra specs for an instance type."""
+    return IMPL.instance_type_extra_specs_get(context, instance_type_id)
+
+
+def instance_type_extra_specs_delete(context, instance_type_id, key):
+    """Delete the given extra specs item."""
+    IMPL.instance_type_extra_specs_delete(context, instance_type_id, key)
+
+
+def instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                               extra_specs):
+    """Create or update instance type extra specs. This adds or modifies the
+    key/value pairs specified in the extra specs dict argument"""
+    IMPL.instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                                    extra_specs)

@@ -56,6 +56,10 @@ class SchedulerManager(manager.Manager):
         """Poll child zones periodically to get status."""
         self.zone_manager.ping(context)
 
+    def get_host_list(self, context=None):
+        """Get a list of hosts from the ZoneManager."""
+        return self.zone_manager.get_host_list()
+
     def get_zone_list(self, context=None):
         """Get a list of zones from the ZoneManager."""
         return self.zone_manager.get_zone_list()
@@ -89,8 +93,8 @@ class SchedulerManager(manager.Manager):
             host = getattr(self.driver, driver_method)(elevated, *args,
                                                        **kwargs)
         except AttributeError, e:
-            LOG.exception(_("Driver Method %(driver_method)s missing: %(e)s")
-                                % locals())
+            LOG.warning(_("Driver Method %(driver_method)s missing: %(e)s."
+                            "Reverting to schedule()") % locals())
             host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
         if not host:
