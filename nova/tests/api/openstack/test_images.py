@@ -801,11 +801,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {'name': 'testname'}
-        image_service.index(
-            context, filters=filters).AndReturn([])
+        image_service.index(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images?name=testname')
+        request = webob.Request.blank('/v1.1/images?name=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
@@ -816,11 +814,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {'status': 'ACTIVE'}
-        image_service.index(
-            context, filters=filters).AndReturn([])
+        image_service.index(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images?status=ACTIVE')
+        request = webob.Request.blank('/v1.1/images?status=ACTIVE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
@@ -831,11 +827,51 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {'property-test': '3'}
-        image_service.index(
-            context, filters=filters).AndReturn([])
+        image_service.index(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images?property-test=3')
+        request = webob.Request.blank('/v1.1/images?property-test=3')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_server(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        # 'server' should be converted to 'property-instance_ref'
+        filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
+        image_service.index(context, filters=filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?server='
+                                      'http://localhost:8774/servers/12')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_changes_since(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'changes-since': '2011-01-24T17:08Z'}
+        image_service.index(context, filters=filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?changes-since='
+                                      '2011-01-24T17:08Z')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_with_type(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'property-image_type': 'BASE'}
+        image_service.index(context, filters=filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?type=BASE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
@@ -846,14 +882,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {'status': 'ACTIVE'}
-        image_service.index(
-            context, filters=filters).AndReturn([])
+        image_service.detail(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        request = webob.Request.blank('/v1.1/images?status=ACTIVE&'
+                                      'UNSUPPORTEDFILTER=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
-        controller.index(request)
+        controller.detail(request)
         mocker.VerifyAll()
 
     def test_image_no_filters(self):
@@ -876,11 +911,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {'name': 'testname'}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
+        image_service.detail(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail?name=testname')
+        request = webob.Request.blank('/v1.1/images/detail?name=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -891,11 +924,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {'status': 'ACTIVE'}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
+        image_service.detail(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail?status=ACTIVE')
+        request = webob.Request.blank('/v1.1/images/detail?status=ACTIVE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -906,14 +937,54 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {'property-test': '3'}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
+        image_service.detail(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail?property-test=3')
+        request = webob.Request.blank('/v1.1/images/detail?property-test=3')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_server(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        # 'server' should be converted to 'property-instance_ref'
+        filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
+        image_service.index(context, filters=filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?server='
+                                      'http://localhost:8774/servers/12')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_changes_since(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'changes-since': '2011-01-24T17:08Z'}
+        image_service.index(context, filters=filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?changes-since='
+                                      '2011-01-24T17:08Z')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_with_type(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'property-image_type': 'BASE'}
+        image_service.index(context, filters=filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?type=BASE')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
         mocker.VerifyAll()
 
     def test_image_detail_filter_not_supported(self):
@@ -921,11 +992,10 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {'status': 'ACTIVE'}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
+        image_service.detail(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        request = webob.Request.blank('/v1.1/images/detail?status=ACTIVE&'
+                                      'UNSUPPORTEDFILTER=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -936,11 +1006,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service = mocker.CreateMockAnything()
         context = object()
         filters = {}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
+        image_service.detail(context, filters=filters).AndReturn([])
         mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail')
+        request = webob.Request.blank('/v1.1/images/detail')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
