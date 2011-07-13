@@ -492,6 +492,16 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = [self.db.network_get(context, network_id)]
         self._allocate_fixed_ips(context, instance_id, networks)
 
+    def remove_fixed_ip_from_instance(self, context, instance_id, address):
+        """Removes a fixed ip from an instance from specified network."""
+        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        for fixed_ip in fixed_ips:
+            if fixed_ip['address'] == address:
+                self.deallocate_fixed_ip(context, address)
+                return
+        raise exception.FixedIpNotFoundForSpecificInstance(
+                                    instance_id=instance_id, ip=address)
+
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
         # TODO(vish): when this is called by compute, we can associate compute
@@ -704,7 +714,7 @@ class FlatManager(NetworkManager):
     def deallocate_fixed_ip(self, context, address, **kwargs):
         """Returns a fixed ip to the pool."""
         super(FlatManager, self).deallocate_fixed_ip(context, address,
-                                                              **kwargs)
+                                                     **kwargs)
         self.db.fixed_ip_disassociate(context, address)
 
     def setup_compute_network(self, context, instance_id):
