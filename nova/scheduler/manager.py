@@ -119,9 +119,9 @@ class SchedulerManager(manager.Manager):
         :returns:
             example format is below.
             {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
-            D: {'vcpus':3, 'memory_mb':2048, 'local_gb':2048,
-                'vcpus_used': 12, 'memory_mb': 10240,
-                'local_gb': 64}
+            D: {'vcpus': 3, 'memory_mb': 2048, 'local_gb': 2048,
+                'vcpus_used': 12, 'memory_mb_used': 10240,
+                'local_gb_used': 64}
 
         """
 

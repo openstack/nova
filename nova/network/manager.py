@@ -124,7 +124,7 @@ class RPCAllocateFixedIP(object):
     used since they share code to RPC.call allocate_fixed_ip on the
     correct network host to configure dnsmasq
     """
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
         """Calls allocate_fixed_ip once for each network."""
         green_pool = greenpool.GreenPool()
 
@@ -136,13 +136,15 @@ class RPCAllocateFixedIP(object):
                 args = {}
                 args['instance_id'] = instance_id
                 args['network_id'] = network['id']
+                args['vpn'] = kwargs.pop('vpn')
 
                 green_pool.spawn_n(rpc.call, context, topic,
                                    {'method': '_rpc_allocate_fixed_ip',
                                     'args': args})
             else:
                 # i am the correct host, run here
-                self.allocate_fixed_ip(context, instance_id, network)
+                self.allocate_fixed_ip(context, instance_id, network,
+                                       vpn=kwargs.pop('vpn'))
 
         # wait for all of the allocates (if any) to finish
         green_pool.waitall()
@@ -371,13 +373,14 @@ class NetworkManager(manager.SchedulerDependentManager):
         instance_id = kwargs.pop('instance_id')
         project_id = kwargs.pop('project_id')
         type_id = kwargs.pop('instance_type_id')
+        vpn = kwargs.pop('vpn')
         admin_context = context.elevated()
         LOG.debug(_("network allocations for instance %s"), instance_id,
                                                             context=context)
         networks = self._get_networks_for_instance(admin_context, instance_id,
                                                                   project_id)
         self._allocate_mac_addresses(context, instance_id, networks)
-        self._allocate_fixed_ips(admin_context, instance_id, networks)
+        self._allocate_fixed_ips(admin_context, instance_id, networks, vpn=vpn)
         return self.get_instance_nw_info(context, instance_id, type_id)
 
     def deallocate_for_instance(self, context, **kwargs):
@@ -646,7 +649,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                               'address': address,
                                               'reserved': reserved})
 
-    def _allocate_fixed_ips(self, context, instance_id, networks):
+    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
         """Calls allocate_fixed_ip once for each network."""
         raise NotImplementedError()
 
@@ -812,6 +815,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             address = self.db.fixed_ip_associate_pool(context,
                                                       network['id'],
                                                       instance_id)
+
         vif = self.db.virtual_interface_get_by_instance_and_network(context,
                                                                  instance_id,
                                                                  network['id'])
