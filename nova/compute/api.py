@@ -855,13 +855,24 @@ class API(base.Base):
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })
 
-    def resize(self, context, instance_id, flavor_id):
-        """Resize a running instance."""
+    def resize(self, context, instance_id, flavor_id=None):
+        """Resize (ie, migrate) a running instance.
+
+        If flavor_id is None, the process is considered a migration, keeping
+        the original flavor_id. If flavor_id is not None, the instance should
+        be migrated to a new host and resized to the new flavor_id.
+        """
         instance = self.db.instance_get(context, instance_id)
         current_instance_type = instance['instance_type']
 
-        new_instance_type = self.db.instance_type_get_by_flavor_id(
-                context, flavor_id)
+        # If flavor_id is not provided, only migrate the instance.
+        if not flavor_id:
+            LOG.debug(_("flavor_id is None. Assuming migration."))
+            new_instance_type = current_instance_type
+        else:
+            new_instance_type = self.db.instance_type_get_by_flavor_id(
+                    context, flavor_id)
+
         current_instance_type_name = current_instance_type['name']
         new_instance_type_name = new_instance_type['name']
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
@@ -875,7 +886,8 @@ class API(base.Base):
         if current_memory_mb > new_memory_mb:
             raise exception.ApiError(_("Invalid flavor: cannot downsize"
                     "instances"))
-        if current_memory_mb == new_memory_mb:
+
+        if (current_memory_mb == new_memory_mb) and flavor_id:
             raise exception.ApiError(_("Invalid flavor: cannot use"
                     "the same flavor. "))
 
@@ -883,14 +895,20 @@ class API(base.Base):
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance_id,
-                              "flavor_id": flavor_id}})
+                              "flavor_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):
         """Add fixed_ip from specified network to given instance."""
         self._cast_compute_message('add_fixed_ip_to_instance', context,
-                                                              instance_id,
-                                                              network_id)
+                                   instance_id,
+                                   params=dict(network_id=network_id))
+
+    @scheduler_api.reroute_compute("remove_fixed_ip")
+    def remove_fixed_ip(self, context, instance_id, address):
+        """Remove fixed_ip from specified network to given instance."""
+        self._cast_compute_message('remove_fixed_ip_from_instance', context,
+                                   instance_id, params=dict(address=address))
 
     #TODO(tr3buchet): how to run this in the correct zone?
     def add_network_to_project(self, context, project_id):
@@ -911,6 +929,11 @@ class API(base.Base):
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
+
+    def set_host_enabled(self, context, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        return self._call_compute_message("set_host_enabled", context,
+                instance_id=None, host=host, params={"enabled": enabled})
 
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
