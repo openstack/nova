@@ -219,7 +219,7 @@ class AdapterConsumer(Consumer):
             return
         self.pool.spawn_n(self._process_data, msg_id, ctxt, method, args)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def _process_data(self, msg_id, ctxt, method, args):
         """Thread that maigcally looks for a method on the proxy
         object and calls it.
@@ -279,7 +279,7 @@ class FanoutAdapterConsumer(AdapterConsumer):
         # them when done, so they're not left around on restart.
         # Also, we're the only one that should be consuming.  exclusive
         # implies auto_delete, so we'll just set that..
-        self.exclusive = True
+        self.exclusive = False
         LOG.info(_('Created "%(exchange)s" fanout exchange '
                    'with "%(key)s" routing key'),
                  dict(exchange=self.exchange, key=self.routing_key))
