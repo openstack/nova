@@ -16,6 +16,7 @@
 # under the License.
 
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
@@ -238,3 +239,35 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(ValueError, self.network.create_networks, None,
                           num_networks=100, vlan_start=1,
                           cidr='192.168.0.1/24', network_size=100)
+
+
+class CommonNetworkTestCase(test.TestCase):
+
+    class FakeNetworkManager(network_manager.NetworkManager):
+        """This NetworkManager doesn't call the base class so we can bypass all
+        inherited service cruft and just perform unit tests.
+        """
+
+        class FakeDB:
+            def fixed_ip_get_by_instance(self, context, instance_id):
+                return [dict(address='10.0.0.0'),  dict(address='10.0.0.1'),
+                        dict(address='10.0.0.2')]
+
+        def __init__(self):
+            self.db = self.FakeDB()
+            self.deallocate_called = None
+
+        def deallocate_fixed_ip(self, context, address):
+            self.deallocate_called = address
+
+    def test_remove_fixed_ip_from_instance(self):
+        manager = self.FakeNetworkManager()
+        manager.remove_fixed_ip_from_instance(None, 99, '10.0.0.1')
+
+        self.assertEquals(manager.deallocate_called, '10.0.0.1')
+
+    def test_remove_fixed_ip_from_instance_bad_input(self):
+        manager = self.FakeNetworkManager()
+        self.assertRaises(exception.FixedIpNotFoundForSpecificInstance,
+                          manager.remove_fixed_ip_from_instance,
+                          None, 99, 'bad input')
