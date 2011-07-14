@@ -508,43 +508,28 @@ class ParseLimitsTest(BaseLimitTestSuite):
 
     def test_invalid(self):
         """Test that parse_limits() handles invalid input correctly."""
-        try:
-            limits.Limiter.parse_limits(';;;;;')
-        except ValueError:
-            return
-        assert False, "Failure to reject invalid input"
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          ';;;;;')
 
     def test_bad_rule(self):
         """Test that parse_limits() handles bad rules correctly."""
-        try:
-            limits.Limiter.parse_limits('GET, *, .*, 20, minute')
-        except ValueError:
-            return
-        assert False, "Failure to reject bad rule"
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          'GET, *, .*, 20, minute')
 
     def test_missing_arg(self):
         """Test that parse_limits() handles missing args correctly."""
-        try:
-            limits.Limiter.parse_limits('(GET, *, .*, 20)')
-        except ValueError:
-            return
-        assert False, "Failure to reject missing rule argument"
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          '(GET, *, .*, 20)')
 
     def test_bad_value(self):
         """Test that parse_limits() handles bad values correctly."""
-        try:
-            limits.Limiter.parse_limits('(GET, *, .*, foo, minute)')
-        except ValueError:
-            return
-        assert False, "Failure to reject invalid value"
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          '(GET, *, .*, foo, minute)')
 
     def test_bad_unit(self):
         """Test that parse_limits() handles bad units correctly."""
-        try:
-            limits.Limiter.parse_limits('(GET, *, .*, 20, lightyears)')
-        except ValueError:
-            return
-        assert False, "Failure to reject invalid unit"
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          '(GET, *, .*, 20, lightyears)')
 
     def test_multiple_rules(self):
         """Test that parse_limits() handles multiple rules correctly."""
