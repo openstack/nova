@@ -49,10 +49,12 @@ from nova import flags
 from nova import log as logging
 from nova import manager
 from nova import network
+from nova import notifier
 from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import power_state
+from nova.notifier import api as notifier_api
 from nova.compute.utils import terminate_volumes
 from nova.virt import driver
 
@@ -215,6 +217,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
+    @exception.wrap_exception
+    def refresh_provider_fw_rules(self, context, **_kwargs):
+        """This call passes straight through to the virtualization driver."""
+        return self.driver.refresh_provider_fw_rules()
+
     def _setup_block_device_mapping(self, context, instance_id):
         """setup volumes for block device mapping"""
         self.db.instance_set_state(context,
@@ -291,50 +298,64 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'networking')
 
         is_vpn = instance_ref['image_ref'] == str(FLAGS.vpn_image_id)
-        # NOTE(vish): This could be a cast because we don't do anything
-        #             with the address currently, but I'm leaving it as
-        #             a call to ensure that network setup completes.  We
-        #             will eventually also need to save the address here.
-        if not FLAGS.stub_network:
-            address = rpc.call(context,
-                               self.get_network_topic(context),
-                               {"method": "allocate_fixed_ip",
-                                "args": {"instance_id": instance_id,
-                                         "vpn": is_vpn}})
-
-            self.network_manager.setup_compute_network(context,
-                                                       instance_id)
-
-        block_device_mapping = self._setup_block_device_mapping(context,
-                                                                instance_id)
-
-        # TODO(vish) check to make sure the availability zone matches
-        self._update_state(context, instance_id, power_state.BUILDING)
-
         try:
-            self.driver.spawn(instance_ref,
-                              block_device_mapping=block_device_mapping)
-        except Exception as ex:  # pylint: disable=W0702
-            msg = _("Instance '%(instance_id)s' failed to spawn. Is "
-                    "virtualization enabled in the BIOS? Details: "
-                    "%(ex)s") % locals()
-            LOG.exception(msg)
+            # NOTE(vish): This could be a cast because we don't do anything
+            #             with the address currently, but I'm leaving it as
+            #             a call to ensure that network setup completes.  We
+            #             will eventually also need to save the address here.
+            if not FLAGS.stub_network:
+                address = rpc.call(context,
+                                   self.get_network_topic(context),
+                                   {"method": "allocate_fixed_ip",
+                                    "args": {"instance_id": instance_id,
+                                             "vpn": is_vpn}})
 
-        if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
-            public_ip = self.network_api.allocate_floating_ip(context)
+                self.network_manager.setup_compute_network(context,
+                                                           instance_id)
 
-            self.db.floating_ip_set_auto_assigned(context, public_ip)
-            fixed_ip = self.db.fixed_ip_get_by_address(context, address)
-            floating_ip = self.db.floating_ip_get_by_address(context,
-                                                             public_ip)
+            block_device_mapping = self._setup_block_device_mapping(
+                context,
+                instance_id)
 
-            self.network_api.associate_floating_ip(context,
-                                                   floating_ip,
-                                                   fixed_ip,
-                                                   affect_auto_assigned=True)
+            # TODO(vish) check to make sure the availability zone matches
+            self._update_state(context, instance_id, power_state.BUILDING)
 
-        self._update_launched_at(context, instance_id)
-        self._update_state(context, instance_id)
+            try:
+                self.driver.spawn(instance_ref,
+                                  block_device_mapping=block_device_mapping)
+            except Exception as ex:  # pylint: disable=W0702
+                msg = _("Instance '%(instance_id)s' failed to spawn. Is "
+                        "virtualization enabled in the BIOS? Details: "
+                        "%(ex)s") % locals()
+                LOG.exception(msg)
+
+            if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
+                public_ip = self.network_api.allocate_floating_ip(context)
+
+                self.db.floating_ip_set_auto_assigned(context, public_ip)
+                fixed_ip = self.db.fixed_ip_get_by_address(context, address)
+                floating_ip = self.db.floating_ip_get_by_address(context,
+                                                                 public_ip)
+
+                self.network_api.associate_floating_ip(
+                    context,
+                    floating_ip,
+                    fixed_ip,
+                    affect_auto_assigned=True)
+
+            self._update_launched_at(context, instance_id)
+            self._update_state(context, instance_id)
+            usage_info = utils.usage_from_instance(instance_ref)
+            notifier_api.notify('compute.%s' % self.host,
+                                'compute.instance.create',
+                                notifier_api.INFO,
+                                usage_info)
+        except exception.InstanceNotFound:
+            # FIXME(wwolf): We are just ignoring InstanceNotFound
+            # exceptions here in case the instance was immediately
+            # deleted before it actually got created.  This should
+            # be fixed once we have no-db-messaging
+            pass
 
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **kwargs):
@@ -407,9 +428,15 @@ class ComputeManager(manager.SchedulerDependentManager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
+        instance_ref = self.db.instance_get(context.elevated(), instance_id)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.delete',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -446,6 +473,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
+        usage_info = utils.usage_from_instance(instance_ref,
+                                               image_ref=image_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.rebuild',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -623,6 +656,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.destroy(instance_ref)
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.confirm',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -670,6 +708,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.revert_resize(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.revert',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -706,6 +749,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'migration_id': migration_ref['id'],
                        'instance_id': instance_id, },
                 })
+        usage_info = utils.usage_from_instance(instance_ref,
+                              new_instance_type=instance_type['name'],
+                              new_instance_type_id=instance_type['id'])
+        notifier_api.notify('compute.%s' % self.host,
+                            'compute.instance.resize.prep',
+                            notifier_api.INFO,
+                            usage_info)
 
     @exception.wrap_exception
     @checks_instance_lock

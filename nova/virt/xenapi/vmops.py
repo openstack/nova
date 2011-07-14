@@ -48,7 +48,8 @@ LOG = logging.getLogger("nova.virt.xenapi.vmops")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('windows_version_timeout', 300,
-                     'time to wait for windows agent to be fully operational')
+                     'number of seconds to wait for windows agent to be '
+                     'fully operational')
 
 
 def cmp_version(a, b):
@@ -257,8 +258,7 @@ class VMOps(object):
                 # need to be more patient than normal as well as watch for
                 # domid changes
                 version = self.get_agent_version(instance,
-                                  timeout=FLAGS.windows_version_timeout,
-                                  check_domid_changes=True)
+                                  timeout=FLAGS.windows_version_timeout)
             else:
                 version = self.get_agent_version(instance)
             if not version:
@@ -515,8 +515,7 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
         self._session.wait_for_task(task, instance.id)
 
-    def get_agent_version(self, instance, timeout=None,
-                          check_domid_changes=False):
+    def get_agent_version(self, instance, timeout=None):
         """Get the version of the agent running on the VM instance."""
 
         def _call():
@@ -538,20 +537,19 @@ class VMOps(object):
 
             domid = vm_rec['domid']
 
-            timeout = time.time() + timeout
-            while time.time() < timeout:
+            expiration = time.time() + timeout
+            while time.time() < expiration:
                 ret = _call()
                 if ret:
                     return ret
 
-                if check_domid_changes:
-                    vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
-                    if vm_rec['domid'] != domid:
-                        LOG.info(_('domid changed from %(olddomid)s to '
-                                   '%(newdomid)s') % {
-                                       'olddomid': domid,
-                                        'newdomid': vm_rec['domid']})
-                        domid = vm_rec['domid']
+                vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+                if vm_rec['domid'] != domid:
+                    LOG.info(_('domid changed from %(olddomid)s to '
+                               '%(newdomid)s') % {
+                                   'olddomid': domid,
+                                    'newdomid': vm_rec['domid']})
+                    domid = vm_rec['domid']
         else:
             return _call()
 

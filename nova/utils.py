@@ -46,6 +46,7 @@ from eventlet.green import subprocess
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import version
 
 
 LOG = logging.getLogger("nova.utils")
@@ -226,8 +227,10 @@ def novadir():
     return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
 
 
-def default_flagfile(filename='nova.conf'):
-    for arg in sys.argv:
+def default_flagfile(filename='nova.conf', args=None):
+    if args is None:
+        args = sys.argv
+    for arg in args:
         if arg.find('flagfile') != -1:
             break
     else:
@@ -239,8 +242,8 @@ def default_flagfile(filename='nova.conf'):
             filename = "./nova.conf"
             if not os.path.exists(filename):
                 filename = '/etc/nova/nova.conf'
-        flagfile = ['--flagfile=%s' % filename]
-        sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
+        flagfile = '--flagfile=%s' % filename
+        args.insert(1, flagfile)
 
 
 def debug(arg):
@@ -277,6 +280,22 @@ DEFAULT_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0,1
 # ~5 bits per symbol
 EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
                            'ABCDEFGHJKLMNPQRSTUVWXYZ')  # Removed: I, O
+
+
+def usage_from_instance(instance_ref, **kw):
+    usage_info = dict(
+          tenant_id=instance_ref['project_id'],
+          user_id=instance_ref['user_id'],
+          instance_id=instance_ref['id'],
+          instance_type=instance_ref['instance_type']['name'],
+          instance_type_id=instance_ref['instance_type_id'],
+          display_name=instance_ref['display_name'],
+          created_at=str(instance_ref['created_at']),
+          launched_at=str(instance_ref['launched_at']) \
+                      if instance_ref['launched_at'] else '',
+          image_ref=instance_ref['image_ref'])
+    usage_info.update(kw)
+    return usage_info
 
 
 def generate_password(length=20, symbols=DEFAULT_PASSWORD_SYMBOLS):
@@ -526,6 +545,16 @@ def loads(s):
     return json.loads(s)
 
 
+try:
+    import anyjson
+except ImportError:
+    pass
+else:
+    anyjson._modules.append(("nova.utils", "dumps", TypeError,
+                                           "loads", ValueError))
+    anyjson.force_implementation("nova.utils")
+
+
 _semaphores = {}
 
 
@@ -741,3 +770,39 @@ def is_uuid_like(val):
     if not isinstance(val, basestring):
         return False
     return (len(val) == 36) and (val.count('-') == 4)
+
+
+class Bootstrapper(object):
+    """Provides environment bootstrapping capabilities for entry points."""
+
+    @staticmethod
+    def bootstrap_binary(argv):
+        """Initialize the Nova environment using command line arguments."""
+        Bootstrapper.setup_flags(argv)
+        Bootstrapper.setup_logging()
+        Bootstrapper.log_flags()
+
+    @staticmethod
+    def setup_logging():
+        """Initialize logging and log a message indicating the Nova version."""
+        logging.setup()
+        logging.audit(_("Nova Version (%s)") %
+                        version.version_string_with_vcs())
+
+    @staticmethod
+    def setup_flags(input_flags):
+        """Initialize flags, load flag file, and print help if needed."""
+        default_flagfile(args=input_flags)
+        FLAGS(input_flags or [])
+        flags.DEFINE_flag(flags.HelpFlag())
+        flags.DEFINE_flag(flags.HelpshortFlag())
+        flags.DEFINE_flag(flags.HelpXMLFlag())
+        FLAGS.ParseNewFlags()
+
+    @staticmethod
+    def log_flags():
+        """Log the list of all active flags being used."""
+        logging.audit(_("Currently active flags:"))
+        for key in FLAGS:
+            value = FLAGS.get(key, None)
+            logging.audit(_("%(key)s : %(value)s" % locals()))

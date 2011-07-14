@@ -1502,7 +1502,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_resized_server_has_correct_status(self):
-        req = self.webreq('/1', 'GET', dict(resize=dict(flavorId=3)))
+        req = self.webreq('/1', 'GET')
 
         def fake_migration_get(*args):
             return {}
