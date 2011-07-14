@@ -128,7 +128,6 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
-    
     inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
 
     if public_addresses is None:
@@ -287,11 +286,12 @@ class ServersTest(test.TestCase):
         flavor_bookmark = "http://localhost/flavors/1"
         private = "192.168.0.3"
         public = ["1.2.3.4"]
+
         def _return_server(context, id):
 
             return  stub_instance(1,
-                                  private_address=private, 
-                                  public_addresses=public, 
+                                  private_address=private,
+                                  public_addresses=public,
                                   power_state=0,
                                   image_ref=image_bookmark,
                                   flavor_id=flavor_id,
@@ -336,7 +336,7 @@ class ServersTest(test.TestCase):
                             "addr": public[0],
                         },
                     ],
-                    "private":[
+                    "private": [
                         {
                             "version": 4,
                             "addr": private,
@@ -369,11 +369,12 @@ class ServersTest(test.TestCase):
         flavor_bookmark = "http://localhost/flavors/1"
         private = "192.168.0.3"
         public = ["1.2.3.4"]
+
         def _return_server(context, id):
 
             return  stub_instance(1,
-                                  private_address=private, 
-                                  public_addresses=public, 
+                                  private_address=private,
+                                  public_addresses=public,
                                   power_state=1,
                                   image_ref=image_bookmark,
                                   flavor_id=flavor_id,
@@ -418,7 +419,7 @@ class ServersTest(test.TestCase):
                             "addr": public[0],
                         },
                     ],
-                    "private":[
+                    "private": [
                         {
                             "version": 4,
                             "addr": private,
@@ -452,11 +453,12 @@ class ServersTest(test.TestCase):
         flavor_bookmark = "http://localhost/flavors/1"
         private = "192.168.0.3"
         public = ["1.2.3.4"]
+
         def _return_server(context, id):
 
             return  stub_instance(1,
-                                  private_address=private, 
-                                  public_addresses=public, 
+                                  private_address=private,
+                                  public_addresses=public,
                                   power_state=1,
                                   image_ref=image_ref,
                                   flavor_id=flavor_id,
@@ -502,7 +504,7 @@ class ServersTest(test.TestCase):
                             "addr": public[0],
                         },
                     ],
-                    "private":[
+                    "private": [
                         {
                             "version": 4,
                             "addr": private,
