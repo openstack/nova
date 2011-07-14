@@ -181,6 +181,8 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['id'] = inst['uuid']
+        response['created'] = inst['created_at']
+        response['updated'] = inst['updated_at']
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])

@@ -144,6 +144,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     instance = {
         "id": int(id),
+        "created_at": "2010-10-10T12:00:00Z",
+        "updated_at": "2010-11-11T11:00:00Z",
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
@@ -303,8 +305,8 @@ class ServersTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": FAKE_UUID,
-                #"updated": "FIXME",
-                #"created": "FIXME",
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
                 "name": "server1",
                 "status": "BUILD",
                 "hostId": '',
