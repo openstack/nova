@@ -568,10 +568,16 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             test_image = {
                 "id": image["id"],
                 "name": image["name"],
-                "links": [{
-                    "rel": "self",
-                    "href": href,
-                }],
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": href,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": bookmark,
+                    },
+                ],
             }
             self.assertTrue(test_image in response_list)
 
