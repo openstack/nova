@@ -69,8 +69,8 @@ class Controller(object):
         for param in req.str_params:
             if param in SUPPORTED_FILTERS or param.startswith('property-'):
                 # map filter name or carry through if property-*
-                _param = SUPPORTED_FILTERS.get(param, param)
-                filters[_param] = req.str_params.get(param)
+                filter_name = SUPPORTED_FILTERS.get(param, param)
+                filters[filter_name] = req.str_params.get(param)
         return filters
 
     def show(self, req, id):
