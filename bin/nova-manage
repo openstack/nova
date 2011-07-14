@@ -414,8 +414,11 @@ class ProjectCommands(object):
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
             print ex
             raise
-        with open(filename, 'w') as f:
-            f.write(rc)
+        if filename == "-":
+            sys.stdout.write(rc)
+        else:
+            with open(filename, 'w') as f:
+                f.write(rc)
 
     def list(self, username=None):
         """Lists all projects
@@ -465,8 +468,11 @@ class ProjectCommands(object):
         arguments: project_id user_id [filename='nova.zip]"""
         try:
             zip_file = self.manager.get_credentials(user_id, project_id)
-            with open(filename, 'w') as f:
-                f.write(zip_file)
+            if filename == "-":
+                sys.stdout.write(zip_file)
+            else:
+                with open(filename, 'w') as f:
+                    f.write(zip_file)
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
             print ex
             raise
