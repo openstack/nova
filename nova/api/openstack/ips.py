@@ -125,4 +125,4 @@ def create_resource(version):
     }
     serializer = wsgi.ResponseSerializer(body_serializers)
 
-    return wsgi.Resource(Controller(), serializer=serializer)
+    return wsgi.Resource(controller, serializer=serializer)
