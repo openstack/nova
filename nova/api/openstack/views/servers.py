@@ -183,6 +183,10 @@ class ViewBuilderV11(ViewBuilder):
         response['id'] = inst['uuid']
         response['created'] = inst['created_at']
         response['updated'] = inst['updated_at']
+        if response['status'] == "ACTIVE":
+            response['progress'] = 100
+        elif response['status'] == "BUILD":
+            response['progress'] = 0
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
