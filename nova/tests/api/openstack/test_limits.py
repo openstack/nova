@@ -500,6 +500,87 @@ class LimitTest(BaseLimitTestSuite):
         self.assertEqual(4, limit.last_request)
 
 
+class ParseLimitsTest(BaseLimitTestSuite):
+    """
+    Tests for the default limits parser in the in-memory
+    `limits.Limiter` class.
+    """
+
+    def test_invalid(self):
+        """Test that parse_limits() handles invalid input correctly."""
+        try:
+            limits.Limiter.parse_limits(';;;;;')
+        except ValueError:
+            return
+        assert False, "Failure to reject invalid input"
+
+    def test_bad_rule(self):
+        """Test that parse_limits() handles bad rules correctly."""
+        try:
+            limits.Limiter.parse_limits('GET, *, .*, 20, minute')
+        except ValueError:
+            return
+        assert False, "Failure to reject bad rule"
+
+    def test_missing_arg(self):
+        """Test that parse_limits() handles missing args correctly."""
+        try:
+            limits.Limiter.parse_limits('(GET, *, .*, 20)')
+        except ValueError:
+            return
+        assert False, "Failure to reject missing rule argument"
+
+    def test_bad_value(self):
+        """Test that parse_limits() handles bad values correctly."""
+        try:
+            limits.Limiter.parse_limits('(GET, *, .*, foo, minute)')
+        except ValueError:
+            return
+        assert False, "Failure to reject invalid value"
+
+    def test_bad_unit(self):
+        """Test that parse_limits() handles bad units correctly."""
+        try:
+            limits.Limiter.parse_limits('(GET, *, .*, 20, lightyears)')
+        except ValueError:
+            return
+        assert False, "Failure to reject invalid unit"
+
+    def test_multiple_rules(self):
+        """Test that parse_limits() handles multiple rules correctly."""
+        try:
+            l = limits.Limiter.parse_limits('(get, *, .*, 20, minute);'
+                                            '(PUT, /foo*, /foo.*, 10, hour);'
+                                            '(POST, /bar*, /bar.*, 5, second);'
+                                            '(Say, /derp*, /derp.*, 1, day)')
+        except ValueError, e:
+            assert False, str(e)
+
+        # Make sure the number of returned limits are correct
+        self.assertEqual(len(l), 4)
+
+        # Check all the verbs...
+        expected = ['GET', 'PUT', 'POST', 'SAY']
+        self.assertEqual([t.verb for t in l], expected)
+
+        # ...the URIs...
+        expected = ['*', '/foo*', '/bar*', '/derp*']
+        self.assertEqual([t.uri for t in l], expected)
+
+        # ...the regexes...
+        expected = ['.*', '/foo.*', '/bar.*', '/derp.*']
+        self.assertEqual([t.regex for t in l], expected)
+
+        # ...the values...
+        expected = [20, 10, 5, 1]
+        self.assertEqual([t.value for t in l], expected)
+
+        # ...and the units...
+        expected = [limits.PER_MINUTE, limits.PER_HOUR,
+                    limits.PER_SECOND, limits.PER_DAY]
+        self.assertEqual([t.unit for t in l], expected)
+
+
 class LimiterTest(BaseLimitTestSuite):
     """
     Tests for the in-memory `limits.Limiter` class.

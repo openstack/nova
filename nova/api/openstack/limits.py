@@ -327,6 +327,11 @@ class Limiter(object):
 
         return None, None
 
+    # Note: This method gets called before the class is instantiated,
+    # so this must be either a static method or a class method.  It is
+    # used to develop a list of limits to feed to the constructor.  We
+    # put this in the class so that subclasses can override the
+    # default limit parsing.
     @staticmethod
     def parse_limits(limits):
         """
@@ -351,14 +356,16 @@ class Limiter(object):
         result = []
         for group in limits.split(';'):
             group = group.strip()
-            if group[0] != '(' or group[-1] != ')':
-                raise ValueError("Groups must be surrounded by parentheses")
+            if group[:1] != '(' or group[-1:] != ')':
+                raise ValueError("Limit rules must be surrounded by "
+                                 "parentheses")
             group = group[1:-1]
 
             # Extract the Limit arguments
             args = [a.strip() for a in group.split(',')]
             if len(args) != 5:
-                raise ValueError("Groups must contain exactly 5 elements")
+                raise ValueError("Limit rules must contain the following "
+                                 "arguments: verb, uri, regex, value, unit")
 
             # Pull out the arguments
             verb, uri, regex, value, unit = args
@@ -464,6 +471,11 @@ class WsgiLimiterProxy(object):
 
         return resp.getheader("X-Wait-Seconds"), resp.read() or None
 
+    # Note: This method gets called before the class is instantiated,
+    # so this must be either a static method or a class method.  It is
+    # used to develop a list of limits to feed to the constructor.
+    # This implementation returns an empty list, since all limit
+    # decisions are made by a remote server.
     @staticmethod
     def parse_limits(limits):
         """
