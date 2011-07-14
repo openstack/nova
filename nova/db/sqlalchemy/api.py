@@ -1256,7 +1256,7 @@ def instance_get_all_by_column_regexp(context, column, column_regexp):
 
 
 @require_context
-def instance_get_all_by_name_regexp(context, ipv6_regexp):
+def instance_get_all_by_name_regexp(context, name_regexp):
     """Get all instances by using regular expression matching against
     its name
     """
@@ -1277,7 +1277,7 @@ def instance_get_all_by_name_regexp(context, ipv6_regexp):
     if not all_instances:
         return []
     # Now do the regexp matching
-    compiled_regexp = re.compile(ipv6_regexp)
+    compiled_regexp = re.compile(name_regexp)
     return [instance for instance in all_instances
         if compiled_regexp.match(instance.name)]
 

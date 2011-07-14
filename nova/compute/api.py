@@ -689,21 +689,19 @@ class API(base.Base):
         # Ignore unknown search options for possible forward compatability.
         # Raise an exception if more than 1 search option is specified
         found_opt = None
-        for opt in exclusive_opts:
-            v = search_opts.get(opt, None)
-            if v:
-                if found_opt is None:
-                    found_opt = opt
-                else:
-                    LOG.error(_("More than 1 mutually exclusive "
-                            "search option specified (%(found_opt)s and "
-                            "%(opt)s were both specified") % locals())
-                    raise exception.InvalidInput(reason=_(
-                            "More than 1 mutually exclusive "
-                            "search option specified (%(found_opt)s and "
-                            "%(opt)s were both specified") % locals())
+        found_opts = [opt for opt in exclusive_opts
+                if search_opts.get(opt, None)]
+        if len(found_opts) > 1:
+            found_opt_str = ", ".join(found_opts)
+            msg = _("More than 1 mutually exclusive "
+                    "search option specified: %(found_opt_str)s") \
+                    % locals()
+            logger.error(msg)
+            raise exception.InvalidInput(reason=msg)
 
-        if found_opt:
+        # Found a search option?
+        if found_opts:
+            found_opt = found_opts[0]
             if found_opt in search_columns:
                 instances = self._get_all_by_column(context,
                         found_opt, search_opts)
@@ -714,10 +712,10 @@ class API(base.Base):
         elif not context.is_admin:
             if context.project:
                 instances = self.db.instance_get_all_by_project(
-                    context, context.project_id)
+                        context, context.project_id)
             else:
                 instances = self.db.instance_get_all_by_user(
-                    context, context.user_id)
+                        context, context.user_id)
         else:
             instances = self.db.instance_get_all(context)
 
