@@ -484,7 +484,12 @@ class ServersTest(test.TestCase):
             {
                 'network': {'label': 'network_2'},
                 'fixed_ips': [
-                    {'address': '172.19.0.1'},
+                    {
+                        'address': '172.19.0.1',
+                        'floating_ips': [
+                            {'address': '1.2.3.4'},
+                        ],
+                    },
                     {'address': '172.19.0.2'},
                 ],
             },
@@ -507,6 +512,7 @@ class ServersTest(test.TestCase):
                 ],
                 'network_2': [
                     {'version': 4, 'addr': '172.19.0.1'},
+                    {'version': 4, 'addr': '1.2.3.4'},
                     {'version': 4, 'addr': '172.19.0.2'},
                 ],
             },
@@ -526,7 +532,12 @@ class ServersTest(test.TestCase):
             {
                 'network': {'label': 'network_2'},
                 'fixed_ips': [
-                    {'address': '172.19.0.1'},
+                    {
+                        'address': '172.19.0.1',
+                        'floating_ips': [
+                            {'address': '1.2.3.4'},
+                        ],
+                    },
                     {'address': '172.19.0.2'},
                 ],
             },
@@ -543,6 +554,7 @@ class ServersTest(test.TestCase):
         expected = {
             'network_2': [
                 {'version': 4, 'addr': '172.19.0.1'},
+                {'version': 4, 'addr': '1.2.3.4'},
                 {'version': 4, 'addr': '172.19.0.2'},
             ],
         }

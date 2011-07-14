@@ -46,24 +46,26 @@ class ViewBuilderV11(ViewBuilder):
         networks = {}
         for interface in interfaces:
             network_label = interface['network']['label']
+
             if network_label not in networks:
                 networks[network_label] = []
 
-            for fixed_ip in interface['fixed_ips']:
-                ip = {'addr': fixed_ip['address'], 'version': 4}
-                networks[network_label].append(ip)
+            networks[network_label].extend(self._extract_ipv4(interface))
+
         return networks
 
     def build_network(self, interfaces, network_label):
         for interface in interfaces:
             if interface['network']['label'] == network_label:
-                ips = self._extract_fixed_ips(interface)
-                return {network_label: ips}
+                ips = self._extract_ipv4(interface)
+                return {network_label: list(ips)}
         return None
 
-    def _extract_fixed_ips(self, interface):
-        fixed_ips = []
+    def _extract_ipv4(self, interface):
         for fixed_ip in interface['fixed_ips']:
-            ip = {'addr': fixed_ip['address'], 'version': 4}
-            fixed_ips.append(ip)
-        return fixed_ips
+            yield self._build_ip_entity(fixed_ip['address'], 4)
+            for floating_ip in fixed_ip.get('floating_ips', []):
+                yield self._build_ip_entity(floating_ip['address'], 4)
+
+    def _build_ip_entity(self, address, version):
+        return {'addr': address, 'version': version}
