@@ -281,7 +281,6 @@ class ServersTest(test.TestCase):
 
     def test_get_server_by_id_v1_1(self):
         self.maxDiff = None
-        image_ref = "http://localhost/v1.1/images/10"
         image_bookmark = "http://localhost/images/10"
         flavor_ref = "http://localhost/v1.1/flavors/1"
         flavor_id = "1"
@@ -294,7 +293,7 @@ class ServersTest(test.TestCase):
                                   private_address=private, 
                                   public_addresses=public, 
                                   power_state=0,
-                                  image_ref=image_ref,
+                                  image_ref=image_bookmark,
                                   flavor_id=flavor_id,
                                   )
         self.stubs.Set(nova.db.api, 'instance_get', _return_server)
@@ -314,12 +313,7 @@ class ServersTest(test.TestCase):
                 #"accessIPv4" : "67.23.10.132",
                 #"accessIPv6" : "::babe:67.23.10.132",
                 "image": {
-                    "id": "10",
                     "links": [
-                        {
-                            "rel": "self",
-                            "href": image_ref,
-                        },
                         {
                             "rel": "bookmark",
                             "href": image_bookmark,
@@ -373,7 +367,93 @@ class ServersTest(test.TestCase):
 
     def test_get_server_with_active_status_by_id_v1_1(self):
         self.maxDiff = None
-        image_ref = "http://localhost/v1.1/images/10"
+        image_bookmark = "http://localhost/images/10"
+        flavor_ref = "http://localhost/v1.1/flavors/1"
+        flavor_id = "1"
+        flavor_bookmark = "http://localhost/flavors/1"
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        def _return_server(context, id):
+
+            return  stub_instance(1,
+                                  private_address=private, 
+                                  public_addresses=public, 
+                                  power_state=1,
+                                  image_ref=image_bookmark,
+                                  flavor_id=flavor_id,
+                                  )
+        self.stubs.Set(nova.db.api, 'instance_get', _return_server)
+
+        req = webob.Request.blank('/v1.1/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        expected_server = {
+            "server": {
+                "id": FAKE_UUID,
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 100,
+                "name": "server1",
+                "status": "ACTIVE",
+                "hostId": '',
+                #"accessIPv4" : "67.23.10.132",
+                #"accessIPv6" : "::babe:67.23.10.132",
+                "image": {
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                      {
+                          "rel": "self",
+                          "href": flavor_ref,
+                      },
+                      {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    "public": [
+                        {
+                            "version": 4,
+                            "addr": public[0],
+                        },
+                    ],
+                    "private":[
+                        {
+                            "version": 4,
+                            "addr": private,
+                        },
+                    ],
+                },
+                "metadata": {
+                    "seq": "1",
+                },
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        self.assertDictEqual(res_dict, expected_server)
+
+    def test_get_server_with_id_image_ref_by_id_v1_1(self):
+        self.maxDiff = None
+        image_ref = "10"
         image_bookmark = "http://localhost/images/10"
         flavor_ref = "http://localhost/v1.1/flavors/1"
         flavor_id = "1"
@@ -408,10 +488,6 @@ class ServersTest(test.TestCase):
                 "image": {
                     "id": "10",
                     "links": [
-                        {
-                            "rel": "self",
-                            "href": image_ref,
-                        },
                         {
                             "rel": "bookmark",
                             "href": image_bookmark,
