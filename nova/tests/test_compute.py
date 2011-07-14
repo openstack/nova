@@ -424,12 +424,12 @@ class ComputeTestCase(test.TestCase):
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
         context = self.context.elevated()
         instance_id = self._create_instance()
-        self.compute.prep_resize(context, instance_id, 1)
+        instance_ref = db.instance_get(context, instance_id)
+        self.compute.prep_resize(context, instance_ref['uuid'], 1)
         migration_ref = db.migration_get_by_instance_and_status(context,
-                instance_id, 'pre-migrating')
+                instance_ref['uuid'], 'pre-migrating')
         try:
-            self.compute.finish_resize(context, instance_id,
-                    int(migration_ref['id']), {})
+            self.compute.finish_resize(context, int(migration_ref['id']), {})
         except KeyError, e:
             # Only catch key errors. We want other reasons for the test to
             # fail to actually error out so we don't obscure anything
@@ -441,14 +441,15 @@ class ComputeTestCase(test.TestCase):
         """Ensure notifications on instance migrate/resize"""
         instance_id = self._create_instance()
         context = self.context.elevated()
+        inst_ref = db.instance_get(context, instance_id)
 
         self.compute.run_instance(self.context, instance_id)
         test_notifier.NOTIFICATIONS = []
 
         db.instance_update(self.context, instance_id, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_id, 1)
+        self.compute.prep_resize(context, inst_ref['uuid'], 1)
         migration_ref = db.migration_get_by_instance_and_status(context,
-                instance_id, 'pre-migrating')
+                inst_ref['uuid'], 'pre-migrating')
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -471,14 +472,15 @@ class ComputeTestCase(test.TestCase):
         """Ensure instance can be migrated/resized"""
         instance_id = self._create_instance()
         context = self.context.elevated()
+        inst_ref = db.instance_get(context, instance_id)
 
         self.compute.run_instance(self.context, instance_id)
-        db.instance_update(self.context, instance_id, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_id, 1)
+        db.instance_update(self.context, inst_ref['uuid'],
+                           {'host': 'foo'})
+        self.compute.prep_resize(context, inst_ref['uuid'], 1)
         migration_ref = db.migration_get_by_instance_and_status(context,
-                instance_id, 'pre-migrating')
-        self.compute.resize_instance(context, instance_id,
-                migration_ref['id'])
+                inst_ref['uuid'], 'pre-migrating')
+        self.compute.resize_instance(context, migration_ref['id'])
         self.compute.terminate_instance(context, instance_id)
 
     def test_resize_invalid_flavor_fails(self):

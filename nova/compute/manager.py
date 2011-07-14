@@ -664,10 +664,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def confirm_resize(self, context, instance_id, migration_id):
+    def confirm_resize(self, context, migration_id):
         """Destroys the source instance."""
-        context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        migration_ref = self.db.migration_get(context, migration_id)
+        instance_ref = self.db.instance_get(context,
+                migration_ref.instance_uuid)
+
         self.driver.destroy(instance_ref)
         usage_info = utils.usage_from_instance(instance_ref)
         notifier_api.notify('compute.%s' % self.host,
@@ -677,43 +679,44 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def revert_resize(self, context, instance_id, migration_id):
+    def revert_resize(self, context, migration_id):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
         source machine.
 
         """
-        instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
+        instance_ref = self.db.instance_get(context,
+                migration_ref.instance_uuid)
 
         self.driver.destroy(instance_ref)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'finish_revert_resize',
-                 'args': {
-                       'migration_id': migration_ref['id'],
-                       'instance_id': instance_id, },
+                 'args': {'migration_id': migration_ref['id']},
                 })
 
     @exception.wrap_exception
     @checks_instance_lock
-    def finish_revert_resize(self, context, instance_id, migration_id):
+    def finish_revert_resize(self, context, migration_id):
         """Finishes the second half of reverting a resize.
 
         Power back on the source instance and revert the resized attributes
         in the database.
 
         """
-        instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
+        instance_ref = self.db.instance_get(context,
+                migration_ref.instance_uuid)
+
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 migration_ref['old_flavor_id'])
 
         # Just roll back the record. There's no need to resize down since
         # the 'old' VM already has the preferred attributes
-        self.db.instance_update(context, instance_id,
+        self.db.instance_update(context, instance_ref.instance_uuid,
            dict(memory_mb=instance_type['memory_mb'],
                 vcpus=instance_type['vcpus'],
                 local_gb=instance_type['local_gb']))
@@ -729,14 +732,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def prep_resize(self, context, instance_id, flavor_id):
+    def prep_resize(self, context, instance_uuid, flavor_id):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
 
         """
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         if instance_ref['host'] == FLAGS.host:
             raise exception.Error(_(
                     'Migration error: destination same as source!'))
@@ -744,7 +747,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 flavor_id)
         migration_ref = self.db.migration_create(context,
-                {'instance_id': instance_id,
+                {'instance_uuid': instance_uuid,
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
                  'dest_host':   self.driver.get_host_ip_addr(),
@@ -752,15 +755,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                  'new_flavor_id': flavor_id,
                  'status':      'pre-migrating'})
 
-        LOG.audit(_('instance %s: migrating to '), instance_id,
+        LOG.audit(_('instance %s: migrating to '), instance_uuid,
                 context=context)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'resize_instance',
-                 'args': {
-                       'migration_id': migration_ref['id'],
-                       'instance_id': instance_id, },
+                 'args': {'migration_id': migration_ref['id']},
                 })
         usage_info = utils.usage_from_instance(instance_ref,
                               new_instance_type=instance_type['name'],
@@ -772,10 +773,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def resize_instance(self, context, instance_id, migration_id):
+    def resize_instance(self, context, migration_id):
         """Starts the migration of a running instance to another host."""
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context,
+                migration_ref.instance_uuid)
+
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'migrating'})
@@ -791,14 +794,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         topic = self.db.queue_get_for(context,
                                       FLAGS.compute_topic,
                                       migration_ref['dest_compute'])
+        params = {'migration_id': migration_id,
+                  'disk_info': disk_info}
         rpc.cast(context, topic, {'method': 'finish_resize',
-                                  'args': {'migration_id': migration_id,
-                                           'instance_id': instance_id,
-                                           'disk_info': disk_info}})
+                                  'args': params})
 
     @exception.wrap_exception
     @checks_instance_lock
-    def finish_resize(self, context, instance_id, migration_id, disk_info):
+    def finish_resize(self, context, migration_id, disk_info):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
@@ -806,24 +809,21 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get(context,
-                migration_ref['instance_id'])
-        # TODO(mdietz): apply the rest of the instance_type attributes going
-        # after they're supported
+        instance_ref = self.db.instance_get_by_uuid(context,
+                migration_ref.instance_uuid)
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 migration_ref['new_flavor_id'])
-        self.db.instance_update(context, instance_id,
+        self.db.instance_update(context, instance_ref.uuid,
                dict(instance_type_id=instance_type['id'],
                     memory_mb=instance_type['memory_mb'],
                     vcpus=instance_type['vcpus'],
                     local_gb=instance_type['local_gb']))
 
-        # reload the updated instance ref
-        # FIXME(mdietz): is there reload functionality?
-        instance = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context,
+                                            instance_ref.uuid)
         network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance)
-        self.driver.finish_resize(instance, disk_info, network_info)
+                                                             instance_ref)
+        self.driver.finish_resize(instance_ref, disk_info, network_info)
 
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })
@@ -955,7 +955,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         LOG.debug(_('instance %s: getting locked state'), instance_id,
                   context=context)
-        instance_ref = self.db.instance_get(context, instance_id)
+        if utils.is_uuid_like(instance_id):
+            uuid = instance_id
+            instance_ref = self.db.instance_get_by_uuid(context, uuid)
+        else:
+            instance_ref = self.db.instance_get(context, instance_id)
         return instance_ref['locked']
 
     @checks_instance_lock

@@ -822,6 +822,7 @@ class API(base.Base):
                                    instance_id,
                                    params=rebuild_params)
 
+    @scheduler_api.reroute_compute("revert_resize")
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
@@ -832,11 +833,12 @@ class API(base.Base):
                                                       status='finished')
 
         params = {'migration_id': migration_ref['id']}
-        self._cast_compute_message('revert_resize', context, instance_id,
+        self._cast_compute_message('revert_resize', context,
                 migration_ref['dest_compute'], params=params)
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'reverted'})
 
+    @scheduler_api.reroute_compute("confirm_resize")
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize and deletes the 'old' instance."""
         context = context.elevated()
@@ -845,9 +847,8 @@ class API(base.Base):
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
-        instance_ref = self.db.instance_get(context, instance_id)
         params = {'migration_id': migration_ref['id']}
-        self._cast_compute_message('confirm_resize', context, instance_id,
+        self._cast_compute_message('confirm_resize', context,
                 migration_ref['source_compute'], params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -855,6 +856,7 @@ class API(base.Base):
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })
 
+    @scheduler_api.reroute_compute("resize")
     def resize(self, context, instance_id, flavor_id=None):
         """Resize (ie, migrate) a running instance.
 
@@ -862,8 +864,8 @@ class API(base.Base):
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
         """
-        instance = self.db.instance_get(context, instance_id)
-        current_instance_type = instance['instance_type']
+        instance_ref = self._get_instance(context, instance_id, 'resize')
+        current_instance_type = instance_ref['instance_type']
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:
@@ -891,10 +893,11 @@ class API(base.Base):
             raise exception.ApiError(_("Invalid flavor: cannot use"
                     "the same flavor. "))
 
+        instance_ref = self._get_instance(context, instance_id, 'resize')
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_id": instance_id,
+                              "instance_uuid": instance_ref['uuid'],
                               "flavor_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
