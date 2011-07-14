@@ -323,11 +323,7 @@ class ServersTest(test.TestCase):
                 "flavor": {
                     "id": "1",
                   "links": [
-                      {
-                          "rel": "self",
-                          "href": flavor_ref,
-                      },
-                      {
+                                            {
                           "rel": "bookmark",
                           "href": flavor_bookmark,
                       },
@@ -409,10 +405,6 @@ class ServersTest(test.TestCase):
                 "flavor": {
                     "id": "1",
                   "links": [
-                      {
-                          "rel": "self",
-                          "href": flavor_ref,
-                      },
                       {
                           "rel": "bookmark",
                           "href": flavor_bookmark,
@@ -497,10 +489,6 @@ class ServersTest(test.TestCase):
                 "flavor": {
                     "id": "1",
                   "links": [
-                      {
-                          "rel": "self",
-                          "href": flavor_ref,
-                      },
                       {
                           "rel": "bookmark",
                           "href": flavor_bookmark,

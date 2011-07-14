@@ -175,10 +175,6 @@ class ViewBuilderV11(ViewBuilder):
                 "id": common.get_uuid_from_href(flavor_ref),
                 "links": [
                     {
-                        "rel": "self",
-                        "href": flavor_ref,
-                    },
-                    {
                         "rel": "bookmark",
                         "href": flavor_bookmark,
                     },
@@ -190,10 +186,11 @@ class ViewBuilderV11(ViewBuilder):
         response['id'] = inst['uuid']
         response['created'] = inst['created_at']
         response['updated'] = inst['updated_at']
-        if response['status'] == "ACTIVE":
-            response['progress'] = 100
-        elif response['status'] == "BUILD":
-            response['progress'] = 0
+        if 'status' in response:
+            if response['status'] == "ACTIVE":
+                response['progress'] = 100
+            elif response['status'] == "BUILD":
+                response['progress'] = 0
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
