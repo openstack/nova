@@ -179,6 +179,224 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Cleanup
         self._delete_server(created_server_id)
 
+    def test_create_server_with_one_networks(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1, 'fixed_ip': '10.0.0.3'}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Check it's there
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
+    def test_create_server_with_two_networks(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1, 'fixed_ip': '10.0.0.3'},
+                        {'id': 2, 'fixed_ip': '10.0.0.12'}]
+        
+        server['networks'] = network_list
+
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Check it's there
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
+    def test_create_server_with_empty_networks(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = []
+        server['networks'] = network_list
+
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Check it's there
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
+    def test_create_server_with_networks_invalid_id(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': "invalid", 'fixed_ip': '10.0.0.3'}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
+
+    def test_create_server_with_networks_no_id(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'fixed_ip': '10.0.0.3'}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
+
+    def test_create_server_with_networks_non_exists_id(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 3, 'fixed_ip': '10.0.0.3'}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
+
+    def test_create_server_with_networks_not_found_for_project(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1, 'fixed_ip': '10.0.0.3'},
+                        {'id': 3, 'fixed_ip': '10.0.0.12'}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
+
+    def test_create_server_with_networks_invalid_fixed_ip(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1, 'fixed_ip': '10.0.0.3.0'}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
+
+    def test_create_server_with_networks_non_existing_fixed_ip(self):
+        """Creates a server with metadata."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1, 'fixed_ip': '10.100.0.3'}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
+
+
+    def test_create_server_with_networks_empty_fixed_ip(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1, 'fixed_ip': ''}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
+
+    def test_create_server_with_networks_non_string_fixed_ip(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1, 'fixed_ip': 12}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
+
+    def test_create_server_with_networks_none_fixed_ip(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1, 'fixed_ip': None}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Check it's there
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
+    def test_create_server_with_networks_no_fixed_ip(self):
+        """Creates a server with networks."""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        network_list = [{'id': 1}]
+        server['networks'] = network_list
+
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Check it's there
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
     def test_create_and_rebuild_server(self):
         """Rebuild a server."""
 

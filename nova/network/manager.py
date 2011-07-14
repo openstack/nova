@@ -614,6 +614,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             net['gateway'] = str(project_net[1])
             net['broadcast'] = str(project_net.broadcast)
             net['dhcp_start'] = str(project_net[2])
+            net['project_id'] = kwargs['project_id']
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, index)
             else:
@@ -705,7 +706,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         """check if the networks exists and host
         is set to each network.
         """
-        if networks is None:
+        if networks is None or len(networks) == 0:
             return
 
         result = self.db.network_get_requested_networks(context, networks)
@@ -965,10 +966,11 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """check if the networks exists and host
         is set to each network.
         """
-        if networks is None:
+        if networks is None or len(networks) == 0:
             return
 
         result = self.db.project_get_requested_networks(context, networks)
+
         for network_id, fixed_ip in networks:
             # check if the fixed IP address is valid and
             # it actually belongs to the network

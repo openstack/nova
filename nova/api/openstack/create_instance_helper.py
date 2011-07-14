@@ -329,9 +329,6 @@ class CreateInstanceHelper(object):
                 expl = _("Bad networks format: network id should "
                          "be integer (%s)") % network_id
                 raise faults.Fault(exc.HTTPBadRequest(explanation=expl))
-            except TypeError:
-                expl = _('Bad networks format')
-                raise faults.Fault(exc.HTTPBadRequest(explanation=expl))
 
         return networks
 

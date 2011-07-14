@@ -66,7 +66,8 @@ def setup():
                             bridge=FLAGS.flat_network_bridge,
                             bridge_interface=bridge_interface,
                             vpn_start=FLAGS.vpn_start,
-                            vlan_start=FLAGS.vlan_start)
+                            vlan_start=FLAGS.vlan_start,
+                            project_id="openstack")
     for net in db.network_get_all(ctxt):
         network.set_network_host(ctxt, net['id'])
 

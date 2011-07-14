@@ -2516,6 +2516,13 @@ class TestServerInstanceCreation(test.TestCase):
         self.assertEquals(response.status_int, 400)
         self.assertEquals(networks, None)
 
+    def test_create_instance_with_network_non_string_fixed_ip(self):
+        networks = [('1', 12345)]
+        request, response, networks = \
+            self._create_instance_with_networks_json(networks)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(networks, None)
+
     def test_create_instance_with_network_empty_fixed_ip_xml(self):
         networks = [('1', '')]
         request, response, networks = \

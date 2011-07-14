@@ -203,9 +203,6 @@ class FlatNetworkTestCase(test.TestCase):
 
     def test_validate_networks_empty_requested_networks(self):
         requested_networks = []
-        self.mox.StubOutWithMock(db, 'network_get_requested_networks')
-        db.network_get_requested_networks(mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndReturn(networks)
         self.mox.ReplayAll()
 
         self.network.validate_networks(None, requested_networks)
@@ -319,11 +316,6 @@ class VlanNetworkTestCase(test.TestCase):
 
     def test_validate_networks_empty_requested_networks(self):
         requested_networks = []
-        self.mox.StubOutWithMock(db, 'project_get_requested_networks')
-        db.project_get_requested_networks(mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndReturn(networks)
-        self.mox.ReplayAll()
-
         self.network.validate_networks(None, requested_networks)
 
     def test_validate_networks_invalid_fixed_ip(self):
