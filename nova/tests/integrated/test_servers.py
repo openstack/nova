@@ -209,7 +209,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         network_list = [{'id': 1, 'fixed_ip': '10.0.0.3'},
                         {'id': 2, 'fixed_ip': '10.0.0.12'}]
-        
         server['networks'] = network_list
 
         post = {'server': server}
@@ -325,7 +324,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         post = {'server': server}
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
-
 
     def test_create_server_with_networks_empty_fixed_ip(self):
         """Creates a server with networks."""

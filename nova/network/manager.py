@@ -354,7 +354,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Set the network hosts for any networks which are unset."""
         try:
             networks = self.db.network_get_all(context)
-        except Exception.NoNetworksFound:
+        except exception.NoNetworksFound:
             # we don't care if no networks are found
             pass
 
@@ -376,7 +376,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         else:
             try:
                 networks = self.db.network_get_all(context)
-            except Exception.NoNetworksFound:
+            except exception.NoNetworksFound:
                 # we don't care if no networks are found
                 pass
 
