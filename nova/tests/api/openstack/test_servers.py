@@ -2532,3 +2532,132 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
         kernel_id, ramdisk_id = create_instance_helper.CreateInstanceHelper. \
                                 _do_get_kernel_ramdisk_from_image(image_meta)
         return kernel_id, ramdisk_id
+
+
+class ServersTestv1_1(test.TestCase):
+
+    def setUp(self):
+        super(ServersTestv1_1, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+
+        fakes.FakeAuthManager.reset_fake_data()
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
+        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_image_service(self.stubs)
+
+        self.stubs.Set(nova.db.api, 'instance_get', self._return_server)
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(ServersTestv1_1, self).tearDown()
+
+    def _return_server(self, context, id):
+        return self._stub_instance_v1_1()
+
+    def _stub_instance_v1_1(self):
+        instance = {
+            "id": 1,
+            "created_at": "2010-10-10T12:00:00Z",
+            "updated_at": "2010-11-11T11:00:00Z",
+            "admin_pass": "",
+            "user_id": "",
+            "project_id": "",
+            "image_ref": "5",
+            "kernel_id": "",
+            "ramdisk_id": "",
+            "launch_index": 0,
+            "key_name": "",
+            "key_data": "",
+            "state": 0,
+            "state_description": "",
+            "memory_mb": 0,
+            "vcpus": 0,
+            "local_gb": 0,
+            "hostname": "",
+            "host": "",
+            "instance_type": {
+               "flavorid": 1, 
+            },
+            "user_data": "",
+            "reservation_id": "",
+            "mac_address": "",
+            "scheduled_at": utils.utcnow(),
+            "launched_at": utils.utcnow(),
+            "terminated_at": utils.utcnow(),
+            "availability_zone": "",
+            "display_name": "test_server",
+            "display_description": "",
+            "locked": False,
+            "metadata": {},
+            #"address": ,
+            #"floating_ips": [{"address":ip} for ip in public_addresses]}
+            "uuid": "deadbeef-feed-edee-beef-d0ea7beefedd"}
+    
+        return instance
+
+    def test_get_server(self):
+        self.maxDiff = None
+        instance = self._stub_instance_v1_1()
+        req = webob.Request.blank('/v1.1/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
+        expected_server = {
+            "server": {
+                "id": instance['uuid'],
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": '',
+                #"accessIPv4" : "67.23.10.132",
+                #"accessIPv6" : "::babe:67.23.10.132",
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    "public": [],
+                    "private": [],
+                },
+                "metadata": {},
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/%s" %
+                        instance['uuid'],
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/%s" %
+                        instance['uuid'],
+                    },
+                ],
+            }
+        }
+
+        import pprint
+        pp = pprint.PrettyPrinter()
+        pp.pprint(res_dict)
+        pp.pprint(expected_server)
+        self.assertDictEqual(res_dict, expected_server)

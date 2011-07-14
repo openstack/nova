@@ -193,8 +193,8 @@ class ViewBuilderV11(ViewBuilder):
                 response['progress'] = 0
 
     def _build_links(self, response, inst):
-        href = self.generate_href(inst["id"])
-        bookmark = self.generate_bookmark(inst["id"])
+        href = self.generate_href(inst["uuid"])
+        bookmark = self.generate_bookmark(inst["uuid"])
 
         links = [
             {
