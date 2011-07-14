@@ -649,7 +649,7 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server1')
         addresses = res_dict['server']['addresses']
         # RM(4047): Figure otu what is up with the 1.1 api and multi-nic
@@ -729,9 +729,9 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], i)
+            self.assertEqual(s['id'], FAKE_UUID)
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s.get('imageId', None), None)
+            self.assertEqual(s.get('image', None), None)
 
             expected_links = [
             {
@@ -790,13 +790,13 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/servers?marker=2')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
-        self.assertEqual([s['id'] for s in servers], [3, 4])
+        self.assertEqual([s['name'] for s in servers], ["server3", "server4"])
 
     def test_get_servers_with_limit_and_marker(self):
         req = webob.Request.blank('/v1.1/servers?limit=2&marker=1')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
-        self.assertEqual([s['id'] for s in servers], [2, 3])
+        self.assertEqual([s['name'] for s in servers], ['server2', 'server3'])
 
     def test_get_servers_with_bad_marker(self):
         req = webob.Request.blank('/v1.1/servers?limit=2&marker=asdf')
@@ -807,8 +807,16 @@ class ServersTest(test.TestCase):
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):
-            return {'id': 1, 'display_name': 'server_test',
-                    'uuid': FAKE_UUID}
+            inst_type = instance_types.get_instance_type_by_flavor_id(3)
+            image_ref = 'http://localhost/images/2'
+            return {'id': 1,
+                    'display_name': 'server_test',
+                    'uuid': FAKE_UUID,
+                    'instance_type': dict(inst_type),
+                    'image_ref': image_ref,
+                    'created_at': '2010-10-10T12:00:00Z',
+                    'updated_at': '2010-11-11T11:00:00Z',
+                   }
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -996,8 +1004,25 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_href = 'http://localhost/images/2'
+        flavor_ref = 'http://localhost/flavors/3'
+        expected_flavor = {
+            "id": "3",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/flavors/3',
+                },
+            ],
+        }
+        expected_image = {
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/images/2',
+                },
+            ],
+        }
         body = {
             'server': {
                 'name': 'server_test',
@@ -1021,9 +1046,8 @@ class ServersTest(test.TestCase):
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
-        self.assertEqual(1, server['id'])
-        self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_href, server['imageRef'])
+        self.assertEqual(expected_flavor, server['flavor'])
+        self.assertEqual(expected_image, server['image'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_v1_1_bad_href(self):
@@ -1045,8 +1069,26 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1_local_href(self):
         self._setup_for_create_instance()
 
-        image_id = 2
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_id = "2"
+        flavor_ref = 'http://localhost/flavors/3'
+        expected_flavor = {
+            "id": "3",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/flavors/3',
+                },
+            ],
+        }
+        expected_image = {
+            "id": "2",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/images/2',
+                },
+            ],
+        }
         body = {
             'server': {
                 'name': 'server_test',
@@ -1063,9 +1105,8 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         server = json.loads(res.body)['server']
-        self.assertEqual(1, server['id'])
-        self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_id, server['imageRef'])
+        self.assertEqual(expected_flavor, server['flavor'])
+        self.assertEqual(expected_image, server['image'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_with_admin_pass_v1_0(self):
@@ -1274,16 +1315,34 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['metadata']['seq'], str(i))
 
     def test_get_all_server_details_v1_1(self):
+        expected_flavor = {
+            "id": "1",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/flavors/1',
+                },
+            ],
+        }
+        expected_image = {
+            "id": "10",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/images/10',
+                },
+            ],
+        }
         req = webob.Request.blank('/v1.1/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], i)
+            self.assertEqual(s['id'], FAKE_UUID)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageRef'], 10)
-            self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
+            self.assertEqual(s['image'], expected_image)
+            self.assertEqual(s['flavor'], expected_flavor)
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], str(i))
 
