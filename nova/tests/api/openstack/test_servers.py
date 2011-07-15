@@ -2927,12 +2927,12 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "flavor": {
                     "id": "1",
-                  "links": [
-                                            {
-                          "rel": "bookmark",
-                          "href": flavor_bookmark,
-                      },
-                  ],
+                    "links": [
+                                              {
+                            "rel": "bookmark",
+                            "href": flavor_bookmark,
+                        },
+                    ],
                 },
                 "addresses": {},
                 "metadata": {
@@ -2954,3 +2954,133 @@ class ServersViewBuilderV11Test(test.TestCase):
 
         output = self.view_builder.build(self.instance, True)
         self.assertDictMatch(output, expected_server)
+
+
+class ServerXMLSerializationTest(test.TestCase):
+
+    TIMESTAMP = "2010-10-11T10:30:22Z"
+    SERVER_HREF = 'http://localhost/v1.1/servers/123'
+    SERVER_BOOKMARK = 'http://localhost/servers/123'
+    IMAGE_BOOKMARK = 'http://localhost/images/5'
+    FLAVOR_BOOKMARK = 'http://localhost/flavors/1'
+
+    def test_show(self):
+        serializer = servers.ServerXMLSerializer()
+
+        fixture = {
+            "server": {
+                "id": 1,
+                "uuid": FAKE_UUID,
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": self.IMAGE_BOOKMARK,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                    "links": [
+                                              {
+                            "rel": "bookmark",
+                            "href": self.FLAVOR_BOOKMARK,
+                        },
+                    ],
+                },
+                "addresses": {
+                    "network_one": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.138",
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.138",
+                        },
+                    ],
+                    "network_two": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.139",
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.139",
+                        },
+                    ],
+                },
+                "metadata": {
+                    "Open": "Stack",
+                    "Number": "1",
+                },
+                'links': [
+                    {
+                        'href': self.SERVER_HREF,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.SERVER_BOOKMARK,
+                        'rel': 'bookmark',
+                    },
+                ],
+            }
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected_server_href = self.SERVER_HREF
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_image_bookmark = self.IMAGE_BOOKMARK
+        expected_flavor_bookmark = self.FLAVOR_BOOKMARK
+        expected_now = self.TIMESTAMP
+        expected_uuid = FAKE_UUID
+        expected = minidom.parseString("""
+        <server id="1"
+                uuid="%(expected_uuid)s"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                name="Image1"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
+                status="BUILD"
+                progress="0">
+            <image id="5">
+                <atom:link rel="bookmark" href="%(expected_image_bookmark)s"/>
+            </image>
+            <flavor id="1">
+                <atom:link rel="bookmark" href="%(expected_flavor_bookmark)s"/>
+            </flavor>
+            <metadata>
+                <meta key="Open">
+                    Stack
+                </meta>
+                <meta key="Number">
+                    1
+                </meta>
+            </metadata>
+            <addresses>
+                <network id="network_one">
+                    <ip version="4" addr="67.23.10.138"/>
+                    <ip version="6" addr="::babe:67.23.10.138"/>
+                </network>
+                <network id="network_two">
+                    <ip version="4" addr="67.23.10.139"/>
+                    <ip version="6" addr="::babe:67.23.10.139"/>
+                </network>
+            </addresses>
+            <atom:link href="%(expected_server_href)s" rel="self"/>
+            <atom:link href="%(expected_server_bookmark)s" rel="bookmark"/>
+        </server>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
