@@ -32,6 +32,7 @@ from nova import utils
 import nova.api.openstack
 from nova.api.openstack import servers
 from nova.api.openstack import create_instance_helper
+from nova.api.openstack import wsgi
 import nova.compute.api
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -2534,30 +2535,16 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
         return kernel_id, ramdisk_id
 
 
-class ServersTestv1_1(test.TestCase):
+class ServersViewBuilderV11Test(test.TestCase):
 
     def setUp(self):
-        super(ServersTestv1_1, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_networking(self.stubs)
-        fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
-        fakes.stub_out_key_pair_funcs(self.stubs)
-        fakes.stub_out_image_service(self.stubs)
-
-        self.stubs.Set(nova.db.api, 'instance_get', self._return_server)
+        self.instance = self._get_instance()
+        self.view_builder = self._get_view_builder()
 
     def tearDown(self):
-        self.stubs.UnsetAll()
-        super(ServersTestv1_1, self).tearDown()
-
-    def _return_server(self, context, id):
-        return self._stub_instance_v1_1()
-
-    def _stub_instance_v1_1(self):
+        pass
+        
+    def _get_instance(self):
         instance = {
             "id": 1,
             "created_at": "2010-10-10T12:00:00Z",
@@ -2598,18 +2585,53 @@ class ServersTestv1_1(test.TestCase):
     
         return instance
 
-    def test_get_server(self):
-        self.maxDiff = None
-        instance = self._stub_instance_v1_1()
-        req = webob.Request.blank('/v1.1/servers/1')
-        res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+    def _get_view_builder(self):
+        base_url = "http://localhost/v1.1"
+        views = nova.api.openstack.views
+        address_builder = views.addresses.ViewBuilderV11()
+        flavor_builder = views.flavors.ViewBuilderV11(base_url)
+        image_builder = views.images.ViewBuilderV11(base_url)
 
+        view_builder = nova.api.openstack.views.servers.ViewBuilderV11(
+            address_builder,
+            flavor_builder,
+            image_builder,
+            base_url
+            )
+        return view_builder
+
+    def test_build_server(self):
+        self.maxDiff = None
+        expected_server = {
+            "server": {
+                "id": self.instance['uuid'],
+                "name": "test_server",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/%s" %
+                        self.instance['uuid'],
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/%s" %
+                        self.instance['uuid'],
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, False)
+        print output
+        self.assertDictEqual(output, expected_server)
+
+    def test_build_server_detail(self):
+        self.maxDiff = None
         image_bookmark = "http://localhost/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
             "server": {
-                "id": instance['uuid'],
+                "id": self.instance['uuid'],
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -2645,19 +2667,16 @@ class ServersTestv1_1(test.TestCase):
                     {
                         "rel": "self",
                         "href": "http://localhost/v1.1/servers/%s" %
-                        instance['uuid'],
+                        self.instance['uuid'],
                     },
                     {
                         "rel": "bookmark",
                         "href": "http://localhost/servers/%s" %
-                        instance['uuid'],
+                        self.instance['uuid'],
                     },
                 ],
             }
         }
 
-        import pprint
-        pp = pprint.PrettyPrinter()
-        pp.pprint(res_dict)
-        pp.pprint(expected_server)
-        self.assertDictEqual(res_dict, expected_server)
+        output = self.view_builder.build(self.instance, True)
+        self.assertDictEqual(output, expected_server)

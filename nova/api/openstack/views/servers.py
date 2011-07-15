@@ -140,6 +140,18 @@ class ViewBuilderV11(ViewBuilder):
         self.image_builder = image_builder
         self.base_url = base_url
 
+    def _build_detail(self, inst):
+        response = super(ViewBuilderV11, self)._build_detail(inst)
+        response['server']['created'] = inst['created_at']
+        response['server']['updated'] = inst['updated_at']
+        if 'status' in response['server']:
+            if response['server']['status'] == "ACTIVE":
+                response['server']['progress'] = 100
+            elif response['server']['status'] == "BUILD":
+                response['server']['progress'] = 0
+        return response
+
+
     def _build_image(self, response, inst):
         if 'image_ref' in dict(inst):
             image_href = inst['image_ref']
@@ -184,13 +196,6 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['id'] = inst['uuid']
-        response['created'] = inst['created_at']
-        response['updated'] = inst['updated_at']
-        if 'status' in response:
-            if response['status'] == "ACTIVE":
-                response['progress'] = 100
-            elif response['status'] == "BUILD":
-                response['progress'] = 0
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["uuid"])
