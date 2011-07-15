@@ -925,6 +925,9 @@ class VersionCommands(object):
         print _("%s (%s)") %\
                 (version.version_string(), version.version_string_with_vcs())
 
+    def __call__(self):
+        self.list()
+
 
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
@@ -1379,14 +1382,19 @@ def main():
     command_object = fn()
     actions = methods_of(command_object)
     if len(argv) < 1:
-        print script_name + " category action [<args>]"
-        print _("Available actions for %s category:") % category
-        for k, _v in actions:
-            print "\t%s" % k
-        sys.exit(2)
-    action = argv.pop(0)
-    matches = lazy_match(action, actions)
-    action, fn = matches[0]
+        if hasattr(command_object, '__call__'):
+            action = '__call__'
+            fn = command_object.__call__
+        else:
+            print script_name + " category action [<args>]"
+            print _("Available actions for %s category:") % category
+            for k, _v in actions:
+                print "\t%s" % k
+            sys.exit(2)
+    else:
+        action = argv.pop(0)
+        matches = lazy_match(action, actions)
+        action, fn = matches[0]
 
     # For not decorated methods
     options = getattr(fn, 'options', '')
