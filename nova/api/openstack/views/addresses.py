@@ -20,13 +20,14 @@ from nova.api.openstack import common
 
 
 class ViewBuilder(object):
-    ''' Models a server addresses response as a python dictionary.'''
+    """Models a server addresses response as a python dictionary."""
 
     def build(self, inst):
         raise NotImplementedError()
 
 
 class ViewBuilderV10(ViewBuilder):
+
     def build(self, inst):
         private_ips = self.build_private_parts(inst)
         public_ips = self.build_public_parts(inst)
@@ -40,11 +41,31 @@ class ViewBuilderV10(ViewBuilder):
 
 
 class ViewBuilderV11(ViewBuilder):
-    def build(self, inst):
-        # TODO(tr3buchet) - this shouldn't be hard coded to 4...
-        private_ips = utils.get_from_path(inst, 'fixed_ips/address')
-        private_ips = [dict(version=4, addr=a) for a in private_ips]
-        public_ips = utils.get_from_path(inst,
-                                         'fixed_ips/floating_ips/address')
-        public_ips = [dict(version=4, addr=a) for a in public_ips]
-        return dict(public=public_ips, private=private_ips)
+
+    def build(self, interfaces):
+        networks = {}
+        for interface in interfaces:
+            network_label = interface['network']['label']
+
+            if network_label not in networks:
+                networks[network_label] = []
+
+            networks[network_label].extend(self._extract_ipv4(interface))
+
+        return networks
+
+    def build_network(self, interfaces, network_label):
+        for interface in interfaces:
+            if interface['network']['label'] == network_label:
+                ips = self._extract_ipv4(interface)
+                return {network_label: list(ips)}
+        return None
+
+    def _extract_ipv4(self, interface):
+        for fixed_ip in interface['fixed_ips']:
+            yield self._build_ip_entity(fixed_ip['address'], 4)
+            for floating_ip in fixed_ip.get('floating_ips', []):
+                yield self._build_ip_entity(floating_ip['address'], 4)
+
+    def _build_ip_entity(self, address, version):
+        return {'addr': address, 'version': version}

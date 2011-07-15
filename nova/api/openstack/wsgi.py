@@ -291,13 +291,21 @@ class XMLDictSerializer(DictSerializer):
         doc = minidom.Document()
         node = self._to_xml_node(doc, self.metadata, root_key, data[root_key])
 
-        self._add_xmlns(node)
+        return self.to_xml_string(node)
 
-        return node.toprettyxml(indent='    ', encoding='utf-8')
+    def to_xml_string(self, node, has_atom=False):
+        self._add_xmlns(node, has_atom)
+        return node.toprettyxml(indent='    ', encoding='UTF-8')
 
-    def _add_xmlns(self, node):
+    #NOTE (ameade): the has_atom should be removed after all of the
+    # xml serializers and view builders have been updated to the current
+    # spec that required all responses include the xmlns:atom, the has_atom
+    # flag is to prevent current tests from breaking
+    def _add_xmlns(self, node, has_atom=False):
         if self.xmlns is not None:
             node.setAttribute('xmlns', self.xmlns)
+        if has_atom:
+            node.setAttribute('xmlns:atom', "http://www.w3.org/2005/Atom")
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""
@@ -352,6 +360,15 @@ class XMLDictSerializer(DictSerializer):
             node = doc.createTextNode(str(data))
             result.appendChild(node)
         return result
+
+    def _create_link_nodes(self, xml_doc, links):
+        link_nodes = []
+        for link in links:
+            link_node = xml_doc.createElement('atom:link')
+            link_node.setAttribute('rel', link['rel'])
+            link_node.setAttribute('href', link['href'])
+            link_nodes.append(link_node)
+        return link_nodes
 
 
 class ResponseHeadersSerializer(ActionDispatcher):

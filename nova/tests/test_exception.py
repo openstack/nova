@@ -32,3 +32,66 @@ class ApiErrorTestCase(test.TestCase):
         self.assertEqual(err.__str__(), 'blah code: fake error')
         self.assertEqual(err.code, 'blah code')
         self.assertEqual(err.msg, 'fake error')
+
+
+class FakeNotifier(object):
+    """Acts like the nova.notifier.api module."""
+    ERROR = 88
+
+    def __init__(self):
+        self.provided_publisher = None
+        self.provided_event = None
+        self.provided_priority = None
+        self.provided_payload = None
+
+    def notify(self, publisher, event, priority, payload):
+        self.provided_publisher = publisher
+        self.provided_event = event
+        self.provided_priority = priority
+        self.provided_payload = payload
+
+
+def good_function():
+    return 99
+
+
+def bad_function_error():
+    raise exception.Error()
+
+
+def bad_function_exception():
+    raise Exception()
+
+
+class WrapExceptionTestCase(test.TestCase):
+    def test_wrap_exception_good_return(self):
+        wrapped = exception.wrap_exception()
+        self.assertEquals(99, wrapped(good_function)())
+
+    def test_wrap_exception_throws_error(self):
+        wrapped = exception.wrap_exception()
+        self.assertRaises(exception.Error, wrapped(bad_function_error))
+
+    def test_wrap_exception_throws_exception(self):
+        wrapped = exception.wrap_exception()
+        # Note that Exception is converted to Error ...
+        self.assertRaises(exception.Error, wrapped(bad_function_exception))
+
+    def test_wrap_exception_with_notifier(self):
+        notifier = FakeNotifier()
+        wrapped = exception.wrap_exception(notifier, "publisher", "event",
+                                           "level")
+        self.assertRaises(exception.Error, wrapped(bad_function_exception))
+        self.assertEquals(notifier.provided_publisher, "publisher")
+        self.assertEquals(notifier.provided_event, "event")
+        self.assertEquals(notifier.provided_priority, "level")
+        for key in ['exception', 'args']:
+            self.assertTrue(key in notifier.provided_payload.keys())
+
+    def test_wrap_exception_with_notifier_defaults(self):
+        notifier = FakeNotifier()
+        wrapped = exception.wrap_exception(notifier)
+        self.assertRaises(exception.Error, wrapped(bad_function_exception))
+        self.assertEquals(notifier.provided_publisher, None)
+        self.assertEquals(notifier.provided_event, "bad_function_exception")
+        self.assertEquals(notifier.provided_priority, notifier.ERROR)
