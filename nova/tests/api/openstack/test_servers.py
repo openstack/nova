@@ -380,11 +380,11 @@ class ServersTest(test.TestCase):
                     {
                         "rel": "self",
                         #FIXME(wwolf) Do we want the links to be id or uuid?
-                        "href": "http://localhost/v1.1/servers/%s" % FAKE_UUID,
+                        "href": "http://localhost/v1.1/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" % FAKE_UUID,
+                        "href": "http://localhost/servers/1",
                     },
                 ],
             }
@@ -470,11 +470,11 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/%s" % FAKE_UUID,
+                        "href": "http://localhost/v1.1/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" % FAKE_UUID,
+                        "href": "http://localhost/servers/1",
                     },
                 ],
             }
@@ -563,11 +563,11 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/%s" % FAKE_UUID,
+                        "href": "http://localhost/v1.1/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" % FAKE_UUID,
+                        "href": "http://localhost/servers/1",
                     },
                 ],
             }
@@ -913,11 +913,11 @@ class ServersTest(test.TestCase):
             expected_links = [
                 {
                     "rel": "self",
-                    "href": "http://localhost/v1.1/servers/%s" % FAKE_UUID,
+                    "href": "http://localhost/v1.1/servers/%s" % s['id'],
                 },
                 {
                     "rel": "bookmark",
-                    "href": "http://localhost/servers/%s" % FAKE_UUID,
+                    "href": "http://localhost/servers/%s" % s['id'],
                 },
             ]
 
@@ -2786,13 +2786,11 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/%s" %
-                        self.instance['uuid'],
+                        "href": "http://localhost/v1.1/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" %
-                        self.instance['uuid'],
+                        "href": "http://localhost/servers/1",
                     },
                 ],
             }
@@ -2838,13 +2836,11 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/%s" %
-                        self.instance['uuid'],
+                        "href": "http://localhost/v1.1/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" %
-                        self.instance['uuid'],
+                        "href": "http://localhost/servers/1",
                     },
                 ],
             }
@@ -2891,13 +2887,11 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/%s" %
-                        self.instance['uuid'],
+                        "href": "http://localhost/v1.1/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" %
-                        self.instance['uuid'],
+                        "href": "http://localhost/servers/1",
                     },
                 ],
             }
@@ -2952,13 +2946,11 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/%s" %
-                        self.instance['uuid'],
+                        "href": "http://localhost/v1.1/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" %
-                        self.instance['uuid'],
+                        "href": "http://localhost/servers/1",
                     },
                 ],
             }

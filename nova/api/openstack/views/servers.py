@@ -209,8 +209,8 @@ class ViewBuilderV11(ViewBuilder):
         response['uuid'] = inst['uuid']
 
     def _build_links(self, response, inst):
-        href = self.generate_href(inst["uuid"])
-        bookmark = self.generate_bookmark(inst["uuid"])
+        href = self.generate_href(inst["id"])
+        bookmark = self.generate_bookmark(inst["id"])
 
         links = [
             {
