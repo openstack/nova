@@ -137,15 +137,22 @@ def get_id_from_href(href):
 
 
 def remove_version_from_href(href):
-    """Removes the api version from the href.
+    """Removes the first api version from the href.
 
     Given: 'http://www.nova.com/v1.1/123'
     Returns: 'http://www.nova.com/123'
 
+    Given: 'http://www.nova.com/v1.1'
+    Returns: 'http://www.nova.com'
+
     """
     try:
-        #matches /v#.#
-        new_href = re.sub(r'[/][v][0-9]*.[0-9]*', '', href)
+        #removes the first instance that matches /v#.#/
+        new_href = re.sub(r'[/][v][0-9]+\.[0-9]+[/]', '/', href, count=1)
+
+        #if no version was found, try finding /v#.# at the end of the string
+        if new_href == href:
+            new_href = re.sub(r'[/][v][0-9]+\.[0-9]+$', '', href, count=1)
     except:
         LOG.debug(_("Error removing version from href: %s") % href)
         msg = _('could not parse version from href')
