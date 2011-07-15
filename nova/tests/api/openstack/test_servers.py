@@ -66,10 +66,28 @@ def return_server_by_uuid(context, uuid):
     return stub_instance(id, uuid=uuid)
 
 
+def return_virtual_interface_by_instance(interfaces):
+    def _return_virtual_interface_by_instance(context, instance_id):
+        return interfaces
+    return _return_virtual_interface_by_instance
+
+
+def return_virtual_interface_instance_nonexistant(interfaces):
+    def _return_virtual_interface_by_instance(context, instance_id):
+        raise exception.InstanceNotFound(instance_id=instance_id)
+    return _return_virtual_interface_by_instance
+
+
 def return_server_with_addresses(private, public):
     def _return_server(context, id):
         return stub_instance(id, private_address=private,
                              public_addresses=public)
+    return _return_server
+
+
+def return_server_with_interfaces(interfaces, **kwargs):
+    def _return_server(context, id):
+        return stub_instance(id, interfaces=interfaces, **kwargs)
     return _return_server
 
 
@@ -125,9 +143,12 @@ def instance_addresses(context, instance_id):
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
                   host=None, power_state=0, reservation_id="",
-                  uuid=FAKE_UUID, image_ref="10", flavor_id="1"):
+                  uuid=FAKE_UUID, image_ref="10", flavor_id="1", interfaces=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
+
+    if interfaces is None:
+        interfaces = []
 
     inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
 
@@ -174,7 +195,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "display_description": "",
         "locked": False,
         "metadata": metadata,
-        "uuid": uuid}
+        "uuid": uuid,
+        "virtual_interfaces": interfaces}
 
     instance["fixed_ips"] = {
         "address": private_address,
@@ -285,19 +307,25 @@ class ServersTest(test.TestCase):
         flavor_ref = "http://localhost/v1.1/flavors/1"
         flavor_id = "1"
         flavor_bookmark = "http://localhost/flavors/1"
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
 
-        def _return_server(context, id):
-
-            return  stub_instance(1,
-                                  private_address=private,
-                                  public_addresses=public,
-                                  power_state=0,
-                                  image_ref=image_bookmark,
-                                  flavor_id=flavor_id,
-                                  )
-        self.stubs.Set(nova.db.api, 'instance_get', _return_server)
+        public_ip = '192.168.0.3'
+        private_ip = '172.19.0.1'
+        interfaces = [
+            {
+                'network': {'label': 'public'},
+                'fixed_ips': [
+                    {'address': public_ip},
+                ],
+            },
+            {
+                'network': {'label': 'private'},
+                'fixed_ips': [
+                    {'address': private_ip},
+                ],
+            },
+        ]
+        new_return_server = return_server_with_interfaces(interfaces)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
@@ -311,9 +339,8 @@ class ServersTest(test.TestCase):
                 "name": "server1",
                 "status": "BUILD",
                 "hostId": '',
-                #"accessIPv4" : "67.23.10.132",
-                #"accessIPv6" : "::babe:67.23.10.132",
                 "image": {
+                    "id":"10",
                     "links": [
                         {
                             "rel": "bookmark",
@@ -334,13 +361,13 @@ class ServersTest(test.TestCase):
                     "public": [
                         {
                             "version": 4,
-                            "addr": public[0],
+                            "addr": public_ip,
                         },
                     ],
                     "private": [
                         {
                             "version": 4,
-                            "addr": private,
+                            "addr": private_ip,
                         },
                     ],
                 },
@@ -368,19 +395,26 @@ class ServersTest(test.TestCase):
         flavor_ref = "http://localhost/v1.1/flavors/1"
         flavor_id = "1"
         flavor_bookmark = "http://localhost/flavors/1"
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
+        private_ip = "192.168.0.3"
+        public_ip = "1.2.3.4"
 
-        def _return_server(context, id):
-
-            return  stub_instance(1,
-                                  private_address=private,
-                                  public_addresses=public,
-                                  power_state=1,
-                                  image_ref=image_bookmark,
-                                  flavor_id=flavor_id,
-                                  )
-        self.stubs.Set(nova.db.api, 'instance_get', _return_server)
+        interfaces = [
+            {
+                'network': {'label': 'public'},
+                'fixed_ips': [
+                    {'address': public_ip},
+                ],
+            },
+            {
+                'network': {'label': 'private'},
+                'fixed_ips': [
+                    {'address': private_ip},
+                ],
+            },
+        ]
+        new_return_server = return_server_with_interfaces(interfaces,
+                                                          power_state=1)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
@@ -397,6 +431,7 @@ class ServersTest(test.TestCase):
                 #"accessIPv4" : "67.23.10.132",
                 #"accessIPv6" : "::babe:67.23.10.132",
                 "image": {
+                    "id" : "10",
                     "links": [
                         {
                             "rel": "bookmark",
@@ -417,13 +452,13 @@ class ServersTest(test.TestCase):
                     "public": [
                         {
                             "version": 4,
-                            "addr": public[0],
+                            "addr": public_ip,
                         },
                     ],
                     "private": [
                         {
                             "version": 4,
-                            "addr": private,
+                            "addr": private_ip,
                         },
                     ],
                 },
@@ -452,19 +487,28 @@ class ServersTest(test.TestCase):
         flavor_ref = "http://localhost/v1.1/flavors/1"
         flavor_id = "1"
         flavor_bookmark = "http://localhost/flavors/1"
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
+        private_ip = "192.168.0.3"
+        public_ip = "1.2.3.4"
 
-        def _return_server(context, id):
-
-            return  stub_instance(1,
-                                  private_address=private,
-                                  public_addresses=public,
-                                  power_state=1,
-                                  image_ref=image_ref,
-                                  flavor_id=flavor_id,
-                                  )
-        self.stubs.Set(nova.db.api, 'instance_get', _return_server)
+        interfaces = [
+            {
+                'network': {'label': 'public'},
+                'fixed_ips': [
+                    {'address': public_ip},
+                ],
+            },
+            {
+                'network': {'label': 'private'},
+                'fixed_ips': [
+                    {'address': private_ip},
+                ],
+            },
+        ]
+        new_return_server = return_server_with_interfaces(interfaces,
+                                                          power_state=1,
+                                                          image_ref=image_ref,
+                                                          flavor_id=flavor_id)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
@@ -502,13 +546,13 @@ class ServersTest(test.TestCase):
                     "public": [
                         {
                             "version": 4,
-                            "addr": public[0],
+                            "addr": public_ip,
                         },
                     ],
                     "private": [
                         {
                             "version": 4,
-                            "addr": private,
+                            "addr": private_ip,
                         },
                     ],
                 },
@@ -645,23 +689,152 @@ class ServersTest(test.TestCase):
         self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_by_id_with_addresses_v1_1(self):
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private, public)
+        interfaces = [
+            {
+                'network': {'label': 'network_1'},
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+            {
+                'network': {'label': 'network_2'},
+                'fixed_ips': [
+                    {'address': '172.19.0.1'},
+                    {'address': '172.19.0.2'},
+                ],
+            },
+        ]
+        new_return_server = return_server_with_interfaces(interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
+
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server1')
         addresses = res_dict['server']['addresses']
-        # RM(4047): Figure otu what is up with the 1.1 api and multi-nic
-        #self.assertEqual(len(addresses["public"]), len(public))
-        #self.assertEqual(addresses["public"][0],
-        #    {"version": 4, "addr": public[0]})
-        #self.assertEqual(len(addresses["private"]), 1)
-        #self.assertEqual(addresses["private"][0],
-        #    {"version": 4, "addr": private})
+        expected = {
+            'network_1': [
+                {'addr': '192.168.0.3', 'version': 4},
+                {'addr': '192.168.0.4', 'version': 4},
+            ],
+            'network_2': [
+                {'addr': '172.19.0.1', 'version': 4},
+                {'addr': '172.19.0.2', 'version': 4},
+            ],
+        }
+
+        self.assertEqual(addresses, expected)
+
+    def test_get_server_addresses_v1_1(self):
+        interfaces = [
+            {
+                'network': {'label': 'network_1'},
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+            {
+                'network': {'label': 'network_2'},
+                'fixed_ips': [
+                    {
+                        'address': '172.19.0.1',
+                        'floating_ips': [
+                            {'address': '1.2.3.4'},
+                        ],
+                    },
+                    {'address': '172.19.0.2'},
+                ],
+            },
+        ]
+
+        _return_vifs = return_virtual_interface_by_instance(interfaces)
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/1/ips')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        expected = {
+            'addresses': {
+                'network_1': [
+                    {'version': 4, 'addr': '192.168.0.3'},
+                    {'version': 4, 'addr': '192.168.0.4'},
+                ],
+                'network_2': [
+                    {'version': 4, 'addr': '172.19.0.1'},
+                    {'version': 4, 'addr': '1.2.3.4'},
+                    {'version': 4, 'addr': '172.19.0.2'},
+                ],
+            },
+        }
+
+        self.assertEqual(res_dict, expected)
+
+    def test_get_server_addresses_single_network_v1_1(self):
+        interfaces = [
+            {
+                'network': {'label': 'network_1'},
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+            {
+                'network': {'label': 'network_2'},
+                'fixed_ips': [
+                    {
+                        'address': '172.19.0.1',
+                        'floating_ips': [
+                            {'address': '1.2.3.4'},
+                        ],
+                    },
+                    {'address': '172.19.0.2'},
+                ],
+            },
+        ]
+        _return_vifs = return_virtual_interface_by_instance(interfaces)
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/1/ips/network_2')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        expected = {
+            'network_2': [
+                {'version': 4, 'addr': '172.19.0.1'},
+                {'version': 4, 'addr': '1.2.3.4'},
+                {'version': 4, 'addr': '172.19.0.2'},
+            ],
+        }
+        self.assertEqual(res_dict, expected)
+
+    def test_get_server_addresses_nonexistant_network_v1_1(self):
+        _return_vifs = return_virtual_interface_by_instance([])
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/1/ips/network_0')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    def test_get_server_addresses_nonexistant_server_v1_1(self):
+        _return_vifs = return_virtual_interface_instance_nonexistant([])
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/600/ips')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
 
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')
@@ -1046,12 +1219,14 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(expected_flavor, server['flavor'])
         self.assertEqual(expected_image, server['image'])
         self.assertEqual(res.status_int, 200)
+        #self.assertEqual(1, server['id'])
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
@@ -2622,7 +2797,6 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         output = self.view_builder.build(self.instance, False)
-        print output
         self.assertDictEqual(output, expected_server)
 
     def test_build_server_detail(self):
