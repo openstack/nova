@@ -127,7 +127,7 @@ def inject_file(self, arg_dict):
     been disabled, and raise a NotImplemented error if that is the case.
     """
     b64_path = arg_dict["b64_path"]
-    b64_file = arg_dict["b64_file"]
+    b64_file = arg_dict["b64_contents"]
     request_id = arg_dict["id"]
     if self._agent_has_method("file_inject"):
         # New version of the agent.  Agent should receive a 'value'
