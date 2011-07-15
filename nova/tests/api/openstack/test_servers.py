@@ -350,17 +350,17 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/servers/%s" % (FAKE_UUID),
                     },
                 ],
             }
         }
 
-        self.assertDictEqual(res_dict, expected_server)
+        self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_with_active_status_by_id_v1_1(self):
         self.maxDiff = None
@@ -433,17 +433,17 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/servers/%s" % (FAKE_UUID),
                     },
                 ],
             }
         }
 
-        self.assertDictEqual(res_dict, expected_server)
+        self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_with_id_image_ref_by_id_v1_1(self):
         self.maxDiff = None
@@ -518,17 +518,17 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/servers/%s" % (FAKE_UUID),
                     },
                 ],
             }
         }
 
-        self.assertDictEqual(res_dict, expected_server)
+        self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_by_id_with_addresses_xml(self):
         private = "192.168.0.3"
@@ -737,17 +737,17 @@ class ServersTest(test.TestCase):
             self.assertEqual(s.get('image', None), None)
 
             expected_links = [
-            {
-                "rel": "self",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/servers/%d" % (i,),
-            },
-        ]
+                {
+                    "rel": "self",
+                    "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
+                },
+                {
+                    "rel": "bookmark",
+                    "href": "http://localhost/servers/%s" % (FAKE_UUID),
+                },
+            ]
 
-        self.assertEqual(s['links'], expected_links)
+            self.assertEqual(s['links'], expected_links)
 
     def test_get_servers_with_limit(self):
         req = webob.Request.blank('/v1.0/servers?limit=3')
