@@ -161,28 +161,18 @@ class ViewBuilderV11(ViewBuilder):
     def _build_image(self, response, inst):
         if 'image_ref' in dict(inst):
             image_href = inst['image_ref']
-            #if id is a uuid do:
-            if image_href == common.get_uuid_from_href(image_href):
-                image_id = image_href
-                _bookmark = self.image_builder.generate_bookmark(image_href)
-                response['image'] = {
-                    "id": image_id,
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": _bookmark,
-                        },
-                    ]
-                }
-            else:
-                response['image'] = {
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": image_href,
-                        },
-                    ]
-                }
+            image_id = str(common.get_id_from_href(image_href))
+            print "IMAGE ID:", image_id
+            _bookmark = self.image_builder.generate_bookmark(image_id)
+            response['image'] = {
+                "id": image_id,
+                "links": [
+                    {
+                        "rel": "bookmark",
+                        "href": _bookmark,
+                    },
+                ]
+            }
 
     def _build_flavor(self, response, inst):
         if "instance_type" in dict(inst):
@@ -190,7 +180,7 @@ class ViewBuilderV11(ViewBuilder):
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
             flavor_bookmark = self.flavor_builder.generate_bookmark(flavor_id)
             response["flavor"] = {
-                "id": common.get_uuid_from_href(flavor_ref),
+                "id": str(common.get_id_from_href(flavor_ref)),
                 "links": [
                     {
                         "rel": "bookmark",

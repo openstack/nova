@@ -1193,6 +1193,7 @@ class ServersTest(test.TestCase):
             ],
         }
         expected_image = {
+            "id": "2",
             "links": [
                 {
                     "rel": "bookmark",
