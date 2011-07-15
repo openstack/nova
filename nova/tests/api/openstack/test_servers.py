@@ -78,16 +78,16 @@ def return_virtual_interface_instance_nonexistant(interfaces):
     return _return_virtual_interface_by_instance
 
 
+def return_server_with_attributes(**kwargs):
+    def _return_server(context, id):
+        return stub_instance(id, **kwargs)
+    return _return_server
+
+
 def return_server_with_addresses(private, public):
     def _return_server(context, id):
         return stub_instance(id, private_address=private,
                              public_addresses=public)
-    return _return_server
-
-
-def return_server_with_interfaces(interfaces, **kwargs):
-    def _return_server(context, id):
-        return stub_instance(id, interfaces=interfaces, **kwargs)
     return _return_server
 
 
@@ -325,7 +325,7 @@ class ServersTest(test.TestCase):
                 ],
             },
         ]
-        new_return_server = return_server_with_interfaces(interfaces)
+        new_return_server = return_server_with_attributes(interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
@@ -414,7 +414,7 @@ class ServersTest(test.TestCase):
                 ],
             },
         ]
-        new_return_server = return_server_with_interfaces(interfaces,
+        new_return_server = return_server_with_attributes(interfaces=interfaces,
                                                           power_state=1)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
@@ -504,7 +504,7 @@ class ServersTest(test.TestCase):
                 ],
             },
         ]
-        new_return_server = return_server_with_interfaces(interfaces,
+        new_return_server = return_server_with_attributes(interfaces=interfaces,
                                                           power_state=1,
                                                           image_ref=image_ref,
                                                           flavor_id=flavor_id)
@@ -704,7 +704,7 @@ class ServersTest(test.TestCase):
                 ],
             },
         ]
-        new_return_server = return_server_with_interfaces(interfaces)
+        new_return_server = return_server_with_attributes(interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
