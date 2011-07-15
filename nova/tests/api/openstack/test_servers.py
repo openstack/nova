@@ -431,8 +431,6 @@ class ServersTest(test.TestCase):
                 "name": "server1",
                 "status": "ACTIVE",
                 "hostId": '',
-                #"accessIPv4" : "67.23.10.132",
-                #"accessIPv6" : "::babe:67.23.10.132",
                 "image": {
                     "id" : "10",
                     "links": [
@@ -526,8 +524,6 @@ class ServersTest(test.TestCase):
                 "name": "server1",
                 "status": "ACTIVE",
                 "hostId": '',
-                #"accessIPv4" : "67.23.10.132",
-                #"accessIPv6" : "::babe:67.23.10.132",
                 "image": {
                     "id": "10",
                     "links": [
@@ -2783,7 +2779,8 @@ class ServersViewBuilderV11Test(test.TestCase):
         self.maxDiff = None
         expected_server = {
             "server": {
-                "id": self.instance['uuid'],
+                "id": 1,
+                "uuid": self.instance['uuid'],
                 "name": "test_server",
                 "links": [
                     {
@@ -2801,7 +2798,7 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         output = self.view_builder.build(self.instance, False)
-        self.assertDictEqual(output, expected_server)
+        self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail(self):
         self.maxDiff = None
@@ -2809,15 +2806,14 @@ class ServersViewBuilderV11Test(test.TestCase):
         flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
             "server": {
-                "id": self.instance['uuid'],
+                "id": 1,
+                "uuid": self.instance['uuid'],
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
                 "status": "BUILD",
                 "hostId": '',
-                #"accessIPv4" : "67.23.10.132",
-                #"accessIPv6" : "::babe:67.23.10.132",
                 "image": {
                     "id": "5",
                     "links": [
@@ -2836,10 +2832,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                       },
                   ],
                 },
-                "addresses": {
-                    "public": [],
-                    "private": [],
-                },
+                "addresses": { },
                 "metadata": {},
                 "links": [
                     {
@@ -2857,7 +2850,7 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         output = self.view_builder.build(self.instance, True)
-        self.assertDictEqual(output, expected_server)
+        self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_active_status(self):
         #set the power state of the instance to running
@@ -2866,15 +2859,14 @@ class ServersViewBuilderV11Test(test.TestCase):
         flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
             "server": {
-                "id": self.instance['uuid'],
+                "id": 1,
+                "uuid": self.instance['uuid'],
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
                 "name": "test_server",
                 "status": "ACTIVE",
                 "hostId": '',
-                #"accessIPv4" : "67.23.10.132",
-                #"accessIPv6" : "::babe:67.23.10.132",
                 "image": {
                     "id": "5",
                     "links": [
@@ -2893,10 +2885,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                       },
                   ],
                 },
-                "addresses": {
-                    "public": [],
-                    "private": [],
-                },
+                "addresses": { },
                 "metadata": {},
                 "links": [
                     {
@@ -2914,7 +2903,7 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         output = self.view_builder.build(self.instance, True)
-        self.assertDictEqual(output, expected_server)
+        self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_with_metadata(self):
         self.maxDiff = None
@@ -2928,15 +2917,14 @@ class ServersViewBuilderV11Test(test.TestCase):
         flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
             "server": {
-                "id": self.instance['uuid'],
+                "id": 1,
+                "uuid": self.instance['uuid'],
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
                 "status": "BUILD",
                 "hostId": '',
-                #"accessIPv4" : "67.23.10.132",
-                #"accessIPv6" : "::babe:67.23.10.132",
                 "image": {
                     "id": "5",
                     "links": [
@@ -2955,10 +2943,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                       },
                   ],
                 },
-                "addresses": {
-                    "public": [],
-                    "private": [],
-                },
+                "addresses": { },
                 "metadata": {
                     "Open": "Stack",
                     "Number": "1",
@@ -2979,4 +2964,4 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         output = self.view_builder.build(self.instance, True)
-        self.assertDictEqual(output, expected_server)
+        self.assertDictMatch(output, expected_server)
