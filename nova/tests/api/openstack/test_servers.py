@@ -332,7 +332,8 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
         expected_server = {
             "server": {
-                "id": FAKE_UUID,
+                "id": 1,
+                "uuid": FAKE_UUID,
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -377,6 +378,7 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
+                        #FIXME(wwolf) Do we want the links to be id or uuid?
                         "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
                     },
                     {
@@ -421,7 +423,8 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
         expected_server = {
             "server": {
-                "id": FAKE_UUID,
+                "id": 1,
+                "uuid": FAKE_UUID,
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -515,7 +518,8 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
         expected_server = {
             "server": {
-                "id": FAKE_UUID,
+                "id": 1,
+                "uuid": FAKE_UUID,
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -712,7 +716,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
         addresses = res_dict['server']['addresses']
         expected = {
@@ -905,7 +909,7 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], FAKE_UUID)
+            self.assertEqual(s['id'], i)
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s.get('image', None), None)
 
@@ -1516,7 +1520,7 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], FAKE_UUID)
+            self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['image'], expected_image)
