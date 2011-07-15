@@ -712,7 +712,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get(context,
+        instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
 
         instance_type = self.db.instance_type_get_by_flavor_id(context,
@@ -720,7 +720,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # Just roll back the record. There's no need to resize down since
         # the 'old' VM already has the preferred attributes
-        self.db.instance_update(context, instance_ref.instance_uuid,
+        self.db.instance_update(context, instance_ref['uuid'],
            dict(memory_mb=instance_type['memory_mb'],
                 vcpus=instance_type['vcpus'],
                 local_gb=instance_type['local_gb']))
