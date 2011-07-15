@@ -227,6 +227,7 @@ class MockSetAdminPassword(object):
 class ServersTest(test.TestCase):
 
     def setUp(self):
+        self.maxDiff = None
         super(ServersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.reset_fake_data()
@@ -303,7 +304,6 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_v1_1(self):
-        self.maxDiff = None
         image_bookmark = "http://localhost/images/10"
         flavor_ref = "http://localhost/v1.1/flavors/1"
         flavor_id = "1"
@@ -393,7 +393,6 @@ class ServersTest(test.TestCase):
         self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_with_active_status_by_id_v1_1(self):
-        self.maxDiff = None
         image_bookmark = "http://localhost/images/10"
         flavor_ref = "http://localhost/v1.1/flavors/1"
         flavor_id = "1"
@@ -483,7 +482,6 @@ class ServersTest(test.TestCase):
         self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_with_id_image_ref_by_id_v1_1(self):
-        self.maxDiff = None
         image_ref = "10"
         image_bookmark = "http://localhost/images/10"
         flavor_ref = "http://localhost/v1.1/flavors/1"
@@ -2778,7 +2776,6 @@ class ServersViewBuilderV11Test(test.TestCase):
         return view_builder
 
     def test_build_server(self):
-        self.maxDiff = None
         expected_server = {
             "server": {
                 "id": 1,
@@ -2801,7 +2798,6 @@ class ServersViewBuilderV11Test(test.TestCase):
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail(self):
-        self.maxDiff = None
         image_bookmark = "http://localhost/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
@@ -2902,7 +2898,6 @@ class ServersViewBuilderV11Test(test.TestCase):
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_with_metadata(self):
-        self.maxDiff = None
 
         metadata = []
         metadata.append(InstanceMetadata(key="Open", value="Stack"))
