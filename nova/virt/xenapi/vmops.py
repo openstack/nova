@@ -597,7 +597,9 @@ class VMOps(object):
                 # No response from the agent
                 return
             resp_dict = json.loads(resp)
-            return resp_dict['message']
+            # Some old versions of the Windows agent have a trailing \\r\\n
+            # (ie CRLF escaped) for some reason. Strip that off.
+            return resp_dict['message'].replace('\\r\\n', '')
 
         if timeout:
             vm_ref = self._get_vm_opaque_ref(instance)
@@ -662,9 +664,13 @@ class VMOps(object):
             # There was some sort of error; the message will contain
             # a description of the error.
             raise RuntimeError(resp_dict['message'])
-        agent_pub = int(resp_dict['message'])
+        # Some old versions of the Windows agent have a trailing \\r\\n
+        # (ie CRLF escaped) for some reason. Strip that off.
+        agent_pub = int(resp_dict['message'].replace('\\r\\n', ''))
         dh.compute_shared(agent_pub)
-        enc_pass = dh.encrypt(new_pass)
+        # Some old versions of Linux and Windows agent expect trailing \n
+        # on password to work correctly.
+        enc_pass = dh.encrypt(new_pass + '\n')
         # Send the encrypted password
         password_transaction_id = str(uuid.uuid4())
         password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
