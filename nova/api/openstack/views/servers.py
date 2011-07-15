@@ -162,7 +162,6 @@ class ViewBuilderV11(ViewBuilder):
         if 'image_ref' in dict(inst):
             image_href = inst['image_ref']
             image_id = str(common.get_id_from_href(image_href))
-            print "IMAGE ID:", image_id
             _bookmark = self.image_builder.generate_bookmark(image_id)
             response['image'] = {
                 "id": image_id,
