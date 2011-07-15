@@ -1389,8 +1389,6 @@ def main():
     action, fn = matches[0]
 
     # For not decorated methods
-    arguments = getattr(fn, 'arguments', '')
-    optargs = getattr(fn, 'optargs', '')
     options = getattr(fn, 'options', '')
 
     usage = "%prog " + "%s %s <args> [options]" % (sys.argv[2], sys.argv[3])
