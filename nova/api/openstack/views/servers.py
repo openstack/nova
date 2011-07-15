@@ -158,7 +158,6 @@ class ViewBuilderV11(ViewBuilder):
                 response['server']['progress'] = 0
         return response
 
-
     def _build_image(self, response, inst):
         if 'image_ref' in dict(inst):
             image_href = inst['image_ref']

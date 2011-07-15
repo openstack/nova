@@ -143,7 +143,8 @@ def instance_addresses(context, instance_id):
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
                   host=None, power_state=0, reservation_id="",
-                  uuid=FAKE_UUID, image_ref="10", flavor_id="1", interfaces=None):
+                  uuid=FAKE_UUID, image_ref="10", flavor_id="1",
+                  interfaces=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -341,7 +342,7 @@ class ServersTest(test.TestCase):
                 "status": "BUILD",
                 "hostId": '',
                 "image": {
-                    "id":"10",
+                    "id": "10",
                     "links": [
                         {
                             "rel": "bookmark",
@@ -379,11 +380,11 @@ class ServersTest(test.TestCase):
                     {
                         "rel": "self",
                         #FIXME(wwolf) Do we want the links to be id or uuid?
-                        "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
+                        "href": "http://localhost/v1.1/servers/%s" % FAKE_UUID,
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" % (FAKE_UUID),
+                        "href": "http://localhost/servers/%s" % FAKE_UUID,
                     },
                 ],
             }
@@ -432,7 +433,7 @@ class ServersTest(test.TestCase):
                 "status": "ACTIVE",
                 "hostId": '',
                 "image": {
-                    "id" : "10",
+                    "id": "10",
                     "links": [
                         {
                             "rel": "bookmark",
@@ -469,11 +470,11 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
+                        "href": "http://localhost/v1.1/servers/%s" % FAKE_UUID,
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" % (FAKE_UUID),
+                        "href": "http://localhost/servers/%s" % FAKE_UUID,
                     },
                 ],
             }
@@ -562,11 +563,11 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
+                        "href": "http://localhost/v1.1/servers/%s" % FAKE_UUID,
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/%s" % (FAKE_UUID),
+                        "href": "http://localhost/servers/%s" % FAKE_UUID,
                     },
                 ],
             }
@@ -912,11 +913,11 @@ class ServersTest(test.TestCase):
             expected_links = [
                 {
                     "rel": "self",
-                    "href": "http://localhost/v1.1/servers/%s" % (FAKE_UUID),
+                    "href": "http://localhost/v1.1/servers/%s" % FAKE_UUID,
                 },
                 {
                     "rel": "bookmark",
-                    "href": "http://localhost/servers/%s" % (FAKE_UUID),
+                    "href": "http://localhost/servers/%s" % FAKE_UUID,
                 },
             ]
 
@@ -2718,7 +2719,7 @@ class ServersViewBuilderV11Test(test.TestCase):
 
     def tearDown(self):
         pass
-        
+
     def _get_instance(self):
         instance = {
             "id": 1,
@@ -2741,7 +2742,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             "hostname": "",
             "host": "",
             "instance_type": {
-               "flavorid": 1, 
+               "flavorid": 1,
             },
             "user_data": "",
             "reservation_id": "",
@@ -2757,7 +2758,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             #"address": ,
             #"floating_ips": [{"address":ip} for ip in public_addresses]}
             "uuid": "deadbeef-feed-edee-beef-d0ea7beefedd"}
-    
+
         return instance
 
     def _get_view_builder(self):
@@ -2832,7 +2833,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                       },
                   ],
                 },
-                "addresses": { },
+                "addresses": {},
                 "metadata": {},
                 "links": [
                     {
@@ -2885,7 +2886,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                       },
                   ],
                 },
-                "addresses": { },
+                "addresses": {},
                 "metadata": {},
                 "links": [
                     {
@@ -2943,7 +2944,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                       },
                   ],
                 },
-                "addresses": { },
+                "addresses": {},
                 "metadata": {
                     "Open": "Stack",
                     "Number": "1",
