@@ -89,6 +89,10 @@ def checks_instance_lock(function):
     """Decorator to prevent action against locked instances for non-admins."""
     @functools.wraps(function)
     def decorated_function(self, context, instance_id, *args, **kwargs):
+        #TODO(anyone): this being called instance_id is forcing a slightly
+        # confusing convention of pushing instance_uuids
+        # through an "instance_id" key in the queue args dict when
+        # casting through the compute API
         LOG.info(_("check_instance_lock: decorating: |%s|"), function,
                  context=context)
         LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|"
@@ -664,10 +668,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def confirm_resize(self, context, migration_id):
+    def confirm_resize(self, context, instance_id, migration_id):
         """Destroys the source instance."""
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get(context,
+        instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
 
         self.driver.destroy(instance_ref)
@@ -679,7 +683,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def revert_resize(self, context, migration_id):
+    def revert_resize(self, context, instance_id, migration_id):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
@@ -687,7 +691,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get(context,
+        instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
 
         self.driver.destroy(instance_ref)
@@ -732,14 +736,19 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def prep_resize(self, context, instance_uuid, flavor_id):
+    def prep_resize(self, context, instance_id, flavor_id):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
 
         """
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+
+        # Because of checks_instance_lock, this must currently be called
+        # instance_id. However, the compute API is always passing the UUID
+        # of the instance down
+        instance_ref = self.db.instance_get_by_uuid(context, instance_id)
+
         if instance_ref['host'] == FLAGS.host:
             raise exception.Error(_(
                     'Migration error: destination same as source!'))
