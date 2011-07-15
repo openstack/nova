@@ -195,7 +195,6 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
-        response['id'] = inst['id']
         response['uuid'] = inst['uuid']
 
     def _build_links(self, response, inst):
