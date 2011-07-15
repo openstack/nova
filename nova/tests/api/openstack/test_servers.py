@@ -2578,7 +2578,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             "display_name": "test_server",
             "display_description": "",
             "locked": False,
-            "metadata": {},
+            "metadata": [],
             #"address": ,
             #"floating_ips": [{"address":ip} for ip in public_addresses]}
             "uuid": "deadbeef-feed-edee-beef-d0ea7beefedd"}
@@ -2663,6 +2663,128 @@ class ServersViewBuilderV11Test(test.TestCase):
                     "private": [],
                 },
                 "metadata": {},
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/%s" %
+                        self.instance['uuid'],
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/%s" %
+                        self.instance['uuid'],
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, True)
+        self.assertDictEqual(output, expected_server)
+
+    def test_build_server_detail_active_status(self):
+        #set the power state of the instance to running
+        self.instance['state'] = 1
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
+        expected_server = {
+            "server": {
+                "id": self.instance['uuid'],
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 100,
+                "name": "test_server",
+                "status": "ACTIVE",
+                "hostId": '',
+                #"accessIPv4" : "67.23.10.132",
+                #"accessIPv6" : "::babe:67.23.10.132",
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    "public": [],
+                    "private": [],
+                },
+                "metadata": {},
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/%s" %
+                        self.instance['uuid'],
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/%s" %
+                        self.instance['uuid'],
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, True)
+        self.assertDictEqual(output, expected_server)
+
+    def test_build_server_detail_with_metadata(self):
+        self.maxDiff = None
+
+        metadata = []
+        metadata.append(InstanceMetadata(key="Open", value="Stack"))
+        metadata.append(InstanceMetadata(key="Number", value=1))
+        self.instance['metadata'] = metadata
+
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
+        expected_server = {
+            "server": {
+                "id": self.instance['uuid'],
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": '',
+                #"accessIPv4" : "67.23.10.132",
+                #"accessIPv6" : "::babe:67.23.10.132",
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    "public": [],
+                    "private": [],
+                },
+                "metadata": {
+                    "Open": "Stack",
+                    "Number": "1",
+                },
                 "links": [
                     {
                         "rel": "self",
