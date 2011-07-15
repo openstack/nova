@@ -826,15 +826,17 @@ class API(base.Base):
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
+        instance_ref = self._get_instance(context, instance_id,
+                'revert_resize')
         migration_ref = self.db.migration_get_by_instance_and_status(context,
-                instance_id, 'finished')
+                instance_ref['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,
-                migration_ref['dest_compute'], params=params)
+                instance_ref['uuid'], params=params)
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'reverted'})
 
@@ -842,14 +844,17 @@ class API(base.Base):
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize and deletes the 'old' instance."""
         context = context.elevated()
+        instance_ref = self._get_instance(context, instance_id,
+                'confirm_resize')
         migration_ref = self.db.migration_get_by_instance_and_status(context,
-                instance_id, 'finished')
+                instance_ref['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context,
-                migration_ref['source_compute'], params=params)
+                                   instance_ref['uuid'],
+                                   params=params)
 
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
@@ -897,7 +902,7 @@ class API(base.Base):
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_uuid": instance_ref['uuid'],
+                              "instance_id": instance_ref['uuid'],
                               "flavor_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
