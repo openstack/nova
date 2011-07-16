@@ -522,6 +522,11 @@ def instance_get_all_by_host(context, host):
     return IMPL.instance_get_all_by_host(context, host)
 
 
+def instance_get_all_by_vsa(context, vsa_id):
+    """Get all instance belonging to a VSA."""
+    return IMPL.instance_get_all_by_vsa(context, vsa_id)
+
+
 def instance_get_all_by_reservation(context, reservation_id):
     """Get all instance belonging to a reservation."""
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
