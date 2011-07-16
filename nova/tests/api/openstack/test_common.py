@@ -20,6 +20,7 @@ Test suites for 'common' code used throughout the OpenStack HTTP API.
 """
 
 import webob.exc
+import xml.dom.minidom as minidom
 
 from webob import Request
 
@@ -247,3 +248,134 @@ class MiscFunctionsTest(test.TestCase):
         self.assertRaises(ValueError,
                           common.get_id_from_href,
                           fixture)
+
+
+class MetadataXMLSerializationTest(test.TestCase):
+
+    def test_index_xml(self):
+        serializer = common.MetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                'one': 'two',
+                'three': 'four',
+            },
+        }
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="three">
+                    four
+                </meta>
+                <meta key="one">
+                    two
+                </meta>
+            </metadata>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index_xml_null(self):
+        serializer = common.MetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                None: None,
+            },
+        }
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="None">
+                    None
+                </meta>
+            </metadata>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index_xml_unicode(self):
+        serializer = common.MetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                u'three': u'Jos\xe9',
+            },
+        }
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString(u"""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="three">
+                    Jos\xe9
+                </meta>
+            </metadata>
+        """.encode("UTF-8").replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_show_xml(self):
+        serializer = common.MetadataXMLSerializer()
+        fixture = {
+            'meta': {
+                'one': 'two',
+            },
+        }
+        output = serializer.serialize(fixture, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <meta xmlns="http://docs.openstack.org/compute/api/v1.1" key="one">
+                two
+            </meta>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_update_item_xml(self):
+        serializer = common.MetadataXMLSerializer()
+        fixture = {
+            'meta': {
+                'one': 'two',
+            },
+        }
+        output = serializer.serialize(fixture, 'update')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <meta xmlns="http://docs.openstack.org/compute/api/v1.1" key="one">
+                two
+            </meta>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_create_xml(self):
+        serializer = common.MetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                'key9': 'value9',
+                'key2': 'value2',
+                'key1': 'value1',
+            },
+        }
+        output = serializer.serialize(fixture, 'create')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="key2">
+                    value2
+                </meta>
+                <meta key="key9">
+                    value9
+                </meta>
+                <meta key="key1">
+                    value1
+                </meta>
+            </metadata>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())

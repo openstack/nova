@@ -21,6 +21,7 @@ from nova import flags
 from nova import image
 from nova import quota
 from nova import utils
+from nova.api.openstack import common 
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
@@ -112,7 +113,7 @@ class Controller(object):
 
 def create_resource():
     body_serializers = {
-        'application/xml': ImageMetadataXMLSerializer(),
+        'application/xml': common.MetadataXMLSerializer(),
     }
     serializer = wsgi.ResponseSerializer(body_serializers)
 
