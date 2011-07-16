@@ -650,7 +650,6 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
             network_node.appendChild(ip_node)
         return network_node
 
-
     def _add_server_attributes(self, node, server):
         node.setAttribute('id', str(server['id']))
         node.setAttribute('uuid', str(server['uuid']))
