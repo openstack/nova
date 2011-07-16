@@ -64,7 +64,8 @@ def db_version():
                           'users', 'user_project_association',
                           'user_project_role_association',
                           'user_role_association',
-                          'volumes'):
+                          'volumes',
+                          'virtual_storage_arrays', 'drive_types'):
                 assert table in meta.tables
             return db_version_control(1)
         except AssertionError:

@@ -269,6 +269,10 @@ class Authorizer(wsgi.Middleware):
                 'DescribeImageAttribute': ['all'],
                 'ModifyImageAttribute': ['projectmanager', 'sysadmin'],
                 'UpdateImage': ['projectmanager', 'sysadmin'],
+                'CreateVsa': ['projectmanager', 'sysadmin'],
+                'DeleteVsa': ['projectmanager', 'sysadmin'],
+                'DescribeVsas': ['projectmanager', 'sysadmin'],
+                'DescribeDriveTypes': ['projectmanager', 'sysadmin'],
             },
             'AdminController': {
                 # All actions have the same permission: ['none'] (the default)

@@ -62,6 +62,10 @@ import sys
 import time
 
 
+import tempfile
+import zipfile
+import ast
+
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -84,6 +88,7 @@ from nova import rpc
 from nova import utils
 from nova import version
 from nova.api.ec2 import ec2utils
+from nova.api.ec2 import cloud
 from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.compute import instance_types
@@ -870,6 +875,243 @@ class VersionCommands(object):
                 (version.version_string(), version.version_string_with_vcs())
 
 
+class VsaCommands(object):
+    """Methods for dealing with VSAs"""
+
+    def __init__(self, *args, **kwargs):
+        self.controller = cloud.CloudController()
+        self.manager = manager.AuthManager()
+
+        # VP-TMP Solution for APIs. Project should be provided per API call
+        #self.context = context.get_admin_context()
+
+        try:
+            project = self.manager.get_projects().pop()
+        except IndexError:
+            print (_("No projects defined"))
+            raise
+
+        self.context = context.RequestContext(user=project.project_manager,
+                                              project=project)
+
+    def _list(self, vsas):
+        format_str = "%-5s %-15s %-25s %-30s %-5s %-10s %-10s %-10s %10s"
+        if len(vsas):
+            print format_str %\
+                   (_('ID'),
+                    _('vsa_id'),
+                    _('displayName'),
+                    _('description'),
+                    _('count'),
+                    _('vc_type'),
+                    _('status'),
+                    _('AZ'),
+                    _('createTime'))
+
+        for vsa in vsas:
+            print format_str %\
+                (vsa['vsaId'],
+                vsa['name'],
+                vsa['displayName'],
+                vsa['displayDescription'],
+                vsa['vcCount'],
+                vsa['vcType'],
+                vsa['status'],
+                vsa['availabilityZone'],
+                str(vsa['createTime']))
+
+    def create(self, storage='[]', name=None, description=None, vc_count=1,
+                     instance_type_name=None, image_name=None, shared=None,
+                     az=None):
+        """Create a VSA.
+        args: [storage] [name] [description] [vc_count]
+              [instance_type] [image_name] [--shared|--full_drives]
+              [availability_zone]
+
+        where <storage> is a string representing list of dictionaries
+        in the following format:
+            [{'drive_name': 'type', 'num_drives': N, 'size': M},..]
+        """
+
+        # Sanity check for storage string
+        storage_list = []
+        if storage is not None:
+            try:
+                storage_list = ast.literal_eval(storage)
+            except:
+                print _("Invalid string format %s") % storage
+                raise
+
+            for node in storage_list:
+                if ('drive_name' not in node) or ('num_drives' not in node):
+                    print (_("Invalid string format for element %s. " \
+                            "Expecting keys 'drive_name' & 'num_drives'"),
+                            str(node))
+                    raise KeyError
+
+        if instance_type_name == '':
+            instance_type_name = None
+
+        if shared is None or shared == "--full_drives":
+            shared = False
+        elif shared == "--shared":
+            shared = True
+        else:
+            raise ValueError(_('Shared parameter should be set either to "\
+                "--shared or --full_drives'))
+
+        values = {
+            'display_name': name,
+            'display_description': description,
+            'vc_count': int(vc_count),
+            'vc_type': instance_type_name,
+            'image_name': image_name,
+            'storage': storage_list,
+            'shared': shared,
+            'placement': {'AvailabilityZone': az}
+            }
+
+        result = self.controller.create_vsa(self.context, **values)
+        self._list(result['vsaSet'])
+
+    def update(self, vsa_id, name=None, description=None, vc_count=None):
+        """Updates name/description of vsa and number of VCs
+        args: vsa_id [display_name] [display_description] [vc_count]"""
+
+        values = {}
+        if name is not None:
+            values['display_name'] = name
+        if description is not None:
+            values['display_description'] = description
+        if vc_count is not None:
+            values['vc_count'] = int(vc_count)
+
+        self.controller.update_vsa(self.context, vsa_id, **values)
+
+    def delete(self, vsa_id):
+        """Delete a vsa
+        args: vsa_id"""
+
+        self.controller.delete_vsa(self.context, vsa_id)
+
+    def list(self, vsa_id=None):
+        """Describe all available VSAs (or particular one)
+        args: [vsa_id]"""
+
+        if vsa_id is not None:
+            vsa_id = [vsa_id]
+
+        result = self.controller.describe_vsas(self.context, vsa_id)
+        self._list(result['vsaSet'])
+
+
+class VsaDriveTypeCommands(object):
+    """Methods for dealing with VSA drive types"""
+
+    def __init__(self, *args, **kwargs):
+        super(VsaDriveTypeCommands, self).__init__(*args, **kwargs)
+
+    def _list(self, drives):
+        format_str = "%-5s %-30s %-10s %-10s %-10s %-20s %-10s %s"
+        if len(drives):
+            print format_str %\
+                   (_('ID'),
+                    _('name'),
+                    _('type'),
+                    _('size_gb'),
+                    _('rpm'),
+                    _('capabilities'),
+                    _('visible'),
+                    _('createTime'))
+
+        for drive in drives:
+            print format_str %\
+                (str(drive['id']),
+                drive['name'],
+                drive['type'],
+                str(drive['size_gb']),
+                drive['rpm'],
+                drive['capabilities'],
+                str(drive['visible']),
+                str(drive['created_at']))
+
+    def create(self, type, size_gb, rpm, capabilities='',
+                     visible=None, name=None):
+        """Create drive type.
+        args: type size_gb rpm [capabilities] [--show|--hide] [custom_name]
+        """
+
+        if visible is None or visible == "--show":
+            visible = True
+        elif visible == "--hide":
+            visible = False
+        else:
+            raise ValueError(_('Visible parameter should be set to --show '\
+                               'or --hide'))
+
+        values = {
+            'type': type,
+            'size_gb': int(size_gb),
+            'rpm': rpm,
+            'capabilities': capabilities,
+            'visible': visible,
+            'name': name
+            }
+        result = self.controller.create_drive_type(context.get_admin_context(),
+                                                   **values)
+        self._list(result['driveTypeSet'])
+
+    def delete(self, name):
+        """Delete drive type
+        args: name"""
+
+        self.controller.delete_drive_type(context.get_admin_context(), name)
+
+    def rename(self, name, new_name=None):
+        """Rename drive type
+        args: name [new_name]"""
+
+        self.controller.rename_drive_type(context.get_admin_context(),
+                                          name, new_name)
+
+    def list(self, visible=None, name=None):
+        """Describe all available VSA drive types (or particular one)
+        args: [--all] [drive_name]"""
+
+        visible = False if visible == "--all" else True
+
+        if name is not None:
+            name = [name]
+
+        result = self.controller.describe_drive_types(
+                        context.get_admin_context(), name, visible)
+        self._list(result['driveTypeSet'])
+
+    def update(self, name, type=None, size_gb=None, rpm=None,
+                     capabilities='', visible=None):
+        """Update drive type.
+        args: name [type] [size_gb] [rpm] [capabilities] [--show|--hide]
+        """
+
+        if visible is None or visible == "--show":
+            visible = True
+        elif visible == "--hide":
+            visible = False
+        else:
+            raise ValueError(_('Visible parameter should be set to --show '\
+                               'or --hide'))
+
+        values = {
+            'type': type,
+            'size_gb': size_gb,
+            'rpm': rpm,
+            'capabilities': capabilities,
+            'visible': visible
+            }
+        self.controller.update_drive_type(context.get_admin_context(),
+                                          name, **values)
+
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -1214,6 +1456,7 @@ CATEGORIES = [
     ('agent', AgentBuildCommands),
     ('config', ConfigCommands),
     ('db', DbCommands),
+    ('drive', VsaDriveTypeCommands),
     ('fixed', FixedIpCommands),
     ('flavor', InstanceTypeCommands),
     ('floating', FloatingIpCommands),
@@ -1229,7 +1472,8 @@ CATEGORIES = [
     ('version', VersionCommands),
     ('vm', VmCommands),
     ('volume', VolumeCommands),
-    ('vpn', VpnCommands)]
+    ('vpn', VpnCommands),
+    ('vsa', VsaCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -1295,6 +1539,10 @@ def main():
     action, fn = matches[0]
     # call the action with the remaining arguments
     try:
+        for arg in sys.argv:
+            if arg == '-h' or arg == '--help':
+                print "%s %s: %s" % (category, action, fn.__doc__)
+                sys.exit(0)
         fn(*argv)
         sys.exit(0)
     except TypeError:

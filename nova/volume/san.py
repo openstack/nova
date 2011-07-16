@@ -26,6 +26,7 @@ import paramiko
 
 from xml.etree import ElementTree
 
+from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -64,12 +65,16 @@ class SanISCSIDriver(ISCSIDriver):
     # discover_volume is still OK
     # undiscover_volume is still OK
 
-    def _connect_to_ssh(self):
+    def _connect_to_ssh(self, san_ip=None):
+        if san_ip:
+            ssh_ip = san_ip
+        else:
+            ssh_ip = FLAGS.san_ip
         ssh = paramiko.SSHClient()
         #TODO(justinsb): We need a better SSH key policy
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         if FLAGS.san_password:
-            ssh.connect(FLAGS.san_ip,
+            ssh.connect(ssh_ip,
                         port=FLAGS.san_ssh_port,
                         username=FLAGS.san_login,
                         password=FLAGS.san_password)
@@ -77,7 +82,7 @@ class SanISCSIDriver(ISCSIDriver):
             privatekeyfile = os.path.expanduser(FLAGS.san_privatekey)
             # It sucks that paramiko doesn't support DSA keys
             privatekey = paramiko.RSAKey.from_private_key_file(privatekeyfile)
-            ssh.connect(FLAGS.san_ip,
+            ssh.connect(ssh_ip,
                         port=FLAGS.san_ssh_port,
                         username=FLAGS.san_login,
                         pkey=privatekey)
@@ -85,9 +90,9 @@ class SanISCSIDriver(ISCSIDriver):
             raise exception.Error(_("Specify san_password or san_privatekey"))
         return ssh
 
-    def _run_ssh(self, command, check_exit_code=True):
+    def _run_ssh(self, command, check_exit_code=True, san_ip=None):
         #TODO(justinsb): SSH connection caching (?)
-        ssh = self._connect_to_ssh()
+        ssh = self._connect_to_ssh(san_ip)
 
         #TODO(justinsb): Reintroduce the retry hack
         ret = ssh_execute(ssh, command, check_exit_code=check_exit_code)
@@ -583,3 +588,311 @@ class HpSanISCSIDriver(SanISCSIDriver):
         cliq_args['volumeName'] = volume['name']
 
         self._cliq_run_xml("unassignVolume", cliq_args)
+
+
+class ZadaraVsaDriver(SanISCSIDriver):
+    """Executes commands relating to Virtual Storage Array volumes.
+
+    There are two types of volumes. Front-end(FE) volumes and Back-end(BE)
+    volumes.
+
+    FE volumes are nova-volumes that are exported by VSA instance & can be
+    consumed by user instances. We use SSH to connect into the VSA instance
+    to execute those steps.
+
+    BE volumes are nova-volumes that are attached as back-end storage for the
+    VSA instance.
+
+    VSA instance essentially consumes the BE volumes and allows creation of FE
+    volumes over it.
+    """
+
+    """ Volume Driver methods """
+    def create_volume(self, volume):
+        """Creates FE/BE volume."""
+        if volume['to_vsa_id']:
+            self._create_be_volume(volume)
+        else:
+            self._create_fe_volume(volume)
+
+    def delete_volume(self, volume):
+        """Deletes FE/BE volume."""
+        if volume['to_vsa_id']:
+            self._delete_be_volume(volume)
+        else:
+            self._delete_fe_volume(volume)
+
+    def local_path(self, volume):
+        # TODO: Is this needed here?
+        raise exception.Error(_("local_path not supported"))
+
+    def ensure_export(self, context, volume):
+        """On bootup synchronously ensures a volume export is available."""
+        if volume['to_vsa_id']:
+            return self._ensure_be_export(context, volume)
+
+        # Not required for FE volumes. VSA VM will ensure volume exposure
+        pass
+
+    def create_export(self, context, volume):
+        """For first time creates volume export."""
+        if volume['to_vsa_id']:
+            return self._create_be_export(context, volume)
+        else:
+            return self._create_fe_export(context, volume)
+
+    def remove_export(self, context, volume):
+        if volume['to_vsa_id']:
+            return self._remove_be_export(context, volume)
+        else:
+            return self._remove_fe_export(context, volume)
+
+    def check_for_setup_error(self):
+        """Returns an error if prerequisites aren't met"""
+        # skip the flags.san_ip check & do the regular check
+
+        if not (FLAGS.san_password or FLAGS.san_privatekey):
+            raise exception.Error(_("Specify san_password or san_privatekey"))
+
+    """ Internal BE Volume methods """
+    def _create_be_volume(self, volume):
+        """Creates BE volume."""
+        if int(volume['size']) == 0:
+            sizestr = '0'   # indicates full-partition
+        else:
+            sizestr = '%s' % (int(volume['size']) << 30)    # size in bytes
+
+        # Set the qos-str to default type sas
+        # TODO - later for this piece we will get the direct qos-group name
+        # in create_volume and hence this lookup will not be needed
+        qosstr = 'SAS_1000'
+        drive_type = volume.get('drive_type')
+        if drive_type is not None:
+            # for now just use the qos-type string from the disktypes.
+            qosstr = drive_type['type'] + ("_%s" % drive_type['size_gb'])
+
+        self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+                        'create_qospart',
+                        '--qos', qosstr,
+                        '--pname', volume['name'],
+                        '--psize', sizestr,
+                        check_exit_code=0)
+        LOG.debug(_("VSA BE create_volume for %s succeeded"), volume['name'])
+
+    def _delete_be_volume(self, volume):
+        try:
+            self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+                            'delete_partition',
+                            '--pname', volume['name'],
+                            check_exit_code=0)
+        except exception.ProcessExecutionError:
+            LOG.debug(_("VSA BE delete_volume for %s failed"), volume['name'])
+            return
+
+        LOG.debug(_("VSA BE delete_volume for %s suceeded"), volume['name'])
+
+    def _create_be_export(self, context, volume):
+        """create BE export for a volume"""
+        self._ensure_iscsi_targets(context, volume['host'])
+        iscsi_target = self.db.volume_allocate_iscsi_target(context,
+                                                          volume['id'],
+                                                          volume['host'])
+        return self._common_be_export(context, volume, iscsi_target)
+
+    def _ensure_be_export(self, context, volume):
+        """ensure BE export for a volume"""
+        try:
+            iscsi_target = self.db.volume_get_iscsi_target_num(context,
+                                                           volume['id'])
+        except exception.NotFound:
+            LOG.info(_("Skipping ensure_export. No iscsi_target " +
+                       "provisioned for volume: %d"), volume['id'])
+            return
+
+        return self._common_be_export(context, volume, iscsi_target)
+
+    def _common_be_export(self, context, volume, iscsi_target):
+        """
+        Common logic that asks zadara_sncfg to setup iSCSI target/lun for
+        this volume
+        """
+        (out, err) = self._sync_exec('sudo',
+                                '/var/lib/zadara/bin/zadara_sncfg',
+                                'create_export',
+                                '--pname', volume['name'],
+                                '--tid', iscsi_target,
+                                check_exit_code=0)
+
+        result_xml = ElementTree.fromstring(out)
+        response_node = result_xml.find("Sn")
+        if response_node is None:
+            msg = "Malformed response from zadara_sncfg"
+            raise exception.Error(msg)
+
+        sn_ip = response_node.findtext("SnIp")
+        sn_iqn = response_node.findtext("IqnName")
+        iscsi_portal = sn_ip + ":3260," + ("%s" % iscsi_target)
+
+        model_update = {}
+        model_update['provider_location'] = ("%s %s" %
+                                             (iscsi_portal,
+                                              sn_iqn))
+        return model_update
+
+    def _remove_be_export(self, context, volume):
+        """Removes BE export for a volume."""
+        try:
+            iscsi_target = self.db.volume_get_iscsi_target_num(context,
+                                                           volume['id'])
+        except exception.NotFound:
+            LOG.info(_("Skipping remove_export. No iscsi_target " +
+                       "provisioned for volume: %d"), volume['id'])
+            return
+
+        try:
+            self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+                        'remove_export',
+                        '--pname', volume['name'],
+                        '--tid', iscsi_target,
+                        check_exit_code=0)
+        except exception.ProcessExecutionError:
+            LOG.debug(_("VSA BE remove_export for %s failed"), volume['name'])
+            return
+
+    def _get_qosgroup_summary(self):
+        """gets the list of qosgroups from Zadara SN"""
+        (out, err) = self._sync_exec('sudo',
+                                    '/var/lib/zadara/bin/zadara_sncfg',
+                                    'get_qosgroups_xml',
+                                    check_exit_code=0)
+        qos_groups = {}
+        #qos_groups = []
+        result_xml = ElementTree.fromstring(out)
+        for element in result_xml.findall('QosGroup'):
+            qos_group = {}
+            # get the name of the group.
+            # If we cannot find it, forget this element
+            group_name = element.findtext("Name")
+            if not group_name:
+                continue
+
+            # loop through all child nodes & fill up attributes of this group
+            for child in element.getchildren():
+                # two types of elements -  property of qos-group & sub property
+                # classify them accordingly
+                if child.text:
+                    qos_group[child.tag] = int(child.text) \
+                        if child.text.isdigit() else child.text
+                else:
+                    subelement = {}
+                    for subchild in child.getchildren():
+                        subelement[subchild.tag] = int(subchild.text) \
+                            if subchild.text.isdigit() else subchild.text
+                    qos_group[child.tag] = subelement
+
+            # Now add this group to the master qos_groups
+            qos_groups[group_name] = qos_group
+            #qos_groups.append(qos_group)
+
+        return qos_groups
+
+    """ Internal FE Volume methods """
+    def _vsa_run(self, volume, verb, vsa_args):
+        """
+        Runs a command over SSH to VSA instance and checks for return status
+        """
+        vsa_arg_strings = []
+
+        if vsa_args:
+            for k, v in vsa_args.items():
+                vsa_arg_strings.append(" --%s %s" % (k, v))
+
+        # Form the zadara_cfg script that will do the configuration at VSA VM
+        cmd = "/var/lib/zadara/bin/zadara_cfg.py " + verb + \
+                ''.join(vsa_arg_strings)
+
+        # get the list of IP's corresponding to VSA VM's
+        vsa_ips = self.db.vsa_get_vc_ips_list(context.get_admin_context(),
+                                              volume['from_vsa_id'])
+        if not vsa_ips:
+            raise exception.Error(_("Cannot Lookup VSA VM's IP"))
+            return
+
+        # pick the first element in the return's fixed_ip for SSH
+        vsa_ip = vsa_ips[0]['fixed']
+
+        (out, _err) = self._run_ssh(cmd, san_ip=vsa_ip)
+
+        # check the xml StatusCode to check fro real status
+        result_xml = ElementTree.fromstring(out)
+
+        status = result_xml.findtext("StatusCode")
+        if status != '0':
+            statusmsg = result_xml.findtext("StatusMessage")
+            msg = (_('vsa_run failed to ' + verb + ' for ' + volume['name'] +
+                         '. Result=' + str(statusmsg)))
+            raise exception.Error(msg)
+
+        return out, _err
+
+    def _create_fe_volume(self, volume):
+        """Creates FE volume."""
+        vsa_args = {}
+        vsa_args['volname'] = volume['name']
+        if int(volume['size']) == 0:
+            sizestr = '100M'
+        else:
+            sizestr = '%sG' % volume['size']
+        vsa_args['volsize'] = sizestr
+        (out, _err) = self._vsa_run(volume, "create_volume", vsa_args)
+
+        LOG.debug(_("VSA FE create_volume for %s suceeded"), volume['name'])
+
+    def _delete_fe_volume(self, volume):
+        """Deletes FE volume."""
+        vsa_args = {}
+        vsa_args['volname'] = volume['name']
+        (out, _err) = self._vsa_run(volume, "delete_volume", vsa_args)
+        LOG.debug(_("VSA FE delete_volume for %s suceeded"), volume['name'])
+        return
+
+    def _create_fe_export(self, context, volume):
+        """Create FE volume exposure at VSA VM"""
+        vsa_args = {}
+        vsa_args['volname'] = volume['name']
+        (out, _err) = self._vsa_run(volume, "create_export", vsa_args)
+
+        result_xml = ElementTree.fromstring(out)
+        response_node = result_xml.find("Vsa")
+        if response_node is None:
+            msg = "Malformed response to VSA command "
+            raise exception.Error(msg)
+
+        LOG.debug(_("VSA create_export for %s suceeded"), volume['name'])
+
+        vsa_ip = response_node.findtext("VsaIp")
+        vsa_iqn = response_node.findtext("IqnName")
+        vsa_interface = response_node.findtext("VsaInterface")
+        iscsi_portal = vsa_ip + ":3260," + vsa_interface
+
+        model_update = {}
+        model_update['provider_location'] = ("%s %s" %
+                                             (iscsi_portal,
+                                              vsa_iqn))
+
+        return model_update
+
+    def remove_fe_export(self, context, volume):
+        """Remove FE volume exposure at VSA VM"""
+        vsa_args = {}
+        vsa_args['volname'] = volume['name']
+        (out, _err) = self._vsa_run(volume, "remove_export", vsa_args)
+        LOG.debug(_("VSA FE remove_export for %s suceeded"), volume['name'])
+        return
+
+    def get_volume_stats(self, refresh=False):
+        """Return the current state of the volume service. If 'refresh' is
+           True, run the update first."""
+
+        drive_info = self._get_qosgroup_summary()
+        return {'drive_qos_info': drive_info}

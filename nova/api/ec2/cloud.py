@@ -42,6 +42,8 @@ from nova import network
 from nova import rpc
 from nova import utils
 from nova import volume
+from nova import vsa
+from nova.vsa import drive_types
 from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
 from nova.image import s3
@@ -87,6 +89,7 @@ class CloudController(object):
         self.compute_api = compute.API(
                 network_api=self.network_api,
                 volume_api=self.volume_api)
+        self.vsa_api = vsa.API(compute_api=self.compute_api)
         self.setup()
 
     def __str__(self):
@@ -727,12 +730,26 @@ class CloudController(object):
             snapshot_id = None
             LOG.audit(_("Create volume of %s GB"), size, context=context)
 
+        to_vsa_id = kwargs.get('to_vsa_id', None)
+        if to_vsa_id:
+            to_vsa_id = ec2utils.ec2_id_to_id(to_vsa_id)
+
+        from_vsa_id = kwargs.get('from_vsa_id', None)
+        if from_vsa_id:
+            from_vsa_id = ec2utils.ec2_id_to_id(from_vsa_id)
+
+        if to_vsa_id or from_vsa_id:
+            LOG.audit(_("Create volume of %s GB associated with VSA "\
+                        "(to: %d, from: %d)"),
+                        size, to_vsa_id, from_vsa_id, context=context)
+
         volume = self.volume_api.create(
                 context,
                 size=size,
                 snapshot_id=snapshot_id,
                 name=kwargs.get('display_name'),
-                description=kwargs.get('display_description'))
+                description=kwargs.get('display_description'),
+                to_vsa_id=to_vsa_id, from_vsa_id=from_vsa_id)
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
@@ -785,6 +802,151 @@ class CloudController(object):
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
                 'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
+
+    def _format_vsa(self, context, p_vsa):
+        vsa = {}
+        vsa['vsaId'] = p_vsa['id']
+        vsa['status'] = p_vsa['status']
+        vsa['availabilityZone'] = p_vsa['availability_zone']
+        vsa['createTime'] = p_vsa['created_at']
+        vsa['name'] = p_vsa['name']
+        vsa['displayName'] = p_vsa['display_name']
+        vsa['displayDescription'] = p_vsa['display_description']
+        vsa['vcCount'] = p_vsa['vc_count']
+        if p_vsa['vsa_instance_type']:
+            vsa['vcType'] = p_vsa['vsa_instance_type'].get('name', None)
+        else:
+            vsa['vcType'] = None
+        return vsa
+
+    def create_vsa(self, context, **kwargs):
+        display_name = kwargs.get('display_name')
+        display_description = kwargs.get('display_description')
+        vc_count = int(kwargs.get('vc_count', 1))
+        instance_type = instance_types.get_instance_type_by_name(
+            kwargs.get('vc_type', FLAGS.default_vsa_instance_type))
+        image_name = kwargs.get('image_name')
+        availability_zone = kwargs.get('placement', {}).get(
+                                                'AvailabilityZone')
+        #storage = ast.literal_eval(kwargs.get('storage', '[]'))
+        storage = kwargs.get('storage', [])
+        shared = kwargs.get('shared', False)
+
+        vc_type = instance_type['name']
+        _storage = str(storage)
+        LOG.audit(_("Create VSA %(display_name)s vc_count:%(vc_count)d "\
+                    "vc_type:%(vc_type)s storage:%(_storage)s"), locals())
+
+        vsa = self.vsa_api.create(context, display_name, display_description,
+                                  vc_count, instance_type, image_name,
+                                  availability_zone, storage, shared)
+        return {'vsaSet': [self._format_vsa(context, vsa)]}
+
+    def update_vsa(self, context, vsa_id, **kwargs):
+        LOG.audit(_("Update VSA %s"), vsa_id)
+        updatable_fields = ['display_name', 'display_description', 'vc_count']
+        changes = {}
+        for field in updatable_fields:
+            if field in kwargs:
+                changes[field] = kwargs[field]
+        if changes:
+            vsa_id = ec2utils.ec2_id_to_id(vsa_id)
+            self.vsa_api.update(context, vsa_id=vsa_id, **changes)
+        return True
+
+    def delete_vsa(self, context, vsa_id, **kwargs):
+        LOG.audit(_("Delete VSA %s"), vsa_id)
+        vsa_id = ec2utils.ec2_id_to_id(vsa_id)
+
+        self.vsa_api.delete(context, vsa_id)
+
+        return True
+
+    def describe_vsas(self, context, vsa_id=None, status=None,
+                      availability_zone=None, **kwargs):
+#        LOG.debug(_("vsa_id=%s, status=%s, az=%s"),
+#                    (vsa_id, status, availability_zone))
+        result = []
+        vsas = []
+        if vsa_id is not None:
+            for ec2_id in vsa_id:
+                internal_id = ec2utils.ec2_id_to_id(ec2_id)
+                vsa = self.vsa_api.get(context, internal_id)
+                vsas.append(vsa)
+        else:
+            vsas = self.vsa_api.get_all(context)
+
+        if status:
+            result = []
+            for vsa in vsas:
+                if vsa['status'] in status:
+                    result.append(vsa)
+            vsas = result
+
+        if availability_zone:
+            result = []
+            for vsa in vsas:
+                if vsa['availability_zone'] in availability_zone:
+                    result.append(vsa)
+            vsas = result
+
+        return {'vsaSet': [self._format_vsa(context, vsa) for vsa in vsas]}
+
+    def create_drive_type(self, context, **kwargs):
+        name = kwargs.get('name')
+        type = kwargs.get('type')
+        size_gb = int(kwargs.get('size_gb'))
+        rpm = kwargs.get('rpm')
+        capabilities = kwargs.get('capabilities')
+        visible = kwargs.get('visible', True)
+
+        LOG.audit(_("Create Drive Type %(name)s: %(type)s %(size_gb)d "\
+                    "%(rpm)s %(capabilities)s %(visible)s"),
+                    locals())
+
+        rv = drive_types.drive_type_create(context, type, size_gb, rpm,
+                                           capabilities, visible, name)
+        return {'driveTypeSet': [dict(rv)]}
+
+    def update_drive_type(self, context, name, **kwargs):
+        LOG.audit(_("Update Drive Type %s"), name)
+        updatable_fields = ['type',
+                            'size_gb',
+                            'rpm',
+                            'capabilities',
+                            'visible']
+        changes = {}
+        for field in updatable_fields:
+            if field in kwargs and \
+               kwargs[field] is not None and \
+               kwargs[field] != '':
+                changes[field] = kwargs[field]
+        if changes:
+            drive_types.drive_type_update(context, name, **changes)
+        return True
+
+    def rename_drive_type(self, context, name, new_name):
+        drive_types.drive_type_rename(context, name, new_name)
+        return True
+
+    def delete_drive_type(self, context, name):
+        drive_types.drive_type_delete(context, name)
+        return True
+
+    def describe_drive_types(self, context, names=None, visible=True):
+
+        drives = []
+        if names is not None:
+            for name in names:
+                drive = drive_types.drive_type_get_by_name(context, name)
+                if drive['visible'] == visible:
+                    drives.append(drive)
+        else:
+            drives = drive_types.drive_type_get_all(context, visible)
+
+        # VP-TODO: Change it later to EC2 compatible func (output)
+
+        return {'driveTypeSet': [dict(drive) for drive in drives]}
 
     def _convert_to_set(self, lst, label):
         if lst is None or lst == []:

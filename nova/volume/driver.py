@@ -501,7 +501,15 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
 
         if not iscsi_properties['target_discovered']:
-            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
+            # zadara-begin: Bug in cactus. _run_iscsiadm() cannot accept
+            # multiple args for iscsi-command. Like in --op new. Hence
+            # using a local version here which does the same thing
+            (out, err) = self._execute('sudo', 'iscsiadm', '--op', 'new',
+                                   '-m', 'node',
+                                   '-T', iscsi_properties['target_iqn'],
+                                   '-p', iscsi_properties['target_portal'])
+            # self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
+            # zadara-end
 
         if iscsi_properties.get('auth_method'):
             self._iscsiadm_update(iscsi_properties,
@@ -553,7 +561,15 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
         self._run_iscsiadm(iscsi_properties, "--logout")
-        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
+        # zadara-begin: Bug in cactus. _run_iscsiadm() cannot accept
+        # multiple args for iscsi-command. Like in --op delete. Hence
+        # using a local version here which does the same thing
+        (out, err) = self._execute('sudo', 'iscsiadm', '--op', 'delete',
+                                   '-m', 'node',
+                                   '-T', iscsi_properties['target_iqn'],
+                                   '-p', iscsi_properties['target_portal'])
+        #self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
+        # zadara-end
 
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""

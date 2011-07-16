@@ -1,8 +1,6 @@
-#!/usr/bin/env bash
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright (c) 2011 Zadara Storage Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,9 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-export LC_ALL=C
+"""Abstraction of the underlying connection to VC."""
 
-sudo ifconfig -a | grep br | grep -v bridge | cut -f1 -d" " | xargs -n1 -ifoo ifconfig foo down
-sudo ifconfig -a | grep br | grep -v bridge | cut -f1 -d" " | xargs -n1 -ifoo brctl delbr foo
-sudo ifconfig -a | grep vlan | cut -f1 -d" " | xargs -n1 -ifoo ifconfig foo down
-sudo ifconfig -a | grep vlan | cut -f1 -d" " | xargs -n1 -ifoo vconfig rem foo
+from nova.vsa import fake
+
+
+def get_connection():
+    # Return an object that is able to talk to VCs
+    return fake.FakeVcConnection()

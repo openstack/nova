@@ -311,6 +311,10 @@ class VolumeNotFoundForInstance(VolumeNotFound):
     message = _("Volume not found for instance %(instance_id)s.")
 
 
+class VolumeNotFoundForVsa(VolumeNotFound):
+    message = _("Volume not found for vsa %(vsa_id)s.")
+
+
 class SnapshotNotFound(NotFound):
     message = _("Snapshot %(snapshot_id)s could not be found.")
 
@@ -682,3 +686,19 @@ class PasteConfigNotFound(NotFound):
 
 class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
+
+
+class VirtualStorageArrayNotFound(NotFound):
+    message = _("Virtual Storage Array %(id)d could not be found.")
+
+
+class VirtualStorageArrayNotFoundByName(NotFound):
+    message = _("Virtual Storage Array %(name)s could not be found.")
+
+
+class VirtualDiskTypeNotFound(NotFound):
+    message = _("Drive Type %(id)d could not be found.")
+
+
+class VirtualDiskTypeNotFoundByName(NotFound):
+    message = _("Drive Type %(name)s could not be found.")

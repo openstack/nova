@@ -49,7 +49,8 @@ flags.DEFINE_string('volume_name_template', 'volume-%08x',
                     'Template string to be used to generate instance names')
 flags.DEFINE_string('snapshot_name_template', 'snapshot-%08x',
                     'Template string to be used to generate snapshot names')
-
+flags.DEFINE_string('vsa_name_template', 'vsa-%08x',
+                    'Template string to be used to generate VSA names')
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')
@@ -509,6 +510,13 @@ def instance_get_all_by_project(context, project_id):
     return IMPL.instance_get_all_by_project(context, project_id)
 
 
+def instance_get_all_by_project_and_vsa(context, project_id, vsa_id):
+    """Get all instance spawned by a given VSA belonging to a project."""
+    return IMPL.instance_get_all_by_project_and_vsa(context,
+                                                    project_id,
+                                                    vsa_id)
+
+
 def instance_get_all_by_host(context, host):
     """Get all instance belonging to a host."""
     return IMPL.instance_get_all_by_host(context, host)
@@ -912,6 +920,16 @@ def volume_get_all_by_instance(context, instance_id):
 def volume_get_all_by_project(context, project_id):
     """Get all volumes belonging to a project."""
     return IMPL.volume_get_all_by_project(context, project_id)
+
+
+def volume_get_all_assigned_to_vsa(context, vsa_id):
+    """Get all volumes assigned to particular VSA."""
+    return IMPL.volume_get_all_assigned_to_vsa(context, vsa_id)
+
+
+def volume_get_all_assigned_from_vsa(context, vsa_id):
+    """Get all volumes created from particular VSA."""
+    return IMPL.volume_get_all_assigned_from_vsa(context, vsa_id)
 
 
 def volume_get_by_ec2_id(context, ec2_id):
@@ -1422,3 +1440,71 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
     key/value pairs specified in the extra specs dict argument"""
     IMPL.instance_type_extra_specs_update_or_create(context, instance_type_id,
                                                     extra_specs)
+
+
+####################
+
+
+def drive_type_create(context, values):
+    """Creates drive type record."""
+    return IMPL.drive_type_create(context, values)
+
+
+def drive_type_update(context, name, values):
+    """Updates drive type record."""
+    return IMPL.drive_type_update(context, name, values)
+
+
+def drive_type_destroy(context, name):
+    """Deletes drive type record."""
+    return IMPL.drive_type_destroy(context, name)
+
+
+def drive_type_get(context, drive_type_id):
+    """Get drive type record by id."""
+    return IMPL.drive_type_get(context, drive_type_id)
+
+
+def drive_type_get_by_name(context, name):
+    """Get drive type record by name."""
+    return IMPL.drive_type_get_by_name(context, name)
+
+
+def drive_type_get_all(context, visible=None):
+    """Returns all (or only visible) drive types."""
+    return IMPL.drive_type_get_all(context, visible)
+
+
+def vsa_create(context, values):
+    """Creates Virtual Storage Array record."""
+    return IMPL.vsa_create(context, values)
+
+
+def vsa_update(context, vsa_id, values):
+    """Updates Virtual Storage Array record."""
+    return IMPL.vsa_update(context, vsa_id, values)
+
+
+def vsa_destroy(context, vsa_id):
+    """Deletes Virtual Storage Array record."""
+    return IMPL.vsa_destroy(context, vsa_id)
+
+
+def vsa_get(context, vsa_id):
+    """Get Virtual Storage Array record by ID."""
+    return IMPL.vsa_get(context, vsa_id)
+
+
+def vsa_get_all(context):
+    """Get all Virtual Storage Array records."""
+    return IMPL.vsa_get_all(context)
+
+
+def vsa_get_all_by_project(context, project_id):
+    """Get all Virtual Storage Array records by project ID."""
+    return IMPL.vsa_get_all_by_project(context, project_id)
+
+
+def vsa_get_vc_ips_list(context, vsa_id):
+    """Retrieves IPs of instances associated with Virtual Storage Array."""
+    return IMPL.vsa_get_vc_ips_list(context, vsa_id)

@@ -242,7 +242,7 @@ class LibvirtConnTestCase(test.TestCase):
                 return """
                     <domain type='kvm'>
                         <devices>
-                            <disk type='file'>
+                            <drive type='file'>
                                 <source file='filename'/>
                             </disk>
                         </devices>

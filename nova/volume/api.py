@@ -41,7 +41,9 @@ LOG = logging.getLogger('nova.volume')
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def create(self, context, size, snapshot_id, name, description):
+    def create(self, context, size, snapshot_id, name, description,
+               to_vsa_id=None, from_vsa_id=None, drive_type_id=None,
+               availability_zone=None):
         if snapshot_id != None:
             snapshot = self.get_snapshot(context, snapshot_id)
             if snapshot['status'] != "available":
@@ -50,25 +52,36 @@ class API(base.Base):
             if not size:
                 size = snapshot['volume_size']
 
-        if quota.allowed_volumes(context, 1, size) < 1:
-            pid = context.project_id
-            LOG.warn(_("Quota exceeeded for %(pid)s, tried to create"
-                    " %(size)sG volume") % locals())
-            raise quota.QuotaError(_("Volume quota exceeded. You cannot "
-                                     "create a volume of size %sG") % size)
+        if availability_zone is None:
+            availability_zone = FLAGS.storage_availability_zone
+
+        if to_vsa_id is None:
+            # VP-TODO: for now don't check quotas for BE volumes
+            if quota.allowed_volumes(context, 1, size) < 1:
+                pid = context.project_id
+                LOG.warn(_("Quota exceeeded for %(pid)s, tried to create"
+                        " %(size)sG volume") % locals())
+                raise quota.QuotaError(_("Volume quota exceeded. You cannot "
+                                         "create a volume of size %sG") % size)
 
         options = {
             'size': size,
             'user_id': context.user_id,
             'project_id': context.project_id,
             'snapshot_id': snapshot_id,
-            'availability_zone': FLAGS.storage_availability_zone,
+            'availability_zone': availability_zone,
             'status': "creating",
             'attach_status': "detached",
             'display_name': name,
-            'display_description': description}
+            'display_description': description,
+            'to_vsa_id': to_vsa_id,
+            'from_vsa_id': from_vsa_id,
+            'drive_type_id': drive_type_id}
 
         volume = self.db.volume_create(context, options)
+        if from_vsa_id is not None:  # for FE VSA volumes do nothing
+            return volume
+
         rpc.cast(context,
                  FLAGS.scheduler_topic,
                  {"method": "create_volume",
@@ -89,6 +102,12 @@ class API(base.Base):
         volume = self.get(context, volume_id)
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
+
+        if volume['from_vsa_id'] is not None:
+            self.db.volume_destroy(context, volume['id'])
+            LOG.debug(_("volume %d: deleted successfully"), volume['id'])
+            return
+
         now = utils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
                                                    'terminated_at': now})
@@ -109,6 +128,15 @@ class API(base.Base):
         if context.is_admin:
             return self.db.volume_get_all(context)
         return self.db.volume_get_all_by_project(context, context.project_id)
+
+    def get_all_by_vsa(self, context, vsa_id, direction):
+        if direction == "to":
+            return self.db.volume_get_all_assigned_to_vsa(context, vsa_id)
+        elif direction == "from":
+            return self.db.volume_get_all_assigned_from_vsa(context, vsa_id)
+        else:
+            raise exception.ApiError(_("Unsupported vol assignment type %s"),
+                                        direction)
 
     def get_snapshot(self, context, snapshot_id):
         rv = self.db.snapshot_get(context, snapshot_id)

@@ -149,7 +149,7 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, vsa_id=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -241,7 +241,8 @@ class API(base.Base):
             'availability_zone': availability_zone,
             'os_type': os_type,
             'architecture': architecture,
-            'vm_mode': vm_mode}
+            'vm_mode': vm_mode,
+            'vsa_id': vsa_id}
 
         return (num_instances, base_options)
 
@@ -381,7 +382,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               vsa_id=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -402,7 +404,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, vsa_id)
 
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
