@@ -2964,6 +2964,12 @@ class ServerXMLSerializationTest(test.TestCase):
     IMAGE_BOOKMARK = 'http://localhost/images/5'
     FLAVOR_BOOKMARK = 'http://localhost/flavors/1'
 
+    def setUp(self):
+        self.maxDiff = None
+
+    def tearDown(self):
+        pass
+
     def test_show(self):
         serializer = servers.ServerXMLSerializer()
 
@@ -3048,12 +3054,14 @@ class ServerXMLSerializationTest(test.TestCase):
                 uuid="%(expected_uuid)s"
                 xmlns="http://docs.openstack.org/compute/api/v1.1"
                 xmlns:atom="http://www.w3.org/2005/Atom"
-                name="Image1"
+                name="test_server"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
                 status="BUILD"
                 progress="0">
+            <atom:link href="%(expected_server_href)s" rel="self"/>
+            <atom:link href="%(expected_server_bookmark)s" rel="bookmark"/>
             <image id="5">
                 <atom:link rel="bookmark" href="%(expected_image_bookmark)s"/>
             </image>
@@ -3078,8 +3086,6 @@ class ServerXMLSerializationTest(test.TestCase):
                     <ip version="6" addr="::babe:67.23.10.139"/>
                 </network>
             </addresses>
-            <atom:link href="%(expected_server_href)s" rel="self"/>
-            <atom:link href="%(expected_server_bookmark)s" rel="bookmark"/>
         </server>
         """.replace("  ", "") % (locals()))
 

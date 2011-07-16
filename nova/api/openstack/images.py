@@ -278,9 +278,9 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
     xmlns = wsgi.XMLNS_V11
 
     def __init__(self):
-        self.metadata_serializer = image_metadata.ImageMetadataXMLSerializer()
+        self.metadata_serializer = common.MetadataXMLSerializer()
 
-    def _image_to_xml(self, xml_doc, image):
+    def image_to_xml(self, xml_doc, image):
         image_node = xml_doc.createElement('image')
         image_node.setAttribute('id', str(image['id']))
         image_node.setAttribute('name', image['name'])

@@ -17,6 +17,7 @@ import base64
 import traceback
 
 from webob import exc
+from xml.dom import minidom
 
 from nova import compute
 from nova import db
@@ -610,6 +611,94 @@ class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
     def delete(self, response, data):
         response.status_int = 204
+
+
+class ServerXMLSerializer(wsgi.XMLDictSerializer):
+
+    xmlns = wsgi.XMLNS_V11
+
+    def __init__(self):
+        self.metadata_serializer = common.MetadataXMLSerializer()
+
+    def _create_basic_entity_node(self, xml_doc, id, links, name):
+        basic_node = xml_doc.createElement(name)
+        basic_node.setAttribute('id', str(id))
+        link_nodes = self._create_link_nodes(xml_doc, links)
+        for link_node in link_nodes:
+            basic_node.appendChild(link_node)
+        return basic_node
+
+    def _create_metadata_node(self, xml_doc, metadata):
+        return self.metadata_serializer.meta_list_to_xml(xml_doc, metadata)
+
+    def _create_addresses_node(self, xml_doc, addresses):
+        addresses_node = xml_doc.createElement('addresses')
+        for name, network_dict in addresses.items():
+            network_node = self._create_network_node(xml_doc,
+                                                     name,
+                                                     network_dict)
+            addresses_node.appendChild(network_node)
+        return addresses_node
+
+    def _create_network_node(self, xml_doc, network_name, network_dict):
+        network_node = xml_doc.createElement('network')
+        network_node.setAttribute('id', network_name)
+        for ip in network_dict:
+            ip_node = xml_doc.createElement('ip')
+            ip_node.setAttribute('version', str(ip['version']))
+            ip_node.setAttribute('addr', ip['addr'])
+            network_node.appendChild(ip_node)
+        return network_node
+
+
+    def _add_server_attributes(self, node, server):
+        node.setAttribute('id', str(server['id']))
+        node.setAttribute('uuid', str(server['uuid']))
+        node.setAttribute('hostId', str(server['hostId']))
+        node.setAttribute('name', server['name'])
+        node.setAttribute('created', server['created'])
+        node.setAttribute('updated', server['updated'])
+        node.setAttribute('status', server['status'])
+        if 'progress' in server:
+            node.setAttribute('progress', str(server['progress']))
+
+    def _server_to_xml_detailed(self, xml_doc, server):
+        server_node = xml_doc.createElement('server')
+        self._add_server_attributes(server_node, server)
+
+        link_nodes = self._create_link_nodes(xml_doc,
+                                             server['links'])
+        for link_node in link_nodes:
+            server_node.appendChild(link_node)
+
+        image_node = self._create_basic_entity_node(xml_doc,
+                                                    server['image']['id'],
+                                                    server['image']['links'],
+                                                    'image')
+        server_node.appendChild(image_node)
+
+        flavor_node = self._create_basic_entity_node(xml_doc,
+                                                    server['flavor']['id'],
+                                                    server['flavor']['links'],
+                                                    'flavor')
+        server_node.appendChild(flavor_node)
+
+        metadata = server.get('metadata', {}).items()
+        if len(metadata) > 0:
+            metadata_node = self._create_metadata_node(xml_doc, metadata)
+            server_node.appendChild(metadata_node)
+
+        addresses_node = self._create_addresses_node(xml_doc,
+                                                     server['addresses'])
+        server_node.appendChild(addresses_node)
+
+        return server_node
+
+    def show(self, server_dict):
+        xml_doc = minidom.Document()
+        node = self._server_to_xml_detailed(xml_doc,
+                                       server_dict['server'])
+        return self.to_xml_string(node, True)
 
 
 def create_resource(version='1.0'):

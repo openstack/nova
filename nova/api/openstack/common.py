@@ -17,12 +17,14 @@
 
 import re
 from urlparse import urlparse
+from xml.dom import minidom
 
 import webob
 
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.api.openstack import wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
@@ -162,3 +164,51 @@ def remove_version_from_href(href):
         msg = _('href does not contain version')
         raise ValueError(msg)
     return new_href
+
+
+class MetadataXMLSerializer(wsgi.XMLDictSerializer):
+    def __init__(self, xmlns=wsgi.XMLNS_V11):
+        super(MetadataXMLSerializer, self).__init__(xmlns=xmlns)
+
+    def _meta_item_to_xml(self, doc, key, value):
+        node = doc.createElement('meta')
+        doc.appendChild(node)
+        node.setAttribute('key', '%s' % key)
+        text = doc.createTextNode('%s' % value)
+        node.appendChild(text)
+        return node
+
+    def meta_list_to_xml(self, xml_doc, meta_items):
+        container_node = xml_doc.createElement('metadata')
+        for (key, value) in meta_items:
+            item_node = self._meta_item_to_xml(xml_doc, key, value)
+            container_node.appendChild(item_node)
+        return container_node
+
+    def _meta_list_to_xml_string(self, metadata_dict):
+        xml_doc = minidom.Document()
+        items = metadata_dict['metadata'].items()
+        container_node = self.meta_list_to_xml(xml_doc, items)
+        xml_doc.appendChild(container_node)
+        self._add_xmlns(container_node)
+        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
+
+    def index(self, metadata_dict):
+        return self._meta_list_to_xml_string(metadata_dict)
+
+    def create(self, metadata_dict):
+        return self._meta_list_to_xml_string(metadata_dict)
+
+    def _meta_item_to_xml_string(self, meta_item_dict):
+        xml_doc = minidom.Document()
+        item_key, item_value = meta_item_dict.items()[0]
+        item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
+        xml_doc.appendChild(item_node)
+        self._add_xmlns(item_node)
+        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
+
+    def show(self, meta_item_dict):
+        return self._meta_item_to_xml_string(meta_item_dict['meta'])
+
+    def update(self, meta_item_dict):
+        return self._meta_item_to_xml_string(meta_item_dict['meta'])
