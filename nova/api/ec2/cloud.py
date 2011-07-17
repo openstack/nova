@@ -25,10 +25,10 @@ datastore.
 import base64
 import netaddr
 import os
-import urllib
-import tempfile
-import shutil
 import re
+import shutil
+import tempfile
+import urllib
 
 from nova import compute
 from nova import context
