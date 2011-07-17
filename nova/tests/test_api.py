@@ -304,8 +304,8 @@ class ApiEc2TestCase(test.TestCase):
         self.manager.add_role('fake', 'netadmin')
         project.add_role('fake', 'netadmin')
 
-        # Test block group_name of non alphanumeric characters, spaces, 
-        # dashes, and underscores. 
+        # Test block group_name of non alphanumeric characters, spaces,
+        # dashes, and underscores.
         security_group_name = "aa #$% -=99"
 
         try:

@@ -196,10 +196,12 @@ class InvalidIpProtocol(Invalid):
 class InvalidContentType(Invalid):
     message = _("Invalid content type %(content_type)s.")
 
+
+# Cannot be templated as the error syntax varies.
+# msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
-    # Cannot be templated as the error syntax varies.
-    # msg needs to be constructed when raised.
     message = _("%(err)s")
+
 
 class InstanceNotRunning(Invalid):
     message = _("Instance %(instance_id)s is not running.")
