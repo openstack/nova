@@ -1234,15 +1234,25 @@ def instance_get_all_by_column_regexp(context, column, column_regexp):
 
     # MySQL 'regexp' is not portable, so we must do our own matching.
     # First... grab all Instances.
-    all_instances = session.query(models.Instance).\
+    prefix = session.query(models.Instance).\
             options(joinedload_all('fixed_ips.floating_ips')).\
             options(joinedload('virtual_interfaces')).\
             options(joinedload('security_groups')).\
             options(joinedload_all('fixed_ips.network')).\
             options(joinedload('metadata')).\
             options(joinedload('instance_type')).\
-            filter_by(deleted=can_read_deleted(context)).\
-            all()
+            filter_by(deleted=can_read_deleted(context))
+
+    if context.is_admin:
+        all_instances = prefix.all()
+    elif context.project:
+        all_instances = prefix.\
+                filter_by(project_id=context.project_id).\
+                all()
+    else:
+        all_instances = prefix.\
+                filter_by(user_id=context.user_id).\
+                all()
     if not all_instances:
         return []
     # Now do the regexp matching
@@ -1265,15 +1275,25 @@ def instance_get_all_by_name_regexp(context, name_regexp):
 
     # MySQL 'regexp' is not portable, so we must do our own matching.
     # First... grab all Instances.
-    all_instances = session.query(models.Instance).\
+    prefix = session.query(models.Instance).\
             options(joinedload_all('fixed_ips.floating_ips')).\
             options(joinedload('virtual_interfaces')).\
             options(joinedload('security_groups')).\
             options(joinedload_all('fixed_ips.network')).\
             options(joinedload('metadata')).\
             options(joinedload('instance_type')).\
-            filter_by(deleted=can_read_deleted(context)).\
-            all()
+            filter_by(deleted=can_read_deleted(context))
+
+    if context.is_admin:
+        all_instances = prefix.all()
+    elif context.project:
+        all_instances = prefix.\
+                filter_by(project_id=context.project_id).\
+                all()
+    else:
+        all_instances = prefix.\
+                filter_by(user_id=context.user_id).\
+                all()
     if not all_instances:
         return []
     # Now do the regexp matching
@@ -1336,6 +1356,15 @@ def instance_get_all_by_ip_regexp(context, ip_regexp):
                 compiled_regexp.match(floating_ip.address):
             instances[fixed_ip.instance.uuid] = fixed_ip.instance
 
+    if context.is_admin:
+        return instances.values()
+    elif context.project:
+        return [instance for instance in instances.values()
+                if instance.project_id == context.project_id]
+    else:
+        return [instance for instance in instances.values()
+                if instance.user_id == context.user_id]
+
     return instances.values()
 
 
@@ -1347,15 +1376,26 @@ def instance_get_all_by_ipv6_regexp(context, ipv6_regexp):
 
     session = get_session()
     with session.begin():
-        all_instances = session.query(models.Instance).\
+        prefix = session.query(models.Instance).\
                 options(joinedload_all('fixed_ips.floating_ips')).\
                 options(joinedload('virtual_interfaces')).\
                 options(joinedload('security_groups')).\
                 options(joinedload_all('fixed_ips.network')).\
                 options(joinedload('metadata')).\
                 options(joinedload('instance_type')).\
-                filter_by(deleted=can_read_deleted(context)).\
-                all()
+                filter_by(deleted=can_read_deleted(context))
+
+        if context.is_admin:
+            all_instances = prefix.all()
+        elif context.project:
+            all_instances = prefix.\
+                   filter_by(project_id=context.project_id).\
+                   all()
+        else:
+            all_instances = prefix.\
+                   filter_by(user_id=context.user_id).\
+                   all()
+
         if not all_instances:
             return []
 

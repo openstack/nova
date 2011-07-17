@@ -686,7 +686,7 @@ class API(base.Base):
                 # v1.1 API
                 'changes-since': (None, None),
                 # Mutually exclusive options
-                'display_name': (_get_all_by_column, ('display_name',)),
+                'name': (_get_all_by_column, ('display_name',)),
                 'reservation_id': (_get_all_by_reservation_id, ()),
                 # Needed for EC2 API
                 'fixed_ip': (_get_all_by_fixed_ip, ()),
@@ -694,8 +694,7 @@ class API(base.Base):
                 'project_id': (_get_all_by_project_id, ()),
                 'ip': (_get_all_by_ip, ()),
                 'ip6': (_get_all_by_ipv6, ()),
-                'instance_name': (_get_all_by_instance_name, ()),
-                'server_name': (_get_all_by_column, ('server_name',))}
+                'instance_name': (_get_all_by_instance_name, ())}
 
         # FIXME(comstud): 'fresh' and 'changes-since' are currently not
         # implemented...

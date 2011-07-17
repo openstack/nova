@@ -820,8 +820,8 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(len(instances), 1)
         self.assertEqual(power_state.SHUTOFF, instances[0]['state'])
 
-    def test_get_all_by_display_name_regexp(self):
-        """Test searching instances by display_name"""
+    def test_get_all_by_name_regexp(self):
+        """Test searching instances by name (display_name)"""
         c = context.get_admin_context()
         instance_id1 = self._create_instance({'display_name': 'woot'})
         instance_id2 = self._create_instance({
@@ -832,78 +832,33 @@ class ComputeTestCase(test.TestCase):
             'id': 30})
 
         instances = self.compute_api.get_all(c,
-                search_opts={'display_name': 'woo.*'})
+                search_opts={'name': 'woo.*'})
         self.assertEqual(len(instances), 2)
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id1 in instance_ids)
         self.assertTrue(instance_id2 in instance_ids)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'display_name': 'woot.*'})
+                search_opts={'name': 'woot.*'})
         instance_ids = [instance.id for instance in instances]
         self.assertEqual(len(instances), 1)
         self.assertTrue(instance_id1 in instance_ids)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'display_name': '.*oot.*'})
+                search_opts={'name': '.*oot.*'})
         self.assertEqual(len(instances), 2)
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id1 in instance_ids)
         self.assertTrue(instance_id3 in instance_ids)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'display_name': 'n.*'})
+                search_opts={'name': 'n.*'})
         self.assertEqual(len(instances), 1)
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id3 in instance_ids)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'display_name': 'noth.*'})
-        self.assertEqual(len(instances), 0)
-
-        db.instance_destroy(c, instance_id1)
-        db.instance_destroy(c, instance_id2)
-        db.instance_destroy(c, instance_id3)
-
-    def test_get_all_by_server_name_regexp(self):
-        """Test searching instances by server_name"""
-        c = context.get_admin_context()
-        instance_id1 = self._create_instance({'server_name': 'woot'})
-        instance_id2 = self._create_instance({
-            'server_name': 'woo',
-            'id': 20})
-        instance_id3 = self._create_instance({
-            'server_name': 'not-woot',
-            'id': 30})
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'server_name': 'woo.*'})
-        self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id1 in instance_ids)
-        self.assertTrue(instance_id2 in instance_ids)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'server_name': 'woot.*'})
-        instance_ids = [instance.id for instance in instances]
-        self.assertEqual(len(instances), 1)
-        self.assertTrue(instance_id1 in instance_ids)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'server_name': '.*oot.*'})
-        self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id1 in instance_ids)
-        self.assertTrue(instance_id3 in instance_ids)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'server_name': 'n.*'})
-        self.assertEqual(len(instances), 1)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id3 in instance_ids)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'server_name': 'noth.*'})
+                search_opts={'name': 'noth.*'})
         self.assertEqual(len(instances), 0)
 
         db.instance_destroy(c, instance_id1)
@@ -942,13 +897,9 @@ class ComputeTestCase(test.TestCase):
     def test_get_by_fixed_ip(self):
         """Test getting 1 instance by Fixed IP"""
         c = context.get_admin_context()
-        instance_id1 = self._create_instance({'server_name': 'woot'})
-        instance_id2 = self._create_instance({
-            'server_name': 'woo',
-            'id': 20})
-        instance_id3 = self._create_instance({
-            'server_name': 'not-woot',
-            'id': 30})
+        instance_id1 = self._create_instance()
+        instance_id2 = self._create_instance({'id': 20})
+        instance_id3 = self._create_instance({'id': 30})
 
         db.fixed_ip_create(c,
                 {'address': '1.1.1.1',
