@@ -293,6 +293,26 @@ class ApiEc2TestCase(test.TestCase):
         self.manager.delete_project(project)
         self.manager.delete_user(user)
 
+    def test_group_name_valid_security_group(self):
+        """Test that we sanely handle invalid security group names. """
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        # At the moment, you need both of these to actually be netadmin
+        self.manager.add_role('fake', 'netadmin')
+        project.add_role('fake', 'netadmin')
+
+        security_group_name = "".join(random.choice("poiuytrewqasdfghjklmnbvc")
+                                      for x in range(random.randint(256, 266)))
+        try:
+            self.ec2.create_security_group(security_group_name, 'test group')
+        except:
+            pass
+        else:
+            self.fail('Exception not raised.')
+
     def test_authorize_revoke_security_group_cidr(self):
         """
         Test that we can add and remove CIDR based rules
