@@ -800,11 +800,16 @@ class CloudController(object):
         return [{label: x} for x in lst]
 
     def describe_instances(self, context, **kwargs):
-        return self._format_describe_instances(context, **kwargs)
+        # Optional DescribeInstances argument
+        instance_id = kwargs.get('instance_id', None)
+        return self._format_describe_instances(context,
+                instance_id=instance_id)
 
     def describe_instances_v6(self, context, **kwargs):
-        kwargs['use_v6'] = True
-        return self._format_describe_instances(context, **kwargs)
+        # Optional DescribeInstancesV6 argument
+        instance_id = kwargs.get('instance_id', None)
+        return self._format_describe_instances(context,
+                instance_id=instance_id, use_v6=True)
 
     def _format_describe_instances(self, context, **kwargs):
         return {'reservationSet': self._format_instances(context, **kwargs)}
@@ -814,7 +819,8 @@ class CloudController(object):
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, instance_id=None, **kwargs):
+    def _format_instances(self, context, instance_id=None, use_v6=False,
+            **search_opts):
         # TODO(termie): this method is poorly named as its name does not imply
         #               that it will be making a variety of database calls
         #               rather than simply formatting a bunch of instances that
@@ -827,14 +833,15 @@ class CloudController(object):
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
                 try:
                     instance = self.compute_api.get(context,
-                            instance_id=internal_id)
+                            instance_id=internal_id,
+                            search_opts=search_opts)
                 except exception.NotFound:
                     continue
                 instances.append(instance)
         else:
             try:
                 instances = self.compute_api.get_all(context,
-                        search_opts=kwargs)
+                        search_opts=search_opts)
             except exception.NotFound:
                 instances = []
         for instance in instances:
@@ -856,7 +863,7 @@ class CloudController(object):
                 fixed_addr = fixed['address']
                 if fixed['floating_ips']:
                     floating_addr = fixed['floating_ips'][0]['address']
-                if fixed['network'] and 'use_v6' in kwargs:
+                if fixed['network'] and use_v6:
                     i['dnsNameV6'] = ipv6.to_global(
                         fixed['network']['cidr_v6'],
                         fixed['virtual_interface']['address'],
@@ -1014,7 +1021,7 @@ class CloudController(object):
                                   'AvailabilityZone'),
             block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context,
-                                          instances[0]['reservation_id'])
+                instance_id=instances[0]['reservation_id'])
 
     def _do_instance(self, action, context, ec2_id):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)

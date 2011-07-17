@@ -910,7 +910,7 @@ class ComputeTestCase(test.TestCase):
         db.instance_destroy(c, instance_id2)
         db.instance_destroy(c, instance_id3)
 
-    def test_get_all_by_name_regexp(self):
+    def test_get_all_by_instance_name_regexp(self):
         """Test searching instances by name"""
         self.flags(instance_name_template='instance-%d')
 
@@ -920,18 +920,18 @@ class ComputeTestCase(test.TestCase):
         instance_id3 = self._create_instance({'id': 10})
 
         instances = self.compute_api.get_all(c,
-                search_opts={'name': 'instance.*'})
+                search_opts={'instance_name': 'instance.*'})
         self.assertEqual(len(instances), 3)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'name': '.*\-\d$'})
+                search_opts={'instance_name': '.*\-\d$'})
         self.assertEqual(len(instances), 2)
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id1 in instance_ids)
         self.assertTrue(instance_id2 in instance_ids)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'name': 'i.*2'})
+                search_opts={'instance_name': 'i.*2'})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0].id, instance_id2)
 

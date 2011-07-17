@@ -623,44 +623,6 @@ class API(base.Base):
         """
         return self.get(context, instance_id)
 
-    def _get_all_by_reservation_id(self, context, search_opts):
-        search_opts['recurse_zones'] = True
-        return self.db.instance_get_all_by_reservation(
-                context, search_opts['reservation_id'])
-
-    def _get_all_by_project_id(self, context, search_opts):
-        return self.db.instance_get_all_by_project(
-                context, search_opts['project_id'])
-
-    def _get_all_by_fixed_ip(self, context, search_opts):
-        fixed_ip = search_opts['fixed_ip']
-        try:
-            instances = self.db.instance_get_by_fixed_ip(context, fixed_ip)
-        except exception.FixedIpNotFound, e:
-            if search_opts['recurse_zones']:
-                return []
-            else:
-                raise
-        if not instances:
-            raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
-        return instances
-
-    def _get_all_by_name(self, context, search_opts):
-        return self.db.instance_get_all_by_name_regexp(
-                context, search_opts['name'])
-
-    def _get_all_by_ip(self, context, search_opts):
-        return self.db.instance_get_all_by_ip_regexp(
-                context, search_opts['ip'])
-
-    def _get_all_by_ip6(self, context, search_opts):
-        return self.db.instance_get_all_by_ipv6_regexp(
-                context, search_opts['ip6'])
-
-    def _get_all_by_column(self, context, column, search_opts):
-        return self.db.instance_get_all_by_column_regexp(
-                context, column, search_opts[column])
-
     def get_all(self, context, search_opts=None):
         """Get all instances filtered by one of the given parameters.
 
@@ -668,57 +630,115 @@ class API(base.Base):
         all instances in the system.
         """
 
+        def _get_all_by_reservation_id(reservation_id):
+            """Get instances by reservation ID"""
+            # reservation_id implies recurse_zones
+            search_opts['recurse_zones'] = True
+            return self.db.instance_get_all_by_reservation(context,
+                    reservation_id)
+
+        def _get_all_by_project_id(project_id):
+            """Get instances by project ID"""
+            return self.db.instance_get_all_by_project(context, project_id)
+
+        def _get_all_by_fixed_ip(fixed_ip):
+            """Get instance by fixed IP"""
+            try:
+                instances = self.db.instance_get_by_fixed_ip(context,
+                        fixed_ip)
+            except exception.FixedIpNotFound, e:
+                if search_opts.get('recurse_zones', False):
+                    return []
+                else:
+                    raise
+            if not instances:
+                raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
+            return instances
+
+        def _get_all_by_instance_name(instance_name_regexp):
+            """Get instances by matching the Instance.name property"""
+            return self.db.instance_get_all_by_name_regexp(
+                    context, instance_name_regexp)
+
+        def _get_all_by_ip(ip_regexp):
+            """Get instances by matching IPv4 addresses"""
+            return self.db.instance_get_all_by_ip_regexp(context, ip_regexp)
+
+        def _get_all_by_ipv6(ipv6_regexp):
+            """Get instances by matching IPv6 addresses"""
+            return self.db.instance_get_all_by_ipv6_regexp(context,
+                    ipv6_regexp)
+
+        def _get_all_by_column(column_regexp, column):
+            """Get instances by matching Instance.<column>"""
+            return self.db.instance_get_all_by_column_regexp(
+                    context, column, column_regexp)
+
+        # Define the search params that we will allow.  This is a mapping
+        # of the search param to tuple of (function_to_call, (function_args))
+        # A 'None' function means it's an optional parameter that will
+        # influence the search results, but itself is not a search option.
+        # Search options are mutually exclusive
+        known_params = {
+                'recurse_zones': (None, None),
+                # v1.0 API?
+                'fresh': (None, None),
+                # v1.1 API
+                'changes-since': (None, None),
+                # Mutually exclusive options
+                'display_name': (_get_all_by_column, ('display_name',)),
+                'reservation_id': (_get_all_by_reservation_id, ()),
+                # Needed for EC2 API
+                'fixed_ip': (_get_all_by_fixed_ip, ()),
+                # Needed for EC2 API
+                'project_id': (_get_all_by_project_id, ()),
+                'ip': (_get_all_by_ip, ()),
+                'ip6': (_get_all_by_ipv6, ()),
+                'instance_name': (_get_all_by_instance_name, ()),
+                'server_name': (_get_all_by_column, ('server_name',))}
+
+        # FIXME(comstud): 'fresh' and 'changes-since' are currently not
+        # implemented...
+
         if search_opts is None:
             search_opts = {}
 
         LOG.debug(_("Searching by: %s") % str(search_opts))
 
-        # Columns we can do a generic search on
-        search_columns = ['display_name',
-                          'server_name']
-
-        # Options that are mutually exclusive
-        exclusive_opts = ['reservation_id',
-                          'project_id',
-                          'fixed_ip',
-                          'name',
-                          'ip',
-                          'ip6'] + search_columns
-
-        # See if a valid search option was passed in.
-        # Ignore unknown search options for possible forward compatability.
-        # Raise an exception if more than 1 search option is specified
-        found_opt = None
-        found_opts = [opt for opt in exclusive_opts
-                if search_opts.get(opt, None)]
+        # Mutually exclusive serach options are any options that have
+        # a function to call.  Raise an exception if more than 1 is
+        # specified...
+        # NOTE(comstud): Ignore unknown options.  The OS API will
+        # do it's own verification on options..
+        found_opts = [opt for opt in search_opts.iterkeys()
+                if opt in known_params and \
+                        known_params[opt][0] is not None]
         if len(found_opts) > 1:
             found_opt_str = ", ".join(found_opts)
             msg = _("More than 1 mutually exclusive "
                     "search option specified: %(found_opt_str)s") \
                     % locals()
-            logger.error(msg)
+            LOG.error(msg)
             raise exception.InvalidInput(reason=msg)
 
         # Found a search option?
         if found_opts:
             found_opt = found_opts[0]
-            if found_opt in search_columns:
-                instances = self._get_all_by_column(context,
-                        found_opt, search_opts)
-            else:
-                method_name = '_get_all_by_%s' % found_opt
-                method = getattr(self, method_name, None)
-                instances = method(context, search_opts)
-        elif not context.is_admin:
+            f, f_args = known_params[found_opt]
+            instances = f(search_opts[found_opt], *f_args)
+        # Nope.  Return all instances if the request is in admin context..
+        elif context.is_admin:
+            instances = self.db.instance_get_all(context)
+        # Nope.  Return all instances for the user/project
+        else:
             if context.project:
                 instances = self.db.instance_get_all_by_project(
                         context, context.project_id)
             else:
                 instances = self.db.instance_get_all_by_user(
                         context, context.user_id)
-        else:
-            instances = self.db.instance_get_all(context)
 
+        # Convert any responses into a list of instances
         if instances is None:
             instances = []
         elif not isinstance(instances, list):

@@ -39,6 +39,41 @@ LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
 
 
+def check_option_permissions(context, specified_options,
+        user_api_options, admin_api_options):
+    """Check whether or not entries in 'specified_options' are valid
+    based on the allowed 'user_api_options' and 'admin_api_options'.
+
+    All inputs are lists of option names
+
+    Returns: exception.InvalidInput for an invalid option or
+             exception.AdminRequired for needing admin privs
+    """
+
+    # We pretend we don't know about admin_api_options if the admin
+    # API is not enabled.
+    if FLAGS.enable_admin_api:
+        known_options = user_api_options + admin_api_options
+    else:
+        known_options = user_api_options
+
+    # Check for unknown query string params.
+    spec_unknown_opts = [for opt in specified_options
+            if opt not in known_options]
+    if spec_unknown_opts:
+        unknown_opt_str = ", ".join(spec_unknown_opts)
+        raise exception.InvalidInput(reason=_(
+                "Unknown options specified: %(unknown_opt_str)"))
+
+    # Check for admin context for the admin commands
+    if not context.is_admin:
+        spec_admin_opts = [for opt in specified_options
+                if opt in admin_api_options]
+        if spec_admin_opts:
+            admin_opt_str = ", ".join(admin_opts)
+            raise exception.AdminRequired()
+
+
 class Controller(object):
     """ The Server API controller for the OpenStack API """
 
@@ -51,9 +86,9 @@ class Controller(object):
         try:
             servers = self._items(req, is_detail=False)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(explanation=str(err))
+            return faults.Fault(exc.HTTPBadRequest(explanation=str(err)))
         except exception.NotFound:
-            return exc.HTTPNotFound()
+            return faults.Fault(exc.HTTPNotFound())
         return servers
 
     def detail(self, req):
@@ -61,9 +96,9 @@ class Controller(object):
         try:
             servers = self._items(req, is_detail=True)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(explanation=str(err))
+            return faults.Fault(exc.HTTPBadRequest(explanation=str(err)))
         except exception.NotFound as err:
-            return exc.HTTPNotFound()
+            return faults.Fault(exc.HTTPNotFound())
         return servers
 
     def _get_view_builder(self, req):
@@ -75,20 +110,17 @@ class Controller(object):
     def _action_rebuild(self, info, request, instance_id):
         raise NotImplementedError()
 
-    def _items(self, req, is_detail):
-        """Returns a list of servers for a given user.
+    def _get_items(self, context, req, is_detail, search_opts=None):
+        """Returns a list of servers.
 
         builder - the response model builder
         """
-        query_str = req.str_GET
-        recurse_zones = utils.bool_from_str(
-                query_str.get('recurse_zones', False))
-        # Pass all of the options on to compute's 'get_all'
-        search_opts = query_str
-        # Reset this after converting from string to bool
-        search_opts['recurse_zones'] = recurse_zones
+
+        if search_opts is None:
+            search_opts = {}
+
         instance_list = self.compute_api.get_all(
-                req.environ['nova.context'], search_opts=search_opts)
+                context, search_opts=search_opts)
         limited_list = self._limit_items(instance_list, req)
         builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
@@ -422,6 +454,41 @@ class ControllerV10(Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
+    def _items(self, req, is_detail):
+        """Returns a list of servers based on the request.
+
+        Checks for search options and permissions on the options.
+        """
+
+        search_opts = {}
+        search_opts.update(req.str_GET)
+
+        user_api = ['project_id', 'fixed_ip', 'recurse_zones',
+                'reservation_id', 'name', 'fresh', 'ip', 'ip6']
+        admin_api = ['instance_name']
+
+        context = req.environ['nova.context']
+
+        try:
+            check_option_permissions(context, search_opt.keys(),
+                    user_api, admin_api)
+        except exception.InvalidInput:
+            # FIXME(comstud): I refactored code in here to support
+            # new search options, and the original code ignored
+            # invalid options.  So, I've left it this way for now.
+            # The v1.1 implementation will return an error in this
+            # case..
+            pass
+        except exception.AdminRequired, e:
+            raise faults.Fault(exc.HTTPForbidden(detail=str(e)))
+
+        # Convert recurse_zones into a boolean
+        search_opts['recurse_zones'] = utils.bool_from_str(
+                search_opts.get('recurse_zones', False))
+
+        return self._get_items(context, req, is_detail,
+                search_opts=search_opts)
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
@@ -492,6 +559,34 @@ class ControllerV11(Controller):
             self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+
+    def _items(self, req, is_detail):
+        """Returns a list of servers based on the request.
+
+        Checks for search options and permissions on the options.
+        """
+
+        search_opts = {}
+        search_opts.update(req.str_GET)
+
+        user_api = ['image', 'flavor', 'name', 'status',
+                'reservation_id', 'changes-since', 'ip', 'ip6']
+        admin_api = ['ip', 'ip6', 'instance_name']
+
+        context = req.environ['nova.context']
+
+        try:
+            check_option_permissions(context, search_opt.keys(),
+                    user_api, admin_api)
+        except exception.InvalidInput, e:
+            raise faults.Fault(exc.HTTPBadRequest(detail=str(e)))
+        except exception.AdminRequired, e:
+            raise faults.Fault(exc.HTTPForbidden(detail=str(e)))
+
+        # NOTE(comstud): Making recurse_zones always be True in v1.1
+        search_opts['recurse_zones'] = True
+        return self._get_items(context, req, is_detail,
+                search_opts=search_opts)
 
     def _image_ref_from_req_data(self, data):
         return data['server']['imageRef']
