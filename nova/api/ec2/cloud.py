@@ -28,6 +28,7 @@ import os
 import urllib
 import tempfile
 import shutil
+import re
 
 from nova import compute
 from nova import context
@@ -602,6 +603,22 @@ class CloudController(object):
         return source_project_id
 
     def create_security_group(self, context, group_name, group_description):
+        if not re.match('^[a-zA-Z0-9_\- ]+$',group_name):
+            # Some validation to ensure that values match API spec.
+            # - Alphanumeric characters, spaces, dashes, and underscores.
+            # TODO(Daviey): extend beyond group_name checking, and probably 
+            # create a param validator function that can be used elsewhere. 
+            err = _("Value (%s) for parameter GroupName is invalid."
+                    " Content limited to Alphanumeric characters, "
+                    "spaces, dashes, and underscores.") % group_name
+            # err not that of master ec2 implementation, as they fail to raise.
+            raise exception.InvalidParameterValue(err=err)
+
+        if len(str(group_name)) > 255:
+            err = _("Value (%s) for parameter GroupName is invalid."
+                    " Length exceeds maximum of 255.") % group_name
+            raise exception.InvalidParameterValue(err=err)
+
         LOG.audit(_("Create Security Group %s"), group_name, context=context)
         self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
