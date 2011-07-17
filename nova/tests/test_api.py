@@ -304,12 +304,32 @@ class ApiEc2TestCase(test.TestCase):
         self.manager.add_role('fake', 'netadmin')
         project.add_role('fake', 'netadmin')
 
+        # Test block group_name of non alphanumeric characters, spaces, 
+        # dashes, and underscores. 
+        security_group_name = "aa #$% -=99"
+
+        try:
+            self.ec2.create_security_group(security_group_name, 'test group')
+        except EC2ResponseError, e:
+            if e.code == 'InvalidParameterValue':
+                pass
+            else:
+                self.fail("Unexpected EC2ResponseError: %s "
+                          "(expected InvalidParameterValue)" % e.code)
+        else:
+            self.fail('Exception not raised.')
+
+        # Test block group_name > 255 chars
         security_group_name = "".join(random.choice("poiuytrewqasdfghjklmnbvc")
                                       for x in range(random.randint(256, 266)))
         try:
             self.ec2.create_security_group(security_group_name, 'test group')
-        except:
-            pass
+        except EC2ResponseError, e:
+            if e.code == 'InvalidParameterValue':
+                pass
+            else:
+                self.fail("Unexpected EC2ResponseError: %s "
+                          "(expected InvalidParameterValue)" % e.code)
         else:
             self.fail('Exception not raised.')
 
