@@ -129,13 +129,14 @@ def inject_file(self, arg_dict):
     b64_path = arg_dict["b64_path"]
     b64_file = arg_dict["b64_contents"]
     request_id = arg_dict["id"]
-    if _agent_has_method(self, "file_inject", arg_dict):
+    agent_features = _get_agent_features(self, arg_dict)
+    if "file_inject" in agent_features:
         # New version of the agent.  Agent should receive a 'value'
         # key whose value is a dictionary containing 'b64_path' and
         # 'b64_file'.  See old version below.
         arg_dict["value"] = json.dumps({"name": "file_inject",
                 "value": {"b64_path": b64_path, "b64_file": b64_file}})
-    elif _agent_has_method(self, "injectfile", arg_dict):
+    elif "injectfile" in agent_features:
         # Old agent requires file path and file contents to be
         # combined into one base64 value.
         raw_path = base64.b64decode(b64_path)
@@ -174,10 +175,8 @@ def agent_update(self, arg_dict):
     return resp
 
 
-def _agent_has_method(self, method, arg_dict):
-    """Check that the agent has a particular method by checking its
-    features.
-    """
+def _get_agent_features(self, arg_dict):
+    """Return an array of features that an agent supports."""
     tmp_id = commands.getoutput("uuidgen")
     dct = {}
     dct.update(arg_dict)
@@ -189,9 +188,7 @@ def _agent_has_method(self, method, arg_dict):
     except TimeoutError, e:
         raise PluginError(e)
     response = json.loads(resp)
-    method_arr = response["message"].split(",")
-    # The agent returns a comma-separated list of methods in the message
-    return method in method_arr
+    return response["message"].split(",")
 
 
 def _wait_for_agent(self, request_id, arg_dict):
