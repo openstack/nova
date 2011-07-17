@@ -3089,3 +3089,60 @@ class ServerXMLSerializationTest(test.TestCase):
         """.replace("  ", "") % (locals()))
 
         self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index(self):
+        serializer = servers.ServerXMLSerializer()
+
+        expected_server_href = 'http://localhost/v1.1/servers/1'
+        expected_server_bookmark = 'http://localhost/servers/1'
+        expected_server_href_2 = 'http://localhost/v1.1/servers/2'
+        expected_server_bookmark_2 = 'http://localhost/servers/2'
+        fixture = { "servers": [
+            {
+                "id": 1,
+                "name": "test_server",
+                'links': [
+                    {
+                        'href': expected_server_href,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': expected_server_bookmark,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+            {
+                "id": 2,
+                "name": "test_server_2",
+                'links': [
+                    {
+                        'href': expected_server_href_2,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': expected_server_bookmark_2,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+        ]}
+
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <servers xmlns="http://docs.openstack.org/compute/api/v1.1"
+                 xmlns:atom="http://www.w3.org/2005/Atom">
+        <server id="1" name="test_server">
+            <atom:link href="%(expected_server_href)s" rel="self"/>
+            <atom:link href="%(expected_server_bookmark)s" rel="bookmark"/>
+        </server>
+        <server id="2" name="test_server_2">
+            <atom:link href="%(expected_server_href_2)s" rel="self"/>
+            <atom:link href="%(expected_server_bookmark_2)s" rel="bookmark"/>
+        </server>
+        </servers>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())

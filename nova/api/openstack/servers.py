@@ -661,6 +661,16 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         if 'progress' in server:
             node.setAttribute('progress', str(server['progress']))
 
+    def _server_to_xml(self, xml_doc, server):
+        server_node = xml_doc.createElement('server')
+        server_node.setAttribute('id', str(server['id']))
+        server_node.setAttribute('name', server['name'])
+        link_nodes = self._create_link_nodes(xml_doc,
+                                             server['links'])
+        for link_node in link_nodes:
+            server_node.appendChild(link_node)
+        return server_node
+
     def _server_to_xml_detailed(self, xml_doc, server):
         server_node = xml_doc.createElement('server')
         self._add_server_attributes(server_node, server)
@@ -692,6 +702,25 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         server_node.appendChild(addresses_node)
 
         return server_node
+
+    def _server_list_to_xml(self, xml_doc, servers, detailed):
+        container_node = xml_doc.createElement('servers')
+        if detailed:
+            server_to_xml = self._server_to_xml_detailed
+        else:
+            server_to_xml = self._server_to_xml
+
+        for server in servers:
+            item_node = server_to_xml(xml_doc, server)
+            container_node.appendChild(item_node)
+        return container_node
+
+    def index(self, servers_dict):
+        xml_doc = minidom.Document()
+        node = self._server_list_to_xml(xml_doc,
+                                       servers_dict['servers'],
+                                       detailed=False)
+        return self.to_xml_string(node, True)
 
     def show(self, server_dict):
         xml_doc = minidom.Document()
