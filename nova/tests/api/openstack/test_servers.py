@@ -3291,7 +3291,7 @@ class ServerXMLSerializationTest(test.TestCase):
         expected_server_bookmark = 'http://localhost/servers/1'
         expected_server_href_2 = 'http://localhost/v1.1/servers/2'
         expected_server_bookmark_2 = 'http://localhost/servers/2'
-        fixture = { "servers": [
+        fixture = {"servers": [
             {
                 "id": 1,
                 "name": "test_server",
@@ -3353,7 +3353,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         expected_server_href_2 = 'http://localhost/v1.1/servers/2'
         expected_server_bookmark_2 = 'http://localhost/servers/2'
-        fixture = { "servers": [
+        fixture = {"servers": [
             {
                 "id": 1,
                 "uuid": FAKE_UUID,
