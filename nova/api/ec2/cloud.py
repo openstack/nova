@@ -730,26 +730,12 @@ class CloudController(object):
             snapshot_id = None
             LOG.audit(_("Create volume of %s GB"), size, context=context)
 
-        to_vsa_id = kwargs.get('to_vsa_id', None)
-        if to_vsa_id:
-            to_vsa_id = ec2utils.ec2_id_to_id(to_vsa_id)
-
-        from_vsa_id = kwargs.get('from_vsa_id', None)
-        if from_vsa_id:
-            from_vsa_id = ec2utils.ec2_id_to_id(from_vsa_id)
-
-        if to_vsa_id or from_vsa_id:
-            LOG.audit(_("Create volume of %s GB associated with VSA "\
-                        "(to: %d, from: %d)"),
-                        size, to_vsa_id, from_vsa_id, context=context)
-
         volume = self.volume_api.create(
                 context,
                 size=size,
                 snapshot_id=snapshot_id,
                 name=kwargs.get('display_name'),
-                description=kwargs.get('display_description'),
-                to_vsa_id=to_vsa_id, from_vsa_id=from_vsa_id)
+                description=kwargs.get('display_description'))
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
@@ -864,8 +850,7 @@ class CloudController(object):
 
     def describe_vsas(self, context, vsa_id=None, status=None,
                       availability_zone=None, **kwargs):
-#        LOG.debug(_("vsa_id=%s, status=%s, az=%s"),
-#                    (vsa_id, status, availability_zone))
+        LOG.audit(_("Describe VSAs"))
         result = []
         vsas = []
         if vsa_id is not None:

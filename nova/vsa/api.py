@@ -275,15 +275,18 @@ class API(base.Base):
                           " Setting to default"), vc_count)
             vc_count = FLAGS.max_vcs_in_vsa
 
+        vsa_name = vsa['name']
         old_vc_count = vsa['vc_count']
         if vc_count > old_vc_count:
-            LOG.debug(_("Adding %d VCs to VSA %s."),
-                        (vc_count - old_vc_count, vsa['name']))
+            add_cnt = vc_count - old_vc_count
+            LOG.debug(_("Adding %(add_cnt)d VCs to VSA %(vsa_name)s."),
+                        locals())
             # VP-TODO: actual code for adding new VCs
 
         elif vc_count < old_vc_count:
-            LOG.debug(_("Deleting %d VCs from VSA %s."),
-                        (old_vc_count - vc_count, vsa['name']))
+            del_cnt = old_vc_count - vc_count
+            LOG.debug(_("Deleting %(add_cnt)d VCs from VSA %(vsa_name)s."),
+                        locals())
             # VP-TODO: actual code for deleting extra VCs
 
     def _force_volume_delete(self, ctxt, volume):

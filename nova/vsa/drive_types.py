@@ -23,14 +23,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import quota
-from nova import rpc
-from nova.db import base
-
-from nova import compute
-from nova import volume
-from nova.compute import instance_types
-
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('drive_type_template_short', '%s_%sGB_%sRPM',

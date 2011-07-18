@@ -101,8 +101,10 @@ class VsaManager(manager.SchedulerDependentManager):
             return
 
         if len(volumes) != vsa['vol_count']:
-            LOG.debug(_("VSA ID %d: Not all volumes are created (%d of %d)"),
-                        vsa_id, len(volumes), vsa['vol_count'])
+            cvol_real = len(volumes)
+            cvol_exp = vsa['vol_count']
+            LOG.debug(_("VSA ID %(vsa_id)d: Not all volumes are created "\
+                        "(%(cvol_real)d of %(cvol_exp)d)"), locals())
             return
 
         # all volumes created (successfully or not)

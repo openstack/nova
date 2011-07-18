@@ -96,8 +96,8 @@ class VsaScheduler(simple.SimpleScheduler):
                cap['cmp_func'] is not None and \
                cap['cmp_func'](qos_values[cap['cap1']],
                                drive_type[cap['cap2']]):
-                # LOG.debug(_("One of required capabilities found: %s:%s"),
-                #            cap['cap1'], drive_type[cap['cap2']])
+                # LOG.debug(("One of required capabilities found: %s:%s"),
+                #           cap['cap1'], drive_type[cap['cap2']])
                 pass
             else:
                 return False
@@ -416,8 +416,8 @@ class VsaScheduler(simple.SimpleScheduler):
         drive_type = dict(drive_type)
 
         # otherwise - drive type is loaded
-        LOG.debug(_("Spawning volume %d with drive type %s"),
-                    volume_ref['id'], drive_type)
+        LOG.debug(_("Spawning volume %(volume_id)s with drive type "\
+                    "%(drive_type)s"), locals())
 
         LOG.debug(_("Service states BEFORE %s"),
                     self.zone_manager.service_states)
