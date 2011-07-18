@@ -588,7 +588,7 @@ class ControllerV11(Controller):
         context = req.environ['nova.context']
 
         try:
-            check_option_permissions(context, search_opt.keys(),
+            check_option_permissions(context, search_opts.keys(),
                     user_api, admin_api)
         except exception.InvalidInput, e:
             raise faults.Fault(exc.HTTPBadRequest(explanation=str(e)))
