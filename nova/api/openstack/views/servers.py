@@ -77,7 +77,6 @@ class ViewBuilder(object):
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
-            'addresses': self.addresses_builder.build(inst),
             'status': power_mapping[inst.get('state')]}
 
         ctxt = nova.context.get_admin_context()
@@ -98,9 +97,14 @@ class ViewBuilder(object):
 
         self._build_image(inst_dict, inst)
         self._build_flavor(inst_dict, inst)
+        self._build_addresses(inst_dict, inst)
 
         inst_dict['uuid'] = inst['uuid']
         return dict(server=inst_dict)
+
+    def _build_addresses(self, response, inst):
+        """Return the addresses sub-resource of a server."""
+        raise NotImplementedError()
 
     def _build_image(self, response, inst):
         """Return the image sub-resource of a server."""
@@ -128,6 +132,9 @@ class ViewBuilderV10(ViewBuilder):
         if 'instance_type' in dict(inst):
             response['flavorId'] = inst['instance_type']['flavorid']
 
+    def _build_addresses(self, response, inst):
+        response['addresses'] = self.addresses_builder.build(inst)
+
 
 class ViewBuilderV11(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
@@ -150,6 +157,10 @@ class ViewBuilderV11(ViewBuilder):
             flavor_id = inst["instance_type"]['flavorid']
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
             response["flavorRef"] = flavor_ref
+
+    def _build_addresses(self, response, inst):
+        interfaces = inst.get('virtual_interfaces', [])
+        response['addresses'] = self.addresses_builder.build(interfaces)
 
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
