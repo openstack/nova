@@ -494,6 +494,9 @@ class ControllerV10(Controller):
         # Convert recurse_zones into a boolean
         search_opts['recurse_zones'] = utils.bool_from_str(
                 search_opts.get('recurse_zones', False))
+        # convert flavor into an int
+        if 'flavor' in search_opts:
+            search_opts['flavor'] = int(search_opts['flavor'])
 
         return self._get_items(context, req, is_detail,
                 search_opts=search_opts)
@@ -594,6 +597,9 @@ class ControllerV11(Controller):
 
         # NOTE(comstud): Making recurse_zones always be True in v1.1
         search_opts['recurse_zones'] = True
+        # convert flavor into an int
+        if 'flavor' in search_opts:
+            search_opts['flavor'] = int(search_opts['flavor'])
         return self._get_items(context, req, is_detail,
                 search_opts=search_opts)
 
