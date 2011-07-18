@@ -770,7 +770,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'resize_instance',
-                 'args': {'migration_id': migration_ref['id']},
+                 'args': { 'instance_id': instance_ref['uuid'],
+                           'migration_id': migration_ref['id']},
                 })
         usage_info = utils.usage_from_instance(instance_ref,
                               new_instance_type=instance_type['name'],
@@ -782,7 +783,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def resize_instance(self, context, migration_id):
+    def resize_instance(self, context, instance_id, migration_id):
         """Starts the migration of a running instance to another host."""
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get_by_uuid(context,
@@ -804,13 +805,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       FLAGS.compute_topic,
                                       migration_ref['dest_compute'])
         params = {'migration_id': migration_id,
-                  'disk_info': disk_info}
+                  'disk_info': disk_info,
+                  'instance_id': instance_ref['uuid']}
         rpc.cast(context, topic, {'method': 'finish_resize',
                                   'args': params})
 
     @exception.wrap_exception
     @checks_instance_lock
-    def finish_resize(self, context, migration_id, disk_info):
+    def finish_resize(self, context, instance_id, migration_id, disk_info):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
