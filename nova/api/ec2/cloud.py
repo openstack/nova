@@ -443,16 +443,16 @@ class CloudController(object):
 
     def _rule_args_to_dict(self, context, kwargs):
         rules = []
-        if not kwargs.has_key('groups') and not kwargs.has_key('ip_ranges'):
+        if not 'groups' in kwargs and not 'ip_ranges' in kwargs:
             rule = self._rule_dict_last_step(context, **kwargs)
             if rule:
                 rules.append(rule)
             return rules
-        if kwargs.has_key('ip_ranges'):
+        if 'ip_ranges' in kwargs:
             rules = self._cidr_args_split(kwargs)
         finalset = []
         for rule in rules:
-            if rule.has_key('groups'):
+            if 'groups' in rule:
                 groups_values = self._groups_args_split(rule)
                 for groups_value in groups_values:
                     finalset.append(groups_value)
@@ -462,7 +462,7 @@ class CloudController(object):
         return finalset
 
     def _cidr_args_split(self, kwargs):
-        cidr_args_split= []
+        cidr_args_split = []
         cidrs = kwargs['ip_ranges']
         for key, cidr in cidrs.iteritems():
             mykwargs = kwargs.copy()
@@ -472,16 +472,16 @@ class CloudController(object):
         return cidr_args_split
 
     def _groups_args_split(self, kwargs):
-        groups_args_split= []
+        groups_args_split = []
         groups = kwargs['groups']
         for key, group in groups.iteritems():
             mykwargs = kwargs.copy()
             del mykwargs['groups']
-            if group.has_key('group_name'):
+            if 'group_name' in group:
                 mykwargs['source_security_group_name'] = group['group_name']
-            if group.has_key('user_id'):
+            if 'user_id' in group:
                 mykwargs['source_security_group_owner_id'] = group['user_id']
-            if group.has_key('group_id'):
+            if 'group_id' in group:
                 mykwargs['source_security_group_id'] = group['group_id']
             groups_args_split.append(mykwargs)
         return groups_args_split
@@ -621,22 +621,25 @@ class CloudController(object):
         for values in prevalues:
             rulesvalues = self._rule_args_to_dict(context, values)
             if not rulesvalues:
-                raise exception.ApiError(_("%s Not enough parameters to build a "
-                                           "valid rule." % rulesvalues))
+                err = "%s Not enough parameters to build a valid rule"
+                raise exception.ApiError(_(err % rulesvalues))
             for values_for_rule in rulesvalues:
                 values_for_rule['parent_group_id'] = security_group.id
-                if self._security_group_rule_exists(security_group, values_for_rule):
-                    raise exception.ApiError(_('%s - This rule already exists in group')
-                                                % values_for_rule)
+                if self._security_group_rule_exists(security_group,
+                                                    values_for_rule):
+                    err = '%s - This rule already exists in group'
+                    raise exception.ApiError(_(err) % values_for_rule)
                 postvalues.append(values_for_rule)
 
         for values_for_rule in postvalues:
-            security_group_rule = db.security_group_rule_create(context, values_for_rule)
+            security_group_rule = db.security_group_rule_create(context,
+                                                               values_for_rule)
 
         self.compute_api.trigger_security_group_rules_refresh(context,
                                   security_group_id=security_group['id'])
 
-        group = db.security_group_get_by_name(context, context.project_id, security_group['name'])
+        group = db.security_group_get_by_name(context, context.project_id,
+                                              security_group['name'])
         return True
 
     def _get_source_project_id(self, context, source_security_group_owner_id):

@@ -251,8 +251,9 @@ class CloudTestCase(test.TestCase):
         sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
-                                      'ip_ranges': {'1': {'cidr_ip': u'0.0.0.0/0'},
-                                                   '2': {'cidr_ip': u'10.10.10.10/32'}},
+                                      'ip_ranges':
+                                         {'1': {'cidr_ip': u'0.0.0.0/0'},
+                                          '2': {'cidr_ip': u'10.10.10.10/32'}},
                                       'ip_protocol': u'tcp'}]}
         self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
 
@@ -261,9 +262,12 @@ class CloudTestCase(test.TestCase):
         sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
-                  'ip_ranges': {'1': {'cidr_ip': u'0.0.0.0/0'}, '2': {'cidr_ip': u'10.10.10.10/32'}},
-                  'groups': {'1': {'user_id': u'someuser', 'group_name': u'somegroup1'},
-                             '2': {'user_id': u'someuser', 'group_name': u'othergroup2'}},
+                  'ip_ranges':{'1': {'cidr_ip': u'0.0.0.0/0'},
+                                '2': {'cidr_ip': u'10.10.10.10/32'}},
+                  'groups': {'1': {'user_id': u'someuser',
+                                   'group_name': u'somegroup1'},
+                             '2': {'user_id': u'someuser',
+                                   'group_name': u'othergroup2'}},
                   'ip_protocol': u'tcp'}]}
         self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
 
