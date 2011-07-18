@@ -3146,3 +3146,191 @@ class ServerXMLSerializationTest(test.TestCase):
         """.replace("  ", "") % (locals()))
 
         self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_detail(self):
+        serializer = servers.ServerXMLSerializer()
+
+        expected_server_href = 'http://localhost/v1.1/servers/1'
+        expected_server_bookmark = 'http://localhost/servers/1'
+        expected_image_bookmark = self.IMAGE_BOOKMARK
+        expected_flavor_bookmark = self.FLAVOR_BOOKMARK
+        expected_now = self.TIMESTAMP
+        expected_uuid = FAKE_UUID
+
+        expected_server_href_2 = 'http://localhost/v1.1/servers/2'
+        expected_server_bookmark_2 = 'http://localhost/servers/2'
+        fixture = { "servers": [
+            {
+                "id": 1,
+                "uuid": FAKE_UUID,
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": expected_image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                    "links": [
+                                              {
+                            "rel": "bookmark",
+                            "href": expected_flavor_bookmark,
+                        },
+                    ],
+                },
+                "addresses": {
+                    "network_one": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.138",
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.138",
+                        },
+                    ],
+                },
+                "metadata": {
+                    "Number": "1",
+                },
+                "links": [
+                    {
+                        "href": expected_server_href,
+                        "rel": "self",
+                    },
+                    {
+                        "href": expected_server_bookmark,
+                        "rel": "bookmark",
+                    },
+                ],
+            },
+            {
+                "id": 2,
+                "uuid": FAKE_UUID,
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                "progress": 100,
+                "name": "test_server_2",
+                "status": "ACTIVE",
+                "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": expected_image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                    "links": [
+                                              {
+                            "rel": "bookmark",
+                            "href": expected_flavor_bookmark,
+                        },
+                    ],
+                },
+                "addresses": {
+                    "network_one": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.138",
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.138",
+                        },
+                    ],
+                },
+                "metadata": {
+                    "Number": "2",
+                },
+                "links": [
+                    {
+                        "href": expected_server_href_2,
+                        "rel": "self",
+                    },
+                    {
+                        "href": expected_server_bookmark_2,
+                        "rel": "bookmark",
+                    },
+                ],
+            },
+        ]}
+
+        output = serializer.serialize(fixture, 'detail')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <servers xmlns="http://docs.openstack.org/compute/api/v1.1"
+                 xmlns:atom="http://www.w3.org/2005/Atom">
+        <server id="1"
+                uuid="%(expected_uuid)s"
+                name="test_server"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
+                status="BUILD"
+                progress="0">
+            <atom:link href="%(expected_server_href)s" rel="self"/>
+            <atom:link href="%(expected_server_bookmark)s" rel="bookmark"/>
+            <image id="5">
+                <atom:link rel="bookmark" href="%(expected_image_bookmark)s"/>
+            </image>
+            <flavor id="1">
+                <atom:link rel="bookmark" href="%(expected_flavor_bookmark)s"/>
+            </flavor>
+            <metadata>
+                <meta key="Number">
+                    1
+                </meta>
+            </metadata>
+            <addresses>
+                <network id="network_one">
+                    <ip version="4" addr="67.23.10.138"/>
+                    <ip version="6" addr="::babe:67.23.10.138"/>
+                </network>
+            </addresses>
+        </server>
+        <server id="2"
+                uuid="%(expected_uuid)s"
+                name="test_server_2"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
+                status="ACTIVE"
+                progress="100">
+            <atom:link href="%(expected_server_href_2)s" rel="self"/>
+            <atom:link href="%(expected_server_bookmark_2)s" rel="bookmark"/>
+            <image id="5">
+                <atom:link rel="bookmark" href="%(expected_image_bookmark)s"/>
+            </image>
+            <flavor id="1">
+                <atom:link rel="bookmark" href="%(expected_flavor_bookmark)s"/>
+            </flavor>
+            <metadata>
+                <meta key="Number">
+                    2
+                </meta>
+            </metadata>
+            <addresses>
+                <network id="network_one">
+                    <ip version="4" addr="67.23.10.138"/>
+                    <ip version="6" addr="::babe:67.23.10.138"/>
+                </network>
+            </addresses>
+        </server>
+        </servers>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())

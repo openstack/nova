@@ -722,6 +722,13 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
                                        detailed=False)
         return self.to_xml_string(node, True)
 
+    def detail(self, servers_dict):
+        xml_doc = minidom.Document()
+        node = self._server_list_to_xml(xml_doc,
+                                       servers_dict['servers'],
+                                       detailed=True)
+        return self.to_xml_string(node, True)
+
     def show(self, server_dict):
         xml_doc = minidom.Document()
         node = self._server_to_xml_detailed(xml_doc,
