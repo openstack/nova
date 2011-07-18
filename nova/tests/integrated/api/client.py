@@ -172,6 +172,17 @@ class TestOpenStackClient(object):
         response = self.api_request(relative_uri, **kwargs)
         return self._decode_json(response)
 
+    def api_put(self, relative_uri, body, **kwargs):
+        kwargs['method'] = 'PUT'
+        if body:
+            headers = kwargs.setdefault('headers', {})
+            headers['Content-Type'] = 'application/json'
+            kwargs['body'] = json.dumps(body)
+
+        kwargs.setdefault('check_response_status', [200, 202, 204])
+        response = self.api_request(relative_uri, **kwargs)
+        return self._decode_json(response)
+
     def api_delete(self, relative_uri, **kwargs):
         kwargs['method'] = 'DELETE'
         kwargs.setdefault('check_response_status', [200, 202, 204])
@@ -186,6 +197,9 @@ class TestOpenStackClient(object):
 
     def post_server(self, server):
         return self.api_post('/servers', server)['server']
+
+    def put_server(self, server_id, server):
+        return self.api_put('/servers/%s' % server_id, server)
 
     def post_server_action(self, server_id, data):
         return self.api_post('/servers/%s/action' % server_id, data)

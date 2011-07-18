@@ -19,6 +19,7 @@ import traceback
 from webob import exc
 
 from nova import compute
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -102,7 +103,7 @@ class Controller(object):
             return faults.Fault(exc.HTTPNotFound())
         return servers
 
-    def _get_view_builder(self, req):
+    def _build_view(self, req, instance, is_detail=False):
         raise NotImplementedError()
 
     def _limit_items(self, items, req):
@@ -132,8 +133,7 @@ class Controller(object):
         instance_list = self.compute_api.get_all(
                 context, search_opts=search_opts)
         limited_list = self._limit_items(instance_list, req)
-        builder = self._get_view_builder(req)
-        servers = [builder.build(inst, is_detail)['server']
+        servers = [self._build_view(req, inst, is_detail)['server']
                 for inst in limited_list]
         return dict(servers=servers)
 
@@ -143,8 +143,7 @@ class Controller(object):
         try:
             instance = self.compute_api.routing_get(
                 req.environ['nova.context'], id)
-            builder = self._get_view_builder(req)
-            return builder.build(instance, is_detail=True)
+            return self._build_view(req, instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -165,8 +164,7 @@ class Controller(object):
         for key in ['instance_type', 'image_ref']:
             inst[key] = extra_values[key]
 
-        builder = self._get_view_builder(req)
-        server = builder.build(inst, is_detail=True)
+        server = self._build_view(req, inst, is_detail=True)
         server['server']['adminPass'] = extra_values['password']
         return server
 
@@ -509,10 +507,10 @@ class ControllerV10(Controller):
     def _flavor_id_from_req_data(self, data):
         return data['server']['flavorId']
 
-    def _get_view_builder(self, req):
-        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV10()
-        return nova.api.openstack.views.servers.ViewBuilderV10(
-            addresses_builder)
+    def _build_view(self, req, instance, is_detail=False):
+        addresses = nova.api.openstack.views.addresses.ViewBuilderV10()
+        builder = nova.api.openstack.views.servers.ViewBuilderV10(addresses)
+        return builder.build(instance, is_detail=is_detail)
 
     def _limit_items(self, items, req):
         return common.limited(items, req)
@@ -612,15 +610,17 @@ class ControllerV11(Controller):
         href = data['server']['flavorRef']
         return common.get_id_from_href(href)
 
-    def _get_view_builder(self, req):
+    def _build_view(self, req, instance, is_detail=False):
         base_url = req.application_url
         flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
             base_url)
         image_builder = nova.api.openstack.views.images.ViewBuilderV11(
             base_url)
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
-        return nova.api.openstack.views.servers.ViewBuilderV11(
+        builder = nova.api.openstack.views.servers.ViewBuilderV11(
             addresses_builder, flavor_builder, image_builder, base_url)
+
+        return builder.build(instance, is_detail=is_detail)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']

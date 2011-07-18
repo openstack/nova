@@ -50,9 +50,8 @@ class FixedIpTest(test.TestCase):
         fakes.stub_out_auth(self.stubs)
         self.stubs.Set(compute.api.API, "add_fixed_ip",
                        compute_api_add_fixed_ip)
-        # TODO(Vek): Fails until remove_fixed_ip() added
-        # self.stubs.Set(compute.api.API, "remove_fixed_ip",
-        #                compute_api_remove_fixed_ip)
+        self.stubs.Set(compute.api.API, "remove_fixed_ip",
+                       compute_api_remove_fixed_ip)
         self.context = context.get_admin_context()
 
     def tearDown(self):
@@ -98,9 +97,8 @@ class FixedIpTest(test.TestCase):
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
-        # TODO(Vek): Fails until remove_fixed_ip() added
-        # self.assertEqual(resp.status_int, 202)
-        # self.assertEqual(last_remove_fixed_ip, ('test_inst', '10.10.10.1'))
+        self.assertEqual(resp.status_int, 202)
+        self.assertEqual(last_remove_fixed_ip, ('test_inst', '10.10.10.1'))
 
     def test_remove_fixed_ip_no_address(self):
         global last_remove_fixed_ip
