@@ -368,6 +368,10 @@ class API(base.Base):
         e_vsa_detail.text = vsa['display_description']
         e_vsa_detail = SubElement(e_vsa, "vc_count")
         e_vsa_detail.text = str(vsa['vc_count'])
+        e_vsa_detail = SubElement(e_vsa, "auth_user")
+        e_vsa_detail.text = str(context.user.name)
+        e_vsa_detail = SubElement(e_vsa, "auth_access_key")
+        e_vsa_detail.text = str(context.user.access)
 
         e_volumes = SubElement(e_vsa, "volumes")
         for volume in volumes:
