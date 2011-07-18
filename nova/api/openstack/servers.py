@@ -52,7 +52,7 @@ def check_option_permissions(context, specified_options,
 
     # We pretend we don't know about admin_api_options if the admin
     # API is not enabled.
-    if FLAGS.enable_admin_api:
+    if FLAGS.allow_admin_api:
         known_options = user_api_options + admin_api_options
     else:
         known_options = user_api_options
@@ -479,7 +479,7 @@ class ControllerV10(Controller):
         context = req.environ['nova.context']
 
         try:
-            check_option_permissions(context, search_opt.keys(),
+            check_option_permissions(context, search_opts.keys(),
                     user_api, admin_api)
         except exception.InvalidInput:
             # FIXME(comstud): I refactored code in here to support
