@@ -677,16 +677,12 @@ class API(base.Base):
                     context, column, column_regexp)
 
         def _get_all_by_column(column_data, column):
-            """Get instances by regular expression matching
-            Instance.<column>
-            """
+            """Get instances by exact matching Instance.<column>"""
             return self.db.instance_get_all_by_column(
                     context, column, column_data)
 
         def _get_all_by_flavor(flavor_id):
-            """Get instances by regular expression matching
-            Instance.<column>
-            """
+            """Get instances by flavor ID"""
             try:
                 instance_type = self.db.instance_type_get_by_flavor_id(
                         context, flavor_id)

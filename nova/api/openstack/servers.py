@@ -472,7 +472,8 @@ class ControllerV10(Controller):
         search_opts.update(req.str_GET)
 
         user_api = ['project_id', 'fixed_ip', 'recurse_zones',
-                'reservation_id', 'name', 'fresh', 'status']
+                'reservation_id', 'name', 'fresh', 'status',
+                'image', 'flavor']
         admin_api = ['ip', 'ip6', 'instance_name']
 
         context = req.environ['nova.context']
