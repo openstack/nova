@@ -60,25 +60,12 @@ class ViewBuilder(object):
 
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
-        power_mapping = {
-            None: 'BUILD',
-            power_state.NOSTATE: 'BUILD',
-            power_state.RUNNING: 'ACTIVE',
-            power_state.BLOCKED: 'ACTIVE',
-            power_state.SUSPENDED: 'SUSPENDED',
-            power_state.PAUSED: 'PAUSED',
-            power_state.SHUTDOWN: 'SHUTDOWN',
-            power_state.SHUTOFF: 'SHUTOFF',
-            power_state.CRASHED: 'ERROR',
-            power_state.FAILED: 'ERROR',
-            power_state.BUILDING: 'BUILD',
-        }
 
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
             'addresses': self.addresses_builder.build(inst),
-            'status': power_mapping[inst.get('state')]}
+            'status': power_state.status_from_state(inst.get('state'))}
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()

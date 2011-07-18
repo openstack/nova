@@ -669,10 +669,31 @@ class API(base.Base):
             return self.db.instance_get_all_by_ipv6_regexp(context,
                     ipv6_regexp)
 
-        def _get_all_by_column(column_regexp, column):
-            """Get instances by matching Instance.<column>"""
+        def _get_all_by_column_regexp(column_regexp, column):
+            """Get instances by regular expression matching
+            Instance.<column>
+            """
             return self.db.instance_get_all_by_column_regexp(
                     context, column, column_regexp)
+
+        def _get_all_by_column(column_data, column):
+            """Get instances by regular expression matching
+            Instance.<column>
+            """
+            return self.db.instance_get_all_by_column(
+                    context, column, column_data)
+
+        def _get_all_by_flavor(flavor_id):
+            """Get instances by regular expression matching
+            Instance.<column>
+            """
+            try:
+                instance_type = self.db.instance_type_get_by_flavor_id(
+                        context, flavor_id)
+            except exception.FlavorNotFound:
+                return []
+            return self.db.instance_get_all_by_column(
+                    context, 'instance_type_id', instance_type['id'])
 
         # Define the search params that we will allow.  This is a mapping
         # of the search param to tuple of (function_to_call, (function_args))
@@ -686,7 +707,7 @@ class API(base.Base):
                 # v1.1 API
                 'changes-since': (None, None),
                 # Mutually exclusive options
-                'name': (_get_all_by_column, ('display_name',)),
+                'name': (_get_all_by_column_regexp, ('display_name',)),
                 'reservation_id': (_get_all_by_reservation_id, ()),
                 # Needed for EC2 API
                 'fixed_ip': (_get_all_by_fixed_ip, ()),
@@ -694,7 +715,10 @@ class API(base.Base):
                 'project_id': (_get_all_by_project_id, ()),
                 'ip': (_get_all_by_ip, ()),
                 'ip6': (_get_all_by_ipv6, ()),
-                'instance_name': (_get_all_by_instance_name, ())}
+                'instance_name': (_get_all_by_instance_name, ()),
+                'image': (_get_all_by_column, ('image_ref',)),
+                'state': (_get_all_by_column, ('state',)),
+                'flavor': (_get_all_by_flavor, ())}
 
         # FIXME(comstud): 'fresh' and 'changes-since' are currently not
         # implemented...
@@ -746,13 +770,26 @@ class API(base.Base):
         if not search_opts.get('recurse_zones', False):
             return instances
 
+        new_search_opts = {}
+        new_search_opts.update(search_opts)
+        # API does state search by status, instead of the real power
+        # state.  So if we're searching by 'state', we need to
+        # convert this back into 'status'
+        state = new_search_opts.pop('state', None)
+        if state:
+            # Might be a list.. we can only use 1.
+            if isinstance(state, list):
+                state = state[0]
+            new_search_opts['status'] = power_state.status_from_state(
+                    state)
+
         # Recurse zones.  Need admin context for this.
         admin_context = context.elevated()
         children = scheduler_api.call_zone_method(admin_context,
                 "list",
                 errors_to_ignore=[novaclient.exceptions.NotFound],
                 novaclient_collection_name="servers",
-                search_opts=search_opts)
+                search_opts=new_search_opts)
 
         for zone, servers in children:
             # 'servers' can be None if a 404 was returned by a zone

@@ -1226,6 +1226,48 @@ def instance_get_by_fixed_ipv6(context, address):
 
 
 @require_context
+def instance_get_all_by_column(context, column, column_data):
+    """Get all instances by exact match against the specified DB column
+    'column_data' can be a list.
+    """
+    session = get_session()
+
+
+    prefix = session.query(models.Instance).\
+            options(joinedload_all('fixed_ips.floating_ips')).\
+            options(joinedload('virtual_interfaces')).\
+            options(joinedload('security_groups')).\
+            options(joinedload_all('fixed_ips.network')).\
+            options(joinedload('metadata')).\
+            options(joinedload('instance_type')).\
+            filter_by(deleted=can_read_deleted(context))
+
+    if isinstance(column_data, list):
+        column_attr = getattr(models.Instance, column)
+        prefix = prefix.filter(column_attr.in_(column_data))
+    else:
+        # Set up the dictionary for filter_by()
+        query_filter = {}
+        query_filter[column] = column_data
+        prefix = prefix.filter_by(**query_filter)
+
+    if context.is_admin:
+        all_instances = prefix.all()
+    elif context.project:
+        all_instances = prefix.\
+                filter_by(project_id=context.project_id).\
+                all()
+    else:
+        all_instances = prefix.\
+                filter_by(user_id=context.user_id).\
+                all()
+    if not all_instances:
+        return []
+
+    return all_instances
+
+
+@require_context
 def instance_get_all_by_column_regexp(context, column, column_regexp):
     """Get all instances by using regular expression matching against
     a particular DB column

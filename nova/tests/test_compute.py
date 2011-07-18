@@ -84,8 +84,11 @@ class ComputeTestCase(test.TestCase):
         self.manager.delete_project(self.project)
         super(ComputeTestCase, self).tearDown()
 
-    def _create_instance(self, params={}):
+    def _create_instance(self, params=None):
         """Create a test instance"""
+
+        if params is None:
+            params = {}
         inst = {}
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
@@ -825,11 +828,11 @@ class ComputeTestCase(test.TestCase):
         c = context.get_admin_context()
         instance_id1 = self._create_instance({'display_name': 'woot'})
         instance_id2 = self._create_instance({
-            'display_name': 'woo',
-            'id': 20})
+                'display_name': 'woo',
+                'id': 20})
         instance_id3 = self._create_instance({
-            'display_name': 'not-woot',
-            'id': 30})
+                'display_name': 'not-woot',
+                'id': 30})
 
         instances = self.compute_api.get_all(c,
                 search_opts={'name': 'woo.*'})
@@ -937,11 +940,11 @@ class ComputeTestCase(test.TestCase):
         c = context.get_admin_context()
         instance_id1 = self._create_instance({'server_name': 'woot'})
         instance_id2 = self._create_instance({
-            'server_name': 'woo',
-            'id': 20})
+                'server_name': 'woo',
+                'id': 20})
         instance_id3 = self._create_instance({
-            'server_name': 'not-woot',
-            'id': 30})
+                'server_name': 'not-woot',
+                'id': 30})
 
         db.fixed_ip_create(c,
                 {'address': '1.1.1.1',
@@ -974,14 +977,12 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'ip': '.*\.2.+'})
         self.assertEqual(len(instances), 1)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id2 in instance_ids)
+        self.assertEqual(instances[0].id, instance_id2)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'ip': '10.*'})
         self.assertEqual(len(instances), 1)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id3 in instance_ids)
+        self.assertEqual(instances[0].id, instance_id3)
 
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
@@ -1004,15 +1005,16 @@ class ComputeTestCase(test.TestCase):
         c = context.get_admin_context()
         instance_id1 = self._create_instance({'server_name': 'woot'})
         instance_id2 = self._create_instance({
-            'server_name': 'woo',
-            'id': 20})
+                'server_name': 'woo',
+                'id': 20})
         instance_id3 = self._create_instance({
-            'server_name': 'not-woot',
-            'id': 30})
+                'server_name': 'not-woot',
+                'id': 30})
 
         instances = self.compute_api.get_all(c,
                 search_opts={'ip6': 'ff.*'})
         self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id1)
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id1 in instance_ids)
 
@@ -1030,6 +1032,126 @@ class ComputeTestCase(test.TestCase):
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id2 in instance_ids)
         self.assertTrue(instance_id3 in instance_ids)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+
+    def test_get_all_by_image(self):
+        """Test searching instances by image"""
+
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'image_ref': '1234'})
+        instance_id2 = self._create_instance({
+            'id': 2,
+            'image_ref': '4567'})
+        instance_id3 = self._create_instance({
+            'id': 10,
+            'image_ref': '4567'})
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'image': '123'})
+        self.assertEqual(len(instances), 0)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'image': '1234'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id1)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'image': '4567'})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id2 in instance_ids)
+        self.assertTrue(instance_id3 in instance_ids)
+
+        # Test passing a list as search arg
+        instances = self.compute_api.get_all(c,
+                search_opts={'image': ['1234', '4567']})
+        self.assertEqual(len(instances), 3)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+
+    def test_get_all_by_flavor(self):
+        """Test searching instances by image"""
+
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'instance_type_id': 1})
+        instance_id2 = self._create_instance({
+                'id': 2,
+                'instance_type_id': 2})
+        instance_id3 = self._create_instance({
+                'id': 10,
+                'instance_type_id': 2})
+
+        # NOTE(comstud): Migrations set up the instance_types table
+        # for us.  Therefore, we assume the following is true for
+        # these tests:
+        # instance_type_id 1 == flavor 3
+        # instance_type_id 2 == flavor 1
+        # instance_type_id 3 == flavor 4
+        # instance_type_id 4 == flavor 5
+        # instance_type_id 5 == flavor 2
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'flavor': 5})
+        self.assertEqual(len(instances), 0)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'flavor': 99})
+        self.assertEqual(len(instances), 0)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'flavor': 3})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id1)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'flavor': 1})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id2 in instance_ids)
+        self.assertTrue(instance_id3 in instance_ids)
+
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+
+    def test_get_all_by_state(self):
+        """Test searching instances by state"""
+
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'state': power_state.SHUTDOWN})
+        instance_id2 = self._create_instance({
+                'id': 2,
+                'state': power_state.RUNNING})
+        instance_id3 = self._create_instance({
+                'id': 10,
+                'state': power_state.RUNNING})
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'state': power_state.SUSPENDED})
+        self.assertEqual(len(instances), 0)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'state': power_state.SHUTDOWN})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id1)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'state': power_state.RUNNING})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id2 in instance_ids)
+        self.assertTrue(instance_id3 in instance_ids)
+
+        # Test passing a list as search arg
+        instances = self.compute_api.get_all(c,
+                search_opts={'state': [power_state.SHUTDOWN,
+                        power_state.RUNNING]})
+        self.assertEqual(len(instances), 3)
 
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)

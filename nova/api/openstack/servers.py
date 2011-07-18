@@ -119,6 +119,14 @@ class Controller(object):
         if search_opts is None:
             search_opts = {}
 
+        # If search by 'status', we need to convert it to 'state'
+        # If the status is unknown, bail
+        status = search_opts.pop('status', None)
+        if status is not None:
+            search_opts['state'] = power_state.states_from_status(status)
+            if len(search_opts['state']) == 0:
+                raise exception.InvalidInput(reason=_(
+                        'Invalid server status'))
         instance_list = self.compute_api.get_all(
                 context, search_opts=search_opts)
         limited_list = self._limit_items(instance_list, req)
@@ -464,8 +472,8 @@ class ControllerV10(Controller):
         search_opts.update(req.str_GET)
 
         user_api = ['project_id', 'fixed_ip', 'recurse_zones',
-                'reservation_id', 'name', 'fresh', 'ip', 'ip6']
-        admin_api = ['instance_name']
+                'reservation_id', 'name', 'fresh', 'status']
+        admin_api = ['ip', 'ip6', 'instance_name']
 
         context = req.environ['nova.context']
 
@@ -570,7 +578,7 @@ class ControllerV11(Controller):
         search_opts.update(req.str_GET)
 
         user_api = ['image', 'flavor', 'name', 'status',
-                'reservation_id', 'changes-since', 'ip', 'ip6']
+                'reservation_id', 'changes-since']
         admin_api = ['ip', 'ip6', 'instance_name']
 
         context = req.environ['nova.context']
@@ -579,9 +587,9 @@ class ControllerV11(Controller):
             check_option_permissions(context, search_opt.keys(),
                     user_api, admin_api)
         except exception.InvalidInput, e:
-            raise faults.Fault(exc.HTTPBadRequest(detail=str(e)))
+            raise faults.Fault(exc.HTTPBadRequest(explanation=str(e)))
         except exception.AdminRequired, e:
-            raise faults.Fault(exc.HTTPForbidden(detail=str(e)))
+            raise faults.Fault(exc.HTTPForbidden(explanation=str(e)))
 
         # NOTE(comstud): Making recurse_zones always be True in v1.1
         search_opts['recurse_zones'] = True

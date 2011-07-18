@@ -520,6 +520,11 @@ def instance_get_by_fixed_ipv6(context, address):
     return IMPL.instance_get_by_fixed_ipv6(context, address)
 
 
+def instance_get_all_by_column(context, column, column_data):
+    """Get all instances by exact match against the specified DB column"""
+    return IMPL.instance_get_all_by_column(context, column, column_data)
+
+
 def instance_get_all_by_column_regexp(context, column, column_regexp):
     """Get all instances by using regular expression matching against
     a particular DB column
