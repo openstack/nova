@@ -188,7 +188,7 @@ def _get_agent_features(self, arg_dict):
     except TimeoutError, e:
         raise PluginError(e)
     response = json.loads(resp)
-    if response['returncode'] != '0':
+    if response['returncode'] != 0:
         return response["message"].split(",")
     else:
         return {}
