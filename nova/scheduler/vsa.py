@@ -41,16 +41,22 @@ flags.DEFINE_integer('vsa_unique_hosts_per_alloc', 10,
 flags.DEFINE_boolean('vsa_select_unique_drives', True,
                      'Allow selection of same host for multiple drives')
 
+def BYTES_TO_GB(bytes):
+    return bytes >> FLAGS.gb_to_bytes_shift
+
+def GB_TO_BYTES(gb):
+    return gb << FLAGS.gb_to_bytes_shift
+
 
 class VsaScheduler(simple.SimpleScheduler):
-    """Implements Naive Scheduler that tries to find least loaded host."""
+    """Implements Scheduler for volume placement."""
 
     def __init__(self, *args, **kwargs):
         super(VsaScheduler, self).__init__(*args, **kwargs)
         self._notify_all_volume_hosts("startup")
 
     def _notify_all_volume_hosts(self, event):
-        rpc.cast(context.get_admin_context(),
+        rpc.fanout_cast(context.get_admin_context(),
                  FLAGS.volume_topic,
                  {"method": "notification",
                   "args": {"event": event}})
@@ -62,7 +68,7 @@ class VsaScheduler(simple.SimpleScheduler):
         return result
 
     def _compare_sizes_exact_match(self, cap_capacity, size_gb):
-        cap_capacity = int(cap_capacity) >> FLAGS.gb_to_bytes_shift
+        cap_capacity = BYTES_TO_GB(int(cap_capacity))
         size_gb = int(size_gb)
         result = cap_capacity == size_gb
         # LOG.debug(_("Comparing %(cap_capacity)d and %(size_gb)d. "\
@@ -70,7 +76,7 @@ class VsaScheduler(simple.SimpleScheduler):
         return result
 
     def _compare_sizes_approxim(self, cap_capacity, size_gb):
-        cap_capacity = int(cap_capacity) >> FLAGS.gb_to_bytes_shift
+        cap_capacity = BYTES_TO_GB(int(cap_capacity))
         size_gb = int(size_gb)
         size_perc = size_gb * FLAGS.drive_type_approx_capacity_percent / 100
 
@@ -106,7 +112,7 @@ class VsaScheduler(simple.SimpleScheduler):
     def _filter_hosts(self, topic, request_spec, host_list=None):
 
         drive_type = request_spec['drive_type']
-        LOG.debug(_("Filter hosts for drive type %(drive_type)s") % locals())
+        LOG.debug(_("Filter hosts for drive type %s"), drive_type['name'])
 
         if host_list is None:
             host_list = self.zone_manager.service_states.iteritems()
@@ -121,14 +127,15 @@ class VsaScheduler(simple.SimpleScheduler):
                 for qosgrp, qos_values in gos_info.iteritems():
                     if self._qosgrp_match(drive_type, qos_values):
                         if qos_values['AvailableCapacity'] > 0:
-                            LOG.debug(_("Adding host %s to the list"), host)
+                            # LOG.debug(_("Adding host %s to the list"), host)
                             filtered_hosts.append((host, gos_info))
                         else:
                             LOG.debug(_("Host %s has no free capacity. Skip"),
                                         host)
                         break
 
-        LOG.debug(_("Found hosts %(filtered_hosts)s") % locals())
+        host_names = [item[0] for item in filtered_hosts]
+        LOG.debug(_("Filter hosts: %s"), host_names)
         return filtered_hosts
 
     def _allowed_to_use_host(self, host, selected_hosts, unique):
@@ -142,103 +149,12 @@ class VsaScheduler(simple.SimpleScheduler):
         if host not in [item[0] for item in selected_hosts]:
             selected_hosts.append((host, cap))
 
-    def _alg_least_used_host(self, request_spec, all_hosts, selected_hosts):
-        size = request_spec['size']
-        drive_type = request_spec['drive_type']
-        best_host = None
-        best_qoscap = None
-        best_cap = None
-        min_used = 0
-
-        LOG.debug(_("Selecting best host for %(size)sGB volume of type "\
-                    "%(drive_type)s from %(all_hosts)s"), locals())
-
-        for (host, capabilities) in all_hosts:
-            has_enough_capacity = False
-            used_capacity = 0
-            for qosgrp, qos_values in capabilities.iteritems():
-
-                used_capacity = used_capacity + qos_values['TotalCapacity'] \
-                                - qos_values['AvailableCapacity']
-
-                if self._qosgrp_match(drive_type, qos_values):
-                    # we found required qosgroup
-
-                    if size == 0:   # full drive match
-                        if qos_values['FullDrive']['NumFreeDrives'] > 0:
-                            has_enough_capacity = True
-                            matched_qos = qos_values
-                        else:
-                            break
-                    else:
-                        if qos_values['AvailableCapacity'] >= size and \
-                           (qos_values['PartitionDrive'][
-                                            'NumFreePartitions'] > 0 or \
-                            qos_values['FullDrive']['NumFreeDrives'] > 0):
-                            has_enough_capacity = True
-                            matched_qos = qos_values
-                        else:
-                            break
-
-            if has_enough_capacity and \
-               self._allowed_to_use_host(host,
-                                         selected_hosts,
-                                         unique) and \
-               (best_host is None or used_capacity < min_used):
-
-                min_used = used_capacity
-                best_host = host
-                best_qoscap = matched_qos
-                best_cap = capabilities
-
-        if best_host:
-            self._add_hostcap_to_list(selected_hosts, host, best_cap)
-            LOG.debug(_("Best host found: %(best_host)s. "\
-                        "(used capacity %(min_used)s)"), locals())
-        return (best_host, best_qoscap)
-
-    def _alg_most_avail_capacity(self, request_spec, all_hosts,
+    def host_selection_algorithm(self, request_spec, all_hosts,
                                 selected_hosts, unique):
-        size = request_spec['size']
-        drive_type = request_spec['drive_type']
-        best_host = None
-        best_qoscap = None
-        best_cap = None
-        max_avail = 0
-
-        LOG.debug(_("Selecting best host for %(size)sGB volume of type "\
-                    "%(drive_type)s from %(all_hosts)s"), locals())
-
-        for (host, capabilities) in all_hosts:
-            for qosgrp, qos_values in capabilities.iteritems():
-                if self._qosgrp_match(drive_type, qos_values):
-                    # we found required qosgroup
-
-                    if size == 0:   # full drive match
-                        available = qos_values['FullDrive']['NumFreeDrives']
-                    else:
-                        available = qos_values['AvailableCapacity']
-
-                    if available > max_avail and \
-                       self._allowed_to_use_host(host,
-                                                 selected_hosts,
-                                                 unique):
-                        max_avail = available
-                        best_host = host
-                        best_qoscap = qos_values
-                        best_cap = capabilities
-                    break   # go to the next host
-
-        if best_host:
-            self._add_hostcap_to_list(selected_hosts, host, best_cap)
-            LOG.debug(_("Best host found: %(best_host)s. "\
-                        "(available capacity %(max_avail)s)"), locals())
-
-        return (best_host, best_qoscap)
+        """Must override this method for VSA scheduler to work."""
+        raise NotImplementedError(_("Must implement host selection mechanism"))
 
     def _select_hosts(self, request_spec, all_hosts, selected_hosts=None):
-
-        #self._alg_most_avail_capacity(request_spec, all_hosts, selected_hosts)
 
         if selected_hosts is None:
             selected_hosts = []
@@ -249,7 +165,7 @@ class VsaScheduler(simple.SimpleScheduler):
             LOG.debug(_("Maximum number of hosts selected (%d)"),
                         len(selected_hosts))
             unique = False
-            (host, qos_cap) = self._alg_most_avail_capacity(request_spec,
+            (host, qos_cap) = self.host_selection_algorithm(request_spec,
                                                             selected_hosts,
                                                             selected_hosts,
                                                             unique)
@@ -262,12 +178,10 @@ class VsaScheduler(simple.SimpleScheduler):
             # if we've not tried yet (# of sel hosts < max) - unique=True
             # or failed to select from selected_hosts - unique=False
             # select from all hosts
-            (host, qos_cap) = self._alg_most_avail_capacity(request_spec,
+            (host, qos_cap) = self.host_selection_algorithm(request_spec,
                                                             all_hosts,
                                                             selected_hosts,
                                                             unique)
-            LOG.debug(_("Selected host %(host)s"), locals())
-
         if host is None:
             raise driver.WillNotSchedule(_("No available hosts"))
 
@@ -329,8 +243,11 @@ class VsaScheduler(simple.SimpleScheduler):
 
         LOG.debug(_("volume_params %(volume_params)s") % locals())
 
+        i = 1
         for vol in volume_params:
-            LOG.debug(_("Assigning host to volume %s") % vol['name'])
+            name = vol['name']
+            LOG.debug(_("%(i)d: Volume %(name)s"), locals())
+            i += 1
 
             if forced_host:
                 vol['host'] = forced_host
@@ -352,21 +269,18 @@ class VsaScheduler(simple.SimpleScheduler):
             vol['capabilities'] = qos_cap
             self._consume_resource(qos_cap, vol['size'], -1)
 
-            LOG.debug(_("Assigned host %(host)s, capabilities %(qos_cap)s"),
-                        locals())
-
-        LOG.debug(_("END: volume_params %(volume_params)s") % locals())
+            # LOG.debug(_("Volume %(name)s assigned to host %(host)s"), locals())
 
     def schedule_create_volumes(self, context, request_spec,
                                 availability_zone, *_args, **_kwargs):
         """Picks hosts for hosting multiple volumes."""
 
+        LOG.debug(_("Service states BEFORE %s"),
+                    self.zone_manager.service_states)
+
         num_volumes = request_spec.get('num_volumes')
         LOG.debug(_("Attempting to spawn %(num_volumes)d volume(s)") %
                 locals())
-
-        LOG.debug(_("Service states BEFORE %s"),
-                    self.zone_manager.service_states)
 
         vsa_id = request_spec.get('vsa_id')
         volume_params = request_spec.get('volumes')
@@ -381,7 +295,6 @@ class VsaScheduler(simple.SimpleScheduler):
 
             LOG.debug(_("Service states AFTER %s"),
                         self.zone_manager.service_states)
-
         except:
             if vsa_id:
                 db.vsa_update(context, vsa_id,
@@ -415,12 +328,11 @@ class VsaScheduler(simple.SimpleScheduler):
                         volume_id, *_args, **_kwargs)
         drive_type = dict(drive_type)
 
-        # otherwise - drive type is loaded
-        LOG.debug(_("Spawning volume %(volume_id)s with drive type "\
-                    "%(drive_type)s"), locals())
-
         LOG.debug(_("Service states BEFORE %s"),
                     self.zone_manager.service_states)
+
+        LOG.debug(_("Spawning volume %(volume_id)s with drive type "\
+                    "%(drive_type)s"), locals())
 
         request_spec = {'size': volume_ref['size'],
                         'drive_type': drive_type}
@@ -487,9 +399,118 @@ class VsaScheduler(simple.SimpleScheduler):
                                         qos_values['DriveCapacity']
             self._consume_full_drive(qos_values, direction)
         else:
-            qos_values['AvailableCapacity'] += direction * \
-                                        (size << FLAGS.gb_to_bytes_shift)
-            self._consume_partition(qos_values,
-                                    size << FLAGS.gb_to_bytes_shift,
-                                    direction)
+            qos_values['AvailableCapacity'] += direction * GB_TO_BYTES(size)
+            self._consume_partition(qos_values, GB_TO_BYTES(size), direction)
         return
+
+
+class VsaSchedulerLeastUsedHost(VsaScheduler):
+    """
+    Implements VSA scheduler to select the host with least used capacity
+    of particular type.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(VsaSchedulerLeastUsedHost, self).__init__(*args, **kwargs)
+
+    def host_selection_algorithm(self, request_spec, all_hosts,
+                                selected_hosts, unique):
+        size = request_spec['size']
+        drive_type = request_spec['drive_type']
+        best_host = None
+        best_qoscap = None
+        best_cap = None
+        min_used = 0
+
+        for (host, capabilities) in all_hosts:
+
+            has_enough_capacity = False
+            used_capacity = 0
+            for qosgrp, qos_values in capabilities.iteritems():
+
+                used_capacity = used_capacity + qos_values['TotalCapacity'] \
+                                - qos_values['AvailableCapacity']
+
+                if self._qosgrp_match(drive_type, qos_values):
+                    # we found required qosgroup
+
+                    if size == 0:   # full drive match
+                        if qos_values['FullDrive']['NumFreeDrives'] > 0:
+                            has_enough_capacity = True
+                            matched_qos = qos_values
+                        else:
+                            break
+                    else:
+                        if qos_values['AvailableCapacity'] >= size and \
+                           (qos_values['PartitionDrive'][
+                                            'NumFreePartitions'] > 0 or \
+                            qos_values['FullDrive']['NumFreeDrives'] > 0):
+                            has_enough_capacity = True
+                            matched_qos = qos_values
+                        else:
+                            break
+
+            if has_enough_capacity and \
+               self._allowed_to_use_host(host,
+                                         selected_hosts,
+                                         unique) and \
+               (best_host is None or used_capacity < min_used):
+
+                min_used = used_capacity
+                best_host = host
+                best_qoscap = matched_qos
+                best_cap = capabilities
+
+        if best_host:
+            self._add_hostcap_to_list(selected_hosts, best_host, best_cap)
+            min_used = BYTES_TO_GB(min_used)
+            LOG.debug(_("\t LeastUsedHost: Best host: %(best_host)s. "\
+                        "(used capacity %(min_used)s)"), locals())
+        return (best_host, best_qoscap)
+
+
+class VsaSchedulerMostAvailCapacity(VsaScheduler):
+    """
+    Implements VSA scheduler to select the host with most available capacity
+    of one particular type.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(VsaSchedulerMostAvailCapacity, self).__init__(*args, **kwargs)
+
+    def host_selection_algorithm(self, request_spec, all_hosts,
+                                selected_hosts, unique):
+        size = request_spec['size']
+        drive_type = request_spec['drive_type']
+        best_host = None
+        best_qoscap = None
+        best_cap = None
+        max_avail = 0
+
+        for (host, capabilities) in all_hosts:
+            for qosgrp, qos_values in capabilities.iteritems():
+                if self._qosgrp_match(drive_type, qos_values):
+                    # we found required qosgroup
+
+                    if size == 0:   # full drive match
+                        available = qos_values['FullDrive']['NumFreeDrives']
+                    else:
+                        available = qos_values['AvailableCapacity']
+
+                    if available > max_avail and \
+                       self._allowed_to_use_host(host,
+                                                 selected_hosts,
+                                                 unique):
+                        max_avail = available
+                        best_host = host
+                        best_qoscap = qos_values
+                        best_cap = capabilities
+                    break   # go to the next host
+
+        if best_host:
+            self._add_hostcap_to_list(selected_hosts, best_host, best_cap)
+            type_str = "drives" if size == 0 else "bytes"
+            LOG.debug(_("\t MostAvailCap: Best host: %(best_host)s. "\
+                        "(available %(max_avail)s %(type_str)s)"), locals())
+
+        return (best_host, best_qoscap)

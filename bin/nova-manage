@@ -1009,6 +1009,8 @@ class VsaDriveTypeCommands(object):
     """Methods for dealing with VSA drive types"""
 
     def __init__(self, *args, **kwargs):
+        self.controller = cloud.CloudController()
+        self.manager = manager.AuthManager()
         super(VsaDriveTypeCommands, self).__init__(*args, **kwargs)
 
     def _list(self, drives):
