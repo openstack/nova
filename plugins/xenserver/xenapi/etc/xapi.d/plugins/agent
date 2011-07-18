@@ -188,7 +188,10 @@ def _get_agent_features(self, arg_dict):
     except TimeoutError, e:
         raise PluginError(e)
     response = json.loads(resp)
-    return response["message"].split(",")
+    if response['returncode'] != '0':
+        return response["message"].split(",")
+    else:
+        return {}
 
 
 def _wait_for_agent(self, request_id, arg_dict):
