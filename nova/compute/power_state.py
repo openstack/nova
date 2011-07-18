@@ -79,7 +79,7 @@ def states_from_status(status):
     power_states = []
     for power_state, status_map in _STATUS_MAP.iteritems():
         # Skip the 'None' state
-        if power_state is not None:
+        if power_state is None:
             continue
         if status.lower() == status_map.lower():
             power_states.append(power_state)

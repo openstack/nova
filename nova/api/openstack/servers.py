@@ -32,6 +32,7 @@ import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
 from nova.api.openstack import wsgi
 import nova.api.openstack
+from nova.compute import power_state
 from nova.scheduler import api as scheduler_api
 
 
@@ -125,8 +126,9 @@ class Controller(object):
         if status is not None:
             search_opts['state'] = power_state.states_from_status(status)
             if len(search_opts['state']) == 0:
-                raise exception.InvalidInput(reason=_(
-                        'Invalid server status'))
+                reason = _('Invalid server status: %(status)s') % locals()
+                LOG.error(reason)
+                raise exception.InvalidInput(reason=reason)
         instance_list = self.compute_api.get_all(
                 context, search_opts=search_opts)
         limited_list = self._limit_items(instance_list, req)
@@ -482,7 +484,7 @@ class ControllerV10(Controller):
             check_option_permissions(context, search_opts.keys(),
                     user_api, admin_api)
         except exception.InvalidInput:
-            # FIXME(comstud): I refactored code in here to support
+            # NOTE(comstud): I refactored code in here to support
             # new search options, and the original code ignored
             # invalid options.  So, I've left it this way for now.
             # The v1.1 implementation will return an error in this
