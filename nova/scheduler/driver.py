@@ -31,6 +31,7 @@ from nova import rpc
 from nova import utils
 from nova.compute import power_state
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('service_down_time', 60,
                      'maximum time since last checkin for up service')

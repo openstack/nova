@@ -30,13 +30,16 @@ Programming HowTos and Tutorials
     addmethod.openstackapi
 
 
-Programming Concepts
---------------------
+Background Concepts for Nova
+----------------------------
 .. toctree::
    :maxdepth: 3
 
+   distributed_scheduler
+   multinic
    zone
    rabbit
+   
 
 API Reference
 -------------
