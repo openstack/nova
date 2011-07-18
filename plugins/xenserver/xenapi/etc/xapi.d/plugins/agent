@@ -114,7 +114,6 @@ def resetnetwork(self, arg_dict):
     xenstore.write_record(self, arg_dict)
 
 
-@jsonify
 def inject_file(self, arg_dict):
     """Expects a file path and the contents of the file to be written. Both
     should be base64-encoded in order to eliminate errors as they are passed
