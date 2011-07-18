@@ -949,8 +949,8 @@ def virtual_interface_get_by_instance(context, instance_id):
                        options(joinedload('instance')).\
                        options(joinedload('fixed_ips')).\
                        all()
-
     return vif_refs
+
 
 @require_context
 def virtual_interface_get_by_instance_and_network(context, instance_id,
