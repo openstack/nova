@@ -770,9 +770,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'resize_instance',
-                 'args': { 'instance_id': instance_ref['uuid'],
-                           'migration_id': migration_ref['id']},
-                })
+                 'args': {'instance_id': instance_ref['uuid'],
+                          'migration_id': migration_ref['id']}})
         usage_info = utils.usage_from_instance(instance_ref,
                               new_instance_type=instance_type['name'],
                               new_instance_type_id=instance_type['id'])

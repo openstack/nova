@@ -429,7 +429,8 @@ class ComputeTestCase(test.TestCase):
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_ref['uuid'], 'pre-migrating')
         try:
-            self.compute.finish_resize(context, int(migration_ref['id']), {})
+            self.compute.finish_resize(context, instance_ref['uuid'],
+                    int(migration_ref['id']), {})
         except KeyError, e:
             # Only catch key errors. We want other reasons for the test to
             # fail to actually error out so we don't obscure anything
@@ -480,7 +481,8 @@ class ComputeTestCase(test.TestCase):
         self.compute.prep_resize(context, inst_ref['uuid'], 1)
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
-        self.compute.resize_instance(context, migration_ref['id'])
+        self.compute.resize_instance(context, inst_ref['uuid'],
+                migration_ref['id'])
         self.compute.terminate_instance(context, instance_id)
 
     def test_resize_invalid_flavor_fails(self):
