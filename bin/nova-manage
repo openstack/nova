@@ -473,7 +473,7 @@ class ProjectCommands(object):
         except db.api.NoMoreNetworks:
             print _('No more networks available. If this is a new '
                     'installation, you need\nto call something like this:\n\n'
-                    '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+                    '  nova-manage network create pvt 10.0.0.0/8 10 64\n\n')
         except exception.ProcessExecutionError, e:
             print e
             print _("The above error may show that the certificate db has not "
@@ -566,9 +566,9 @@ class NetworkCommands(object):
                    [network_size=FLAG], [multi_host=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
                    [flat_network_bridge=FLAG], [bridge_interface=FLAG]
-        If you wish to use a later argument fill in the gaps with 0s
-        Ex: network create private 10.0.0.0/8 1 15 0 0 0 0 xenbr1 eth1
-            network create private 10.0.0.0/8 1 15
+        If you wish to use a later argument fill in the gaps with ""s
+        Ex: network create private 10.0.0.0/8 1 16 T "" "" "" "" xenbr1 eth1
+            network create private 10.0.0.0/8 1 16
         """
         if not label:
             msg = _('a label (ex: public) is required to create networks.')

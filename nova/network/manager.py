@@ -870,7 +870,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             net = {}
             address = FLAGS.vpn_ip
             net['vpn_public_address'] = address
-            network_ref = db.network_update(context, network_ref, net)
+            network_ref = db.network_update(context, network_ref['id'], net)
         else:
             address = network_ref['vpn_public_address']
         self.driver.ensure_vlan_bridge(network_ref['vlan'],

@@ -1480,8 +1480,6 @@ def network_associate(context, project_id, force=False):
     called by project_get_networks under certain conditions
     and network manager add_network_to_project()
 
-    only associates projects with networks that have configured hosts
-
     only associate if the project doesn't already have a network
     or if force is True
 
@@ -1497,7 +1495,6 @@ def network_associate(context, project_id, force=False):
         def network_query(project_filter):
             return session.query(models.Network).\
                            filter_by(deleted=False).\
-                           filter(models.Network.host != None).\
                            filter_by(project_id=project_filter).\
                            with_lockmode('update').\
                            first()
@@ -1745,6 +1742,7 @@ def network_update(context, network_id, values):
         network_ref = network_get(context, network_id, session=session)
         network_ref.update(values)
         network_ref.save(session=session)
+        return network_ref
 
 
 ###################
