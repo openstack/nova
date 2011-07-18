@@ -773,8 +773,7 @@ def create_resource(version='1.0'):
     headers_serializer = HeadersSerializer()
 
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                  xmlns=xmlns),
+        'application/xml': ServerXMLSerializer(),
     }
 
     body_deserializers = {
