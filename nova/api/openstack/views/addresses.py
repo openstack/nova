@@ -50,22 +50,36 @@ class ViewBuilderV11(ViewBuilder):
             if network_label not in networks:
                 networks[network_label] = []
 
-            networks[network_label].extend(self._extract_ipv4(interface))
+            ip_addresses = list(self._extract_ipv4_addresses(interface))
+
+            ipv6_address = self._extract_ipv6_address(interface)
+            if ipv6_address is not None:
+                ip_addresses.append(ipv6_address)
+
+            networks[network_label].extend(ip_addresses)
 
         return networks
 
     def build_network(self, interfaces, network_label):
         for interface in interfaces:
             if interface['network']['label'] == network_label:
-                ips = self._extract_ipv4(interface)
-                return {network_label: list(ips)}
+                ips = list(self._extract_ipv4_addresses(interface))
+                ipv6 = self._extract_ipv6_address(interface)
+                if ipv6 is not None:
+                    ips.append(ipv6)
+                return {network_label: ips}
         return None
 
-    def _extract_ipv4(self, interface):
+    def _extract_ipv4_addresses(self, interface):
         for fixed_ip in interface['fixed_ips']:
             yield self._build_ip_entity(fixed_ip['address'], 4)
             for floating_ip in fixed_ip.get('floating_ips', []):
                 yield self._build_ip_entity(floating_ip['address'], 4)
+
+    def _extract_ipv6_address(self, interface):
+        fixed_ipv6 = interface.get('fixed_ipv6')
+        if fixed_ipv6 is not None:
+            return self._build_ip_entity(fixed_ipv6, 6)
 
     def _build_ip_entity(self, address, version):
         return {'addr': address, 'version': version}

@@ -447,6 +447,7 @@ class ServersTest(test.TestCase):
                     {'address': '172.19.0.1'},
                     {'address': '172.19.0.2'},
                 ],
+                'fixed_ipv6': '2001:4860::12',
             },
         ]
         new_return_server = return_server_with_interfaces(interfaces)
@@ -467,6 +468,7 @@ class ServersTest(test.TestCase):
             'network_2': [
                 {'addr': '172.19.0.1', 'version': 4},
                 {'addr': '172.19.0.2', 'version': 4},
+                {'addr': '2001:4860::12', 'version': 6},
             ],
         }
 
@@ -492,6 +494,7 @@ class ServersTest(test.TestCase):
                     },
                     {'address': '172.19.0.2'},
                 ],
+                'fixed_ipv6': '2001:4860::12',
             },
         ]
 
@@ -514,6 +517,7 @@ class ServersTest(test.TestCase):
                     {'version': 4, 'addr': '172.19.0.1'},
                     {'version': 4, 'addr': '1.2.3.4'},
                     {'version': 4, 'addr': '172.19.0.2'},
+                    {'version': 6, 'addr': '2001:4860::12'},
                 ],
             },
         }
@@ -540,6 +544,7 @@ class ServersTest(test.TestCase):
                     },
                     {'address': '172.19.0.2'},
                 ],
+                'fixed_ipv6': '2001:4860::12',
             },
         ]
         _return_vifs = return_virtual_interface_by_instance(interfaces)
@@ -556,6 +561,7 @@ class ServersTest(test.TestCase):
                 {'version': 4, 'addr': '172.19.0.1'},
                 {'version': 4, 'addr': '1.2.3.4'},
                 {'version': 4, 'addr': '172.19.0.2'},
+                {'version': 6, 'addr': '2001:4860::12'},
             ],
         }
         self.assertEqual(res_dict, expected)
