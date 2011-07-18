@@ -58,7 +58,7 @@ def check_option_permissions(context, specified_options,
         known_options = user_api_options
 
     # Check for unknown query string params.
-    spec_unknown_opts = [for opt in specified_options
+    spec_unknown_opts = [opt for opt in specified_options
             if opt not in known_options]
     if spec_unknown_opts:
         unknown_opt_str = ", ".join(spec_unknown_opts)
@@ -67,7 +67,7 @@ def check_option_permissions(context, specified_options,
 
     # Check for admin context for the admin commands
     if not context.is_admin:
-        spec_admin_opts = [for opt in specified_options
+        spec_admin_opts = [opt for opt in specified_options
                 if opt in admin_api_options]
         if spec_admin_opts:
             admin_opt_str = ", ".join(admin_opts)
