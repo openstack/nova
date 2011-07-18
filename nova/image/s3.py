@@ -102,18 +102,7 @@ class S3ImageService(service.BaseImageService):
         key.get_contents_to_filename(local_filename)
         return local_filename
 
-    def _s3_create(self, context, metadata):
-        """Gets a manifext from s3 and makes an image."""
-
-        image_path = tempfile.mkdtemp(dir=FLAGS.image_decryption_dir)
-
-        image_location = metadata['properties']['image_location']
-        bucket_name = image_location.split('/')[0]
-        manifest_path = image_location[len(bucket_name) + 1:]
-        bucket = self._conn(context).get_bucket(bucket_name)
-        key = bucket.get_key(manifest_path)
-        manifest = key.get_contents_as_string()
-
+    def _s3_parse_manifest(self, context, metadata, manifest):
         manifest = ElementTree.fromstring(manifest)
         image_format = 'ami'
         image_type = 'machine'
@@ -141,6 +130,28 @@ class S3ImageService(service.BaseImageService):
         except Exception:
             arch = 'x86_64'
 
+        # NOTE(yamahata):
+        # EC2 ec2-budlne-image --block-device-mapping accepts
+        # <virtual name>=<device name> where
+        # virtual name = {ami, root, swap, ephemeral<N>}
+        #                where N is no negative integer
+        # device name = the device name seen by guest kernel.
+        # They are converted into
+        # block_device_mapping/mapping/{virtual, device}
+        #
+        # Do NOT confuse this with ec2-register's block device mapping
+        # argument.
+        mappings = []
+        try:
+            block_device_mapping = manifest.findall('machine_configuration/'
+                                                    'block_device_mapping/'
+                                                    'mapping')
+            for bdm in block_device_mapping:
+                mappings.append({'virtual': bdm.find('virtual').text,
+                                 'device': bdm.find('device').text})
+        except Exception:
+            mappings = []
+
         properties = metadata['properties']
         properties['project_id'] = context.project_id
         properties['architecture'] = arch
@@ -151,6 +162,9 @@ class S3ImageService(service.BaseImageService):
         if ramdisk_id:
             properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
 
+        if mappings:
+            properties['mappings'] = mappings
+
         metadata.update({'disk_format': image_format,
                          'container_format': image_format,
                          'status': 'queued',
@@ -158,6 +172,21 @@ class S3ImageService(service.BaseImageService):
                          'properties': properties})
         metadata['properties']['image_state'] = 'pending'
         image = self.service.create(context, metadata)
+        return manifest, image
+
+    def _s3_create(self, context, metadata):
+        """Gets a manifext from s3 and makes an image."""
+
+        image_path = tempfile.mkdtemp(dir=FLAGS.image_decryption_dir)
+
+        image_location = metadata['properties']['image_location']
+        bucket_name = image_location.split('/')[0]
+        manifest_path = image_location[len(bucket_name) + 1:]
+        bucket = self._conn(context).get_bucket(bucket_name)
+        key = bucket.get_key(manifest_path)
+        manifest = key.get_contents_as_string()
+
+        manifest, image = self._s3_parse_manifest(context, metadata, manifest)
         image_id = image['id']
 
         def delayed_create():
