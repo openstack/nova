@@ -413,8 +413,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         # TODO(tr3buchet) should handle floating IPs as well?
         fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
         vifs = self.db.virtual_interface_get_by_instance(context, instance_id)
-        flavor = self.db.instance_type_get_by_id(context,
-                                                 instance_type_id)
+        flavor = self.db.instance_type_get(context, instance_type_id)
         network_info = []
         # a vif has an address, instance_id, and network_id
         # it is also joined to the instance and network given by those IDs

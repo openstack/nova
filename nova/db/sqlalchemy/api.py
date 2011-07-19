@@ -2985,7 +2985,7 @@ def instance_type_get_all(context, inactive=False):
 
 
 @require_context
-def instance_type_get_by_id(context, id):
+def instance_type_get(context, id):
     """Returns a dict describing specific instance_type"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
