@@ -454,7 +454,7 @@ class ControllerV10(Controller):
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
-        instance_id = int(instance_id)
+        instance_id = instance_id
 
         try:
             image_id = info["rebuild"]["imageId"]
@@ -569,7 +569,7 @@ class ControllerV11(Controller):
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
-        instance_id = int(instance_id)
+        instance_id = instance_id
 
         try:
             image_href = info["rebuild"]["imageRef"]
