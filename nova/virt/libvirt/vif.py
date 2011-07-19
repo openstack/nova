@@ -74,7 +74,7 @@ class LibvirtBridge(LibvirtVIF):
 
         return result
 
-    
+
 class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
     """VIF driver for Linux bridge."""
 
