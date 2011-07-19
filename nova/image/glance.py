@@ -91,7 +91,8 @@ class GlanceImageService(service.BaseImageService):
         filtered = []
         filters = filters or {}
         if 'is_public' not in filters:
-            filters['is_public'] = None
+            # NOTE(vish): don't filter out private images
+            filters['is_public'] = 'none'
         image_metas = self.client.get_images_detailed(filters=filters,
                                                       marker=marker,
                                                       limit=limit)
@@ -106,7 +107,8 @@ class GlanceImageService(service.BaseImageService):
         filtered = []
         filters = filters or {}
         if 'is_public' not in filters:
-            filters['is_public'] = None
+            # NOTE(vish): don't filter out private images
+            filters['is_public'] = 'none'
         image_metas = self.client.get_images_detailed(filters=filters,
                                                       marker=marker,
                                                       limit=limit)
