@@ -776,14 +776,6 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
 
         self.driver.metadata_forward()
 
-    def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
-        """Allocate flat_network fixed_ip, then setup dhcp for this network."""
-        address = super(FlatDHCPManager, self).allocate_fixed_ip(context,
-                                                                 instance_id,
-                                                                 network)
-        if not FLAGS.fake_network:
-            self.driver.update_dhcp(context, network['id'])
-
     def setup_compute_network(self, context, instance_id):
         """Sets up matching networks for compute hosts.
 
