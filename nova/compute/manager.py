@@ -293,7 +293,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 network_info = self.network_api.allocate_for_instance(context,
                                                          instance, vpn=is_vpn)
                 LOG.debug(_("instance network_info: |%s|"), network_info)
-                self.driver.setup_vif_network(context, instance, network_info)
+                self.driver.setup_vif_network(context, instance)
             else:
                 # TODO(tr3buchet) not really sure how this should be handled.
                 # virt requires network_info to be passed in but stub_network
@@ -348,7 +348,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                   {'action_str': action_str, 'instance_id': instance_id},
                   context=context)
 
+        network_info = None
         if not FLAGS.stub_network:
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                instance)
             self.network_api.deallocate_for_instance(context, instance)
 
         volumes = instance.get('volumes') or []
@@ -360,7 +363,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
                                     ' instance: %s') % instance_id)
-        self.driver.destroy(instance)
+        self.driver.destroy(instance,network_info)
 
         if action_str == 'Terminating':
             terminate_volumes(self.db, context, instance_id)
@@ -406,7 +409,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._update_state(context, instance_id, power_state.BUILDING)
 
-        self.driver.destroy(instance_ref)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                        instance_ref)
+        self.driver.destroy(instance_ref,network_info)
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
         instance_ref.injected_files = kwargs.get('injected_files', [])
@@ -666,7 +671,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Destroys the source instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        self.driver.destroy(instance_ref)
+
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                        instance_ref)
+        self.driver.destroy(instance_ref,network_info)
         usage_info = utils.usage_from_instance(instance_ref)
         notifier_api.notify('compute.%s' % self.host,
                             'compute.instance.resize.confirm',
@@ -685,7 +693,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
 
-        self.driver.destroy(instance_ref)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                        instance_ref)
+        self.driver.destroy(instance_ref,network_info)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 instance_ref['host'])
         rpc.cast(context, topic,

@@ -261,11 +261,13 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def setup_vif_network(self, ctxt, instance_id):
         """Set up VIF networking on the host."""
-        networks = db.network_get_all_by_instance(ctxt, instance_id)
-        for network in networks:
-            self.vif_driver.plug(network)
+        # FIXME: this is dying because DB has no networks for instances
+        #networks = db.network_get_all_by_instance(ctxt, instance_id)
+        #for network in networks:
+        #    self.vif_driver.plug(network)
+        pass
 
-    def destroy(self, instance, cleanup=True):
+    def destroy(self, instance, network_info, cleanup=True):
         instance_name = instance['name']
 
         try:
@@ -307,6 +309,14 @@ class LibvirtConnection(driver.ComputeDriver):
                               "%(instance_name)s. Code=%(errcode)s "
                               "Error=%(e)s") %
                             locals())
+                raise
+
+            try:
+                for (network, mapping) in network_info:
+                            self.vif_driver.unplug(instance, network, mapping)
+            except:
+                LOG.warning("Failed while unplugging vif of instance '%s'" % \
+                    instance['name'])
                 raise
 
         def _wait_for_destroy():
@@ -890,9 +900,12 @@ class LibvirtConnection(driver.ComputeDriver):
             address = mapping['ips'][0]['ip']
             netmask = mapping['ips'][0]['netmask']
             address_v6 = None
+            gateway_v6 = None
+            netmask_v6 = None
             if FLAGS.use_ipv6:
                 address_v6 = mapping['ip6s'][0]['ip']
                 netmask_v6 = mapping['ip6s'][0]['netmask']
+                gateway_v6 = mapping['gateway6']
             net_info = {'name': 'eth%d' % ifc_num,
                    'address': address,
                    'netmask': netmask,
@@ -900,7 +913,7 @@ class LibvirtConnection(driver.ComputeDriver):
                    'broadcast': mapping['broadcast'],
                    'dns': mapping['dns'],
                    'address_v6': address_v6,
-                   'gateway6': mapping['gateway6'],
+                   'gateway6': gateway_v6,
                    'netmask_v6': netmask_v6}
             nets.append(net_info)
 

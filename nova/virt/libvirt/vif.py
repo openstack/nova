@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (C) 2011 Midokura KK
+# Copyright (C) 2011 Nicira, Inc
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,6 +21,7 @@
 from nova import flags
 from nova.network import linux_net
 from nova.virt.libvirt import netutils
+from nova import utils
 from nova.virt.vif import VIFDriver
 
 FLAGS = flags.FLAGS
@@ -74,7 +76,7 @@ class LibvirtBridge(LibvirtVIF):
 
         return result
 
-    
+
 class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
     """VIF driver for Linux bridge."""
 
@@ -83,7 +85,7 @@ class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
         linux_net.ensure_bridge(network['bridge'],
                                 network['bridge_interface'])
 
-    def unplug(self, network):
+    def unplug(self, instance, network, mapping):
         pass
 
 
@@ -95,5 +97,38 @@ class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
         linux_net.ensure_vlan_bridge(network['vlan'], network['bridge'],
                                      network['bridge_interface'])
 
-    def unplug(self, network):
+    def unplug(self, instance, network, mapping):
         pass
+
+class LibvirtOpenVswitchDriver(VIFDriver):
+    """VIF driver for Open vSwitch."""
+
+    def get_configurations(self, instance, network, mapping):
+        vif_id = str(instance['id']) + "-" + str(network['id'])
+        dev = "tap-%s" % vif_id
+        utils.execute('sudo','ip','tuntap','add', dev, 'mode','tap')
+        utils.execute('sudo','ip','link','set', dev, 'up')
+        utils.execute('sudo', 'ovs-vsctl','--', '--may-exist', 'add-port',
+           FLAGS.flat_network_bridge, dev,
+           '--', 'set', 'Interface', dev, "external-ids:iface-id=%s" % vif_id,
+           '--', 'set', 'Interface', dev, "external-ids:iface-status=active",
+           '--', 'set', 'Interface', dev, "external-ids:attached-mac=%s" % \
+                mapping['mac'])
+
+        result = {
+            'script': '',
+            'name': dev,
+            'mac_address' : mapping['mac']
+        }
+        print "using result = %s" % str(result)
+        return result
+
+
+    def plug(self, network):
+        pass
+
+    def unplug(self, instance, network, mapping):
+        vif_id = str(instance['id']) + "-" + str(network['id'])
+        dev = "tap-%s" % vif_id
+        utils.execute('sudo', 'ovs-vsctl','del-port', FLAGS.flat_network_bridge, dev)
+        utils.execute('sudo','ip','link','delete', dev)

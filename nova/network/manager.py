@@ -351,6 +351,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = self.db.network_get_all(context)
 
         # return only networks which are not vlan networks and have host set
+        for n in networks:
+            print "net: host = %s vlan = %s" % (n['host'],n['vlan'])
         return [network for network in networks if
                 not network['vlan'] and network['host']]
 
