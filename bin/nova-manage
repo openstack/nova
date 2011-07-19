@@ -414,8 +414,11 @@ class ProjectCommands(object):
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
             print ex
             raise
-        with open(filename, 'w') as f:
-            f.write(rc)
+        if filename == "-":
+            sys.stdout.write(rc)
+        else:
+            with open(filename, 'w') as f:
+                f.write(rc)
 
     def list(self, username=None):
         """Lists all projects
@@ -465,8 +468,11 @@ class ProjectCommands(object):
         arguments: project_id user_id [filename='nova.zip]"""
         try:
             zip_file = self.manager.get_credentials(user_id, project_id)
-            with open(filename, 'w') as f:
-                f.write(zip_file)
+            if filename == "-":
+                sys.stdout.write(zip_file)
+            else:
+                with open(filename, 'w') as f:
+                    f.write(zip_file)
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
             print ex
             raise
@@ -615,15 +621,19 @@ class NetworkCommands(object):
 
     def list(self):
         """List all created networks"""
-        print "%-18s\t%-15s\t%-15s\t%-15s" % (_('network'),
-                                              _('netmask'),
-                                              _('start address'),
-                                              'DNS')
+        print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (_('network'),
+                                                  _('netmask'),
+                                                  _('start address'),
+                                                  _('DNS'),
+                                                  _('VlanID'),
+                                                  'project')
         for network in db.network_get_all(context.get_admin_context()):
-            print "%-18s\t%-15s\t%-15s\t%-15s" % (network.cidr,
-                                network.netmask,
-                                network.dhcp_start,
-                                network.dns)
+            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+                                        network.netmask,
+                                        network.dhcp_start,
+                                        network.dns,
+                                        network.vlan,
+                                        network.project_id)
 
     def delete(self, fixed_range):
         """Deletes a network"""
@@ -840,6 +850,28 @@ class ServiceCommands(object):
         rpc.call(ctxt,
                  db.queue_get_for(ctxt, FLAGS.compute_topic, host),
                  {"method": "update_available_resource"})
+
+
+class HostCommands(object):
+    """List hosts"""
+
+    def list(self, zone=None):
+        """Show a list of all physical hosts. Filter by zone.
+        args: [zone]"""
+        print "%-25s\t%-15s" % (_('host'),
+                                _('zone'))
+        ctxt = context.get_admin_context()
+        now = utils.utcnow()
+        services = db.service_get_all(ctxt)
+        if zone:
+            services = [s for s in services if s['availability_zone'] == zone]
+        hosts = []
+        for srv in services:
+            if not [h for h in hosts if h['host'] == srv['host']]:
+                hosts.append(srv)
+
+        for h in hosts:
+            print "%-25s\t%-15s" % (h['host'], h['availability_zone'])
 
 
 class DbCommands(object):
@@ -1215,6 +1247,7 @@ CATEGORIES = [
     ('fixed', FixedIpCommands),
     ('flavor', InstanceTypeCommands),
     ('floating', FloatingIpCommands),
+    ('host', HostCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
     ('network', NetworkCommands),

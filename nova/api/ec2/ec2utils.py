@@ -34,6 +34,17 @@ def id_to_ec2_id(instance_id, template='i-%08x'):
     return template % instance_id
 
 
+def id_to_ec2_snap_id(instance_id):
+    """Convert an snapshot ID (int) to an ec2 snapshot ID
+    (snap-[base 16 number])"""
+    return id_to_ec2_id(instance_id, 'snap-%08x')
+
+
+def id_to_ec2_vol_id(instance_id):
+    """Convert an volume ID (int) to an ec2 volume ID (vol-[base 16 number])"""
+    return id_to_ec2_id(instance_id, 'vol-%08x')
+
+
 _c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
 
 
@@ -124,3 +135,32 @@ def dict_from_dotted_str(items):
                 args[key] = value
 
     return args
+
+
+def properties_root_device_name(properties):
+    """get root device name from image meta data.
+    If it isn't specified, return None.
+    """
+    root_device_name = None
+
+    # NOTE(yamahata): see image_service.s3.s3create()
+    for bdm in properties.get('mappings', []):
+        if bdm['virtual'] == 'root':
+            root_device_name = bdm['device']
+
+    # NOTE(yamahata): register_image's command line can override
+    #                 <machine>.manifest.xml
+    if 'root_device_name' in properties:
+        root_device_name = properties['root_device_name']
+
+    return root_device_name
+
+
+def mappings_prepend_dev(mappings):
+    """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type"""
+    for m in mappings:
+        virtual = m['virtual']
+        if ((virtual == 'swap' or virtual.startswith('ephemeral')) and
+            (not m['device'].startswith('/'))):
+            m['device'] = '/dev/' + m['device']
+    return mappings

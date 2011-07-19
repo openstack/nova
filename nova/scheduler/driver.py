@@ -32,6 +32,7 @@ from nova import utils
 from nova.compute import power_state
 from nova.api.ec2 import ec2utils
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('service_down_time', 60,
                      'maximum time since last checkin for up service')
@@ -202,8 +203,13 @@ class Scheduler(object):
                 reason = _("Block migration can not be used "
                            "with shared storage.")
                 raise exception.InvalidSharedStorage(reason=reason, path=dest)
-        except rpc.RemoteError:
+        except exception.FileNotFound:
             if not block_migration:
+                src = instance_ref['host']
+                ipath = FLAGS.instances_path
+                logging.error(_("Cannot confirm tmpfile at %(ipath)s is on "
+                                "same shared storage between %(src)s "
+                                "and %(dest)s.") % locals())
                 raise
 
         # Checking dest exists.
@@ -356,15 +362,13 @@ class Scheduler(object):
                                 {"method": 'create_shared_storage_test_file'})
 
             # make sure existence at src host.
-            rpc.call(context, src_t,
-                     {"method": 'check_shared_storage_test_file',
-                      "args": {'filename': filename}})
+            ret = rpc.call(context, src_t,
+                          {"method": 'check_shared_storage_test_file',
+                           "args": {'filename': filename}})
+            if not ret:
+                raise exception.FileNotFound(file_path=filename)
 
-        except rpc.RemoteError:
-            ipath = FLAGS.instances_path
-            logging.error(_("Cannot confirm tmpfile at %(ipath)s is on "
-                            "same shared storage between %(src)s "
-                            "and %(dest)s.") % locals())
+        except exception.FileNotFound:
             raise
 
         finally:

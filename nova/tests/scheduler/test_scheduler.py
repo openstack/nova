@@ -844,7 +844,8 @@ class SimpleDriverTestCase(test.TestCase):
              "args": {'filename': fpath}})
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.SourceHostUnavailable,
+        #self.assertRaises(exception.SourceHostUnavailable,
+        self.assertRaises(exception.FileNotFound,
                           self.scheduler.driver._live_migration_common_check,
                           self.context, i_ref, dest, False)
 
