@@ -519,6 +519,17 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(context, instance_id)
 
+    def test_finish_revert_resize(self):
+        """Ensure that the flavor is reverted to the original on revert"""
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+
+        self.compute.run_instance(self.context, instance_id)
+
+        self.compute_api.finish_revert_resize(context, instance_id, 1)
+
+        self.compute.terminate_instance(context, instance_id)
+
     def test_get_by_flavor_id(self):
         type = instance_types.get_instance_type_by_flavor_id(1)
         self.assertEqual(type['name'], 'm1.tiny')

@@ -743,6 +743,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.Error(_(
                     'Migration error: destination same as source!'))
 
+        old_instance_type = self.db.instance_type_get_by_flavor_id(context,
+                instance_ref['instance_type_id'])
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 flavor_id)
         migration_ref = self.db.migration_create(context,
@@ -750,7 +752,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
                  'dest_host':   self.driver.get_host_ip_addr(),
-                 'old_flavor_id': instance_type['flavorid'],
+                 'old_flavor_id': old_instance_type['flavorid'],
                  'new_flavor_id': flavor_id,
                  'status':      'pre-migrating'})
 
