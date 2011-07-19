@@ -15,8 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import flags
 from nova import utils
 from nova.api.openstack import common
+
+FLAGS = flags.FLAGS
 
 
 class ViewBuilder(object):
@@ -52,9 +55,10 @@ class ViewBuilderV11(ViewBuilder):
 
             ip_addresses = list(self._extract_ipv4_addresses(interface))
 
-            ipv6_address = self._extract_ipv6_address(interface)
-            if ipv6_address is not None:
-                ip_addresses.append(ipv6_address)
+            if FLAGS.use_ipv6:
+                ipv6_address = self._extract_ipv6_address(interface)
+                if ipv6_address is not None:
+                    ip_addresses.append(ipv6_address)
 
             networks[network_label].extend(ip_addresses)
 

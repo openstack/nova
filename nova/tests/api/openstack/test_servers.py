@@ -433,6 +433,7 @@ class ServersTest(test.TestCase):
         self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_by_id_with_addresses_v1_1(self):
+        FLAGS.use_ipv6 = True
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -474,7 +475,50 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(addresses, expected)
 
+    def test_get_server_by_id_with_addresses_v1_1_ipv6_disabled(self):
+        FLAGS.use_ipv6 = False
+        interfaces = [
+            {
+                'network': {'label': 'network_1'},
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+            {
+                'network': {'label': 'network_2'},
+                'fixed_ips': [
+                    {'address': '172.19.0.1'},
+                    {'address': '172.19.0.2'},
+                ],
+                'fixed_ipv6': '2001:4860::12',
+            },
+        ]
+        new_return_server = return_server_with_interfaces(interfaces)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        req = webob.Request.blank('/v1.1/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['name'], 'server1')
+        addresses = res_dict['server']['addresses']
+        expected = {
+            'network_1': [
+                {'addr': '192.168.0.3', 'version': 4},
+                {'addr': '192.168.0.4', 'version': 4},
+            ],
+            'network_2': [
+                {'addr': '172.19.0.1', 'version': 4},
+                {'addr': '172.19.0.2', 'version': 4},
+            ],
+        }
+
+        self.assertEqual(addresses, expected)
+
     def test_get_server_addresses_v1_1(self):
+        FLAGS.use_ipv6 = True
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -525,6 +569,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_get_server_addresses_single_network_v1_1(self):
+        FLAGS.use_ipv6 = True
         interfaces = [
             {
                 'network': {'label': 'network_1'},
