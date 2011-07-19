@@ -125,7 +125,6 @@ if [ $recreate_db -eq 1 ]; then
     rm -f tests.sqlite
 fi
 
-
 run_tests || exit
 
 # NOTE(sirp): we only want to run pep8 when we're running the full-test suite,
