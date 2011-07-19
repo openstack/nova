@@ -265,6 +265,12 @@ class LibvirtConnection(driver.ComputeDriver):
         for network in networks:
             self.vif_driver.plug(network)
 
+    def destroy_vif_network(self, ctxt, instance_id):
+        """Clean up VIF networking on the host."""
+        networks = db.network_get_all_by_instance(ctxt, instance_id)
+        for network in networks:
+            self.vif_driver.unplug(network)
+
     def destroy(self, instance, cleanup=True):
         instance_name = instance['name']
 
@@ -323,6 +329,8 @@ class LibvirtConnection(driver.ComputeDriver):
         timer = utils.LoopingCall(_wait_for_destroy)
         timer.start(interval=0.5, now=True)
 
+        ctxt = context.get_admin_context()
+        self.destroy_vif_network(ctxt, instance['id'])
         self.firewall_driver.unfilter_instance(instance)
 
         if cleanup:
