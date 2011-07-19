@@ -2224,6 +2224,23 @@ def block_device_mapping_update(context, bdm_id, values):
 
 
 @require_context
+def block_device_mapping_update_or_create(context, values):
+    session = get_session()
+    with session.begin():
+        result = session.query(models.BlockDeviceMapping).\
+                 filter_by(instance_id=values['instance_id']).\
+                 filter_by(device_name=values['device_name']).\
+                 filter_by(deleted=False).\
+                 first()
+        if not result:
+            bdm_ref = models.BlockDeviceMapping()
+            bdm_ref.update(values)
+            bdm_ref.save(session=session)
+        else:
+            result.update(values)
+
+
+@require_context
 def block_device_mapping_get_all_by_instance(context, instance_id):
     session = get_session()
     result = session.query(models.BlockDeviceMapping).\
