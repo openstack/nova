@@ -263,7 +263,9 @@ class ExtensionMiddleware(base_wsgi.Middleware):
             LOG.debug(_('Extended resource: %s'),
                         resource.collection)
             mapper.resource(resource.collection, resource.collection,
-                            controller=wsgi.Resource(resource.controller),
+                            controller=wsgi.Resource(resource.controller,
+                                                     resource.deserializer,
+                                                     resource.serializer),
                             collection=resource.collection_actions,
                             member=resource.member_actions,
                             parent_resource=resource.parent)
@@ -456,9 +458,12 @@ class ResourceExtension(object):
     """Add top level resources to the OpenStack API in nova."""
 
     def __init__(self, collection, controller, parent=None,
-                 collection_actions={}, member_actions={}):
+                 collection_actions={}, member_actions={},
+                 deserializer=None, serializer=None):
         self.collection = collection
         self.controller = controller
         self.parent = parent
         self.collection_actions = collection_actions
         self.member_actions = member_actions
+        self.deserializer = deserializer
+        self.serializer = serializer

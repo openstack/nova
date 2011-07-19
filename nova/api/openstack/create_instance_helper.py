@@ -25,7 +25,6 @@ from nova import flags
 from nova import log as logging
 import nova.image
 from nova import quota
-from nova import rpc
 from nova import utils
 
 from nova.compute import instance_types
@@ -102,12 +101,6 @@ class CreateInstanceHelper(object):
         if personality:
             injected_files = self._get_injected_files(personality)
 
-        requested_networks = body['server'].get('networks')
-
-        if requested_networks is not None:
-            requested_networks = self._get_requested_networks(
-                                                    requested_networks)
-
         flavor_id = self.controller._flavor_id_from_req_data(body)
 
         if not 'name' in body['server']:
@@ -154,16 +147,11 @@ class CreateInstanceHelper(object):
                                   zone_blob=zone_blob,
                                   reservation_id=reservation_id,
                                   min_count=min_count,
-                                  max_count=max_count,
-                                  requested_networks=requested_networks))
+                                  max_count=max_count))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
-        except rpc.RemoteError as err:
-            msg = "%(err_type)s: %(err_msg)s" % \
-                    {'err_type': err.exc_type, 'err_msg': err.value}
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
         # Let the caller deal with unhandled exceptions.
@@ -296,42 +284,6 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
         return password
 
-    def _get_requested_networks(self, requested_networks):
-        """
-        Create a list of requested networks from the networks attribute
-        """
-        networks = []
-        for network in requested_networks:
-            try:
-                network_id = network['id']
-                network_id = int(network_id)
-                #fixed IP address is optional
-                #if the fixed IP address is not provided then
-                #it will use one of the available IP address from the network
-                fixed_ip = network.get('fixed_ip', None)
-                if fixed_ip is not None:
-                    self._validate_fixed_ip(fixed_ip)
-                # check if the network id is already present in the list,
-                # we don't want duplicate networks to be passed
-                # at the boot time
-                for id, ip in networks:
-                    if id == network_id:
-                        expl = _("Duplicate networks (%s) are not allowed")\
-                                % network_id
-                        raise faults.Fault(exc.HTTPBadRequest(
-                                               explanation=expl))
-
-                networks.append((network_id, fixed_ip))
-            except KeyError as key:
-                expl = _('Bad network format: missing %s') % key
-                raise faults.Fault(exc.HTTPBadRequest(explanation=expl))
-            except ValueError:
-                expl = _("Bad networks format: network id should "
-                         "be integer (%s)") % network_id
-                raise faults.Fault(exc.HTTPBadRequest(explanation=expl))
-
-        return networks
-
 
 class ServerXMLDeserializer(wsgi.XMLDeserializer):
     """
@@ -411,7 +363,6 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
     def _find_first_child_named(self, parent, name):
         """Search a nodes children for the first child with a given name"""
         for node in parent.childNodes:
-            LOG.debug(node.nodeName)
             if node.nodeName == name:
                 return node
         return None
