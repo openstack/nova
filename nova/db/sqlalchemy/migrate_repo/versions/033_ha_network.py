@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2011 MORITA Kazutaka.
+# Copyright (c) 2011 OpenStack, LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -25,13 +25,20 @@ networks_multi_host = Column('multi_host', Boolean, default=False)
 
 
 def upgrade(migrate_engine):
-    # Upgrade operations go here. Don't create your own engine;
-    # bind migrate_engine to your metadata
     meta.bind = migrate_engine
 
-    # Add columns to existing tables
     fixed_ips = Table('fixed_ips', meta, autoload=True)
     fixed_ips.create_column(fixed_ips_host)
 
     networks = Table('networks', meta, autoload=True)
     networks.create_column(networks_multi_host)
+
+
+def downgrade(migrate_engine):
+    meta.bind = migrate_engine
+
+    fixed_ips = Table('fixed_ips', meta, autoload=True)
+    fixed_ips.drop_column(fixed_ips_host)
+
+    networks = Table('networks', meta, autoload=True)
+    networks.drop_column(networks_multi_host)
