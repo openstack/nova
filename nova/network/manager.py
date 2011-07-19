@@ -156,12 +156,13 @@ class RPCAllocateFixedIP(object):
         # wait for all of the allocates (if any) to finish
         green_pool.waitall()
 
-    def _rpc_allocate_fixed_ip(self, context, instance_id, network_id):
+    def _rpc_allocate_fixed_ip(self, context, instance_id, network_id,
+                               **kwargs):
         """Sits in between _allocate_fixed_ips and allocate_fixed_ip to
         perform network lookup on the far side of rpc.
         """
         network = self.db.network_get(context, network_id)
-        self.allocate_fixed_ip(context, instance_id, network)
+        self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
 
 class FloatingIP(object):
