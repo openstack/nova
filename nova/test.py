@@ -31,6 +31,7 @@ import unittest
 
 import mox
 import nose.plugins.skip
+import nova.image.fake
 import shutil
 import stubout
 from eventlet import greenthread
@@ -118,6 +119,9 @@ class TestCase(unittest.TestCase):
             if FLAGS.connection_type == 'fake':
                 if hasattr(fake.FakeConnection, '_instance'):
                     del fake.FakeConnection._instance
+
+            if FLAGS.image_service == 'nova.image.fake.FakeImageService':
+                nova.image.fake.FakeImageService_reset()
 
             # Reset any overriden flags
             self.reset_flags()
@@ -248,3 +252,15 @@ class TestCase(unittest.TestCase):
         for d1, d2 in zip(L1, L2):
             self.assertDictMatch(d1, d2, approx_equal=approx_equal,
                                  tolerance=tolerance)
+
+    def assertSubDictMatch(self, sub_dict, super_dict):
+        """Assert a sub_dict is subset of super_dict."""
+        self.assertTrue(set(sub_dict.keys()).issubset(set(super_dict.keys())))
+        for k, sub_value in sub_dict.items():
+            super_value = super_dict[k]
+            if isinstance(sub_value, dict):
+                self.assertSubDictMatch(sub_value, super_value)
+            elif 'DONTCARE' in (sub_value, super_value):
+                continue
+            else:
+                self.assertEqual(sub_value, super_value)
