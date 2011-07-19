@@ -524,9 +524,49 @@ class ComputeTestCase(test.TestCase):
         context = self.context.elevated()
         instance_id = self._create_instance()
 
+        def fake(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        self.stubs.Set(self.compute.driver, 'revert_resize', fake)
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
+
         self.compute.run_instance(self.context, instance_id)
 
-        self.compute_api.finish_revert_resize(context, instance_id, 1)
+        # Confirm the instance size before the resize starts
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 1)
+
+        db.instance_update(self.context, instance_id, {'host': 'foo'})
+
+        self.compute.prep_resize(context, instance_id, 3)
+
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+
+        self.compute.resize_instance(context, instance_id,
+                migration_ref['id'])
+        self.compute.finish_resize(context, instance_id,
+                    int(migration_ref['id']), {})
+
+        # Prove that the instance size is now the new size
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 3)
+
+        # Finally, revert and confirm the old flavor has been applied
+        self.compute.revert_resize(context, instance_id,
+                migration_ref['id'])
+        self.compute.finish_revert_resize(context, instance_id,
+                migration_ref['id'])
+
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 1)
 
         self.compute.terminate_instance(context, instance_id)
 
