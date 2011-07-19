@@ -100,15 +100,16 @@ class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
     def unplug(self, instance, network, mapping):
         pass
 
+
 class LibvirtOpenVswitchDriver(VIFDriver):
     """VIF driver for Open vSwitch."""
 
     def get_configurations(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
-        utils.execute('sudo','ip','tuntap','add', dev, 'mode','tap')
-        utils.execute('sudo','ip','link','set', dev, 'up')
-        utils.execute('sudo', 'ovs-vsctl','--', '--may-exist', 'add-port',
+        utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
+        utils.execute('sudo', 'ip', 'link', 'set', dev, 'up')
+        utils.execute('sudo', 'ovs-vsctl', '--', '--may-exist', 'add-port',
            FLAGS.flat_network_bridge, dev,
            '--', 'set', 'Interface', dev, "external-ids:iface-id=%s" % vif_id,
            '--', 'set', 'Interface', dev, "external-ids:iface-status=active",
@@ -118,11 +119,9 @@ class LibvirtOpenVswitchDriver(VIFDriver):
         result = {
             'script': '',
             'name': dev,
-            'mac_address' : mapping['mac']
-        }
+            'mac_address': mapping['mac']}
         print "using result = %s" % str(result)
         return result
-
 
     def plug(self, network):
         pass
@@ -130,5 +129,6 @@ class LibvirtOpenVswitchDriver(VIFDriver):
     def unplug(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
-        utils.execute('sudo', 'ovs-vsctl','del-port', FLAGS.flat_network_bridge, dev)
-        utils.execute('sudo','ip','link','delete', dev)
+        utils.execute('sudo', 'ovs-vsctl', 'del-port',
+                FLAGS.flat_network_bridge, dev)
+        utils.execute('sudo', 'ip', 'link', 'delete', dev)

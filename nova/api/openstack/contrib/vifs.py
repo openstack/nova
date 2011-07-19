@@ -59,7 +59,6 @@ class ServerVIFController(object):
         return _translate_vifs_view(vifs)
 
 
-
 class VIFs(extensions.ExtensionDescriptor):
     def get_name(self):
         return "VIFs"

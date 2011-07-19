@@ -313,7 +313,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             try:
                 for (network, mapping) in network_info:
-                            self.vif_driver.unplug(instance, network, mapping)
+                    self.vif_driver.unplug(instance, network, mapping)
             except:
                 LOG.warning("Failed while unplugging vif of instance '%s'" % \
                     instance['name'])
