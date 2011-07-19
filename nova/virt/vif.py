@@ -17,6 +17,7 @@
 
 """VIF module common to all virt layers."""
 
+
 class VIFDriver(object):
     """Abstract class that defines generic interfaces for all VIF drivers."""
 
