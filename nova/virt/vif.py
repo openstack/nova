@@ -21,10 +21,10 @@
 class VIFDriver(object):
     """Abstract class that defines generic interfaces for all VIF drivers."""
 
-    def plug(self, network):
+    def plug(self, instance, network, mapping):
         """Plug VIF into network."""
         raise NotImplementedError()
 
-    def unplug(self, network):
+    def unplug(self, instance, network, mapping):
         """Unplug VIF from network."""
         raise NotImplementedError()

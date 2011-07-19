@@ -30,15 +30,7 @@ flags.DEFINE_bool('allow_project_net_traffic',
                   'Whether to allow in project network traffic')
 
 
-class LibvirtVIF(object):
-    """VIF class for libvirt"""
-
-    def get_configurations(self, instance, network, mapping):
-        """Get a dictionary of VIF configuration for libvirt interfaces."""
-        raise NotImplementedError()
-
-
-class LibvirtBridge(LibvirtVIF):
+class LibvirtBridge(object):
     """Linux bridge VIF for Libvirt."""
 
     def get_configurations(self, instance, network, mapping):
@@ -80,7 +72,7 @@ class LibvirtBridge(LibvirtVIF):
 class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
     """VIF driver for Linux bridge."""
 
-    def plug(self, network):
+    def plug(self, instance, network, mapping):
         """Ensure that the bridge exists, and add VIF to it."""
         linux_net.ensure_bridge(network['bridge'],
                                 network['bridge_interface'])
@@ -92,7 +84,7 @@ class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
 class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
     """VIF driver for Linux bridge with VLAN."""
 
-    def plug(self, network):
+    def plug(self, instance, network, mapping):
         """Ensure that VLAN and bridge exist and add VIF to the bridge."""
         linux_net.ensure_vlan_bridge(network['vlan'], network['bridge'],
                                      network['bridge_interface'])
@@ -123,7 +115,7 @@ class LibvirtOpenVswitchDriver(VIFDriver):
         print "using result = %s" % str(result)
         return result
 
-    def plug(self, network):
+    def plug(self, instance, network, mapping):
         pass
 
     def unplug(self, instance, network, mapping):
