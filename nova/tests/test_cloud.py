@@ -30,6 +30,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import network
 from nova import rpc
 from nova import test
 from nova import utils
@@ -151,7 +152,6 @@ class CloudTestCase(test.TestCase):
                        'fixed_ip': fixed_ip,
                        'project_id': None,
                        'auto_assigned': False}
-        from nova import network
         network_api = network.api.API()
         self.mox.StubOutWithMock(network_api.db, 'floating_ip_get_by_address')
         network_api.db.floating_ip_get_by_address(mox.IgnoreArg(),
