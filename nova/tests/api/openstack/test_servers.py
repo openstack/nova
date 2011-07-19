@@ -1422,7 +1422,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_update_no_body(self):
+    def test_update_server_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
         res = req.get_response(fakes.wsgi_app())
@@ -1488,6 +1488,21 @@ class ServersTest(test.TestCase):
         self.assertEqual(mock_method.instance_id, '1')
         self.assertEqual(mock_method.password, 'bacon')
 
+    def test_update_server_no_body_v1_1(self):
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.method = 'PUT'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_update_server_name_v1_1(self):
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        req.body = json.dumps({'server': {'name': 'new-name'}})
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
+        self.assertEqual(res.body, '')
+
     def test_update_server_adminPass_ignored_v1_1(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
         self.body = json.dumps(dict(server=inst_dict))
@@ -1506,6 +1521,7 @@ class ServersTest(test.TestCase):
         req.body = self.body
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 204)
+        self.assertEqual(res.body, '')
 
     def test_create_backup_schedules(self):
         req = webob.Request.blank('/v1.0/servers/1/backup_schedule')
