@@ -64,8 +64,10 @@ def check_option_permissions(context, specified_options,
             if opt not in known_options]
     if spec_unknown_opts:
         unknown_opt_str = ", ".join(spec_unknown_opts)
+        LOG.error(_("Received request for unknown options "
+                "'%(unknown_opt_str)s'") % locals())
         raise exception.InvalidInput(reason=_(
-                "Unknown options specified: %(unknown_opt_str)"))
+                "Unknown options specified: %(unknown_opt_str)s"))
 
     # Check for admin context for the admin commands
     if not context.is_admin:
@@ -73,6 +75,9 @@ def check_option_permissions(context, specified_options,
                 if opt in admin_api_options]
         if spec_admin_opts:
             admin_opt_str = ", ".join(admin_opts)
+            LOG.error(_("Received request for admin options "
+                    "'%(admin_opt_str)s' from non-admin context") %
+                    locals())
             raise exception.AdminRequired()
 
 
@@ -471,9 +476,9 @@ class ControllerV10(Controller):
         search_opts = {}
         search_opts.update(req.str_GET)
 
-        user_api = ['project_id', 'fixed_ip', 'recurse_zones',
-                'reservation_id', 'name', 'fresh', 'status',
-                'image', 'flavor']
+        user_api = ['marker', 'limit', 'project_id', 'fixed_ip',
+                'recurse_zones', 'reservation_id', 'name', 'fresh',
+                'status', 'image', 'flavor']
         admin_api = ['ip', 'ip6', 'instance_name']
 
         context = req.environ['nova.context']
@@ -581,8 +586,8 @@ class ControllerV11(Controller):
         search_opts = {}
         search_opts.update(req.str_GET)
 
-        user_api = ['image', 'flavor', 'name', 'status',
-                'reservation_id', 'changes-since']
+        user_api = ['marker', 'limit', 'image', 'flavor', 'name',
+                'status', 'reservation_id', 'changes-since']
         admin_api = ['ip', 'ip6', 'instance_name']
 
         context = req.environ['nova.context']
