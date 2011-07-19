@@ -137,7 +137,11 @@ class _FakeImageService(service.BaseImageService):
         try:
             image_id = metadata['id']
         except KeyError:
-            image_id = random.randint(0, 2 ** 31 - 1)
+            while True:
+                image_id = random.randint(0, 2 ** 31 - 1)
+                if not self.images.get(str(image_id)):
+                    break
+
         image_id = str(image_id)
 
         if self.images.get(image_id):
@@ -176,3 +180,8 @@ _fakeImageService = _FakeImageService()
 
 def FakeImageService():
     return _fakeImageService
+
+
+def FakeImageService_reset():
+    global _fakeImageService
+    _fakeImageService = _FakeImageService()

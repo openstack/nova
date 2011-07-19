@@ -92,7 +92,9 @@ class XmlConversionTestCase(test.TestCase):
         conv = ec2utils._try_convert
         self.assertEqual(conv('None'), None)
         self.assertEqual(conv('True'), True)
+        self.assertEqual(conv('true'), True)
         self.assertEqual(conv('False'), False)
+        self.assertEqual(conv('false'), False)
         self.assertEqual(conv('0'), 0)
         self.assertEqual(conv('42'), 42)
         self.assertEqual(conv('3.14'), 3.14)
@@ -107,6 +109,8 @@ class Ec2utilsTestCase(test.TestCase):
     def test_ec2_id_to_id(self):
         self.assertEqual(ec2utils.ec2_id_to_id('i-0000001e'), 30)
         self.assertEqual(ec2utils.ec2_id_to_id('ami-1d'), 29)
+        self.assertEqual(ec2utils.ec2_id_to_id('snap-0000001c'), 28)
+        self.assertEqual(ec2utils.ec2_id_to_id('vol-0000001b'), 27)
 
     def test_bad_ec2_id(self):
         self.assertRaises(exception.InvalidEc2Id,
@@ -116,6 +120,72 @@ class Ec2utilsTestCase(test.TestCase):
     def test_id_to_ec2_id(self):
         self.assertEqual(ec2utils.id_to_ec2_id(30), 'i-0000001e')
         self.assertEqual(ec2utils.id_to_ec2_id(29, 'ami-%08x'), 'ami-0000001d')
+        self.assertEqual(ec2utils.id_to_ec2_snap_id(28), 'snap-0000001c')
+        self.assertEqual(ec2utils.id_to_ec2_vol_id(27), 'vol-0000001b')
+
+    def test_dict_from_dotted_str(self):
+        in_str = [('BlockDeviceMapping.1.DeviceName', '/dev/sda1'),
+                  ('BlockDeviceMapping.1.Ebs.SnapshotId', 'snap-0000001c'),
+                  ('BlockDeviceMapping.1.Ebs.VolumeSize', '80'),
+                  ('BlockDeviceMapping.1.Ebs.DeleteOnTermination', 'false'),
+                  ('BlockDeviceMapping.2.DeviceName', '/dev/sdc'),
+                  ('BlockDeviceMapping.2.VirtualName', 'ephemeral0')]
+        expected_dict = {
+            'block_device_mapping': {
+            '1': {'device_name': '/dev/sda1',
+                  'ebs': {'snapshot_id': 'snap-0000001c',
+                          'volume_size': 80,
+                          'delete_on_termination': False}},
+            '2': {'device_name': '/dev/sdc',
+                  'virtual_name': 'ephemeral0'}}}
+        out_dict = ec2utils.dict_from_dotted_str(in_str)
+
+        self.assertDictMatch(out_dict, expected_dict)
+
+    def test_properties_root_defice_name(self):
+        mappings = [{"device": "/dev/sda1", "virtual": "root"}]
+        properties0 = {'mappings': mappings}
+        properties1 = {'root_device_name': '/dev/sdb', 'mappings': mappings}
+
+        root_device_name = ec2utils.properties_root_device_name(properties0)
+        self.assertEqual(root_device_name, '/dev/sda1')
+
+        root_device_name = ec2utils.properties_root_device_name(properties1)
+        self.assertEqual(root_device_name, '/dev/sdb')
+
+    def test_mapping_prepend_dev(self):
+        mappings = [
+            {'virtual': 'ami',
+             'device': 'sda1'},
+            {'virtual': 'root',
+             'device': '/dev/sda1'},
+
+            {'virtual': 'swap',
+             'device': 'sdb1'},
+            {'virtual': 'swap',
+             'device': '/dev/sdb2'},
+
+            {'virtual': 'ephemeral0',
+            'device': 'sdc1'},
+            {'virtual': 'ephemeral1',
+             'device': '/dev/sdc1'}]
+        expected_result = [
+            {'virtual': 'ami',
+             'device': 'sda1'},
+            {'virtual': 'root',
+             'device': '/dev/sda1'},
+
+            {'virtual': 'swap',
+             'device': '/dev/sdb1'},
+            {'virtual': 'swap',
+             'device': '/dev/sdb2'},
+
+            {'virtual': 'ephemeral0',
+             'device': '/dev/sdc1'},
+            {'virtual': 'ephemeral1',
+             'device': '/dev/sdc1'}]
+        self.assertDictListMatch(ec2utils.mappings_prepend_dev(mappings),
+                                 expected_result)
 
 
 class ApiEc2TestCase(test.TestCase):
