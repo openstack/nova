@@ -56,7 +56,7 @@ class ConsoleProxyManager(manager.Manager):
     def init_host(self):
         self.driver.init_host()
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def add_console(self, context, instance_id, password=None,
                     port=None, **kwargs):
         instance = self.db.instance_get(context, instance_id)
@@ -83,7 +83,7 @@ class ConsoleProxyManager(manager.Manager):
             self.driver.setup_console(context, console)
         return console['id']
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def remove_console(self, context, console_id, **_kwargs):
         try:
             console = self.db.console_get(context, console_id)

@@ -65,10 +65,28 @@ def return_server_by_uuid(context, uuid):
     return stub_instance(id, uuid=uuid)
 
 
+def return_virtual_interface_by_instance(interfaces):
+    def _return_virtual_interface_by_instance(context, instance_id):
+        return interfaces
+    return _return_virtual_interface_by_instance
+
+
+def return_virtual_interface_instance_nonexistant(interfaces):
+    def _return_virtual_interface_by_instance(context, instance_id):
+        raise exception.InstanceNotFound(instance_id=instance_id)
+    return _return_virtual_interface_by_instance
+
+
 def return_server_with_addresses(private, public):
     def _return_server(context, id):
         return stub_instance(id, private_address=private,
                              public_addresses=public)
+    return _return_server
+
+
+def return_server_with_interfaces(interfaces):
+    def _return_server(context, id):
+        return stub_instance(id, interfaces=interfaces)
     return _return_server
 
 
@@ -124,9 +142,12 @@ def instance_addresses(context, instance_id):
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
                   host=None, power_state=0, reservation_id="",
-                  uuid=FAKE_UUID):
+                  uuid=FAKE_UUID, interfaces=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
+
+    if interfaces is None:
+        interfaces = []
 
     inst_type = instance_types.get_instance_type_by_flavor_id(1)
 
@@ -171,7 +192,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "display_description": "",
         "locked": False,
         "metadata": metadata,
-        "uuid": uuid}
+        "uuid": uuid,
+        "virtual_interfaces": interfaces}
 
     instance["fixed_ips"] = {
         "address": private_address,
@@ -290,13 +312,7 @@ class ServersTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/servers/1",
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/servers/1",
+                "href": "http://localhost/servers/1",
             },
         ]
 
@@ -417,23 +433,152 @@ class ServersTest(test.TestCase):
         self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_by_id_with_addresses_v1_1(self):
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private, public)
+        interfaces = [
+            {
+                'network': {'label': 'network_1'},
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+            {
+                'network': {'label': 'network_2'},
+                'fixed_ips': [
+                    {'address': '172.19.0.1'},
+                    {'address': '172.19.0.2'},
+                ],
+            },
+        ]
+        new_return_server = return_server_with_interfaces(interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
+
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
         addresses = res_dict['server']['addresses']
-        # RM(4047): Figure otu what is up with the 1.1 api and multi-nic
-        #self.assertEqual(len(addresses["public"]), len(public))
-        #self.assertEqual(addresses["public"][0],
-        #    {"version": 4, "addr": public[0]})
-        #self.assertEqual(len(addresses["private"]), 1)
-        #self.assertEqual(addresses["private"][0],
-        #    {"version": 4, "addr": private})
+        expected = {
+            'network_1': [
+                {'addr': '192.168.0.3', 'version': 4},
+                {'addr': '192.168.0.4', 'version': 4},
+            ],
+            'network_2': [
+                {'addr': '172.19.0.1', 'version': 4},
+                {'addr': '172.19.0.2', 'version': 4},
+            ],
+        }
+
+        self.assertEqual(addresses, expected)
+
+    def test_get_server_addresses_v1_1(self):
+        interfaces = [
+            {
+                'network': {'label': 'network_1'},
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+            {
+                'network': {'label': 'network_2'},
+                'fixed_ips': [
+                    {
+                        'address': '172.19.0.1',
+                        'floating_ips': [
+                            {'address': '1.2.3.4'},
+                        ],
+                    },
+                    {'address': '172.19.0.2'},
+                ],
+            },
+        ]
+
+        _return_vifs = return_virtual_interface_by_instance(interfaces)
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/1/ips')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        expected = {
+            'addresses': {
+                'network_1': [
+                    {'version': 4, 'addr': '192.168.0.3'},
+                    {'version': 4, 'addr': '192.168.0.4'},
+                ],
+                'network_2': [
+                    {'version': 4, 'addr': '172.19.0.1'},
+                    {'version': 4, 'addr': '1.2.3.4'},
+                    {'version': 4, 'addr': '172.19.0.2'},
+                ],
+            },
+        }
+
+        self.assertEqual(res_dict, expected)
+
+    def test_get_server_addresses_single_network_v1_1(self):
+        interfaces = [
+            {
+                'network': {'label': 'network_1'},
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+            {
+                'network': {'label': 'network_2'},
+                'fixed_ips': [
+                    {
+                        'address': '172.19.0.1',
+                        'floating_ips': [
+                            {'address': '1.2.3.4'},
+                        ],
+                    },
+                    {'address': '172.19.0.2'},
+                ],
+            },
+        ]
+        _return_vifs = return_virtual_interface_by_instance(interfaces)
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/1/ips/network_2')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        expected = {
+            'network_2': [
+                {'version': 4, 'addr': '172.19.0.1'},
+                {'version': 4, 'addr': '1.2.3.4'},
+                {'version': 4, 'addr': '172.19.0.2'},
+            ],
+        }
+        self.assertEqual(res_dict, expected)
+
+    def test_get_server_addresses_nonexistant_network_v1_1(self):
+        _return_vifs = return_virtual_interface_by_instance([])
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/1/ips/network_0')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    def test_get_server_addresses_nonexistant_server_v1_1(self):
+        _return_vifs = return_virtual_interface_instance_nonexistant([])
+        self.stubs.Set(nova.db.api,
+                       'virtual_interface_get_by_instance',
+                       _return_vifs)
+
+        req = webob.Request.blank('/v1.1/servers/600/ips')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
 
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')
@@ -515,13 +660,7 @@ class ServersTest(test.TestCase):
             },
             {
                 "rel": "bookmark",
-                "type": "application/json",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
+                "href": "http://localhost/servers/%d" % (i,),
             },
         ]
 
@@ -799,13 +938,13 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
         self.assertEqual(flavor_ref, server['flavorRef'])
         self.assertEqual(image_href, server['imageRef'])
-        self.assertEqual(res.status_int, 200)
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
@@ -913,11 +1052,11 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_update_no_body(self):
+    def test_update_server_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 422)
+        self.assertEqual(res.status_int, 400)
 
     def test_update_nonstring_name(self):
         """ Confirm that update is filtering params """
@@ -979,6 +1118,21 @@ class ServersTest(test.TestCase):
         self.assertEqual(mock_method.instance_id, '1')
         self.assertEqual(mock_method.password, 'bacon')
 
+    def test_update_server_no_body_v1_1(self):
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.method = 'PUT'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_update_server_name_v1_1(self):
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        req.body = json.dumps({'server': {'name': 'new-name'}})
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
+        self.assertEqual(res.body, '')
+
     def test_update_server_adminPass_ignored_v1_1(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
         self.body = json.dumps(dict(server=inst_dict))
@@ -997,6 +1151,7 @@ class ServersTest(test.TestCase):
         req.body = self.body
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 204)
+        self.assertEqual(res.body, '')
 
     def test_create_backup_schedules(self):
         req = webob.Request.blank('/v1.0/servers/1/backup_schedule')
@@ -1445,6 +1600,57 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
 
+    def test_rescue_accepted(self):
+        FLAGS.allow_admin_api = True
+        body = {}
+
+        self.called = False
+
+        def rescue_mock(*args, **kwargs):
+            self.called = True
+
+        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
+        req = webob.Request.blank('/v1.0/servers/1/rescue')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(self.called, True)
+        self.assertEqual(res.status_int, 202)
+
+    def test_rescue_raises_handled(self):
+        FLAGS.allow_admin_api = True
+        body = {}
+
+        def rescue_mock(*args, **kwargs):
+            raise Exception('Who cares?')
+
+        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
+        req = webob.Request.blank('/v1.0/servers/1/rescue')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 422)
+
+    def test_delete_server_instance_v1_1(self):
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'DELETE'
+
+        self.server_delete_called = False
+
+        def instance_destroy_mock(context, id):
+            self.server_delete_called = True
+
+        self.stubs.Set(nova.db.api, 'instance_destroy',
+            instance_destroy_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
+        self.assertEqual(self.server_delete_called, True)
+
     def test_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(flavorId=3)))
 
@@ -1569,6 +1775,23 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_migrate_server(self):
+        """This is basically the same as resize, only we provide the `migrate`
+        attribute in the body's dict.
+        """
+        req = self.webreq('/1/action', 'POST', dict(migrate=None))
+
+        self.resize_called = False
+
+        def resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
+
     def test_shutdown_status(self):
         new_server = return_server_with_power_state(power_state.SHUTDOWN)
         self.stubs.Set(nova.db.api, 'instance_get', new_server)
@@ -1603,7 +1826,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
                 "imageId": "1",
                 "flavorId": "1",
                 }}
-        self.assertEquals(request, expected)
+        self.assertEquals(request['body'], expected)
 
     def test_request_with_empty_metadata(self):
         serial_request = """
@@ -1618,7 +1841,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
                 "flavorId": "1",
                 "metadata": {},
                 }}
-        self.assertEquals(request, expected)
+        self.assertEquals(request['body'], expected)
 
     def test_request_with_empty_personality(self):
         serial_request = """
@@ -1633,7 +1856,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
                 "flavorId": "1",
                 "personality": [],
                 }}
-        self.assertEquals(request, expected)
+        self.assertEquals(request['body'], expected)
 
     def test_request_with_empty_metadata_and_personality(self):
         serial_request = """
@@ -1650,7 +1873,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
                 "metadata": {},
                 "personality": [],
                 }}
-        self.assertEquals(request, expected)
+        self.assertEquals(request['body'], expected)
 
     def test_request_with_empty_metadata_and_personality_reversed(self):
         serial_request = """
@@ -1667,7 +1890,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
                 "metadata": {},
                 "personality": [],
                 }}
-        self.assertEquals(request, expected)
+        self.assertEquals(request['body'], expected)
 
     def test_request_with_one_personality(self):
         serial_request = """
@@ -1679,7 +1902,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
-        self.assertEquals(request["server"]["personality"], expected)
+        self.assertEquals(request['body']["server"]["personality"], expected)
 
     def test_request_with_two_personalities(self):
         serial_request = """
@@ -1690,7 +1913,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"},
                     {"path": "/etc/sudoers", "contents": "abcd"}]
-        self.assertEquals(request["server"]["personality"], expected)
+        self.assertEquals(request['body']["server"]["personality"], expected)
 
     def test_request_second_personality_node_ignored(self):
         serial_request = """
@@ -1705,7 +1928,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
-        self.assertEquals(request["server"]["personality"], expected)
+        self.assertEquals(request['body']["server"]["personality"], expected)
 
     def test_request_with_one_personality_missing_path(self):
         serial_request = """
@@ -1714,7 +1937,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <personality><file>aabbccdd</file></personality></server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"contents": "aabbccdd"}]
-        self.assertEquals(request["server"]["personality"], expected)
+        self.assertEquals(request['body']["server"]["personality"], expected)
 
     def test_request_with_one_personality_empty_contents(self):
         serial_request = """
@@ -1723,7 +1946,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <personality><file path="/etc/conf"></file></personality></server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": ""}]
-        self.assertEquals(request["server"]["personality"], expected)
+        self.assertEquals(request['body']["server"]["personality"], expected)
 
     def test_request_with_one_personality_empty_contents_variation(self):
         serial_request = """
@@ -1732,7 +1955,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <personality><file path="/etc/conf"/></personality></server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": ""}]
-        self.assertEquals(request["server"]["personality"], expected)
+        self.assertEquals(request['body']["server"]["personality"], expected)
 
     def test_request_with_one_metadata(self):
         serial_request = """
@@ -1744,7 +1967,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "beta"}
-        self.assertEquals(request["server"]["metadata"], expected)
+        self.assertEquals(request['body']["server"]["metadata"], expected)
 
     def test_request_with_two_metadata(self):
         serial_request = """
@@ -1757,7 +1980,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "beta", "foo": "bar"}
-        self.assertEquals(request["server"]["metadata"], expected)
+        self.assertEquals(request['body']["server"]["metadata"], expected)
 
     def test_request_with_metadata_missing_value(self):
         serial_request = """
@@ -1769,7 +1992,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": ""}
-        self.assertEquals(request["server"]["metadata"], expected)
+        self.assertEquals(request['body']["server"]["metadata"], expected)
 
     def test_request_with_two_metadata_missing_value(self):
         serial_request = """
@@ -1782,7 +2005,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "", "delta": ""}
-        self.assertEquals(request["server"]["metadata"], expected)
+        self.assertEquals(request['body']["server"]["metadata"], expected)
 
     def test_request_with_metadata_missing_key(self):
         serial_request = """
@@ -1794,7 +2017,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"": "beta"}
-        self.assertEquals(request["server"]["metadata"], expected)
+        self.assertEquals(request['body']["server"]["metadata"], expected)
 
     def test_request_with_two_metadata_missing_key(self):
         serial_request = """
@@ -1807,7 +2030,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"": "gamma"}
-        self.assertEquals(request["server"]["metadata"], expected)
+        self.assertEquals(request['body']["server"]["metadata"], expected)
 
     def test_request_with_metadata_duplicate_key(self):
         serial_request = """
@@ -1820,7 +2043,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"foo": "baz"}
-        self.assertEquals(request["server"]["metadata"], expected)
+        self.assertEquals(request['body']["server"]["metadata"], expected)
 
     def test_canonical_request_from_docs(self):
         serial_request = """
@@ -1866,7 +2089,7 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
             ],
         }}
         request = self.deserializer.deserialize(serial_request, 'create')
-        self.assertEqual(request, expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_xmlser_with_flavor_image_href(self):
         serial_request = """
@@ -1876,9 +2099,9 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
                     flavorRef="http://localhost:8774/v1.1/flavors/1">
                 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
-        self.assertEquals(request["server"]["flavorRef"],
+        self.assertEquals(request['body']["server"]["flavorRef"],
                           "http://localhost:8774/v1.1/flavors/1")
-        self.assertEquals(request["server"]["imageRef"],
+        self.assertEquals(request['body']["server"]["imageRef"],
                           "http://localhost:8774/v1.1/images/1")
 
 
@@ -1943,7 +2166,7 @@ class TestServerInstanceCreation(test.TestCase):
 
     def _get_create_request_json(self, body_dict):
         req = webob.Request.blank('/v1.0/servers')
-        req.content_type = 'application/json'
+        req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body_dict)
         return req

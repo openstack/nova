@@ -118,7 +118,22 @@ def require_context(f):
     return wrapper
 
 
+def require_instance_exists(f):
+    """Decorator to require the specified instance to exist.
+
+    Requres the wrapped function to use context and instance_id as
+    their first two arguments.
+    """
+
+    def wrapper(context, instance_id, *args, **kwargs):
+        db.api.instance_get(context, instance_id)
+        return f(context, instance_id, *args, **kwargs)
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+
 ###################
+
 
 @require_admin_context
 def service_destroy(context, service_id):
@@ -921,6 +936,7 @@ def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
 
 
 @require_context
+@require_instance_exists
 def virtual_interface_get_by_instance(context, instance_id):
     """Gets all virtual interfaces for instance.
 
@@ -2208,6 +2224,23 @@ def block_device_mapping_update(context, bdm_id, values):
 
 
 @require_context
+def block_device_mapping_update_or_create(context, values):
+    session = get_session()
+    with session.begin():
+        result = session.query(models.BlockDeviceMapping).\
+                 filter_by(instance_id=values['instance_id']).\
+                 filter_by(device_name=values['device_name']).\
+                 filter_by(deleted=False).\
+                 first()
+        if not result:
+            bdm_ref = models.BlockDeviceMapping()
+            bdm_ref.update(values)
+            bdm_ref.save(session=session)
+        else:
+            result.update(values)
+
+
+@require_context
 def block_device_mapping_get_all_by_instance(context, instance_id):
     session = get_session()
     result = session.query(models.BlockDeviceMapping).\
@@ -3069,14 +3102,6 @@ def zone_get_all(context):
 
 
 ####################
-
-
-def require_instance_exists(func):
-    def new_func(context, instance_id, *args, **kwargs):
-        db.api.instance_get(context, instance_id)
-        return func(context, instance_id, *args, **kwargs)
-    new_func.__name__ = func.__name__
-    return new_func
 
 
 @require_context

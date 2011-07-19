@@ -340,7 +340,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if os.path.exists(target):
             shutil.rmtree(target)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def attach_volume(self, instance_name, device_path, mountpoint):
         virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
@@ -384,7 +384,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if doc is not None:
                 doc.freeDoc()
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def detach_volume(self, instance_name, mountpoint):
         virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
@@ -393,7 +393,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise exception.DiskNotFound(location=mount_device)
         virt_dom.detachDevice(xml)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def snapshot(self, instance, image_href):
         """Create snapshot from a running VM instance.
 
@@ -469,7 +469,7 @@ class LibvirtConnection(driver.ComputeDriver):
         # Clean up
         shutil.rmtree(temp_dir)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def reboot(self, instance):
         """Reboot a virtual machine, given an instance reference.
 
@@ -510,31 +510,31 @@ class LibvirtConnection(driver.ComputeDriver):
         timer = utils.LoopingCall(_wait_for_reboot)
         return timer.start(interval=0.5, now=True)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def pause(self, instance, callback):
         """Pause VM instance"""
         dom = self._lookup_by_name(instance.name)
         dom.suspend()
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def unpause(self, instance, callback):
         """Unpause paused VM instance"""
         dom = self._lookup_by_name(instance.name)
         dom.resume()
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def suspend(self, instance, callback):
         """Suspend the specified instance"""
         dom = self._lookup_by_name(instance.name)
         dom.managedSave(0)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def resume(self, instance, callback):
         """resume the specified instance"""
         dom = self._lookup_by_name(instance.name)
         dom.create()
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def rescue(self, instance):
         """Loads a VM using rescue images.
 
@@ -572,7 +572,7 @@ class LibvirtConnection(driver.ComputeDriver):
         timer = utils.LoopingCall(_wait_for_rescue)
         return timer.start(interval=0.5, now=True)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def unrescue(self, instance):
         """Reboot the VM which is being rescued back into primary images.
 
@@ -582,13 +582,13 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         self.reboot(instance)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def poll_rescued_instances(self, timeout):
         pass
 
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def spawn(self, instance, network_info=None, block_device_mapping=None):
         xml = self.to_xml(instance, False, network_info=network_info,
                           block_device_mapping=block_device_mapping)
@@ -651,7 +651,7 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.info(_('Contents of file %(fpath)s: %(contents)r') % locals())
         return contents
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def get_console_output(self, instance):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
@@ -672,7 +672,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return self._dump_file(fpath)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def get_ajax_console(self, instance):
         def get_open_port():
             start_port, end_port = FLAGS.ajaxterm_portrange.split("-")
@@ -713,7 +713,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def get_host_ip_addr(self):
         return FLAGS.my_ip
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def get_vnc_console(self, instance):
         def get_vnc_port_for_instance(instance_name):
             virt_dom = self._lookup_by_name(instance_name)
@@ -992,7 +992,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     'volumes': block_device_mapping}
 
         if FLAGS.vnc_enabled:
-            if FLAGS.libvirt_type != 'lxc':
+            if FLAGS.libvirt_type != 'lxc' or FLAGS.libvirt_type != 'uml':
                 xml_info['vncserver_host'] = FLAGS.vncserver_host
                 xml_info['vnc_keymap'] = FLAGS.vnc_keymap
         if not rescue:
@@ -1567,4 +1567,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def get_host_stats(self, refresh=False):
         """See xenapi_conn.py implementation."""
+        pass
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
         pass

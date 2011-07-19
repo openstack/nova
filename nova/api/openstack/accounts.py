@@ -87,8 +87,8 @@ def create_resource():
         },
     }
 
-    serializers = {
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
     }
-
-    return wsgi.Resource(Controller(), serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+    return wsgi.Resource(Controller(), serializer=serializer)
