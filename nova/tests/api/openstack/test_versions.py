@@ -70,14 +70,10 @@ class VersionsTest(test.TestCase):
 
         expected = """<versions>
             <version id="v1.1" status="CURRENT">
-                <links>
-                    <link href="http://localhost/v1.1" rel="self"/>
-                </links>
+                <atom:link href="http://localhost/v1.1" rel="self"/>
             </version>
             <version id="v1.0" status="DEPRECATED">
-                <links>
-                    <link href="http://localhost/v1.0" rel="self"/>
-                </links>
+                <atom:link href="http://localhost/v1.0" rel="self"/>
             </version>
         </versions>""".replace("  ", "").replace("\n", "")
 

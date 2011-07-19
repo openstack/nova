@@ -17,6 +17,7 @@
 
 import webob
 import webob.dec
+from xml.dom import minidom
 
 import nova.api.openstack.views.versions
 from nova.api.openstack import wsgi
@@ -32,7 +33,7 @@ class Versions(wsgi.Resource):
         }
 
         body_serializers = {
-            'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
+            'application/xml': VersionsXMLSerializer(metadata=metadata),
         }
         serializer = wsgi.ResponseSerializer(body_serializers)
 
@@ -54,3 +55,36 @@ class Versions(wsgi.Resource):
         builder = nova.api.openstack.views.versions.get_view_builder(request)
         versions = [builder.build(version) for version in version_objs]
         return dict(versions=versions)
+
+class VersionsXMLSerializer(wsgi.XMLDictSerializer):
+    def __init__(self, metadata=None, xmlns=None):
+        super(VersionsXMLSerializer, self).__init__(metadata, xmlns)
+
+    def _versions_to_xml(self, versions):
+        root = self.xml_doc.createElement('versions')
+
+        for version in versions:
+            root.appendChild(self._create_version_node(version))
+
+        return root
+
+    def _create_version_node(self, version):
+        version_node = self.xml_doc.createElement('version')
+        version_node.setAttribute('id', version['id'])
+        version_node.setAttribute('status', version['status'])
+        #TODO(wwolf) need 'updated' attribute too
+
+        for link in version['links']:
+            link_node = self.xml_doc.createElement('atom:link')
+            link_node.setAttribute('rel', link['rel'])
+            link_node.setAttribute('href', link['href'])
+            version_node.appendChild(link_node)
+
+        return version_node
+
+
+    def default(self, data):
+        self.xml_doc = minidom.Document()
+        node = self._versions_to_xml(data['versions'])
+
+        return self.to_xml_string(node)
