@@ -290,7 +290,7 @@ class CreateserverextTest(test.TestCase):
         return {'server': server}
 
     def _get_create_request_json(self, body_dict):
-        req = webob.Request.blank('/v1.1/os-servers-create-ext')
+        req = webob.Request.blank('/v1.1/os-create-server-ext')
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body_dict)
@@ -334,7 +334,7 @@ class CreateserverextTest(test.TestCase):
         return ''.join(body_parts)
 
     def _get_create_request_xml(self, body_dict):
-        req = webob.Request.blank('/v1.1/os-servers-create-ext')
+        req = webob.Request.blank('/v1.1/os-create-server-ext')
         req.content_type = 'application/xml'
         req.accept = 'application/xml'
         req.method = 'POST'

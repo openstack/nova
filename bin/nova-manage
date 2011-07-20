@@ -621,7 +621,7 @@ class NetworkCommands(object):
 
     def list(self):
         """List all created networks"""
-        print "%-5s\%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (_('id'),
+        print "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (_('id'),
                                                   _('network'),
                                                   _('netmask'),
                                                   _('start address'),

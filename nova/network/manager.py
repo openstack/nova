@@ -614,7 +614,6 @@ class NetworkManager(manager.SchedulerDependentManager):
             net['gateway'] = str(project_net[1])
             net['broadcast'] = str(project_net.broadcast)
             net['dhcp_start'] = str(project_net[2])
-            net['project_id'] = kwargs['project_id']
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, index)
             else:

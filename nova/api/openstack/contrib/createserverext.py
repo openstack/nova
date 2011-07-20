@@ -205,7 +205,7 @@ class Createserverext(extensions.ExtensionDescriptor):
         return "Createserverext"
 
     def get_alias(self):
-        return "os-servers-create-ext"
+        return "os-create-server-ext"
 
     def get_description(self):
         return "Extended support to the Create Server v1.1 API"
@@ -234,7 +234,7 @@ class Createserverext(extensions.ExtensionDescriptor):
                                              headers_serializer)
         deserializer = wsgi.RequestDeserializer(body_deserializers)
 
-        res = extensions.ResourceExtension('os-servers-create-ext',
+        res = extensions.ResourceExtension('os-create-server-ext',
                                         controller=CreateServerExtController(),
                                         deserializer=deserializer,
                                         serializer=serializer)
