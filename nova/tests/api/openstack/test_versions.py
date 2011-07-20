@@ -84,6 +84,48 @@ class VersionsTest(test.TestCase):
 
         self.assertEqual(expected, actual)
 
+    def test_get_version_list_atom(self):
+        req = webob.Request.blank('/')
+        req.accept = "application/atom+xml"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/atom+xml")
+
+        expected = """
+        <feed xmlns="http://www.w3.org/2005/Atom">
+            <title type="text">Available API Versions</title>
+            <updated>2010-12-12T18:30:02.25Z</updated>
+            <id>http://servers.api.openstack.org/</id>
+            <author>
+                <name>Rackspace</name>
+                <uri>http://www.rackspace.com/</uri>
+            </author>
+            <link rel="self" href="http://servers.api.openstack.org/"/>
+            <entry>
+                <id>http://servers.api.openstack.org/v1.1/</id>
+                <title type="text">Version v1.1</title>
+                <updated>2010-12-12T18:30:02.25Z</updated>
+                <link rel="self" href="http://servers.api.openstack.org/v1.1/"/>
+                <content type="text">
+                    Version v1.1 CURRENT (2010-12-12T18:30:02.25Z)
+                </content>
+            </entry>
+            <entry>
+                <id>http://servers.api.openstack.org/v1.0/</id>
+                <title type="text">Version v1.0</title>
+                <updated>2009-10-09T11:30:00Z</updated>
+                <link rel="self" href="http://servers.api.openstack.org/v1.0/"/>
+                <content type="text">
+                    Version v1.0 DEPRECATED (2009-10-09T11:30:00Z)
+                </content>
+            </entry>
+        </feed> 
+        """.replace("  ", "").replace("\n", "")
+
+        actual = res.body.replace("  ", "").replace("\n", "")
+
+        self.assertEqual(expected, actual)
+
     def test_view_builder(self):
         base_url = "http://example.org/"
 
