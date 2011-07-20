@@ -43,6 +43,7 @@ class VersionsTest(test.TestCase):
             {
                 "id": "v1.1",
                 "status": "CURRENT",
+                "updated": "2011-7-18T11:30:00Z",
                 "links": [
                     {
                         "rel": "self",
@@ -52,6 +53,7 @@ class VersionsTest(test.TestCase):
             {
                 "id": "v1.0",
                 "status": "DEPRECATED",
+                "updated": "2010-10-09T11:30:00Z",
                 "links": [
                     {
                         "rel": "self",
@@ -69,10 +71,11 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
 
         expected = """<versions>
-            <version id="v1.1" status="CURRENT">
+            <version id="v1.1" status="CURRENT" updated="2011-7-18T11:30:00Z">
                 <atom:link href="http://localhost/v1.1" rel="self"/>
             </version>
-            <version id="v1.0" status="DEPRECATED">
+            <version id="v1.0" status="DEPRECATED" 
+                updated="2010-10-09T11:30:00Z">
                 <atom:link href="http://localhost/v1.0" rel="self"/>
             </version>
         </versions>""".replace("  ", "").replace("\n", "")
@@ -87,11 +90,13 @@ class VersionsTest(test.TestCase):
         version_data = {
             "id": "3.2.1",
             "status": "CURRENT",
+            "updated": "2011-7-18T11:30:00Z"
         }
 
         expected = {
             "id": "3.2.1",
             "status": "CURRENT",
+            "updated": "2011-7-18T11:30:00Z",
             "links": [
                 {
                     "rel": "self",

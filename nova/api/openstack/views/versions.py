@@ -36,6 +36,7 @@ class ViewBuilder(object):
         version = {
             "id": version_data["id"],
             "status": version_data["status"],
+            "updated": version_data["updated"],
             "links": self._build_links(version_data),
         }
 

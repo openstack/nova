@@ -45,10 +45,14 @@ class Versions(wsgi.Resource):
             {
                 "id": "v1.1",
                 "status": "CURRENT",
+                #TODO(wwolf) get correct value for these
+                "updated": "2011-7-18T11:30:00Z",
             },
             {
                 "id": "v1.0",
                 "status": "DEPRECATED",
+                #TODO(wwolf) get correct value for these
+                "updated": "2010-10-09T11:30:00Z",
             },
         ]
 
@@ -72,7 +76,7 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
         version_node = self.xml_doc.createElement('version')
         version_node.setAttribute('id', version['id'])
         version_node.setAttribute('status', version['status'])
-        #TODO(wwolf) need 'updated' attribute too
+        version_node.setAttribute('updated', version['updated'])
 
         for link in version['links']:
             link_node = self.xml_doc.createElement('atom:link')
