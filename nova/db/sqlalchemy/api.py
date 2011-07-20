@@ -1221,12 +1221,14 @@ def instance_get_all_by_reservation(context, reservation_id):
 
 @require_context
 def instance_get_by_fixed_ip(context, address):
+    """Return instance ref by exact match of FixedIP"""
     fixed_ip_ref = fixed_ip_get_by_address(context, address)
     return fixed_ip_ref.instance
 
 
 @require_context
 def instance_get_by_fixed_ipv6(context, address):
+    """Return instance ref by exact match of IPv6"""
     session = get_session()
 
     # convert IPv6 address to mac
