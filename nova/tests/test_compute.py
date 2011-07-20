@@ -569,7 +569,6 @@ class ComputeTestCase(test.TestCase):
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
         volmock = self.mox.CreateMock(self.volume_manager)
-        netmock = self.mox.CreateMock(self.network_manager)
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
@@ -577,12 +576,11 @@ class ComputeTestCase(test.TestCase):
         for i in range(len(i_ref['volumes'])):
             vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
-        netmock.setup_compute_network(c, i_ref['id'])
+        drivermock.plug_vifs(i_ref, [])
         drivermock.ensure_filtering_rules_for_instance(i_ref)
 
         self.compute.db = dbmock
         self.compute.volume_manager = volmock
-        self.compute.network_manager = netmock
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
@@ -597,18 +595,16 @@ class ComputeTestCase(test.TestCase):
 
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
-        netmock = self.mox.CreateMock(self.network_manager)
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
         compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
-        netmock.setup_compute_network(c, i_ref['id'])
+        drivermock.plug_vifs(i_ref, [])
         drivermock.ensure_filtering_rules_for_instance(i_ref)
 
         self.compute.db = dbmock
-        self.compute.network_manager = netmock
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
@@ -629,18 +625,20 @@ class ComputeTestCase(test.TestCase):
         dbmock = self.mox.CreateMock(db)
         netmock = self.mox.CreateMock(self.network_manager)
         volmock = self.mox.CreateMock(self.volume_manager)
+        drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             volmock.setup_compute_volume(c, i_ref['volumes'][i]['id'])
         for i in range(FLAGS.live_migration_retry_count):
-            netmock.setup_compute_network(c, i_ref['id']).\
+            drivermock.plug_vifs(i_ref, []).\
                 AndRaise(exception.ProcessExecutionError())
 
         self.compute.db = dbmock
         self.compute.network_manager = netmock
         self.compute.volume_manager = volmock
+        self.compute.driver = drivermock
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ProcessExecutionError,
