@@ -57,4 +57,4 @@ class ViewBuilder(object):
 
     def generate_href(self, version_number):
         """Create an url that refers to a specific version_number."""
-        return os.path.join(self.base_url, version_number)
+        return os.path.join(self.base_url, version_number) + '/'

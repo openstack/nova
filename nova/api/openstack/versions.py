@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from datetime import datetime
 import webob
 import webob.dec
 from xml.dom import minidom
@@ -58,7 +59,7 @@ class Versions(wsgi.Resource):
                 "id": "v1.1",
                 "status": "CURRENT",
                 #TODO(wwolf) get correct value for these
-                "updated": "2011-7-18T11:30:00Z",
+                "updated": "2011-07-18T11:30:00Z",
             },
             {
                 "id": "v1.0",
@@ -117,60 +118,81 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
         elem.appendChild(elem_text)
         return elem
 
-    def _create_meta(self, root):
+    def _get_most_recent_update(self, versions):
+        recent = None
+        for version in versions:
+            updated = datetime.strptime(version['updated'],'%Y-%m-%dT%H:%M:%SZ')
+            if not recent:
+                recent = updated
+            elif updated > recent:
+                recent = updated
+
+        return recent.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    def _get_base_url(self, link_href):
+        # Make sure no trailing /
+        link_href = link_href.rstrip('/')
+        return link_href.rsplit('/',1)[0] + '/'
+
+    def _create_meta(self, root, versions):
         title = self._create_text_elem('title', 'Available API Versions',
                                        type='text')
-        #TODO(wwolf): what should updated be?
-        updated = self._create_text_elem('updated', '2010-12-12T18:30:02.25Z')
-        #TODO(wwolf): get URI
-        id = self._create_text_elem('id', '')
-        #TODO(wwolf): get link info
+        # Set this updated to the most recently updated version
+        recent = self._get_most_recent_update(versions)
+        updated = self._create_text_elem('updated', recent)
+
+        base_url = self._get_base_url(versions[0]['links'][0]['href'])
+        id = self._create_text_elem('id', base_url)
         link = self._xml_doc.createElement('link')
-        link.setAttribute('rel', 'rel')
-        link.setAttribute('href', 'href')
+        link.setAttribute('rel', 'self')
+        link.setAttribute('href', base_url)
 
         author = self._xml_doc.createElement('author')
         author_name = self._create_text_elem('name', 'Rackspace')
-        author_uri = self._create_text_elem('uri', 'http://www.rackspace.com')
+        author_uri = self._create_text_elem('uri', 'http://www.rackspace.com/')
         author.appendChild(author_name)
         author.appendChild(author_uri)
 
         root.appendChild(title)
         root.appendChild(updated)
         root.appendChild(id)
-        root.appendChild(link)
         root.appendChild(author)
+        root.appendChild(link)
 
     def _create_version_entries(self, root, versions):
         for version in versions:
             entry = self._xml_doc.createElement('entry')
-            #TODO(wwolf) GET URI
-            id = self._create_text_elem('id', 'URI')
+
+            id = self._create_text_elem('id', version['links'][0]['href'])
             title = self._create_text_elem('title', 
                                            'Version %s' % version['id'],
                                            type='text')
             updated = self._create_text_elem('updated', version['updated'])
-            #TODO(wwolf): get link info
-            link = self._xml_doc.createElement('link')
-            link.setAttribute('rel', 'rel')
-            link.setAttribute('href', 'href')
-            content = self._create_text_elem('content', 
-                'Version %s %s (%s)' % 
-                    (version['id'], 
-                     version['status'],
-                     version['updated']))
 
             entry.appendChild(id)
             entry.appendChild(title)
             entry.appendChild(updated)
-            entry.appendChild(link)
+
+            for link in version['links']:
+                link_node = self._xml_doc.createElement('link')
+                link_node.setAttribute('rel', link['rel'])
+                link_node.setAttribute('href', link['href'])
+            entry.appendChild(link_node)
+
+            content = self._create_text_elem('content', 
+                'Version %s %s (%s)' % 
+                    (version['id'], 
+                     version['status'],
+                     version['updated']),
+                type='text')
+
             entry.appendChild(content)
             root.appendChild(entry)
 
     def default(self, data):
         self._xml_doc = minidom.Document()
         node = self._xml_doc.createElementNS(self.xmlns, 'feed')
-        self._create_meta(node)
+        self._create_meta(node, data['versions'])
         self._create_version_entries(node, data['versions'])
 
         return self.to_xml_string(node)

@@ -43,7 +43,7 @@ class VersionsTest(test.TestCase):
             {
                 "id": "v1.1",
                 "status": "CURRENT",
-                "updated": "2011-7-18T11:30:00Z",
+                "updated": "2011-07-18T11:30:00Z",
                 "links": [
                     {
                         "rel": "self",
@@ -71,7 +71,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
 
         expected = """<versions>
-            <version id="v1.1" status="CURRENT" updated="2011-7-18T11:30:00Z">
+            <version id="v1.1" status="CURRENT" updated="2011-07-18T11:30:00Z">
                 <atom:link href="http://localhost/v1.1" rel="self"/>
             </version>
             <version id="v1.0" status="DEPRECATED" 
@@ -94,35 +94,35 @@ class VersionsTest(test.TestCase):
         expected = """
         <feed xmlns="http://www.w3.org/2005/Atom">
             <title type="text">Available API Versions</title>
-            <updated>2010-12-12T18:30:02.25Z</updated>
-            <id>http://servers.api.openstack.org/</id>
+            <updated>2011-07-18T11:30:00Z</updated>
+            <id>http://localhost/</id>
             <author>
                 <name>Rackspace</name>
                 <uri>http://www.rackspace.com/</uri>
             </author>
-            <link rel="self" href="http://servers.api.openstack.org/"/>
+            <link href="http://localhost/" rel="self"/>
             <entry>
-                <id>http://servers.api.openstack.org/v1.1/</id>
+                <id>http://localhost/v1.1/</id>
                 <title type="text">Version v1.1</title>
-                <updated>2010-12-12T18:30:02.25Z</updated>
-                <link rel="self" href="http://servers.api.openstack.org/v1.1/"/>
+                <updated>2011-07-18T11:30:00Z</updated>
+                <link href="http://localhost/v1.1/" rel="self"/>
                 <content type="text">
-                    Version v1.1 CURRENT (2010-12-12T18:30:02.25Z)
+                    Version v1.1 CURRENT (2011-07-18T11:30:00Z)
                 </content>
             </entry>
             <entry>
-                <id>http://servers.api.openstack.org/v1.0/</id>
+                <id>http://localhost/v1.0/</id>
                 <title type="text">Version v1.0</title>
-                <updated>2009-10-09T11:30:00Z</updated>
-                <link rel="self" href="http://servers.api.openstack.org/v1.0/"/>
+                <updated>2010-10-09T11:30:00Z</updated>
+                <link href="http://localhost/v1.0/" rel="self"/>
                 <content type="text">
-                    Version v1.0 DEPRECATED (2009-10-09T11:30:00Z)
+                    Version v1.0 DEPRECATED (2010-10-09T11:30:00Z)
                 </content>
             </entry>
-        </feed> 
-        """.replace("  ", "").replace("\n", "")
+        </feed>
+        """.replace("  ", "").replace("\n", "").replace("\t", "")
 
-        actual = res.body.replace("  ", "").replace("\n", "")
+        actual = res.body.replace("  ", "").replace("\n", "").replace("\t","")
 
         self.assertEqual(expected, actual)
 
@@ -132,13 +132,13 @@ class VersionsTest(test.TestCase):
         version_data = {
             "id": "3.2.1",
             "status": "CURRENT",
-            "updated": "2011-7-18T11:30:00Z"
+            "updated": "2011-07-18T11:30:00Z"
         }
 
         expected = {
             "id": "3.2.1",
             "status": "CURRENT",
-            "updated": "2011-7-18T11:30:00Z",
+            "updated": "2011-07-18T11:30:00Z",
             "links": [
                 {
                     "rel": "self",
