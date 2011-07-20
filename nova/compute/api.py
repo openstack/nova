@@ -747,9 +747,9 @@ class API(base.Base):
                 # Mutually exclusive options
                 'name': (_get_all_by_column_regexp, ('display_name',)),
                 'reservation_id': (_get_all_by_reservation_id, ()),
-                # Needed for EC2 API
+                # 'fixed_ip' needed for EC2 API
                 'fixed_ip': (_get_all_by_fixed_ip, ()),
-                # Needed for EC2 API
+                # 'project_id' needed for EC2 API
                 'project_id': (_get_all_by_project_id, ()),
                 'ip': (_get_all_by_ip, ()),
                 'ip6': (_get_all_by_ipv6, ()),
