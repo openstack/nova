@@ -202,9 +202,11 @@ class XenAPIConnection(driver.ComputeDriver):
         """Reverts a resize, powering back on the instance"""
         self._vmops.revert_resize(instance)
 
-    def finish_resize(self, instance, disk_info, network_info):
+    def finish_resize(self, instance, disk_info, network_info,
+                      resize_instance=False):
         """Completes a resize, turning on the migrated instance"""
-        self._vmops.finish_resize(instance, disk_info, network_info)
+        self._vmops.finish_resize(instance, disk_info, network_info,
+                                  resize_instance)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """

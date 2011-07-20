@@ -820,20 +820,24 @@ class ComputeManager(manager.SchedulerDependentManager):
                 migration_ref['instance_id'])
         # TODO(mdietz): apply the rest of the instance_type attributes going
         # after they're supported
-        instance_type = self.db.instance_type_get_by_flavor_id(context,
-                migration_ref['new_flavor_id'])
-        self.db.instance_update(context, instance_id,
-               dict(instance_type_id=instance_type['id'],
-                    memory_mb=instance_type['memory_mb'],
-                    vcpus=instance_type['vcpus'],
-                    local_gb=instance_type['local_gb']))
+        resize_instance = False
+        if migration_ref['old_flavor_id'] != migration_ref['new_flavor_id']:
+            instance_type = self.db.instance_type_get_by_flavor_id(context,
+                    migration_ref['new_flavor_id'])
+            self.db.instance_update(context, instance_id,
+                   dict(instance_type_id=instance_type['id'],
+                        memory_mb=instance_type['memory_mb'],
+                        vcpus=instance_type['vcpus'],
+                        local_gb=instance_type['local_gb']))
+            resize_instance = True
 
         # reload the updated instance ref
         # FIXME(mdietz): is there reload functionality?
         instance = self.db.instance_get(context, instance_id)
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
-        self.driver.finish_resize(instance, disk_info, network_info)
+        self.driver.finish_resize(instance, disk_info, network_info,
+                                  resize_instance)
 
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })

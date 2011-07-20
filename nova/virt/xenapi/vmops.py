@@ -110,13 +110,14 @@ class VMOps(object):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._start(instance, vm_ref)
 
-    def finish_resize(self, instance, disk_info, network_info):
+    def finish_resize(self, instance, disk_info, network_info,
+                      resize_instance):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
         vm_ref = self._create_vm(instance,
                                  [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
                                  network_info)
-        self.resize_instance(instance, vdi_uuid)
+        self.resize_instance(instance, vdi_uuid, resize_instance)
         self._spawn(instance, vm_ref)
 
     def _start(self, instance, vm_ref=None):
@@ -565,7 +566,7 @@ class VMOps(object):
 
         return new_cow_uuid
 
-    def resize_instance(self, instance, vdi_uuid):
+    def resize_instance(self, instance, vdi_uuid, resize_instance):
         """Resize a running instance by changing its RAM and disk size."""
         #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
@@ -577,7 +578,7 @@ class VMOps(object):
                 " Expanding to %(instance_local_gb)d GB") % locals())
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
         # for an instance with no local storage
-        if new_disk_size > 0:
+        if resize_instance and new_disk_size > 0:
             self._session.call_xenapi('VDI.resize_online', vdi_ref,
                     str(new_disk_size))
         LOG.debug(_("Resize instance %s complete") % (instance.name))

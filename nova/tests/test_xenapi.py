@@ -810,10 +810,10 @@ class XenAPIMigrateInstance(test.TestCase):
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
         conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
-                                                           network_info)
+                           network_info, resize_instance=True)
         self.assertEqual(self.called, True)
 
-    def test_finish_migrate_no_resize_vdi(self):
+    def test_finish_migrate_no_local_storage(self):
         tiny_type_id = \
                 instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.values.update({'instance_type_id': tiny_type_id, 'local_gb': 0})
@@ -842,7 +842,37 @@ class XenAPIMigrateInstance(test.TestCase):
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
         conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
-                                                           network_info)
+                           network_info, resize_instance=True)
+
+    def test_finish_migrate_no_resize_vdi(self):
+        instance = db.instance_create(self.context, self.values)
+
+        def fake_vdi_resize(*args, **kwargs):
+            raise Exception("This shouldn't be called")
+
+        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+                "VDI_resize_online", fake_vdi_resize)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        stubs.stubout_loopingcall_start(self.stubs)
+        conn = xenapi_conn.get_connection(False)
+        network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+                          {'broadcast': '192.168.0.255',
+                           'dns': ['192.168.0.1'],
+                           'gateway': '192.168.0.1',
+                           'gateway6': 'dead:beef::1',
+                           'ip6s': [{'enabled': '1',
+                                     'ip': 'dead:beef::dcad:beff:feef:0',
+                                           'netmask': '64'}],
+                           'ips': [{'enabled': '1',
+                                    'ip': '192.168.0.100',
+                                    'netmask': '255.255.255.0'}],
+                           'label': 'fake',
+                           'mac': 'DE:AD:BE:EF:00:00',
+                           'rxtx_cap': 3})]
+
+        # Resize instance would be determined by the compute call
+        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
+                           network_info, resize_instance=False)
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
