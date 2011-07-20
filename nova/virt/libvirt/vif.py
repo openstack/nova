@@ -31,19 +31,10 @@ flags.DEFINE_bool('allow_project_net_traffic',
 flags.DEFINE_string('libvirt_ovs_integration_bridge', 'br-int',
 			'Name of Integration Bridge used by Open vSwitch')
 
-
-class LibvirtVIF(object):
-    """VIF class for libvirt"""
-
-    def get_configurations(self, instance, network, mapping):
-        """Get a dictionary of VIF configuration for libvirt interfaces."""
-        raise NotImplementedError()
-
-
-class LibvirtBridge(LibvirtVIF):
+class LibvirtBridge(object):
     """Linux bridge VIF for Libvirt."""
 
-    def get_configurations(self, instance, network, mapping):
+    def get_configurations(self, network, mapping):
         """Get a dictionary of VIF configurations for bridge type."""
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = mapping['gateway']
@@ -82,10 +73,11 @@ class LibvirtBridge(LibvirtVIF):
 class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
     """VIF driver for Linux bridge."""
 
-    def plug(self, network):
+    def plug(self, instance, network, mapping):
         """Ensure that the bridge exists, and add VIF to it."""
         linux_net.ensure_bridge(network['bridge'],
                                 network['bridge_interface'])
+        return self.get_configurations(network, mapping)
 
     def unplug(self, instance, network, mapping):
         pass
@@ -94,10 +86,11 @@ class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
 class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
     """VIF driver for Linux bridge with VLAN."""
 
-    def plug(self, network):
+    def plug(self, instance, network, mapping):
         """Ensure that VLAN and bridge exist and add VIF to the bridge."""
         linux_net.ensure_vlan_bridge(network['vlan'], network['bridge'],
                                      network['bridge_interface'])
+        return self.get_configurations(network, mapping)
 
     def unplug(self, instance, network, mapping):
         pass
@@ -106,7 +99,7 @@ class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
 class LibvirtOpenVswitchDriver(VIFDriver):
     """VIF driver for Open vSwitch."""
 
-    def get_configurations(self, instance, network, mapping):
+    def plug(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
         utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
@@ -123,9 +116,6 @@ class LibvirtOpenVswitchDriver(VIFDriver):
             'name': dev,
             'mac_address': mapping['mac']}
         return result
-
-    def plug(self, network):
-        pass
 
     def unplug(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])

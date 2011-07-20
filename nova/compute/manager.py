@@ -299,7 +299,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 network_info = self.network_api.allocate_for_instance(context,
                                                          instance, vpn=is_vpn)
                 LOG.debug(_("instance network_info: |%s|"), network_info)
-                self.driver.setup_vif_network(context, instance['id'])
             else:
                 # TODO(tr3buchet) not really sure how this should be handled.
                 # virt requires network_info to be passed in but stub_network
@@ -356,7 +355,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = None
         if not FLAGS.stub_network:
             network_info = self.network_api.get_instance_nw_info(context,
-                                                                instance)
+                                                                 instance)
             self.network_api.deallocate_for_instance(context, instance)
 
         volumes = instance.get('volumes') or []
@@ -414,12 +413,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_state(context, instance_id, power_state.BUILDING)
 
         network_info = self.network_api.get_instance_nw_info(context,
-                                                        instance_ref)
+                                                             instance_ref)
         self.driver.destroy(instance_ref, network_info)
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
         instance_ref.injected_files = kwargs.get('injected_files', [])
-        self.driver.spawn(instance_ref)
+        self.driver.spawn(instance_ref, network_info)
 
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
@@ -452,7 +451,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rebooting')
-        self.driver.reboot(instance_ref)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance_ref)
+        self.driver.reboot(instance_ref, network_info)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -642,10 +643,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rescuing')
-        self.driver.setup_vif_network(context, instance_id)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance_ref)
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
-        self.driver.rescue(instance_ref, _update_state)
+        self.driver.rescue(instance_ref, _update_state, network_info)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -661,7 +663,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'unrescuing')
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
-        self.driver.unrescue(instance_ref, _update_state)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance_ref)
+        self.driver.unrescue(instance_ref, _update_state, network_info)
         self._update_state(context, instance_id)
 
     @staticmethod
@@ -677,7 +681,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
 
         network_info = self.network_api.get_instance_nw_info(context,
-                                                        instance_ref)
+                                                             instance_ref)
         self.driver.destroy(instance_ref, network_info)
         usage_info = utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host,
@@ -698,7 +702,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         migration_ref = self.db.migration_get(context, migration_id)
 
         network_info = self.network_api.get_instance_nw_info(context,
-                                                        instance_ref)
+                                                             instance_ref)
         self.driver.destroy(instance_ref, network_info)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 instance_ref['host'])
@@ -1203,16 +1207,18 @@ class ComputeManager(manager.SchedulerDependentManager):
         #
         # Retry operation is necessary because continuously request comes,
         # concorrent request occurs to iptables, then it complains.
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance_ref)
         max_retry = FLAGS.live_migration_retry_count
         for cnt in range(max_retry):
             try:
-                self.driver.setup_vif_network(context, instance_id)
+                self.driver.plug_vifs(instance_ref, network_info)
                 break
             except exception.ProcessExecutionError:
                 if cnt == max_retry - 1:
                     raise
                 else:
-                    LOG.warn(_("setup_vif_network() failed %(cnt)d."
+                    LOG.warn(_("plug_vifs() failed %(cnt)d."
                                "Retry up to %(max_retry)d for %(hostname)s.")
                                % locals())
                     time.sleep(1)

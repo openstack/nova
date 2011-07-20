@@ -444,7 +444,9 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'id': network['id'],
                 'cidr': network['cidr'],
                 'cidr_v6': network['cidr_v6'],
-                'injected': network['injected']}
+                'injected': network['injected'],
+                'vlan': network['vlan'],
+                'bridge_interface': network['bridge_interface']}
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
