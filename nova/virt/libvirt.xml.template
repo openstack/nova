@@ -85,7 +85,7 @@
             <disk type='${vol.type}'>
                 <driver type='raw'/>
                 #if $vol.type == 'network'
-                <source protocol='${vol.protocol}' name='${vol.device_path}'/>
+                <source protocol='${vol.protocol}' name='${vol.name}'/>
                 #else
                 <source dev='${vol.device_path}'/>
                 #end if

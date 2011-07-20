@@ -335,21 +335,20 @@ class LibvirtConnection(driver.ComputeDriver):
     def attach_volume(self, instance_name, device_path, mountpoint):
         virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
-        if device_path.startswith('/dev/'):
+        (type, protocol, name) = \
+            self._get_volume_device_info(vol['device_path'])
+        if type == 'block':
             xml = """<disk type='block'>
                          <driver name='qemu' type='raw'/>
                          <source dev='%s'/>
                          <target dev='%s' bus='virtio'/>
                      </disk>""" % (device_path, mount_device)
-        elif ':' in device_path:
-            (protocol, name) = device_path.split(':')
+        elif type == 'network':
             xml = """<disk type='network'>
                          <driver name='qemu' type='raw'/>
                          <source protocol='%s' name='%s'/>
                          <target dev='%s' bus='virtio'/>
-                     </disk>""" % (protocol,
-                                   name,
-                                   mount_device)
+                     </disk>""" % (protocol, name, mount_device)
         else:
             raise exception.InvalidDevicePath(path=device_path)
 
@@ -972,6 +971,15 @@ class LibvirtConnection(driver.ComputeDriver):
         return False
 
     @exception.wrap_exception
+    def _get_volume_device_info(self, device_path):
+        if device_path.startswith('/dev/'):
+            return ('block', None, None)
+        elif ':' in device_path:
+            (protocol, name) = device_path.split(':')
+            return ('network', protocol, name)
+        else:
+            raise exception.InvalidDevicePath(path=device_path)
+
     def _prepare_xml_info(self, instance, rescue=False, network_info=None,
                           block_device_mapping=None):
         block_device_mapping = block_device_mapping or []
@@ -994,15 +1002,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         for vol in block_device_mapping:
             vol['mount_device'] = _strip_dev(vol['mount_device'])
-            if vol['device_path'].startswith('/dev/'):
-                vol['type'] = 'block'
-            elif ':' in vol['device_path']:
-                (protocol, name) = vol['device_path'].split(':')
-                vol['type'] = 'network'
-                vol['protocol'] = protocol
-                vol['device_path'] = name
-            else:
-                raise exception.InvalidDevicePath(path=vol['device_path'])
+            (vol['type'], vol['protocol'], vol['name']) = \
+                self._get_volume_device_info(vol['device_path'])
 
         ebs_root = self._volume_in_mapping(self.root_mount_device,
                                            block_device_mapping)
