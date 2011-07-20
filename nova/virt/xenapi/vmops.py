@@ -566,17 +566,20 @@ class VMOps(object):
         return new_cow_uuid
 
     def resize_instance(self, instance, vdi_uuid):
-        """Resize a running instance by changing it's RAM and disk size."""
+        """Resize a running instance by changing its RAM and disk size."""
         #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
 
-        new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
+        new_disk_size = instance.local_gb * 1024 * 1024 * 1024
         instance_name = instance.name
         instance_local_gb = instance.local_gb
         LOG.debug(_("Resizing VDI %(vdi_uuid)s for instance %(instance_name)s."
                 " Expanding to %(instance_local_gb)d GB") % locals())
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        self._session.call_xenapi('VDI.resize_online', vdi_ref, new_disk_size)
+        # for an instance with no local storage
+        if new_disk_size > 0:
+            self._session.call_xenapi('VDI.resize_online', vdi_ref,
+                    str(new_disk_size))
         LOG.debug(_("Resize instance %s complete") % (instance.name))
 
     def reboot(self, instance):
