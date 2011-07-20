@@ -340,7 +340,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Set the network hosts for any networks which are unset."""
         try:
             networks = self.db.network_get_all(context)
-        except Exception.NoNetworksFound:
+        except exception.NoNetworksFound:
             # we don't care if no networks are found
             pass
 
@@ -357,7 +357,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 a non-vlan instance should connect to
         try:
             networks = self.db.network_get_all(context)
-        except Exception.NoNetworksFound:
+        except exception.NoNetworksFound:
             # we don't care if no networks are found
             pass
 

@@ -37,7 +37,7 @@ import time
 import XenAPIPlugin
 
 from pluginlib_nova import *
-configure_logging("xenstore")
+configure_logging("agent")
 import xenstore
 
 AGENT_TIMEOUT = 30
@@ -114,7 +114,6 @@ def resetnetwork(self, arg_dict):
     xenstore.write_record(self, arg_dict)
 
 
-@jsonify
 def inject_file(self, arg_dict):
     """Expects a file path and the contents of the file to be written. Both
     should be base64-encoded in order to eliminate errors as they are passed
@@ -127,20 +126,21 @@ def inject_file(self, arg_dict):
     been disabled, and raise a NotImplemented error if that is the case.
     """
     b64_path = arg_dict["b64_path"]
-    b64_file = arg_dict["b64_file"]
+    b64_file = arg_dict["b64_contents"]
     request_id = arg_dict["id"]
-    if self._agent_has_method("file_inject"):
+    agent_features = _get_agent_features(self, arg_dict)
+    if "file_inject" in agent_features:
         # New version of the agent.  Agent should receive a 'value'
         # key whose value is a dictionary containing 'b64_path' and
         # 'b64_file'.  See old version below.
         arg_dict["value"] = json.dumps({"name": "file_inject",
                 "value": {"b64_path": b64_path, "b64_file": b64_file}})
-    elif self._agent_has_method("injectfile"):
+    elif "injectfile" in agent_features:
         # Old agent requires file path and file contents to be
         # combined into one base64 value.
         raw_path = base64.b64decode(b64_path)
         raw_file = base64.b64decode(b64_file)
-        new_b64 = base64.b64encode("%s,%s") % (raw_path, raw_file)
+        new_b64 = base64.b64encode("%s,%s" % (raw_path, raw_file))
         arg_dict["value"] = json.dumps({"name": "injectfile",
                 "value": new_b64})
     else:
@@ -174,30 +174,23 @@ def agent_update(self, arg_dict):
     return resp
 
 
-def _agent_has_method(self, method):
-    """Check that the agent has a particular method by checking its
-    features.  Cache the features so we don't have to query the agent
-    every time we need to check.
-    """
+def _get_agent_features(self, arg_dict):
+    """Return an array of features that an agent supports."""
+    tmp_id = commands.getoutput("uuidgen")
+    dct = {}
+    dct.update(arg_dict)
+    dct["value"] = json.dumps({"name": "features", "value": ""})
+    dct["path"] = "data/host/%s" % tmp_id
+    xenstore.write_record(self, dct)
     try:
-        self._agent_methods
-    except AttributeError:
-        self._agent_methods = []
-    if not self._agent_methods:
-        # Haven't been defined
-        tmp_id = commands.getoutput("uuidgen")
-        dct = {}
-        dct["value"] = json.dumps({"name": "features", "value": ""})
-        dct["path"] = "data/host/%s" % tmp_id
-        xenstore.write_record(self, dct)
-        try:
-            resp = _wait_for_agent(self, tmp_id, dct)
-        except TimeoutError, e:
-            raise PluginError(e)
-        response = json.loads(resp)
-        # The agent returns a comma-separated list of methods.
-        self._agent_methods = response.split(",")
-    return method in self._agent_methods
+        resp = _wait_for_agent(self, tmp_id, dct)
+    except TimeoutError, e:
+        raise PluginError(e)
+    response = json.loads(resp)
+    if response['returncode'] != 0:
+        return response["message"].split(",")
+    else:
+        return {}
 
 
 def _wait_for_agent(self, request_id, arg_dict):

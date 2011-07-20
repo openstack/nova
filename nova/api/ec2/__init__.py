@@ -262,6 +262,8 @@ class Authorizer(wsgi.Middleware):
                 'TerminateInstances': ['projectmanager', 'sysadmin'],
                 'RebootInstances': ['projectmanager', 'sysadmin'],
                 'UpdateInstance': ['projectmanager', 'sysadmin'],
+                'StartInstances': ['projectmanager', 'sysadmin'],
+                'StopInstances': ['projectmanager', 'sysadmin'],
                 'DeleteVolume': ['projectmanager', 'sysadmin'],
                 'DescribeImages': ['all'],
                 'DeregisterImage': ['projectmanager', 'sysadmin'],
@@ -269,6 +271,7 @@ class Authorizer(wsgi.Middleware):
                 'DescribeImageAttribute': ['all'],
                 'ModifyImageAttribute': ['projectmanager', 'sysadmin'],
                 'UpdateImage': ['projectmanager', 'sysadmin'],
+                'CreateImage': ['projectmanager', 'sysadmin'],
             },
             'AdminController': {
                 # All actions have the same permission: ['none'] (the default)
@@ -325,13 +328,13 @@ class Executor(wsgi.Application):
         except exception.VolumeNotFound as ex:
             LOG.info(_('VolumeNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = ec2utils.id_to_ec2_id(ex.volume_id, 'vol-%08x')
+            ec2_id = ec2utils.id_to_ec2_vol_id(ex.volume_id)
             message = _('Volume %s not found') % ec2_id
             return self._error(req, context, type(ex).__name__, message)
         except exception.SnapshotNotFound as ex:
             LOG.info(_('SnapshotNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = ec2utils.id_to_ec2_id(ex.snapshot_id, 'snap-%08x')
+            ec2_id = ec2utils.id_to_ec2_snap_id(ex.snapshot_id)
             message = _('Snapshot %s not found') % ec2_id
             return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:
