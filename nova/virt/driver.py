@@ -253,3 +253,8 @@ class ComputeDriver(object):
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         raise NotImplementedError()
+
+    def plug_vifs(self, instance, network_info):
+        """Plugs in VIFs to networks."""
+        raise NotImplementedError()
+

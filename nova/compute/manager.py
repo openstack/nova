@@ -1212,7 +1212,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         max_retry = FLAGS.live_migration_retry_count
         for cnt in range(max_retry):
             try:
-                self.driver.plug_vifs(context, instance_ref, network_info)
+                self.driver.plug_vifs(instance_ref, network_info)
                 break
             except exception.ProcessExecutionError:
                 if cnt == max_retry - 1:
