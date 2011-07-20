@@ -261,11 +261,9 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def setup_vif_network(self, ctxt, instance_id):
         """Set up VIF networking on the host."""
-        # FIXME: this is dying because DB has no networks for instances
-        #networks = db.network_get_all_by_instance(ctxt, instance_id)
-        #for network in networks:
-        #    self.vif_driver.plug(network)
-        pass
+        networks = db.network_get_all_by_instance(ctxt, instance_id)
+        for network in networks:
+            self.vif_driver.plug(network)
 
     def destroy(self, instance, network_info, cleanup=True):
         instance_name = instance['name']

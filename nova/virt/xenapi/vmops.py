@@ -52,6 +52,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('windows_version_timeout', 300,
                      'number of seconds to wait for windows agent to be '
                      'fully operational')
+flags.DEFINE_string('xenapi_vif_driver',
+                    'nova.virt.xenapi.vif.XenAPIBridgeDriver',
+                    'The XenAPI VIF driver using XenServer Network APIs.')
 
 
 def cmp_version(a, b):
@@ -78,6 +81,7 @@ class VMOps(object):
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
+        self.vif_driver = utils.import_object(FLAGS.xenapi_vif_driver)
 
     def list_instances(self):
         """List VM instances."""
@@ -255,7 +259,7 @@ class VMOps(object):
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 
-        self.create_vifs(vm_ref, network_info)
+        self.create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
         return vm_ref
 
@@ -873,6 +877,11 @@ class VMOps(object):
             self._destroy_kernel_ramdisk(instance, vm_ref)
         self._destroy_vm(instance, vm_ref)
 
+        networks = db.network_get_all_by_instance(ctxt, instance['id'])
+        for network in networks:
+            self.vif_driver.unplug(network)
+
+
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:
@@ -1068,7 +1077,7 @@ class VMOps(object):
                 # catch KeyError for domid if instance isn't running
                 pass
 
-    def create_vifs(self, vm_ref, network_info):
+    def create_vifs(self, vm_ref, instance, network_info):
         """Creates vifs for an instance."""
 
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
@@ -1077,14 +1086,19 @@ class VMOps(object):
         self._session.get_xenapi().VM.get_record(vm_ref)
 
         for device, (network, info) in enumerate(network_info):
-            mac_address = info['mac']
-            bridge = network['bridge']
-            rxtx_cap = info.pop('rxtx_cap')
-            network_ref = \
-                NetworkHelper.find_network_with_bridge(self._session,
-                                                       bridge)
-            VMHelper.create_vif(self._session, vm_ref, network_ref,
-                                mac_address, device, rxtx_cap)
+            vif_rec = self.vif_driver.get_vif_rec(self._session,
+                    vm_ref, instance, device, network, info)
+            LOG.debug(_('Creating VIF for VM %(vm_ref)s,' \
+                ' network %(network_ref)s.') % locals())
+            vif_ref = session.call_xenapi('VIF.create', vif_rec)
+            LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
+                ' network %(network_ref)s.') % locals())
+
+    def setup_vif_network(self, ctxt, instance_id):
+        """Set up VIF networking on the host."""
+        networks = db.network_get_all_by_instance(ctxt, instance_id)
+        for network in networks:
+            self.vif_driver.plug(network)
 
     def reset_network(self, instance, vm_ref=None):
         """Creates uuid arg to pass to make_agent_call and calls it."""

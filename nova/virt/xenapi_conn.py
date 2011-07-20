@@ -269,6 +269,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """inject network info for specified instance"""
         self._vmops.inject_network_info(instance, network_info)
 
+    def setup_vif_network(self, ctxt, instance_id):
+        self._vmops.setup_vif_network(ctxt, instance_id)
+
     def get_info(self, instance_id):
         """Return data about VM instance"""
         return self._vmops.get_info(instance_id)

@@ -282,27 +282,6 @@ class VMHelper(HelperBase):
             LOG.exception(exc)
             raise StorageError(_('Unable to destroy VDI %s') % vdi_ref)
 
-    @classmethod
-    def create_vif(cls, session, vm_ref, network_ref, mac_address,
-                   dev, rxtx_cap=0):
-        """Create a VIF record.  Returns a Deferred that gives the new
-        VIF reference."""
-        vif_rec = {}
-        vif_rec['device'] = str(dev)
-        vif_rec['network'] = network_ref
-        vif_rec['VM'] = vm_ref
-        vif_rec['MAC'] = mac_address
-        vif_rec['MTU'] = '1500'
-        vif_rec['other_config'] = {}
-        vif_rec['qos_algorithm_type'] = "ratelimit" if rxtx_cap else ''
-        vif_rec['qos_algorithm_params'] = \
-                {"kbps": str(rxtx_cap * 1024)} if rxtx_cap else {}
-        LOG.debug(_('Creating VIF for VM %(vm_ref)s,'
-                ' network %(network_ref)s.') % locals())
-        vif_ref = session.call_xenapi('VIF.create', vif_rec)
-        LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
-                ' network %(network_ref)s.') % locals())
-        return vif_ref
 
     @classmethod
     def create_vdi(cls, session, sr_ref, name_label, virtual_size, read_only):
@@ -1115,7 +1094,6 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
         f.seek(offset)
         for chunk in image_file:
             f.write(chunk)
-
 
 def _write_partition(virtual_size, dev):
     dest = '/dev/%s' % dev
