@@ -836,7 +836,10 @@ class API(base.Base):
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,
-                instance_ref['uuid'], params=params)
+                                   instance_ref['uuid'],
+                                   migration_ref['source_compute'],
+                                   params=params)
+
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'reverted'})
 
@@ -853,6 +856,7 @@ class API(base.Base):
                                                       status='finished')
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context,
+                                   migration_ref['dest_compute'],
                                    instance_ref['uuid'],
                                    params=params)
 
