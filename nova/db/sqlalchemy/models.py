@@ -237,6 +237,8 @@ class Instance(BASE, NovaBase):
     vm_mode = Column(String(255))
     uuid = Column(String(36))
 
+    root_device_name = Column(String(255))
+
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
     # vmstate_state = running, halted, suspended, paused

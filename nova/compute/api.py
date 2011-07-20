@@ -33,6 +33,7 @@ from nova import quota
 from nova import rpc
 from nova import utils
 from nova import volume
+from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute.utils import terminate_volumes
@@ -218,6 +219,9 @@ class API(base.Base):
         if reservation_id is None:
             reservation_id = utils.generate_uid('r')
 
+        root_device_name = ec2utils.properties_root_device_name(
+            image['properties'])
+
         base_options = {
             'reservation_id': reservation_id,
             'image_ref': image_href,
@@ -242,11 +246,61 @@ class API(base.Base):
             'availability_zone': availability_zone,
             'os_type': os_type,
             'architecture': architecture,
-            'vm_mode': vm_mode}
+            'vm_mode': vm_mode,
+            'root_device_name': root_device_name}
 
-        return (num_instances, base_options)
+        return (num_instances, base_options, image)
 
-    def create_db_entry_for_new_instance(self, context, base_options,
+    def _update_image_block_device_mapping(self, elevated_context, instance_id,
+                                           mappings):
+        """tell vm driver to create ephemeral/swap device at boot time by
+        updating BlockDeviceMapping
+        """
+        for bdm in ec2utils.mappings_prepend_dev(mappings):
+            LOG.debug(_("bdm %s"), bdm)
+
+            virtual_name = bdm['virtual']
+            if virtual_name == 'ami' or virtual_name == 'root':
+                continue
+
+            assert (virtual_name == 'swap' or
+                    virtual_name.startswith('ephemeral'))
+            values = {
+                'instance_id': instance_id,
+                'device_name': bdm['device'],
+                'virtual_name': virtual_name, }
+            self.db.block_device_mapping_update_or_create(elevated_context,
+                                                          values)
+
+    def _update_block_device_mapping(self, elevated_context, instance_id,
+                                     block_device_mapping):
+        """tell vm driver to attach volume at boot time by updating
+        BlockDeviceMapping
+        """
+        for bdm in block_device_mapping:
+            LOG.debug(_('bdm %s'), bdm)
+            assert 'device_name' in bdm
+
+            values = {'instance_id': instance_id}
+            for key in ('device_name', 'delete_on_termination', 'virtual_name',
+                        'snapshot_id', 'volume_id', 'volume_size',
+                        'no_device'):
+                values[key] = bdm.get(key)
+
+            # NOTE(yamahata): NoDevice eliminates devices defined in image
+            #                 files by command line option.
+            #                 (--block-device-mapping)
+            if bdm.get('virtual_name') == 'NoDevice':
+                values['no_device'] = True
+                for k in ('delete_on_termination', 'volume_id',
+                          'snapshot_id', 'volume_id', 'volume_size',
+                          'virtual_name'):
+                    values[k] = None
+
+            self.db.block_device_mapping_update_or_create(elevated_context,
+                                                          values)
+
+    def create_db_entry_for_new_instance(self, context, image, base_options,
              security_group, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
@@ -279,23 +333,14 @@ class API(base.Base):
                                                 instance_id,
                                                 security_group_id)
 
-        block_device_mapping = block_device_mapping or []
-        # NOTE(yamahata)
-        # tell vm driver to attach volume at boot time by updating
-        # BlockDeviceMapping
-        for bdm in block_device_mapping:
-            LOG.debug(_('bdm %s'), bdm)
-            assert 'device_name' in bdm
-            values = {
-                'instance_id': instance_id,
-                'device_name': bdm['device_name'],
-                'delete_on_termination': bdm.get('delete_on_termination'),
-                'virtual_name': bdm.get('virtual_name'),
-                'snapshot_id': bdm.get('snapshot_id'),
-                'volume_id': bdm.get('volume_id'),
-                'volume_size': bdm.get('volume_size'),
-                'no_device': bdm.get('no_device')}
-            self.db.block_device_mapping_create(elevated, values)
+        # BlockDeviceMapping table
+        self._update_image_block_device_mapping(elevated, instance_id,
+            image['properties'].get('mappings', []))
+        self._update_block_device_mapping(elevated, instance_id,
+            image['properties'].get('block_device_mapping', []))
+        # override via command line option
+        self._update_block_device_mapping(elevated, instance_id,
+                                          block_device_mapping)
 
         # Set sane defaults if not specified
         updates = {}
@@ -357,7 +402,7 @@ class API(base.Base):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
-        num_instances, base_options = self._check_create_parameters(
+        num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -395,7 +440,7 @@ class API(base.Base):
         Returns a list of instance dicts.
         """
 
-        num_instances, base_options = self._check_create_parameters(
+        num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -405,10 +450,11 @@ class API(base.Base):
                                injected_files, admin_password, zone_blob,
                                reservation_id)
 
+        block_device_mapping = block_device_mapping or []
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
-            instance = self.create_db_entry_for_new_instance(context,
+            instance = self.create_db_entry_for_new_instance(context, image,
                                     base_options, security_group,
                                     block_device_mapping, num=num)
             instances.append(instance)

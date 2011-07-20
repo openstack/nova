@@ -523,6 +523,57 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(context, instance_id)
 
+    def test_finish_revert_resize(self):
+        """Ensure that the flavor is reverted to the original on revert"""
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+
+        def fake(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        self.stubs.Set(self.compute.driver, 'revert_resize', fake)
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
+
+        self.compute.run_instance(self.context, instance_id)
+
+        # Confirm the instance size before the resize starts
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 1)
+
+        db.instance_update(self.context, instance_id, {'host': 'foo'})
+
+        self.compute.prep_resize(context, instance_id, 3)
+
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+
+        self.compute.resize_instance(context, instance_id,
+                migration_ref['id'])
+        self.compute.finish_resize(context, instance_id,
+                    int(migration_ref['id']), {})
+
+        # Prove that the instance size is now the new size
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 3)
+
+        # Finally, revert and confirm the old flavor has been applied
+        self.compute.revert_resize(context, instance_id,
+                migration_ref['id'])
+        self.compute.finish_revert_resize(context, instance_id,
+                migration_ref['id'])
+
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 1)
+
+        self.compute.terminate_instance(context, instance_id)
+
     def test_get_by_flavor_id(self):
         type = instance_types.get_instance_type_by_flavor_id(1)
         self.assertEqual(type['name'], 'm1.tiny')
@@ -1156,3 +1207,114 @@ class ComputeTestCase(test.TestCase):
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
         db.instance_destroy(c, instance_id3)
+
+    @staticmethod
+    def _parse_db_block_device_mapping(bdm_ref):
+        attr_list = ('delete_on_termination', 'device_name', 'no_device',
+                     'virtual_name', 'volume_id', 'volume_size', 'snapshot_id')
+        bdm = {}
+        for attr in attr_list:
+            val = bdm_ref.get(attr, None)
+            if val:
+                bdm[attr] = val
+
+        return bdm
+
+    def test_update_block_device_mapping(self):
+        instance_id = self._create_instance()
+        mappings = [
+                {'virtual': 'ami', 'device': 'sda1'},
+                {'virtual': 'root', 'device': '/dev/sda1'},
+
+                {'virtual': 'swap', 'device': 'sdb1'},
+                {'virtual': 'swap', 'device': 'sdb2'},
+                {'virtual': 'swap', 'device': 'sdb3'},
+                {'virtual': 'swap', 'device': 'sdb4'},
+
+                {'virtual': 'ephemeral0', 'device': 'sdc1'},
+                {'virtual': 'ephemeral1', 'device': 'sdc2'},
+                {'virtual': 'ephemeral2', 'device': 'sdc3'}]
+        block_device_mapping = [
+                # root
+                {'device_name': '/dev/sda1',
+                 'snapshot_id': 0x12345678,
+                 'delete_on_termination': False},
+
+
+                # overwrite swap
+                {'device_name': '/dev/sdb2',
+                 'snapshot_id': 0x23456789,
+                 'delete_on_termination': False},
+                {'device_name': '/dev/sdb3',
+                 'snapshot_id': 0x3456789A},
+                {'device_name': '/dev/sdb4',
+                 'no_device': True},
+
+                # overwrite ephemeral
+                {'device_name': '/dev/sdc2',
+                 'snapshot_id': 0x456789AB,
+                 'delete_on_termination': False},
+                {'device_name': '/dev/sdc3',
+                 'snapshot_id': 0x56789ABC},
+                {'device_name': '/dev/sdc4',
+                 'no_device': True},
+
+                # volume
+                {'device_name': '/dev/sdd1',
+                 'snapshot_id': 0x87654321,
+                 'delete_on_termination': False},
+                {'device_name': '/dev/sdd2',
+                 'snapshot_id': 0x98765432},
+                {'device_name': '/dev/sdd3',
+                 'snapshot_id': 0xA9875463},
+                {'device_name': '/dev/sdd4',
+                 'no_device': True}]
+
+        self.compute_api._update_image_block_device_mapping(
+            self.context, instance_id, mappings)
+
+        bdms = [self._parse_db_block_device_mapping(bdm_ref)
+                for bdm_ref in db.block_device_mapping_get_all_by_instance(
+                    self.context, instance_id)]
+        expected_result = [
+            {'virtual_name': 'swap', 'device_name': '/dev/sdb1'},
+            {'virtual_name': 'swap', 'device_name': '/dev/sdb2'},
+            {'virtual_name': 'swap', 'device_name': '/dev/sdb3'},
+            {'virtual_name': 'swap', 'device_name': '/dev/sdb4'},
+            {'virtual_name': 'ephemeral0', 'device_name': '/dev/sdc1'},
+            {'virtual_name': 'ephemeral1', 'device_name': '/dev/sdc2'},
+            {'virtual_name': 'ephemeral2', 'device_name': '/dev/sdc3'}]
+        bdms.sort()
+        expected_result.sort()
+        self.assertDictListMatch(bdms, expected_result)
+
+        self.compute_api._update_block_device_mapping(
+            self.context, instance_id, block_device_mapping)
+        bdms = [self._parse_db_block_device_mapping(bdm_ref)
+                for bdm_ref in db.block_device_mapping_get_all_by_instance(
+                    self.context, instance_id)]
+        expected_result = [
+            {'snapshot_id': 0x12345678, 'device_name': '/dev/sda1'},
+
+            {'virtual_name': 'swap', 'device_name': '/dev/sdb1'},
+            {'snapshot_id': 0x23456789, 'device_name': '/dev/sdb2'},
+            {'snapshot_id': 0x3456789A, 'device_name': '/dev/sdb3'},
+            {'no_device': True, 'device_name': '/dev/sdb4'},
+
+            {'virtual_name': 'ephemeral0', 'device_name': '/dev/sdc1'},
+            {'snapshot_id': 0x456789AB, 'device_name': '/dev/sdc2'},
+            {'snapshot_id': 0x56789ABC, 'device_name': '/dev/sdc3'},
+            {'no_device': True, 'device_name': '/dev/sdc4'},
+
+            {'snapshot_id': 0x87654321, 'device_name': '/dev/sdd1'},
+            {'snapshot_id': 0x98765432, 'device_name': '/dev/sdd2'},
+            {'snapshot_id': 0xA9875463, 'device_name': '/dev/sdd3'},
+            {'no_device': True, 'device_name': '/dev/sdd4'}]
+        bdms.sort()
+        expected_result.sort()
+        self.assertDictListMatch(bdms, expected_result)
+
+        for bdm in db.block_device_mapping_get_all_by_instance(
+            self.context, instance_id):
+            db.block_device_mapping_destroy(self.context, bdm['id'])
+        self.compute.terminate_instance(self.context, instance_id)
