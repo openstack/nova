@@ -81,9 +81,8 @@ class VMOps(object):
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
-        print "loading vif_driver = %s" % FLAGS.xenapi_vif_driver
         self.vif_driver = utils.import_object(FLAGS.xenapi_vif_driver)
-        print "driver class = %s" % str(self.vif_driver)
+
     def list_instances(self):
         """List VM instances."""
         # TODO(justinsb): Should we just always use the details method?
