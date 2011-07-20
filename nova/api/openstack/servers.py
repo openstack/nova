@@ -466,7 +466,7 @@ class ControllerV10(Controller):
         try:
             self.compute_api.rebuild(context, instance_id, image_id)
         except exception.BuildInProgress:
-            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             return faults.Fault(exc.HTTPConflict(explanation=msg))
 
@@ -590,7 +590,7 @@ class ControllerV11(Controller):
             self.compute_api.rebuild(context, instance_id, image_href, name,
                                      metadata, personalities)
         except exception.BuildInProgress:
-            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             return faults.Fault(exc.HTTPConflict(explanation=msg))
 

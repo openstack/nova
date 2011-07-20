@@ -96,6 +96,12 @@ def return_server_with_power_state(power_state):
     return _return_server
 
 
+def return_server_with_uuid_and_power_state(power_state):
+    def _return_server(context, id):
+        return stub_instance(id, uuid=FAKE_UUID, power_state=power_state)
+    return _return_server
+
+
 def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
@@ -1440,6 +1446,8 @@ class ServersTest(test.TestCase):
         state = power_state.BUILDING
         new_return_server = return_server_with_power_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_with_uuid_and_power_state(state))
 
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
@@ -1488,6 +1496,8 @@ class ServersTest(test.TestCase):
         state = power_state.BUILDING
         new_return_server = return_server_with_power_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_with_uuid_and_power_state(state))
 
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
