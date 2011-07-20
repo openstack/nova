@@ -52,7 +52,7 @@ class MetadataTestCase(test.TestCase):
             return '99.99.99.99'
 
         self.stubs.Set(api, 'instance_get', instance_get)
-        self.stubs.Set(api, 'fixed_ip_get_instance', instance_get)
+        self.stubs.Set(api, 'instance_get_by_fixed_ip', instance_get)
         self.stubs.Set(api, 'instance_get_floating_address', floating_get)
         self.app = metadatarequesthandler.MetadataRequestHandler()
 
