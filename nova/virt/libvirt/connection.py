@@ -1015,8 +1015,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     'volumes': block_device_mapping}
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
-                xml_info['vncserver_host'] = FLAGS.vncserver_host
-                xml_info['vnc_keymap'] = FLAGS.vnc_keymap
+            xml_info['vncserver_host'] = FLAGS.vncserver_host
+            xml_info['vnc_keymap'] = FLAGS.vnc_keymap
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
