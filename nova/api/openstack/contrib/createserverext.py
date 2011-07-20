@@ -137,6 +137,15 @@ class CreateInstanceHelperEx(helper.CreateInstanceHelper):
 
         # Let the caller deal with unhandled exceptions.
 
+    def _validate_fixed_ip(self, value):
+        if not isinstance(value, basestring):
+            msg = _("Fixed IP is not a string or unicode")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        if value.strip() == '':
+            msg = _("Fixed IP is an empty string")
+            raise exc.HTTPBadRequest(explanation=msg)
+
     def _get_requested_networks(self, requested_networks):
         """
         Create a list of requested networks from the networks attribute
@@ -202,7 +211,7 @@ class Createserverext(extensions.ExtensionDescriptor):
         return "Extended support to the Create Server v1.1 API"
 
     def get_namespace(self):
-        return "http://docs.openstack.org/ext/serverscreateext/api/v1.1"
+        return "http://docs.openstack.org/ext/createserverext/api/v1.1"
 
     def get_updated(self):
         return "2011-07-19T00:00:00+00:00"

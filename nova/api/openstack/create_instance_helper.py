@@ -193,15 +193,6 @@ class CreateInstanceHelper(object):
             msg = _("Server name is an empty string")
             raise exc.HTTPBadRequest(explanation=msg)
 
-    def _validate_fixed_ip(self, value):
-        if not isinstance(value, basestring):
-            msg = _("Fixed IP is not a string or unicode")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if value.strip() == '':
-            msg = _("Fixed IP is an empty string")
-            raise exc.HTTPBadRequest(explanation=msg)
-
     def _get_kernel_ramdisk_from_image(self, req, image_id):
         """Fetch an image from the ImageService, then if present, return the
         associated kernel and ramdisk image IDs.
