@@ -363,8 +363,10 @@ class ApiEc2TestCase(test.TestCase):
         self.manager.delete_project(project)
         self.manager.delete_user(user)
 
-    def test_group_name_valid_security_group(self):
-        """Test that we sanely handle invalid security group names. """
+    def test_group_name_valid_chars_security_group(self):
+        """ Test that we sanely handle invalid security group names.
+         API Spec states we should only accept alphanumeric characters, 
+         spaces, dashes, and underscores. """
         self.expect_http()
         self.mox.ReplayAll()
         user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
@@ -376,7 +378,7 @@ class ApiEc2TestCase(test.TestCase):
 
         # Test block group_name of non alphanumeric characters, spaces,
         # dashes, and underscores.
-        security_group_name = "aa #$% -=99"
+        security_group_name = "aa #^% -=99"
 
         try:
             self.ec2.create_security_group(security_group_name, 'test group')
@@ -388,6 +390,18 @@ class ApiEc2TestCase(test.TestCase):
                           "(expected InvalidParameterValue)" % e.code)
         else:
             self.fail('Exception not raised.')
+
+    def test_group_name_valid_length_security_group(self):
+        """Test that we sanely handle invalid security group names.
+         API Spec states that the length should not exceed 255 chars """
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        # At the moment, you need both of these to actually be netadmin
+        self.manager.add_role('fake', 'netadmin')
+        project.add_role('fake', 'netadmin')
 
         # Test block group_name > 255 chars
         security_group_name = "".join(random.choice("poiuytrewqasdfghjklmnbvc")
