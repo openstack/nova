@@ -64,11 +64,10 @@ def check_option_permissions(context, specified_options,
             if opt not in known_options]
     if spec_unknown_opts:
         unknown_opt_str = ", ".join(spec_unknown_opts)
-        LOG.error(_("Received request for unknown options "
-                "'%(unknown_opt_str)s'") % locals())
-        raise exception.InvalidInput(reason=_(
-                "Unknown options specified: %(unknown_opt_str)s") %
-                locals())
+        reason = _("Received request for unknown options "
+                "'%(unknown_opt_str)s'") % locals()
+        LOG.error(reason)
+        raise exception.InvalidInput(reason=reason)
 
     # Check for admin context for the admin commands
     if not context.is_admin:
@@ -136,6 +135,11 @@ class Controller(object):
                 reason = _('Invalid server status: %(status)s') % locals()
                 LOG.error(reason)
                 raise exception.InvalidInput(reason=reason)
+
+        # Don't pass these along to compute API, if they exist.
+        search_opts.pop('changes-since', None)
+        search_opts.pop('fresh', None)
+
         instance_list = self.compute_api.get_all(
                 context, search_opts=search_opts)
         limited_list = self._limit_items(instance_list, req)

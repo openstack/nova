@@ -744,10 +744,6 @@ class API(base.Base):
         # Search options are mutually exclusive
         known_params = {
                 'recurse_zones': (None, None),
-                # v1.0 API?
-                'fresh': (None, None),
-                # v1.1 API
-                'changes-since': (None, None),
                 # Mutually exclusive options
                 'name': (_get_all_by_column_regexp, ('display_name',)),
                 'reservation_id': (_get_all_by_reservation_id, ()),
@@ -761,9 +757,6 @@ class API(base.Base):
                 'image': (_get_all_by_column, ('image_ref',)),
                 'state': (_get_all_by_column, ('state',)),
                 'flavor': (_get_all_by_flavor, ())}
-
-        # FIXME(comstud): 'fresh' and 'changes-since' are currently not
-        # implemented...
 
         if search_opts is None:
             search_opts = {}
