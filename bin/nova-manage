@@ -518,7 +518,7 @@ class FixedIpCommands(object):
                 instance = fixed_ip['instance']
                 hostname = instance['hostname']
                 host = instance['host']
-                mac_address = fixed_ip['mac_address']['address']
+                mac_address = fixed_ip['virtual_interface']['address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
                     fixed_ip['network']['cidr'],
                     fixed_ip['address'],

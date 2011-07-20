@@ -60,6 +60,9 @@ class API(base.Base):
                             affect_auto_assigned=False):
         """Removes floating ip with address from a project."""
         floating_ip = self.db.floating_ip_get_by_address(context, address)
+        if floating_ip['fixed_ip']:
+            raise exception.ApiError(_('Floating ip is in use.  '
+                             'Disassociate it before releasing.'))
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
         # NOTE(vish): We don't know which network host should get the ip

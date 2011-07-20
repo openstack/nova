@@ -721,7 +721,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_update(context, instance_id,
            dict(memory_mb=instance_type['memory_mb'],
                 vcpus=instance_type['vcpus'],
-                local_gb=instance_type['local_gb']))
+                local_gb=instance_type['local_gb'],
+                instance_type_id=instance_type['id']))
 
         self.driver.revert_resize(instance_ref)
         self.db.migration_update(context, migration_id,
@@ -742,18 +743,20 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
+
         if instance_ref['host'] == FLAGS.host:
             raise exception.Error(_(
                     'Migration error: destination same as source!'))
 
-        instance_type = self.db.instance_type_get_by_flavor_id(context,
-                flavor_id)
+        old_instance_type = self.db.instance_type_get_by_id(context,
+                instance_ref['instance_type_id'])
+
         migration_ref = self.db.migration_create(context,
                 {'instance_id': instance_id,
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
                  'dest_host':   self.driver.get_host_ip_addr(),
-                 'old_flavor_id': instance_type['flavorid'],
+                 'old_flavor_id': old_instance_type['flavorid'],
                  'new_flavor_id': flavor_id,
                  'status':      'pre-migrating'})
 
@@ -767,6 +770,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'migration_id': migration_ref['id'],
                        'instance_id': instance_id, },
                 })
+
+        instance_type = self.db.instance_type_get_by_flavor_id(context,
+                flavor_id)
         usage_info = utils.usage_from_instance(instance_ref,
                               new_instance_type=instance_type['name'],
                               new_instance_type_id=instance_type['id'])
