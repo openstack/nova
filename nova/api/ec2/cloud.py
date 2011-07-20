@@ -832,9 +832,7 @@ class CloudController(object):
             for ec2_id in instance_id:
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
                 try:
-                    instance = self.compute_api.get(context,
-                            instance_id=internal_id,
-                            search_opts=search_opts)
+                    instance = self.compute_api.get(context, internal_id)
                 except exception.NotFound:
                     continue
                 instances.append(instance)
@@ -1021,7 +1019,7 @@ class CloudController(object):
                                   'AvailabilityZone'),
             block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context,
-                instance_id=instances[0]['reservation_id'])
+                reservation_id=instances[0]['reservation_id'])
 
     def _do_instance(self, action, context, ec2_id):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
