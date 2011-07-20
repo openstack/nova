@@ -299,7 +299,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 network_info = self.network_api.allocate_for_instance(context,
                                                          instance, vpn=is_vpn)
                 LOG.debug(_("instance network_info: |%s|"), network_info)
-                self.driver.plug_vifs(context, instance, network_info)
             else:
                 # TODO(tr3buchet) not really sure how this should be handled.
                 # virt requires network_info to be passed in but stub_network
@@ -646,7 +645,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'rescuing')
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance_ref)
-        self.driver.plug_vifs(context, instance_ref, network_info)
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
         self.driver.rescue(instance_ref, _update_state, network_info)

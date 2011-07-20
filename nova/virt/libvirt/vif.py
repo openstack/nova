@@ -33,7 +33,7 @@ flags.DEFINE_bool('allow_project_net_traffic',
 class LibvirtBridge(object):
     """Linux bridge VIF for Libvirt."""
 
-    def get_configurations(self, instance, network, mapping):
+    def get_configurations(self, network, mapping):
         """Get a dictionary of VIF configurations for bridge type."""
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = mapping['gateway']
@@ -76,6 +76,7 @@ class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
         """Ensure that the bridge exists, and add VIF to it."""
         linux_net.ensure_bridge(network['bridge'],
                                 network['bridge_interface'])
+        return self.get_configurations(network, mapping)
 
     def unplug(self, instance, network, mapping):
         pass
@@ -88,6 +89,7 @@ class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
         """Ensure that VLAN and bridge exist and add VIF to the bridge."""
         linux_net.ensure_vlan_bridge(network['vlan'], network['bridge'],
                                      network['bridge_interface'])
+        return self.get_configurations(network, mapping)
 
     def unplug(self, instance, network, mapping):
         pass
@@ -96,7 +98,7 @@ class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
 class LibvirtOpenVswitchDriver(VIFDriver):
     """VIF driver for Open vSwitch."""
 
-    def get_configurations(self, instance, network, mapping):
+    def plug(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
         utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
@@ -114,9 +116,6 @@ class LibvirtOpenVswitchDriver(VIFDriver):
             'mac_address': mapping['mac']}
         print "using result = %s" % str(result)
         return result
-
-    def plug(self, instance, network, mapping):
-        pass
 
     def unplug(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])
