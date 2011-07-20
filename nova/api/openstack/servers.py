@@ -67,14 +67,15 @@ def check_option_permissions(context, specified_options,
         LOG.error(_("Received request for unknown options "
                 "'%(unknown_opt_str)s'") % locals())
         raise exception.InvalidInput(reason=_(
-                "Unknown options specified: %(unknown_opt_str)s"))
+                "Unknown options specified: %(unknown_opt_str)s") %
+                locals())
 
     # Check for admin context for the admin commands
     if not context.is_admin:
         spec_admin_opts = [opt for opt in specified_options
                 if opt in admin_api_options]
         if spec_admin_opts:
-            admin_opt_str = ", ".join(admin_opts)
+            admin_opt_str = ", ".join(spec_admin_opts)
             LOG.error(_("Received request for admin options "
                     "'%(admin_opt_str)s' from non-admin context") %
                     locals())

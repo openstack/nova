@@ -724,6 +724,208 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         self.assertTrue(res.body.find('marker param') > -1)
 
+    def test_get_servers_with_bad_option_v1_0(self):
+        # 1.0 API ignores unknown options
+        def fake_get_all(compute_self, context, search_opts=None):
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = webob.Request.blank('/v1.0/servers?unknownoption=whee')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_with_bad_option_v1_1(self):
+        req = webob.Request.blank('/v1.1/servers?unknownoption=whee')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(res.body.find(
+                "Unknown options specified: unknownoption") > -1)
+
+    def test_get_servers_allows_image_v1_1(self):
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('image' in search_opts)
+            self.assertEqual(search_opts['image'], '12345')
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = webob.Request.blank('/v1.1/servers?image=12345')
+        res = req.get_response(fakes.wsgi_app())
+        # The following assert will fail if either of the asserts in
+        # fake_get_all() fail
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_allows_flavor_v1_1(self):
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('flavor' in search_opts)
+            # flavor is an integer ID
+            self.assertEqual(search_opts['flavor'], 12345)
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = webob.Request.blank('/v1.1/servers?flavor=12345')
+        res = req.get_response(fakes.wsgi_app())
+        # The following assert will fail if either of the asserts in
+        # fake_get_all() fail
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_allows_status_v1_1(self):
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('state' in search_opts)
+            self.assertEqual(search_opts['state'],
+                    [power_state.RUNNING, power_state.BLOCKED])
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = webob.Request.blank('/v1.1/servers?status=active')
+        res = req.get_response(fakes.wsgi_app())
+        # The following assert will fail if either of the asserts in
+        # fake_get_all() fail
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_allows_name_v1_1(self):
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('name' in search_opts)
+            self.assertEqual(search_opts['name'], 'whee.*')
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = webob.Request.blank('/v1.1/servers?name=whee.*')
+        res = req.get_response(fakes.wsgi_app())
+        # The following assert will fail if either of the asserts in
+        # fake_get_all() fail
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_allows_instance_name1_v1_1(self):
+        """Test getting servers by instance_name with admin_api
+        disabled
+        """
+        FLAGS.allow_admin_api = False
+        req = webob.Request.blank('/v1.1/servers?instance_name=whee.*')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(res.body.find(
+                "Unknown options specified: instance_name") > -1)
+
+    def test_get_servers_allows_instance_name2_v1_1(self):
+        """Test getting servers by instance_name with admin_api
+        enabled but non-admin context
+        """
+        FLAGS.allow_admin_api = True
+
+        context = nova.context.RequestContext('testuser', 'testproject',
+                is_admin=False)
+        req = webob.Request.blank('/v1.1/servers?instance_name=whee.*')
+        req.environ["nova.context"] = context
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 403)
+        self.assertTrue(res.body.find(
+                "User does not have admin privileges") > -1)
+
+    def test_get_servers_allows_instance_name3_v1_1(self):
+        """Test getting servers by instance_name with admin_api
+        enabled and admin context
+        """
+        FLAGS.allow_admin_api = True
+
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('instance_name' in search_opts)
+            self.assertEqual(search_opts['instance_name'], 'whee.*')
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = webob.Request.blank('/v1.1/servers?instance_name=whee.*')
+        # Request admin context
+        context = nova.context.RequestContext('testuser', 'testproject',
+                is_admin=True)
+        req.environ["nova.context"] = context
+        res = req.get_response(fakes.wsgi_app())
+        # The following assert will fail if either of the asserts in
+        # fake_get_all() fail
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_allows_ip_v1_1(self):
+        """Test getting servers by ip with admin_api enabled and
+        admin context
+        """
+        FLAGS.allow_admin_api = True
+
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('ip' in search_opts)
+            self.assertEqual(search_opts['ip'], '10\..*')
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = webob.Request.blank('/v1.1/servers?ip=10\..*')
+        # Request admin context
+        context = nova.context.RequestContext('testuser', 'testproject',
+                is_admin=True)
+        req.environ["nova.context"] = context
+        res = req.get_response(fakes.wsgi_app())
+        # The following assert will fail if either of the asserts in
+        # fake_get_all() fail
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_allows_ip6_v1_1(self):
+        """Test getting servers by ip6 with admin_api enabled and
+        admin context
+        """
+        FLAGS.allow_admin_api = True
+
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('ip6' in search_opts)
+            self.assertEqual(search_opts['ip6'], 'ffff.*')
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = webob.Request.blank('/v1.1/servers?ip6=ffff.*')
+        # Request admin context
+        context = nova.context.RequestContext('testuser', 'testproject',
+                is_admin=True)
+        req.environ["nova.context"] = context
+        res = req.get_response(fakes.wsgi_app())
+        # The following assert will fail if either of the asserts in
+        # fake_get_all() fail
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):
@@ -1665,7 +1867,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
 
-    def test_resize_server_v11(self):
+    def test_resize_server_v1_1(self):
 
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.content_type = 'application/json'
