@@ -1248,7 +1248,6 @@ def instance_get_all_by_column(context, column, column_data):
     """
     session = get_session()
 
-
     prefix = session.query(models.Instance).\
             options(joinedload_all('fixed_ips.floating_ips')).\
             options(joinedload('virtual_interfaces')).\

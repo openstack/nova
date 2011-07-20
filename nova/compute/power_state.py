@@ -48,14 +48,6 @@ _STATE_MAP = {
     BUILDING: 'building',
 }
 
-
-def name(code):
-    return _STATE_MAP[code]
-
-
-def valid_states():
-    return _STATE_MAP.keys()
-
 _STATUS_MAP = {
     None: 'BUILD',
     NOSTATE: 'BUILD',
@@ -70,9 +62,19 @@ _STATUS_MAP = {
     BUILDING: 'BUILD',
 }
 
+
+def name(code):
+    return _STATE_MAP[code]
+
+
+def valid_states():
+    return _STATE_MAP.keys()
+
+
 def status_from_state(power_state):
     """Map the power state to the server status string"""
     return _STATUS_MAP[power_state]
+
 
 def states_from_status(status):
     """Map the server status string to a list of power states"""
