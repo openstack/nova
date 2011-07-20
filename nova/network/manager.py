@@ -140,7 +140,9 @@ class RPCAllocateFixedIP(object):
                                  'args': {'network_ref': network}})
             if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
-                topic = self.db.queue_get_for(context, FLAGS.network_topic, host)
+                topic = self.db.queue_get_for(context,
+                                              FLAGS.network_topic,
+                                              host)
                 args = {}
                 args['instance_id'] = instance_id
                 args['network_id'] = network['id']
@@ -414,7 +416,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         # deallocate vifs (mac addresses)
         self.db.virtual_interface_delete_by_instance(context, instance_id)
 
-    def get_instance_nw_info(self, context, instance_id, instance_type_id, host):
+    def get_instance_nw_info(self, context, instance_id,
+                             instance_type_id, host):
         """Creates network info list for instance.
 
         called by allocate_for_instance and netowrk_api
