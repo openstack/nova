@@ -96,6 +96,9 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
+flags.DEFINE_bool('allow_project_net_traffic',
+                  True,
+                  'Whether to allow in project network traffic')
 flags.DEFINE_bool('use_cow_images',
                   True,
                   'Whether to use cow images')
@@ -1001,10 +1004,9 @@ class LibvirtConnection(driver.ComputeDriver):
                     'ebs_root': ebs_root,
                     'volumes': block_device_mapping}
 
-        if FLAGS.vnc_enabled:
-            if FLAGS.libvirt_type != 'lxc' or FLAGS.libvirt_type != 'uml':
-                xml_info['vncserver_host'] = FLAGS.vncserver_host
-                xml_info['vnc_keymap'] = FLAGS.vnc_keymap
+        if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
+            xml_info['vncserver_host'] = FLAGS.vncserver_host
+            xml_info['vnc_keymap'] = FLAGS.vnc_keymap
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

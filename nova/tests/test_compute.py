@@ -519,6 +519,57 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(context, instance_id)
 
+    def test_finish_revert_resize(self):
+        """Ensure that the flavor is reverted to the original on revert"""
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+
+        def fake(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        self.stubs.Set(self.compute.driver, 'revert_resize', fake)
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
+
+        self.compute.run_instance(self.context, instance_id)
+
+        # Confirm the instance size before the resize starts
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 1)
+
+        db.instance_update(self.context, instance_id, {'host': 'foo'})
+
+        self.compute.prep_resize(context, instance_id, 3)
+
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+
+        self.compute.resize_instance(context, instance_id,
+                migration_ref['id'])
+        self.compute.finish_resize(context, instance_id,
+                    int(migration_ref['id']), {})
+
+        # Prove that the instance size is now the new size
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 3)
+
+        # Finally, revert and confirm the old flavor has been applied
+        self.compute.revert_resize(context, instance_id,
+                migration_ref['id'])
+        self.compute.finish_revert_resize(context, instance_id,
+                migration_ref['id'])
+
+        inst_ref = db.instance_get(context, instance_id)
+        instance_type_ref = db.instance_type_get_by_id(context,
+                inst_ref['instance_type_id'])
+        self.assertEqual(instance_type_ref['flavorid'], 1)
+
+        self.compute.terminate_instance(context, instance_id)
+
     def test_get_by_flavor_id(self):
         type = instance_types.get_instance_type_by_flavor_id(1)
         self.assertEqual(type['name'], 'm1.tiny')
@@ -569,7 +620,6 @@ class ComputeTestCase(test.TestCase):
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
         volmock = self.mox.CreateMock(self.volume_manager)
-        netmock = self.mox.CreateMock(self.network_manager)
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
@@ -577,12 +627,11 @@ class ComputeTestCase(test.TestCase):
         for i in range(len(i_ref['volumes'])):
             vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
-        netmock.setup_compute_network(c, i_ref['id'])
+        drivermock.plug_vifs(i_ref, [])
         drivermock.ensure_filtering_rules_for_instance(i_ref)
 
         self.compute.db = dbmock
         self.compute.volume_manager = volmock
-        self.compute.network_manager = netmock
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
@@ -597,18 +646,16 @@ class ComputeTestCase(test.TestCase):
 
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
-        netmock = self.mox.CreateMock(self.network_manager)
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
         compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
-        netmock.setup_compute_network(c, i_ref['id'])
+        drivermock.plug_vifs(i_ref, [])
         drivermock.ensure_filtering_rules_for_instance(i_ref)
 
         self.compute.db = dbmock
-        self.compute.network_manager = netmock
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
@@ -629,18 +676,20 @@ class ComputeTestCase(test.TestCase):
         dbmock = self.mox.CreateMock(db)
         netmock = self.mox.CreateMock(self.network_manager)
         volmock = self.mox.CreateMock(self.volume_manager)
+        drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             volmock.setup_compute_volume(c, i_ref['volumes'][i]['id'])
         for i in range(FLAGS.live_migration_retry_count):
-            netmock.setup_compute_network(c, i_ref['id']).\
+            drivermock.plug_vifs(i_ref, []).\
                 AndRaise(exception.ProcessExecutionError())
 
         self.compute.db = dbmock
         self.compute.network_manager = netmock
         self.compute.volume_manager = volmock
+        self.compute.driver = drivermock
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ProcessExecutionError,
