@@ -81,8 +81,9 @@ class VMOps(object):
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
+        print "loading vif_driver = %s" % FLAGS.xenapi_vif_driver
         self.vif_driver = utils.import_object(FLAGS.xenapi_vif_driver)
-
+        print "driver class = %s" % str(self.vif_driver)
     def list_instances(self):
         """List VM instances."""
         # TODO(justinsb): Should we just always use the details method?
@@ -473,7 +474,7 @@ class VMOps(object):
                     self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
-                self._destroy(instance, template_vm_ref,
+                self._destroy(instance, template_vm_ref, None,
                         shutdown=False, destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
@@ -843,7 +844,7 @@ class VMOps(object):
 
         self._session.call_xenapi("Async.VM.destroy", rescue_vm_ref)
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         """Destroy VM instance.
 
         This is the method exposed by xenapi_conn.destroy(). The rest of the
@@ -853,9 +854,9 @@ class VMOps(object):
         instance_id = instance.id
         LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
         vm_ref = VMHelper.lookup(self._session, instance.name)
-        return self._destroy(instance, vm_ref, shutdown=True)
+        return self._destroy(instance, vm_ref, network_info, shutdown=True)
 
-    def _destroy(self, instance, vm_ref, shutdown=True,
+    def _destroy(self, instance, vm_ref, network_info, shutdown=True,
                  destroy_kernel_ramdisk=True):
         """Destroys VM instance by performing:
 
@@ -877,9 +878,14 @@ class VMOps(object):
             self._destroy_kernel_ramdisk(instance, vm_ref)
         self._destroy_vm(instance, vm_ref)
 
-        networks = db.network_get_all_by_instance(ctxt, instance['id'])
-        for network in networks:
-            self.vif_driver.unplug(network)
+        if network_info:
+            try:
+                for (network, mapping) in network_info:
+                    self.vif_driver.unplug(instance, network, mapping)
+            except:
+                LOG.warning("Failed while unplugging vif of instance '%s'" % \
+                    instance['name'])
+                raise
 
 
     def _wait_with_callback(self, instance_id, task, callback):
@@ -1088,17 +1094,17 @@ class VMOps(object):
         for device, (network, info) in enumerate(network_info):
             vif_rec = self.vif_driver.get_vif_rec(self._session,
                     vm_ref, instance, device, network, info)
+            network_ref = vif_rec['network']
             LOG.debug(_('Creating VIF for VM %(vm_ref)s,' \
                 ' network %(network_ref)s.') % locals())
-            vif_ref = session.call_xenapi('VIF.create', vif_rec)
+            vif_ref = self._session.call_xenapi('VIF.create', vif_rec)
             LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
                 ' network %(network_ref)s.') % locals())
 
-    def setup_vif_network(self, ctxt, instance_id):
+    def plug_vifs(instance, network_info):
         """Set up VIF networking on the host."""
-        networks = db.network_get_all_by_instance(ctxt, instance_id)
-        for network in networks:
-            self.vif_driver.plug(network)
+        for (network, mapping) in network_info:
+            self.vif_driver.plug(self._session, instance, network, mapping)
 
     def reset_network(self, instance, vm_ref=None):
         """Creates uuid arg to pass to make_agent_call and calls it."""

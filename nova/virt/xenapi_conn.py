@@ -226,7 +226,7 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def destroy(self, instance, network_info):
         """Destroy VM instance"""
-        self._vmops.destroy(instance)
+        self._vmops.destroy(instance, network_info)
 
     def pause(self, instance, callback):
         """Pause VM instance"""
@@ -269,8 +269,8 @@ class XenAPIConnection(driver.ComputeDriver):
         """inject network info for specified instance"""
         self._vmops.inject_network_info(instance, network_info)
 
-    def setup_vif_network(self, ctxt, instance_id):
-        self._vmops.setup_vif_network(ctxt, instance_id)
+    def plug_vifs(self, instance_ref, network_info):
+        self._vmops.plug_vifs(instance_ref, network_info)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
