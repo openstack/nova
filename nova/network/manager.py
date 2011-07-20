@@ -334,21 +334,21 @@ class NetworkManager(manager.SchedulerDependentManager):
                                         self.host)
         if host == self.host:
             self._on_set_network_host(context, network_id)
-        return host
 
     def set_network_hosts(self, context):
         """Set the network hosts for any networks which are unset."""
         try:
             networks = self.db.network_get_all(context)
         except exception.NoNetworksFound:
-            # we don't care if no networks are found
-            pass
+            # no networks found, nothing to do
+            return
 
         for network in networks:
             host = network['host']
             if not host:
-                # return so worker will only grab 1 (to help scale flatter)
-                return self.set_network_host(context, network['id'])
+                # break so worker will only grab 1 (to help scale flatter)
+                self.set_network_host(context, network['id'])
+                break
 
     def _get_networks_for_instance(self, context, instance_id, project_id):
         """Determine & return which networks an instance should connect to."""
