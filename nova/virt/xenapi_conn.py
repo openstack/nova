@@ -210,7 +210,7 @@ class XenAPIConnection(driver.ComputeDriver):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, image_id)
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
 
@@ -249,11 +249,11 @@ class XenAPIConnection(driver.ComputeDriver):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
-    def rescue(self, instance, callback):
+    def rescue(self, instance, callback, network_info):
         """Rescue the specified instance"""
         self._vmops.rescue(instance, callback)
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""
         self._vmops.unrescue(instance, callback)
 

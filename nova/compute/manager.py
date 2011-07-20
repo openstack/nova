@@ -419,7 +419,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
         instance_ref.injected_files = kwargs.get('injected_files', [])
-        self.driver.spawn(instance_ref)
+        self.driver.spawn(instance_ref, network_info)
 
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
@@ -452,7 +452,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rebooting')
-        self.driver.reboot(instance_ref)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance_ref)
+        self.driver.reboot(instance_ref, network_info)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -647,7 +649,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.plug_vifs(context, instance_ref, network_info)
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
-        self.driver.rescue(instance_ref, _update_state)
+        self.driver.rescue(instance_ref, _update_state, network_info)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -663,7 +665,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'unrescuing')
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
-        self.driver.unrescue(instance_ref, _update_state)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance_ref)
+        self.driver.unrescue(instance_ref, _update_state, network_info)
         self._update_state(context, instance_id)
 
     @staticmethod

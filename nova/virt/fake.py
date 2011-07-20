@@ -167,7 +167,7 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """
         Reboot the specified instance.
 
@@ -240,13 +240,13 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def rescue(self, instance):
+    def rescue(self, instance, callback, network_info):
         """
         Rescue the specified instance.
         """
         pass
 
-    def unrescue(self, instance):
+    def unrescue(self, instance, callback, network_info):
         """
         Unrescue the specified instance.
         """
@@ -293,7 +293,7 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         key = instance.name
         if key in self.instances:
             del self.instances[key]

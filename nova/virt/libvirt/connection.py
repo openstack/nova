@@ -477,7 +477,7 @@ class LibvirtConnection(driver.ComputeDriver):
         shutil.rmtree(temp_dir)
 
     @exception.wrap_exception()
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot a virtual machine, given an instance reference.
 
         This method actually destroys and re-creates the domain to ensure the
@@ -492,7 +492,7 @@ class LibvirtConnection(driver.ComputeDriver):
         # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
         # better because we cannot ensure flushing dirty buffers
         # in the guest OS. But, in case of KVM, shutdown() does not work...
-        self.destroy(instance, False)
+        self.destroy(instance, network_info, cleanup=False)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_new_domain(xml)
@@ -542,7 +542,7 @@ class LibvirtConnection(driver.ComputeDriver):
         dom.create()
 
     @exception.wrap_exception()
-    def rescue(self, instance):
+    def rescue(self, instance, callback, network_info):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
@@ -551,7 +551,7 @@ class LibvirtConnection(driver.ComputeDriver):
         data recovery.
 
         """
-        self.destroy(instance, False)
+        self.destroy(instance, network_info, cleanup=False)
 
         xml = self.to_xml(instance, rescue=True)
         rescue_images = {'image_id': FLAGS.rescue_image_id,
@@ -580,14 +580,14 @@ class LibvirtConnection(driver.ComputeDriver):
         return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception()
-    def unrescue(self, instance):
+    def unrescue(self, instance, network_info):
         """Reboot the VM which is being rescued back into primary images.
 
         Because reboot destroys and re-creates instances, unresue should
         simply call reboot.
 
         """
-        self.reboot(instance)
+        self.reboot(instance, network_info)
 
     @exception.wrap_exception()
     def poll_rescued_instances(self, timeout):
@@ -596,7 +596,7 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, instance, network_info=None, block_device_mapping=None):
+    def spawn(self, instance, network_info, block_device_mapping=None):
         xml = self.to_xml(instance, False, network_info=network_info,
                           block_device_mapping=block_device_mapping)
         block_device_mapping = block_device_mapping or []
