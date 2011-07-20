@@ -743,7 +743,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
         self.assertTrue(res.body.find(
-                "Unknown options specified: unknownoption") > -1)
+                "unknown options 'unknownoption'") > -1)
 
     def test_get_servers_allows_image_v1_1(self):
         def fake_get_all(compute_self, context, search_opts=None):
@@ -828,7 +828,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
         self.assertTrue(res.body.find(
-                "Unknown options specified: instance_name") > -1)
+                "unknown options 'instance_name'") > -1)
 
     def test_get_servers_allows_instance_name2_v1_1(self):
         """Test getting servers by instance_name with admin_api
