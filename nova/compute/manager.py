@@ -708,7 +708,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def finish_revert_resize(self, context, migration_id):
+    def finish_revert_resize(self, context, instance_id, migration_id):
         """Finishes the second half of reverting a resize.
 
         Power back on the source instance and revert the resized attributes

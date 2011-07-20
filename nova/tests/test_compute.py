@@ -545,14 +545,14 @@ class ComputeTestCase(test.TestCase):
 
         db.instance_update(self.context, instance_id, {'host': 'foo'})
 
-        self.compute.prep_resize(context, instance_id, 3)
+        self.compute.prep_resize(context, inst_ref['uuid'], 3)
 
         migration_ref = db.migration_get_by_instance_and_status(context,
-                instance_id, 'pre-migrating')
+                inst_ref['uuid'], 'pre-migrating')
 
-        self.compute.resize_instance(context, instance_id,
+        self.compute.resize_instance(context, inst_ref['uuid'],
                 migration_ref['id'])
-        self.compute.finish_resize(context, instance_id,
+        self.compute.finish_resize(context, inst_ref['uuid'],
                     int(migration_ref['id']), {})
 
         # Prove that the instance size is now the new size
@@ -562,9 +562,9 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(instance_type_ref['flavorid'], 3)
 
         # Finally, revert and confirm the old flavor has been applied
-        self.compute.revert_resize(context, instance_id,
+        self.compute.revert_resize(context, inst_ref['uuid'],
                 migration_ref['id'])
-        self.compute.finish_revert_resize(context, instance_id,
+        self.compute.finish_revert_resize(context, inst_ref['uuid'],
                 migration_ref['id'])
 
         inst_ref = db.instance_get(context, instance_id)
