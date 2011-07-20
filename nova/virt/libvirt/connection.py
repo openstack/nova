@@ -96,6 +96,9 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
+flags.DEFINE_bool('allow_project_net_traffic',
+                  True,
+                  'Whether to allow in project network traffic')
 flags.DEFINE_bool('use_cow_images',
                   True,
                   'Whether to use cow images')

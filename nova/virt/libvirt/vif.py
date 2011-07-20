@@ -25,9 +25,6 @@ from nova import utils
 from nova.virt.vif import VIFDriver
 
 FLAGS = flags.FLAGS
-flags.DEFINE_bool('allow_project_net_traffic',
-                  True,
-                  'Whether to allow in project network traffic')
 
 
 class LibvirtBridge(object):
