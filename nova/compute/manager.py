@@ -212,6 +212,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
 
+    def _get_instance_nw_info(self, context, instance):
+        """Get a list of dictionaries of network data of an instance.
+        Returns an empty list if stub_network flag is set."""
+        network_info = []
+        if not FLAGS.stub_network:
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                 instance)
+        return network_info
+
     def _setup_block_device_mapping(self, context, instance_id):
         """setup volumes for block device mapping"""
         self.db.instance_set_state(context,
@@ -352,10 +361,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                   {'action_str': action_str, 'instance_id': instance_id},
                   context=context)
 
-        network_info = None
+        network_info = self._get_instance_nw_info(context, instance)
         if not FLAGS.stub_network:
-            network_info = self.network_api.get_instance_nw_info(context,
-                                                                 instance)
             self.network_api.deallocate_for_instance(context, instance)
 
         volumes = instance.get('volumes') or []
@@ -412,8 +419,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._update_state(context, instance_id, power_state.BUILDING)
 
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance_ref)
+        network_info = self._get_instance_nw_info(context, instance_ref)
+
         self.driver.destroy(instance_ref, network_info)
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
@@ -451,8 +458,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rebooting')
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance_ref)
+        network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.reboot(instance_ref, network_info)
         self._update_state(context, instance_id)
 
@@ -643,10 +649,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rescuing')
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance_ref)
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
+        network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.rescue(instance_ref, _update_state, network_info)
         self._update_state(context, instance_id)
 
@@ -663,8 +668,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'unrescuing')
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance_ref)
+        network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.unrescue(instance_ref, _update_state, network_info)
         self._update_state(context, instance_id)
 
@@ -680,8 +684,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance_ref)
+        network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.destroy(instance_ref, network_info)
         usage_info = utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host,
@@ -701,8 +704,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
 
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance_ref)
+        network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.destroy(instance_ref, network_info)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 instance_ref['host'])
@@ -837,8 +839,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # reload the updated instance ref
         # FIXME(mdietz): is there reload functionality?
         instance = self.db.instance_get(context, instance_id)
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance)
+        network_info = self._get_instance_nw_info(context, instance)
         self.driver.finish_resize(instance, disk_info, network_info)
 
         self.db.migration_update(context, migration_id,
@@ -988,8 +989,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.debug(_('instance %s: inject network info'), instance_id,
                                                          context=context)
         instance = self.db.instance_get(context, instance_id)
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance)
+        network_info = self._get_instance_nw_info(context, instance)
         LOG.debug(_("network_info to inject: |%s|"), network_info)
 
         self.driver.inject_network_info(instance, network_info)
@@ -1207,8 +1207,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         #
         # Retry operation is necessary because continuously request comes,
         # concorrent request occurs to iptables, then it complains.
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance_ref)
+        network_info = self._get_instance_nw_info(context, instance_ref)
         max_retry = FLAGS.live_migration_retry_count
         for cnt in range(max_retry):
             try:
