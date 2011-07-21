@@ -15,9 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import time
 
 from nova.api.openstack import common
+from nova import utils
 
 
 class ViewBuilder(object):
@@ -113,10 +115,11 @@ class ViewBuilderV11(ViewBuilder):
         return limits
 
     def _build_rate_limit(self, rate_limit):
+        next_avail = datetime.datetime.fromtimestamp(rate_limit["resetTime"])
         return {
             "verb": rate_limit["verb"],
             "value": rate_limit["value"],
             "remaining": int(rate_limit["remaining"]),
             "unit": rate_limit["unit"],
-            "next-available": rate_limit["resetTime"],
+            "next-available": utils.isotime(at=next_avail),
         }

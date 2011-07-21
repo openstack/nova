@@ -211,6 +211,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
         self.controller = limits.create_resource('1.1')
+        self.maxDiff = None
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -267,14 +268,14 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": 0,
+                                "next-available": "1969-12-31T19:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
                             },
                             {
                                 "verb": "POST",
-                                "next-available": 0,
+                                "next-available": "1969-12-31T19:00:00Z",
                                 "unit": "HOUR",
                                 "value": 5,
                                 "remaining": 5,
@@ -287,7 +288,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": 0,
+                                "next-available": "1969-12-31T19:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 5,
                                 "remaining": 5,
@@ -329,7 +330,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": 0,
+                                "next-available": "1969-12-31T19:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
@@ -342,7 +343,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": 0,
+                                "next-available": "1969-12-31T19:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
@@ -919,7 +920,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                 "verb": "POST",
                 "remaining": 2,
                 "unit": "MINUTE",
-                "resetTime": "2011-12-15T22:42:45Z"
+                "resetTime": 1311272226
             },
             {
                 "URI": "*/servers",
@@ -928,7 +929,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                 "verb": "POST",
                 "remaining": 10,
                 "unit": "DAY",
-                "resetTime": "2011-12-15T22:42:45Z"
+                "resetTime": 1311272226
             },
         ]
         self.absolute_limits = {
@@ -953,7 +954,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                                 "verb": "POST",
                                 "remaining": 2,
                                 "unit": "MINUTE",
-                                "next-available": "2011-12-15T22:42:45Z"
+                                "next-available": "2011-07-21T14:17:06Z"
                             },
                         ]
                     },
@@ -966,7 +967,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                                 "verb": "POST",
                                 "remaining": 10,
                                 "unit": "DAY",
-                                "next-available": "2011-12-15T22:42:45Z"
+                                "next-available": "2011-07-21T14:17:06Z"
                             },
                         ]
                     },
