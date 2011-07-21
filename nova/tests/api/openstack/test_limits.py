@@ -25,11 +25,11 @@ import time
 import unittest
 import webob
 
-from xml.dom.minidom import parseString
+import xml.dom.minidom
 
-from nova import test
 import nova.context
 from nova.api.openstack import limits
+from nova import test
 
 
 TEST_LIMITS = [
@@ -910,18 +910,8 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
 class LimitsViewBuilderV11Test(test.TestCase):
 
     def setUp(self):
-        self.view_builder = self._get_view_builder()
-
-    def tearDown(self):
-        pass
-
-    def _get_view_builder(self):
-        views = nova.api.openstack.views
-        view_builder = views.limits.ViewBuilderV11()
-        return view_builder
-
-    def _get_rate_limits(self):
-        rate_limits = [
+        self.view_builder = views.limits.ViewBuilderV11()
+        self.rate_limits = [
             {
                 "URI": "*",
                 "regex": ".*",
@@ -941,17 +931,14 @@ class LimitsViewBuilderV11Test(test.TestCase):
                 "resetTime": "2011-12-15T22:42:45Z"
             },
         ]
-
-        return rate_limits
-
-    def _get_absolute_limits(self):
-        absolute_limits = {
+        self.absolute_limits = {
             "metadata_items": 1,
             "injected_files": 5,
             "injected_file_content_bytes": 5,
         }
 
-        return absolute_limits
+    def tearDown(self):
+        pass
 
     def test_build_limits(self):
         expected_limits = {
@@ -993,8 +980,8 @@ class LimitsViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self._get_rate_limits(),
-                                         self._get_absolute_limits())
+        output = self.view_builder.build(self.rate_limits,
+                                         self.absolute_limits)
         self.assertDictMatch(output, expected_limits)
 
     def test_build_limits_empty_limits(self):
@@ -1062,7 +1049,7 @@ class LimitsXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'index')
-        actual = parseString(output.replace("  ", ""))
+        actual = minidom.parseString(output.replace("  ", ""))
 
         expected = parseString("""
         <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
@@ -1085,7 +1072,7 @@ class LimitsXMLSerializationTest(test.TestCase):
                 <limit name="maxPersonalitySize" value="10240"/>
             </absolute>
         </limits>
-        """.replace("  ", "") % (locals()))
+        """.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -1100,13 +1087,13 @@ class LimitsXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'index')
-        actual = parseString(output.replace("  ", ""))
+        actual = minidom.parseString(output.replace("  ", ""))
 
         expected = parseString("""
         <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
             <rates />
             <absolute />
         </limits>
-        """.replace("  ", "") % (locals()))
+        """.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
