@@ -607,7 +607,7 @@ class NetworkCommands(object):
             bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
         if not gateway_v6:
             gateway_v6 = FLAGS.gateway_v6
-        if not dns:
+        if not dns and FLAGS.flat_network_dns:
             dns = FLAGS.flat_network_dns
         net_manager = utils.import_object(FLAGS.network_manager)
 
