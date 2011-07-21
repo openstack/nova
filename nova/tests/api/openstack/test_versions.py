@@ -21,6 +21,7 @@ import webob
 from nova import context
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.api.openstack import versions
 from nova.api.openstack import views
 
 
@@ -161,3 +162,93 @@ class VersionsTest(test.TestCase):
         actual = builder.generate_href(version_number)
 
         self.assertEqual(actual, expected)
+
+    def test_xml_serializer(self):
+        versions_data = {
+            'versions': [
+                {
+                    "id": "2.7.1",
+                    "updated": "2011-07-18T11:30:00Z",
+                    "status": "DEPRECATED",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://test/2.7.1",
+                        }
+                    ],
+                },
+            ]
+        }
+
+        expected = """
+            <versions>
+                <version id="2.7.1" status="DEPRECATED"
+                 updated="2011-07-18T11:30:00Z">
+                    <atom:link href="http://test/2.7.1" rel="self"/>
+                </version>
+            </versions>""".replace("  ", "").replace("\n", "")
+
+        serializer = versions.VersionsXMLSerializer()
+        response = serializer.default(versions_data)
+        response = response.replace("  ", "").replace("\n", "")
+        self.assertEqual(expected, response)
+
+    def test_atom_serializer(self):
+        versions_data = {
+            'versions': [
+                {
+                    "id": "2.9.8",
+                    "updated": "2011-07-20T11:40:00Z",
+                    "status": "CURRENT",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://test/2.9.8",
+                        }
+                    ],
+                },
+            ]
+        }
+
+        expected = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+                <title type="text">
+                    Available API Versions
+                </title>
+                <updated>
+                    2011-07-20T11:40:00Z
+                </updated>
+                <id>
+                    http://test/
+                </id>
+                <author>
+                    <name>
+                        Rackspace
+                    </name>
+                    <uri>
+                        http://www.rackspace.com/
+                    </uri>
+                </author>
+                <link href="http://test/" rel="self"/>
+                <entry>
+                    <id>
+                        http://test/2.9.8
+                    </id>
+                    <title type="text">
+                        Version 2.9.8
+                    </title>
+                    <updated>
+                        2011-07-20T11:40:00Z
+                    </updated>
+                    <link href="http://test/2.9.8" rel="self"/>
+                    <content type="text">
+                        Version 2.9.8 CURRENT (2011-07-20T11:40:00Z)
+                    </content>
+                </entry>
+            </feed>""".replace("  ", "").replace("\n", "")
+
+        serializer = versions.VersionsAtomSerializer()
+        response = serializer.default(versions_data)
+        print response
+        response = response.replace("  ", "").replace("\n", "")
+        self.assertEqual(expected, response)

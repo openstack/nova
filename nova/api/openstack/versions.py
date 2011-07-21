@@ -28,7 +28,6 @@ ATOM_XMLNS = "http://www.w3.org/2005/Atom"
 
 
 class Versions(wsgi.Resource):
-
     def __init__(self):
         metadata = {
             "attributes": {
