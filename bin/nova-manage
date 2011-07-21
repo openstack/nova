@@ -613,7 +613,7 @@ class NetworkCommands(object):
     @args('--fixed_range_v6', dest="fixed_range_v6", help='fixed ipv6 range')
     @args('--gateway_v6', dest="gateway_v6", help='ipv6 gateway')
     @args('--flat_network_bridge', dest="flat_network_bridge", metavar='<flat network bridge>', help='Flat_network_bridge')
-    @args('--bridge', dest="bridge_interface", metavar='<bridge interface>', help='Bridge_interface')
+    @args('--bridge_interface', dest="bridge_interface", metavar='<bridge interface>', help='Bridge_interface')
     def create(self, label=None, fixed_range=None, num_networks=None,
                network_size=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, gateway_v6=None,
