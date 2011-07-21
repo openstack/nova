@@ -77,7 +77,7 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     try:
         offset = int(request.GET.get('offset', 0))
     except ValueError:
-        msg =  _('offset param must be an integer')
+        msg = _('offset param must be an integer')
         raise webob.exc.HTTPBadRequest(explanation=msg)
 
     try:
@@ -115,7 +115,7 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
                 start_index = i + 1
                 break
         if start_index < 0:
-            msg = _('marker [%s] not found' % marker)
+            msg = _('marker [%s] not found') % marker
             raise webob.exc.HTTPBadRequest(explanation=msg)
     range_end = start_index + limit
     return items[start_index:range_end]
