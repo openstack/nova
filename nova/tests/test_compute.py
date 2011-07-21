@@ -535,7 +535,7 @@ class ComputeTestCase(test.TestCase):
 
         # Confirm the instance size before the resize starts
         inst_ref = db.instance_get(context, instance_id)
-        instance_type_ref = db.instance_type_get_by_id(context,
+        instance_type_ref = db.instance_type_get(context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], 1)
 
@@ -553,7 +553,7 @@ class ComputeTestCase(test.TestCase):
 
         # Prove that the instance size is now the new size
         inst_ref = db.instance_get(context, instance_id)
-        instance_type_ref = db.instance_type_get_by_id(context,
+        instance_type_ref = db.instance_type_get(context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], 3)
 
@@ -564,7 +564,7 @@ class ComputeTestCase(test.TestCase):
                 migration_ref['id'])
 
         inst_ref = db.instance_get(context, instance_id)
-        instance_type_ref = db.instance_type_get_by_id(context,
+        instance_type_ref = db.instance_type_get(context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], 1)
 

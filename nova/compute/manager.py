@@ -748,7 +748,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.Error(_(
                     'Migration error: destination same as source!'))
 
-        old_instance_type = self.db.instance_type_get_by_id(context,
+        old_instance_type = self.db.instance_type_get(context,
                 instance_ref['instance_type_id'])
 
         migration_ref = self.db.migration_create(context,
