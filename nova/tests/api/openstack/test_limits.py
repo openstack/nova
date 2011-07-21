@@ -268,14 +268,14 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": "1969-12-31T19:00:00Z",
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
                             },
                             {
                                 "verb": "POST",
-                                "next-available": "1969-12-31T19:00:00Z",
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "HOUR",
                                 "value": 5,
                                 "remaining": 5,
@@ -288,7 +288,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": "1969-12-31T19:00:00Z",
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 5,
                                 "remaining": 5,
@@ -330,7 +330,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": "1969-12-31T19:00:00Z",
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
@@ -343,7 +343,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": "1969-12-31T19:00:00Z",
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
@@ -954,7 +954,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                                 "verb": "POST",
                                 "remaining": 2,
                                 "unit": "MINUTE",
-                                "next-available": "2011-07-21T14:17:06Z"
+                                "next-available": "2011-07-21T18:17:06Z"
                             },
                         ]
                     },
@@ -967,7 +967,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                                 "verb": "POST",
                                 "remaining": 10,
                                 "unit": "DAY",
-                                "next-available": "2011-07-21T14:17:06Z"
+                                "next-available": "2011-07-21T18:17:06Z"
                             },
                         ]
                     },
