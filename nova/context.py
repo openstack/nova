@@ -18,9 +18,8 @@
 
 """RequestContext: context for requests that persist through all of nova."""
 
-import random
+import uuid
 
-from nova import exception
 from nova import utils
 
 
@@ -31,86 +30,53 @@ class RequestContext(object):
 
     """
 
-    def __init__(self, user, project, is_admin=None, read_deleted=False,
-                 remote_address=None, timestamp=None, request_id=None):
-        if hasattr(user, 'id'):
-            self._user = user
-            self.user_id = user.id
-        else:
-            self._user = None
-            self.user_id = user
-        if hasattr(project, 'id'):
-            self._project = project
-            self.project_id = project.id
-        else:
-            self._project = None
-            self.project_id = project
-        if is_admin is None:
-            if self.user_id and self.user:
-                self.is_admin = self.user.is_admin()
+    def __init__(self, user_id, project_id, is_admin=None, read_deleted=False,
+                 roles=None, remote_address=None, timestamp=None, request_id=None):
+        self.user_id = user_id
+        self.project_id = project_id
+        self.roles = roles or []
+        self.is_admin = is_admin
+        if self.is_admin is None:
+            if 'admin' in self.roles:
+                self.is_admin = True
             else:
                 self.is_admin = False
-        else:
-            self.is_admin = is_admin
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
             timestamp = utils.utcnow()
-        if isinstance(timestamp, str) or isinstance(timestamp, unicode):
-            timestamp = utils.parse_isotime(timestamp)
+        if isinstance(timestamp, basestring):
+            timestamp = utils.parse_strtime(timestamp)
         self.timestamp = timestamp
         if not request_id:
-            chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-'
-            request_id = ''.join([random.choice(chars) for x in xrange(20)])
+            request_id = unicode(uuid.uuid4())
         self.request_id = request_id
 
-    @property
-    def user(self):
-        # NOTE(vish): Delay import of manager, so that we can import this
-        #             file from manager.
-        from nova.auth import manager
-        if not self._user:
-            try:
-                self._user = manager.AuthManager().get_user(self.user_id)
-            except exception.NotFound:
-                pass
-        return self._user
-
-    @property
-    def project(self):
-        # NOTE(vish): Delay import of manager, so that we can import this
-        #             file from manager.
-        from nova.auth import manager
-        if not self._project:
-            try:
-                auth_manager = manager.AuthManager()
-                self._project = auth_manager.get_project(self.project_id)
-            except exception.NotFound:
-                pass
-        return self._project
-
     def to_dict(self):
-        return {'user': self.user_id,
-                'project': self.project_id,
+        return {'user_id': self.user_id,
+                'project_id': self.project_id,
                 'is_admin': self.is_admin,
                 'read_deleted': self.read_deleted,
+                'roles': self.roles,
                 'remote_address': self.remote_address,
-                'timestamp': utils.isotime(self.timestamp),
+                'timestamp': utils.strtime(self.timestamp),
                 'request_id': self.request_id}
 
     @classmethod
     def from_dict(cls, values):
         return cls(**values)
 
-    def elevated(self, read_deleted=False):
+    def elevated(self, read_deleted=None):
         """Return a version of this context with admin flag set."""
-        return RequestContext(self.user_id,
-                              self.project_id,
-                              True,
-                              read_deleted,
-                              self.remote_address,
-                              self.timestamp,
-                              self.request_id)
+        rd = self.read_deleted if read_deleted is None else read_deleted
+        return RequestContext(user_id=self.user_id,
+                              project_id=self.project_id,
+                              is_admin=True,
+                              read_deleted=rd,
+                              roles=self.roles,
+                              remote_address=self.remote_address,
+                              timestamp=self.timestamp,
+                              request_id=self.request_id)
 
 
 def get_admin_context(read_deleted=False):
