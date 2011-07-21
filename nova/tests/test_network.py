@@ -129,13 +129,13 @@ class FlatNetworkTestCase(test.TestCase):
     def test_get_instance_nw_info(self):
         self.mox.StubOutWithMock(db, 'fixed_ip_get_by_instance')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
-        self.mox.StubOutWithMock(db, 'instance_type_get_by_id')
+        self.mox.StubOutWithMock(db, 'instance_type_get')
 
         db.fixed_ip_get_by_instance(mox.IgnoreArg(),
                                     mox.IgnoreArg()).AndReturn(fixed_ips)
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
                                              mox.IgnoreArg()).AndReturn(vifs)
-        db.instance_type_get_by_id(mox.IgnoreArg(),
+        db.instance_type_get(mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn(flavor)
         self.mox.ReplayAll()
 
