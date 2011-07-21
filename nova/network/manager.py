@@ -481,6 +481,9 @@ class NetworkManager(manager.SchedulerDependentManager):
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
                 info['gateway6'] = network['gateway_v6']
+            if network['dns2']:
+                info['dns'].append(network['dns2'])
+
             network_info.append((network_dict, info))
         return network_info
 
@@ -591,7 +594,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
-                        bridge_interface, **kwargs):
+                        bridge_interface, dns, dns2=None, **kwargs):
         """Create networks based on parameters."""
         fixed_net = netaddr.IPNetwork(cidr)
         fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
@@ -606,7 +609,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
-            net['dns'] = FLAGS.flat_network_dns
+            net['dns'] = dns
+            net['dns2'] = dns2
             net['cidr'] = cidr
             net['multi_host'] = multi_host
             net['netmask'] = str(project_net.netmask)
@@ -636,6 +640,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
                 del net['dns']
+                del net['dns2']
                 vlan = kwargs['vlan_start'] + index
                 net['vpn_private_address'] = str(project_net[2])
                 net['dhcp_start'] = str(project_net[3])
@@ -755,7 +760,6 @@ class FlatManager(NetworkManager):
         """Setup Network on this host."""
         net = {}
         net['injected'] = FLAGS.flat_injected
-        net['dns'] = FLAGS.flat_network_dns
         self.db.network_update(context, network_ref['id'], net)
 
 

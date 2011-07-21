@@ -556,6 +556,7 @@ class Network(BASE, NovaBase):
     gateway = Column(String(255))
     broadcast = Column(String(255))
     dns = Column(String(255))
+    dns2 = Column(String(255))
 
     vlan = Column(Integer)
     vpn_public_address = Column(String(255))
