@@ -157,8 +157,6 @@ class CreateInstanceHelper(object):
         except exception.FlavorNotFound as error:
             msg = _("Invalid flavorRef provided.")
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
-        
-
         # Let the caller deal with unhandled exceptions.
 
     def _handle_quota_error(self, error):
