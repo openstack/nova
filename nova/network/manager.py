@@ -409,9 +409,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         LOG.debug(_("network allocations for instance %s"), instance_id,
                                                             context=context)
         networks = self._get_networks_for_instance(admin_context,
-                                                   instance_id,
-                                                   project_id,
-                                                   requested_networks=requested_networks)
+                                        instance_id, project_id,
+                                        requested_networks=requested_networks)
         self._allocate_mac_addresses(context, instance_id, networks)
         self._allocate_fixed_ips(admin_context, instance_id,
                                  host, networks, vpn=vpn,
@@ -928,7 +927,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                                     requested_networks)
         else:
             networks = self.db.project_get_networks(context, project_id)
-        return networks;
+        return networks
 
     def create_networks(self, context, **kwargs):
         """Create networks based on parameters."""
