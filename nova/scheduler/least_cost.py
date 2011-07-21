@@ -48,25 +48,43 @@ def noop_cost_fn(host):
     return 1
 
 
-flags.DEFINE_integer('fill_first_cost_fn_weight', 1,
+flags.DEFINE_integer('compute_fill_first_cost_fn_weight', 1,
                      'How much weight to give the fill-first cost function')
 
 
-def fill_first_cost_fn(host):
+def compute_fill_first_cost_fn(host):
     """Prefer hosts that have less ram available, filter_hosts will exclude
     hosts that don't have enough ram"""
     hostname, caps = host
-    free_mem = caps['compute']['host_memory_free']
+    free_mem = caps['host_memory_free']
     return free_mem
 
 
 class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):
-    def get_cost_fns(self):
+    def __init__(self, *args, **kwargs):
+        self.cost_fns_cache = {}
+        super(LeastCostScheduler, self).__init__(*args, **kwargs)
+
+    def get_cost_fns(self, topic):
         """Returns a list of tuples containing weights and cost functions to
         use for weighing hosts
         """
+
+        if topic in self.cost_fns_cache:
+            return self.cost_fns_cache[topic]
+
         cost_fns = []
         for cost_fn_str in FLAGS.least_cost_scheduler_cost_functions:
+            if '.' in cost_fn_str:
+                short_name = cost_fn_str.split('.')[-1]
+            else:
+                short_name = cost_fn_str
+                cost_fn_str = "%s.%s.%s" % (
+                        __name__, self.__class__.__name__, short_name)
+
+            if not (short_name.startswith('%s_' % topic) or
+                    short_name.startswith('noop')):
+                continue
 
             try:
                 # NOTE(sirp): import_class is somewhat misnamed since it can
@@ -84,23 +102,23 @@ class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):
 
             cost_fns.append((weight, cost_fn))
 
+        self.cost_fns_cache[topic] = cost_fns
         return cost_fns
 
-    def weigh_hosts(self, num, request_spec, hosts):
+    def weigh_hosts(self, topic, request_spec, hosts):
         """Returns a list of dictionaries of form:
-            [ {weight: weight, hostname: hostname} ]"""
+           [ {weight: weight, hostname: hostname, capabilities: capabs} ]
+        """
 
-        # FIXME(sirp): weigh_hosts should handle more than just instances
-        hostnames = [hostname for hostname, caps in hosts]
-
-        cost_fns = self.get_cost_fns()
+        cost_fns = self.get_cost_fns(topic)
         costs = weighted_sum(domain=hosts, weighted_fns=cost_fns)
 
         weighted = []
         weight_log = []
-        for cost, hostname in zip(costs, hostnames):
+        for cost, (hostname, caps) in zip(costs, hosts):
             weight_log.append("%s: %s" % (hostname, "%.2f" % cost))
-            weight_dict = dict(weight=cost, hostname=hostname)
+            weight_dict = dict(weight=cost, hostname=hostname,
+                    capabilities=caps)
             weighted.append(weight_dict)
 
         LOG.debug(_("Weighted Costs => %s") % weight_log)
@@ -127,7 +145,8 @@ def weighted_sum(domain, weighted_fns, normalize=True):
     weighted_fns - list of weights and functions like:
         [(weight, objective-functions)]
 
-    Returns an unsorted of scores. To pair with hosts do: zip(scores, hosts)
+    Returns an unsorted list of scores. To pair with hosts do:
+        zip(scores, hosts)
     """
     # Table of form:
     #   { domain1: [score1, score2, ..., scoreM]
@@ -150,7 +169,6 @@ def weighted_sum(domain, weighted_fns, normalize=True):
     domain_scores = []
     for idx in sorted(score_table):
         elem_score = sum(score_table[idx])
-        elem = domain[idx]
         domain_scores.append(elem_score)
 
     return domain_scores

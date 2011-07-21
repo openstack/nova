@@ -276,6 +276,19 @@ class GenericUtilsTestCase(test.TestCase):
         result = utils.parse_server_string('www.exa:mple.com:8443')
         self.assertEqual(('', ''), result)
 
+    def test_bool_from_str(self):
+        self.assertTrue(utils.bool_from_str('1'))
+        self.assertTrue(utils.bool_from_str('2'))
+        self.assertTrue(utils.bool_from_str('-1'))
+        self.assertTrue(utils.bool_from_str('true'))
+        self.assertTrue(utils.bool_from_str('True'))
+        self.assertTrue(utils.bool_from_str('tRuE'))
+        self.assertFalse(utils.bool_from_str('False'))
+        self.assertFalse(utils.bool_from_str('false'))
+        self.assertFalse(utils.bool_from_str('0'))
+        self.assertFalse(utils.bool_from_str(None))
+        self.assertFalse(utils.bool_from_str('junk'))
+
 
 class IsUUIDLikeTestCase(test.TestCase):
     def assertUUIDLike(self, val, expected):

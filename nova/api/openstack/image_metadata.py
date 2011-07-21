@@ -112,18 +112,18 @@ class Controller(object):
 
 
 class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
-    def __init__(self):
-        xmlns = wsgi.XMLNS_V11
+    def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(ImageMetadataXMLSerializer, self).__init__(xmlns=xmlns)
 
     def _meta_item_to_xml(self, doc, key, value):
         node = doc.createElement('meta')
-        node.setAttribute('key', key)
-        text = doc.createTextNode(value)
+        doc.appendChild(node)
+        node.setAttribute('key', '%s' % key)
+        text = doc.createTextNode('%s' % value)
         node.appendChild(text)
         return node
 
-    def _meta_list_to_xml(self, xml_doc, meta_items):
+    def meta_list_to_xml(self, xml_doc, meta_items):
         container_node = xml_doc.createElement('metadata')
         for (key, value) in meta_items:
             item_node = self._meta_item_to_xml(xml_doc, key, value)
@@ -133,9 +133,10 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
     def _meta_list_to_xml_string(self, metadata_dict):
         xml_doc = minidom.Document()
         items = metadata_dict['metadata'].items()
-        container_node = self._meta_list_to_xml(xml_doc, items)
+        container_node = self.meta_list_to_xml(xml_doc, items)
+        xml_doc.appendChild(container_node)
         self._add_xmlns(container_node)
-        return container_node.toprettyxml(indent='    ')
+        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
 
     def index(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
@@ -147,8 +148,9 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
         xml_doc = minidom.Document()
         item_key, item_value = meta_item_dict.items()[0]
         item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
+        xml_doc.appendChild(item_node)
         self._add_xmlns(item_node)
-        return item_node.toprettyxml(indent='    ')
+        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
 
     def show(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
@@ -158,8 +160,9 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
 
 
 def create_resource():
-    serializers = {
+    body_serializers = {
         'application/xml': ImageMetadataXMLSerializer(),
     }
+    serializer = wsgi.ResponseSerializer(body_serializers)
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    return wsgi.Resource(Controller(), serializer=serializer)

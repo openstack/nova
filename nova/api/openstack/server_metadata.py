@@ -123,8 +123,10 @@ class Controller(object):
 
 
 def create_resource():
-    serializers = {
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11),
     }
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(Controller(), serializer=serializer)

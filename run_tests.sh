@@ -114,7 +114,7 @@ if [ $just_pep8 -eq 1 ]; then
 fi
 
 if [ $recreate_db -eq 1 ]; then
-    rm tests.sqlite
+    rm -f tests.sqlite
 fi
 
 run_tests || exit

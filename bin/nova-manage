@@ -172,17 +172,23 @@ class VpnCommands(object):
     def change(self, project_id, ip, port):
         """Change the ip and port for a vpn.
 
+        this will update all networks associated with a project
+        not sure if that's the desired behavior or not, patches accepted
+
         args: project, ip, port"""
+        # TODO(tr3buchet): perhaps this shouldn't update all networks
+        # associated with a project in the future
         project = self.manager.get_project(project_id)
         if not project:
             print 'No project %s' % (project_id)
             return
-        admin = context.get_admin_context()
-        network_ref = db.project_get_network(admin, project_id)
-        db.network_update(admin,
-                          network_ref['id'],
-                          {'vpn_public_address': ip,
-                           'vpn_public_port': int(port)})
+        admin_context = context.get_admin_context()
+        networks = db.project_get_networks(admin_context, project_id)
+        for network in networks:
+            db.network_update(admin_context,
+                              network['id'],
+                              {'vpn_public_address': ip,
+                               'vpn_public_port': int(port)})
 
 
 class ShellCommands(object):
@@ -408,8 +414,11 @@ class ProjectCommands(object):
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
             print ex
             raise
-        with open(filename, 'w') as f:
-            f.write(rc)
+        if filename == "-":
+            sys.stdout.write(rc)
+        else:
+            with open(filename, 'w') as f:
+                f.write(rc)
 
     def list(self, username=None):
         """Lists all projects
@@ -446,27 +455,31 @@ class ProjectCommands(object):
     def scrub(self, project_id):
         """Deletes data associated with project
         arguments: project_id"""
-        ctxt = context.get_admin_context()
-        network_ref = db.project_get_network(ctxt, project_id)
-        db.network_disassociate(ctxt, network_ref['id'])
-        groups = db.security_group_get_by_project(ctxt, project_id)
+        admin_context = context.get_admin_context()
+        networks = db.project_get_networks(admin_context, project_id)
+        for network in networks:
+            db.network_disassociate(admin_context, network['id'])
+        groups = db.security_group_get_by_project(admin_context, project_id)
         for group in groups:
-            db.security_group_destroy(ctxt, group['id'])
+            db.security_group_destroy(admin_context, group['id'])
 
     def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file
         arguments: project_id user_id [filename='nova.zip]"""
         try:
             zip_file = self.manager.get_credentials(user_id, project_id)
-            with open(filename, 'w') as f:
-                f.write(zip_file)
+            if filename == "-":
+                sys.stdout.write(zip_file)
+            else:
+                with open(filename, 'w') as f:
+                    f.write(zip_file)
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
             print ex
             raise
         except db.api.NoMoreNetworks:
             print _('No more networks available. If this is a new '
                     'installation, you need\nto call something like this:\n\n'
-                    '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+                    '  nova-manage network create pvt 10.0.0.0/8 10 64\n\n')
         except exception.ProcessExecutionError, e:
             print e
             print _("The above error may show that the certificate db has not "
@@ -487,7 +500,7 @@ class FixedIpCommands(object):
             if host is None:
                 fixed_ips = db.fixed_ip_get_all(ctxt)
             else:
-                fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+                fixed_ips = db.fixed_ip_get_all_by_instance_host(ctxt, host)
         except exception.NotFound as ex:
             print "error: %s" % ex
             sys.exit(2)
@@ -505,7 +518,7 @@ class FixedIpCommands(object):
                 instance = fixed_ip['instance']
                 hostname = instance['hostname']
                 host = instance['host']
-                mac_address = instance['mac_address']
+                mac_address = fixed_ip['virtual_interface']['address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
                     fixed_ip['network']['cidr'],
                     fixed_ip['address'],
@@ -515,13 +528,12 @@ class FixedIpCommands(object):
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
-    def create(self, host, range):
-        """Creates floating ips for host by range
-        arguments: host ip_range"""
+    def create(self, range):
+        """Creates floating ips for zone by range
+        arguments: ip_range"""
         for address in netaddr.IPNetwork(range):
             db.floating_ip_create(context.get_admin_context(),
-                                  {'address': str(address),
-                                   'host': host})
+                                  {'address': str(address)})
 
     def delete(self, ip_range):
         """Deletes floating ips by range
@@ -532,7 +544,8 @@ class FloatingIpCommands(object):
 
     def list(self, host=None):
         """Lists all floating ips (optionally by host)
-        arguments: [host]"""
+        arguments: [host]
+        Note: if host is given, only active floating IPs are returned"""
         ctxt = context.get_admin_context()
         if host is None:
             floating_ips = db.floating_ip_get_all(ctxt)
@@ -550,10 +563,23 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
-    def create(self, fixed_range=None, num_networks=None, network_size=None,
-            vlan_start=None, vpn_start=None, fixed_range_v6=None,
-            gateway_v6=None, label='public'):
-        """Creates fixed ips for host by range"""
+    def create(self, label=None, fixed_range=None, num_networks=None,
+               network_size=None, multi_host=None, vlan_start=None,
+               vpn_start=None, fixed_range_v6=None, gateway_v6=None,
+               flat_network_bridge=None, bridge_interface=None):
+        """Creates fixed ips for host by range
+        arguments: label, fixed_range, [num_networks=FLAG],
+                   [network_size=FLAG], [multi_host=FLAG], [vlan_start=FLAG],
+                   [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
+                   [flat_network_bridge=FLAG], [bridge_interface=FLAG]
+        If you wish to use a later argument fill in the gaps with ""s
+        Ex: network create private 10.0.0.0/8 1 16 T "" "" "" "" xenbr1 eth1
+            network create private 10.0.0.0/8 1 16
+        """
+        if not label:
+            msg = _('a label (ex: public) is required to create networks.')
+            print msg
+            raise TypeError(msg)
         if not fixed_range:
             msg = _('Fixed range in the form of 10.0.0.0/8 is '
                     'required to create networks.')
@@ -563,40 +589,56 @@ class NetworkCommands(object):
             num_networks = FLAGS.num_networks
         if not network_size:
             network_size = FLAGS.network_size
+        if not multi_host:
+            multi_host = FLAGS.multi_host
+        else:
+            multi_host = multi_host == 'T'
         if not vlan_start:
             vlan_start = FLAGS.vlan_start
         if not vpn_start:
             vpn_start = FLAGS.vpn_start
         if not fixed_range_v6:
             fixed_range_v6 = FLAGS.fixed_range_v6
+        if not flat_network_bridge:
+            flat_network_bridge = FLAGS.flat_network_bridge
+        if not bridge_interface:
+            bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
         if not gateway_v6:
             gateway_v6 = FLAGS.gateway_v6
         net_manager = utils.import_object(FLAGS.network_manager)
+
         try:
             net_manager.create_networks(context.get_admin_context(),
+                                        label=label,
                                         cidr=fixed_range,
+                                        multi_host=multi_host,
                                         num_networks=int(num_networks),
                                         network_size=int(network_size),
                                         vlan_start=int(vlan_start),
                                         vpn_start=int(vpn_start),
                                         cidr_v6=fixed_range_v6,
                                         gateway_v6=gateway_v6,
-                                        label=label)
+                                        bridge=flat_network_bridge,
+                                        bridge_interface=bridge_interface)
         except ValueError, e:
             print e
             raise e
 
     def list(self):
         """List all created networks"""
-        print "%-18s\t%-15s\t%-15s\t%-15s" % (_('network'),
-                                              _('netmask'),
-                                              _('start address'),
-                                              'DNS')
+        print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (_('network'),
+                                                  _('netmask'),
+                                                  _('start address'),
+                                                  _('DNS'),
+                                                  _('VlanID'),
+                                                  'project')
         for network in db.network_get_all(context.get_admin_context()):
-            print "%-18s\t%-15s\t%-15s\t%-15s" % (network.cidr,
-                                network.netmask,
-                                network.dhcp_start,
-                                network.dns)
+            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+                                        network.netmask,
+                                        network.dhcp_start,
+                                        network.dns,
+                                        network.vlan,
+                                        network.project_id)
 
     def delete(self, fixed_range):
         """Deletes a network"""
@@ -783,6 +825,28 @@ class ServiceCommands(object):
         rpc.call(ctxt,
                  db.queue_get_for(ctxt, FLAGS.compute_topic, host),
                  {"method": "update_available_resource"})
+
+
+class HostCommands(object):
+    """List hosts"""
+
+    def list(self, zone=None):
+        """Show a list of all physical hosts. Filter by zone.
+        args: [zone]"""
+        print "%-25s\t%-15s" % (_('host'),
+                                _('zone'))
+        ctxt = context.get_admin_context()
+        now = utils.utcnow()
+        services = db.service_get_all(ctxt)
+        if zone:
+            services = [s for s in services if s['availability_zone'] == zone]
+        hosts = []
+        for srv in services:
+            if not [h for h in hosts if h['host'] == srv['host']]:
+                hosts.append(srv)
+
+        for h in hosts:
+            print "%-25s\t%-15s" % (h['host'], h['availability_zone'])
 
 
 class DbCommands(object):
@@ -1158,6 +1222,7 @@ CATEGORIES = [
     ('fixed', FixedIpCommands),
     ('flavor', InstanceTypeCommands),
     ('floating', FloatingIpCommands),
+    ('host', HostCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
     ('network', NetworkCommands),

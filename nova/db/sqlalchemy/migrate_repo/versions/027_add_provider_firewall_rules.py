@@ -58,7 +58,7 @@ provider_fw_rules = Table('provider_fw_rules', meta,
         Column('to_port', Integer()),
         Column('cidr',
                String(length=255, convert_unicode=False, assert_unicode=None,
-                    unicode_error=None, _warn_on_bytestring=False)))
+                      unicode_error=None, _warn_on_bytestring=False)))
 
 
 def upgrade(migrate_engine):

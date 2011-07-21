@@ -18,7 +18,6 @@
 """
 Implementation of SQLAlchemy backend.
 """
-import traceback
 import warnings
 
 from nova import db
@@ -26,17 +25,18 @@ from nova import exception
 from nova import flags
 from nova import ipv6
 from nova import utils
+from nova import log as logging
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import exists
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import literal_column
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger("nova.db.sqlalchemy")
 
 
 def is_admin_context(context):
@@ -116,7 +116,22 @@ def require_context(f):
     return wrapper
 
 
+def require_instance_exists(f):
+    """Decorator to require the specified instance to exist.
+
+    Requres the wrapped function to use context and instance_id as
+    their first two arguments.
+    """
+
+    def wrapper(context, instance_id, *args, **kwargs):
+        db.api.instance_get(context, instance_id)
+        return f(context, instance_id, *args, **kwargs)
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+
 ###################
+
 
 @require_admin_context
 def service_destroy(context, service_id):
@@ -428,6 +443,8 @@ def certificate_update(context, certificate_id, values):
 
 
 ###################
+
+
 @require_context
 def floating_ip_get(context, id):
     session = get_session()
@@ -448,18 +465,17 @@ def floating_ip_get(context, id):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.FloatingIpNotFoundForFixedAddress()
+        raise exception.FloatingIpNotFound(id=id)
 
     return result
 
 
 @require_context
-def floating_ip_allocate_address(context, host, project_id):
+def floating_ip_allocate_address(context, project_id):
     authorize_project_context(context, project_id)
     session = get_session()
     with session.begin():
         floating_ip_ref = session.query(models.FloatingIp).\
-                                  filter_by(host=host).\
                                   filter_by(fixed_ip_id=None).\
                                   filter_by(project_id=None).\
                                   filter_by(deleted=False).\
@@ -468,7 +484,7 @@ def floating_ip_allocate_address(context, host, project_id):
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not floating_ip_ref:
-            raise db.NoMoreAddresses()
+            raise exception.NoMoreFloatingIps()
         floating_ip_ref['project_id'] = project_id
         session.add(floating_ip_ref)
     return floating_ip_ref['address']
@@ -486,6 +502,7 @@ def floating_ip_create(context, values):
 def floating_ip_count_by_project(context, project_id):
     authorize_project_context(context, project_id)
     session = get_session()
+    # TODO(tr3buchet): why leave auto_assigned floating IPs out?
     return session.query(models.FloatingIp).\
                    filter_by(project_id=project_id).\
                    filter_by(auto_assigned=False).\
@@ -517,6 +534,7 @@ def floating_ip_deallocate(context, address):
                                                      address,
                                                      session=session)
         floating_ip_ref['project_id'] = None
+        floating_ip_ref['host'] = None
         floating_ip_ref['auto_assigned'] = False
         floating_ip_ref.save(session=session)
 
@@ -565,32 +583,42 @@ def floating_ip_set_auto_assigned(context, address):
 @require_admin_context
 def floating_ip_get_all(context):
     session = get_session()
-    return session.query(models.FloatingIp).\
-                   options(joinedload_all('fixed_ip.instance')).\
-                   filter_by(deleted=False).\
-                   all()
+    floating_ip_refs = session.query(models.FloatingIp).\
+                               options(joinedload_all('fixed_ip.instance')).\
+                               filter_by(deleted=False).\
+                               all()
+    if not floating_ip_refs:
+        raise exception.NoFloatingIpsDefined()
+    return floating_ip_refs
 
 
 @require_admin_context
 def floating_ip_get_all_by_host(context, host):
     session = get_session()
-    return session.query(models.FloatingIp).\
-                   options(joinedload_all('fixed_ip.instance')).\
-                   filter_by(host=host).\
-                   filter_by(deleted=False).\
-                   all()
+    floating_ip_refs = session.query(models.FloatingIp).\
+                               options(joinedload_all('fixed_ip.instance')).\
+                               filter_by(host=host).\
+                               filter_by(deleted=False).\
+                               all()
+    if not floating_ip_refs:
+        raise exception.FloatingIpNotFoundForHost(host=host)
+    return floating_ip_refs
 
 
 @require_context
 def floating_ip_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
     session = get_session()
-    return session.query(models.FloatingIp).\
-                   options(joinedload_all('fixed_ip.instance')).\
-                   filter_by(project_id=project_id).\
-                   filter_by(auto_assigned=False).\
-                   filter_by(deleted=False).\
-                   all()
+    # TODO(tr3buchet): why do we not want auto_assigned floating IPs here?
+    floating_ip_refs = session.query(models.FloatingIp).\
+                               options(joinedload_all('fixed_ip.instance')).\
+                               filter_by(project_id=project_id).\
+                               filter_by(auto_assigned=False).\
+                               filter_by(deleted=False).\
+                               all()
+    if not floating_ip_refs:
+        raise exception.FloatingIpNotFoundForProject(project_id=project_id)
+    return floating_ip_refs
 
 
 @require_context
@@ -600,29 +628,12 @@ def floating_ip_get_by_address(context, address, session=None):
         session = get_session()
 
     result = session.query(models.FloatingIp).\
-                   options(joinedload_all('fixed_ip.network')).\
+                     options(joinedload_all('fixed_ip.network')).\
                      filter_by(address=address).\
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.FloatingIpNotFoundForFixedAddress(fixed_ip=address)
-
-    return result
-
-
-@require_context
-def floating_ip_get_by_ip(context, ip, session=None):
-    if not session:
-        session = get_session()
-
-    result = session.query(models.FloatingIp).\
-                filter_by(address=ip).\
-                filter_by(deleted=can_read_deleted(context)).\
-                first()
-
-    if not result:
-        raise exception.FloatingIpNotFound(floating_ip=ip)
-
+        raise exception.FloatingIpNotFoundForAddress(address=address)
     return result
 
 
@@ -653,13 +664,13 @@ def fixed_ip_associate(context, address, instance_id):
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not fixed_ip_ref:
-            raise db.NoMoreAddresses()
+            raise exception.NoMoreFixedIps()
         fixed_ip_ref.instance = instance
         session.add(fixed_ip_ref)
 
 
 @require_admin_context
-def fixed_ip_associate_pool(context, network_id, instance_id):
+def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
@@ -669,19 +680,23 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
                                filter_by(reserved=False).\
                                filter_by(deleted=False).\
                                filter_by(instance=None).\
+                               filter_by(host=None).\
                                with_lockmode('update').\
                                first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not fixed_ip_ref:
-            raise db.NoMoreAddresses()
+            raise exception.NoMoreFixedIps()
         if not fixed_ip_ref.network:
             fixed_ip_ref.network = network_get(context,
                                            network_id,
                                            session=session)
-        fixed_ip_ref.instance = instance_get(context,
-                                             instance_id,
-                                             session=session)
+        if instance_id:
+            fixed_ip_ref.instance = instance_get(context,
+                                                 instance_id,
+                                                 session=session)
+        if host:
+            fixed_ip_ref.host = host
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
@@ -715,9 +730,9 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      filter(models.FixedIp.network_id.in_(inner_q)).\
                      filter(models.FixedIp.updated_at < time).\
                      filter(models.FixedIp.instance_id != None).\
-                     filter_by(allocated=0).\
+                     filter_by(allocated=False).\
                      update({'instance_id': None,
-                             'leased': 0,
+                             'leased': False,
                              'updated_at': utils.utcnow()},
                              synchronize_session='fetch')
     return result
@@ -727,25 +742,28 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
 def fixed_ip_get_all(context, session=None):
     if not session:
         session = get_session()
-    result = session.query(models.FixedIp).all()
+    result = session.query(models.FixedIp).\
+                     options(joinedload('floating_ips')).\
+                     all()
     if not result:
-        raise exception.NoFloatingIpsDefined()
+        raise exception.NoFixedIpsDefined()
 
     return result
 
 
 @require_admin_context
-def fixed_ip_get_all_by_host(context, host=None):
+def fixed_ip_get_all_by_instance_host(context, host=None):
     session = get_session()
 
     result = session.query(models.FixedIp).\
-                    join(models.FixedIp.instance).\
-                    filter_by(state=1).\
-                    filter_by(host=host).\
-                    all()
+                     options(joinedload('floating_ips')).\
+                     join(models.FixedIp.instance).\
+                     filter_by(state=1).\
+                     filter_by(host=host).\
+                     all()
 
     if not result:
-        raise exception.NoFloatingIpsDefinedForHost(host=host)
+        raise exception.FixedIpNotFoundForHost(host=host)
 
     return result
 
@@ -757,16 +775,57 @@ def fixed_ip_get_by_address(context, address, session=None):
     result = session.query(models.FixedIp).\
                      filter_by(address=address).\
                      filter_by(deleted=can_read_deleted(context)).\
+                     options(joinedload('floating_ips')).\
                      options(joinedload('network')).\
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.FloatingIpNotFoundForFixedAddress(fixed_ip=address)
+        raise exception.FixedIpNotFoundForAddress(address=address)
 
     if is_user_context(context):
         authorize_project_context(context, result.instance.project_id)
 
     return result
+
+
+@require_context
+def fixed_ip_get_by_instance(context, instance_id):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 options(joinedload('floating_ips')).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False).\
+                 all()
+    if not rv:
+        raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+    return rv
+
+
+@require_context
+def fixed_ip_get_by_network_host(context, network_id, host):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(network_id=network_id).\
+                 filter_by(host=host).\
+                 filter_by(deleted=False).\
+                 first()
+    if not rv:
+        raise exception.FixedIpNotFoundForNetworkHost(network_id=network_id,
+                                                      host=host)
+    return rv
+
+
+@require_context
+def fixed_ip_get_by_virtual_interface(context, vif_id):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 options(joinedload('floating_ips')).\
+                 filter_by(virtual_interface_id=vif_id).\
+                 filter_by(deleted=False).\
+                 all()
+    if not rv:
+        raise exception.FixedIpNotFoundForVirtualInterface(vif_id=vif_id)
+    return rv
 
 
 @require_context
@@ -776,24 +835,18 @@ def fixed_ip_get_instance(context, address):
 
 
 @require_context
-def fixed_ip_get_all_by_instance(context, instance_id):
-    session = get_session()
-    rv = session.query(models.FixedIp).\
-                 filter_by(instance_id=instance_id).\
-                 filter_by(deleted=False)
-    if not rv:
-        raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
-    return rv
-
-
-@require_context
 def fixed_ip_get_instance_v6(context, address):
     session = get_session()
+
+    # convert IPv6 address to mac
     mac = ipv6.to_mac(address)
 
+    # get virtual interface
+    vif_ref = virtual_interface_get_by_address(context, mac)
+
+    # look up instance based on instance_id from vif row
     result = session.query(models.Instance).\
-                     filter_by(mac_address=mac).\
-                     first()
+                     filter_by(id=vif_ref['instance_id'])
     return result
 
 
@@ -815,6 +868,164 @@ def fixed_ip_update(context, address, values):
 
 
 ###################
+
+
+@require_context
+def virtual_interface_create(context, values):
+    """Create a new virtual interface record in teh database.
+
+    :param values: = dict containing column values
+    """
+    try:
+        vif_ref = models.VirtualInterface()
+        vif_ref.update(values)
+        vif_ref.save()
+    except IntegrityError:
+        raise exception.VirtualInterfaceCreateException()
+
+    return vif_ref
+
+
+@require_context
+def virtual_interface_update(context, vif_id, values):
+    """Update a virtual interface record in the database.
+
+    :param vif_id: = id of virtual interface to update
+    :param values: = values to update
+    """
+    session = get_session()
+    with session.begin():
+        vif_ref = virtual_interface_get(context, vif_id, session=session)
+        vif_ref.update(values)
+        vif_ref.save(session=session)
+        return vif_ref
+
+
+@require_context
+def virtual_interface_get(context, vif_id, session=None):
+    """Gets a virtual interface from the table.
+
+    :param vif_id: = id of the virtual interface
+    """
+    if not session:
+        session = get_session()
+
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(id=vif_id).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
+
+
+@require_context
+def virtual_interface_get_by_address(context, address):
+    """Gets a virtual interface from the table.
+
+    :param address: = the address of the interface you're looking to get
+    """
+    session = get_session()
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(address=address).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
+
+
+@require_context
+def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
+    """Gets the virtual interface fixed_ip is associated with.
+
+    :param fixed_ip_id: = id of the fixed_ip
+    """
+    session = get_session()
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(fixed_ip_id=fixed_ip_id).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
+
+
+@require_context
+@require_instance_exists
+def virtual_interface_get_by_instance(context, instance_id):
+    """Gets all virtual interfaces for instance.
+
+    :param instance_id: = id of the instance to retreive vifs for
+    """
+    session = get_session()
+    vif_refs = session.query(models.VirtualInterface).\
+                       filter_by(instance_id=instance_id).\
+                       options(joinedload('network')).\
+                       options(joinedload('instance')).\
+                       options(joinedload('fixed_ips')).\
+                       all()
+    return vif_refs
+
+
+@require_context
+def virtual_interface_get_by_instance_and_network(context, instance_id,
+                                                           network_id):
+    """Gets virtual interface for instance that's associated with network."""
+    session = get_session()
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(instance_id=instance_id).\
+                      filter_by(network_id=network_id).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
+
+
+@require_admin_context
+def virtual_interface_get_by_network(context, network_id):
+    """Gets all virtual_interface on network.
+
+    :param network_id: = network to retreive vifs for
+    """
+    session = get_session()
+    vif_refs = session.query(models.VirtualInterface).\
+                       filter_by(network_id=network_id).\
+                       options(joinedload('network')).\
+                       options(joinedload('instance')).\
+                       options(joinedload('fixed_ips')).\
+                       all()
+    return vif_refs
+
+
+@require_context
+def virtual_interface_delete(context, vif_id):
+    """Delete virtual interface record from teh database.
+
+    :param vif_id: = id of vif to delete
+    """
+    session = get_session()
+    vif_ref = virtual_interface_get(context, vif_id, session)
+    with session.begin():
+        session.delete(vif_ref)
+
+
+@require_context
+def virtual_interface_delete_by_instance(context, instance_id):
+    """Delete virtual interface records that are associated
+    with the instance given by instance_id.
+
+    :param instance_id: = id of instance
+    """
+    vif_refs = virtual_interface_get_by_instance(context, instance_id)
+    for vif_ref in vif_refs:
+        virtual_interface_delete(context, vif_ref['id'])
+
+
+###################
+
+
 def _metadata_refs(metadata_dict):
     metadata_refs = []
     if metadata_dict:
@@ -927,10 +1138,11 @@ def _build_instance_get(context, session=None):
         session = get_session()
 
     partial = session.query(models.Instance).\
-                     options(joinedload_all('fixed_ip.floating_ips')).\
+                     options(joinedload_all('fixed_ips.floating_ips')).\
+                     options(joinedload_all('fixed_ips.network')).\
+                     options(joinedload('virtual_interfaces')).\
                      options(joinedload_all('security_groups.rules')).\
                      options(joinedload('volumes')).\
-                     options(joinedload_all('fixed_ip.network')).\
                      options(joinedload('metadata')).\
                      options(joinedload('instance_type'))
 
@@ -946,9 +1158,10 @@ def _build_instance_get(context, session=None):
 def instance_get_all(context):
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -977,9 +1190,10 @@ def instance_get_active_by_window(context, begin, end=None):
 def instance_get_all_by_user(context, user_id):
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -991,9 +1205,10 @@ def instance_get_all_by_user(context, user_id):
 def instance_get_all_by_host(context, host):
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(host=host).\
@@ -1007,9 +1222,10 @@ def instance_get_all_by_project(context, project_id):
 
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
@@ -1023,9 +1239,10 @@ def instance_get_all_by_reservation(context, reservation_id):
 
     if is_admin_context(context):
         return session.query(models.Instance).\
-                       options(joinedload_all('fixed_ip.floating_ips')).\
+                       options(joinedload_all('fixed_ips.floating_ips')).\
+                       options(joinedload('virtual_interfaces')).\
                        options(joinedload('security_groups')).\
-                       options(joinedload_all('fixed_ip.network')).\
+                       options(joinedload_all('fixed_ips.network')).\
                        options(joinedload('metadata')).\
                        options(joinedload('instance_type')).\
                        filter_by(reservation_id=reservation_id).\
@@ -1033,9 +1250,10 @@ def instance_get_all_by_reservation(context, reservation_id):
                        all()
     elif is_user_context(context):
         return session.query(models.Instance).\
-                       options(joinedload_all('fixed_ip.floating_ips')).\
+                       options(joinedload_all('fixed_ips.floating_ips')).\
+                       options(joinedload('virtual_interfaces')).\
                        options(joinedload('security_groups')).\
-                       options(joinedload_all('fixed_ip.network')).\
+                       options(joinedload_all('fixed_ips.network')).\
                        options(joinedload('metadata')).\
                        options(joinedload('instance_type')).\
                        filter_by(project_id=context.project_id).\
@@ -1048,7 +1266,8 @@ def instance_get_all_by_reservation(context, reservation_id):
 def instance_get_project_vpn(context, project_id):
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
                    options(joinedload('metadata')).\
@@ -1060,38 +1279,53 @@ def instance_get_project_vpn(context, project_id):
 
 
 @require_context
-def instance_get_fixed_address(context, instance_id):
+def instance_get_fixed_addresses(context, instance_id):
     session = get_session()
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
-        if not instance_ref.fixed_ip:
-            return None
-        return instance_ref.fixed_ip['address']
+        try:
+            fixed_ips = fixed_ip_get_by_instance(context, instance_id)
+        except exception.NotFound:
+            return []
+        return [fixed_ip.address for fixed_ip in fixed_ips]
 
 
 @require_context
-def instance_get_fixed_address_v6(context, instance_id):
+def instance_get_fixed_addresses_v6(context, instance_id):
     session = get_session()
     with session.begin():
+        # get instance
         instance_ref = instance_get(context, instance_id, session=session)
-        network_ref = network_get_by_instance(context, instance_id)
-        prefix = network_ref.cidr_v6
-        mac = instance_ref.mac_address
+        # assume instance has 1 mac for each network associated with it
+        # get networks associated with instance
+        network_refs = network_get_all_by_instance(context, instance_id)
+        # compile a list of cidr_v6 prefixes sorted by network id
+        prefixes = [ref.cidr_v6 for ref in
+                    sorted(network_refs, key=lambda ref: ref.id)]
+        # get vifs associated with instance
+        vif_refs = virtual_interface_get_by_instance(context, instance_ref.id)
+        # compile list of the mac_addresses for vifs sorted by network id
+        macs = [vif_ref['address'] for vif_ref in
+                sorted(vif_refs, key=lambda vif_ref: vif_ref['network_id'])]
+        # get project id from instance
         project_id = instance_ref.project_id
-        return ipv6.to_global(prefix, mac, project_id)
+        # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
+        prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
+        # return list containing ipv6 address for each tuple
+        return [ipv6.to_global_ipv6(*t) for t in prefix_mac_tuples]
 
 
 @require_context
 def instance_get_floating_address(context, instance_id):
-    session = get_session()
-    with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
-        if not instance_ref.fixed_ip:
-            return None
-        if not instance_ref.fixed_ip.floating_ips:
-            return None
-        # NOTE(vish): this just returns the first floating ip
-        return instance_ref.fixed_ip.floating_ips[0]['address']
+    fixed_ip_refs = fixed_ip_get_by_instance(context, instance_id)
+    if not fixed_ip_refs:
+        return None
+    # NOTE(tr3buchet): this only gets the first fixed_ip
+    # won't find floating ips associated with other fixed_ips
+    if not fixed_ip_refs[0].floating_ips:
+        return None
+    # NOTE(vish): this just returns the first floating ip
+    return fixed_ip_refs[0].floating_ips[0]['address']
 
 
 @require_admin_context
@@ -1256,20 +1490,49 @@ def key_pair_get_all_by_user(context, user_id):
 
 
 @require_admin_context
-def network_associate(context, project_id):
+def network_associate(context, project_id, force=False):
+    """Associate a project with a network.
+
+    called by project_get_networks under certain conditions
+    and network manager add_network_to_project()
+
+    only associate if the project doesn't already have a network
+    or if force is True
+
+    force solves race condition where a fresh project has multiple instance
+    builds simultaneosly picked up by multiple network hosts which attempt
+    to associate the project with multiple networks
+    force should only be used as a direct consequence of user request
+    all automated requests should not use force
+    """
     session = get_session()
     with session.begin():
-        network_ref = session.query(models.Network).\
-                               filter_by(deleted=False).\
-                               filter_by(project_id=None).\
-                               with_lockmode('update').\
-                               first()
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
-        if not network_ref:
-            raise db.NoMoreNetworks()
-        network_ref['project_id'] = project_id
-        session.add(network_ref)
+
+        def network_query(project_filter):
+            return session.query(models.Network).\
+                           filter_by(deleted=False).\
+                           filter_by(project_id=project_filter).\
+                           with_lockmode('update').\
+                           first()
+
+        if not force:
+            # find out if project has a network
+            network_ref = network_query(project_id)
+
+        if force or not network_ref:
+            # in force mode or project doesn't have a network so assocaite
+            # with a new network
+
+            # get new network
+            network_ref = network_query(None)
+            if not network_ref:
+                raise db.NoMoreNetworks()
+
+            # associate with network
+            # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+            #             then this has concurrency issues
+            network_ref['project_id'] = project_id
+            session.add(network_ref)
     return network_ref
 
 
@@ -1372,7 +1635,8 @@ def network_get(context, network_id, session=None):
 @require_admin_context
 def network_get_all(context):
     session = get_session()
-    result = session.query(models.Network)
+    result = session.query(models.Network).\
+                 filter_by(deleted=False).all()
     if not result:
         raise exception.NoNetworksFound()
     return result
@@ -1390,6 +1654,7 @@ def network_get_associated_fixed_ips(context, network_id):
                    options(joinedload_all('instance')).\
                    filter_by(network_id=network_id).\
                    filter(models.FixedIp.instance_id != None).\
+                   filter(models.FixedIp.virtual_interface_id != None).\
                    filter_by(deleted=False).\
                    all()
 
@@ -1420,6 +1685,8 @@ def network_get_by_cidr(context, cidr):
 
 @require_admin_context
 def network_get_by_instance(_context, instance_id):
+    # note this uses fixed IP to get to instance
+    # only works for networks the instance has an IP from
     session = get_session()
     rv = session.query(models.Network).\
                  filter_by(deleted=False).\
@@ -1439,10 +1706,28 @@ def network_get_all_by_instance(_context, instance_id):
                  filter_by(deleted=False).\
                  join(models.Network.fixed_ips).\
                  filter_by(instance_id=instance_id).\
-                 filter_by(deleted=False)
+                 filter_by(deleted=False).\
+                 all()
     if not rv:
         raise exception.NetworkNotFoundForInstance(instance_id=instance_id)
     return rv
+
+
+@require_admin_context
+def network_get_all_by_host(context, host):
+    session = get_session()
+    with session.begin():
+        # NOTE(vish): return networks that have host set
+        #             or that have a fixed ip with host set
+        host_filter = or_(models.Network.host == host,
+                          models.FixedIp.host == host)
+
+        return session.query(models.Network).\
+                       filter_by(deleted=False).\
+                       join(models.Network.fixed_ips).\
+                       filter(host_filter).\
+                       filter_by(deleted=False).\
+                       all()
 
 
 @require_admin_context
@@ -1473,37 +1758,7 @@ def network_update(context, network_id, values):
         network_ref = network_get(context, network_id, session=session)
         network_ref.update(values)
         network_ref.save(session=session)
-
-
-###################
-
-
-@require_context
-def project_get_network(context, project_id, associate=True):
-    session = get_session()
-    result = session.query(models.Network).\
-                     filter_by(project_id=project_id).\
-                     filter_by(deleted=False).\
-                     first()
-    if not result:
-        if not associate:
-            return None
-        try:
-            return network_associate(context, project_id)
-        except IntegrityError:
-            # NOTE(vish): We hit this if there is a race and two
-            #             processes are attempting to allocate the
-            #             network at the same time
-            result = session.query(models.Network).\
-                             filter_by(project_id=project_id).\
-                             filter_by(deleted=False).\
-                             first()
-    return result
-
-
-@require_context
-def project_get_network_v6(context, project_id):
-    return project_get_network(context, project_id)
+        return network_ref
 
 
 ###################
@@ -1990,6 +2245,23 @@ def block_device_mapping_update(context, bdm_id, values):
 
 
 @require_context
+def block_device_mapping_update_or_create(context, values):
+    session = get_session()
+    with session.begin():
+        result = session.query(models.BlockDeviceMapping).\
+                 filter_by(instance_id=values['instance_id']).\
+                 filter_by(device_name=values['device_name']).\
+                 filter_by(deleted=False).\
+                 first()
+        if not result:
+            bdm_ref = models.BlockDeviceMapping()
+            bdm_ref.update(values)
+            bdm_ref.save(session=session)
+        else:
+            result.update(values)
+
+
+@require_context
 def block_device_mapping_get_all_by_instance(context, instance_id):
     session = get_session()
     result = session.query(models.BlockDeviceMapping).\
@@ -2341,6 +2613,73 @@ def user_get_all(context):
                    all()
 
 
+def user_get_roles(context, user_id):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        return [role.role for role in user_ref['roles']]
+
+
+def user_get_roles_for_project(context, user_id, project_id):
+    session = get_session()
+    with session.begin():
+        res = session.query(models.UserProjectRoleAssociation).\
+                   filter_by(user_id=user_id).\
+                   filter_by(project_id=project_id).\
+                   all()
+        return [association.role for association in res]
+
+
+def user_remove_project_role(context, user_id, project_id, role):
+    session = get_session()
+    with session.begin():
+        session.query(models.UserProjectRoleAssociation).\
+                filter_by(user_id=user_id).\
+                filter_by(project_id=project_id).\
+                filter_by(role=role).\
+                delete()
+
+
+def user_remove_role(context, user_id, role):
+    session = get_session()
+    with session.begin():
+        res = session.query(models.UserRoleAssociation).\
+                    filter_by(user_id=user_id).\
+                    filter_by(role=role).\
+                    all()
+        for role in res:
+            session.delete(role)
+
+
+def user_add_role(context, user_id, role):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        models.UserRoleAssociation(user=user_ref, role=role).\
+               save(session=session)
+
+
+def user_add_project_role(context, user_id, project_id, role):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        project_ref = project_get(context, project_id, session=session)
+        models.UserProjectRoleAssociation(user_id=user_ref['id'],
+                                          project_id=project_ref['id'],
+                                          role=role).save(session=session)
+
+
+def user_update(context, user_id, values):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        user_ref.update(values)
+        user_ref.save(session=session)
+
+
+###################
+
+
 def project_create(_context, values):
     project_ref = models.Project()
     project_ref.update(values)
@@ -2404,14 +2743,6 @@ def project_remove_member(context, project_id, user_id):
         project.save(session=session)
 
 
-def user_update(context, user_id, values):
-    session = get_session()
-    with session.begin():
-        user_ref = user_get(context, user_id, session=session)
-        user_ref.update(values)
-        user_ref.save(session=session)
-
-
 def project_update(context, project_id, values):
     session = get_session()
     with session.begin():
@@ -2433,73 +2764,26 @@ def project_delete(context, id):
         session.delete(project_ref)
 
 
-def user_get_roles(context, user_id):
+@require_context
+def project_get_networks(context, project_id, associate=True):
+    # NOTE(tr3buchet): as before this function will associate
+    # a project with a network if it doesn't have one and
+    # associate is true
     session = get_session()
-    with session.begin():
-        user_ref = user_get(context, user_id, session=session)
-        return [role.role for role in user_ref['roles']]
+    result = session.query(models.Network).\
+                     filter_by(project_id=project_id).\
+                     filter_by(deleted=False).all()
+
+    if not result:
+        if not associate:
+            return []
+        return [network_associate(context, project_id)]
+    return result
 
 
-def user_get_roles_for_project(context, user_id, project_id):
-    session = get_session()
-    with session.begin():
-        res = session.query(models.UserProjectRoleAssociation).\
-                   filter_by(user_id=user_id).\
-                   filter_by(project_id=project_id).\
-                   all()
-        return [association.role for association in res]
-
-
-def user_remove_project_role(context, user_id, project_id, role):
-    session = get_session()
-    with session.begin():
-        session.query(models.UserProjectRoleAssociation).\
-                filter_by(user_id=user_id).\
-                filter_by(project_id=project_id).\
-                filter_by(role=role).\
-                delete()
-
-
-def user_remove_role(context, user_id, role):
-    session = get_session()
-    with session.begin():
-        res = session.query(models.UserRoleAssociation).\
-                    filter_by(user_id=user_id).\
-                    filter_by(role=role).\
-                    all()
-        for role in res:
-            session.delete(role)
-
-
-def user_add_role(context, user_id, role):
-    session = get_session()
-    with session.begin():
-        user_ref = user_get(context, user_id, session=session)
-        models.UserRoleAssociation(user=user_ref, role=role).\
-               save(session=session)
-
-
-def user_add_project_role(context, user_id, project_id, role):
-    session = get_session()
-    with session.begin():
-        user_ref = user_get(context, user_id, session=session)
-        project_ref = project_get(context, project_id, session=session)
-        models.UserProjectRoleAssociation(user_id=user_ref['id'],
-                                          project_id=project_ref['id'],
-                                          role=role).save(session=session)
-
-
-###################
-
-
-@require_admin_context
-def host_get_networks(context, host):
-    session = get_session()
-    with session.begin():
-        return session.query(models.Network).\
-                       filter_by(deleted=False).\
-                       filter_by(host=host).\
-                       all()
+@require_context
+def project_get_networks_v6(context, project_id):
+    return project_get_networks(context, project_id)
 
 
 ###################
@@ -2714,13 +2998,11 @@ def instance_type_get_all(context, inactive=False):
                         filter_by(deleted=False).\
                         order_by("name").\
                         all()
+    inst_dict = {}
     if inst_types:
-        inst_dict = {}
         for i in inst_types:
             inst_dict[i['name']] = _dict_with_extra_specs(i)
-        return inst_dict
-    else:
-        raise exception.NoInstanceTypesFound()
+    return inst_dict
 
 
 @require_context
@@ -2812,7 +3094,7 @@ def zone_update(context, zone_id, values):
     if not zone:
         raise exception.ZoneNotFound(zone_id=zone_id)
     zone.update(values)
-    zone.save()
+    zone.save(session=session)
     return zone
 
 
@@ -2841,14 +3123,6 @@ def zone_get_all(context):
 
 
 ####################
-
-
-def require_instance_exists(func):
-    def new_func(context, instance_id, *args, **kwargs):
-        db.api.instance_get(context, instance_id)
-        return func(context, instance_id, *args, **kwargs)
-    new_func.__name__ = func.__name__
-    return new_func
 
 
 @require_context

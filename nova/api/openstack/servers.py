@@ -17,8 +17,10 @@ import base64
 import traceback
 
 from webob import exc
+import webob
 
 from nova import compute
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -62,7 +64,7 @@ class Controller(object):
             return exc.HTTPBadRequest(explanation=str(err))
         return servers
 
-    def _get_view_builder(self, req):
+    def _build_view(self, req, instance, is_detail=False):
         raise NotImplementedError()
 
     def _limit_items(self, items, req):
@@ -76,13 +78,19 @@ class Controller(object):
 
         builder - the response model builder
         """
-        reservation_id = req.str_GET.get('reservation_id')
+        query_str = req.str_GET
+        reservation_id = query_str.get('reservation_id')
+        project_id = query_str.get('project_id')
+        fixed_ip = query_str.get('fixed_ip')
+        recurse_zones = utils.bool_from_str(query_str.get('recurse_zones'))
         instance_list = self.compute_api.get_all(
-                                            req.environ['nova.context'],
-                                            reservation_id=reservation_id)
+                req.environ['nova.context'],
+                reservation_id=reservation_id,
+                project_id=project_id,
+                fixed_ip=fixed_ip,
+                recurse_zones=recurse_zones)
         limited_list = self._limit_items(instance_list, req)
-        builder = self._get_view_builder(req)
-        servers = [builder.build(inst, is_detail)['server']
+        servers = [self._build_view(req, inst, is_detail)['server']
                 for inst in limited_list]
         return dict(servers=servers)
 
@@ -92,38 +100,28 @@ class Controller(object):
         try:
             instance = self.compute_api.routing_get(
                 req.environ['nova.context'], id)
-            builder = self._get_view_builder(req)
-            return builder.build(instance, is_detail=True)
+            return self._build_view(req, instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-
-    @scheduler_api.redirect_handler
-    def delete(self, req, id):
-        """ Destroys a server """
-        try:
-            self.compute_api.delete(req.environ['nova.context'], id)
-        except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
 
     def create(self, req, body):
         """ Creates a new server for a given user """
         extra_values = None
         result = None
         try:
-            extra_values, result = self.helper.create_instance(
-                                    req, body, self.compute_api.create)
+            extra_values, instances = self.helper.create_instance(
+                    req, body, self.compute_api.create)
         except faults.Fault, f:
             return f
 
-        instances = result
-
-        (inst, ) = instances
+        # We can only return 1 instance via the API, if we happen to
+        # build more than one...  instances is a list, so we'll just
+        # use the first one..
+        inst = instances[0]
         for key in ['instance_type', 'image_ref']:
             inst[key] = extra_values[key]
 
-        builder = self._get_view_builder(req)
-        server = builder.build(inst, is_detail=True)
+        server = self._build_view(req, inst, is_detail=True)
         server['server']['adminPass'] = extra_values['password']
         return server
 
@@ -168,7 +166,7 @@ class Controller(object):
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,
-            }
+            'migrate': self._action_migrate}
 
         for key in actions.keys():
             if key in body:
@@ -192,7 +190,7 @@ class Controller(object):
         except Exception, e:
             LOG.exception(_("Error in revert-resize %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _action_resize(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
@@ -210,7 +208,15 @@ class Controller(object):
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
+
+    def _action_migrate(self, input_dict, req, id):
+        try:
+            self.compute_api.resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in migrate %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def lock(self, req, id):
@@ -226,7 +232,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::lock %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def unlock(self, req, id):
@@ -242,7 +248,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unlock %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_lock(self, req, id):
@@ -257,7 +263,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::get_lock %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def reset_network(self, req, id, body):
@@ -272,7 +278,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def inject_network_info(self, req, id, body):
@@ -287,7 +293,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::inject_network_info %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def pause(self, req, id, body):
@@ -299,7 +305,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def unpause(self, req, id, body):
@@ -311,7 +317,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def suspend(self, req, id, body):
@@ -323,7 +329,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def resume(self, req, id, body):
@@ -335,7 +341,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def rescue(self, req, id):
@@ -347,7 +353,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::rescue %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def unrescue(self, req, id):
@@ -359,7 +365,7 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::unrescue %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_ajax_console(self, req, id):
@@ -369,7 +375,7 @@ class Controller(object):
                 int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_vnc_console(self, req, id):
@@ -379,7 +385,7 @@ class Controller(object):
                                              int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def diagnostics(self, req, id):
@@ -404,16 +410,25 @@ class Controller(object):
 
 class ControllerV10(Controller):
 
+    @scheduler_api.redirect_handler
+    def delete(self, req, id):
+        """ Destroys a server """
+        try:
+            self.compute_api.delete(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return webob.Response(status_int=202)
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
     def _flavor_id_from_req_data(self, data):
         return data['server']['flavorId']
 
-    def _get_view_builder(self, req):
-        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV10()
-        return nova.api.openstack.views.servers.ViewBuilderV10(
-            addresses_builder)
+    def _build_view(self, req, instance, is_detail=False):
+        addresses = nova.api.openstack.views.addresses.ViewBuilderV10()
+        builder = nova.api.openstack.views.servers.ViewBuilderV10(addresses)
+        return builder.build(instance, is_detail=is_detail)
 
     def _limit_items(self, items, req):
         return common.limited(items, req)
@@ -436,7 +451,7 @@ class ControllerV10(Controller):
         except Exception, e:
             LOG.exception(_("Error in resize %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -456,9 +471,7 @@ class ControllerV10(Controller):
             LOG.debug(msg)
             return faults.Fault(exc.HTTPConflict(explanation=msg))
 
-        response = exc.HTTPAccepted()
-        response.empty_body = True
-        return response
+        return webob.Response(status_int=202)
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
@@ -466,6 +479,15 @@ class ControllerV10(Controller):
 
 
 class ControllerV11(Controller):
+
+    @scheduler_api.redirect_handler
+    def delete(self, req, id):
+        """ Destroys a server """
+        try:
+            self.compute_api.delete(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageRef']
 
@@ -473,15 +495,17 @@ class ControllerV11(Controller):
         href = data['server']['flavorRef']
         return common.get_id_from_href(href)
 
-    def _get_view_builder(self, req):
+    def _build_view(self, req, instance, is_detail=False):
         base_url = req.application_url
         flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
             base_url)
         image_builder = nova.api.openstack.views.images.ViewBuilderV11(
             base_url)
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
-        return nova.api.openstack.views.servers.ViewBuilderV11(
+        builder = nova.api.openstack.views.servers.ViewBuilderV11(
             addresses_builder, flavor_builder, image_builder, base_url)
+
+        return builder.build(instance, is_detail=is_detail)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']
@@ -494,7 +518,7 @@ class ControllerV11(Controller):
             msg = _("Invalid adminPass")
             return exc.HTTPBadRequest(explanation=msg)
         self.compute_api.set_admin_password(context, id, password)
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
@@ -540,7 +564,7 @@ class ControllerV11(Controller):
         except Exception, e:
             LOG.exception(_("Error in resize %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -569,9 +593,7 @@ class ControllerV11(Controller):
             LOG.debug(msg)
             return faults.Fault(exc.HTTPConflict(explanation=msg))
 
-        response = exc.HTTPAccepted()
-        response.empty_body = True
-        return response
+        return webob.Response(status_int=202)
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
@@ -579,6 +601,12 @@ class ControllerV11(Controller):
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_new_style(server)
+
+
+class HeadersSerializer(wsgi.ResponseHeadersSerializer):
+
+    def delete(self, response, data):
+        response.status_int = 204
 
 
 def create_resource(version='1.0'):
@@ -608,14 +636,18 @@ def create_resource(version='1.0'):
         '1.1': wsgi.XMLNS_V11,
     }[version]
 
-    serializers = {
+    headers_serializer = HeadersSerializer()
+
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
                                                   xmlns=xmlns),
     }
 
-    deserializers = {
+    body_deserializers = {
         'application/xml': helper.ServerXMLDeserializer(),
     }
 
-    return wsgi.Resource(controller, serializers=serializers,
-                         deserializers=deserializers)
+    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
+    deserializer = wsgi.RequestDeserializer(body_deserializers)
+
+    return wsgi.Resource(controller, deserializer, serializer)

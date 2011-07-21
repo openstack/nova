@@ -620,7 +620,7 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules += ['-j $provider']
         ipv6_rules += ['-j $provider']
 
-        dhcp_servers = [network['gateway'] for (network, _m) in network_info]
+        dhcp_servers = [info['gateway'] for (_n, info) in network_info]
 
         for dhcp_server in dhcp_servers:
             ipv4_rules.append('-s %s -p udp --sport 67 --dport 68 '
@@ -637,7 +637,7 @@ class IptablesFirewallDriver(FirewallDriver):
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            gateways_v6 = [network['gateway_v6'] for (network, _m) in
+            gateways_v6 = [mapping['gateway6'] for (_n, mapping) in
                            network_info]
             for gateway_v6 in gateways_v6:
                 ipv6_rules.append(
@@ -645,8 +645,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
             #Allow project network traffic
             if FLAGS.allow_project_net_traffic:
-                cidrv6s = [network['cidr_v6'] for (network, _m)
-                          in network_info]
+                cidrv6s = [network['cidr_v6'] for (network, _m) in
+                           network_info]
 
                 for cidrv6 in cidrv6s:
                     ipv6_rules.append('-s %s -j ACCEPT' % (cidrv6,))

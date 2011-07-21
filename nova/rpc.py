@@ -219,7 +219,7 @@ class AdapterConsumer(Consumer):
             return
         self.pool.spawn_n(self._process_data, msg_id, ctxt, method, args)
 
-    @exception.wrap_exception
+    @exception.wrap_exception()
     def _process_data(self, msg_id, ctxt, method, args):
         """Thread that maigcally looks for a method on the proxy
         object and calls it.
@@ -360,6 +360,7 @@ class FanoutPublisher(Publisher):
         self.exchange = '%s_fanout' % topic
         self.queue = '%s_fanout' % topic
         self.durable = False
+        self.auto_delete = True
         LOG.info(_('Creating "%(exchange)s" fanout exchange'),
                  dict(exchange=self.exchange))
         super(FanoutPublisher, self).__init__(connection=connection)

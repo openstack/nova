@@ -197,7 +197,7 @@ class ComputeDriver(object):
 
     def reset_network(self, instance):
         """reset networking for specified instance"""
-        raise NotImplementedError()
+        pass
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
         """Setting up filtering rules and waiting for its completion.
@@ -242,10 +242,14 @@ class ComputeDriver(object):
         """Update agent on the VM instance."""
         raise NotImplementedError()
 
-    def inject_network_info(self, instance):
+    def inject_network_info(self, instance, nw_info):
         """inject network info for specified instance"""
-        raise NotImplementedError()
+        pass
 
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
+        raise NotImplementedError()
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
         raise NotImplementedError()

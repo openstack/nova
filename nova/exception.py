@@ -24,8 +24,9 @@ SHOULD include dedicated exception logging.
 
 """
 
-from nova import log as logging
+from functools import wraps
 
+from nova import log as logging
 
 LOG = logging.getLogger('nova.exception')
 
@@ -81,19 +82,49 @@ def wrap_db_error(f):
     _wrap.func_name = f.func_name
 
 
-def wrap_exception(f):
-    def _wrap(*args, **kw):
-        try:
-            return f(*args, **kw)
-        except Exception, e:
-            if not isinstance(e, Error):
-                #exc_type, exc_value, exc_traceback = sys.exc_info()
-                LOG.exception(_('Uncaught exception'))
-                #logging.error(traceback.extract_stack(exc_traceback))
-                raise Error(str(e))
-            raise
-    _wrap.func_name = f.func_name
-    return _wrap
+def wrap_exception(notifier=None, publisher_id=None, event_type=None,
+                   level=None):
+    """This decorator wraps a method to catch any exceptions that may
+    get thrown. It logs the exception as well as optionally sending
+    it to the notification system.
+    """
+    # TODO(sandy): Find a way to import nova.notifier.api so we don't have
+    # to pass it in as a parameter. Otherwise we get a cyclic import of
+    # nova.notifier.api -> nova.utils -> nova.exception :(
+    def inner(f):
+        def wrapped(*args, **kw):
+            try:
+                return f(*args, **kw)
+            except Exception, e:
+                if notifier:
+                    payload = dict(args=args, exception=e)
+                    payload.update(kw)
+
+                    # Use a temp vars so we don't shadow
+                    # our outer definitions.
+                    temp_level = level
+                    if not temp_level:
+                        temp_level = notifier.ERROR
+
+                    temp_type = event_type
+                    if not temp_type:
+                        # If f has multiple decorators, they must use
+                        # functools.wraps to ensure the name is
+                        # propagated.
+                        temp_type = f.__name__
+
+                    notifier.notify(publisher_id, temp_type, temp_level,
+                                    payload)
+
+                if not isinstance(e, Error):
+                    #exc_type, exc_value, exc_traceback = sys.exc_info()
+                    LOG.exception(_('Uncaught exception'))
+                    #logging.error(traceback.extract_stack(exc_traceback))
+                    raise Error(str(e))
+                raise
+
+        return wraps(f)(wrapped)
+    return inner
 
 
 class NovaException(Exception):
@@ -116,6 +147,15 @@ class NovaException(Exception):
 
     def __str__(self):
         return self._error_string
+
+
+class VirtualInterfaceCreateException(NovaException):
+    message = _("Virtual Interface creation failed")
+
+
+class VirtualInterfaceMacAddressException(NovaException):
+    message = _("5 attempts to create virtual interface"
+                "with unique mac address failed")
 
 
 class NotAuthorized(NovaException):
@@ -356,32 +396,65 @@ class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
 
-class NoFixedIpsFoundForInstance(NotFound):
+class FixedIpNotFound(NotFound):
+    message = _("No fixed IP associated with id %(id)s.")
+
+
+class FixedIpNotFoundForAddress(FixedIpNotFound):
+    message = _("Fixed ip not found for address %(address)s.")
+
+
+class FixedIpNotFoundForInstance(FixedIpNotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
 
 
+class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
+    message = _("Network host %(host)s has zero fixed ips "
+                "in network %(network_id)s.")
+
+
+class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):
+    message = _("Instance %(instance_id)s doesn't have fixed ip '%(ip)s'.")
+
+
+class FixedIpNotFoundForVirtualInterface(FixedIpNotFound):
+    message = _("Virtual interface %(vif_id)s has zero associated fixed ips.")
+
+
+class FixedIpNotFoundForHost(FixedIpNotFound):
+    message = _("Host %(host)s has zero fixed ips.")
+
+
+class NoMoreFixedIps(Error):
+    message = _("Zero fixed ips available.")
+
+
+class NoFixedIpsDefined(NotFound):
+    message = _("Zero fixed ips could be found.")
+
+
 class FloatingIpNotFound(NotFound):
-    message = _("Floating ip %(floating_ip)s not found")
+    message = _("Floating ip not found for id %(id)s.")
 
 
-class FloatingIpNotFoundForFixedAddress(NotFound):
-    message = _("Floating ip not found for fixed address %(fixed_ip)s.")
+class FloatingIpNotFoundForAddress(FloatingIpNotFound):
+    message = _("Floating ip not found for address %(address)s.")
+
+
+class FloatingIpNotFoundForProject(FloatingIpNotFound):
+    message = _("Floating ip not found for project %(project_id)s.")
+
+
+class FloatingIpNotFoundForHost(FloatingIpNotFound):
+    message = _("Floating ip not found for host %(host)s.")
+
+
+class NoMoreFloatingIps(FloatingIpNotFound):
+    message = _("Zero floating ips available.")
 
 
 class NoFloatingIpsDefined(NotFound):
-    message = _("Zero floating ips could be found.")
-
-
-class NoFloatingIpsDefinedForHost(NoFloatingIpsDefined):
-    message = _("Zero floating ips defined for host %(host)s.")
-
-
-class NoFloatingIpsDefinedForInstance(NoFloatingIpsDefined):
-    message = _("Zero floating ips defined for instance %(instance_id)s.")
-
-
-class NoMoreFloatingIps(NotFound):
-    message = _("Zero floating ips available.")
+    message = _("Zero floating ips exist.")
 
 
 class KeypairNotFound(NotFound):

@@ -87,6 +87,19 @@ class FlavorsTest(test.TestCase):
         ]
         self.assertEqual(flavors, expected)
 
+    def test_get_empty_flavor_list_v1_0(self):
+        def _return_empty(self):
+            return {}
+        self.stubs.Set(nova.db.api, "instance_type_get_all",
+                       _return_empty)
+
+        req = webob.Request.blank('/v1.0/flavors')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavors = json.loads(res.body)["flavors"]
+        expected = []
+        self.assertEqual(flavors, expected)
+
     def test_get_flavor_list_detail_v1_0(self):
         req = webob.Request.blank('/v1.0/flavors/detail')
         res = req.get_response(fakes.wsgi_app())
@@ -146,13 +159,7 @@ class FlavorsTest(test.TestCase):
                 },
                 {
                     "rel": "bookmark",
-                    "type": "application/json",
-                    "href": "http://localhost/v1.1/flavors/12",
-                },
-                {
-                    "rel": "bookmark",
-                    "type": "application/xml",
-                    "href": "http://localhost/v1.1/flavors/12",
+                    "href": "http://localhost/flavors/12",
                 },
             ],
         }
@@ -175,13 +182,7 @@ class FlavorsTest(test.TestCase):
                     },
                     {
                         "rel": "bookmark",
-                        "type": "application/json",
-                        "href": "http://localhost/v1.1/flavors/1",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "type": "application/xml",
-                        "href": "http://localhost/v1.1/flavors/1",
+                        "href": "http://localhost/flavors/1",
                     },
                 ],
             },
@@ -195,13 +196,7 @@ class FlavorsTest(test.TestCase):
                     },
                     {
                         "rel": "bookmark",
-                        "type": "application/json",
-                        "href": "http://localhost/v1.1/flavors/2",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "type": "application/xml",
-                        "href": "http://localhost/v1.1/flavors/2",
+                        "href": "http://localhost/flavors/2",
                     },
                 ],
             },
@@ -227,13 +222,7 @@ class FlavorsTest(test.TestCase):
                     },
                     {
                         "rel": "bookmark",
-                        "type": "application/json",
-                        "href": "http://localhost/v1.1/flavors/1",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "type": "application/xml",
-                        "href": "http://localhost/v1.1/flavors/1",
+                        "href": "http://localhost/flavors/1",
                     },
                 ],
             },
@@ -249,15 +238,22 @@ class FlavorsTest(test.TestCase):
                     },
                     {
                         "rel": "bookmark",
-                        "type": "application/json",
-                        "href": "http://localhost/v1.1/flavors/2",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "type": "application/xml",
-                        "href": "http://localhost/v1.1/flavors/2",
+                        "href": "http://localhost/flavors/2",
                     },
                 ],
             },
         ]
         self.assertEqual(flavor, expected)
+
+    def test_get_empty_flavor_list_v1_1(self):
+        def _return_empty(self):
+            return {}
+        self.stubs.Set(nova.db.api, "instance_type_get_all",
+                       _return_empty)
+
+        req = webob.Request.blank('/v1.1/flavors')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavors = json.loads(res.body)["flavors"]
+        expected = []
+        self.assertEqual(flavors, expected)
