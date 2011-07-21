@@ -722,6 +722,9 @@ class LibvirtConnTestCase(test.TestCase):
                 return vdmock
 
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.mox.StubOutWithMock(self.compute, "recover_live_migration")
+        self.compute.recover_live_migration(self.context, instance_ref,
+                                            dest='dest')
 
         # Start test
         self.mox.ReplayAll()
