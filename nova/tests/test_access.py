@@ -93,7 +93,7 @@ class AccessTestCase(test.TestCase):
         super(AccessTestCase, self).tearDown()
 
     def response_status(self, user, methodName):
-        ctxt = context.RequestContext(user, self.project)
+        ctxt = context.RequestContext(user.id, self.project.id)
         environ = self._env_for(ctxt, methodName)
         req = webob.Request.blank('/', environ)
         resp = req.get_response(self.mw)

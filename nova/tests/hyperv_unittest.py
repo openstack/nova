@@ -38,7 +38,7 @@ class HyperVTestCase(test.TestCase):
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.RequestContext(self.user, self.project)
+        self.context = context.RequestContext(self.user.id, self.project.id)
 
     def test_create_destroy(self):
         """Create a VM and destroy it"""

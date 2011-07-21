@@ -429,8 +429,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(parameters[1].get('value'), 'fake')
 
     def _check_xml_and_container(self, instance):
-        user_context = context.RequestContext(project=self.project,
-                                              user=self.user)
+        user_context = context.RequestContext(self.user.id,
+                                              self.project.id)
         instance_ref = db.instance_create(user_context, instance)
         # Re-get the instance so it's bound to an actual session
         instance_ref = db.instance_get(user_context, instance_ref['id'])
@@ -475,8 +475,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
-        user_context = context.RequestContext(project=self.project,
-                                              user=self.user)
+        user_context = context.RequestContext(self.user.id, self.project.id)
         instance_ref = db.instance_create(user_context, instance)
         network_ref = db.project_get_networks(context.get_admin_context(),
                                              self.project.id)[0]
@@ -1166,7 +1165,7 @@ class NWFilterTestCase(test.TestCase):
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.RequestContext(self.user, self.project)
+        self.context = context.RequestContext(self.user.id, self.project.id)
 
         self.fake_libvirt_connection = Mock()
 

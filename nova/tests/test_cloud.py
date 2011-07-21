@@ -65,8 +65,8 @@ class CloudTestCase(test.TestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.RequestContext(user=self.user,
-                                              project=self.project)
+        self.context = context.RequestContext(user_id=self.user.id,
+                                              project_id=self.project.id)
         host = self.network.host
 
         def fake_show(meh, context, id):
@@ -97,7 +97,7 @@ class CloudTestCase(test.TestCase):
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
-        return cloud._gen_key(self.context, self.context.user.id, name)
+        return cloud._gen_key(self.context, self.context.user_id, name)
 
     def test_describe_regions(self):
         """Makes sure describe regions runs without raising an exception"""
@@ -936,7 +936,7 @@ class CloudTestCase(test.TestCase):
         key = RSA.load_key_string(private_key, callback=lambda: None)
         bio = BIO.MemoryBuffer()
         public_key = db.key_pair_get(self.context,
-                                    self.context.user.id,
+                                    self.context.user_id,
                                     'test')['public_key']
         key.save_pub_key_bio(bio)
         converted = crypto.ssl_pub_to_ssh_pub(bio.read())
@@ -960,7 +960,7 @@ class CloudTestCase(test.TestCase):
                                                'mytestfprint')
         self.assertTrue(result1)
         keydata = db.key_pair_get(self.context,
-                                  self.context.user.id,
+                                  self.context.user_id,
                                   'testimportkey1')
         self.assertEqual('mytestpubkey', keydata['public_key'])
         self.assertEqual('mytestfprint', keydata['fingerprint'])
@@ -977,7 +977,7 @@ class CloudTestCase(test.TestCase):
                                                dummypub)
         self.assertTrue(result2)
         keydata = db.key_pair_get(self.context,
-                                  self.context.user.id,
+                                  self.context.user_id,
                                   'testimportkey2')
         self.assertEqual(dummypub, keydata['public_key'])
         self.assertEqual(dummyfprint, keydata['fingerprint'])

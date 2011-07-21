@@ -48,31 +48,19 @@ class AuthMiddleware(wsgi.Middleware):
     def __call__(self, req):
         if not self.has_authentication(req):
             return self.authenticate(req)
-        user = self.get_user_by_authentication(req)
-        if not user:
+        user_id = self.get_user_by_authentication(req)
+        if not user_id:
             token = req.headers["X-Auth-Token"]
-            msg = _("%(user)s could not be found with token '%(token)s'")
+            msg = _("%(user_id)s could not be found with token '%(token)s'")
             LOG.warn(msg % locals())
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         try:
-            account = req.headers["X-Auth-Project-Id"]
+            project_id = req.headers["X-Auth-Project-Id"]
         except KeyError:
-            # FIXME(usrleon): It needed only for compatibility
-            # while osapi clients don't use this header
-            accounts = self.auth.get_projects(user=user)
-            if accounts:
-                account = accounts[0]
-            else:
-                return faults.Fault(webob.exc.HTTPUnauthorized())
+            project_id = user_id
 
-        if not self.auth.is_admin(user) and \
-           not self.auth.is_project_member(user, account):
-            msg = _("%(user)s must be an admin or a member of %(account)s")
-            LOG.warn(msg % locals())
-            return faults.Fault(webob.exc.HTTPUnauthorized())
-
-        req.environ['nova.context'] = context.RequestContext(user, account)
+        req.environ['nova.context'] = context.RequestContext(user_id, project_id)
         return self.application
 
     def has_authentication(self, req):
@@ -133,7 +121,7 @@ class AuthMiddleware(wsgi.Middleware):
             if delta.days >= 2:
                 self.db.auth_token_destroy(ctxt, token['token_hash'])
             else:
-                return self.auth.get_user(token['user_id'])
+                return token['user_id']
         return None
 
     def _authorize_user(self, username, key, req):

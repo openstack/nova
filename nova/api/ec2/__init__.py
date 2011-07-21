@@ -174,8 +174,8 @@ class Authenticate(wsgi.Middleware):
         remote_address = req.remote_addr
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
-        ctxt = context.RequestContext(user=user,
-                                      project=project,
+        ctxt = context.RequestContext(user_id=user.id,
+                                      project_id=project.id,
                                       remote_address=remote_address)
         req.environ['ec2.context'] = ctxt
         uname = user.name
@@ -295,13 +295,15 @@ class Authorizer(wsgi.Middleware):
 
     def _matches_any_role(self, context, roles):
         """Return True if any role in roles is allowed in context."""
-        if context.user.is_superuser():
+        authman = manager.AuthManager()
+        user = authman.get_user(context.user_id)
+        if user.is_superuser():
             return True
         if 'all' in roles:
             return True
         if 'none' in roles:
             return False
-        return any(context.project.has_role(context.user_id, role)
+        return any(authman.has_role(context.user_id, role, context.project_id)
                    for role in roles)
 
 

@@ -62,7 +62,7 @@ def is_user_context(context):
 def authorize_project_context(context, project_id):
     """Ensures a request has permission to access the given project."""
     if is_user_context(context):
-        if not context.project:
+        if not context.project_id:
             raise exception.NotAuthorized()
         elif context.project_id != project_id:
             raise exception.NotAuthorized()
@@ -71,7 +71,7 @@ def authorize_project_context(context, project_id):
 def authorize_user_context(context, user_id):
     """Ensures a request has permission to access the given user."""
     if is_user_context(context):
-        if not context.user:
+        if not context.user_id:
             raise exception.NotAuthorized()
         elif context.user_id != user_id:
             raise exception.NotAuthorized()

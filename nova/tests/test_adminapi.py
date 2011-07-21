@@ -54,8 +54,8 @@ class AdminApiTestCase(test.TestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.RequestContext(user=self.user,
-                                              project=self.project)
+        self.context = context.RequestContext(user_id=self.user.id,
+                                              project_id=self.project.id)
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,

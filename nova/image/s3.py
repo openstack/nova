@@ -84,9 +84,9 @@ class S3ImageService(service.BaseImageService):
     def _conn(context):
         # TODO(vish): is there a better way to get creds to sign
         #             for the user?
-        access = manager.AuthManager().get_access_key(context.user,
-                                                      context.project)
-        secret = str(context.user.secret)
+        authman = manager.AuthManager()
+        access = authman.get_access_key(context.user_id, context.project_id)
+        secret = str(authman.get_user(context.user_id).secret)
         calling = boto.s3.connection.OrdinaryCallingFormat()
         return boto.s3.connection.S3Connection(aws_access_key_id=access,
                                                aws_secret_access_key=secret,

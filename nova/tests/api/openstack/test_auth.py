@@ -24,7 +24,6 @@ import webob.dec
 import nova.api
 import nova.api.openstack.auth
 import nova.auth.manager
-from nova import auth
 from nova import context
 from nova import db
 from nova import test
