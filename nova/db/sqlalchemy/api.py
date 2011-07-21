@@ -18,7 +18,6 @@
 """
 Implementation of SQLAlchemy backend.
 """
-import traceback
 import warnings
 
 from nova import db
@@ -33,7 +32,6 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import exists
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import literal_column
 
@@ -672,7 +670,7 @@ def fixed_ip_associate(context, address, instance_id):
 
 
 @require_admin_context
-def fixed_ip_associate_pool(context, network_id, instance_id):
+def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
@@ -682,6 +680,7 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
                                filter_by(reserved=False).\
                                filter_by(deleted=False).\
                                filter_by(instance=None).\
+                               filter_by(host=None).\
                                with_lockmode('update').\
                                first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
@@ -692,9 +691,12 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
             fixed_ip_ref.network = network_get(context,
                                            network_id,
                                            session=session)
-        fixed_ip_ref.instance = instance_get(context,
-                                             instance_id,
-                                             session=session)
+        if instance_id:
+            fixed_ip_ref.instance = instance_get(context,
+                                                 instance_id,
+                                                 session=session)
+        if host:
+            fixed_ip_ref.host = host
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
@@ -750,7 +752,7 @@ def fixed_ip_get_all(context, session=None):
 
 
 @require_admin_context
-def fixed_ip_get_all_by_host(context, host=None):
+def fixed_ip_get_all_by_instance_host(context, host=None):
     session = get_session()
 
     result = session.query(models.FixedIp).\
@@ -796,6 +798,20 @@ def fixed_ip_get_by_instance(context, instance_id):
                  all()
     if not rv:
         raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+    return rv
+
+
+@require_context
+def fixed_ip_get_by_network_host(context, network_id, host):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(network_id=network_id).\
+                 filter_by(host=host).\
+                 filter_by(deleted=False).\
+                 first()
+    if not rv:
+        raise exception.FixedIpNotFoundForNetworkHost(network_id=network_id,
+                                                      host=host)
     return rv
 
 
@@ -1484,8 +1500,6 @@ def network_associate(context, project_id, force=False):
     called by project_get_networks under certain conditions
     and network manager add_network_to_project()
 
-    only associates projects with networks that have configured hosts
-
     only associate if the project doesn't already have a network
     or if force is True
 
@@ -1501,7 +1515,6 @@ def network_associate(context, project_id, force=False):
         def network_query(project_filter):
             return session.query(models.Network).\
                            filter_by(deleted=False).\
-                           filter(models.Network.host != None).\
                            filter_by(project_id=project_filter).\
                            with_lockmode('update').\
                            first()
@@ -1708,9 +1721,16 @@ def network_get_all_by_instance(_context, instance_id):
 def network_get_all_by_host(context, host):
     session = get_session()
     with session.begin():
+        # NOTE(vish): return networks that have host set
+        #             or that have a fixed ip with host set
+        host_filter = or_(models.Network.host == host,
+                          models.FixedIp.host == host)
+
         return session.query(models.Network).\
                        filter_by(deleted=False).\
-                       filter_by(host=host).\
+                       join(models.Network.fixed_ips).\
+                       filter(host_filter).\
+                       filter_by(deleted=False).\
                        all()
 
 
@@ -1742,6 +1762,7 @@ def network_update(context, network_id, values):
         network_ref = network_get(context, network_id, session=session)
         network_ref.update(values)
         network_ref.save(session=session)
+        return network_ref
 
 
 ###################

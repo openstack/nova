@@ -77,8 +77,6 @@ flags.DEFINE_integer('live_migration_retry_count', 30,
 flags.DEFINE_integer("rescue_timeout", 0,
                      "Automatically unrescue an instance after N seconds."
                      " Set to 0 to disable.")
-flags.DEFINE_bool('auto_assign_floating_ip', False,
-                  'Autoassigning floating ip to VM')
 flags.DEFINE_integer('host_state_interval', 120,
                      'Interval in seconds for querying the host status')
 
@@ -278,16 +276,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Launch a new instance with specified options."""
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
-        instance.injected_files = kwargs.get('injected_files', [])
-        instance.admin_pass = kwargs.get('admin_password', None)
         if instance['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
                   context=context)
-        self.db.instance_update(context,
-                                instance_id,
-                                {'host': self.host, 'launched_on': self.host})
-
+        updates = {}
+        updates['host'] = self.host
+        updates['launched_on'] = self.host
+        # NOTE(vish): used by virt but not in database
+        updates['injected_files'] = kwargs.get('injected_files', [])
+        updates['admin_pass'] = kwargs.get('admin_password', None)
+        instance = self.db.instance_update(context,
+                                           instance_id,
+                                           updates)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,

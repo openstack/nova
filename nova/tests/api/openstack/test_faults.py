@@ -139,3 +139,8 @@ class TestFaults(test.TestCase):
         self.assertEqual(resp.content_type, "application/xml")
         self.assertEqual(resp.status_int, 404)
         self.assertTrue('whut?' in resp.body)
+
+    def test_fault_has_status_int(self):
+        """Ensure the status_int is set correctly on faults"""
+        fault = faults.Fault(webob.exc.HTTPBadRequest(explanation='what?'))
+        self.assertEqual(fault.status_int, 400)
