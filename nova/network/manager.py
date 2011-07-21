@@ -427,7 +427,12 @@ class NetworkManager(manager.SchedulerDependentManager):
         and info = dict containing pertinent networking data
         """
         # TODO(tr3buchet) should handle floating IPs as well?
-        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        try:
+            fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        except exception.FixedIpNotFoundForInstance, ex:
+            LOG.warn(_('No fixed IPs for instance %s'), instance_id)
+            fixed_ips = []
+
         vifs = self.db.virtual_interface_get_by_instance(context, instance_id)
         flavor = self.db.instance_type_get_by_id(context,
                                                  instance_type_id)
