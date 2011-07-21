@@ -18,12 +18,14 @@
 import json
 import stubout
 import webob
+import xml.dom.minidom as minidom
 
+from nova.api.openstack import flavors
 import nova.db.api
-from nova import context
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova import wsgi
 
 
 def stub_flavor(flavorid, name, memory_mb="256", local_gb="10"):
@@ -64,7 +66,6 @@ class FlavorsTest(test.TestCase):
                        return_instance_types)
         self.stubs.Set(nova.db.api, "instance_type_get_by_flavor_id",
                        return_instance_type_by_flavor_id)
-        self.context = context.get_admin_context()
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -146,22 +147,24 @@ class FlavorsTest(test.TestCase):
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        flavor = json.loads(res.body)["flavor"]
+        flavor = json.loads(res.body)
         expected = {
-            "id": "12",
-            "name": "flavor 12",
-            "ram": "256",
-            "disk": "10",
-            "links": [
-                {
-                    "rel": "self",
-                    "href": "http://localhost/v1.1/flavors/12",
-                },
-                {
-                    "rel": "bookmark",
-                    "href": "http://localhost/flavors/12",
-                },
-            ],
+            "flavor": {
+                "id": "12",
+                "name": "flavor 12",
+                "ram": "256",
+                "disk": "10",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/12",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/flavors/12",
+                    },
+                ],
+            },
         }
         self.assertEqual(flavor, expected)
 
@@ -170,37 +173,39 @@ class FlavorsTest(test.TestCase):
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        flavor = json.loads(res.body)["flavors"]
-        expected = [
-            {
-                "id": "1",
-                "name": "flavor 1",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v1.1/flavors/1",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/flavors/1",
-                    },
-                ],
-            },
-            {
-                "id": "2",
-                "name": "flavor 2",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v1.1/flavors/2",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/flavors/2",
-                    },
-                ],
-            },
-        ]
+        flavor = json.loads(res.body)
+        expected = {
+            "flavors": [
+                {
+                    "id": "1",
+                    "name": "flavor 1",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/flavors/1",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/flavors/1",
+                        },
+                    ],
+                },
+                {
+                    "id": "2",
+                    "name": "flavor 2",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/flavors/2",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/flavors/2",
+                        },
+                    ],
+                },
+            ],
+        }
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_detail_v1_1(self):
@@ -208,48 +213,49 @@ class FlavorsTest(test.TestCase):
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        flavor = json.loads(res.body)["flavors"]
-        expected = [
-            {
-                "id": "1",
-                "name": "flavor 1",
-                "ram": "256",
-                "disk": "10",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v1.1/flavors/1",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/flavors/1",
-                    },
-                ],
-            },
-            {
-                "id": "2",
-                "name": "flavor 2",
-                "ram": "256",
-                "disk": "10",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v1.1/flavors/2",
-                    },
-                    {
-                        "rel": "bookmark",
-                        "href": "http://localhost/flavors/2",
-                    },
-                ],
-            },
-        ]
+        flavor = json.loads(res.body)
+        expected = {
+            "flavors": [
+                {
+                    "id": "1",
+                    "name": "flavor 1",
+                    "ram": "256",
+                    "disk": "10",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/flavors/1",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/flavors/1",
+                        },
+                    ],
+                },
+                {
+                    "id": "2",
+                    "name": "flavor 2",
+                    "ram": "256",
+                    "disk": "10",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/flavors/2",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/flavors/2",
+                        },
+                    ],
+                },
+            ],
+        }
         self.assertEqual(flavor, expected)
 
     def test_get_empty_flavor_list_v1_1(self):
         def _return_empty(self):
             return {}
-        self.stubs.Set(nova.db.api, "instance_type_get_all",
-                       _return_empty)
+        self.stubs.Set(nova.db.api, "instance_type_get_all", _return_empty)
 
         req = webob.Request.blank('/v1.1/flavors')
         res = req.get_response(fakes.wsgi_app())
@@ -257,3 +263,223 @@ class FlavorsTest(test.TestCase):
         flavors = json.loads(res.body)["flavors"]
         expected = []
         self.assertEqual(flavors, expected)
+
+
+class FlavorsXMLSerializationTest(test.TestCase):
+
+    def test_show(self):
+        serializer = flavors.FlavorXMLSerializer()
+
+        input = {
+            "flavor": {
+                "id": "12",
+                "name": "asdf",
+                "ram": "256",
+                "disk": "10",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/12",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/flavors/12",
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(input, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <flavor xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                id="12"
+                name="asdf"
+                ram="256"
+                disk="10">
+            <atom:link href="http://localhost/v1.1/flavors/12" rel="self"/>
+            <atom:link href="http://localhost/flavors/12" rel="bookmark"/>
+        </flavor>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_show_handles_integers(self):
+        serializer = flavors.FlavorXMLSerializer()
+
+        input = {
+            "flavor": {
+                "id": 12,
+                "name": "asdf",
+                "ram": 256,
+                "disk": 10,
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/12",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/flavors/12",
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(input, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <flavor xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                id="12"
+                name="asdf"
+                ram="256"
+                disk="10">
+            <atom:link href="http://localhost/v1.1/flavors/12" rel="self"/>
+            <atom:link href="http://localhost/flavors/12" rel="bookmark"/>
+        </flavor>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_detail(self):
+        serializer = flavors.FlavorXMLSerializer()
+
+        input = {
+            "flavors": [
+                {
+                    "id": "23",
+                    "name": "flavor 23",
+                    "ram": "512",
+                    "disk": "20",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/flavors/23",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/flavors/23",
+                        },
+                    ],
+                },        {
+                    "id": "13",
+                    "name": "flavor 13",
+                    "ram": "256",
+                    "disk": "10",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/flavors/13",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/flavors/13",
+                        },
+                    ],
+                },
+            ],
+        }
+
+        output = serializer.serialize(input, 'detail')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <flavors xmlns="http://docs.openstack.org/compute/api/v1.1"
+                 xmlns:atom="http://www.w3.org/2005/Atom">
+            <flavor id="23"
+                    name="flavor 23"
+                    ram="512"
+                    disk="20">
+                <atom:link href="http://localhost/v1.1/flavors/23" rel="self"/>
+                <atom:link href="http://localhost/flavors/23" rel="bookmark"/>
+            </flavor>
+            <flavor id="13"
+                    name="flavor 13"
+                    ram="256"
+                    disk="10">
+                <atom:link href="http://localhost/v1.1/flavors/13" rel="self"/>
+                <atom:link href="http://localhost/flavors/13" rel="bookmark"/>
+            </flavor>
+        </flavors>
+        """.replace("  ", "") % locals())
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index(self):
+        serializer = flavors.FlavorXMLSerializer()
+
+        input = {
+            "flavors": [
+                {
+                    "id": "23",
+                    "name": "flavor 23",
+                    "ram": "512",
+                    "disk": "20",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/flavors/23",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/flavors/23",
+                        },
+                    ],
+                },        {
+                    "id": "13",
+                    "name": "flavor 13",
+                    "ram": "256",
+                    "disk": "10",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/flavors/13",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/flavors/13",
+                        },
+                    ],
+                },
+            ],
+        }
+
+        output = serializer.serialize(input, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <flavors xmlns="http://docs.openstack.org/compute/api/v1.1"
+                 xmlns:atom="http://www.w3.org/2005/Atom">
+            <flavor id="23" name="flavor 23">
+                <atom:link href="http://localhost/v1.1/flavors/23" rel="self"/>
+                <atom:link href="http://localhost/flavors/23" rel="bookmark"/>
+            </flavor>
+            <flavor id="13" name="flavor 13">
+                <atom:link href="http://localhost/v1.1/flavors/13" rel="self"/>
+                <atom:link href="http://localhost/flavors/13" rel="bookmark"/>
+            </flavor>
+        </flavors>
+        """.replace("  ", "") % locals())
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index_empty(self):
+        serializer = flavors.FlavorXMLSerializer()
+
+        input = {
+            "flavors": [],
+        }
+
+        output = serializer.serialize(input, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <flavors xmlns="http://docs.openstack.org/compute/api/v1.1"
+                 xmlns:atom="http://www.w3.org/2005/Atom" />
+        """.replace("  ", "") % locals())
+
+        self.assertEqual(expected.toxml(), actual.toxml())
