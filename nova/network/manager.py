@@ -780,7 +780,6 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
 
         self.driver.metadata_forward()
 
-
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
         network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)

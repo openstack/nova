@@ -257,4 +257,3 @@ class ComputeDriver(object):
     def plug_vifs(self, instance, network_info):
         """Plugs in VIFs to networks."""
         raise NotImplementedError()
-

@@ -884,7 +884,6 @@ class VMOps(object):
                     instance['name'])
                 raise
 
-
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:

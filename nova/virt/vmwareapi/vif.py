@@ -53,7 +53,8 @@ class VMWareVlanBridgeDriver(VIFDriver):
         session = VMWareAPISession(host_ip, host_username, host_password,
                                    FLAGS.vmwareapi_api_retry_count)
         vlan_interface = bridge_interface
-        # Check if the vlan_interface physical network adapter exists on the host
+        # Check if the vlan_interface physical network adapter exists on the
+        # host.
         if not network_utils.check_if_vlan_interface_exists(session,
                                                             vlan_interface):
             raise exception.NetworkAdapterNotFound(adapter=vlan_interface)
@@ -62,32 +63,33 @@ class VMWareVlanBridgeDriver(VIFDriver):
         vswitch_associated = network_utils.get_vswitch_for_vlan_interface(
                                             session, vlan_interface)
         if vswitch_associated is None:
-            raise exception.SwicthNotFoundForNetworkAdapter(adapter=vlan_interface)
+            raise exception.SwicthNotFoundForNetworkAdapter(
+                adapter=vlan_interface)
         # Check whether bridge already exists and retrieve the the ref of the
         # network whose name_label is "bridge"
         network_ref = network_utils.get_network_with_the_name(session, bridge)
         if network_ref is None:
-            # Create a port group on the vSwitch associated with the vlan_interface
-            # corresponding physical network adapter on the ESX host
-            network_utils.create_port_group(session, bridge, vswitch_associated,
-                                    vlan_num)
+            # Create a port group on the vSwitch associated with the
+            # vlan_interface corresponding physical network adapter on the ESX
+            # host.
+            network_utils.create_port_group(session, bridge,
+                                            vswitch_associated, vlan_num)
         else:
             # Get the vlan id and vswitch corresponding to the port group
             pg_vlanid, pg_vswitch = \
-                network_utils.get_vlanid_and_vswitch_for_portgroup(session, bridge)
+                network_utils.get_vlanid_and_vswitch_for_portgroup(session,
+                                                                   bridge)
 
             # Check if the vswitch associated is proper
             if pg_vswitch != vswitch_associated:
-                raise exception.InvalidVLANPortGroup(bridge=bridge,
-                                                     expected=vswitch_associated,
-                                                     actual=pg_vswitch)
+                raise exception.InvalidVLANPortGroup(
+                    bridge=bridge, expected=vswitch_associated,
+                    actual=pg_vswitch)
 
             # Check if the vlan id is proper for the port group
             if pg_vlanid != vlan_num:
                 raise exception.InvalidVLANTag(bridge=bridge, tag=vlan_num,
                                                pgroup=pg_vlanid)
 
-
     def unplug(self, instance, network, mapping):
         pass
-

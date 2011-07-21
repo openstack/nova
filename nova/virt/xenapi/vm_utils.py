@@ -282,7 +282,6 @@ class VMHelper(HelperBase):
             LOG.exception(exc)
             raise StorageError(_('Unable to destroy VDI %s') % vdi_ref)
 
-
     @classmethod
     def create_vdi(cls, session, sr_ref, name_label, virtual_size, read_only):
         """Create a VDI record and returns its reference."""
@@ -1094,6 +1093,7 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
         f.seek(offset)
         for chunk in image_file:
             f.write(chunk)
+
 
 def _write_partition(virtual_size, dev):
     dest = '/dev/%s' % dev

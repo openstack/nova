@@ -30,7 +30,7 @@ LOG = logging.getLogger('nova.virt.libvirt.vif')
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('libvirt_ovs_integration_bridge', 'br-int',
-			'Name of Integration Bridge used by Open vSwitch')
+                    'Name of Integration Bridge used by Open vSwitch')
 
 
 class LibvirtBridgeDriver(VIFDriver):
