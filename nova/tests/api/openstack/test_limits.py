@@ -27,6 +27,7 @@ import webob
 
 from xml.dom.minidom import parseString
 
+from nova import test
 import nova.context
 from nova.api.openstack import limits
 
@@ -904,3 +905,208 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
             "made to /delayed every minute.")
 
         self.assertEqual((delay, error), expected)
+
+
+class LimitsViewBuilderV11Test(test.TestCase):
+
+    def setUp(self):
+        self.view_builder = self._get_view_builder()
+
+    def tearDown(self):
+        pass
+
+    def _get_view_builder(self):
+        views = nova.api.openstack.views
+        view_builder = views.limits.ViewBuilderV11()
+        return view_builder
+
+    def _get_rate_limits(self):
+        rate_limits = [
+            {
+                "URI": "*",
+                "regex": ".*",
+                "value": 10,
+                "verb": "POST",
+                "remaining": 2,
+                "unit": "MINUTE",
+                "resetTime": "2011-12-15T22:42:45Z"
+            },
+            {
+                "URI": "*/servers",
+                "regex": "^/servers",
+                "value": 50,
+                "verb": "POST",
+                "remaining": 10,
+                "unit": "DAY",
+                "resetTime": "2011-12-15T22:42:45Z"
+            },
+        ]
+
+        return rate_limits
+
+    def _get_absolute_limits(self):
+        absolute_limits = {
+            "metadata_items": 1,
+            "injected_files": 5,
+            "injected_file_content_bytes": 5,
+        }
+
+        return absolute_limits
+
+    def test_build_limits(self):
+        expected_limits = {
+            "limits": {
+                "rate": [
+                    {
+                        "uri": "*",
+                        "regex": ".*",
+                        "limit": [
+                            {
+                                "value": 10,
+                                "verb": "POST",
+                                "remaining": 2,
+                                "unit": "MINUTE",
+                                "next-available": "2011-12-15T22:42:45Z"
+                            },
+                        ]
+                    },
+                    {
+                        "uri": "*/servers",
+                        "regex": "^/servers",
+                        "limit": [
+                            {
+                                "value": 50,
+                                "verb": "POST",
+                                "remaining": 10,
+                                "unit": "DAY",
+                                "next-available": "2011-12-15T22:42:45Z"
+                            },
+                        ]
+                    },
+                ],
+                "absolute": {
+                    "maxServerMeta": 1,
+                    "maxImageMeta": 1,
+                    "maxPersonality": 5,
+                    "maxPersonalitySize": 5
+                }
+            }
+        }
+
+        output = self.view_builder.build(self._get_rate_limits(),
+                                         self._get_absolute_limits())
+        self.assertDictMatch(output, expected_limits)
+
+    def test_build_limits_empty_limits(self):
+        expected_limits = {
+            "limits": {
+                "rate": [],
+                "absolute": {}
+            }
+        }
+
+        abs_limits = {}
+        rate_limits = []
+        output = self.view_builder.build(rate_limits, abs_limits)
+        self.assertDictMatch(output, expected_limits)
+
+
+class LimitsXMLSerializationTest(test.TestCase):
+
+    def setUp(self):
+        self.maxDiff = None
+
+    def tearDown(self):
+        pass
+
+    def test_index(self):
+        serializer = limits.LimitsXMLSerializer()
+
+        fixture = {
+            "limits": {
+                "rate": [
+                    {
+                        "uri": "*",
+                        "regex": ".*",
+                        "limit": [
+                            {
+                                "value": 10,
+                                "verb": "POST",
+                                "remaining": 2,
+                                "unit": "MINUTE",
+                                "next-available": "2011-12-15T22:42:45Z"
+                            },
+                        ]
+                    },
+                    {
+                        "uri": "*/servers",
+                        "regex": "^/servers",
+                        "limit": [
+                            {
+                                "value": 50,
+                                "verb": "POST",
+                                "remaining": 10,
+                                "unit": "DAY",
+                                "next-available": "2011-12-15T22:42:45Z"
+                            },
+                        ]
+                    },
+                ],
+                "absolute": {
+                    "maxServerMeta": 1,
+                    "maxImageMeta": 1,
+                    "maxPersonality": 5,
+                    "maxPersonalitySize": 10240
+                }
+            }
+        }
+
+        output = serializer.serialize(fixture, 'index')
+        actual = parseString(output.replace("  ", ""))
+
+        expected = parseString("""
+        <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
+            <rates>
+                <rate uri="*" regex=".*">
+                    <limit value="10" verb="POST" remaining="2"
+                        unit="MINUTE"
+                        next-available="2011-12-15T22:42:45Z"/>
+                </rate>
+                <rate uri="*/servers" regex="^/servers">
+                    <limit value="50" verb="POST" remaining="10"
+                        unit="DAY"
+                        next-available="2011-12-15T22:42:45Z"/>
+                </rate>
+            </rates>
+            <absolute>
+                <limit name="maxServerMeta" value="1"/>
+                <limit name="maxPersonality" value="5"/>
+                <limit name="maxImageMeta" value="1"/>
+                <limit name="maxPersonalitySize" value="10240"/>
+            </absolute>
+        </limits>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index_no_limits(self):
+        serializer = limits.LimitsXMLSerializer()
+
+        fixture = {
+            "limits": {
+                "rate": [],
+                "absolute": {}
+            }
+        }
+
+        output = serializer.serialize(fixture, 'index')
+        actual = parseString(output.replace("  ", ""))
+
+        expected = parseString("""
+        <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
+            <rates />
+            <absolute />
+        </limits>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
