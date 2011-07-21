@@ -47,7 +47,7 @@ class VersionsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1",
+                        "href": "http://localhost/v1.1/",
                     }],
             },
             {
@@ -57,7 +57,7 @@ class VersionsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.0",
+                        "href": "http://localhost/v1.0/",
                     }],
             },
         ]
@@ -72,11 +72,11 @@ class VersionsTest(test.TestCase):
 
         expected = """<versions>
             <version id="v1.1" status="CURRENT" updated="2011-07-18T11:30:00Z">
-                <atom:link href="http://localhost/v1.1" rel="self"/>
+                <atom:link href="http://localhost/v1.1/" rel="self"/>
             </version>
-            <version id="v1.0" status="DEPRECATED" 
-                updated="2010-10-09T11:30:00Z">
-                <atom:link href="http://localhost/v1.0" rel="self"/>
+            <version id="v1.0" status="DEPRECATED"
+                 updated="2010-10-09T11:30:00Z">
+                <atom:link href="http://localhost/v1.0/" rel="self"/>
             </version>
         </versions>""".replace("  ", "").replace("\n", "")
 
@@ -120,9 +120,9 @@ class VersionsTest(test.TestCase):
                 </content>
             </entry>
         </feed>
-        """.replace("  ", "").replace("\n", "").replace("\t", "")
+        """.replace("  ", "").replace("\n", "")
 
-        actual = res.body.replace("  ", "").replace("\n", "").replace("\t","")
+        actual = res.body.replace("  ", "").replace("\n", "")
 
         self.assertEqual(expected, actual)
 
@@ -132,8 +132,7 @@ class VersionsTest(test.TestCase):
         version_data = {
             "id": "3.2.1",
             "status": "CURRENT",
-            "updated": "2011-07-18T11:30:00Z"
-        }
+            "updated": "2011-07-18T11:30:00Z"}
 
         expected = {
             "id": "3.2.1",
@@ -142,7 +141,7 @@ class VersionsTest(test.TestCase):
             "links": [
                 {
                     "rel": "self",
-                    "href": "http://example.org/3.2.1",
+                    "href": "http://example.org/3.2.1/",
                 },
             ],
         }
@@ -156,7 +155,7 @@ class VersionsTest(test.TestCase):
         base_url = "http://example.org/app/"
         version_number = "v1.4.6"
 
-        expected = "http://example.org/app/v1.4.6"
+        expected = "http://example.org/app/v1.4.6/"
 
         builder = views.versions.ViewBuilder(base_url)
         actual = builder.generate_href(version_number)

@@ -43,8 +43,8 @@ class Versions(wsgi.Resource):
         }
         serializer = wsgi.ResponseSerializer(body_serializers)
 
-        supported_content_types = ('application/json', 
-                                   'application/xml', 
+        supported_content_types = ('application/json',
+                                   'application/xml',
                                    'application/atom+xml')
         deserializer = wsgi.RequestDeserializer(
             supported_content_types=supported_content_types)
@@ -73,6 +73,7 @@ class Versions(wsgi.Resource):
         versions = [builder.build(version) for version in version_objs]
         return dict(versions=versions)
 
+
 class VersionsXMLSerializer(wsgi.XMLDictSerializer):
     def _versions_to_xml(self, versions):
         root = self._xml_doc.createElement('versions')
@@ -96,12 +97,12 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
         return version_node
 
-
     def default(self, data):
         self._xml_doc = minidom.Document()
         node = self._versions_to_xml(data['versions'])
 
         return self.to_xml_string(node)
+
 
 class VersionsAtomSerializer(wsgi.XMLDictSerializer):
     def __init__(self, metadata=None, xmlns=None):
@@ -121,7 +122,8 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
     def _get_most_recent_update(self, versions):
         recent = None
         for version in versions:
-            updated = datetime.strptime(version['updated'],'%Y-%m-%dT%H:%M:%SZ')
+            updated = datetime.strptime(version['updated'],
+                                        '%Y-%m-%dT%H:%M:%SZ')
             if not recent:
                 recent = updated
             elif updated > recent:
@@ -132,7 +134,7 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
     def _get_base_url(self, link_href):
         # Make sure no trailing /
         link_href = link_href.rstrip('/')
-        return link_href.rsplit('/',1)[0] + '/'
+        return link_href.rsplit('/', 1)[0] + '/'
 
     def _create_meta(self, root, versions):
         title = self._create_text_elem('title', 'Available API Versions',
@@ -164,7 +166,7 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
             entry = self._xml_doc.createElement('entry')
 
             id = self._create_text_elem('id', version['links'][0]['href'])
-            title = self._create_text_elem('title', 
+            title = self._create_text_elem('title',
                                            'Version %s' % version['id'],
                                            type='text')
             updated = self._create_text_elem('updated', version['updated'])
@@ -179,9 +181,9 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
                 link_node.setAttribute('href', link['href'])
             entry.appendChild(link_node)
 
-            content = self._create_text_elem('content', 
-                'Version %s %s (%s)' % 
-                    (version['id'], 
+            content = self._create_text_elem('content',
+                'Version %s %s (%s)' %
+                    (version['id'],
                      version['status'],
                      version['updated']),
                 type='text')
