@@ -529,7 +529,8 @@ class Migration(BASE, NovaBase):
     dest_host = Column(String(255))
     old_flavor_id = Column(Integer())
     new_flavor_id = Column(Integer())
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance_uuid = Column(String(255), ForeignKey('instances.uuid'),
+            nullable=True)
     #TODO(_cerberus_): enum
     status = Column(String(255))
 
