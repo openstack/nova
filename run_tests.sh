@@ -142,5 +142,5 @@ fi
 
 if [ $coverage -eq 1 ]; then
   echo "Generating coverage report in covhtml/"
-  coverage html -d covhtml -i
+  ${wrapper} coverage html -d covhtml -i
 fi
