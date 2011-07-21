@@ -24,7 +24,6 @@ import stubout
 import time
 import unittest
 import webob
-
 import xml.dom.minidom
 
 import nova.context
