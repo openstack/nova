@@ -141,6 +141,6 @@ if [ -z "$noseargs" ]; then
 fi
 
 if [ $coverage -eq 1 ]; then
-  echo "Generating coverage report in covhtml/"
-  ${wrapper} coverage html -d covhtml -i
+    echo "Generating coverage report in covhtml/"
+    ${wrapper} coverage html -d covhtml -i
 fi
