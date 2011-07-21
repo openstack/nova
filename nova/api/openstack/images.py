@@ -34,7 +34,13 @@ from nova.api.openstack import wsgi
 LOG = log.getLogger('nova.api.openstack.images')
 FLAGS = flags.FLAGS
 
-SUPPORTED_FILTERS = ['name', 'status']
+SUPPORTED_FILTERS = {
+    'name': 'name',
+    'status': 'status',
+    'changes-since': 'changes-since',
+    'server': 'property-instance_ref',
+    'type': 'property-image_type',
+}
 
 
 class Controller(object):
@@ -61,8 +67,9 @@ class Controller(object):
         filters = {}
         for param in req.str_params:
             if param in SUPPORTED_FILTERS or param.startswith('property-'):
-                filters[param] = req.str_params.get(param)
-
+                # map filter name or carry through if property-*
+                filter_name = SUPPORTED_FILTERS.get(param, param)
+                filters[filter_name] = req.str_params.get(param)
         return filters
 
     def show(self, req, id):
