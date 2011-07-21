@@ -23,6 +23,7 @@ import sys
 import routes
 import webob.dec
 import webob.exc
+from xml.etree import ElementTree
 
 from nova import exception
 from nova import flags
@@ -194,7 +195,7 @@ class ExtensionsResource(wsgi.Resource):
     def show(self, req, id):
         # NOTE(dprince): the extensions alias is used as the 'id' for show
         ext = self.extension_manager.extensions[id]
-        return self._translate(ext)
+        return dict(extension=self._translate(ext))
 
     def delete(self, req, id):
         raise faults.Fault(webob.exc.HTTPNotFound())
@@ -258,15 +259,18 @@ class ExtensionMiddleware(base_wsgi.Middleware):
 
         mapper = routes.Mapper()
 
+        serializer = wsgi.ResponseSerializer(
+            {'application/xml': ExtensionsXMLSerializer()})
         # extended resources
         for resource in ext_mgr.get_resources():
             LOG.debug(_('Extended resource: %s'),
                         resource.collection)
             mapper.resource(resource.collection, resource.collection,
-                            controller=wsgi.Resource(resource.controller),
-                            collection=resource.collection_actions,
-                            member=resource.member_actions,
-                            parent_resource=resource.parent)
+                controller=wsgi.Resource(
+                    resource.controller, serializer=serializer),
+                collection=resource.collection_actions,
+                member=resource.member_actions,
+                parent_resource=resource.parent)
 
         # extended actions
         action_resources = self._action_ext_resources(application, ext_mgr,
@@ -462,3 +466,32 @@ class ResourceExtension(object):
         self.parent = parent
         self.collection_actions = collection_actions
         self.member_actions = member_actions
+
+
+class ExtensionsXMLSerializer(wsgi.XMLDictSerializer):
+
+    def _add_extension_attributes(self, node, extension):
+        node.setAttribute('name', extension['name'])
+        node.setAttribute('namespace', extension['namespace'])
+        node.setAttribute('alias', extension['alias'])
+        node.setAttribute('updated', extension['updated'])
+
+    def show(self, ext_dict):
+        root = ElementTree.Element('extension');
+        extension = ext_dict['extension']
+        root.set('xmlns', wsgi.XMLNS_V11)
+        root.set('xmlns:atom', wsgi.XMLNS_ATOM)
+        root.set('name', extension['name'])
+        root.set('namespace', extension['namespace'])
+        root.set('alias', extension['alias'])
+        root.set('updated', extension['updated'])
+        desc = ElementTree.Element('description');
+        desc.text = extension['description']
+        root.append(desc)
+        for link in extension.get('links', []):
+            elem = ElementTree.Element('atom:link');
+            elem.set('rel', link['rel'])
+            elem.set('href', link['href'])
+            elem.set('type', link['type'])
+            root.append(elem)
+        return ElementTree.tostring(root)
