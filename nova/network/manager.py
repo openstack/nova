@@ -478,7 +478,9 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'mac': vif['address'],
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [network['dns']],
-                'ips': [ip_dict(ip) for ip in network_IPs]}
+                'ips': [ip_dict(ip) for ip in network_IPs],
+                'create_bridge': self._create_bridge,
+                'create_vlan': self._create_vlan}
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
             # TODO(tr3buchet): handle ip6 routes here as well
@@ -696,6 +698,16 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Sets up network on this host."""
         raise NotImplementedError()
 
+    @property
+    def _create_bridge(self):
+        """Indicate whether this manager requires VIF to create a bridge."""
+        return False
+
+    @property
+    def _create_vlan(self):
+        """Indicate whether this manager requires VIF to create a VLAN tag."""
+        return False
+
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
@@ -782,6 +794,11 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
                 gateway = utils.get_my_linklocal(network_ref['bridge'])
                 self.db.network_update(context, network_ref['id'],
                                        {'gateway_v6': gateway})
+
+    @property
+    def _create_bridge(self):
+        """Indicate whether this manager requires VIF to create a bridge."""
+        return True
 
 
 class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
@@ -899,3 +916,13 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Number of reserved ips at the top of the range."""
         parent_reserved = super(VlanManager, self)._top_reserved_ips
         return parent_reserved + FLAGS.cnt_vpn_clients
+
+    @property
+    def _create_bridge(self):
+        """Indicate whether this manager requires VIF to create a bridge."""
+        return True
+
+    @property
+    def _create_vlan(self):
+        """Indicate whether this manager requires VIF to create a VLAN tag."""
+        return True

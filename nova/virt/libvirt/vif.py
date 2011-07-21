@@ -19,20 +19,24 @@
 """VIF drivers for libvirt."""
 
 from nova import flags
+from nova import log as logging
 from nova.network import linux_net
 from nova.virt.libvirt import netutils
 from nova import utils
 from nova.virt.vif import VIFDriver
+
+LOG = logging.getLogger('nova.virt.libvirt.vif')
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('libvirt_ovs_integration_bridge', 'br-int',
 			'Name of Integration Bridge used by Open vSwitch')
 
-class LibvirtBridge(object):
-    """Linux bridge VIF for Libvirt."""
 
-    def get_configurations(self, network, mapping):
+class LibvirtBridgeDriver(VIFDriver):
+    """VIF driver for Linux bridge."""
+
+    def _get_configurations(self, network, mapping):
         """Get a dictionary of VIF configurations for bridge type."""
         # Assume that the gateway also acts as the dhcp server.
         gateway6 = mapping.get('gateway6')
@@ -66,32 +70,24 @@ class LibvirtBridge(object):
 
         return result
 
-
-class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
-    """VIF driver for Linux bridge."""
-
     def plug(self, instance, network, mapping):
         """Ensure that the bridge exists, and add VIF to it."""
-        if not network.get('multi_host'):
-            linux_net.ensure_bridge(network['bridge'],
-                                    network['bridge_interface'])
-        return self.get_configurations(network, mapping)
+        if not network.get('multi_host') and mapping.get('create_bridge'):
+            if mapping.get('create_vlan'):
+                LOG.debug(_("Ensuring vlan %s and bridge %s") %
+                          (network['vlan'], network['bridge']))
+                linux_net.ensure_vlan_bridge(network['vlan'],
+                                             network['bridge'],
+                                             network['bridge_interface'])
+            else:
+                LOG.debug(_("Ensuring bridge %s") % network['bridge'])
+                linux_net.ensure_bridge(network['bridge'],
+                                        network['bridge_interface'])
+
+        return self._get_configurations(network, mapping)
 
     def unplug(self, instance, network, mapping):
-        pass
-
-
-class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
-    """VIF driver for Linux bridge with VLAN."""
-
-    def plug(self, instance, network, mapping):
-        """Ensure that VLAN and bridge exist and add VIF to the bridge."""
-        if not network.get('multi_host'):
-            linux_net.ensure_vlan_bridge(network['vlan'], network['bridge'],
-                                         network['bridge_interface'])
-        return self.get_configurations(network, mapping)
-
-    def unplug(self, instance, network, mapping):
+        """No manual unplugging required."""
         pass
 
 
