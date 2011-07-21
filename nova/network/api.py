@@ -18,7 +18,6 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -108,7 +107,11 @@ class API(base.Base):
                                        '(%(project)s)') %
                                         {'address': floating_ip['address'],
                                         'project': context.project_id})
-        host = fixed_ip['network']['host']
+        # NOTE(vish): if we are multi_host, send to the instances host
+        if fixed_ip['network']['multi_host']:
+            host = fixed_ip['instance']['host']
+        else:
+            host = fixed_ip['network']['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
                  {'method': 'associate_floating_ip',
@@ -123,7 +126,11 @@ class API(base.Base):
             return
         if not floating_ip.get('fixed_ip'):
             raise exception.ApiError('Address is not associated.')
-        host = floating_ip['fixed_ip']['network']['host']
+        # NOTE(vish): if we are multi_host, send to the instances host
+        if floating_ip['fixed_ip']['network']['multi_host']:
+            host = floating_ip['fixed_ip']['instance']['host']
+        else:
+            host = floating_ip['fixed_ip']['network']['host']
         rpc.call(context,
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
                  {'method': 'disassociate_floating_ip',
@@ -137,7 +144,9 @@ class API(base.Base):
         args = kwargs
         args['instance_id'] = instance['id']
         args['project_id'] = instance['project_id']
+        args['host'] = instance['host']
         args['instance_type_id'] = instance['instance_type_id']
+
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'allocate_for_instance',
                          'args': args})
@@ -176,7 +185,8 @@ class API(base.Base):
     def get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
         args = {'instance_id': instance['id'],
-                'instance_type_id': instance['instance_type_id']}
+                'instance_type_id': instance['instance_type_id'],
+                'host': instance['host']}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_instance_nw_info',
                          'args': args})

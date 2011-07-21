@@ -47,10 +47,10 @@ class Controller(object):
             raise exception.AdminRequired()
 
     def index(self, req):
-        raise faults.Fault(webob.exc.HTTPNotImplemented())
+        raise webob.exc.HTTPNotImplemented()
 
     def detail(self, req):
-        raise faults.Fault(webob.exc.HTTPNotImplemented())
+        raise webob.exc.HTTPNotImplemented()
 
     def show(self, req, id):
         """Return data about the given account id"""
@@ -65,7 +65,7 @@ class Controller(object):
     def create(self, req, body):
         """We use update with create-or-update semantics
            because the id comes from an external source"""
-        raise faults.Fault(webob.exc.HTTPNotImplemented())
+        raise webob.exc.HTTPNotImplemented()
 
     def update(self, req, id, body):
         """This is really create or update."""

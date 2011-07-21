@@ -20,7 +20,6 @@ import time
 from webob import exc
 
 import nova
-from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 from nova.api.openstack import wsgi
 from nova import db
@@ -37,14 +36,14 @@ class Controller(object):
             instance = self.compute_api.get(
                 req.environ['nova.context'], server_id)
         except nova.exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         return instance
 
     def create(self, req, server_id, body):
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
     def delete(self, req, server_id, id):
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
 
 class ControllerV10(Controller):
@@ -63,7 +62,7 @@ class ControllerV10(Controller):
             view = builder.build_public_parts(instance)
         else:
             msg = _("Only private and public networks available")
-            return faults.Fault(exc.HTTPNotFound(explanation=msg))
+            raise exc.HTTPNotFound(explanation=msg)
 
         return {id: view}
 
@@ -86,7 +85,7 @@ class ControllerV11(Controller):
 
         if network is None:
             msg = _("Instance is not a member of specified network")
-            return faults.Fault(exc.HTTPNotFound(explanation=msg))
+            raise exc.HTTPNotFound(explanation=msg)
 
         return network
 

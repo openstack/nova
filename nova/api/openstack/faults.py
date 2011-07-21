@@ -40,6 +40,7 @@ class Fault(webob.exc.HTTPException):
     def __init__(self, exception):
         """Create a Fault for the given webob.exc.exception."""
         self.wrapped_exc = exception
+        self.status_int = exception.status_int
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
