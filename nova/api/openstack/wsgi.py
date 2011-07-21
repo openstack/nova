@@ -20,21 +20,22 @@ LOG = logging.getLogger('nova.api.openstack.wsgi')
 class Request(webob.Request):
     """Add some Openstack API-specific logic to the base webob.Request."""
 
-    def best_match_content_type(self):
+    def best_match_content_type(self, supported_content_types=None):
         """Determine the requested response content-type.
 
         Based on the query extension then the Accept header.
 
         """
-        supported = ('application/json', 'application/xml')
+        supported_content_types = supported_content_types or \
+            ('application/json', 'application/xml')
 
         parts = self.path.rsplit('.', 1)
         if len(parts) > 1:
             ctype = 'application/{0}'.format(parts[1])
-            if ctype in supported:
+            if ctype in supported_content_types:
                 return ctype
 
-        bm = self.accept.best_match(supported)
+        bm = self.accept.best_match(supported_content_types)
 
         # default to application/json if we don't find a preference
         return bm or 'application/json'
@@ -151,7 +152,12 @@ class RequestHeadersDeserializer(ActionDispatcher):
 class RequestDeserializer(object):
     """Break up a Request object into more useful pieces."""
 
-    def __init__(self, body_deserializers=None, headers_deserializer=None):
+    def __init__(self, body_deserializers=None, headers_deserializer=None,
+                 supported_content_types=None):
+
+        self.supported_content_types = supported_content_types or \
+                ('application/json', 'application/xml')
+
         self.body_deserializers = {
             'application/xml': XMLDeserializer(),
             'application/json': JSONDeserializer(),
@@ -213,7 +219,7 @@ class RequestDeserializer(object):
             raise exception.InvalidContentType(content_type=content_type)
 
     def get_expected_content_type(self, request):
-        return request.best_match_content_type()
+        return request.best_match_content_type(self.supported_content_types)
 
     def get_action_args(self, request_environment):
         """Parse dictionary created by routes library."""
@@ -412,6 +418,7 @@ class Resource(wsgi.Application):
     serialized by requested content type.
 
     """
+
     def __init__(self, controller, deserializer=None, serializer=None):
         """
         :param controller: object that implement methods created by routes lib
@@ -441,7 +448,11 @@ class Resource(wsgi.Application):
             msg = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
-        action_result = self.dispatch(request, action, args)
+        try:
+            action_result = self.dispatch(request, action, args)
+        except webob.exc.HTTPException as ex:
+            LOG.info(_("HTTP exception thrown: %s"), unicode(ex))
+            action_result = faults.Fault(ex)
 
         #TODO(bcwaldon): find a more elegant way to pass through non-dict types
         if type(action_result) is dict or action_result is None:

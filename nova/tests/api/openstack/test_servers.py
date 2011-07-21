@@ -1790,7 +1790,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
+        self.assertEqual(res.status_int, 500)
 
     def test_resized_server_has_correct_status(self):
         req = self.webreq('/1', 'GET')
