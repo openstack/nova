@@ -24,10 +24,11 @@ import stubout
 import time
 import unittest
 import webob
-import xml.dom.minidom
+from xml.dom import minidom
 
 import nova.context
 from nova.api.openstack import limits
+from nova.api.openstack import views
 from nova import test
 
 
@@ -166,7 +167,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         request = self._get_index_request("application/xml")
         response = request.get_response(self.controller)
 
-        expected = parseString("""
+        expected = minidom.parseString("""
             <limits
                 xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate/>
@@ -174,7 +175,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
             </limits>
         """.replace("  ", ""))
 
-        body = parseString(response.body.replace("  ", ""))
+        body = minidom.parseString(response.body.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), body.toxml())
 
@@ -184,7 +185,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         request = self._populate_limits(request)
         response = request.get_response(self.controller)
 
-        expected = parseString("""
+        expected = minidom.parseString("""
             <limits
                 xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate>
@@ -196,7 +197,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
                 <absolute/>
             </limits>
         """.replace("  ", ""))
-        body = parseString(response.body.replace("  ", ""))
+        body = minidom.parseString(response.body.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), body.toxml())
 
@@ -458,7 +459,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 403)
 
-        root = parseString(response.body).childNodes[0]
+        root = minidom.parseString(response.body).childNodes[0]
         expected = "Only 1 GET request(s) can be made to * every minute."
 
         details = root.getElementsByTagName("details")
@@ -1050,7 +1051,7 @@ class LimitsXMLSerializationTest(test.TestCase):
         output = serializer.serialize(fixture, 'index')
         actual = minidom.parseString(output.replace("  ", ""))
 
-        expected = parseString("""
+        expected = minidom.parseString("""
         <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
             <rates>
                 <rate uri="*" regex=".*">
@@ -1088,7 +1089,7 @@ class LimitsXMLSerializationTest(test.TestCase):
         output = serializer.serialize(fixture, 'index')
         actual = minidom.parseString(output.replace("  ", ""))
 
-        expected = parseString("""
+        expected = minidom.parseString("""
         <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
             <rates />
             <absolute />
