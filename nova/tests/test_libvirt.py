@@ -62,6 +62,7 @@ def _create_network_info(count=1, ipv6=None):
                'vlan': fake_vlan,
                'bridge_interface': fake_bridge_interface}
     mapping = {'mac': fake,
+               'dhcp_server': fake,
                'gateway': fake,
                'gateway6': fake,
                'ips': [{'ip': fake_ip}, {'ip': fake_ip}]}

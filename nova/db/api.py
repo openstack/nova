@@ -332,13 +332,14 @@ def fixed_ip_associate(context, address, instance_id):
     return IMPL.fixed_ip_associate(context, address, instance_id)
 
 
-def fixed_ip_associate_pool(context, network_id, instance_id):
-    """Find free ip in network and associate it to instance.
+def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
+    """Find free ip in network and associate it to instance or host.
 
     Raises if one is not available.
 
     """
-    return IMPL.fixed_ip_associate_pool(context, network_id, instance_id)
+    return IMPL.fixed_ip_associate_pool(context, network_id,
+                                        instance_id, host)
 
 
 def fixed_ip_create(context, values):
@@ -361,9 +362,9 @@ def fixed_ip_get_all(context):
     return IMPL.fixed_ip_get_all(context)
 
 
-def fixed_ip_get_all_by_host(context, host):
-    """Get all defined fixed ips used by a host."""
-    return IMPL.fixed_ip_get_all_by_host(context, host)
+def fixed_ip_get_all_by_instance_host(context, host):
+    """Get all allocated fixed ips filtered by instance host."""
+    return IMPL.fixed_ip_get_all_instance_by_host(context, host)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -374,6 +375,11 @@ def fixed_ip_get_by_address(context, address):
 def fixed_ip_get_by_instance(context, instance_id):
     """Get fixed ips by instance or raise if none exist."""
     return IMPL.fixed_ip_get_by_instance(context, instance_id)
+
+
+def fixed_ip_get_by_network_host(context, network_id, host):
+    """Get fixed ip for a host in a network."""
+    return IMPL.fixed_ip_get_by_network_host(context, network_id, host)
 
 
 def fixed_ip_get_by_virtual_interface(context, vif_id):

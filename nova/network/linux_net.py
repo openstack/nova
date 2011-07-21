@@ -498,7 +498,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         suffix = net_attrs['cidr'].rpartition('/')[2]
         out, err = _execute('sudo', 'ip', 'addr', 'add',
                             '%s/%s' %
-                            (net_attrs['gateway'], suffix),
+                            (net_attrs['dhcp_server'], suffix),
                             'brd',
                             net_attrs['broadcast'],
                             'dev',
@@ -552,21 +552,27 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                                              bridge)
 
 
-def get_dhcp_leases(context, network_id):
+def get_dhcp_leases(context, network_ref):
     """Return a network's hosts config in dnsmasq leasefile format."""
     hosts = []
-    for fixed_ip_ref in db.network_get_associated_fixed_ips(context,
-                                                            network_id):
-        hosts.append(_host_lease(fixed_ip_ref))
+    for fixed_ref in db.network_get_associated_fixed_ips(context,
+                                                         network_ref['id']):
+        host = fixed_ref['instance']['host']
+        if network_ref['multi_host'] and FLAGS.host != host:
+            continue
+        hosts.append(_host_lease(fixed_ref))
     return '\n'.join(hosts)
 
 
-def get_dhcp_hosts(context, network_id):
+def get_dhcp_hosts(context, network_ref):
     """Get network's hosts config in dhcp-host format."""
     hosts = []
-    for fixed_ip_ref in db.network_get_associated_fixed_ips(context,
-                                                            network_id):
-        hosts.append(_host_dhcp(fixed_ip_ref))
+    for fixed_ref in db.network_get_associated_fixed_ips(context,
+                                                         network_ref['id']):
+        host = fixed_ref['instance']['host']
+        if network_ref['multi_host'] and FLAGS.host != host:
+            continue
+        hosts.append(_host_dhcp(fixed_ref))
     return '\n'.join(hosts)
 
 
@@ -574,18 +580,16 @@ def get_dhcp_hosts(context, network_id):
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
 @utils.synchronized('dnsmasq_start')
-def update_dhcp(context, network_id):
+def update_dhcp(context, network_ref):
     """(Re)starts a dnsmasq server for a given network.
 
     If a dnsmasq instance is already running then send a HUP
     signal causing it to reload, otherwise spawn a new instance.
 
     """
-    network_ref = db.network_get(context, network_id)
-
     conffile = _dhcp_file(network_ref['bridge'], 'conf')
     with open(conffile, 'w') as f:
-        f.write(get_dhcp_hosts(context, network_id))
+        f.write(get_dhcp_hosts(context, network_ref))
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
@@ -613,9 +617,7 @@ def update_dhcp(context, network_id):
 
 
 @utils.synchronized('radvd_start')
-def update_ra(context, network_id):
-    network_ref = db.network_get(context, network_id)
-
+def update_ra(context, network_ref):
     conffile = _ra_file(network_ref['bridge'], 'conf')
     with open(conffile, 'w') as f:
         conf_str = """
@@ -651,9 +653,6 @@ interface %s
             LOG.debug(_('Pid %d is stale, relaunching radvd'), pid)
     command = _ra_cmd(network_ref)
     _execute(*command)
-    db.network_update(context, network_id,
-                      {'gateway_v6':
-                       utils.get_my_linklocal(network_ref['bridge'])})
 
 
 def _host_lease(fixed_ip_ref):
@@ -702,10 +701,11 @@ def _dnsmasq_cmd(net):
     cmd = ['sudo', '-E', 'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
+           '--interface=%s' % net['bridge'],
            '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
-           '--listen-address=%s' % net['gateway'],
+           '--listen-address=%s' % net['dhcp_server'],
            '--except-interface=lo',
            '--dhcp-range=%s,static,120s' % net['dhcp_start'],
            '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(net['cidr'])),

@@ -16,6 +16,7 @@
 #    under the License.
 
 from webob import exc
+import webob
 
 from nova import console
 from nova import exception
@@ -86,7 +87,7 @@ class Controller(object):
                                             int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
 
 def create_resource():

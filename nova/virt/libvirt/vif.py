@@ -35,7 +35,6 @@ class LibvirtBridge(object):
     def get_configurations(self, network, mapping):
         """Get a dictionary of VIF configurations for bridge type."""
         # Assume that the gateway also acts as the dhcp server.
-        dhcp_server = mapping['gateway']
         gateway6 = mapping.get('gateway6')
         mac_id = mapping['mac'].replace(':', '')
 
@@ -58,7 +57,7 @@ class LibvirtBridge(object):
             'bridge_name': network['bridge'],
             'mac_address': mapping['mac'],
             'ip_address': mapping['ips'][0]['ip'],
-            'dhcp_server': dhcp_server,
+            'dhcp_server': mapping['dhcp_server'],
             'extra_params': extra_params,
         }
 
@@ -73,8 +72,9 @@ class LibvirtBridgeDriver(VIFDriver, LibvirtBridge):
 
     def plug(self, instance, network, mapping):
         """Ensure that the bridge exists, and add VIF to it."""
-        linux_net.ensure_bridge(network['bridge'],
-                                network['bridge_interface'])
+        if not network.get('multi_host'):
+            linux_net.ensure_bridge(network['bridge'],
+                                    network['bridge_interface'])
         return self.get_configurations(network, mapping)
 
     def unplug(self, instance, network, mapping):
@@ -86,8 +86,9 @@ class LibvirtVlanBridgeDriver(VIFDriver, LibvirtBridge):
 
     def plug(self, instance, network, mapping):
         """Ensure that VLAN and bridge exist and add VIF to the bridge."""
-        linux_net.ensure_vlan_bridge(network['vlan'], network['bridge'],
-                                     network['bridge_interface'])
+        if not network.get('multi_host'):
+            linux_net.ensure_vlan_bridge(network['vlan'], network['bridge'],
+                                         network['bridge_interface'])
         return self.get_configurations(network, mapping)
 
     def unplug(self, instance, network, mapping):
