@@ -641,7 +641,8 @@ class NetworkCommands(object):
                                                   _('VlanID'),
                                                   'project')
         for network in db.network_get_all(context.get_admin_context()):
-            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
+                                        network.cidr,
                                         network.netmask,
                                         network.dhcp_start,
                                         network.dns,
