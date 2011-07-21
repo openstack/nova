@@ -16,6 +16,7 @@
 """The multinic extension."""
 
 from webob import exc
+import webob
 
 from nova import compute
 from nova import log as logging
@@ -103,7 +104,7 @@ class Multinic(extensions.ExtensionDescriptor):
         except Exception, e:
             LOG.exception(_("Error in addFixedIp %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _remove_fixed_ip(self, input_dict, req, id):
         """Removes an IP from an instance."""
@@ -122,4 +123,4 @@ class Multinic(extensions.ExtensionDescriptor):
         except Exception, e:
             LOG.exception(_("Error in removeFixedIp %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)

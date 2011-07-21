@@ -15,6 +15,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import mox
 
 from base64 import b64decode
 from M2Crypto import BIO
@@ -29,6 +30,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import network
 from nova import rpc
 from nova import test
 from nova import utils
@@ -131,6 +133,33 @@ class CloudTestCase(test.TestCase):
         self.assertRaises(exception.NoMoreFloatingIps,
                           allocate,
                           self.context)
+
+    def test_release_address(self):
+        address = "10.10.10.10"
+        allocate = self.cloud.allocate_address
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'host': self.network.host})
+        result = self.cloud.release_address(self.context, address)
+        self.assertEqual(result['releaseResponse'], ['Address released.'])
+
+    def test_release_address_still_associated(self):
+        address = "10.10.10.10"
+        fixed_ip = {'instance': {'id': 1}}
+        floating_ip = {'id': 0,
+                       'address': address,
+                       'fixed_ip_id': 0,
+                       'fixed_ip': fixed_ip,
+                       'project_id': None,
+                       'auto_assigned': False}
+        network_api = network.api.API()
+        self.mox.StubOutWithMock(network_api.db, 'floating_ip_get_by_address')
+        network_api.db.floating_ip_get_by_address(mox.IgnoreArg(),
+                                mox.IgnoreArg()).AndReturn(floating_ip)
+        self.mox.ReplayAll()
+        release = self.cloud.release_address
+        # ApiError: Floating ip is in use.  Disassociate it before releasing.
+        self.assertRaises(exception.ApiError, release, self.context, address)
 
     @test.skip_test("Skipping this pending future merge")
     def test_associate_disassociate_address(self):

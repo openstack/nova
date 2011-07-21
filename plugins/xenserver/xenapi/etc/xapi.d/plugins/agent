@@ -72,7 +72,9 @@ def key_init(self, arg_dict):
     info to be passed, such as passwords. Returns the shared
     secret key value.
     """
-    pub = int(arg_dict["pub"])
+    # WARNING: Some older Windows agents will crash if the public key isn't
+    # a string
+    pub = arg_dict["pub"]
     arg_dict["value"] = json.dumps({"name": "keyinit", "value": pub})
     request_id = arg_dict["id"]
     arg_dict["path"] = "data/host/%s" % request_id

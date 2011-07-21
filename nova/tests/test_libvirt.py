@@ -58,6 +58,7 @@ def _create_network_info(count=1, ipv6=None):
                'cidr': fake_ip,
                'cidr_v6': fake_ip}
     mapping = {'mac': fake,
+               'dhcp_server': fake,
                'gateway': fake,
                'gateway6': fake,
                'ips': [{'ip': fake_ip}, {'ip': fake_ip}]}
