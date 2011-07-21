@@ -52,8 +52,8 @@ for arg in "$@"; do
   process_option $arg
 done
 
+# If enabled, tell nose to collect coverage data 
 if [ $coverage -eq 1 ]; then
-    ${wrapper} coverage erase
     noseopts="$noseopts --with-coverage --cover-package=nova"
 fi
 
@@ -114,6 +114,11 @@ then
       fi
     fi
   fi
+fi
+
+# Delete old coverage data from previous runs
+if [ $coverage -eq 1 ]; then
+    ${wrapper} coverage erase
 fi
 
 if [ $just_pep8 -eq 1 ]; then
