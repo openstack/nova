@@ -26,6 +26,8 @@ from nova.virt.vif import VIFDriver
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string('libvirt_ovs_integration_bridge', 'br-int',
+			'Name of Integration Bridge used by Open vSwitch')
 
 class LibvirtBridge(object):
     """Linux bridge VIF for Libvirt."""
@@ -101,7 +103,7 @@ class LibvirtOpenVswitchDriver(VIFDriver):
         utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
         utils.execute('sudo', 'ip', 'link', 'set', dev, 'up')
         utils.execute('sudo', 'ovs-vsctl', '--', '--may-exist', 'add-port',
-           FLAGS.flat_network_bridge, dev,
+           FLAGS.libvirt_ovs_integration_bridge, dev,
            '--', 'set', 'Interface', dev, "external-ids:iface-id=%s" % vif_id,
            '--', 'set', 'Interface', dev, "external-ids:iface-status=active",
            '--', 'set', 'Interface', dev, "external-ids:attached-mac=%s" % \
@@ -111,7 +113,6 @@ class LibvirtOpenVswitchDriver(VIFDriver):
             'script': '',
             'name': dev,
             'mac_address': mapping['mac']}
-        print "using result = %s" % str(result)
         return result
 
     def unplug(self, instance, network, mapping):
