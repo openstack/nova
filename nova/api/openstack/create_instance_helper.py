@@ -101,7 +101,11 @@ class CreateInstanceHelper(object):
         if personality:
             injected_files = self._get_injected_files(personality)
 
-        flavor_id = self.controller._flavor_id_from_req_data(body)
+        try:
+            flavor_id = self.controller._flavor_id_from_req_data(body)
+        except ValueError as error:
+            msg = _("Invalid flavorRef provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         if not 'name' in body['server']:
             msg = _("Server name is not defined")
@@ -153,7 +157,9 @@ class CreateInstanceHelper(object):
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
-
+        except exception.FlavorNotFound as error:
+            msg = _("Invalid flavorRef provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
         # Let the caller deal with unhandled exceptions.
 
     def _handle_quota_error(self, error):
