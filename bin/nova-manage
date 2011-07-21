@@ -479,7 +479,7 @@ class ProjectCommands(object):
         except db.api.NoMoreNetworks:
             print _('No more networks available. If this is a new '
                     'installation, you need\nto call something like this:\n\n'
-                    '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+                    '  nova-manage network create pvt 10.0.0.0/8 10 64\n\n')
         except exception.ProcessExecutionError, e:
             print e
             print _("The above error may show that the certificate db has not "
@@ -500,7 +500,7 @@ class FixedIpCommands(object):
             if host is None:
                 fixed_ips = db.fixed_ip_get_all(ctxt)
             else:
-                fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+                fixed_ips = db.fixed_ip_get_all_by_instance_host(ctxt, host)
         except exception.NotFound as ex:
             print "error: %s" % ex
             sys.exit(2)
@@ -518,7 +518,7 @@ class FixedIpCommands(object):
                 instance = fixed_ip['instance']
                 hostname = instance['hostname']
                 host = instance['host']
-                mac_address = fixed_ip['mac_address']['address']
+                mac_address = fixed_ip['virtual_interface']['address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
                     fixed_ip['network']['cidr'],
                     fixed_ip['address'],
@@ -564,17 +564,17 @@ class NetworkCommands(object):
     """Class for managing networks."""
 
     def create(self, label=None, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None,
+               network_size=None, multi_host=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, gateway_v6=None,
                flat_network_bridge=None, bridge_interface=None):
         """Creates fixed ips for host by range
         arguments: label, fixed_range, [num_networks=FLAG],
-                   [network_size=FLAG], [vlan_start=FLAG],
+                   [network_size=FLAG], [multi_host=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
                    [flat_network_bridge=FLAG], [bridge_interface=FLAG]
-        If you wish to use a later argument fill in the gaps with 0s
-        Ex: network create private 10.0.0.0/8 1 15 0 0 0 0 xenbr1 eth1
-            network create private 10.0.0.0/8 1 15
+        If you wish to use a later argument fill in the gaps with ""s
+        Ex: network create private 10.0.0.0/8 1 16 T "" "" "" "" xenbr1 eth1
+            network create private 10.0.0.0/8 1 16
         """
         if not label:
             msg = _('a label (ex: public) is required to create networks.')
@@ -589,6 +589,10 @@ class NetworkCommands(object):
             num_networks = FLAGS.num_networks
         if not network_size:
             network_size = FLAGS.network_size
+        if not multi_host:
+            multi_host = FLAGS.multi_host
+        else:
+            multi_host = multi_host == 'T'
         if not vlan_start:
             vlan_start = FLAGS.vlan_start
         if not vpn_start:
@@ -607,6 +611,7 @@ class NetworkCommands(object):
             net_manager.create_networks(context.get_admin_context(),
                                         label=label,
                                         cidr=fixed_range,
+                                        multi_host=multi_host,
                                         num_networks=int(num_networks),
                                         network_size=int(network_size),
                                         vlan_start=int(vlan_start),
