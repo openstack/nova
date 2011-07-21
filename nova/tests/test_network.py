@@ -147,6 +147,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'cidr': '192.168.%s.0/24' % i,
                      'cidr_v6': '2001:db%s::/64' % i8,
                      'id': i,
+                     'multi_host': False,
                      'injected': 'DONTCARE',
                      'bridge_interface': 'fake_fa%s' % i,
                      'vlan': None}
@@ -162,7 +163,9 @@ class FlatNetworkTestCase(test.TestCase):
                      'ips': 'DONTCARE',
                      'label': 'test%s' % i,
                      'mac': 'DE:AD:BE:EF:00:0%s' % i,
-                     'rxtx_cap': 'DONTCARE'}
+                     'rxtx_cap': 'DONTCARE',
+                     'create_vlan': False,
+                     'create_bridge': False}
             self.assertDictMatch(nw[1], check)
 
             check = [{'enabled': 'DONTCARE',
