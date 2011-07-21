@@ -115,7 +115,8 @@ class ViewBuilderV11(ViewBuilder):
         return limits
 
     def _build_rate_limit(self, rate_limit):
-        next_avail = datetime.datetime.utcfromtimestamp(rate_limit["resetTime"])
+        next_avail = \
+            datetime.datetime.utcfromtimestamp(rate_limit["resetTime"])
         return {
             "verb": rate_limit["verb"],
             "value": rate_limit["value"],
