@@ -28,7 +28,6 @@ from nova import quota
 from nova import utils
 
 from nova.compute import instance_types
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 from nova.auth import manager as auth_manager
 
@@ -70,7 +69,7 @@ class CreateInstanceHelper(object):
         return type from this method is left to the caller.
         """
         if not body:
-            raise faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
 
         context = req.environ['nova.context']
 
@@ -94,7 +93,7 @@ class CreateInstanceHelper(object):
         except Exception, e:
             msg = _("Cannot find requested image %(image_href)s: %(e)s" %
                                                                     locals())
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
         personality = body['server'].get('personality')
 
@@ -153,7 +152,7 @@ class CreateInstanceHelper(object):
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
         # Let the caller deal with unhandled exceptions.
 

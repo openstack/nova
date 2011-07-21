@@ -25,7 +25,6 @@ from nova import flags
 import nova.image
 from nova import log
 from nova.api.openstack import common
-from nova.api.openstack import faults
 from nova.api.openstack import image_metadata
 from nova.api.openstack import servers
 from nova.api.openstack.views import images as images_view
@@ -85,7 +84,7 @@ class Controller(object):
             image = self._image_service.show(context, id)
         except (exception.NotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")
-            raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
+            raise webob.exc.HTTPNotFound(explanation=explanation)
 
         return dict(image=self.get_builder(req).build(image, detail=True))
 
