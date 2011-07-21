@@ -723,7 +723,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 local_gb=instance_type['local_gb'],
                 instance_type_id=instance_type['id']))
 
-        self.driver.revert_resize(instance_ref)
+        self.driver.revert_migration(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
         usage_info = utils.usage_from_instance(instance_ref)
@@ -836,7 +836,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance = self.db.instance_get(context, instance_id)
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
-        self.driver.finish_resize(instance, disk_info, network_info,
+        self.driver.finish_migration(instance, disk_info, network_info,
                                   resize_instance)
 
         self.db.migration_update(context, migration_id,

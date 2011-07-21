@@ -783,7 +783,7 @@ class XenAPIMigrateInstance(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(instance, '127.0.0.1')
 
-    def test_finish_resize(self):
+    def test_finish_migrate(self):
         instance = db.instance_create(self.context, self.values)
         self.called = False
 
@@ -809,7 +809,7 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
+        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
                            network_info, resize_instance=True)
         self.assertEqual(self.called, True)
 
@@ -841,7 +841,7 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
+        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
                            network_info, resize_instance=True)
 
     def test_finish_migrate_no_resize_vdi(self):
@@ -871,7 +871,7 @@ class XenAPIMigrateInstance(test.TestCase):
                            'rxtx_cap': 3})]
 
         # Resize instance would be determined by the compute call
-        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
+        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
                            network_info, resize_instance=False)
 
 
