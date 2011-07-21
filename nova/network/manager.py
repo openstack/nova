@@ -474,13 +474,15 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'broadcast': network['broadcast'],
                 'mac': vif['address'],
                 'rxtx_cap': flavor['rxtx_cap'],
-                'dns': [network['dns']],
+                'dns': [],
                 'ips': [ip_dict(ip) for ip in network_IPs]}
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
                 info['gateway6'] = network['gateway_v6']
+            if network['dns']:
+                info['dns'].append(network['dns'])
             if network['dns2']:
                 info['dns'].append(network['dns2'])
 
