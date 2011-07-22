@@ -68,7 +68,7 @@ def setup():
                             bridge_interface=bridge_interface,
                             vpn_start=FLAGS.vpn_start,
                             vlan_start=FLAGS.vlan_start,
-                            dns=FLAGS.flat_network_dns)
+                            dns1=FLAGS.flat_network_dns)
     for net in db.network_get_all(ctxt):
         network.set_network_host(ctxt, net)
 
