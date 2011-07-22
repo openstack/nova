@@ -573,7 +573,7 @@ class NetworkCommands(object):
                    [network_size=FLAG], [multi_host=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
                    [flat_network_bridge=FLAG], [bridge_interface=FLAG]
-                   [dns=FLAG], [dns2]
+                   [dns1=FLAG], [dns2]
         If you wish to use a later argument fill in the gaps with ""s
         Ex: network create private 10.0.0.0/8 1 16 T "" "" "" "" xenbr1 eth1
             network create private 10.0.0.0/8 1 16
