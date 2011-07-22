@@ -36,7 +36,7 @@ class XenAPIBridgeDriver(VIFDriver):
 
     def plug(self, xenapi_session, vm_ref, instance, device, network,
                                                     network_mapping):
-        if network['vlan']:
+        if network_mapping.get('create_vlan'):
             network_ref = self.ensure_vlan_bridge(xenapi_session, network)
         else:
             network_ref = NetworkHelper.find_network_with_bridge(
