@@ -16,6 +16,7 @@
 #    under the License.
 
 import webob
+import xml.dom.minidom as minidom
 
 from nova import db
 from nova import exception
@@ -74,19 +75,65 @@ class ControllerV11(Controller):
         return views.flavors.ViewBuilderV11(base_url)
 
 
+class FlavorXMLSerializer(wsgi.XMLDictSerializer):
+
+    def __init__(self):
+        super(FlavorXMLSerializer, self).__init__(xmlns=wsgi.XMLNS_V11)
+
+    def _flavor_to_xml(self, xml_doc, flavor, detailed):
+        flavor_node = xml_doc.createElement('flavor')
+        flavor_node.setAttribute('id', str(flavor['id']))
+        flavor_node.setAttribute('name', flavor['name'])
+
+        if detailed:
+            flavor_node.setAttribute('ram', str(flavor['ram']))
+            flavor_node.setAttribute('disk', str(flavor['disk']))
+
+        link_nodes = self._create_link_nodes(xml_doc, flavor['links'])
+        for link_node in link_nodes:
+            flavor_node.appendChild(link_node)
+        return flavor_node
+
+    def _flavors_list_to_xml(self, xml_doc, flavors, detailed):
+        container_node = xml_doc.createElement('flavors')
+
+        for flavor in flavors:
+            item_node = self._flavor_to_xml(xml_doc, flavor, detailed)
+            container_node.appendChild(item_node)
+        return container_node
+
+    def show(self, flavor_container):
+        xml_doc = minidom.Document()
+        flavor = flavor_container['flavor']
+        node = self._flavor_to_xml(xml_doc, flavor, True)
+        return self.to_xml_string(node, True)
+
+    def detail(self, flavors_container):
+        xml_doc = minidom.Document()
+        flavors = flavors_container['flavors']
+        node = self._flavors_list_to_xml(xml_doc, flavors, True)
+        return self.to_xml_string(node, True)
+
+    def index(self, flavors_container):
+        xml_doc = minidom.Document()
+        flavors = flavors_container['flavors']
+        node = self._flavors_list_to_xml(xml_doc, flavors, False)
+        return self.to_xml_string(node, True)
+
+
 def create_resource(version='1.0'):
     controller = {
         '1.0': ControllerV10,
         '1.1': ControllerV11,
     }[version]()
 
-    xmlns = {
-        '1.0': wsgi.XMLNS_V10,
-        '1.1': wsgi.XMLNS_V11,
+    xml_serializer = {
+        '1.0': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V10),
+        '1.1': FlavorXMLSerializer(),
     }[version]
 
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns),
+        'application/xml': xml_serializer,
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers)

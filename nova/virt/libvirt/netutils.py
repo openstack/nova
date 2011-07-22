@@ -59,7 +59,7 @@ def get_network_info(instance):
     vifs = db.virtual_interface_get_by_instance(admin_context, instance['id'])
     networks = db.network_get_all_by_instance(admin_context,
                                               instance['id'])
-    flavor = db.instance_type_get_by_id(admin_context,
+    flavor = db.instance_type_get(admin_context,
                                         instance['instance_type_id'])
     network_info = []
 

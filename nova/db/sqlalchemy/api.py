@@ -1349,7 +1349,11 @@ def instance_update(context, instance_id, values):
         instance_metadata_update_or_create(context, instance_id,
                                            values.pop('metadata'))
     with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
+        if utils.is_uuid_like(instance_id):
+            instance_ref = instance_get_by_uuid(context, instance_id,
+                                                session=session)
+        else:
+            instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
         instance_ref.save(session=session)
         return instance_ref
@@ -2819,13 +2823,13 @@ def migration_get(context, id, session=None):
 
 
 @require_admin_context
-def migration_get_by_instance_and_status(context, instance_id, status):
+def migration_get_by_instance_and_status(context, instance_uuid, status):
     session = get_session()
     result = session.query(models.Migration).\
-                     filter_by(instance_id=instance_id).\
+                     filter_by(instance_uuid=instance_uuid).\
                      filter_by(status=status).first()
     if not result:
-        raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
+        raise exception.MigrationNotFoundByStatus(instance_id=instance_uuid,
                                                   status=status)
     return result
 
@@ -3006,7 +3010,7 @@ def instance_type_get_all(context, inactive=False):
 
 
 @require_context
-def instance_type_get_by_id(context, id):
+def instance_type_get(context, id):
     """Returns a dict describing specific instance_type"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
