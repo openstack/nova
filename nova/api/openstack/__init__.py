@@ -169,12 +169,11 @@ class APIRouterV11(APIRouter):
                         controller=image_metadata_controller,
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
-        mapper.connect("image_meta", controller=image_metadata_controller,
-                       action='update_collection', condition={"method":['PUT']})
+
         mapper.connect("metadata", "/images/{image_id}/metadata",
                        controller=image_metadata_controller,
                        action='update_all',
-                       conditions={"method":['PUT',]})
+                       conditions={"method": ['PUT']})
 
         mapper.resource("server_meta", "meta",
                         controller=server_metadata.create_resource(),
