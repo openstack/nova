@@ -141,7 +141,7 @@ class ExtensionControllerTest(unittest.TestCase):
 
         ns = "{http://docs.openstack.org/compute/api/v1.1}"
         root = ElementTree.XML(response.body)
-        self.assertEqual(root.tag, 'extensions')
+        self.assertEqual(root.tag.split('extensions')[0], ns)
 
         # Make sure we have all the extensions.
         exts = root.findall('{0}extension'.format(ns))

@@ -355,7 +355,6 @@ class XMLDictSerializer(DictSerializer):
             link_node.setAttribute('href', link['href'])
             if link.get('type'):
                 link_node.setAttribute('type', link['type'])
-                
             link_nodes.append(link_node)
         return link_nodes
 

@@ -470,31 +470,36 @@ class ResourceExtension(object):
 
 class ExtensionsXMLSerializer(wsgi.XMLDictSerializer):
 
+    def show(self, ext_dict):
+        ext = self._create_ext_elem(ext_dict['extension'])
+        return self._to_xml(ext)
+
+    def index(self, exts_dict):
+        exts = ElementTree.Element('extensions')
+        for ext_dict in exts_dict['extensions']:
+            exts.append(self._create_ext_elem(ext_dict))
+        return self._to_xml(exts)
+
     def _create_ext_elem(self, ext_dict):
-        ext_elem = ElementTree.Element('extension');
-        ext_elem.set('xmlns', wsgi.XMLNS_V11)
-        ext_elem.set('xmlns:atom', wsgi.XMLNS_ATOM)
+        """Create an extension xml element from a dict."""
+        ext_elem = ElementTree.Element('extension')
         ext_elem.set('name', ext_dict['name'])
         ext_elem.set('namespace', ext_dict['namespace'])
         ext_elem.set('alias', ext_dict['alias'])
         ext_elem.set('updated', ext_dict['updated'])
-        desc = ElementTree.Element('description');
+        desc = ElementTree.Element('description')
         desc.text = ext_dict['description']
         ext_elem.append(desc)
         for link in ext_dict.get('links', []):
-            elem = ElementTree.Element('atom:link');
+            elem = ElementTree.Element('atom:link')
             elem.set('rel', link['rel'])
             elem.set('href', link['href'])
             elem.set('type', link['type'])
             ext_elem.append(elem)
         return ext_elem
 
-    def show(self, ext_dict):
-        ext = self._create_ext_elem(ext_dict['extension'])
-        return ElementTree.tostring(ext, encoding='UTF-8')
-
-    def index(self, exts_dict):
-        exts = ElementTree.Element('extensions');
-        for ext_dict in exts_dict['extensions']:
-             exts.append(self._create_ext_elem(ext_dict))
-        return ElementTree.tostring(exts, encoding='UTF-8')
+    def _to_xml(self, root):
+        """Convert the xml tree object to an xml string."""
+        root.set('xmlns', wsgi.XMLNS_V11)
+        root.set('xmlns:atom', wsgi.XMLNS_ATOM)
+        return ElementTree.tostring(root, encoding='UTF-8')
