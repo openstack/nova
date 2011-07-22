@@ -1306,7 +1306,8 @@ class ServersTest(test.TestCase):
         '''
 
         def return_servers_with_host(context, *args, **kwargs):
-            return [stub_instance(i, 'fake', 'fake', None, None, i % 2) for i in xrange(5)]
+            return [stub_instance(i, 'fake', 'fake', None, None, i % 2)
+                    for i in xrange(5)]
 
         self.stubs.Set(nova.db.api, 'instance_get_all_by_project',
             return_servers_with_host)

@@ -395,7 +395,6 @@ class ApiEc2TestCase(test.TestCase):
         self.expect_http()
         self.mox.ReplayAll()
 
-
         security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                                       for x in range(random.randint(4, 8)))
 

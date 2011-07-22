@@ -189,7 +189,8 @@ class ZonesTest(test.TestCase):
         self.assertEqual(res_dict['zone']['cap2'], 'c;d')
 
     def test_zone_select(self):
-        self.flags(build_plan_encryption_key='c286696d887c9aa0611bbb3e2025a45a')
+        key = 'c286696d887c9aa0611bbb3e2025a45a'
+        self.flags(build_plan_encryption_key=key)
         self.stubs.Set(api, 'select', zone_select)
 
         req = webob.Request.blank('/v1.0/zones/select')

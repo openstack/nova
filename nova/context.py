@@ -31,7 +31,8 @@ class RequestContext(object):
     """
 
     def __init__(self, user_id, project_id, is_admin=None, read_deleted=False,
-                 roles=None, remote_address=None, timestamp=None, request_id=None):
+                 roles=None, remote_address=None, timestamp=None,
+                 request_id=None):
         self.user_id = user_id
         self.project_id = project_id
         self.roles = roles or []
