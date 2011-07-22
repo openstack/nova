@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 
 
 class VMWareVlanBridgeDriver(VIFDriver):
-    """VIF driver for Linux VLAN bridge."""
+    """VIF Driver to setup bridge/VLAN networking using VMWare API."""
 
     def plug(self, instance, network, mapping):
         """Create a vlan and bridge unless they already exist."""
