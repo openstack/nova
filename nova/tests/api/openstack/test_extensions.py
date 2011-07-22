@@ -103,12 +103,12 @@ class ExtensionControllerTest(unittest.TestCase):
         (fox_ext,) = [
             x for x in data['extensions'] if x['alias'] == 'FOXNSOX']
         self.assertEqual(fox_ext, {
-                "namespace" : "http://www.fox.in.socks/api/ext/pie/v1.0",
-                "name" : "Fox In Socks",
-                "updated" : "2011-01-22T13:25:27-06:00",
-                "description" : "The Fox In Socks Extension",
-                "alias" : "FOXNSOX",
-                "links" : []
+                'namespace' : 'http://www.fox.in.socks/api/ext/pie/v1.0',
+                'name' : 'Fox In Socks',
+                'updated' : '2011-01-22T13:25:27-06:00',
+                'description' : 'The Fox In Socks Extension',
+                'alias' : 'FOXNSOX',
+                'links' : []
             }
         )
 
@@ -130,6 +130,32 @@ class ExtensionControllerTest(unittest.TestCase):
             }
         )
 
+    def test_list_extensions_xml(self):
+        app = openstack.APIRouterV11()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        request = webob.Request.blank("/extensions")
+        request.accept = "application/xml"
+        response = request.get_response(ext_midware)
+        self.assertEqual(200, response.status_int)
+        print response.body
+
+        ns = "{http://docs.openstack.org/compute/api/v1.1}"
+        root = ElementTree.XML(response.body)
+        self.assertEqual(root.tag, 'extensions')
+
+        # Make sure we have all the extensions.
+        exts = root.findall('{0}extension'.format(ns))
+        self.assertEqual(len(exts), 6)
+
+        # Make sure that at least Fox in Sox is correct.
+        (fox_ext,) = [ x for x in exts if x.get('alias') == 'FOXNSOX' ]
+        self.assertEqual(fox_ext.get('name'), 'Fox In Socks')
+        self.assertEqual(fox_ext.get('namespace'),
+            'http://www.fox.in.socks/api/ext/pie/v1.0')
+        self.assertEqual(fox_ext.get('updated'), '2011-01-22T13:25:27-06:00')
+        self.assertEqual(fox_ext.findtext('{0}description'.format(ns)),
+            'The Fox In Socks Extension')
+
     def test_get_extension_xml(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
@@ -139,14 +165,15 @@ class ExtensionControllerTest(unittest.TestCase):
         self.assertEqual(200, response.status_int)
         print response.body
 
-        elem = ElementTree.XML(response.body.replace("  ", ""))
-        self.assertEqual(elem.get('alias'), 'FOXNSOX')
-        self.assertEqual(elem.get('name'), 'Fox In Socks')
-        self.assertEqual(elem.get('namespace'),
-            'http://www.fox.in.socks/api/ext/pie/v1.0')
-        self.assertEqual(elem.get('updated'), '2011-01-22T13:25:27-06:00')
+        root = ElementTree.XML(response.body)
         ns = "{http://docs.openstack.org/compute/api/v1.1}"
-        self.assertEqual(elem.findtext('{0}description'.format(ns)),
+        self.assertEqual(root.tag.split('extension')[0], ns)
+        self.assertEqual(root.get('alias'), 'FOXNSOX')
+        self.assertEqual(root.get('name'), 'Fox In Socks')
+        self.assertEqual(root.get('namespace'),
+            'http://www.fox.in.socks/api/ext/pie/v1.0')
+        self.assertEqual(root.get('updated'), '2011-01-22T13:25:27-06:00')
+        self.assertEqual(root.findtext('{0}description'.format(ns)),
             'The Fox In Socks Extension')
 
 
@@ -247,7 +274,7 @@ class ActionExtensionTest(unittest.TestCase):
 
     def test_invalid_action(self):
         body = dict(blah=dict(name="test"))
-        response = self._send_server_action_request("/asdf/1/action", body)
+        response = self._send_server_action_request("/fdsa/1/action", body)
         self.assertEqual(404, response.status_int)
 
 
@@ -327,17 +354,18 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
 
         ns = "{http://docs.openstack.org/compute/api/v1.1}"
         atomns = "{http://www.w3.org/2005/Atom}"
-        elem = ElementTree.XML(serializer.serialize(data, 'show'))
-        self.assertEqual(elem.tag.split('extension')[0], ns)
-        self.assertEqual(elem.get('alias'), 'RS-PIE')
-        self.assertEqual(elem.get('name'), 'ext1')
-        self.assertEqual(elem.get('namespace'),
+        xml = serializer.serialize(data, 'show')
+        root = ElementTree.XML(xml)
+        self.assertEqual(root.tag.split('extension')[0], ns)
+        self.assertEqual(root.get('alias'), 'RS-PIE')
+        self.assertEqual(root.get('name'), 'ext1')
+        self.assertEqual(root.get('namespace'),
             'http://docs.rack.com/servers/api/ext/pie/v1.0')
-        self.assertEqual(elem.get('updated'), '2011-01-22T13:25:27-06:00')
-        self.assertEqual(elem.findtext('{0}description'.format(ns)),
+        self.assertEqual(root.get('updated'), '2011-01-22T13:25:27-06:00')
+        self.assertEqual(root.findtext('{0}description'.format(ns)),
             'Adds the capability to share an image.')
 
-        link_nodes = elem.findall('{0}link'.format(atomns))
+        link_nodes = root.findall('{0}link'.format(atomns))
         self.assertEqual(len(link_nodes), 2)
         link_nodes.sort(key=lambda x: x.get('type'))
 

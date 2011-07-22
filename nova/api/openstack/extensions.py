@@ -470,28 +470,31 @@ class ResourceExtension(object):
 
 class ExtensionsXMLSerializer(wsgi.XMLDictSerializer):
 
-    def _add_extension_attributes(self, node, extension):
-        node.setAttribute('name', extension['name'])
-        node.setAttribute('namespace', extension['namespace'])
-        node.setAttribute('alias', extension['alias'])
-        node.setAttribute('updated', extension['updated'])
-
-    def show(self, ext_dict):
-        root = ElementTree.Element('extension');
-        extension = ext_dict['extension']
-        root.set('xmlns', wsgi.XMLNS_V11)
-        root.set('xmlns:atom', wsgi.XMLNS_ATOM)
-        root.set('name', extension['name'])
-        root.set('namespace', extension['namespace'])
-        root.set('alias', extension['alias'])
-        root.set('updated', extension['updated'])
+    def _create_ext_elem(self, ext_dict):
+        ext_elem = ElementTree.Element('extension');
+        ext_elem.set('xmlns', wsgi.XMLNS_V11)
+        ext_elem.set('xmlns:atom', wsgi.XMLNS_ATOM)
+        ext_elem.set('name', ext_dict['name'])
+        ext_elem.set('namespace', ext_dict['namespace'])
+        ext_elem.set('alias', ext_dict['alias'])
+        ext_elem.set('updated', ext_dict['updated'])
         desc = ElementTree.Element('description');
-        desc.text = extension['description']
-        root.append(desc)
-        for link in extension.get('links', []):
+        desc.text = ext_dict['description']
+        ext_elem.append(desc)
+        for link in ext_dict.get('links', []):
             elem = ElementTree.Element('atom:link');
             elem.set('rel', link['rel'])
             elem.set('href', link['href'])
             elem.set('type', link['type'])
-            root.append(elem)
-        return ElementTree.tostring(root)
+            ext_elem.append(elem)
+        return ext_elem
+
+    def show(self, ext_dict):
+        ext = self._create_ext_elem(ext_dict['extension'])
+        return ElementTree.tostring(ext, encoding='UTF-8')
+
+    def index(self, exts_dict):
+        exts = ElementTree.Element('extensions');
+        for ext_dict in exts_dict['extensions']:
+             exts.append(self._create_ext_elem(ext_dict))
+        return ElementTree.tostring(exts, encoding='UTF-8')
