@@ -785,7 +785,7 @@ class AuthManager(object):
         return read_buffer
 
     def get_environment_rc(self, user, project=None, use_dmz=True):
-        """Get credential zip for user in project"""
+        """Get environment rc for user in project"""
         if not isinstance(user, User):
             user = self.get_user(user)
         if project is None:

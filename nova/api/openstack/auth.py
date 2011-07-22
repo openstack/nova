@@ -62,7 +62,7 @@ class AuthMiddleware(wsgi.Middleware):
             # while osapi clients don't use this header
             projects = self.auth.get_projects(user_id)
             if projects:
-                project_id = projects[0]
+                project_id = projects[0].id
             else:
                 return faults.Fault(webob.exc.HTTPUnauthorized())
 
