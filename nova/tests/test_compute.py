@@ -828,7 +828,7 @@ class ComputeTestCase(test.TestCase):
         for v in i_ref['volumes']:
             self.compute.volume_manager.remove_compute_volume(c, v['id'])
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
-        self.compute.driver.unfilter_instance(i_ref)
+        self.compute.driver.unfilter_instance(i_ref, network_info=[])
 
         # executing
         self.mox.ReplayAll()

@@ -333,7 +333,8 @@ class LibvirtConnection(driver.ComputeDriver):
         timer = utils.LoopingCall(_wait_for_destroy)
         timer.start(interval=0.5, now=True)
 
-        self.firewall_driver.unfilter_instance(instance)
+        self.firewall_driver.unfilter_instance(instance,
+                                               network_info=network_info)
 
         if cleanup:
             self._cleanup(instance)
@@ -1569,9 +1570,10 @@ class LibvirtConnection(driver.ComputeDriver):
         timer.f = wait_for_live_migration
         timer.start(interval=0.5, now=True)
 
-    def unfilter_instance(self, instance_ref):
+    def unfilter_instance(self, instance_ref, network_info=None):
         """See comments of same method in firewall_driver."""
-        self.firewall_driver.unfilter_instance(instance_ref)
+        self.firewall_driver.unfilter_instance(instance_ref,
+                                               network_info=network_info)
 
     def update_host_status(self):
         """See xenapi_conn.py implementation."""
