@@ -135,8 +135,42 @@ class XMLDeserializer(TextDeserializer):
                                                                  listnames)
             return result
 
+    def find_first_child_named(self, parent, name):
+        """Search a nodes children for the first child with a given name"""
+        for node in parent.childNodes:
+            if node.nodeName == name:
+                return node
+        return None
+
+    def find_children_named(self, parent, name):
+        """Return all of a nodes children who have the given name"""
+        for node in parent.childNodes:
+            if node.nodeName == name:
+                yield node
+
+    def extract_text(self, node):
+        """Get the text field contained by the given node"""
+        if len(node.childNodes) == 1:
+            child = node.childNodes[0]
+            if child.nodeType == child.TEXT_NODE:
+                return child.nodeValue
+        return ""
+
     def default(self, datastring):
         return {'body': self._from_xml(datastring)}
+
+
+class MetadataXMLDeserializer(XMLDeserializer):
+
+    def extract_metadata(self, metadata_node):
+        """Marshal the metadata attribute of a parsed request"""
+        if metadata_node is None:
+            return None
+        metadata = {}
+        for meta_node in self.find_children_named(metadata_node, "meta"):
+            key = meta_node.getAttribute("key")
+            metadata[key] = self.extract_text(meta_node)
+        return metadata
 
 
 class RequestHeadersDeserializer(ActionDispatcher):
@@ -395,9 +429,10 @@ class ResponseSerializer(object):
         self.headers_serializer.serialize(response, data, action)
 
     def serialize_body(self, response, data, content_type, action):
-        response.headers['Content-Type'] = content_type
-        serializer = self.get_body_serializer(content_type)
-        response.body = serializer.serialize(data, action)
+        if data is not None:
+            response.headers['Content-Type'] = content_type
+            serializer = self.get_body_serializer(content_type)
+            response.body = serializer.serialize(data, action)
 
     def get_body_serializer(self, content_type):
         try:
@@ -443,7 +478,7 @@ class Resource(wsgi.Application):
             action, args, accept = self.deserializer.deserialize(request)
         except exception.InvalidContentType:
             msg = _("Unsupported Content-Type")
-            return webob.exc.HTTPBadRequest(explanation=msg)
+            return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
         except exception.MalformedRequestBody:
             msg = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
@@ -452,13 +487,10 @@ class Resource(wsgi.Application):
             action_result = self.dispatch(request, action, args)
         except webob.exc.HTTPException as ex:
             LOG.info(_("HTTP exception thrown: %s"), unicode(ex))
-            action_result = faults.Fault(ex)
+            return faults.Fault(ex)
 
-        #TODO(bcwaldon): find a more elegant way to pass through non-dict types
-        if type(action_result) is dict or action_result is None:
-            response = self.serializer.serialize(action_result,
-                                                 accept,
-                                                 action=action)
+        if isinstance(action_result, dict) or action_result is None:
+            response = self.serializer.serialize(action_result, accept, action)
         else:
             response = action_result
 

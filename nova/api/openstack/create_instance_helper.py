@@ -282,7 +282,7 @@ class CreateInstanceHelper(object):
         return password
 
 
-class ServerXMLDeserializer(wsgi.XMLDeserializer):
+class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
     """
     Deserializer to handle xml-formatted server create requests.
 
@@ -299,11 +299,12 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
     def _extract_server(self, node):
         """Marshal the server attribute of a parsed request"""
         server = {}
-        server_node = self._find_first_child_named(node, 'server')
+        server_node = self.find_first_child_named(node, 'server')
         for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
-        metadata = self._extract_metadata(server_node)
+        metadata_node = self.find_first_child_named(server_node, "metadata")
+        metadata = self.extract_metadata(metadata_node)
         if metadata is not None:
             server["metadata"] = metadata
         personality = self._extract_personality(server_node)
@@ -311,49 +312,17 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
             server["personality"] = personality
         return server
 
-    def _extract_metadata(self, server_node):
-        """Marshal the metadata attribute of a parsed request"""
-        metadata_node = self._find_first_child_named(server_node, "metadata")
-        if metadata_node is None:
-            return None
-        metadata = {}
-        for meta_node in self._find_children_named(metadata_node, "meta"):
-            key = meta_node.getAttribute("key")
-            metadata[key] = self._extract_text(meta_node)
-        return metadata
-
     def _extract_personality(self, server_node):
         """Marshal the personality attribute of a parsed request"""
         personality_node = \
-                self._find_first_child_named(server_node, "personality")
+                self.find_first_child_named(server_node, "personality")
         if personality_node is None:
             return None
         personality = []
-        for file_node in self._find_children_named(personality_node, "file"):
+        for file_node in self.find_children_named(personality_node, "file"):
             item = {}
             if file_node.hasAttribute("path"):
                 item["path"] = file_node.getAttribute("path")
-            item["contents"] = self._extract_text(file_node)
+            item["contents"] = self.extract_text(file_node)
             personality.append(item)
         return personality
-
-    def _find_first_child_named(self, parent, name):
-        """Search a nodes children for the first child with a given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                return node
-        return None
-
-    def _find_children_named(self, parent, name):
-        """Return all of a nodes children who have the given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                yield node
-
-    def _extract_text(self, node):
-        """Get the text field contained by the given node"""
-        if len(node.childNodes) == 1:
-            child = node.childNodes[0]
-            if child.nodeType == child.TEXT_NODE:
-                return child.nodeValue
-        return ""

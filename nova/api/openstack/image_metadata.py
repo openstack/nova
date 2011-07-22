@@ -96,8 +96,16 @@ class Controller(object):
         self._check_quota_limit(context, metadata)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
+        return dict(meta=meta)
 
-        return req.body
+    def update_all(self, req, image_id, body):
+        context = req.environ['nova.context']
+        img = self.image_service.show(context, image_id)
+        metadata = body.get('metadata', {})
+        self._check_quota_limit(context, metadata)
+        img['properties'] = metadata
+        self.image_service.update(context, image_id, img, None)
+        return dict(metadata=metadata)
 
     def delete(self, req, image_id, id):
         context = req.environ['nova.context']
@@ -108,6 +116,32 @@ class Controller(object):
         metadata.pop(id)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
+
+
+class ImageMetadataXMLDeserializer(wsgi.MetadataXMLDeserializer):
+
+    def _extract_metadata_container(self, datastring):
+        dom = minidom.parseString(datastring)
+        metadata_node = self.find_first_child_named(dom, "metadata")
+        metadata = self.extract_metadata(metadata_node)
+        return {'body': {'metadata': metadata}}
+
+    def create(self, datastring):
+        return self._extract_metadata_container(datastring)
+
+    def update_all(self, datastring):
+        return self._extract_metadata_container(datastring)
+
+    def update(self, datastring):
+        dom = minidom.parseString(datastring)
+        metadata_item = self.extract_metadata(dom)
+        return {'body': {'meta': metadata_item}}
+
+
+class HeadersSerializer(wsgi.ResponseHeadersSerializer):
+
+    def delete(self, response, data):
+        response.status_int = 204
 
 
 class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
@@ -143,6 +177,9 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
     def create(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
 
+    def update_all(self, metadata_dict):
+        return self._meta_list_to_xml_string(metadata_dict)
+
     def _meta_item_to_xml_string(self, meta_item_dict):
         xml_doc = minidom.Document()
         item_key, item_value = meta_item_dict.items()[0]
@@ -157,11 +194,21 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
     def update(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
 
+    def default(self, *args, **kwargs):
+        return ''
+
 
 def create_resource():
+    headers_serializer = HeadersSerializer()
+
+    body_deserializers = {
+        'application/xml': ImageMetadataXMLDeserializer(),
+    }
+
     body_serializers = {
         'application/xml': ImageMetadataXMLSerializer(),
     }
-    serializer = wsgi.ResponseSerializer(body_serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
+    deserializer = wsgi.RequestDeserializer(body_deserializers)
 
-    return wsgi.Resource(Controller(), serializer=serializer)
+    return wsgi.Resource(Controller(), deserializer, serializer)
