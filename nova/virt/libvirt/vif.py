@@ -72,8 +72,9 @@ class LibvirtBridgeDriver(VIFDriver):
 
     def plug(self, instance, network, mapping):
         """Ensure that the bridge exists, and add VIF to it."""
-        if not network.get('multi_host') and mapping.get('create_bridge'):
-            if mapping.get('create_vlan'):
+        if (not network.get('multi_host') and
+            mapping.get('should_create_bridge')):
+            if mapping.get('should_create_vlan'):
                 LOG.debug(_('Ensuring vlan %(vlan)s and bridge %(bridge)s'),
                           {'vlan': network['vlan'],
                            'bridge': network['bridge']})

@@ -1316,7 +1316,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(ctxt, instance_ref)
         # Releasing security group ingress rule.
-        self.driver.unfilter_instance(instance_ref, network_info=network_info)
+        self.driver.unfilter_instance(instance_ref, network_info)
 
         # Database updating.
         i_name = instance_ref.name

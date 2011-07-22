@@ -300,6 +300,14 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
+    """Constant to indicate whether this manager requires VIF to create a
+    bridge."""
+    SHOULD_CREATE_BRIDGE = False
+
+    """Constant to indicate whether this manager requires VIF to create a
+    VLAN tag."""
+    SHOULD_CREATE_VLAN = False
+
     timeout_fixed_ips = True
 
     def __init__(self, network_driver=None, *args, **kwargs):
@@ -483,8 +491,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [network['dns']],
                 'ips': [ip_dict(ip) for ip in network_IPs],
-                'create_bridge': self._create_bridge,
-                'create_vlan': self._create_vlan}
+                'should_create_bridge': self.SHOULD_CREATE_BRIDGE,
+                'should_create_vlan': self.SHOULD_CREATE_VLAN}
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
             # TODO(tr3buchet): handle ip6 routes here as well
@@ -702,16 +710,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Sets up network on this host."""
         raise NotImplementedError()
 
-    @property
-    def _create_bridge(self):
-        """Indicate whether this manager requires VIF to create a bridge."""
-        return False
-
-    @property
-    def _create_vlan(self):
-        """Indicate whether this manager requires VIF to create a VLAN tag."""
-        return False
-
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
@@ -772,6 +770,8 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
 
     """
 
+    SHOULD_CREATE_BRIDGE = True
+
     def init_host(self):
         """Do any initialization that needs to be run if this is a
         standalone service.
@@ -798,11 +798,6 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
                 self.db.network_update(context, network_ref['id'],
                                        {'gateway_v6': gateway})
 
-    @property
-    def _create_bridge(self):
-        """Indicate whether this manager requires VIF to create a bridge."""
-        return True
-
 
 class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     """Vlan network with dhcp.
@@ -818,6 +813,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     instances in its subnet.
 
     """
+
+    SHOULD_CREATE_BRIDGE = True
+    SHOULD_CREATE_VLAN = True
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
@@ -919,13 +917,3 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Number of reserved ips at the top of the range."""
         parent_reserved = super(VlanManager, self)._top_reserved_ips
         return parent_reserved + FLAGS.cnt_vpn_clients
-
-    @property
-    def _create_bridge(self):
-        """Indicate whether this manager requires VIF to create a bridge."""
-        return True
-
-    @property
-    def _create_vlan(self):
-        """Indicate whether this manager requires VIF to create a VLAN tag."""
-        return True

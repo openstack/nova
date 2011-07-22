@@ -315,8 +315,8 @@ class LibvirtConnection(driver.ComputeDriver):
                 for (network, mapping) in network_info:
                     self.vif_driver.unplug(instance, network, mapping)
             except:
-                LOG.warning("Failed while unplugging vif of instance '%s'" % \
-                    instance['name'])
+                LOG.warning(_("Failed while unplugging vif of instance '%s'"),
+                            instance['name'])
                 raise
 
         def _wait_for_destroy():
@@ -1570,7 +1570,7 @@ class LibvirtConnection(driver.ComputeDriver):
         timer.f = wait_for_live_migration
         timer.start(interval=0.5, now=True)
 
-    def unfilter_instance(self, instance_ref, network_info=None):
+    def unfilter_instance(self, instance_ref, network_info):
         """See comments of same method in firewall_driver."""
         self.firewall_driver.unfilter_instance(instance_ref,
                                                network_info=network_info)

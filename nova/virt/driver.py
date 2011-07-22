@@ -224,7 +224,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def unfilter_instance(self, instance, network_info=None):
+    def unfilter_instance(self, instance, network_info):
         """Stop filtering instance"""
         raise NotImplementedError()
 

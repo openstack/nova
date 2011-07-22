@@ -164,8 +164,8 @@ class FlatNetworkTestCase(test.TestCase):
                      'label': 'test%s' % i,
                      'mac': 'DE:AD:BE:EF:00:0%s' % i,
                      'rxtx_cap': 'DONTCARE',
-                     'create_vlan': False,
-                     'create_bridge': False}
+                     'should_create_vlan': False,
+                     'should_create_bridge': False}
             self.assertDictMatch(nw[1], check)
 
             check = [{'enabled': 'DONTCARE',
