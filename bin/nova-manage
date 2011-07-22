@@ -61,7 +61,6 @@ import os
 import sys
 import time
 
-import IPy
 from optparse import OptionParser
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
