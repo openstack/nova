@@ -79,6 +79,11 @@ class StubExtensionManager(object):
 
 class ExtensionControllerTest(test.TestCase):
 
+    def setUp(self):
+        super(ExtensionControllerTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
+
     def test_index(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
@@ -95,6 +100,11 @@ class ExtensionControllerTest(test.TestCase):
 
 
 class ResourceExtensionTest(test.TestCase):
+
+    def setUp(self):
+        super(ResourceExtensionTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
@@ -201,9 +211,8 @@ class RequestExtensionTest(test.TestCase):
 
     def setUp(self):
         super(RequestExtensionTest, self).setUp()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
-        self.context = context.get_admin_context()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_get_resources_with_stub_mgr(self):
 
