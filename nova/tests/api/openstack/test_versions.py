@@ -16,6 +16,7 @@
 #    under the License.
 
 import json
+import stubout
 import webob
 
 from nova import context
@@ -29,6 +30,9 @@ class VersionsTest(test.TestCase):
     def setUp(self):
         super(VersionsTest, self).setUp()
         self.context = context.get_admin_context()
+        self.stubs = stubout.StubOutForTesting()
+        fakes.stub_out_auth(self.stubs)
+
 
     def tearDown(self):
         super(VersionsTest, self).tearDown()
@@ -61,6 +65,55 @@ class VersionsTest(test.TestCase):
                         "href": "http://localhost/v1.0/",
                     }],
             },
+        ]
+        self.assertEqual(versions, expected)
+
+    def test_get_version_1_1_detail(self):
+        req = webob.Request.blank('/v1.1/')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        print res.body
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        versions = json.loads(res.body)["versions"]
+        expected = [
+            {
+                "version" : {
+                    "id" : "v1.1",
+                    "status" : "CURRENT",
+                    "updated" : "2011-01-21T11:33:21-06:00",
+                    "links": [
+                        {
+                            "rel" : "self",
+                            "href" : "http://servers.api.openstack.org/v1.0/"
+                        },
+                        {
+                            "rel" : "describedby",
+                            "type" : "application/pdf",
+                            "href" : "http://docs.rackspacecloud.com/"
+                                "servers/api/v1.1/cs-devguide-20110125.pdf"
+                        },
+                        {
+                            "rel" : "describedby",
+                            "type" : "application/vnd.sun.wadl+xml",
+                            "href" : "http://docs.rackspacecloud.com/"
+                                "servers/api/v1.1/application.wadl"
+                        }
+                    ],
+                    "media-types": [
+                        {
+                            "base" : "application/xml",
+                            "type" : "application/"
+                                "vnd.openstack.compute-v1.1+xml"
+                        },
+                        {
+                            "base" : "application/json",
+                            "type" : "application/"
+                                "vnd.openstack.compute-v1.1+json"
+                        }
+                    ]
+                }
+            }
         ]
         self.assertEqual(versions, expected)
 
