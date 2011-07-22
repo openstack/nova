@@ -738,10 +738,6 @@ class AuthManager(object):
         with self.driver() as drv:
             drv.modify_user(uid, access_key, secret_key, admin)
 
-    @staticmethod
-    def get_key_pairs(context):
-        return db.key_pair_get_all_by_user(context.elevated(), context.user_id)
-
     def get_credentials(self, user, project=None, use_dmz=True):
         """Get credential zip for user in project"""
         if not isinstance(user, User):
