@@ -146,7 +146,26 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def init_host(self):
         """Initialization for a standalone compute service."""
+        # NOTE(nsokolov): based on itoumsn's implementation from libvirt driver
+        from nova import context
         self.driver.init_host(host=self.host)
+        admin_context = context.get_admin_context()
+        for instance in self.db.instance_get_all_by_host(admin_context, self.host):
+            try:
+                LOG.debug(_('Checking state of %s'), instance['name'])
+                state = self.driver.get_info(instance['name'])['state']
+            except exception.NotFound:
+                state = power_state.SHUTOFF
+
+            LOG.debug(_('Current state of %(name)s is %(state)s, state in DB is %(db_state)s.'),
+                          {'name': instance['name'], 'state': state, 'db_state': instance['state']})
+
+            if instance['state'] == power_state.RUNNING and state != power_state.RUNNING \
+                and FLAGS.start_guests_on_host_boot:
+                LOG.debug(_('Rebooting instance %(name)s after nova-compute restart.'))
+                self.reboot_instance(admin_context, instance[id])
+            else:
+                self.db.instance_set_state(ctxt, instance['id'], state)
 
     def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
