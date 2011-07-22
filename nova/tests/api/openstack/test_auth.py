@@ -17,7 +17,6 @@
 
 import datetime
 
-import stubout
 import webob
 import webob.dec
 
@@ -43,7 +42,6 @@ class Test(test.TestCase):
         fakes.stub_out_networking(self.stubs)
 
     def tearDown(self):
-        self.stubs.UnsetAll()
         fakes.fake_data_store = {}
         super(Test, self).tearDown()
 
@@ -237,7 +235,6 @@ class TestFunctional(test.TestCase):
 class TestLimiter(test.TestCase):
     def setUp(self):
         super(TestLimiter, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
@@ -246,7 +243,6 @@ class TestLimiter(test.TestCase):
         fakes.stub_out_networking(self.stubs)
 
     def tearDown(self):
-        self.stubs.UnsetAll()
         fakes.fake_data_store = {}
         super(TestLimiter, self).tearDown()
 
