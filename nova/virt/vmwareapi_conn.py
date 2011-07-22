@@ -198,6 +198,7 @@ class VMWareESXConnection(driver.ComputeDriver):
         """Plugs in VIFs to networks."""
         self._vmops.plug_vifs(instance, network_info)
 
+
 class VMWareAPISession(object):
     """
     Sets up a session with the ESX host and handles all

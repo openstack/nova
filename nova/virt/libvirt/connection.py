@@ -126,7 +126,7 @@ flags.DEFINE_bool('start_guests_on_host_boot', False,
 flags.DEFINE_string('libvirt_vif_type', 'bridge',
                     'Type of VIF to create.')
 flags.DEFINE_string('libvirt_vif_driver',
-                    'nova.virt.libvirt.vif.LibvirtVlanBridgeDriver',
+                    'nova.virt.libvirt.vif.LibvirtBridgeDriver',
                     'The libvirt VIF driver to configure the VIFs.')
 
 

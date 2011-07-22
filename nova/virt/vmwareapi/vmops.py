@@ -806,4 +806,3 @@ class VMWareVMOps(object):
         """Unplug VIFs from networks."""
         for (network, mapping) in network_info:
             self._vif_driver.unplug(instance, network, mapping)
-
