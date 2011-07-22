@@ -556,7 +556,7 @@ class Network(BASE, NovaBase):
     bridge_interface = Column(String(255))
     gateway = Column(String(255))
     broadcast = Column(String(255))
-    dns = Column(String(255))
+    dns1 = Column(String(255))
     dns2 = Column(String(255))
 
     vlan = Column(Integer)

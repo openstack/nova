@@ -480,8 +480,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
                 info['gateway6'] = network['gateway_v6']
-            if network['dns']:
-                info['dns'].append(network['dns'])
+            if network['dns1']:
+                info['dns'].append(network['dns1'])
             if network['dns2']:
                 info['dns'].append(network['dns2'])
 
@@ -595,7 +595,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
-                        bridge_interface, dns, dns2=None, **kwargs):
+                        bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
         fixed_net = netaddr.IPNetwork(cidr)
         fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
@@ -610,7 +610,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
-            net['dns'] = dns
+            net['dns1'] = dns1
             net['dns2'] = dns2
             net['cidr'] = cidr
             net['multi_host'] = multi_host
@@ -640,7 +640,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
-                del net['dns']
+                del net['dns1']
                 del net['dns2']
                 vlan = kwargs['vlan_start'] + index
                 net['vpn_private_address'] = str(project_net[2])
