@@ -66,7 +66,7 @@ class RequestLogging(wsgi.Middleware):
         else:
             controller = None
             action = None
-        ctxt = request.environ.get('ec2.context', None)
+        ctxt = request.environ.get('nova.context', None)
         delta = utils.utcnow() - start
         seconds = delta.seconds
         microseconds = delta.microseconds
@@ -138,20 +138,8 @@ class Lockout(wsgi.Middleware):
         return res
 
 
-class InjectContext(wsgi.Middleware):
-    """Always add a fake 'ec2.context' to WSGI environ."""
-    def __init__(self, context, *args, **kwargs):
-        self.context = context
-        super(InjectContext, self).__init__(*args, **kwargs)
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        req.environ['ec2.context'] = self.context
-        return self.application
-
-
 class Authenticate(wsgi.Middleware):
-    """Authenticate an EC2 request and add 'ec2.context' to WSGI environ."""
+    """Authenticate an EC2 request and add 'nova.context' to WSGI environ."""
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
@@ -187,12 +175,13 @@ class Authenticate(wsgi.Middleware):
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
         ctxt = context.RequestContext(user_id=user.id,
                                       project_id=project.id,
+                                      is_admin=user.is_admin(),
                                       remote_address=remote_address)
-        req.environ['ec2.context'] = ctxt
+        req.environ['nova.context'] = ctxt
         uname = user.name
         pname = project.name
         msg = _('Authenticated Request For %(uname)s:%(pname)s)') % locals()
-        LOG.audit(msg, context=req.environ['ec2.context'])
+        LOG.audit(msg, context=req.environ['nova.context'])
         return self.application
 
 
@@ -239,7 +228,7 @@ class Authorizer(wsgi.Middleware):
     """Authorize an EC2 API request.
 
     Return a 401 if ec2.controller and ec2.action in WSGI environ may not be
-    executed in ec2.context.
+    executed in nova.context.
     """
 
     def __init__(self, application):
@@ -293,7 +282,7 @@ class Authorizer(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        context = req.environ['ec2.context']
+        context = req.environ['nova.context']
         controller = req.environ['ec2.request'].controller.__class__.__name__
         action = req.environ['ec2.request'].action
         allowed_roles = self.action_roles[controller].get(action, ['none'])
@@ -319,14 +308,14 @@ class Executor(wsgi.Application):
 
     """Execute an EC2 API request.
 
-    Executes 'ec2.action' upon 'ec2.controller', passing 'ec2.context' and
+    Executes 'ec2.action' upon 'ec2.controller', passing 'nova.context' and
     'ec2.action_args' (all variables in WSGI environ.)  Returns an XML
     response, or a 400 upon failure.
     """
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        context = req.environ['ec2.context']
+        context = req.environ['nova.context']
         api_request = req.environ['ec2.request']
         result = None
         try:

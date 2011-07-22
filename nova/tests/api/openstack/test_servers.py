@@ -96,8 +96,8 @@ def return_server_with_power_state(power_state):
     return _return_server
 
 
-def return_servers(context, user_id=1):
-    return [stub_instance(i, user_id) for i in xrange(5)]
+def return_servers(context, *args, **kwargs):
+    return [stub_instance(i, 'fake', 'fake') for i in xrange(5)]
 
 
 def return_servers_by_reservation(context, reservation_id=""):
@@ -140,9 +140,9 @@ def instance_addresses(context, instance_id):
     return None
 
 
-def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
-                  host=None, power_state=0, reservation_id="",
-                  uuid=FAKE_UUID, interfaces=None):
+def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
+                  public_addresses=None, host=None, power_state=0,
+                  reservation_id="", uuid=FAKE_UUID, interfaces=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -166,7 +166,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "id": int(id),
         "admin_pass": "",
         "user_id": user_id,
-        "project_id": "",
+        "project_id": project_id,
         "image_ref": "10",
         "kernel_id": "",
         "ramdisk_id": "",
@@ -225,11 +225,9 @@ class ServersTest(test.TestCase):
     def setUp(self):
         super(ServersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(utils, 'gen_uuid', fake_gen_uuid)
@@ -237,7 +235,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        return_server_by_uuid)
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_project',
                        return_servers)
         self.stubs.Set(nova.db.api, 'instance_add_security_group',
                        return_security_group)
@@ -636,6 +634,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
+        self.assertEqual(len(res_dict['servers']), 5)
         i = 0
         for s in res_dict['servers']:
             self.assertEqual(s['id'], i)
@@ -699,23 +698,24 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
+        self.assertEqual(len(res_dict['servers']), 5)
         for i, s in enumerate(res_dict['servers']):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s.get('imageId', None), None)
 
             expected_links = [
-            {
-                "rel": "self",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/servers/%d" % (i,),
-            },
-        ]
+                {
+                    "rel": "self",
+                    "href": "http://localhost/v1.1/servers/%d" % (i,),
+                },
+                {
+                    "rel": "bookmark",
+                    "href": "http://localhost/servers/%d" % (i,),
+                },
+            ]
 
-        self.assertEqual(s['links'], expected_links)
+            self.assertEqual(s['links'], expected_links)
 
     def test_get_servers_with_limit(self):
         req = webob.Request.blank('/v1.0/servers?limit=3')
@@ -1282,10 +1282,10 @@ class ServersTest(test.TestCase):
         instances - 2 on one host and 3 on another.
         '''
 
-        def return_servers_with_host(context, user_id=1):
-            return [stub_instance(i, 1, None, None, i % 2) for i in xrange(5)]
+        def return_servers_with_host(context, *args, **kwargs):
+            return [stub_instance(i, 'fake', 'fake', None, None, i % 2) for i in xrange(5)]
 
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_project',
             return_servers_with_host)
 
         req = webob.Request.blank('/v1.0/servers/detail')
@@ -2161,7 +2161,6 @@ class TestServerInstanceCreation(test.TestCase):
     def setUp(self):
         super(TestServerInstanceCreation, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_image_service(self.stubs)

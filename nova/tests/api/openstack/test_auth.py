@@ -34,7 +34,6 @@ class Test(test.TestCase):
 
     def setUp(self):
         super(Test, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
@@ -56,7 +55,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-CDN-Management-Url'],
@@ -72,7 +71,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-Server-Management-Url'],
@@ -85,7 +84,7 @@ class Test(test.TestCase):
         self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
 
@@ -109,7 +108,7 @@ class Test(test.TestCase):
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-Token'] = 'token_hash'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
         self.assertEqual(self.destroy_called, True)
 
@@ -123,7 +122,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
 
         token = result.headers['X-Auth-Token']
@@ -131,7 +130,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
         req.headers['X-Auth-Project-Id'] = 'user2_project'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
 
@@ -139,7 +138,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'unknown_user'
         req.headers['X-Auth-Key'] = 'unknown_user_key'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_bad_user_good_key(self):
@@ -150,18 +149,18 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'unknown_user'
         req.headers['X-Auth-Key'] = 'user1_key'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_no_user(self):
         req = webob.Request.blank('/v1.0/')
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_bad_token(self):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-Token'] = 'unknown_token'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_bad_project(self):
@@ -176,7 +175,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
 
         token = result.headers['X-Auth-Token']
@@ -184,7 +183,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
         req.headers['X-Auth-Project-Id'] = 'user2_project'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_not_existing_project(self):
@@ -196,7 +195,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
 
         token = result.headers['X-Auth-Token']
@@ -204,7 +203,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
         req.headers['X-Auth-Project-Id'] = 'unknown_project'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
 
@@ -225,13 +224,13 @@ class TestFunctional(test.TestCase):
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-Token'] = 'test_token_hash'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_token_doesnotexist(self):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-Token'] = 'nonexistant_token_hash'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
 
@@ -260,7 +259,7 @@ class TestLimiter(test.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
 
         token = result.headers['X-Auth-Token']
@@ -268,6 +267,6 @@ class TestLimiter(test.TestCase):
         req = webob.Request.blank('/v1.0/fake')
         req.method = 'POST'
         req.headers['X-Auth-Token'] = token
-        result = req.get_response(fakes.wsgi_app())
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')

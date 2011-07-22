@@ -30,6 +30,7 @@ import webob
 from nova import context
 from nova import exception
 from nova import test
+from nova import wsgi
 from nova.api import ec2
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import cloud
@@ -195,7 +196,7 @@ class ApiEc2TestCase(test.TestCase):
         # NOTE(vish): skipping the Authorizer
         roles = ['sysadmin', 'netadmin']
         ctxt = context.RequestContext('fake', 'fake', roles=roles)
-        self.app = ec2.InjectContext(ctxt,
+        self.app = wsgi.InjectContext(ctxt,
                 ec2.Requestify(ec2.Authorizer(ec2.Executor()),
                                'nova.api.ec2.cloud.CloudController'))
 

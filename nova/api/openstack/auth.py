@@ -58,9 +58,25 @@ class AuthMiddleware(wsgi.Middleware):
         try:
             project_id = req.headers["X-Auth-Project-Id"]
         except KeyError:
-            project_id = user_id
+            # FIXME(usrleon): It needed only for compatibility
+            # while osapi clients don't use this header
+            projects = self.auth.get_projects(user_id)
+            if projects:
+                project_id = projects[0]
+            else:
+                return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        req.environ['nova.context'] = context.RequestContext(user_id, project_id)
+        is_admin = self.auth.is_admin(user_id)
+        req.environ['nova.context'] = context.RequestContext(user_id,
+                                                             project_id,
+                                                             is_admin)
+        if not is_admin and not self.auth.is_project_member(user_id,
+                                                            project_id):
+            msg = _("%(user_id)s must be an admin or a "
+                    "member of %(project_id)s")
+            LOG.warn(msg % locals())
+            return faults.Fault(webob.exc.HTTPUnauthorized())
+
         return self.application
 
     def has_authentication(self, req):

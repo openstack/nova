@@ -41,7 +41,7 @@ class FakeApiRequest(object):
 class AccessTestCase(test.TestCase):
     def _env_for(self, ctxt, action):
         env = {}
-        env['ec2.context'] = ctxt
+        env['nova.context'] = ctxt
         env['ec2.request'] = FakeApiRequest(action)
         return env
 

@@ -676,6 +676,7 @@ class API(base.Base):
         all instances in the system.
         """
 
+        LOG.info(locals())
         if reservation_id is not None:
             recurse_zones = True
             instances = self.db.instance_get_all_by_reservation(
@@ -688,6 +689,7 @@ class API(base.Base):
                     raise
                 instances = None
         elif project_id or not context.is_admin:
+            LOG.info(context.project_id)
             if not context.project_id:
                 instances = self.db.instance_get_all_by_user(
                     context, context.user_id)
