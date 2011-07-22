@@ -168,7 +168,7 @@ class S3ImageService(service.BaseImageService):
         metadata.update({'disk_format': image_format,
                          'container_format': image_format,
                          'status': 'queued',
-                         'is_public': True,
+                         'is_public': False,
                          'properties': properties})
         metadata['properties']['image_state'] = 'pending'
         image = self.service.create(context, metadata)

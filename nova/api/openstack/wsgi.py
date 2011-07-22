@@ -448,7 +448,11 @@ class Resource(wsgi.Application):
             msg = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
-        action_result = self.dispatch(request, action, args)
+        try:
+            action_result = self.dispatch(request, action, args)
+        except webob.exc.HTTPException as ex:
+            LOG.info(_("HTTP exception thrown: %s"), unicode(ex))
+            action_result = faults.Fault(ex)
 
         #TODO(bcwaldon): find a more elegant way to pass through non-dict types
         if type(action_result) is dict or action_result is None:

@@ -467,10 +467,10 @@ class API(base.Base):
 
         return [dict(x.iteritems()) for x in instances]
 
-    def has_finished_migration(self, context, instance_id):
+    def has_finished_migration(self, context, instance_uuid):
         """Returns true if an instance has a finished migration."""
         try:
-            db.migration_get_by_instance_and_status(context, instance_id,
+            db.migration_get_by_instance_and_status(context, instance_uuid,
                     'finished')
             return True
         except exception.NotFound:

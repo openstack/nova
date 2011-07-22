@@ -89,6 +89,10 @@ class GlanceImageService(service.BaseImageService):
         # `get_images` here because we need `is_public` and `properties`
         # included so we can filter by user
         filtered = []
+        filters = filters or {}
+        if 'is_public' not in filters:
+            # NOTE(vish): don't filter out private images
+            filters['is_public'] = 'none'
         image_metas = self.client.get_images_detailed(filters=filters,
                                                       marker=marker,
                                                       limit=limit)
@@ -101,6 +105,10 @@ class GlanceImageService(service.BaseImageService):
     def detail(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of detailed image information."""
         filtered = []
+        filters = filters or {}
+        if 'is_public' not in filters:
+            # NOTE(vish): don't filter out private images
+            filters['is_public'] = 'none'
         image_metas = self.client.get_images_detailed(filters=filters,
                                                       marker=marker,
                                                       limit=limit)
