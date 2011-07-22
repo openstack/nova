@@ -156,8 +156,9 @@ class Authenticate(wsgi.Middleware):
         auth_params.pop('Signature')
 
         # Authenticate the request.
+        authman = manager.AuthManager()
         try:
-            (user, project) = manager.AuthManager().authenticate(
+            (user, project) = authman.authenticate(
                     access,
                     signature,
                     auth_params,
@@ -173,9 +174,12 @@ class Authenticate(wsgi.Middleware):
         remote_address = req.remote_addr
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
+        roles = authman.get_active_roles(user, project)
+        LOG.warn(roles)
         ctxt = context.RequestContext(user_id=user.id,
                                       project_id=project.id,
                                       is_admin=user.is_admin(),
+                                      roles=roles,
                                       remote_address=remote_address)
         req.environ['nova.context'] = ctxt
         uname = user.name
@@ -295,6 +299,7 @@ class Authorizer(wsgi.Middleware):
 
     def _matches_any_role(self, context, roles):
         """Return True if any role in roles is allowed in context."""
+        LOG.info(context.roles)
         if context.is_admin:
             return True
         if 'all' in roles:

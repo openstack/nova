@@ -518,6 +518,15 @@ class AuthManager(object):
             return drv.get_user_roles(User.safe_id(user),
                                       Project.safe_id(project))
 
+    def get_active_roles(self, user, project=None):
+        """Get all active roles for context"""
+        if project:
+            roles = FLAGS.allowed_roles
+            roles.append('projectmanager')
+        else:
+            roles = FLAGS.global_roles
+        return [role for role in roles if self.has_role(user, role, project)]
+
     def get_project(self, pid):
         """Get project object by id"""
         with self.driver() as drv:
