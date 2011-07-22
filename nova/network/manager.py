@@ -429,7 +429,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         # TODO(tr3buchet) should handle floating IPs as well?
         try:
             fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
-        except exception.FixedIpNotFoundForInstance, ex:
+        except exception.FixedIpNotFoundForInstance:
             LOG.warn(_('No fixed IPs for instance %s'), instance_id)
             fixed_ips = []
 
