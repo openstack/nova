@@ -35,7 +35,6 @@ class XenAPIBridgeDriver(VIFDriver):
 
     def get_vif_rec(self, xenapi_session, vm_ref, instance, device, network,
                                                     network_mapping):
-        print "bridge = '%s'" % network['bridge']
        	network_ref = NetworkHelper.find_network_with_bridge(xenapi_session,
 							network['bridge'])
         rxtx_cap = network_mapping.pop('rxtx_cap')
@@ -60,13 +59,11 @@ class XenAPIBridgeDriver(VIFDriver):
 	    bridge = network['bridge']
         bridge_interface = network['bridge_interface']
 
-        print "in plug with bridge = %s and bridge_interface = %s" % (bridge,bridge_interface)
     	# Check whether bridge already exists
     	# Retrieve network whose name_label is "bridge"
     	network_ref = network_utils.NetworkHelper.find_network_with_name_label(
                                                                xenapi_session,
                                                                        bridge)
-    	print "got network_ref = %s" % network_ref
         if network_ref is None:
         	# If bridge does not exists
         	# 1 - create network
@@ -87,7 +84,6 @@ class XenAPIBridgeDriver(VIFDriver):
             		raise Exception(
                   	_('Found no PIF for device %s') % bridge_interface)
             # 3 - create vlan for network
-            print "creating vlan %s" % str(vlan_num)
             for pif_ref in pifs.keys():
             		xenapi_session.call_xenapi('VLAN.create',
                                 pif_ref,
@@ -107,9 +103,6 @@ class XenAPIBridgeDriver(VIFDriver):
                 		raise Exception(_("PIF %(pif_rec['uuid'])s for network "
                                   "%(bridge)s has VLAN id %(pif_vlan)d. "
                                   "Expected %(vlan_num)d") % locals())
-            print "vlan is good"
-
-        print "all done"
 
     def unplug(self, instance, network, mapping):
         pass
