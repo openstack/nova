@@ -79,7 +79,7 @@ class API(base.Base):
 
             # find DB record for this disk
             try:
-                drive_ref = drive_types.drive_type_get_by_name(context, name)
+                drive_ref = drive_types.get_by_name(context, name)
             except exception.NotFound:
                 raise exception.ApiError(_("Invalid drive type name %s"),
                                             name)

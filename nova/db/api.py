@@ -1455,14 +1455,14 @@ def drive_type_create(context, values):
     return IMPL.drive_type_create(context, values)
 
 
-def drive_type_update(context, name, values):
+def drive_type_update(context, drive_type_id, values):
     """Updates drive type record."""
-    return IMPL.drive_type_update(context, name, values)
+    return IMPL.drive_type_update(context, drive_type_id, values)
 
 
-def drive_type_destroy(context, name):
+def drive_type_destroy(context, drive_type_id):
     """Deletes drive type record."""
-    return IMPL.drive_type_destroy(context, name)
+    return IMPL.drive_type_destroy(context, drive_type_id)
 
 
 def drive_type_get(context, drive_type_id):
@@ -1475,7 +1475,7 @@ def drive_type_get_by_name(context, name):
     return IMPL.drive_type_get_by_name(context, name)
 
 
-def drive_type_get_all(context, visible=None):
+def drive_type_get_all(context, visible):
     """Returns all (or only visible) drive types."""
     return IMPL.drive_type_get_all(context, visible)
 

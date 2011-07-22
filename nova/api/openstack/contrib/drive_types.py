@@ -21,6 +21,7 @@
 from webob import exc
 
 from nova.vsa import drive_types
+from nova import exception
 from nova import db
 from nova import quota
 from nova import log as logging
@@ -30,6 +31,19 @@ from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 LOG = logging.getLogger("nova.api.drive_types")
+
+
+def _drive_type_view(drive):
+    """Maps keys for drive types view."""
+    d = {}
+
+    d['id'] = drive['id']
+    d['displayName'] = drive['name']
+    d['type'] = drive['type']
+    d['size'] = drive['size_gb']
+    d['rpm'] = drive['rpm']
+    d['capabilities'] = drive['capabilities']
+    return d
 
 
 class DriveTypeController(object):
@@ -47,25 +61,13 @@ class DriveTypeController(object):
                     "capabilities",
                     ]}}}
 
-    def _drive_type_view(self, context, drive):
-        """Maps keys for drive types view."""
-        d = {}
-
-        d['id'] = drive['id']
-        d['displayName'] = drive['name']
-        d['type'] = drive['type']
-        d['size'] = drive['size_gb']
-        d['rpm'] = drive['rpm']
-        d['capabilities'] = drive['capabilities']
-        return d
-
     def index(self, req):
         """Returns a list of drive types."""
 
         context = req.environ['nova.context']
-        drive_types = drive_types.drive_type_get_all(context)
-        limited_list = common.limited(drive_types, req)
-        res = [self._drive_type_view(context, drive) for drive in limited_list]
+        dtypes = drive_types.get_all(context)
+        limited_list = common.limited(dtypes, req)
+        res = [_drive_type_view(drive) for drive in limited_list]
         return {'drive_types': res}
 
     def show(self, req, id):
@@ -73,11 +75,11 @@ class DriveTypeController(object):
         context = req.environ['nova.context']
 
         try:
-            drive = drive_types.drive_type_get(context, id)
+            drive = drive_types.get(context, id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-        return {'drive_type': self._drive_type_view(context, drive)}
+        return {'drive_type': _drive_type_view(drive)}
 
     def create(self, req, body):
         """Creates a new drive type."""
@@ -97,14 +99,14 @@ class DriveTypeController(object):
         LOG.audit(_("Create drive type %(name)s for "\
                     "%(type)s:%(size)s:%(rpm)s"), locals(), context=context)
 
-        new_drive = drive_types.drive_type_create(context,
-                                                  type=type,
-                                                  size_gb=size,
-                                                  rpm=rpm,
-                                                  capabilities=capabilities,
-                                                  name=name)
+        new_drive = drive_types.create(context,
+                                      type=type,
+                                      size_gb=size,
+                                      rpm=rpm,
+                                      capabilities=capabilities,
+                                      name=name)
 
-        return {'drive_type': self._drive_type_view(context, new_drive)}
+        return {'drive_type': _drive_type_view(new_drive)}
 
     def delete(self, req, id):
         """Deletes a drive type."""
@@ -113,11 +115,10 @@ class DriveTypeController(object):
         LOG.audit(_("Delete drive type with id: %s"), id, context=context)
 
         try:
-            drive = drive_types.drive_type_get(context, id)
-            drive_types.drive_type_delete(context, drive['name'])
+            drive_types.delete(context, id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+        # return exc.HTTPAccepted()
 
 
 class Drive_types(extensions.ExtensionDescriptor):

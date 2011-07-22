@@ -43,8 +43,8 @@ def _generate_default_drive_name(type, size_gb, rpm, capabilities):
                 (type, str(size_gb), rpm, capabilities)
 
 
-def drive_type_create(context, type, size_gb, rpm,
-                     capabilities='', visible=True, name=None):
+def create(context, type, size_gb, rpm, capabilities='',
+                    visible=True, name=None):
     if name is None:
         name = _generate_default_drive_name(type, size_gb, rpm,
                                                 capabilities)
@@ -62,12 +62,12 @@ def drive_type_create(context, type, size_gb, rpm,
     return db.drive_type_create(context, values)
 
 
-def drive_type_update(context, name, **kwargs):
-    LOG.debug(_("Updating drive type %(name)s: "), locals())
-    return db.drive_type_update(context, name, kwargs)
+def update(context, id, **kwargs):
+    LOG.debug(_("Updating drive type with id %(id)s"), locals())
+    return db.drive_type_update(context, id, kwargs)
 
 
-def drive_type_rename(context, name, new_name=None):
+def rename(context, name, new_name=None):
 
     if new_name is None or \
        new_name == '':
@@ -78,21 +78,22 @@ def drive_type_rename(context, name, new_name=None):
     LOG.debug(_("Renaming drive type %(name)s to %(new_name)s"), locals())
 
     values = dict(name=new_name)
-    return db.drive_type_update(context, name, values)
+    dtype = db.drive_type_get_by_name(context, name)
+    return db.drive_type_update(context, dtype['id'], values)
 
 
-def drive_type_delete(context, name):
-    LOG.debug(_("Deleting drive type %(name)s"), locals())
-    db.drive_type_destroy(context, name)
+def delete(context, id):
+    LOG.debug(_("Deleting drive type %d"), id)
+    db.drive_type_destroy(context, id)
 
 
-def drive_type_get(context, id):
+def get(context, id):
     return db.drive_type_get(context, id)
 
 
-def drive_type_get_by_name(context, name):
+def get_by_name(context, name):
     return db.drive_type_get_by_name(context, name)
 
 
-def drive_type_get_all(context, visible=None):
+def get_all(context, visible=True):
     return db.drive_type_get_all(context, visible)

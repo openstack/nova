@@ -3364,31 +3364,30 @@ def drive_type_create(context, values):
 
 
 @require_admin_context
-def drive_type_update(context, name, values):
+def drive_type_update(context, drive_type_id, values):
     """
     Updates drive type record.
     """
     session = get_session()
     with session.begin():
-        drive_type_ref = drive_type_get_by_name(context, name, session=session)
+        drive_type_ref = drive_type_get(context, drive_type_id,
+                                        session=session)
         drive_type_ref.update(values)
         drive_type_ref.save(session=session)
     return drive_type_ref
 
 
 @require_admin_context
-def drive_type_destroy(context, name):
+def drive_type_destroy(context, drive_type_id):
     """
     Deletes drive type record.
     """
     session = get_session()
     drive_type_ref = session.query(models.DriveTypes).\
-                                  filter_by(name=name)
+                                  filter_by(id=drive_type_id)
     records = drive_type_ref.delete()
     if records == 0:
-        raise exception.VirtualDiskTypeNotFoundByName(name=name)
-    else:
-        return drive_type_ref
+        raise exception.VirtualDiskTypeNotFound(id=drive_type_id)
 
 
 @require_context
@@ -3428,20 +3427,20 @@ def drive_type_get_by_name(context, name, session=None):
 
 
 @require_context
-def drive_type_get_all(context, visible=False):
+def drive_type_get_all(context, visible):
     """
     Returns all (or only visible) drive types.
     """
     session = get_session()
-    if not visible:
+    if visible:
         drive_types = session.query(models.DriveTypes).\
                             filter_by(deleted=can_read_deleted(context)).\
+                            filter_by(visible=True).\
                             order_by("name").\
                             all()
     else:
         drive_types = session.query(models.DriveTypes).\
                             filter_by(deleted=can_read_deleted(context)).\
-                            filter_by(visible=True).\
                             order_by("name").\
                             all()
     return drive_types

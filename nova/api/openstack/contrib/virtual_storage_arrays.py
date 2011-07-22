@@ -39,6 +39,29 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.vsa")
 
 
+def _vsa_view(context, vsa, details=False):
+    """Map keys for vsa summary/detailed view."""
+    d = {}
+
+    d['id'] = vsa.get('id')
+    d['name'] = vsa.get('name')
+    d['displayName'] = vsa.get('display_name')
+    d['displayDescription'] = vsa.get('display_description')
+
+    d['createTime'] = vsa.get('created_at')
+    d['status'] = vsa.get('status')
+
+    if 'vsa_instance_type' in vsa:
+        d['vcType'] = vsa['vsa_instance_type'].get('name', None)
+    else:
+        d['vcType'] = None
+
+    d['vcCount'] = vsa.get('vc_count')
+    d['driveCount'] = vsa.get('vol_count')
+
+    return d
+
+
 class VsaController(object):
     """The Virtual Storage Array API controller for the OpenStack API."""
 
@@ -61,34 +84,12 @@ class VsaController(object):
         self.vsa_api = vsa.API()
         super(VsaController, self).__init__()
 
-    def _vsa_view(self, context, vsa, details=False):
-        """Map keys for vsa summary/detailed view."""
-        d = {}
-
-        d['id'] = vsa['id']
-        d['name'] = vsa['name']
-        d['displayName'] = vsa['display_name']
-        d['displayDescription'] = vsa['display_description']
-
-        d['createTime'] = vsa['created_at']
-        d['status'] = vsa['status']
-
-        if vsa['vsa_instance_type']:
-            d['vcType'] = vsa['vsa_instance_type'].get('name', None)
-        else:
-            d['vcType'] = None
-
-        d['vcCount'] = vsa['vc_count']
-        d['driveCount'] = vsa['vol_count']
-
-        return d
-
     def _items(self, req, details):
         """Return summary or detailed list of VSAs."""
         context = req.environ['nova.context']
         vsas = self.vsa_api.get_all(context)
         limited_list = common.limited(vsas, req)
-        res = [self._vsa_view(context, vsa, details) for vsa in limited_list]
+        res = [_vsa_view(context, vsa, details) for vsa in limited_list]
         return {'vsaSet': res}
 
     def index(self, req):
@@ -108,24 +109,20 @@ class VsaController(object):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-        return {'vsa': self._vsa_view(context, vsa, details=True)}
+        return {'vsa': _vsa_view(context, vsa, details=True)}
 
     def create(self, req, body):
         """Create a new VSA."""
         context = req.environ['nova.context']
 
-        if not body:
+        if not body or 'vsa' not in body:
+            LOG.debug(_("No body provided"), context=context)
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
         vsa = body['vsa']
 
         display_name = vsa.get('displayName')
-        display_description = vsa.get('displayDescription')
-        storage = vsa.get('storage')
-        shared = vsa.get('shared')
         vc_type = vsa.get('vcType', FLAGS.default_vsa_instance_type)
-        availability_zone = vsa.get('placement', {}).get('AvailabilityZone')
-
         try:
             instance_type = instance_types.get_instance_type_by_name(vc_type)
         except exception.NotFound:
@@ -134,15 +131,17 @@ class VsaController(object):
         LOG.audit(_("Create VSA %(display_name)s of type %(vc_type)s"),
                     locals(), context=context)
 
-        result = self.vsa_api.create(context,
-                                    display_name=display_name,
-                                    display_description=display_description,
-                                    storage=storage,
-                                    shared=shared,
-                                    instance_type=instance_type,
-                                    availability_zone=availability_zone)
+        args = dict(display_name=display_name,
+                display_description=vsa.get('displayDescription'),
+                instance_type=instance_type,
+                storage=vsa.get('storage'),
+                shared=vsa.get('shared'),
+                availability_zone=vsa.get('placement', {}).\
+                                          get('AvailabilityZone'))
 
-        return {'vsa': self._vsa_view(context, result, details=True)}
+        result = self.vsa_api.create(context, **args)
+
+        return {'vsa': _vsa_view(context, result, details=True)}
 
     def delete(self, req, id):
         """Delete a VSA."""
@@ -154,7 +153,7 @@ class VsaController(object):
             self.vsa_api.delete(context, vsa_id=id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+        # return exc.HTTPAccepted()
 
 
 class VsaVolumeDriveController(volumes.VolumeController):

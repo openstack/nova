@@ -889,12 +889,15 @@ class CloudController(object):
                     "%(rpm)s %(capabilities)s %(visible)s"),
                     locals())
 
-        rv = drive_types.drive_type_create(context, type, size_gb, rpm,
-                                           capabilities, visible, name)
+        rv = drive_types.create(context, type, size_gb, rpm,
+                                capabilities, visible, name)
         return {'driveTypeSet': [dict(rv)]}
 
     def update_drive_type(self, context, name, **kwargs):
         LOG.audit(_("Update Drive Type %s"), name)
+
+        dtype = drive_types.get_by_name(context, name)
+
         updatable_fields = ['type',
                             'size_gb',
                             'rpm',
@@ -906,16 +909,18 @@ class CloudController(object):
                kwargs[field] is not None and \
                kwargs[field] != '':
                 changes[field] = kwargs[field]
+
         if changes:
-            drive_types.drive_type_update(context, name, **changes)
+            drive_types.update(context, dtype['id'], **changes)
         return True
 
     def rename_drive_type(self, context, name, new_name):
-        drive_types.drive_type_rename(context, name, new_name)
+        drive_types.rename(context, name, new_name)
         return True
 
     def delete_drive_type(self, context, name):
-        drive_types.drive_type_delete(context, name)
+        dtype = drive_types.get_by_name(context, name)
+        drive_types.delete(context, dtype['id'])
         return True
 
     def describe_drive_types(self, context, names=None, visible=True):
@@ -923,11 +928,11 @@ class CloudController(object):
         drives = []
         if names is not None:
             for name in names:
-                drive = drive_types.drive_type_get_by_name(context, name)
+                drive = drive_types.get_by_name(context, name)
                 if drive['visible'] == visible:
                     drives.append(drive)
         else:
-            drives = drive_types.drive_type_get_all(context, visible)
+            drives = drive_types.get_all(context, visible)
 
         # VP-TODO: Change it later to EC2 compatible func (output)
 

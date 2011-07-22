@@ -41,8 +41,10 @@ flags.DEFINE_integer('vsa_unique_hosts_per_alloc', 10,
 flags.DEFINE_boolean('vsa_select_unique_drives', True,
                      'Allow selection of same host for multiple drives')
 
+
 def BYTES_TO_GB(bytes):
     return bytes >> FLAGS.gb_to_bytes_shift
+
 
 def GB_TO_BYTES(gb):
     return gb << FLAGS.gb_to_bytes_shift
@@ -269,7 +271,8 @@ class VsaScheduler(simple.SimpleScheduler):
             vol['capabilities'] = qos_cap
             self._consume_resource(qos_cap, vol['size'], -1)
 
-            # LOG.debug(_("Volume %(name)s assigned to host %(host)s"), locals())
+            # LOG.debug(_("Volume %(name)s assigned to host %(host)s"),
+            #           locals())
 
     def schedule_create_volumes(self, context, request_spec,
                                 availability_zone, *_args, **_kwargs):

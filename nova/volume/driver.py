@@ -22,6 +22,7 @@ Drivers for volumes.
 
 import time
 import os
+from xml.etree import ElementTree
 
 from nova import exception
 from nova import flags
@@ -207,6 +208,11 @@ class VolumeDriver(object):
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""
         raise NotImplementedError()
+
+    def get_volume_stats(self, refresh=False):
+        """Return the current state of the volume service. If 'refresh' is
+           True, run the update first."""
+        return None
 
 
 class AOEDriver(VolumeDriver):
@@ -809,3 +815,217 @@ class LoggingVolumeDriver(VolumeDriver):
             if match:
                 matches.append(entry)
         return matches
+
+
+class ZadaraBEDriver(ISCSIDriver):
+    """Performs actions to configure Zadara BE module."""
+
+    def _not_vsa_be_volume(self, volume):
+        """Returns True if volume is not VSA BE volume."""
+        if volume['to_vsa_id'] is None:
+            LOG.debug(_("\tVolume %s is NOT VSA volume"), volume['name'])
+            return True
+        else:
+            return False
+
+    def check_for_setup_error(self):
+        """No setup necessary for Zadara BE."""
+        pass
+
+    """ Volume Driver methods """
+    def create_volume(self, volume):
+        """Creates BE volume."""
+        if self._not_vsa_be_volume(volume):
+            return super(ZadaraBEDriver, self).create_volume(volume)
+
+        if int(volume['size']) == 0:
+            sizestr = '0'   # indicates full-partition
+        else:
+            sizestr = '%s' % (int(volume['size']) << 30)    # size in bytes
+
+        # Set the qos-str to default type sas
+        qosstr = 'SAS_1000'
+        drive_type = volume.get('drive_type')
+        if drive_type is not None:
+            qosstr = drive_type['type'] + ("_%s" % drive_type['size_gb'])
+
+        try:
+            self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+                            'create_qospart',
+                            '--qos', qosstr,
+                            '--pname', volume['name'],
+                            '--psize', sizestr,
+                            check_exit_code=0)
+        except exception.ProcessExecutionError:
+            LOG.debug(_("VSA BE create_volume for %s failed"), volume['name'])
+            raise
+
+        LOG.debug(_("VSA BE create_volume for %s succeeded"), volume['name'])
+
+    def delete_volume(self, volume):
+        """Deletes BE volume."""
+        if self._not_vsa_be_volume(volume):
+            return super(ZadaraBEDriver, self).delete_volume(volume)
+
+        try:
+            self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+                            'delete_partition',
+                            '--pname', volume['name'],
+                            check_exit_code=0)
+        except exception.ProcessExecutionError:
+            LOG.debug(_("VSA BE delete_volume for %s failed"), volume['name'])
+            return
+
+        LOG.debug(_("VSA BE delete_volume for %s suceeded"), volume['name'])
+
+    def local_path(self, volume):
+        if self._not_vsa_be_volume(volume):
+            return super(ZadaraBEDriver, self).local_path(volume)
+
+        raise exception.Error(_("local_path not supported"))
+
+    def ensure_export(self, context, volume):
+        """ensure BE export for a volume"""
+        if self._not_vsa_be_volume(volume):
+            return super(ZadaraBEDriver, self).ensure_export(context, volume)
+
+        try:
+            iscsi_target = self.db.volume_get_iscsi_target_num(context,
+                                                           volume['id'])
+        except exception.NotFound:
+            LOG.info(_("Skipping ensure_export. No iscsi_target " +
+                       "provisioned for volume: %d"), volume['id'])
+            return
+
+        try:
+            ret = self._common_be_export(context, volume, iscsi_target)
+        except exception.ProcessExecutionError:
+            return
+        return ret
+
+    def create_export(self, context, volume):
+        """create BE export for a volume"""
+        if self._not_vsa_be_volume(volume):
+            return super(ZadaraBEDriver, self).create_export(context, volume)
+
+        self._ensure_iscsi_targets(context, volume['host'])
+        iscsi_target = self.db.volume_allocate_iscsi_target(context,
+                                                          volume['id'],
+                                                          volume['host'])
+        try:
+            ret = self._common_be_export(context, volume, iscsi_target)
+        except:
+            raise exception.ProcessExecutionError
+
+    def remove_export(self, context, volume):
+        """Removes BE export for a volume."""
+        if self._not_vsa_be_volume(volume):
+            return super(ZadaraBEDriver, self).remove_export(context, volume)
+
+        try:
+            iscsi_target = self.db.volume_get_iscsi_target_num(context,
+                                                           volume['id'])
+        except exception.NotFound:
+            LOG.info(_("Skipping remove_export. No iscsi_target " +
+                       "provisioned for volume: %d"), volume['id'])
+            return
+
+        try:
+            self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+                        'remove_export',
+                        '--pname', volume['name'],
+                        '--tid', iscsi_target,
+                        check_exit_code=0)
+        except exception.ProcessExecutionError:
+            LOG.debug(_("VSA BE remove_export for %s failed"), volume['name'])
+            return
+
+    def create_snapshot(self, snapshot):
+        """Nothing required for snapshot"""
+        if self._not_vsa_be_volume(volume):
+            return super(ZadaraBEDriver, self).create_snapshot(volume)
+
+        pass
+
+    def delete_snapshot(self, snapshot):
+        """Nothing required to delete a snapshot"""
+        if self._not_vsa_be_volume(volume):
+            return super(ZadaraBEDriver, self).delete_snapshot(volume)
+
+        pass
+
+    """ Internal BE Volume methods """
+    def _common_be_export(self, context, volume, iscsi_target):
+        """
+        Common logic that asks zadara_sncfg to setup iSCSI target/lun for
+        this volume
+        """
+        (out, err) = self._sync_exec('sudo',
+                                '/var/lib/zadara/bin/zadara_sncfg',
+                                'create_export',
+                                '--pname', volume['name'],
+                                '--tid', iscsi_target,
+                                check_exit_code=0)
+
+        result_xml = ElementTree.fromstring(out)
+        response_node = result_xml.find("Sn")
+        if response_node is None:
+            msg = "Malformed response from zadara_sncfg"
+            raise exception.Error(msg)
+
+        sn_ip = response_node.findtext("SnIp")
+        sn_iqn = response_node.findtext("IqnName")
+        iscsi_portal = sn_ip + ":3260," + ("%s" % iscsi_target)
+
+        model_update = {}
+        model_update['provider_location'] = ("%s %s" %
+                                             (iscsi_portal,
+                                              sn_iqn))
+        return model_update
+
+    def _get_qosgroup_summary(self):
+        """gets the list of qosgroups from Zadara BE"""
+        try:
+            (out, err) = self._sync_exec('sudo',
+                                        '/var/lib/zadara/bin/zadara_sncfg',
+                                        'get_qosgroups_xml',
+                                        check_exit_code=0)
+        except exception.ProcessExecutionError:
+            LOG.debug(_("Failed to retrieve QoS info"))
+            return {}
+
+        qos_groups = {}
+        result_xml = ElementTree.fromstring(out)
+        for element in result_xml.findall('QosGroup'):
+            qos_group = {}
+            # get the name of the group.
+            # If we cannot find it, forget this element
+            group_name = element.findtext("Name")
+            if not group_name:
+                continue
+
+            # loop through all child nodes & fill up attributes of this group
+            for child in element.getchildren():
+                # two types of elements -  property of qos-group & sub property
+                # classify them accordingly
+                if child.text:
+                    qos_group[child.tag] = int(child.text) \
+                        if child.text.isdigit() else child.text
+                else:
+                    subelement = {}
+                    for subchild in child.getchildren():
+                        subelement[subchild.tag] = int(subchild.text) \
+                            if subchild.text.isdigit() else subchild.text
+                    qos_group[child.tag] = subelement
+
+            # Now add this group to the master qos_groups
+            qos_groups[group_name] = qos_group
+
+        return qos_groups
+
+    def get_volume_stats(self, refresh=False):
+        """Return the current state of the volume service. If 'refresh' is
+           True, run the update first."""
+
+        drive_info = self._get_qosgroup_summary()
+        return {'drive_qos_info': drive_info}
