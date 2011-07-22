@@ -99,14 +99,14 @@
             <script path='${nic.script}' />
         </interface>
     #else if $vif_type == '802.1Qbh'
-        <interface type='direct'>
-             <mac address=${nic.mac_address}/>
-             <source dev=${nic.device_name} mode='private'/>
-             <virtualport type='802.1Qbh'>
-                 <parameters profileid=${nic.profile_name}/>
-             </virtualport>
-             <model type='virtio'/>
-        </interface>
+       <interface type='direct'>
+            <mac address='${nic.mac_address}'/>
+            <source dev='${nic.device_name}' mode='private'/>
+            <virtualport type='802.1Qbh'>
+                <parameters profileid='${nic.profile_name}'/>
+            </virtualport>
+            <model type='virtio'/>
+       </interface>
     #else
         <interface type='bridge'>
             <source bridge='${nic.bridge_name}'/>
