@@ -98,14 +98,17 @@ class LibvirtOpenVswitchDriver(VIFDriver):
     def plug(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
+        iface_id = "nova-" + vif_id
         utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
         utils.execute('sudo', 'ip', 'link', 'set', dev, 'up')
         utils.execute('sudo', 'ovs-vsctl', '--', '--may-exist', 'add-port',
-           FLAGS.libvirt_ovs_integration_bridge, dev,
-           '--', 'set', 'Interface', dev, "external-ids:iface-id=%s" % vif_id,
-           '--', 'set', 'Interface', dev, "external-ids:iface-status=active",
-           '--', 'set', 'Interface', dev, "external-ids:attached-mac=%s" % \
-                mapping['mac'])
+            FLAGS.libvirt_ovs_integration_bridge, dev,
+            '--', 'set', 'Interface', dev,
+            "external-ids:iface-id=%s" % iface_id,
+            '--', 'set', 'Interface', dev,
+            "external-ids:iface-status=active",
+            '--', 'set', 'Interface', dev,
+            "external-ids:attached-mac=%s" % mapping['mac'])
 
         result = {
             'script': '',
