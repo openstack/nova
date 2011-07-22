@@ -370,8 +370,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         try:
             networks = self.db.network_get_all(context)
         except exception.NoNetworksFound:
-            # we don't care if no networks are found
-            pass
+            return []
 
         # return only networks which are not vlan networks
         return [network for network in networks if
