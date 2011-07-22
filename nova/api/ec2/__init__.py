@@ -138,8 +138,19 @@ class Lockout(wsgi.Middleware):
         return res
 
 
-class Authenticate(wsgi.Middleware):
+class InjectContext(wsgi.Middleware):
+    """Always add a fake 'ec2.context' to WSGI environ."""
+    def __init__(self, context, *args, **kwargs):
+        self.context = context
+        super(InjectContext, self).__init__(*args, **kwargs)
 
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        req.environ['ec2.context'] = self.context
+        return self.application
+
+
+class Authenticate(wsgi.Middleware):
     """Authenticate an EC2 request and add 'ec2.context' to WSGI environ."""
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
@@ -295,16 +306,13 @@ class Authorizer(wsgi.Middleware):
 
     def _matches_any_role(self, context, roles):
         """Return True if any role in roles is allowed in context."""
-        authman = manager.AuthManager()
-        user = authman.get_user(context.user_id)
-        if user.is_superuser():
+        if context.is_admin:
             return True
         if 'all' in roles:
             return True
         if 'none' in roles:
             return False
-        return any(authman.has_role(context.user_id, role, context.project_id)
-                   for role in roles)
+        return any(role in context.roles for role in roles)
 
 
 class Executor(wsgi.Application):

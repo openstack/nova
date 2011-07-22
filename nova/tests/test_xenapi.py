@@ -30,7 +30,6 @@ from nova import flags
 from nova import log as logging
 from nova import test
 from nova import utils
-from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova import exception
@@ -69,7 +68,9 @@ class XenAPIVolumeTestCase(test.TestCase):
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        self.context = context.RequestContext('fake', 'fake', False)
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         FLAGS.target_host = '127.0.0.1'
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
@@ -77,7 +78,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
         self.values = {'id': 1,
-                  'project_id': 'fake',
+                  'project_id': self.user_id,
                   'user_id': 'fake',
                   'image_ref': 1,
                   'kernel_id': 2,
@@ -173,10 +174,6 @@ class XenAPIVMTestCase(test.TestCase):
     """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake',
-                                             admin=True)
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
         self.stubs = stubout.StubOutForTesting()
         self.flags(xenapi_connection_url='test_url',
@@ -195,7 +192,9 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stub_out_vm_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
         fake_utils.stub_out_utils_execute(self.stubs)
-        self.context = context.RequestContext('fake', 'fake', False)
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         self.conn = xenapi_conn.get_connection(False)
 
     def test_parallel_builds(self):
@@ -229,8 +228,8 @@ class XenAPIVMTestCase(test.TestCase):
             instance = db.instance_create(self.context, values)
             self.conn.spawn(instance, network_info)
 
-        gt1 = eventlet.spawn(_do_build, 1, self.project.id, self.user.id)
-        gt2 = eventlet.spawn(_do_build, 2, self.project.id, self.user.id)
+        gt1 = eventlet.spawn(_do_build, 1, self.project_id, self.user_id)
+        gt2 = eventlet.spawn(_do_build, 2, self.project_id, self.user_id)
         gt1.wait()
         gt2.wait()
 
@@ -399,8 +398,8 @@ class XenAPIVMTestCase(test.TestCase):
                     check_injection=False):
         stubs.stubout_loopingcall_start(self.stubs)
         values = {'id': instance_id,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
+                  'project_id': self.project_id,
+                  'user_id': self.user_id,
                   'image_ref': image_ref,
                   'kernel_id': kernel_id,
                   'ramdisk_id': ramdisk_id,
@@ -465,12 +464,30 @@ class XenAPIVMTestCase(test.TestCase):
         self._check_vdis(vdi_recs_start, vdi_recs_end)
 
     def test_spawn_raw_objectstore(self):
-        FLAGS.xenapi_image_service = 'objectstore'
-        self._test_spawn(1, None, None)
+        # TODO(vish): deprecated
+        from nova.auth import manager
+        authman = manager.AuthManager()
+        authman.create_user('fake', 'fake')
+        authman.create_project('fake', 'fake')
+        try:
+            FLAGS.xenapi_image_service = 'objectstore'
+            self._test_spawn(1, None, None)
+        finally:
+            authman.delete_project('fake')
+            authman.delete_user('fake')
 
     def test_spawn_objectstore(self):
-        FLAGS.xenapi_image_service = 'objectstore'
-        self._test_spawn(1, 2, 3)
+        # TODO(vish): deprecated
+        from nova.auth import manager
+        authman = manager.AuthManager()
+        authman.create_user('fake', 'fake')
+        authman.create_project('fake', 'fake')
+        try:
+            FLAGS.xenapi_image_service = 'objectstore'
+            self._test_spawn(1, 2, 3)
+        finally:
+            authman.delete_project('fake')
+            authman.delete_user('fake')
 
     @stub_vm_utils_with_vdi_attached_here
     def test_spawn_raw_glance(self):
@@ -599,7 +616,7 @@ class XenAPIVMTestCase(test.TestCase):
         # guest agent is detected
         self.assertFalse(self._tee_executed)
 
-    @test.skip_test("Never gets an address, not sure why")
+    @test.skip_test("Key Error on domid")
     def test_spawn_vlanmanager(self):
         self.flags(xenapi_image_service='glance',
                    network_manager='nova.network.manager.VlanManager',
@@ -609,7 +626,7 @@ class XenAPIVMTestCase(test.TestCase):
         def dummy(*args, **kwargs):
             pass
 
-        self.stubs.Set(VMOps, 'create_vifs', dummy)
+        self.stubs.Set(vmops.VMOps, 'create_vifs', dummy)
         # Reset network table
         xenapi_fake.reset_table('network')
         # Instance id = 2 will use vlan network (see db/fakes.py)
@@ -623,7 +640,7 @@ class XenAPIVMTestCase(test.TestCase):
             self.network.set_network_host(ctxt, network['id'])
 
         self.network.allocate_for_instance(ctxt, instance_id=instance_ref.id,
-                instance_type_id=1, project_id=self.project.id)
+                instance_type_id=1, project_id=self.project_id)
         self.network.setup_compute_network(ctxt, instance_ref.id)
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
@@ -655,21 +672,13 @@ class XenAPIVMTestCase(test.TestCase):
         # Ensure that it will not unrescue a non-rescued instance.
         self.assertRaises(Exception, conn.unrescue, instance, None)
 
-    def tearDown(self):
-        super(XenAPIVMTestCase, self).tearDown()
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
-        self.vm_info = None
-        self.vm = None
-        self.stubs.UnsetAll()
-
     def _create_instance(self, instance_id=1):
         """Creates and spawns a test instance."""
         stubs.stubout_loopingcall_start(self.stubs)
         values = {
             'id': instance_id,
-            'project_id': self.project.id,
-            'user_id': self.user.id,
+            'project_id': self.project_id,
+            'user_id': self.user_id,
             'image_ref': 1,
             'kernel_id': 2,
             'ramdisk_id': 3,
@@ -750,14 +759,12 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake',
-                                             admin=True)
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.RequestContext('fake', 'fake', False)
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         self.values = {'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
+                  'project_id': self.project_id,
+                  'user_id': self.user_id,
                   'image_ref': 1,
                   'kernel_id': None,
                   'ramdisk_id': None,
@@ -770,12 +777,6 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
-
-    def tearDown(self):
-        super(XenAPIMigrateInstance, self).tearDown()
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
-        self.stubs.UnsetAll()
 
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.values)

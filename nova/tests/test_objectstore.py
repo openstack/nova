@@ -21,8 +21,6 @@ Unittets for S3 objectstore clone.
 """
 
 import boto
-import glob
-import hashlib
 import os
 import shutil
 import tempfile
@@ -30,12 +28,9 @@ import tempfile
 from boto import exception as boto_exception
 from boto.s3 import connection as s3
 
-from nova import context
-from nova import exception
 from nova import flags
 from nova import wsgi
 from nova import test
-from nova.auth import manager
 from nova.objectstore import s3server
 
 
@@ -61,11 +56,6 @@ class S3APITestCase(test.TestCase):
                    buckets_path=os.path.join(OSS_TEMPDIR, 'buckets'),
                    s3_host='127.0.0.1')
 
-        self.auth_manager = manager.AuthManager()
-        self.admin_user = self.auth_manager.create_user('admin', admin=True)
-        self.admin_project = self.auth_manager.create_project('admin',
-                                                              self.admin_user)
-
         shutil.rmtree(FLAGS.buckets_path)
         os.mkdir(FLAGS.buckets_path)
 
@@ -80,8 +70,8 @@ class S3APITestCase(test.TestCase):
             boto.config.add_section('Boto')
 
         boto.config.set('Boto', 'num_retries', '0')
-        conn = s3.S3Connection(aws_access_key_id=self.admin_user.access,
-                               aws_secret_access_key=self.admin_user.secret,
+        conn = s3.S3Connection(aws_access_key_id='fake',
+                               aws_secret_access_key='fake',
                                host=FLAGS.s3_host,
                                port=FLAGS.s3_port,
                                is_secure=False,
@@ -104,11 +94,11 @@ class S3APITestCase(test.TestCase):
         self.assertEquals(buckets[0].name, name, "Wrong name")
         return True
 
-    def test_000_list_buckets(self):
+    def test_list_buckets(self):
         """Make sure we are starting with no buckets."""
         self._ensure_no_buckets(self.conn.get_all_buckets())
 
-    def test_001_create_and_delete_bucket(self):
+    def test_create_and_delete_bucket(self):
         """Test bucket creation and deletion."""
         bucket_name = 'testbucket'
 
@@ -117,7 +107,7 @@ class S3APITestCase(test.TestCase):
         self.conn.delete_bucket(bucket_name)
         self._ensure_no_buckets(self.conn.get_all_buckets())
 
-    def test_002_create_bucket_and_key_and_delete_key_again(self):
+    def test_create_bucket_and_key_and_delete_key_again(self):
         """Test key operations on buckets."""
         bucket_name = 'testbucket'
         key_name = 'somekey'
@@ -146,8 +136,6 @@ class S3APITestCase(test.TestCase):
                           bucket_name)
 
     def tearDown(self):
-        """Tear down auth and test server."""
-        self.auth_manager.delete_user('admin')
-        self.auth_manager.delete_project('admin')
+        """Tear down test server."""
         self.server.stop()
         super(S3APITestCase, self).tearDown()

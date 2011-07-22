@@ -34,7 +34,6 @@ from nova import network
 from nova import rpc
 from nova import test
 from nova import utils
-from nova.auth import manager
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import fake
@@ -62,12 +61,11 @@ class CloudTestCase(test.TestCase):
         self.volume = self.start_service('volume')
         self.image_service = utils.import_object(FLAGS.image_service)
 
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('admin', 'admin', 'admin', True)
-        self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.RequestContext(user_id=self.user.id,
-                                              project_id=self.project.id)
-        host = self.network.host
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id,
+                                              True)
 
         def fake_show(meh, context, id):
             return {'id': 1, 'container_format': 'ami',
@@ -87,12 +85,10 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(rpc, 'cast', finish_cast)
 
     def tearDown(self):
-        networks = db.project_get_networks(self.context, self.project.id,
+        networks = db.project_get_networks(self.context, self.project_id,
                                            associate=False)
         for network in networks:
             db.network_disassociate(self.context, network['id'])
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
         super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
