@@ -1088,7 +1088,7 @@ class VMOps(object):
         self._session.get_xenapi().VM.get_record(vm_ref)
 
         for device, (network, info) in enumerate(network_info):
-            vif_rec = self.vif_driver.get_vif_rec(self._session,
+            vif_rec = self.vif_driver.plug(self._session,
                     vm_ref, instance, device, network, info)
             network_ref = vif_rec['network']
             LOG.debug(_('Creating VIF for VM %(vm_ref)s,' \
