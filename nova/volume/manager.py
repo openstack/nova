@@ -42,15 +42,14 @@ intact.
 
 """
 
-# import time
 
 from nova import context
 from nova import exception
+from nova import rpc
 from nova import flags
 from nova import log as logging
 from nova import manager
 from nova import utils
-from nova import rpc
 
 
 LOG = logging.getLogger('nova.volume.manager')
@@ -62,8 +61,6 @@ flags.DEFINE_string('volume_driver', 'nova.volume.driver.ISCSIDriver',
                     'Driver to use for volume creation')
 flags.DEFINE_boolean('use_local_volumes', True,
                      'if True, will not discover local volumes')
-# flags.DEFINE_integer('volume_state_interval', 60,
-#                     'Interval in seconds for querying volumes status')
 
 
 class VolumeManager(manager.SchedulerDependentManager):
@@ -79,7 +76,6 @@ class VolumeManager(manager.SchedulerDependentManager):
         #             by the driver.
         self.driver.db = self.db
         self._last_volume_stats = []
-        #self._last_host_check = 0
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
@@ -141,9 +137,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                               volume_ref['id'], {'status': 'available',
                                                  'launched_at': now})
         LOG.debug(_("volume %s: created successfully"), volume_ref['name'])
-
         self._notify_vsa(context, volume_ref, 'available')
-
         return volume_id
 
     def _notify_vsa(self, context, volume_ref, status):
@@ -282,11 +276,6 @@ class VolumeManager(manager.SchedulerDependentManager):
         return False
 
     def _report_driver_status(self):
-        #curr_time = time.time()
-        #LOG.info(_("Report Volume node status"))
-        #if curr_time - self._last_host_check > FLAGS.volume_state_interval:
-        #    self._last_host_check = curr_time
-
         volume_stats = self.driver.get_volume_stats(refresh=True)
         if volume_stats:
             LOG.info(_("Checking volume capabilities"))

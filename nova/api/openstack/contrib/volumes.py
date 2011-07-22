@@ -16,6 +16,7 @@
 """The volumes extension."""
 
 from webob import exc
+import webob
 
 from nova import compute
 from nova import exception
@@ -104,7 +105,7 @@ class VolumeController(object):
             self.volume_api.delete(context, volume_id=id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def index(self, req):
         """Returns a summary list of volumes."""
@@ -279,7 +280,7 @@ class VolumeAttachmentController(object):
         self.compute_api.detach_volume(context,
                                        volume_id=volume_id)
 
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _items(self, req, server_id, entity_maker):
         """Returns a list of attachments, transformed through entity_maker."""

@@ -56,7 +56,7 @@ class API(base.Base):
             availability_zone = FLAGS.storage_availability_zone
 
         if to_vsa_id is None:
-            # VP-TODO: for now don't check quotas for BE volumes
+            # Check quotas for non-VSA volumes only
             if quota.allowed_volumes(context, 1, size) < 1:
                 pid = context.project_id
                 LOG.warn(_("Quota exceeeded for %(pid)s, tried to create"
@@ -168,9 +168,10 @@ class API(base.Base):
                  {"method": "remove_volume",
                   "args": {'volume_id': volume_id}})
 
-    def create_snapshot(self, context, volume_id, name, description):
+    def _create_snapshot(self, context, volume_id, name, description,
+                         force=False):
         volume = self.get(context, volume_id)
-        if volume['status'] != "available":
+        if ((not force) and (volume['status'] != "available")):
             raise exception.ApiError(_("Volume status must be available"))
 
         options = {
@@ -191,6 +192,14 @@ class API(base.Base):
                            "volume_id": volume_id,
                            "snapshot_id": snapshot['id']}})
         return snapshot
+
+    def create_snapshot(self, context, volume_id, name, description):
+        return self._create_snapshot(context, volume_id, name, description,
+                                     False)
+
+    def create_snapshot_force(self, context, volume_id, name, description):
+        return self._create_snapshot(context, volume_id, name, description,
+                                     True)
 
     def delete_snapshot(self, context, snapshot_id):
         snapshot = self.get_snapshot(context, snapshot_id)

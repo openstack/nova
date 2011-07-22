@@ -26,7 +26,6 @@ import paramiko
 
 from xml.etree import ElementTree
 
-from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -66,15 +65,13 @@ class SanISCSIDriver(ISCSIDriver):
     # undiscover_volume is still OK
 
     def _connect_to_ssh(self, san_ip=None):
-        if san_ip:
-            ssh_ip = san_ip
-        else:
-            ssh_ip = FLAGS.san_ip
+        if san_ip is None:
+            san_ip = FLAGS.san_ip
         ssh = paramiko.SSHClient()
         #TODO(justinsb): We need a better SSH key policy
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         if FLAGS.san_password:
-            ssh.connect(ssh_ip,
+            ssh.connect(san_ip,
                         port=FLAGS.san_ssh_port,
                         username=FLAGS.san_login,
                         password=FLAGS.san_password)
@@ -82,7 +79,7 @@ class SanISCSIDriver(ISCSIDriver):
             privatekeyfile = os.path.expanduser(FLAGS.san_privatekey)
             # It sucks that paramiko doesn't support DSA keys
             privatekey = paramiko.RSAKey.from_private_key_file(privatekeyfile)
-            ssh.connect(ssh_ip,
+            ssh.connect(san_ip,
                         port=FLAGS.san_ssh_port,
                         username=FLAGS.san_login,
                         pkey=privatekey)

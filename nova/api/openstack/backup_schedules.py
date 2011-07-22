@@ -19,7 +19,6 @@ import time
 
 from webob import exc
 
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -36,20 +35,20 @@ class Controller(object):
 
     def index(self, req, server_id, **kwargs):
         """ Returns the list of backup schedules for a given instance """
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
     def show(self, req, server_id, id, **kwargs):
         """ Returns a single backup schedule for a given instance """
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
     def create(self, req, server_id, **kwargs):
         """ No actual update method required, since the existing API allows
         both create and update through a POST """
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
     def delete(self, req, server_id, id, **kwargs):
         """ Deletes an existing backup schedule """
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
 
 def create_resource():
