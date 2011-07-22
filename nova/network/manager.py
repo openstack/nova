@@ -879,7 +879,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
-        network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
         if not network_ref['vpn_public_address']:
             net = {}
             address = FLAGS.vpn_ip
@@ -887,6 +886,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             network_ref = db.network_update(context, network_ref['id'], net)
         else:
             address = network_ref['vpn_public_address']
+        network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
                                        network_ref['bridge_interface'],
