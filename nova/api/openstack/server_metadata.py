@@ -18,7 +18,6 @@
 from webob import exc
 
 from nova import compute
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 from nova import exception
 from nova import quota

@@ -22,7 +22,6 @@ from nova import flags
 from nova import image
 from nova import quota
 from nova import utils
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -62,7 +61,7 @@ class Controller(object):
         if id in metadata:
             return {'meta': {id: metadata[id]}}
         else:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def create(self, req, image_id, body):
         context = req.environ['nova.context']
@@ -105,7 +104,7 @@ class Controller(object):
         img = self.image_service.show(context, image_id)
         metadata = self._get_metadata(context, image_id)
         if not id in metadata:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         metadata.pop(id)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)

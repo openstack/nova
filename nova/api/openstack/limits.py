@@ -25,14 +25,15 @@ import re
 import time
 import urllib
 import webob.exc
+from xml.dom import minidom
 
 from collections import defaultdict
 
 from webob.dec import wsgify
 
 from nova import quota
+from nova import utils
 from nova import wsgi as base_wsgi
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import limits as limits_views
@@ -76,6 +77,58 @@ class LimitsControllerV11(LimitsController):
         return limits_views.ViewBuilderV11()
 
 
+class LimitsXMLSerializer(wsgi.XMLDictSerializer):
+
+    xmlns = wsgi.XMLNS_V11
+
+    def __init__(self):
+        pass
+
+    def _create_rates_node(self, xml_doc, rates):
+        rates_node = xml_doc.createElement('rates')
+        for rate in rates:
+            rate_node = xml_doc.createElement('rate')
+            rate_node.setAttribute('uri', rate['uri'])
+            rate_node.setAttribute('regex', rate['regex'])
+
+            for limit in rate['limit']:
+                limit_node = xml_doc.createElement('limit')
+                limit_node.setAttribute('value', str(limit['value']))
+                limit_node.setAttribute('verb', limit['verb'])
+                limit_node.setAttribute('remaining', str(limit['remaining']))
+                limit_node.setAttribute('unit', limit['unit'])
+                limit_node.setAttribute('next-available',
+                                        str(limit['next-available']))
+                rate_node.appendChild(limit_node)
+
+            rates_node.appendChild(rate_node)
+        return rates_node
+
+    def _create_absolute_node(self, xml_doc, absolutes):
+        absolute_node = xml_doc.createElement('absolute')
+        for key, value in absolutes.iteritems():
+            limit_node = xml_doc.createElement('limit')
+            limit_node.setAttribute('name', key)
+            limit_node.setAttribute('value', str(value))
+            absolute_node.appendChild(limit_node)
+        return absolute_node
+
+    def _limits_to_xml(self, xml_doc, limits):
+        limits_node = xml_doc.createElement('limits')
+        rates_node = self._create_rates_node(xml_doc, limits['rate'])
+        limits_node.appendChild(rates_node)
+
+        absolute_node = self._create_absolute_node(xml_doc, limits['absolute'])
+        limits_node.appendChild(absolute_node)
+
+        return limits_node
+
+    def index(self, limits_dict):
+        xml_doc = minidom.Document()
+        node = self._limits_to_xml(xml_doc, limits_dict['limits'])
+        return self.to_xml_string(node, False)
+
+
 def create_resource(version='1.0'):
     controller = {
         '1.0': LimitsControllerV10,
@@ -97,9 +150,13 @@ def create_resource(version='1.0'):
         },
     }
 
+    xml_serializer = {
+        '1.0': wsgi.XMLDictSerializer(xmlns=xmlns, metadata=metadata),
+        '1.1': LimitsXMLSerializer(),
+    }[version]
+
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns,
-                                                  metadata=metadata),
+        'application/xml': xml_serializer,
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers)
@@ -118,6 +175,8 @@ class Limit(object):
         60 * 60: "HOUR",
         60 * 60 * 24: "DAY",
     }
+
+    UNIT_MAP = dict([(v, k) for k, v in UNITS.items()])
 
     def __init__(self, verb, uri, regex, value, unit):
         """
@@ -224,16 +283,30 @@ class RateLimitingMiddleware(base_wsgi.Middleware):
     is stored in memory for this implementation.
     """
 
-    def __init__(self, application, limits=None):
+    def __init__(self, application, limits=None, limiter=None, **kwargs):
         """
         Initialize new `RateLimitingMiddleware`, which wraps the given WSGI
         application and sets up the given limits.
 
         @param application: WSGI application to wrap
-        @param limits: List of dictionaries describing limits
+        @param limits: String describing limits
+        @param limiter: String identifying class for representing limits
+
+        Other parameters are passed to the constructor for the limiter.
         """
         base_wsgi.Middleware.__init__(self, application)
-        self._limiter = Limiter(limits or DEFAULT_LIMITS)
+
+        # Select the limiter class
+        if limiter is None:
+            limiter = Limiter
+        else:
+            limiter = utils.import_class(limiter)
+
+        # Parse the limits, if any are provided
+        if limits is not None:
+            limits = limiter.parse_limits(limits)
+
+        self._limiter = limiter(limits or DEFAULT_LIMITS, **kwargs)
 
     @wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
@@ -271,7 +344,7 @@ class Limiter(object):
     Rate-limit checking class which handles limits in memory.
     """
 
-    def __init__(self, limits):
+    def __init__(self, limits, **kwargs):
         """
         Initialize the new `Limiter`.
 
@@ -279,6 +352,12 @@ class Limiter(object):
         """
         self.limits = copy.deepcopy(limits)
         self.levels = defaultdict(lambda: copy.deepcopy(limits))
+
+        # Pick up any per-user limit information
+        for key, value in kwargs.items():
+            if key.startswith('user:'):
+                username = key[5:]
+                self.levels[username] = self.parse_limits(value)
 
     def get_limits(self, username=None):
         """
@@ -304,6 +383,66 @@ class Limiter(object):
             return delays[0]
 
         return None, None
+
+    # Note: This method gets called before the class is instantiated,
+    # so this must be either a static method or a class method.  It is
+    # used to develop a list of limits to feed to the constructor.  We
+    # put this in the class so that subclasses can override the
+    # default limit parsing.
+    @staticmethod
+    def parse_limits(limits):
+        """
+        Convert a string into a list of Limit instances.  This
+        implementation expects a semicolon-separated sequence of
+        parenthesized groups, where each group contains a
+        comma-separated sequence consisting of HTTP method,
+        user-readable URI, a URI reg-exp, an integer number of
+        requests which can be made, and a unit of measure.  Valid
+        values for the latter are "SECOND", "MINUTE", "HOUR", and
+        "DAY".
+
+        @return: List of Limit instances.
+        """
+
+        # Handle empty limit strings
+        limits = limits.strip()
+        if not limits:
+            return []
+
+        # Split up the limits by semicolon
+        result = []
+        for group in limits.split(';'):
+            group = group.strip()
+            if group[:1] != '(' or group[-1:] != ')':
+                raise ValueError("Limit rules must be surrounded by "
+                                 "parentheses")
+            group = group[1:-1]
+
+            # Extract the Limit arguments
+            args = [a.strip() for a in group.split(',')]
+            if len(args) != 5:
+                raise ValueError("Limit rules must contain the following "
+                                 "arguments: verb, uri, regex, value, unit")
+
+            # Pull out the arguments
+            verb, uri, regex, value, unit = args
+
+            # Upper-case the verb
+            verb = verb.upper()
+
+            # Convert value--raises ValueError if it's not integer
+            value = int(value)
+
+            # Convert unit
+            unit = unit.upper()
+            if unit not in Limit.UNIT_MAP:
+                raise ValueError("Invalid units specified")
+            unit = Limit.UNIT_MAP[unit]
+
+            # Build a limit
+            result.append(Limit(verb, uri, regex, value, unit))
+
+        return result
 
 
 class WsgiLimiter(object):
@@ -388,3 +527,19 @@ class WsgiLimiterProxy(object):
             return None, None
 
         return resp.getheader("X-Wait-Seconds"), resp.read() or None
+
+    # Note: This method gets called before the class is instantiated,
+    # so this must be either a static method or a class method.  It is
+    # used to develop a list of limits to feed to the constructor.
+    # This implementation returns an empty list, since all limit
+    # decisions are made by a remote server.
+    @staticmethod
+    def parse_limits(limits):
+        """
+        Ignore a limits string--simply doesn't apply for the limit
+        proxy.
+
+        @return: Empty list.
+        """
+
+        return []

@@ -340,6 +340,7 @@ class VMOps(object):
                     _check_agent_version()
                     _inject_files()
                     _set_admin_password()
+                    self.reset_network(instance, vm_ref)
                     return True
             except Exception, exc:
                 LOG.warn(exc)
@@ -348,9 +349,6 @@ class VMOps(object):
                 return False
 
         timer.f = _wait_for_boot
-
-        # call to reset network to configure network from xenstore
-        self.reset_network(instance, vm_ref)
 
         return timer.start(interval=0.5, now=True)
 

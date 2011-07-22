@@ -78,8 +78,8 @@ def wrap_db_error(f):
         except Exception, e:
             LOG.exception(_('DB exception wrapped.'))
             raise DBError(e)
-    return _wrap
     _wrap.func_name = f.func_name
+    return _wrap
 
 
 def wrap_exception(notifier=None, publisher_id=None, event_type=None,
@@ -406,6 +406,11 @@ class FixedIpNotFoundForAddress(FixedIpNotFound):
 
 class FixedIpNotFoundForInstance(FixedIpNotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
+
+
+class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
+    message = _("Network host %(host)s has zero fixed ips "
+                "in network %(network_id)s.")
 
 
 class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):

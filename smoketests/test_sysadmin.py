@@ -103,27 +103,48 @@ class ImageTests(base.UserSmokeTestCase):
                                                'launchPermission')
         self.assert_(attrs.name, 'launch_permission')
 
-    def test_009_can_modify_image_launch_permission(self):
+    def test_009_can_add_image_launch_permission(self):
+        image = self.conn.get_image(self.data['image_id'])
+        self.assertEqual(image.id, self.data['image_id'])
+        self.assertEqual(image.is_public, False)
         self.conn.modify_image_attribute(image_id=self.data['image_id'],
                                          operation='add',
                                          attribute='launchPermission',
                                          groups='all')
         image = self.conn.get_image(self.data['image_id'])
         self.assertEqual(image.id, self.data['image_id'])
+        self.assertEqual(image.is_public, True)
 
     def test_010_can_see_launch_permission(self):
         attrs = self.conn.get_image_attribute(self.data['image_id'],
                                               'launchPermission')
-        self.assert_(attrs.name, 'launch_permission')
-        self.assert_(attrs.attrs['groups'][0], 'all')
+        self.assertEqual(attrs.name, 'launch_permission')
+        self.assertEqual(attrs.attrs['groups'][0], 'all')
 
-    def test_011_user_can_deregister_kernel(self):
+    def test_011_can_remove_image_launch_permission(self):
+        image = self.conn.get_image(self.data['image_id'])
+        self.assertEqual(image.id, self.data['image_id'])
+        self.assertEqual(image.is_public, True)
+        self.conn.modify_image_attribute(image_id=self.data['image_id'],
+                                         operation='remove',
+                                         attribute='launchPermission',
+                                         groups='all')
+        image = self.conn.get_image(self.data['image_id'])
+        self.assertEqual(image.id, self.data['image_id'])
+        self.assertEqual(image.is_public, False)
+
+    def test_012_private_image_shows_in_list(self):
+        images = self.conn.get_all_images()
+        image_ids = [image.id for image in images]
+        self.assertTrue(self.data['image_id'] in image_ids)
+
+    def test_013_user_can_deregister_kernel(self):
         self.assertTrue(self.conn.deregister_image(self.data['kernel_id']))
 
-    def test_012_can_deregister_image(self):
+    def test_014_can_deregister_image(self):
         self.assertTrue(self.conn.deregister_image(self.data['image_id']))
 
-    def test_013_can_delete_bundle(self):
+    def test_015_can_delete_bundle(self):
         self.assertTrue(self.delete_bundle_bucket(TEST_BUCKET))
 
 
