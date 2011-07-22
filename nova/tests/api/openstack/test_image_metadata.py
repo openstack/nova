@@ -16,8 +16,6 @@
 #    under the License.
 
 import json
-import stubout
-import unittest
 import webob
 import xml.dom.minidom as minidom
 
@@ -85,22 +83,12 @@ class ImageMetaDataTest(test.TestCase):
 
     def setUp(self):
         super(ImageMetaDataTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        self.orig_image_service = FLAGS.image_service
-        FLAGS.image_service = 'nova.image.glance.GlanceImageService'
-        fakes.FakeAuthManager.auth_data = {}
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
+        self.flags(image_service='nova.image.glance.GlanceImageService')
         # NOTE(dprince) max out properties/metadata in image 3 for testing
         img3 = self.IMAGE_FIXTURES[2]
         for num in range(FLAGS.quota_metadata_items):
             img3['properties']['key%i' % num] = "blah"
         fakes.stub_out_glance(self.stubs, self.IMAGE_FIXTURES)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.image_service = self.orig_image_service
-        super(ImageMetaDataTest, self).tearDown()
 
     def test_index(self):
         req = webob.Request.blank('/v1.1/images/1/meta')

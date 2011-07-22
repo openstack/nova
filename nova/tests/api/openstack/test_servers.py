@@ -20,7 +20,6 @@ import json
 import unittest
 from xml.dom import minidom
 
-import stubout
 import webob
 
 from nova import context
@@ -224,8 +223,6 @@ class ServersTest(test.TestCase):
 
     def setUp(self):
         super(ServersTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
@@ -250,14 +247,8 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'resume', fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
-        self.allow_admin = FLAGS.allow_admin_api
 
         self.webreq = common.webob_factory('/v1.0/servers')
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.allow_admin_api = self.allow_admin
-        super(ServersTest, self).tearDown()
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -853,7 +844,7 @@ class ServersTest(test.TestCase):
     def test_create_instance_via_zones(self):
         """Server generated ReservationID"""
         self._setup_for_create_instance()
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = dict(server=dict(
             name='server_test', imageId=3, flavorId=2,
@@ -875,7 +866,7 @@ class ServersTest(test.TestCase):
     def test_create_instance_via_zones_with_resid(self):
         """User supplied ReservationID"""
         self._setup_for_create_instance()
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = dict(server=dict(
             name='server_test', imageId=3, flavorId=2,
@@ -1305,7 +1296,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['flavorId'], 1)
 
     def test_server_pause(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
@@ -1317,7 +1308,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_server_unpause(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
@@ -1329,7 +1320,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_server_suspend(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
@@ -1341,7 +1332,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_server_resume(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
@@ -1353,7 +1344,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_server_reset_network(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
@@ -1365,7 +1356,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_server_inject_network_info(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
@@ -1652,7 +1643,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(self.server_delete_called, True)
 
     def test_rescue_accepted(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         body = {}
 
         self.called = False
@@ -1671,7 +1662,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_rescue_raises_handled(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         body = {}
 
         def rescue_mock(*args, **kwargs):
@@ -2160,17 +2151,8 @@ class TestServerInstanceCreation(test.TestCase):
 
     def setUp(self):
         super(TestServerInstanceCreation, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        self.allow_admin = FLAGS.allow_admin_api
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.allow_admin_api = self.allow_admin
-        super(TestServerInstanceCreation, self).tearDown()
 
     def _setup_mock_compute_api_for_personality(self):
 

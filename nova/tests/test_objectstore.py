@@ -52,8 +52,7 @@ class S3APITestCase(test.TestCase):
     def setUp(self):
         """Setup users, projects, and start a test server."""
         super(S3APITestCase, self).setUp()
-        self.flags(auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
-                   buckets_path=os.path.join(OSS_TEMPDIR, 'buckets'),
+        self.flags(buckets_path=os.path.join(OSS_TEMPDIR, 'buckets'),
                    s3_host='127.0.0.1')
 
         shutil.rmtree(FLAGS.buckets_path)

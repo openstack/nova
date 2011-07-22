@@ -175,7 +175,6 @@ class Authenticate(wsgi.Middleware):
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
         roles = authman.get_active_roles(user, project)
-        LOG.warn(roles)
         ctxt = context.RequestContext(user_id=user.id,
                                       project_id=project.id,
                                       is_admin=user.is_admin(),
@@ -299,7 +298,6 @@ class Authorizer(wsgi.Middleware):
 
     def _matches_any_role(self, context, roles):
         """Return True if any role in roles is allowed in context."""
-        LOG.info(context.roles)
         if context.is_admin:
             return True
         if 'all' in roles:

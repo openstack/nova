@@ -95,30 +95,14 @@ def zone_select(context, specs):
 class ZonesTest(test.TestCase):
     def setUp(self):
         super(ZonesTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
+        self.flags(allow_admin_api=True)
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
-
-        self.allow_admin = FLAGS.allow_admin_api
-        FLAGS.allow_admin_api = True
 
         self.stubs.Set(nova.db, 'zone_get', zone_get)
         self.stubs.Set(nova.db, 'zone_update', zone_update)
         self.stubs.Set(nova.db, 'zone_create', zone_create)
         self.stubs.Set(nova.db, 'zone_delete', zone_delete)
-
-        self.old_zone_name = FLAGS.zone_name
-        self.old_zone_capabilities = FLAGS.zone_capabilities
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.allow_admin_api = self.allow_admin
-        FLAGS.zone_name = self.old_zone_name
-        FLAGS.zone_capabilities = self.old_zone_capabilities
-        super(ZonesTest, self).tearDown()
 
     def test_get_zone_list_scheduler(self):
         self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler)
@@ -190,8 +174,8 @@ class ZonesTest(test.TestCase):
         self.assertFalse('username' in res_dict['zone'])
 
     def test_zone_info(self):
-        FLAGS.zone_name = 'darksecret'
-        FLAGS.zone_capabilities = ['cap1=a;b', 'cap2=c;d']
+        caps = ['cap1=a;b', 'cap2=c;d']
+        self.flags(zone_name='darksecret', zone_capabilities=caps)
         self.stubs.Set(api, '_call_scheduler', zone_capabilities)
 
         body = dict(zone=dict(username='zeb', password='sneaky'))
@@ -205,7 +189,7 @@ class ZonesTest(test.TestCase):
         self.assertEqual(res_dict['zone']['cap2'], 'c;d')
 
     def test_zone_select(self):
-        FLAGS.build_plan_encryption_key = 'c286696d887c9aa0611bbb3e2025a45a'
+        self.flags(build_plan_encryption_key='c286696d887c9aa0611bbb3e2025a45a')
         self.stubs.Set(api, 'select', zone_select)
 
         req = webob.Request.blank('/v1.0/zones/select')
