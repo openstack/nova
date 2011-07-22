@@ -709,23 +709,14 @@ class IptablesFirewallDriver(FirewallDriver):
                     args += ['-s', rule.cidr]
                     fw_rules += [' '.join(args)]
                 else:
-                    LOG.info('Not using cidr %r', rule.cidr)
-                    if self.iptables.ipset_supported():
-                        LOG.info('ipset supported %r', rule.cidr)
-                        ipset = linux_net.IpSet('%s' % rule.group_id)
-                        args += ipset.iptables_source_match()
-                        fw_rules += [' '.join(args)]
-                    else:
-                        LOG.info('ipset unsupported %r', rule.cidr)
-                        LOG.info('rule.grantee_group.instances: %r', rule.grantee_group.instances)
-                        for instance in rule.grantee_group.instances:
-                            LOG.info('instance: %r', instance)
-                            ips = db.instance_get_fixed_addresses(ctxt,
-                                                                instance['id'])
-                            LOG.info('ips: %r', ips)
-                            for ip in ips:
-                                subrule = args + ['-s %s' % ip]
-                                fw_rules += [' '.join(subrule)]
+                    for instance in rule.grantee_group.instances:
+                        LOG.info('instance: %r', instance)
+                        ips = db.instance_get_fixed_addresses(ctxt,
+                                                            instance['id'])
+                        LOG.info('ips: %r', ips)
+                        for ip in ips:
+                            subrule = args + ['-s %s' % ip]
+                            fw_rules += [' '.join(subrule)]
 
                 LOG.info('Using fw_rules: %r', fw_rules)
         ipv4_rules += ['-j $sg-fallback']
@@ -738,9 +729,8 @@ class IptablesFirewallDriver(FirewallDriver):
         return self.nwfilter.instance_filter_exists(instance)
 
     def refresh_security_group_members(self, security_group):
-        if not self.iptables.ipset_supported():
-            self.do_refresh_security_group_rules(security_group)
-            self.iptables.apply()
+        self.do_refresh_security_group_rules(security_group)
+        self.iptables.apply()
 
     def refresh_security_group_rules(self, security_group, network_info=None):
         self.do_refresh_security_group_rules(security_group, network_info)
