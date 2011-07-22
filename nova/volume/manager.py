@@ -291,15 +291,16 @@ class VolumeManager(manager.SchedulerDependentManager):
         if volume_stats:
             LOG.info(_("Checking volume capabilities"))
 
-            if self._volume_stats_changed(self._last_volume_stats, volume_stats):
-    
+            if self._volume_stats_changed(self._last_volume_stats,
+                                          volume_stats):
                 LOG.info(_("New capabilities found: %s"), volume_stats)
                 self._last_volume_stats = volume_stats
-    
+
                 # This will grab info about the host and queue it
                 # to be sent to the Schedulers.
                 self.update_service_capabilities(self._last_volume_stats)
             else:
+                # avoid repeating fanouts
                 self.update_service_capabilities(None)
 
     def notification(self, context, event):
