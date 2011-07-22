@@ -17,10 +17,45 @@
 #    under the License.
 """Unit Tests for network code."""
 
-import os
-
 from nova import test
 from nova.network import linux_net
+
+class IpSetTestCase(test.TestCase):
+    def test_add(self):
+        """Adding an address"""
+        ipset = linux_net.IpSet('somename')
+
+        ipset.add_ip('1.2.3.4')
+        self.assertTrue('1.2.3.4' in ipset)
+
+
+    def test_add_remove(self):
+        """Adding and then removing an address"""
+
+        self.verify_cmd_call_count = 0
+        def verify_cmd(*args):
+            self.assertEquals(args, self.expected_cmd)
+            self.verify_cmd_call_count += 1
+
+        self.expected_cmd = ('ipset', '-A', 'run_tests.py-somename', '1.2.3.4')
+        ipset = linux_net.IpSet('somename',execute=verify_cmd)
+        ipset.add_ip('1.2.3.4')
+        self.assertTrue('1.2.3.4' in ipset)
+
+        self.expected_cmd = ('ipset', '-D', 'run_tests.py-somename', '1.2.3.4')
+        ipset.remove_ip('1.2.3.4')
+        self.assertTrue('1.2.3.4' not in ipset)
+        self.assertEquals(self.verify_cmd_call_count, 2)
+
+
+    def test_two_adds_one_remove(self):
+        """Adding the same address twice works. Removing it once removes it entirely."""
+        ipset = linux_net.IpSet('somename')
+
+        ipset.add_ip('1.2.3.4')
+        ipset.add_ip('1.2.3.4')
+        ipset.remove_ip('1.2.3.4')
+        self.assertTrue('1.2.3.4' not in ipset)
 
 
 class IptablesManagerTestCase(test.TestCase):

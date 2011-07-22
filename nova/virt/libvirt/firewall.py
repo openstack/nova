@@ -663,11 +663,10 @@ class IptablesFirewallDriver(FirewallDriver):
                 LOG.debug(_('Adding security group rule: %r'), rule)
 
                 if not rule.cidr:
-                    # Eventually, a mechanism to grant access for security
-                    # groups will turn up here. It'll use ipsets.
-                    continue
+                    version = 4
+                else:
+                    version = netutils.get_ip_version(rule.cidr)
 
-                version = netutils.get_ip_version(rule.cidr)
                 if version == 4:
                     fw_rules = ipv4_rules
                 else:
@@ -677,16 +676,16 @@ class IptablesFirewallDriver(FirewallDriver):
                 if version == 6 and rule.protocol == 'icmp':
                     protocol = 'icmpv6'
 
-                args = ['-p', protocol, '-s', rule.cidr]
+                args = ['-j ACCEPT', '-p', protocol]
 
-                if rule.protocol in ['udp', 'tcp']:
+                if protocol in ['udp', 'tcp']:
                     if rule.from_port == rule.to_port:
                         args += ['--dport', '%s' % (rule.from_port,)]
                     else:
                         args += ['-m', 'multiport',
                                  '--dports', '%s:%s' % (rule.from_port,
                                                         rule.to_port)]
-                elif rule.protocol == 'icmp':
+                elif protocol == 'icmp':
                     icmp_type = rule.from_port
                     icmp_code = rule.to_port
 
@@ -705,9 +704,30 @@ class IptablesFirewallDriver(FirewallDriver):
                             args += ['-m', 'icmp6', '--icmpv6-type',
                                      icmp_type_arg]
 
-                args += ['-j ACCEPT']
-                fw_rules += [' '.join(args)]
+                if rule.cidr:
+                    LOG.info('Using cidr %r', rule.cidr)
+                    args += ['-s', rule.cidr]
+                    fw_rules += [' '.join(args)]
+                else:
+                    LOG.info('Not using cidr %r', rule.cidr)
+                    if self.iptables.ipset_supported():
+                        LOG.info('ipset supported %r', rule.cidr)
+                        ipset = linux_net.IpSet('%s' % rule.group_id)
+                        args += ipset.iptables_source_match()
+                        fw_rules += [' '.join(args)]
+                    else:
+                        LOG.info('ipset unsupported %r', rule.cidr)
+                        LOG.info('rule.grantee_group.instances: %r', rule.grantee_group.instances)
+                        for instance in rule.grantee_group.instances:
+                            LOG.info('instance: %r', instance)
+                            ips = db.instance_get_fixed_addresses(ctxt,
+                                                                instance['id'])
+                            LOG.info('ips: %r', ips)
+                            for ip in ips:
+                                subrule = args + ['-s %s' % ip]
+                                fw_rules += [' '.join(subrule)]
 
+                LOG.info('Using fw_rules: %r', fw_rules)
         ipv4_rules += ['-j $sg-fallback']
         ipv6_rules += ['-j $sg-fallback']
 
@@ -718,7 +738,9 @@ class IptablesFirewallDriver(FirewallDriver):
         return self.nwfilter.instance_filter_exists(instance)
 
     def refresh_security_group_members(self, security_group):
-        pass
+        if not self.iptables.ipset_supported():
+            self.do_refresh_security_group_rules(security_group)
+            self.iptables.apply()
 
     def refresh_security_group_rules(self, security_group, network_info=None):
         self.do_refresh_security_group_rules(security_group, network_info)

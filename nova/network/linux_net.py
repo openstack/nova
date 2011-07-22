@@ -96,6 +96,33 @@ class IptablesRule(object):
             chain = self.chain
         return '-A %s %s' % (chain, self.rule)
 
+class IpSet(object):
+    """A class for handling large collections of IPs efficiently"""
+
+    def __init__(self, name, execute=None):
+        self.name = name
+        self._ips = set()
+        if not execute:
+            self.execute = _execute
+        else:
+            self.execute = execute
+
+    def __contains__(self, addr):
+        return addr in self._ips
+
+    def _set_name(self):
+        return '%s-%s' % (binary_name, self.name)
+
+    def add_ip(self, addr):
+        self._ips.add(addr)
+        self.execute('ipset', '-A', self._set_name(), addr)
+
+    def remove_ip(self, addr):
+        self._ips.remove(addr)
+        self.execute('ipset', '-D', self._set_name(), addr)
+
+    def iptables_source_match(self):
+        return ['-m set --match-set %s src' % (self._set_name(),)]
 
 class IptablesTable(object):
     """An iptables table."""
@@ -280,6 +307,9 @@ class IptablesManager(object):
         # the snat chain.
         self.ipv4['nat'].add_chain('floating-snat')
         self.ipv4['nat'].add_rule('snat', '-j $floating-snat')
+
+    def ipset_supported(self):
+        return False
 
     @utils.synchronized('iptables', external=True)
     def apply(self):
