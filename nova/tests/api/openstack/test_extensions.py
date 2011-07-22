@@ -103,12 +103,12 @@ class ExtensionControllerTest(unittest.TestCase):
         (fox_ext,) = [
             x for x in data['extensions'] if x['alias'] == 'FOXNSOX']
         self.assertEqual(fox_ext, {
-                'namespace' : 'http://www.fox.in.socks/api/ext/pie/v1.0',
-                'name' : 'Fox In Socks',
-                'updated' : '2011-01-22T13:25:27-06:00',
-                'description' : 'The Fox In Socks Extension',
-                'alias' : 'FOXNSOX',
-                'links' : []
+                'namespace': 'http://www.fox.in.socks/api/ext/pie/v1.0',
+                'name': 'Fox In Socks',
+                'updated': '2011-01-22T13:25:27-06:00',
+                'description': 'The Fox In Socks Extension',
+                'alias': 'FOXNSOX',
+                'links': []
             }
         )
 
@@ -121,12 +121,12 @@ class ExtensionControllerTest(unittest.TestCase):
 
         data = json.loads(response.body)
         self.assertEqual(data['extension'], {
-                "namespace" : "http://www.fox.in.socks/api/ext/pie/v1.0",
-                "name" : "Fox In Socks",
-                "updated" : "2011-01-22T13:25:27-06:00",
-                "description" : "The Fox In Socks Extension",
-                "alias" : "FOXNSOX",
-                "links" : []
+                "namespace": "http://www.fox.in.socks/api/ext/pie/v1.0",
+                "name": "Fox In Socks",
+                "updated": "2011-01-22T13:25:27-06:00",
+                "description": "The Fox In Socks Extension",
+                "alias": "FOXNSOX",
+                "links": []
             }
         )
 
@@ -148,7 +148,7 @@ class ExtensionControllerTest(unittest.TestCase):
         self.assertEqual(len(exts), 6)
 
         # Make sure that at least Fox in Sox is correct.
-        (fox_ext,) = [ x for x in exts if x.get('alias') == 'FOXNSOX' ]
+        (fox_ext,) = [x for x in exts if x.get('alias') == 'FOXNSOX']
         self.assertEqual(fox_ext.get('name'), 'Fox In Socks')
         self.assertEqual(fox_ext.get('namespace'),
             'http://www.fox.in.socks/api/ext/pie/v1.0')
@@ -327,29 +327,30 @@ class RequestExtensionTest(unittest.TestCase):
         self.assertEqual('newblue', response_data['flavor']['googoose'])
         self.assertEqual("Pig Bands!", response_data['big_bands'])
 
+
 class ExtensionsXMLSerializerTest(unittest.TestCase):
     def test_serialize(self):
         serializer = extensions.ExtensionsXMLSerializer()
         data = {
             'extension': {
                 'name': 'ext1',
-                "namespace" : "http://docs.rack.com/servers/api/ext/pie/v1.0",
-                "alias" : "RS-PIE",
-                "updated" : "2011-01-22T13:25:27-06:00",
-                "description" : "Adds the capability to share an image.",
-                "links" : [
+                'namespace': 'http://docs.rack.com/servers/api/ext/pie/v1.0',
+                'alias': 'RS-PIE',
+                'updated': '2011-01-22T13:25:27-06:00',
+                'description': 'Adds the capability to share an image.',
+                'links': [
                     {
-                        "rel" : "describedby",
-                        "type" : "application/pdf",
-                        "href" : "http://docs.rack.com/servers/api/ext/cs.pdf"
+                        'rel': 'describedby',
+                        'type': 'application/pdf',
+                        'href': 'http://docs.rack.com/servers/api/ext/cs.pdf'
                     },
                     {
-                        "rel" : "describedby",
-                        "type" : "application/vnd.sun.wadl+xml",
-                        "href" : "http://docs.rack.com/servers/api/ext/cs.wadl"
+                        'rel': 'describedby',
+                        'type': 'application/vnd.sun.wadl+xml',
+                        'href': 'http://docs.rack.com/servers/api/ext/cs.wadl'
                     }
                 ]
-            },
+            }
         }
 
         ns = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -371,11 +372,11 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
 
         self.assertEqual(link_nodes[0].get('type'), 'application/pdf')
         self.assertEqual(link_nodes[0].get('rel'), 'describedby')
-        self.assertEqual(link_nodes[0].get('href'), 
+        self.assertEqual(link_nodes[0].get('href'),
             'http://docs.rack.com/servers/api/ext/cs.pdf')
 
-        self.assertEqual(link_nodes[1].get('type'), 
+        self.assertEqual(link_nodes[1].get('type'),
             'application/vnd.sun.wadl+xml')
         self.assertEqual(link_nodes[1].get('rel'), 'describedby')
-        self.assertEqual(link_nodes[1].get('href'), 
+        self.assertEqual(link_nodes[1].get('href'),
             'http://docs.rack.com/servers/api/ext/cs.wadl')
