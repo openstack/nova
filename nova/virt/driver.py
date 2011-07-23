@@ -43,6 +43,10 @@ def block_device_info_get_swap(block_device_info):
                                              'swap_size': 0}
 
 
+def swap_is_usable(swap):
+    return swap and swap['device_name'] and swap['swap_size'] > 0
+
+
 def block_device_info_get_ephemerals(block_device_info):
     block_device_info = block_device_info or {}
     ephemerals = block_device_info.get('ephemerals') or []

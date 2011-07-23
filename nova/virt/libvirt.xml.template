@@ -3,12 +3,10 @@
     <memory>${memory_kb}</memory>
     <os>
 #if $type == 'lxc'
-    #set $disk_prefix = ''
     #set $disk_bus = ''
         <type>exe</type>
         <init>/sbin/init</init>
 #else if $type == 'uml'
-    #set $disk_prefix = 'ubd'
     #set $disk_bus = 'uml'
         <type>uml</type>
         <kernel>/usr/bin/linux</kernel>
@@ -16,13 +14,11 @@
         <root>${root_device_name}</root>
 #else
     #if $type == 'xen'
-        #set $disk_prefix = 'sd'
         #set $disk_bus = 'scsi'
             <type>linux</type>
             #set $root_device_name = $getVar('root_device_name', '/dev/xvda')
             <root>${root_device_name}</root>
     #else
-        #set $disk_prefix = 'vd'
         #set $disk_bus = 'virtio'
             <type>hvm</type>
     #end if
@@ -77,13 +73,27 @@
             <target dev='${root_device}' bus='${disk_bus}'/>
         </disk>
         #end if
-        #if $getVar('local', False)
+        #if $getVar('local_device', False)
             <disk type='file'>
                 <driver type='${driver_type}'/>
                 <source file='${basepath}/disk.local'/>
-                <target dev='${disk_prefix}b' bus='${disk_bus}'/>
+                <target dev='${local_device}' bus='${disk_bus}'/>
             </disk>
         #end if
+	#for $eph in $ephemerals
+	     <disk type='block'>
+                <driver type='${driver_type}'/>
+                <source dev='${basepath}/${eph.device_path}'/>
+                <target dev='${eph.device}' bus='${disk_bus}'/>
+	     </disk>
+	#end for
+	#if $getVar('swap_device', False)
+            <disk type='file'>
+                <driver type='${driver_type}'/>
+                <source file='${basepath}/disk.swap'/>
+                <target dev='${swap_device}' bus='${disk_bus}'/>
+            </disk>
+	#end if
         #for $vol in $volumes
             <disk type='block'>
                 <driver type='raw'/>
