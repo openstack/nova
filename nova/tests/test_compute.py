@@ -990,3 +990,13 @@ class ComputeTestCase(test.TestCase):
             self.context, instance_id):
             db.block_device_mapping_destroy(self.context, bdm['id'])
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_ephemeral_size(self):
+        local_size = 2
+        inst_type = {'local_gb': local_size}
+        self.assertEqual(self.compute_api._ephemeral_size(inst_type,
+                                                          'ephemeral0'),
+                         local_size)
+        self.assertEqual(self.compute_api._ephemeral_size(inst_type,
+                                                          'ephemeral1'),
+                         0)
