@@ -91,8 +91,13 @@ def get_network_info(instance):
             'broadcast': network['broadcast'],
             'mac': vif['address'],
             'rxtx_cap': flavor['rxtx_cap'],
-            'dns': [network['dns']],
+            'dns': [],
             'ips': [ip_dict(ip) for ip in network_ips]}
+
+        if network['dns1']:
+            mapping['dns'].append(network['dns1'])
+        if network['dns2']:
+            mapping['dns'].append(network['dns2'])
 
         if FLAGS.use_ipv6:
             mapping['ip6s'] = [ip6_dict()]
