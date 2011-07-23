@@ -17,6 +17,8 @@
 #    under the License.
 import mox
 
+import functools
+
 from base64 import b64decode
 from M2Crypto import BIO
 from M2Crypto import RSA
@@ -1438,3 +1440,145 @@ class CloudTestCase(test.TestCase):
         # TODO(yamahata): clean up snapshot created by CreateImage.
 
         self._restart_compute_service()
+
+    @staticmethod
+    def _fake_bdm_get(ctxt, id):
+            return [{'volume_id': 87654321,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': None,
+                     'delete_on_termination': True,
+                     'device_name': '/dev/sdh'},
+                    {'volume_id': None,
+                     'snapshot_id': 98765432,
+                     'no_device': None,
+                     'virtual_name': None,
+                     'delete_on_termination': True,
+                     'device_name': '/dev/sdi'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': True,
+                     'virtual_name': None,
+                     'delete_on_termination': None,
+                     'device_name': None},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'ephemeral0',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sdb'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'swap',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sdc'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'ephemeral1',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sdd'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'ephemeral2',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sd3'},
+                    ]
+
+    def test_get_instance_mapping(self):
+        """Make sure that _get_instance_mapping works"""
+        ctxt = None
+        instance_ref0 = {'id': 0,
+                         'root_device_name': None}
+        instance_ref1 = {'id': 0,
+                         'root_device_name': '/dev/sda1'}
+
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       self._fake_bdm_get)
+
+        expected = {'ami': 'sda1',
+                    'root': '/dev/sda1',
+                    'ephemeral0': '/dev/sdb',
+                    'swap': '/dev/sdc',
+                    'ephemeral1': '/dev/sdd',
+                    'ephemeral2': '/dev/sd3'}
+
+        self.assertEqual(self.cloud._get_instance_mapping(ctxt, instance_ref0),
+                         cloud._DEFAULT_MAPPINGS)
+        self.assertEqual(self.cloud._get_instance_mapping(ctxt, instance_ref1),
+                         expected)
+
+    def test_describe_instance_attribute(self):
+        """Make sure that describe_instance_attribute works"""
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       self._fake_bdm_get)
+
+        def fake_get(ctxt, instance_id):
+            return {
+                'id': 0,
+                'root_device_name': '/dev/sdh',
+                'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
+                'state_description': 'stopping',
+                'instance_type': {'name': 'fake_type'},
+                'kernel_id': 1,
+                'ramdisk_id': 2,
+                'user_data': 'fake-user data',
+                }
+        self.stubs.Set(self.cloud.compute_api, 'get', fake_get)
+
+        def fake_volume_get(ctxt, volume_id, session=None):
+            if volume_id == 87654321:
+                return {'id': volume_id,
+                        'attach_time': '13:56:24',
+                        'status': 'in-use'}
+            raise exception.VolumeNotFound(volume_id=volume_id)
+        self.stubs.Set(db.api, 'volume_get', fake_volume_get)
+
+        get_attribute = functools.partial(
+            self.cloud.describe_instance_attribute,
+            self.context, 'i-12345678')
+
+        bdm = get_attribute('blockDeviceMapping')
+        bdm['blockDeviceMapping'].sort()
+
+        expected_bdm = {'instance_id': 'i-12345678',
+                        'rootDeviceType': 'ebs',
+                        'blockDeviceMapping': [
+                            {'deviceName': '/dev/sdh',
+                             'ebs': {'status': 'in-use',
+                                     'deleteOnTermination': True,
+                                     'volumeId': 87654321,
+                                     'attachTime': '13:56:24'}}]}
+        expected_bdm['blockDeviceMapping'].sort()
+        self.assertEqual(bdm, expected_bdm)
+        # NOTE(yamahata): this isn't supported
+        # get_attribute('disableApiTermination')
+        groupSet = get_attribute('groupSet')
+        groupSet['groupSet'].sort()
+        expected_groupSet = {'instance_id': 'i-12345678',
+                             'groupSet': [{'groupId': 'fake0'},
+                                          {'groupId': 'fake1'}]}
+        expected_groupSet['groupSet'].sort()
+        self.assertEqual(groupSet, expected_groupSet)
+        self.assertEqual(get_attribute('instanceInitiatedShutdownBehavior'),
+                         {'instance_id': 'i-12345678',
+                          'instanceInitiatedShutdownBehavior': 'stop'})
+        self.assertEqual(get_attribute('instanceType'),
+                         {'instance_id': 'i-12345678',
+                          'instanceType': 'fake_type'})
+        self.assertEqual(get_attribute('kernel'),
+                         {'instance_id': 'i-12345678',
+                          'kernel': 'aki-00000001'})
+        self.assertEqual(get_attribute('ramdisk'),
+                         {'instance_id': 'i-12345678',
+                          'ramdisk': 'ari-00000002'})
+        self.assertEqual(get_attribute('rootDeviceName'),
+                         {'instance_id': 'i-12345678',
+                          'rootDeviceName': '/dev/sdh'})
+        # NOTE(yamahata): this isn't supported
+        # get_attribute('sourceDestCheck')
+        self.assertEqual(get_attribute('userData'),
+                         {'instance_id': 'i-12345678',
+                          'userData': '}\xa9\x1e\xba\xc7\xabu\xabZ'})
