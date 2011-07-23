@@ -32,6 +32,29 @@ class InstanceInfo(object):
         self.state = state
 
 
+def block_device_info_get_root(block_device_info):
+    block_device_info = block_device_info or {}
+    return block_device_info.get('root_device_name')
+
+
+def block_device_info_get_swap(block_device_info):
+    block_device_info = block_device_info or {}
+    return block_device_info.get('swap') or {'device_name': None,
+                                             'swap_size': 0}
+
+
+def block_device_info_get_ephemerals(block_device_info):
+    block_device_info = block_device_info or {}
+    ephemerals = block_device_info.get('ephemerals') or []
+    return ephemerals
+
+
+def block_device_info_get_mapping(block_device_info):
+    block_device_info = block_device_info or {}
+    block_device_mapping = block_device_info.get('block_device_mapping') or []
+    return block_device_mapping
+
+
 class ComputeDriver(object):
     """Base class for compute drivers.
 
@@ -61,7 +84,7 @@ class ComputeDriver(object):
         """Return a list of InstanceInfo for all registered VMs"""
         raise NotImplementedError()
 
-    def spawn(self, instance, network_info=None, block_device_mapping=None):
+    def spawn(self, instance, network_info=None, block_device_info=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
