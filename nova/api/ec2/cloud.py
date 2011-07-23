@@ -79,6 +79,10 @@ def _gen_key(context, user_id, key_name):
 
 # TODO(yamahata): hypervisor dependent default device name
 _DEFAULT_ROOT_DEVICE_NAME = '/dev/sda1'
+_DEFAULT_MAPPINGS = {'ami': 'sda1',
+                     'ephemeral0': 'sda2',
+                     'root': _DEFAULT_ROOT_DEVICE_NAME,
+                     'swap': 'sda3'}
 
 
 def _parse_block_device_mapping(bdm):
@@ -233,6 +237,30 @@ class CloudController(object):
             state = 'available'
         return image['properties'].get('image_state', state)
 
+    def _get_instance_mapping(self, ctxt, instance_ref):
+        root_device_name = instance_ref['root_device_name']
+        if root_device_name is None:
+            return _DEFAULT_MAPPINGS
+
+        mappings = {}
+        mappings['ami'] = block_device.strip_dev(root_device_name)
+        mappings['root'] = root_device_name
+
+        # 'ephemeralN' and 'swap'
+        for bdm in db.block_device_mapping_get_all_by_instance(
+            ctxt, instance_ref['id']):
+            if (bdm['volume_id'] or bdm['snapshot_id'] or bdm['no_device']):
+                continue
+
+            virtual_name = bdm['virtual_name']
+            if not virtual_name:
+                continue
+
+            if block_device.is_swap_or_ephemeral(virtual_name):
+                mappings[virtual_name] = bdm['device_name']
+
+        return mappings
+
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
@@ -259,18 +287,14 @@ class CloudController(object):
         security_groups = db.security_group_get_by_instance(ctxt,
                                                             instance_ref['id'])
         security_groups = [x['name'] for x in security_groups]
+        mappings = self._get_instance_mapping(ctxt, instance_ref)
         data = {
             'user-data': self._format_user_data(instance_ref),
             'meta-data': {
                 'ami-id': image_ec2_id,
                 'ami-launch-index': instance_ref['launch_index'],
                 'ami-manifest-path': 'FIXME',
-                'block-device-mapping': {
-                    # TODO(vish): replace with real data
-                    'ami': 'sda1',
-                    'ephemeral0': 'sda2',
-                    'root': _DEFAULT_ROOT_DEVICE_NAME,
-                    'swap': 'sda3'},
+                'block-device-mapping': mappings,
                 'hostname': hostname,
                 'instance-action': 'none',
                 'instance-id': ec2_id,
