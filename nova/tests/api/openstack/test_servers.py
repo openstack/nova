@@ -775,11 +775,14 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         self.assertTrue(res.body.find('marker param') > -1)
 
-    def _setup_for_create_instance(self):
+    def _setup_for_create_instance(self, instance_db_stub=None):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):
-            return {'id': 1, 'display_name': 'server_test',
-                    'uuid': FAKE_UUID}
+            if instance_db_stub:
+                return instance_db_stub
+            else:
+                return {'id': 1, 'display_name': 'server_test',
+                        'uuid': FAKE_UUID,}
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -996,6 +999,132 @@ class ServersTest(test.TestCase):
         self.assertEqual(1, server['id'])
         self.assertEqual(flavor_ref, server['flavorRef'])
         self.assertEqual(image_href, server['imageRef'])
+
+    def test_create_instance_with_config_drive_v1_1(self):
+        db_stub = {'id': 100, 'display_name': 'config_drive_test',
+                   'uuid': FAKE_UUID, 'config_drive': True}
+        self._setup_for_create_instance(instance_db_stub=db_stub)
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': True,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        server = json.loads(res.body)['server']
+        self.assertEqual(100, server['id'])
+        self.assertTrue(server['config_drive'])
+
+    def test_create_instance_with_config_drive_as_id_v1_1(self):
+        db_stub = {'id': 100, 'display_name': 'config_drive_test',
+                   'uuid': FAKE_UUID, 'config_drive': 2}
+        self._setup_for_create_instance(instance_db_stub=db_stub)
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': 2,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        server = json.loads(res.body)['server']
+        self.assertEqual(100, server['id'])
+        self.assertTrue(server['config_drive'])
+        self.assertEqual(2, server['config_drive'])
+
+    def test_create_instance_with_bad_config_drive_v1_1(self):
+        db_stub = {'id': 100, 'display_name': 'config_drive_test',
+                   'uuid': FAKE_UUID, 'config_drive': 'asdf'}
+        self._setup_for_create_instance(instance_db_stub=db_stub)
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': 'asdf',
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_without_config_drive_v1_1(self):
+        db_stub = {'id': 100, 'display_name': 'config_drive_test',
+                   'uuid': FAKE_UUID, 'config_drive': None}
+        self._setup_for_create_instance(instance_db_stub=db_stub)
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': True,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        server = json.loads(res.body)['server']
+        self.assertEqual(100, server['id'])
+        self.assertFalse(server['config_drive'])
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()

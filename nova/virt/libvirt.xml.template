@@ -55,6 +55,13 @@
             <target dir='/'/>
         </filesystem>
 #else
+    #if $getVar('config', False)
+        <disk type='file'>
+            <driver type='${driver_type}' />
+            <source file='${basepath}/disk.config' />
+            <target dev='${disk_prefix}z' bus='${disk_bus}' />
+        </disk>
+    #end if
     #if $getVar('rescue', False)
         <disk type='file'>
             <driver type='${driver_type}'/>

@@ -164,6 +164,7 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
+        self._build_config_drive(response, inst)
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
@@ -181,6 +182,9 @@ class ViewBuilderV11(ViewBuilder):
         ]
 
         response["server"]["links"] = links
+
+    def _build_config_drive(self, response, inst):
+        response['server']['config_drive'] = inst.get('config_drive')
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""

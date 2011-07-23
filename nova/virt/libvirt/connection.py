@@ -123,6 +123,8 @@ flags.DEFINE_string('qemu_img', 'qemu-img',
                     'binary to use for qemu-img commands')
 flags.DEFINE_bool('start_guests_on_host_boot', False,
                   'Whether to restart guests when the host reboots')
+flags.DEFINE_string('default_local_format', None,
+                    'Default filesystem format for local drives')
 
 
 def get_connection(read_only):
@@ -586,6 +588,8 @@ class LibvirtConnection(driver.ComputeDriver):
         block_device_mapping = block_device_mapping or []
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
+
+        # This is where things actually get built.
         self._create_image(instance, xml, network_info=network_info,
                            block_device_mapping=block_device_mapping)
         domain = self._create_new_domain(xml)
@@ -763,10 +767,15 @@ class LibvirtConnection(driver.ComputeDriver):
         if size:
             disk.extend(target, size)
 
-    def _create_local(self, target, local_gb):
+    def _create_local(self, target, local_size, prefix='G', fs_format=None):
         """Create a blank image of specified size"""
-        utils.execute('truncate', target, '-s', "%dG" % local_gb)
-        # TODO(vish): should we format disk by default?
+
+        if not fs_format:
+            fs_format = FLAGS.default_local_format
+
+        utils.execute('truncate', target, '-s', "%d%c" % (local_size, prefix))
+        if fs_format:
+            utils.execute('mkfs', '-t', fs_format, target)
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
                         network_info=None, block_device_mapping=None):
@@ -859,6 +868,18 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if FLAGS.libvirt_type == 'lxc':
             target_partition = None
+        else:
+            if inst['config_drive_id']:
+                fname = '%08x' % int(inst['config_drive_id'])
+                self._cache_image(fn=self._fetch_image,
+                                  target=basepath('config'),
+                                  fname=fname,
+                                  image_id=inst['config_drive_id'],
+                                  user=user,
+                                  project=project)
+            elif inst['config_drive']:
+                self._create_local(basepath('config'), 64, prefix="M",
+                                   fs_format='msdos')  # 64MB
 
         if inst['key_data']:
             key = str(inst['key_data'])
@@ -903,17 +924,23 @@ class LibvirtConnection(driver.ComputeDriver):
                                searchList=[{'interfaces': nets,
                                             'use_ipv6': FLAGS.use_ipv6}]))
 
-        if key or net:
+        if any(key, net, inst['metadata']):
             inst_name = inst['name']
-            img_id = inst.image_ref
-            if key:
-                LOG.info(_('instance %(inst_name)s: injecting key into'
-                        ' image %(img_id)s') % locals())
-            if net:
-                LOG.info(_('instance %(inst_name)s: injecting net into'
-                        ' image %(img_id)s') % locals())
+
+            if inst['config_drive']:  # Should be True or None by now.
+                injection_path = basepath('config')
+                img_id = 'config-drive'
+            else:
+                injection_path = basepath('disk')
+                img_id = inst.image_ref
+
+            for injection in ('metadata', 'key', 'net'):
+                if locals()[injection]:
+                    LOG.info(_('instance %(inst_name)s: injecting '
+                               '%(injection)s into image %(img_id)s' 
+                               % locals()))
             try:
-                disk.inject_data(basepath('disk'), key, net,
+                disk.inject_data(injection_path, key, net, inst['metadata'],
                                  partition=target_partition,
                                  nbd=FLAGS.use_cow_images)
 

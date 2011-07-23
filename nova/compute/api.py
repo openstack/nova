@@ -150,7 +150,7 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, config_drive=None,):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -181,6 +181,11 @@ class API(base.Base):
         (image_service, image_id) = nova.image.get_image_service(image_href)
         image = image_service.show(context, image_id)
 
+        config_drive_id = None
+        if config_drive and config_drive is not True:
+            # config_drive is volume id
+            config_drive, config_drive_id = None, config_drive
+
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
             os_type = image['properties']['os_type']
@@ -208,6 +213,8 @@ class API(base.Base):
             image_service.show(context, kernel_id)
         if ramdisk_id:
             image_service.show(context, ramdisk_id)
+        if config_drive_id:
+            image_service.show(context, config_drive_id)
 
         self.ensure_default_security_group(context)
 
@@ -226,6 +233,8 @@ class API(base.Base):
             'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
+            'config_drive_id': config_drive_id or '',
+            'config_drive': config_drive or '',
             'state': 0,
             'state_description': 'scheduling',
             'user_id': context.user_id,
@@ -397,7 +406,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               config_drive=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
@@ -409,7 +419,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, config_drive)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
@@ -426,7 +436,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               config_drive=None,):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -447,7 +458,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, config_drive)
 
         block_device_mapping = block_device_mapping or []
         instances = []

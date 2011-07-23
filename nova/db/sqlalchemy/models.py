@@ -238,6 +238,7 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
+    config_drive = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
