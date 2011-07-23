@@ -30,6 +30,7 @@ import tempfile
 import time
 import shutil
 
+from nova import block_device
 from nova import compute
 from nova import context
 
@@ -1240,7 +1241,7 @@ class CloudController(object):
         i['architecture'] = image['properties'].get('architecture')
 
         properties = image['properties']
-        root_device_name = ec2utils.properties_root_device_name(properties)
+        root_device_name = block_device.properties_root_device_name(properties)
         root_device_type = 'instance-store'
         for bdm in properties.get('block_device_mapping', []):
             if (bdm.get('device_name') == root_device_name and
@@ -1313,7 +1314,7 @@ class CloudController(object):
 
         def _root_device_name_attribute(image, result):
             result['rootDeviceName'] = \
-                    ec2utils.properties_root_device_name(image['properties'])
+                block_device.properties_root_device_name(image['properties'])
             if result['rootDeviceName'] is None:
                 result['rootDeviceName'] = _DEFAULT_ROOT_DEVICE_NAME
 

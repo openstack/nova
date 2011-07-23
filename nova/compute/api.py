@@ -22,6 +22,7 @@ import eventlet
 import re
 import time
 
+from nova import block_device
 from nova import db
 from nova import exception
 from nova import flags
@@ -218,7 +219,7 @@ class API(base.Base):
         if reservation_id is None:
             reservation_id = utils.generate_uid('r')
 
-        root_device_name = ec2utils.properties_root_device_name(
+        root_device_name = block_device.properties_root_device_name(
             image['properties'])
 
         base_options = {

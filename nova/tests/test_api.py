@@ -27,6 +27,7 @@ import random
 import StringIO
 import webob
 
+from nova import block_device
 from nova import context
 from nova import exception
 from nova import test
@@ -147,10 +148,12 @@ class Ec2utilsTestCase(test.TestCase):
         properties0 = {'mappings': mappings}
         properties1 = {'root_device_name': '/dev/sdb', 'mappings': mappings}
 
-        root_device_name = ec2utils.properties_root_device_name(properties0)
+        root_device_name = block_device.properties_root_device_name(
+            properties0)
         self.assertEqual(root_device_name, '/dev/sda1')
 
-        root_device_name = ec2utils.properties_root_device_name(properties1)
+        root_device_name = block_device.properties_root_device_name(
+            properties1)
         self.assertEqual(root_device_name, '/dev/sdb')
 
     def test_mapping_prepend_dev(self):
