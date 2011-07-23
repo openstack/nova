@@ -54,6 +54,7 @@ from xml.etree import ElementTree
 from eventlet import greenthread
 from eventlet import tpool
 
+from nova import block_device
 from nova import context
 from nova import db
 from nova import exception
@@ -834,7 +835,7 @@ class LibvirtConnection(driver.ComputeDriver):
             size = None
             root_fname += "_sm"
 
-        if not self._volume_in_mapping(self.root_mount_device,
+        if not self._volume_in_mapping(self.default_root_device,
                                        block_device_mapping):
             self._cache_image(fn=self._fetch_image,
                               target=basepath('disk'),
@@ -965,13 +966,13 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return result
 
-    root_mount_device = 'vda'  # FIXME for now. it's hard coded.
+    default_root_device = 'vda'  # FIXME for now. it's hard coded.
     local_mount_device = 'vdb'  # FIXME for now. it's hard coded.
 
     def _volume_in_mapping(self, mount_device, block_device_mapping):
-        mount_device_ = _strip_dev(mount_device)
+        mount_device_ = block_device.strip_dev(mount_device)
         for vol in block_device_mapping:
-            vol_mount_device = _strip_dev(vol['mount_device'])
+            vol_mount_device = block_device.strip_dev(vol['mount_device'])
             if vol_mount_device == mount_device_:
                 return True
         return False
@@ -998,8 +999,8 @@ class LibvirtConnection(driver.ComputeDriver):
             driver_type = 'raw'
 
         for vol in block_device_mapping:
-            vol['mount_device'] = _strip_dev(vol['mount_device'])
-        ebs_root = self._volume_in_mapping(self.root_mount_device,
+            vol['mount_device'] = block_device.strip_dev(vol['mount_device'])
+        ebs_root = self._volume_in_mapping(self.default_root_device,
                                            block_device_mapping)
         if self._volume_in_mapping(self.local_mount_device,
                                    block_device_mapping):
@@ -1019,6 +1020,11 @@ class LibvirtConnection(driver.ComputeDriver):
                     'nics': nics,
                     'ebs_root': ebs_root,
                     'volumes': block_device_mapping}
+
+        root_device_name = driver.block_device_info_get_root(block_device_info)
+        if root_device_name:
+            xml_info['root_device'] = block_device.strip_dev(root_device_name)
+            xml_info['root_device_name'] = root_device_name
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
             xml_info['vncserver_host'] = FLAGS.vncserver_host
