@@ -353,6 +353,10 @@ class VsaDriveController(VsaVolumeDriveController):
         """Update a drive. Should be done through VSA APIs"""
         return faults.Fault(exc.HTTPBadRequest())
 
+    def delete(self, req, vsa_id, id):
+        """Delete a volume. Should be done through VSA APIs"""
+        return faults.Fault(exc.HTTPBadRequest())
+
 
 class VsaVPoolController(object):
     """The vPool VSA API controller for the OpenStack API."""

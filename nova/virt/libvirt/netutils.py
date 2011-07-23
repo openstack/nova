@@ -99,7 +99,6 @@ def get_network_info(instance):
         if network['dns2']:
             mapping['dns'].append(network['dns2'])
 
-
         if FLAGS.use_ipv6:
             mapping['ip6s'] = [ip6_dict()]
             mapping['gateway6'] = network['gateway_v6']
