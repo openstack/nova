@@ -106,7 +106,7 @@ def _parse_block_device_mapping(bdm):
 
 
 def _properties_get_mappings(properties):
-    return ec2utils.mappings_prepend_dev(properties.get('mappings', []))
+    return block_device.mappings_prepend_dev(properties.get('mappings', []))
 
 
 def _format_block_device_mapping(bdm):
@@ -145,8 +145,7 @@ def _format_mappings(properties, result):
     """Format multiple BlockDeviceMappingItemType"""
     mappings = [{'virtualName': m['virtual'], 'deviceName': m['device']}
                 for m in _properties_get_mappings(properties)
-                if (m['virtual'] == 'swap' or
-                    m['virtual'].startswith('ephemeral'))]
+                if block_device.is_swap_or_ephemeral(m['virtual'])]
 
     block_device_mapping = [_format_block_device_mapping(bdm) for bdm in
                             properties.get('block_device_mapping', [])]
@@ -1447,8 +1446,7 @@ class CloudController(object):
             if virtual_name in ('ami', 'root'):
                 continue
 
-            assert (virtual_name == 'swap' or
-                    virtual_name.startswith('ephemeral'))
+            assert block_device.is_swap_or_ephemeral(virtual_name)
             device_name = m['device']
             if device_name in [b['device_name'] for b in mapping
                                if not b.get('no_device', False)]:

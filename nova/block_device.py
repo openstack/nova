@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
+
 
 def properties_root_device_name(properties):
     """get root device name from image meta data.
@@ -33,3 +35,37 @@ def properties_root_device_name(properties):
         root_device_name = properties['root_device_name']
 
     return root_device_name
+
+
+_ephemeral = re.compile('^ephemeral(\d|[1-9]\d+)$')
+
+
+def is_ephemeral(device_name):
+    return _ephemeral.match(device_name)
+
+
+def ephemeral_num(ephemeral_name):
+    assert is_ephemeral(ephemeral_name)
+    return int(_ephemeral.sub('\\1', ephemeral_name))
+
+
+def is_swap_or_ephemeral(device_name):
+    return device_name == 'swap' or is_ephemeral(device_name)
+
+
+def mappings_prepend_dev(mappings):
+    """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type"""
+    for m in mappings:
+        virtual = m['virtual']
+        if (is_swap_or_ephemeral(virtual) and
+            (not m['device'].startswith('/'))):
+            m['device'] = '/dev/' + m['device']
+    return mappings
+
+
+_dev = re.compile('^/dev/')
+
+
+def strip_dev(device_name):
+    """remove leading '/dev/'"""
+    return _dev.sub('', device_name)

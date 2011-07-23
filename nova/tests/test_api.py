@@ -187,7 +187,7 @@ class Ec2utilsTestCase(test.TestCase):
              'device': '/dev/sdc1'},
             {'virtual': 'ephemeral1',
              'device': '/dev/sdc1'}]
-        self.assertDictListMatch(ec2utils.mappings_prepend_dev(mappings),
+        self.assertDictListMatch(block_device.mappings_prepend_dev(mappings),
                                  expected_result)
 
 

@@ -135,13 +135,3 @@ def dict_from_dotted_str(items):
                 args[key] = value
 
     return args
-
-
-def mappings_prepend_dev(mappings):
-    """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type"""
-    for m in mappings:
-        virtual = m['virtual']
-        if ((virtual == 'swap' or virtual.startswith('ephemeral')) and
-            (not m['device'].startswith('/'))):
-            m['device'] = '/dev/' + m['device']
-    return mappings
