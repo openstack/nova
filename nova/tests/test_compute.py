@@ -959,7 +959,8 @@ class ComputeTestCase(test.TestCase):
         self.assertDictListMatch(bdms, expected_result)
 
         self.compute_api._update_block_device_mapping(
-            self.context, instance_id, block_device_mapping)
+            self.context, instance_types.get_default_instance_type(),
+            instance_id, block_device_mapping)
         bdms = [self._parse_db_block_device_mapping(bdm_ref)
                 for bdm_ref in db.block_device_mapping_get_all_by_instance(
                     self.context, instance_id)]
