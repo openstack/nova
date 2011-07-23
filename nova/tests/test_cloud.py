@@ -852,13 +852,16 @@ class CloudTestCase(test.TestCase):
     def test_modify_image_attribute(self):
         modify_image_attribute = self.cloud.modify_image_attribute
 
+        fake_metadata = {'id': 1, 'container_format': 'ami',
+                         'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                                        'type': 'machine'}, 'is_public': False}
+
         def fake_show(meh, context, id):
-            return {'id': 1, 'container_format': 'ami',
-                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}, 'is_public': False}
+            return fake_metadata
 
         def fake_update(meh, context, image_id, metadata, data=None):
-            return metadata
+            fake_metadata.update(metadata)
+            return fake_metadata
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
         self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
