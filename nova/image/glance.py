@@ -19,7 +19,9 @@
 
 from __future__ import absolute_import
 
+import copy
 import datetime
+import json
 import random
 
 from glance.common import exception as glance_exception
@@ -184,6 +186,7 @@ class GlanceImageService(service.BaseImageService):
         """
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
+        image_meta = _convert_to_string(image_meta)
         try:
             image_meta = self.client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
@@ -211,11 +214,19 @@ class GlanceImageService(service.BaseImageService):
         pass
 
     @classmethod
+    def _translate_to_service(cls, image_meta):
+        image_meta = super(GlanceImageService,
+                           cls)._translate_to_service(image_meta)
+        image_meta = _convert_to_string(image_meta)
+        return image_meta
+
+    @classmethod
     def _translate_to_base(cls, image_meta):
         """Override translation to handle conversion to datetime objects."""
         image_meta = service.BaseImageService._propertify_metadata(
                         image_meta, cls.SERVICE_IMAGE_ATTRS)
         image_meta = _convert_timestamps_to_datetimes(image_meta)
+        image_meta = _convert_from_string(image_meta)
         return image_meta
 
 
@@ -241,3 +252,38 @@ def _parse_glance_iso8601_timestamp(timestamp):
 
     raise ValueError(_('%(timestamp)s does not follow any of the '
                        'signatures: %(ISO_FORMATS)s') % locals())
+
+
+# TODO(yamahata): use block-device-mapping extension to glance
+def _json_loads(properties, attr):
+    prop = properties[attr]
+    if isinstance(prop, basestring):
+        properties[attr] = json.loads(prop)
+
+
+def _json_dumps(properties, attr):
+    prop = properties[attr]
+    if not isinstance(prop, basestring):
+        properties[attr] = json.dumps(prop)
+
+
+_CONVERT_PROPS = ('block_device_mapping', 'mappings')
+
+
+def _convert(method, metadata):
+    metadata = copy.deepcopy(metadata)  # don't touch original metadata
+    properties = metadata.get('properties')
+    if properties:
+        for attr in _CONVERT_PROPS:
+            if attr in properties:
+                method(properties, attr)
+
+    return metadata
+
+
+def _convert_from_string(metadata):
+    return _convert(_json_loads, metadata)
+
+
+def _convert_to_string(metadata):
+    return _convert(_json_dumps, metadata)
