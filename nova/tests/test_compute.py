@@ -887,15 +887,17 @@ class ComputeTestCase(test.TestCase):
         return bdm
 
     def test_update_block_device_mapping(self):
+        swap_size = 1
+        instance_type = {'swap': swap_size}
         instance_id = self._create_instance()
         mappings = [
                 {'virtual': 'ami', 'device': 'sda1'},
                 {'virtual': 'root', 'device': '/dev/sda1'},
 
-                {'virtual': 'swap', 'device': 'sdb1'},
-                {'virtual': 'swap', 'device': 'sdb2'},
-                {'virtual': 'swap', 'device': 'sdb3'},
                 {'virtual': 'swap', 'device': 'sdb4'},
+                {'virtual': 'swap', 'device': 'sdb3'},
+                {'virtual': 'swap', 'device': 'sdb2'},
+                {'virtual': 'swap', 'device': 'sdb1'},
 
                 {'virtual': 'ephemeral0', 'device': 'sdc1'},
                 {'virtual': 'ephemeral1', 'device': 'sdc2'},
@@ -937,19 +939,21 @@ class ComputeTestCase(test.TestCase):
                  'no_device': True}]
 
         self.compute_api._update_image_block_device_mapping(
-            self.context, instance_id, mappings)
+            self.context, instance_type, instance_id, mappings)
 
         bdms = [self._parse_db_block_device_mapping(bdm_ref)
                 for bdm_ref in db.block_device_mapping_get_all_by_instance(
                     self.context, instance_id)]
         expected_result = [
-            {'virtual_name': 'swap', 'device_name': '/dev/sdb1'},
-            {'virtual_name': 'swap', 'device_name': '/dev/sdb2'},
-            {'virtual_name': 'swap', 'device_name': '/dev/sdb3'},
-            {'virtual_name': 'swap', 'device_name': '/dev/sdb4'},
+            {'virtual_name': 'swap', 'device_name': '/dev/sdb1',
+             'volume_size': swap_size},
             {'virtual_name': 'ephemeral0', 'device_name': '/dev/sdc1'},
-            {'virtual_name': 'ephemeral1', 'device_name': '/dev/sdc2'},
-            {'virtual_name': 'ephemeral2', 'device_name': '/dev/sdc3'}]
+
+            # NOTE(yamahata): ATM only ephemeral0 is supported.
+            #                 they're ignored for now
+            #{'virtual_name': 'ephemeral1', 'device_name': '/dev/sdc2'},
+            #{'virtual_name': 'ephemeral2', 'device_name': '/dev/sdc3'}
+            ]
         bdms.sort()
         expected_result.sort()
         self.assertDictListMatch(bdms, expected_result)
@@ -962,7 +966,8 @@ class ComputeTestCase(test.TestCase):
         expected_result = [
             {'snapshot_id': 0x12345678, 'device_name': '/dev/sda1'},
 
-            {'virtual_name': 'swap', 'device_name': '/dev/sdb1'},
+            {'virtual_name': 'swap', 'device_name': '/dev/sdb1',
+             'volume_size': swap_size},
             {'snapshot_id': 0x23456789, 'device_name': '/dev/sdb2'},
             {'snapshot_id': 0x3456789A, 'device_name': '/dev/sdb3'},
             {'no_device': True, 'device_name': '/dev/sdb4'},
