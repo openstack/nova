@@ -709,14 +709,15 @@ class IptablesFirewallDriver(FirewallDriver):
                     args += ['-s', rule.cidr]
                     fw_rules += [' '.join(args)]
                 else:
-                    for instance in rule.grantee_group.instances:
-                        LOG.info('instance: %r', instance)
-                        ips = db.instance_get_fixed_addresses(ctxt,
-                                                            instance['id'])
-                        LOG.info('ips: %r', ips)
-                        for ip in ips:
-                            subrule = args + ['-s %s' % ip]
-                            fw_rules += [' '.join(subrule)]
+                    if rule['grantee_group']:
+                        for instance in rule['grantee_group']['instances']:
+                            LOG.info('instance: %r', instance)
+                            ips = db.instance_get_fixed_addresses(ctxt,
+                                                                instance['id'])
+                            LOG.info('ips: %r', ips)
+                            for ip in ips:
+                                subrule = args + ['-s %s' % ip]
+                                fw_rules += [' '.join(subrule)]
 
                 LOG.info('Using fw_rules: %r', fw_rules)
         ipv4_rules += ['-j $sg-fallback']
