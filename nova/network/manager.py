@@ -353,12 +353,12 @@ class NetworkManager(manager.SchedulerDependentManager):
                 return self.set_network_host(context, network['id'])
 
     def _do_trigger_security_group_members_refresh_for_instance(self,
-                                                                context,
                                                                 instance_id):
-        instance_ref = db.instance_get(context, instance_id)
-        groups = instance_ref.security_groups
-        group_ids = [group.id for group in groups]
-        self.compute_api.trigger_security_group_members_refresh(context,
+        admin_context = context.get_admin_context()
+        instance_ref = self.db.instance_get(admin_context, instance_id)
+        groups = instance_ref['security_groups']
+        group_ids = [group['id'] for group in groups]
+        self.compute_api.trigger_security_group_members_refresh(admin_context,
                                                                     group_ids)
 
     def _get_networks_for_instance(self, context, instance_id, project_id):
@@ -523,7 +523,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                   network['id'],
                                                   instance_id)
         self._do_trigger_security_group_members_refresh_for_instance(
-                                                                   context,
                                                                    instance_id)
         vif = self.db.virtual_interface_get_by_instance_and_network(context,
                                                                 instance_id,
@@ -542,7 +541,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         instance_ref = fixed_ip_ref['instance']
         instance_id = instance_ref['id']
         self._do_trigger_security_group_members_refresh_for_instance(
-                                                                   context,
                                                                    instance_id)
 
     def lease_fixed_ip(self, context, address):
@@ -846,7 +844,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                                       network['id'],
                                                       instance_id)
             self._do_trigger_security_group_members_refresh_for_instance(
-                                                                   context,
                                                                    instance_id)
         vif = self.db.virtual_interface_get_by_instance_and_network(context,
                                                                  instance_id,
