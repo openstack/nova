@@ -74,15 +74,15 @@ class API(base.Base):
             num_disks = node.get('num_drives', 1)
 
             if name is None:
-                raise exception.ApiError(_("No drive_name param found in %s"),
-                                            node)
+                raise exception.ApiError(_("No drive_name param found in %s")
+                                            % node)
 
             # find DB record for this disk
             try:
                 drive_ref = drive_types.get_by_name(context, name)
             except exception.NotFound:
-                raise exception.ApiError(_("Invalid drive type name %s"),
-                                            name)
+                raise exception.ApiError(_("Invalid drive type name %s")
+                                            % name)
 
             # if size field present - override disk size specified in DB
             size = node.get('size', drive_ref['size_gb'])
@@ -149,8 +149,8 @@ class API(base.Base):
             vc_image = image_service.show_by_name(context, image_name)
             vc_image_href = vc_image['id']
         except exception.ImageNotFound:
-            raise exception.ApiError(_("Failed to find configured image %s"),
-                                        image_name)
+            raise exception.ApiError(_("Failed to find configured image %s")
+                                        % image_name)
 
         options = {
             'display_name': display_name,
@@ -258,34 +258,42 @@ class API(base.Base):
         """
         LOG.info(_("VSA ID %(vsa_id)d: Update VSA call"), locals())
 
+        updatable_fields = ['status', 'vc_count', 'vol_count',
+                            'display_name', 'display_description']
+        changes = {}
+        for field in updatable_fields:
+            if field in kwargs:
+                changes[field] = kwargs[field]
+
         vc_count = kwargs.get('vc_count', None)
         if vc_count is not None:
             # VP-TODO: This request may want to update number of VCs
             # Get number of current VCs and add/delete VCs appropriately
             vsa = self.get(context, vsa_id)
             vc_count = int(vc_count)
+            if vc_count > FLAGS.max_vcs_in_vsa:
+                LOG.warning(_("Requested number of VCs (%d) is too high."\
+                              " Setting to default"), vc_count)
+                vc_count = FLAGS.max_vcs_in_vsa
+
             if vsa['vc_count'] != vc_count:
                 self.update_num_vcs(context, vsa, vc_count)
+                changes['vc_count'] = vc_count
 
-        return self.db.vsa_update(context, vsa_id, kwargs)
+        return self.db.vsa_update(context, vsa_id, changes)
 
     def update_num_vcs(self, context, vsa, vc_count):
-        if vc_count > FLAGS.max_vcs_in_vsa:
-            LOG.warning(_("Requested number of VCs (%d) is too high."\
-                          " Setting to default"), vc_count)
-            vc_count = FLAGS.max_vcs_in_vsa
-
         vsa_name = vsa['name']
-        old_vc_count = vsa['vc_count']
+        old_vc_count = int(vsa['vc_count'])
         if vc_count > old_vc_count:
             add_cnt = vc_count - old_vc_count
-            LOG.debug(_("Adding %(add_cnt)d VCs to VSA %(vsa_name)s."),
+            LOG.debug(_("Adding %(add_cnt)s VCs to VSA %(vsa_name)s."),
                         locals())
             # VP-TODO: actual code for adding new VCs
 
         elif vc_count < old_vc_count:
             del_cnt = old_vc_count - vc_count
-            LOG.debug(_("Deleting %(add_cnt)d VCs from VSA %(vsa_name)s."),
+            LOG.debug(_("Deleting %(del_cnt)s VCs from VSA %(vsa_name)s."),
                         locals())
             # VP-TODO: actual code for deleting extra VCs
 
@@ -372,9 +380,11 @@ class API(base.Base):
         e_vsa_detail = SubElement(e_vsa, "vc_count")
         e_vsa_detail.text = str(vsa['vc_count'])
         e_vsa_detail = SubElement(e_vsa, "auth_user")
-        e_vsa_detail.text = str(context.user.name)
+        if context.user is not None:
+            e_vsa_detail.text = str(context.user.name)
         e_vsa_detail = SubElement(e_vsa, "auth_access_key")
-        e_vsa_detail.text = str(context.user.access)
+        if context.user is not None:
+            e_vsa_detail.text = str(context.user.access)
 
         e_volumes = SubElement(e_vsa, "volumes")
         for volume in volumes:
