@@ -32,7 +32,8 @@ class RequestContext(object):
     """
 
     def __init__(self, user, project, is_admin=None, read_deleted=False,
-                 remote_address=None, timestamp=None, request_id=None):
+                 remote_address=None, timestamp=None, request_id=None,
+                 auth_token=None):
         if hasattr(user, 'id'):
             self._user = user
             self.user_id = user.id
@@ -63,6 +64,7 @@ class RequestContext(object):
             chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-'
             request_id = ''.join([random.choice(chars) for x in xrange(20)])
         self.request_id = request_id
+        self.auth_token = auth_token
 
     @property
     def user(self):
