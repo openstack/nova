@@ -40,6 +40,7 @@ from nova.api.openstack import servers
 from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
+from nova.api.openstack import versions
 from nova.api.openstack import wsgi
 from nova.api.openstack import zones
 
@@ -115,6 +116,10 @@ class APIRouter(base_wsgi.Router):
                                     'select': 'POST',
                                     'boot': 'POST'})
 
+        mapper.connect("versions", "/", 
+                    controller=versions.create_resource(version), 
+                    action="index")
+
         mapper.resource("console", "consoles",
                     controller=consoles.create_resource(),
                     parent_resource=dict(member_name='server',
@@ -164,6 +169,7 @@ class APIRouterV11(APIRouter):
 
     def _setup_routes(self, mapper):
         super(APIRouterV11, self)._setup_routes(mapper, '1.1')
+
         mapper.resource("image_meta", "meta",
                         controller=image_metadata.create_resource(),
                         parent_resource=dict(member_name='image',

@@ -68,6 +68,55 @@ class VersionsTest(test.TestCase):
         ]
         self.assertEqual(versions, expected)
 
+    def test_get_version_1_0_detail(self):
+        req = webob.Request.blank('/v1.0/')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        print res.body
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        versions = json.loads(res.body)["versions"]
+        expected = [
+            {
+                "version" : {
+                    "id" : "v1.0",
+                    "status" : "CURRENT",
+                    "updated" : "2011-01-21T11:33:21-06:00",
+                    "links": [
+                        {
+                            "rel" : "self",
+                            "href" : "http://servers.api.openstack.org/v1.0/"
+                        },
+                        {
+                            "rel" : "describedby",
+                            "type" : "application/pdf",
+                            "href" : "http://docs.rackspacecloud.com/"
+                                "servers/api/v1.0/cs-devguide-20110125.pdf"
+                        },
+                        {
+                            "rel" : "describedby",
+                            "type" : "application/vnd.sun.wadl+xml",
+                            "href" : "http://docs.rackspacecloud.com/"
+                                "servers/api/v1.0/application.wadl"
+                        }
+                    ],
+                    "media-types": [
+                        {
+                            "base" : "application/xml",
+                            "type" : "application/"
+                                "vnd.openstack.compute-v1.0+xml"
+                        },
+                        {
+                            "base" : "application/json",
+                            "type" : "application/"
+                                "vnd.openstack.compute-v1.0+json"
+                        }
+                    ]
+                }
+            }
+        ]
+        self.assertEqual(versions, expected)
+
     def test_get_version_1_1_detail(self):
         req = webob.Request.blank('/v1.1/')
         req.accept = "application/json"
@@ -85,7 +134,7 @@ class VersionsTest(test.TestCase):
                     "links": [
                         {
                             "rel" : "self",
-                            "href" : "http://servers.api.openstack.org/v1.0/"
+                            "href" : "http://servers.api.openstack.org/v1.1/"
                         },
                         {
                             "rel" : "describedby",

@@ -28,6 +28,13 @@ ATOM_XMLNS = "http://www.w3.org/2005/Atom"
 
 
 class Versions(wsgi.Resource):
+    @classmethod
+    def factory(cls, global_config, **local_config):
+        """Paste factory."""
+        def _factory(app):
+            return cls(app, **local_config)
+        return _factory
+
     def __init__(self):
         metadata = {
             "attributes": {
@@ -45,7 +52,7 @@ class Versions(wsgi.Resource):
         supported_content_types = ('application/json',
                                    'application/xml',
                                    'application/atom+xml')
-        deserializer = wsgi.RequestDeserializer(
+        deserializer = VersionsRequestDeserializer(
             supported_content_types=supported_content_types)
 
         wsgi.Resource.__init__(self, None, serializer=serializer,
@@ -53,6 +60,14 @@ class Versions(wsgi.Resource):
 
     def dispatch(self, request, *args):
         """Respond to a request for all OpenStack API versions."""
+        if request.path == '/':
+            # List Versions
+            return self._versions_list(request)
+        else:
+            # Versions Multiple Choice
+            return self._versions_multi_choice(request)
+
+    def _versions_list(self, request):
         version_objs = [
             {
                 "id": "v1.1",
@@ -72,6 +87,47 @@ class Versions(wsgi.Resource):
         versions = [builder.build(version) for version in version_objs]
         return dict(versions=versions)
 
+    def _versions_multi_choice(self, request):
+        version_objs = [
+            {
+                "id": "v1.1",
+                "status": "CURRENT",
+                #TODO(wwolf) get correct value for these
+                "updated": "2011-07-18T11:30:00Z",
+            },
+            {
+                "id": "v1.0",
+                "status": "DEPRECATED",
+                #TODO(wwolf) get correct value for these
+                "updated": "2010-10-09T11:30:00Z",
+            },
+        ]
+
+        builder = nova.api.openstack.views.versions.get_view_builder(request)
+        versions = [builder.build(version) for version in version_objs]
+        return dict(versions=versions)
+
+
+class VersionV10(object):
+    def index(self, req):
+        return "test index 1.0"
+
+
+class VersionV11(object):
+    def index(self, req):
+        return "test index 1.1"
+
+class VersionsRequestDeserializer(wsgi.RequestDeserializer):
+    def get_action_args(self, request_environment):
+        """Parse dictionary created by routes library."""
+
+        args = {}
+        if request_environment['PATH_INFO'] == '/':
+            args['action'] = 'index'
+        else:
+            args['action'] = 'multi'
+
+        return args
 
 class VersionsXMLSerializer(wsgi.XMLDictSerializer):
     def _versions_to_xml(self, versions):
@@ -96,7 +152,13 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
         return version_node
 
-    def default(self, data):
+    def index(self, data):
+        self._xml_doc = minidom.Document()
+        node = self._versions_to_xml(data['versions'])
+
+        return self.to_xml_string(node)
+
+    def multi(self, data):
         self._xml_doc = minidom.Document()
         node = self._versions_to_xml(data['versions'])
 
@@ -190,10 +252,34 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
             entry.appendChild(content)
             root.appendChild(entry)
 
-    def default(self, data):
+    def index(self, data):
         self._xml_doc = minidom.Document()
         node = self._xml_doc.createElementNS(self.xmlns, 'feed')
         self._create_meta(node, data['versions'])
         self._create_version_entries(node, data['versions'])
 
         return self.to_xml_string(node)
+
+    def multi(self, data):
+        self._xml_doc = minidom.Document()
+        node = self._xml_doc.createElementNS(self.xmlns, 'feed')
+        self._create_meta(node, data['versions'])
+        self._create_version_entries(node, data['versions'])
+
+        return self.to_xml_string(node)
+
+
+def create_resource(version='1.0'):
+    controller = {
+        '1.0': VersionV10,
+        '1.1': VersionV11,
+    }[version]()
+
+    body_serializers = {
+        'application/xml': VersionsXMLSerializer(),
+        'application/atom+xml': VersionsAtomSerializer(),
+    }
+
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(controller, serializer=serializer)
