@@ -279,14 +279,6 @@ class VirtualStorageArray(BASE, NovaBase):
     vol_count = Column(Integer, default=0)  # total number of BE volumes
     status = Column(String(255))
 
-    #admin_pass = Column(String(255))
-
-    #disks = relationship(VsaDiskAssociation,
-    #                    backref=backref('vsa', uselist=False),
-    #                    foreign_keys=id,
-    #                    primaryjoin='and_(VsaDiskAssociation.vsa_id == '
-    #                                'VirtualStorageArray.id)')
-
 
 class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
@@ -400,18 +392,6 @@ class DriveTypes(BASE, NovaBase):
                            foreign_keys=id,
                            primaryjoin='and_(Volume.drive_type_id == '
                                        'DriveTypes.id)')
-
-#
-#class VsaDiskAssociation(BASE, NovaBase):
-#    """associates drive types with Virtual Storage Arrays."""
-#    __tablename__ = 'vsa_disk_association'
-#
-#    id = Column(Integer, primary_key=True, autoincrement=True)
-#
-#    drive_type_id = Column(Integer, ForeignKey('drive_types.id'))
-#    vsa_id = Column(Integer, ForeignKey('virtual_storage_arrays.id'))
-#
-#    disk_num = Column(Integer, nullable=False) # number of disks
 
 
 class Quota(BASE, NovaBase):

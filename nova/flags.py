@@ -369,7 +369,6 @@ DEFINE_string('vsa_manager', 'nova.vsa.manager.VsaManager',
               'Manager for vsa')
 DEFINE_string('vc_image_name', 'vc_image',
               'the VC image ID (for a VC image that exists in DB Glance)')
-#---------------------------------------------------------------------
 # VSA constants and enums
 DEFINE_string('default_vsa_instance_type', 'm1.small',
               'default instance type for VSA instances')

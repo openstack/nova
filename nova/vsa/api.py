@@ -67,7 +67,8 @@ class API(base.Base):
         return instance_types.get_instance_type_by_name(
                                 FLAGS.default_vsa_instance_type)
 
-    def _check_storage_parameters(self, context, vsa_name, storage, shared):
+    def _check_storage_parameters(self, context, vsa_name, storage,
+                                  shared, first_index=0):
         """
         Translates storage array of disks to the list of volumes
         :param storage: List of dictionaries with following keys:
@@ -105,13 +106,16 @@ class API(base.Base):
                 size = 0    # special handling for full drives
 
             for i in range(num_volumes):
-                # VP-TODO: potentialy may conflict with previous volumes
-                volume_name = vsa_name + ("_%s_vol-%d" % (name, i))
+                # volume_name = vsa_name + ("_%s_vol-%d" % (name, i))
+                volume_name = "drive-%03d" % first_index
+                first_index += 1
+                volume_desc = 'BE volume for VSA %s type %s' % \
+                              (vsa_name, name)
                 volume = {
                     'size': size,
                     'snapshot_id': None,
                     'name': volume_name,
-                    'description': 'BE volume for ' + volume_name,
+                    'description': volume_desc,
                     'drive_ref': drive_ref
                     }
                 volume_params.append(volume)
