@@ -429,8 +429,8 @@ class ResponseSerializer(object):
         self.headers_serializer.serialize(response, data, action)
 
     def serialize_body(self, response, data, content_type, action):
+        response.headers['Content-Type'] = content_type
         if data is not None:
-            response.headers['Content-Type'] = content_type
             serializer = self.get_body_serializer(content_type)
             response.body = serializer.serialize(data, action)
 
