@@ -617,7 +617,8 @@ class NetworkCommands(object):
     def create(self, label=None, fixed_range=None, num_networks=None,
                network_size=None, multi_host=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, gateway_v6=None,
-               flat_network_bridge=None, bridge_interface=None):
+               flat_network_bridge=None, bridge_interface=None,
+               dns1=None, dns2=None):
         """Creates fixed ips for host by range"""
         if not label:
             msg = _('a label (ex: public) is required to create networks.')
@@ -648,6 +649,8 @@ class NetworkCommands(object):
             bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
         if not gateway_v6:
             gateway_v6 = FLAGS.gateway_v6
+        if not dns1 and FLAGS.flat_network_dns:
+            dns1 = FLAGS.flat_network_dns
         net_manager = utils.import_object(FLAGS.network_manager)
 
         try:
@@ -662,24 +665,30 @@ class NetworkCommands(object):
                                         cidr_v6=fixed_range_v6,
                                         gateway_v6=gateway_v6,
                                         bridge=flat_network_bridge,
-                                        bridge_interface=bridge_interface)
+                                        bridge_interface=bridge_interface,
+                                        dns1=dns1,
+                                        dns2=dns2)
         except ValueError, e:
             print e
             raise e
 
     def list(self):
         """List all created networks"""
-        print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (_('network'),
+        print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
+                                                  _('network'),
                                                   _('netmask'),
                                                   _('start address'),
-                                                  _('DNS'),
+                                                  _('DNS1'),
+                                                  _('DNS2'),
                                                   _('VlanID'),
                                                   'project')
         for network in db.network_get_all(context.get_admin_context()):
-            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
+                                        network.cidr,
                                         network.netmask,
                                         network.dhcp_start,
-                                        network.dns,
+                                        network.dns1,
+                                        network.dns2,
                                         network.vlan,
                                         network.project_id)
 

@@ -370,8 +370,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         try:
             networks = self.db.network_get_all(context)
         except exception.NoNetworksFound:
-            # we don't care if no networks are found
-            pass
+            return []
 
         # return only networks which are not vlan networks
         return [network for network in networks if
@@ -473,13 +472,18 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'broadcast': network['broadcast'],
                 'mac': vif['address'],
                 'rxtx_cap': flavor['rxtx_cap'],
-                'dns': [network['dns']],
+                'dns': [],
                 'ips': [ip_dict(ip) for ip in network_IPs]}
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
                 info['gateway6'] = network['gateway_v6']
+            if network['dns1']:
+                info['dns'].append(network['dns1'])
+            if network['dns2']:
+                info['dns'].append(network['dns2'])
+
             network_info.append((network_dict, info))
         return network_info
 
@@ -590,7 +594,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
-                        bridge_interface, **kwargs):
+                        bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
         fixed_net = netaddr.IPNetwork(cidr)
         fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
@@ -605,7 +609,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
-            net['dns'] = FLAGS.flat_network_dns
+            net['dns1'] = dns1
+            net['dns2'] = dns2
             net['cidr'] = cidr
             net['multi_host'] = multi_host
             net['netmask'] = str(project_net.netmask)
@@ -634,7 +639,8 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
-                del net['dns']
+                del net['dns1']
+                del net['dns2']
                 vlan = kwargs['vlan_start'] + index
                 net['vpn_private_address'] = str(project_net[2])
                 net['dhcp_start'] = str(project_net[3])
@@ -754,7 +760,6 @@ class FlatManager(NetworkManager):
         """Setup Network on this host."""
         net = {}
         net['injected'] = FLAGS.flat_injected
-        net['dns'] = FLAGS.flat_network_dns
         self.db.network_update(context, network_ref['id'], net)
 
 
@@ -893,7 +898,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
-        network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
         if not network_ref['vpn_public_address']:
             net = {}
             address = FLAGS.vpn_ip
@@ -901,6 +905,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             network_ref = db.network_update(context, network_ref['id'], net)
         else:
             address = network_ref['vpn_public_address']
+        network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
                                        network_ref['bridge_interface'],
