@@ -209,16 +209,39 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
         return root
 
-    def _create_version_node(self, version):
+    def _create_media_types(self, media_types):
+        base = self._xml_doc.createElement('media-types')
+        for type in media_types:
+            node = self._xml_doc.createElement('media-type')
+            node.setAttribute('base', type['base'])
+            node.setAttribute('type', type['type'])
+            base.appendChild(node)
+
+        return base
+            
+    def _create_version_node(self, version, create_ns=False):
         version_node = self._xml_doc.createElement('version')
+        if create_ns:
+            xmlns = "http://docs.openstack.org/common/api/%s" % version['id']
+            xmlns_atom = "http://www.w3.org/2005/Atom"
+            version_node.setAttribute('xmlns', xmlns)
+            version_node.setAttribute('xmlns:atom', xmlns_atom)
+
         version_node.setAttribute('id', version['id'])
         version_node.setAttribute('status', version['status'])
         version_node.setAttribute('updated', version['updated'])
+
+        if 'media-types' in version:
+            media_types = self._create_media_types(version['media-types'])
+            version_node.appendChild(media_types)
 
         for link in version['links']:
             link_node = self._xml_doc.createElement('atom:link')
             link_node.setAttribute('rel', link['rel'])
             link_node.setAttribute('href', link['href'])
+            if 'type' in link:
+                link_node.setAttribute('type', link['type'])
+
             version_node.appendChild(link_node)
 
         return version_node
@@ -230,7 +253,10 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
         return self.to_xml_string(node)
 
     def detail(self,data):
-        return "<xml></xml>"
+        self._xml_doc = minidom.Document()
+        node = self._create_version_node(data['version'], True)
+
+        return self.to_xml_string(node)
 
     def multi(self, data):
         self._xml_doc = minidom.Document()

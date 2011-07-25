@@ -161,7 +161,40 @@ class VersionsTest(test.TestCase):
         self.assertEqual(expected, version)
 
     def test_get_version_1_0_detail_xml(self):
-        pass
+        req = webob.Request.blank('/v1.0/')
+        req.accept = "application/xml"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/xml")
+        expected = """
+        <version id="v1.0" status="CURRENT" 
+            updated="2011-01-21T11:33:21-06:00" 
+            xmlns="http://docs.openstack.org/common/api/v1.0" 
+            xmlns:atom="http://www.w3.org/2005/Atom">
+
+            <media-types>
+                <media-type base="application/xml"
+                     type="application/vnd.openstack.compute-v1.0+xml"/>
+                <media-type base="application/json"
+                     type="application/vnd.openstack.compute-v1.0+json"/>
+            </media-types>
+
+            <atom:link href="http://servers.api.openstack.org/v1.0/"
+                 rel="self"/>
+
+            <atom:link href="http://docs.rackspacecloud.com/servers/
+                api/v1.0/cs-devguide-20110125.pdf"
+                 rel="describedby"
+                 type="application/pdf"/>
+
+            <atom:link href="http://docs.rackspacecloud.com/servers/
+                api/v1.0/application.wadl"
+                 rel="describedby" 
+                type="application/vnd.sun.wadl+xml"/>
+        </version>""".replace("  ", "").replace("\n", "")
+
+        actual = res.body.replace("  ", "").replace("\n", "")
+        self.assertEqual(expected, actual)
 
     def test_get_version_1_1_detail_xml(self):
         req = webob.Request.blank('/v1.1/')
@@ -170,31 +203,31 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/xml")
         expected = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <version xmlns="http://docs.openstack.org/common/api/v1.0"
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                id="v1.1" status="CURRENT" updated="2011-01-21T11:33:21-06:00">
+        <version id="v1.1" status="CURRENT" 
+            updated="2011-01-21T11:33:21-06:00" 
+            xmlns="http://docs.openstack.org/common/api/v1.1" 
+            xmlns:atom="http://www.w3.org/2005/Atom">
 
-                 <media-types>
-                     <media-type base="application/xml"
-                        type="application/vnd.openstack.compute-v1.1+xml"/>
-                     <media-type base="application/json"
-                        type="application/vnd.openstack.compute-v1.1+json"/>
-                 </media-types>
+            <media-types>
+                <media-type base="application/xml"
+                     type="application/vnd.openstack.compute-v1.1+xml"/>
+                <media-type base="application/json"
+                     type="application/vnd.openstack.compute-v1.1+json"/>
+            </media-types>
 
-                 <atom:link rel="self"
-                            href="http://servers.api.openstack.org/v1.0/"/>
+            <atom:link href="http://servers.api.openstack.org/v1.1/"
+                 rel="self"/>
 
-                <atom:link rel="describedby"
-                           type="application/pdf"
-                           href="http://docs.rackspacecloud.com/
-                           servers/api/v1.1/cs-devguide-20110125.pdf" />
+            <atom:link href="http://docs.rackspacecloud.com/servers/
+                api/v1.1/cs-devguide-20110125.pdf"
+                 rel="describedby"
+                 type="application/pdf"/>
 
-                <atom:link rel="describedby"
-                           type="application/vnd.sun.wadl+xml"
-                           href="http://docs.rackspacecloud.com/
-                           servers/api/v1.1/application.wadl" />
-            </version>""".replace("  ", "").replace("\n", "")
+            <atom:link href="http://docs.rackspacecloud.com/servers/
+                api/v1.1/application.wadl"
+                 rel="describedby" 
+                type="application/vnd.sun.wadl+xml"/>
+        </version>""".replace("  ", "").replace("\n", "")
 
         actual = res.body.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, actual)
@@ -330,31 +363,70 @@ class VersionsTest(test.TestCase):
 
     def test_versions_detail_xml_serializer(self):
         versions_data = {
-            'versions': [
-                {
-                    "id": "2.7.1",
-                    "updated": "2011-07-18T11:30:00Z",
-                    "status": "DEPRECATED",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://test/2.7.1",
-                        }
-                    ],
-                },
-            ]
+            "version" : { 
+                "id": "v1.0",
+                "status": "CURRENT",
+                "updated": "2011-01-21T11:33:21-06:00", 
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://servers.api.openstack.org/v1.0/"
+                    },
+                    {
+                        "rel": "describedby",
+                        "type": "application/pdf",
+                        "href": "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.0/cs-devguide-20110125.pdf"
+                    }, 
+                    {
+                        "rel": "describedby",
+                        "type": "application/vnd.sun.wadl+xml",
+                        "href": "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.0/application.wadl"
+                    },
+                ],
+                "media-types": [
+                    {
+                        "base" : "application/xml",
+                        "type" : "application/vnd.openstack.compute-v1.0+xml"
+                    },
+                    {
+                        "base" : "application/json",
+                        "type" : "application/vnd.openstack.compute-v1.0+json"
+                    }
+                ],
+            },
         }
 
         expected = """
-            <versions>
-                <version id="2.7.1" status="DEPRECATED"
-                 updated="2011-07-18T11:30:00Z">
-                    <atom:link href="http://test/2.7.1" rel="self"/>
-                </version>
-            </versions>""".replace("  ", "").replace("\n", "")
+        <version id="v1.0" status="CURRENT" 
+            updated="2011-01-21T11:33:21-06:00" 
+            xmlns="http://docs.openstack.org/common/api/v1.0" 
+            xmlns:atom="http://www.w3.org/2005/Atom">
+
+            <media-types>
+                <media-type base="application/xml"
+                     type="application/vnd.openstack.compute-v1.0+xml"/>
+                <media-type base="application/json"
+                     type="application/vnd.openstack.compute-v1.0+json"/>
+            </media-types>
+
+            <atom:link href="http://servers.api.openstack.org/v1.0/"
+                 rel="self"/>
+
+            <atom:link href="http://docs.rackspacecloud.com/servers/
+                api/v1.0/cs-devguide-20110125.pdf"
+                 rel="describedby"
+                 type="application/pdf"/>
+
+            <atom:link href="http://docs.rackspacecloud.com/servers/
+                api/v1.0/application.wadl"
+                 rel="describedby" 
+                type="application/vnd.sun.wadl+xml"/>
+        </version>""".replace("  ", "").replace("\n", "")
 
         serializer = versions.VersionsXMLSerializer()
-        response = serializer.index(versions_data)
+        response = serializer.detail(versions_data)
         response = response.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, response)
 
@@ -418,6 +490,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(expected, response)
 
     def test_version_detail_atom_serializer(self):
+        #TODO
         versions_data = {
             'versions': [
                 {
