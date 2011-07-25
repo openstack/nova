@@ -908,6 +908,21 @@ class CloudTestCase(test.TestCase):
         self._wait_for_running(ec2_instance_id)
         return ec2_instance_id
 
+    def test_rescue_unrescue_instance(self):
+        instance_id = self._run_instance(
+            image_id='ami-1',
+            instance_type=FLAGS.default_instance_type,
+            max_count=1)
+        self.cloud.rescue_instance(context=self.context,
+                                   instance_id=instance_id)
+        # NOTE(vish): This currently does no validation, it simply makes sure
+        #             that the code path doesn't throw an exception.
+        self.cloud.unrescue_instance(context=self.context,
+                                   instance_id=instance_id)
+        # TODO(soren): We need this until we can stop polling in the rpc code
+        #              for unit tests.
+        self.cloud.terminate_instances(self.context, [instance_id])
+
     def test_console_output(self):
         instance_id = self._run_instance(
             image_id='ami-1',
