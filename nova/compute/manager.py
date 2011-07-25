@@ -184,6 +184,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 state = power_state.FAILED
 
         self.db.instance_set_state(context, instance_id, state)
+        return state
 
     def _update_launched_at(self, context, instance_id, launched_at=None):
         """Update the launched_at parameter of the given instance."""
