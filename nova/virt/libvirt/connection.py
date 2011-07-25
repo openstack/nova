@@ -571,11 +571,6 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
 
-        if FLAGS.start_guests_on_host_boot:
-            LOG.debug(_("instance %s: setting autostart ON") %
-                      instance['name'])
-            domain.setAutostart(1)
-
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
             instance_name = instance['name']
