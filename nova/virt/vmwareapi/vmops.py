@@ -116,8 +116,9 @@ class VMWareVMOps(object):
                                                         net_name)
             if network_ref is None:
                 raise exception.NetworkNotFoundForBridge(bridge=net_name)
+            return network_ref
 
-        _check_if_network_bridge_exists()
+        network_obj = _check_if_network_bridge_exists()
 
         def _get_datastore_ref():
             """Get the datastore list and choose the first local storage."""
@@ -175,8 +176,10 @@ class VMWareVMOps(object):
         vm_folder_mor, res_pool_mor = _get_vmfolder_and_res_pool_mors()
 
         # Get the create vm config spec
-        config_spec = vm_util.get_vm_create_spec(client_factory, instance,
-                                data_store_name, net_name, os_type)
+        config_spec = vm_util.get_vm_create_spec(
+                            client_factory, instance,
+                            data_store_name, net_name, os_type,
+                            network_obj)
 
         def _execute_create_vm():
             """Create VM on ESX host."""
@@ -718,13 +721,17 @@ class VMWareVMOps(object):
 
         net_mask = network["netmask"]
         gateway = network["gateway"]
+        broadcast = network["broadcast"]
+        dns = network["dns"]
+
         addresses = db.instance_get_fixed_addresses(admin_context,
                                                     instance['id'])
         ip_addr = addresses[0] if addresses else None
 
         machine_id_chanfge_spec = \
             vm_util.get_machine_id_change_spec(client_factory, mac_address,
-                                        ip_addr, net_mask, gateway)
+                                               ip_addr, net_mask, gateway,
+                                               broadcast, dns)
         LOG.debug(_("Reconfiguring VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %
                   ({'name': instance.name,
