@@ -941,6 +941,18 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_create_instance_no_server_entity(self):
+        self._setup_for_create_instance()
+
+        body = {}
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 422)
+
     def test_create_instance_whitespace_name(self):
         self._setup_for_create_instance()
 
