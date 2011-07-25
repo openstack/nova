@@ -688,6 +688,7 @@ class ServersTest(test.TestCase):
         self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_by_id_with_addresses_v1_1(self):
+        FLAGS.use_ipv6 = True
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -702,6 +703,50 @@ class ServersTest(test.TestCase):
                     {'address': '172.19.0.1'},
                     {'address': '172.19.0.2'},
                 ],
+                'fixed_ipv6': '2001:4860::12',
+            },
+        ]
+        new_return_server = return_server_with_interfaces(interfaces)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        req = webob.Request.blank('/v1.1/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['name'], 'server1')
+        addresses = res_dict['server']['addresses']
+        expected = {
+            'network_1': [
+                {'addr': '192.168.0.3', 'version': 4},
+                {'addr': '192.168.0.4', 'version': 4},
+            ],
+            'network_2': [
+                {'addr': '172.19.0.1', 'version': 4},
+                {'addr': '172.19.0.2', 'version': 4},
+                {'addr': '2001:4860::12', 'version': 6},
+            ],
+        }
+
+        self.assertEqual(addresses, expected)
+
+    def test_get_server_by_id_with_addresses_v1_1_ipv6_disabled(self):
+        FLAGS.use_ipv6 = False
+        interfaces = [
+            {
+                'network': {'label': 'network_1'},
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+            {
+                'network': {'label': 'network_2'},
+                'fixed_ips': [
+                    {'address': '172.19.0.1'},
+                    {'address': '172.19.0.2'},
+                ],
+                'fixed_ipv6': '2001:4860::12',
             },
         ]
         new_return_server = return_server_with_attributes(interfaces=interfaces)
@@ -728,6 +773,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses, expected)
 
     def test_get_server_addresses_v1_1(self):
+        FLAGS.use_ipv6 = True
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -747,6 +793,7 @@ class ServersTest(test.TestCase):
                     },
                     {'address': '172.19.0.2'},
                 ],
+                'fixed_ipv6': '2001:4860::12',
             },
         ]
 
@@ -769,6 +816,7 @@ class ServersTest(test.TestCase):
                     {'version': 4, 'addr': '172.19.0.1'},
                     {'version': 4, 'addr': '1.2.3.4'},
                     {'version': 4, 'addr': '172.19.0.2'},
+                    {'version': 6, 'addr': '2001:4860::12'},
                 ],
             },
         }
@@ -776,6 +824,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_get_server_addresses_single_network_v1_1(self):
+        FLAGS.use_ipv6 = True
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -795,6 +844,7 @@ class ServersTest(test.TestCase):
                     },
                     {'address': '172.19.0.2'},
                 ],
+                'fixed_ipv6': '2001:4860::12',
             },
         ]
         _return_vifs = return_virtual_interface_by_instance(interfaces)
@@ -811,6 +861,7 @@ class ServersTest(test.TestCase):
                 {'version': 4, 'addr': '172.19.0.1'},
                 {'version': 4, 'addr': '1.2.3.4'},
                 {'version': 4, 'addr': '172.19.0.2'},
+                {'version': 6, 'addr': '2001:4860::12'},
             ],
         }
         self.assertEqual(res_dict, expected)
@@ -1227,6 +1278,38 @@ class ServersTest(test.TestCase):
         self.assertEqual(expected_image, server['image'])
         self.assertEqual(res.status_int, 200)
         #self.assertEqual(1, server['id'])
+
+    def test_create_instance_v1_1_invalid_flavor_href(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/asdf'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_bad_flavor_href(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/17'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
@@ -2024,7 +2107,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
+        self.assertEqual(res.status_int, 500)
 
     def test_resized_server_has_correct_status(self):
         req = self.webreq('/1', 'GET')

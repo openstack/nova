@@ -45,6 +45,7 @@ class FakeModel(dict):
 networks = [{'id': 0,
              'label': 'test0',
              'injected': False,
+             'multi_host': False,
              'cidr': '192.168.0.0/24',
              'cidr_v6': '2001:db8::/64',
              'gateway_v6': '2001:db8::1',
@@ -54,7 +55,8 @@ networks = [{'id': 0,
              'bridge_interface': 'fake_fa0',
              'gateway': '192.168.0.1',
              'broadcast': '192.168.0.255',
-             'dns': '192.168.0.1',
+             'dns1': '192.168.0.1',
+             'dns2': '192.168.0.2',
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
@@ -62,6 +64,7 @@ networks = [{'id': 0,
             {'id': 1,
              'label': 'test1',
              'injected': False,
+             'multi_host': False,
              'cidr': '192.168.1.0/24',
              'cidr_v6': '2001:db9::/64',
              'gateway_v6': '2001:db9::1',
@@ -71,7 +74,8 @@ networks = [{'id': 0,
              'bridge_interface': 'fake_fa1',
              'gateway': '192.168.1.1',
              'broadcast': '192.168.1.255',
-             'dns': '192.168.0.1',
+             'dns1': '192.168.0.1',
+             'dns2': '192.168.0.2',
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
@@ -122,34 +126,20 @@ class FlatNetworkTestCase(test.TestCase):
         self.network = network_manager.FlatManager(host=HOST)
         self.network.db = db
 
-    def test_set_network_hosts(self):
-        self.mox.StubOutWithMock(db, 'network_get_all')
-        self.mox.StubOutWithMock(db, 'network_set_host')
-        self.mox.StubOutWithMock(db, 'network_update')
-
-        db.network_get_all(mox.IgnoreArg()).AndReturn([networks[0]])
-        db.network_set_host(mox.IgnoreArg(),
-                            networks[0]['id'],
-                            mox.IgnoreArg()).AndReturn(HOST)
-        db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-
-        self.network.set_network_hosts(None)
-
     def test_get_instance_nw_info(self):
         self.mox.StubOutWithMock(db, 'fixed_ip_get_by_instance')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
-        self.mox.StubOutWithMock(db, 'instance_type_get_by_id')
+        self.mox.StubOutWithMock(db, 'instance_type_get')
 
         db.fixed_ip_get_by_instance(mox.IgnoreArg(),
                                     mox.IgnoreArg()).AndReturn(fixed_ips)
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
                                              mox.IgnoreArg()).AndReturn(vifs)
-        db.instance_type_get_by_id(mox.IgnoreArg(),
+        db.instance_type_get(mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn(flavor)
         self.mox.ReplayAll()
 
-        nw_info = self.network.get_instance_nw_info(None, 0, 0)
+        nw_info = self.network.get_instance_nw_info(None, 0, 0, None)
 
         self.assertTrue(nw_info)
 
@@ -164,6 +154,7 @@ class FlatNetworkTestCase(test.TestCase):
             self.assertDictMatch(nw[0], check)
 
             check = {'broadcast': '192.168.%s.255' % i,
+                     'dhcp_server': '192.168.%s.1' % i,
                      'dns': 'DONTCARE',
                      'gateway': '192.168.%s.1' % i,
                      'gateway6': '2001:db%s::1' % i8,
