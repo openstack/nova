@@ -116,7 +116,7 @@ class VersionV10(object):
             "version" : { 
                 "id": "v1.0",
                 "status": "CURRENT",
-                "updated": "2011-01-21T11:33:21-06:00", 
+                "updated": "2011-01-21T11:33:21Z", 
                 "links": [
                     {
                         "rel": "self",
@@ -155,7 +155,7 @@ class VersionV11(object):
             "version" : { 
                 "id": "v1.1",
                 "status": "CURRENT",
-                "updated": "2011-01-21T11:33:21-06:00",
+                "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
                         "rel": "self",
@@ -298,8 +298,33 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
         link_href = link_href.rstrip('/')
         return link_href.rsplit('/', 1)[0] + '/'
 
-    def _create_meta(self, root, versions):
-        title = self._create_text_elem('title', 'Available API Versions',
+    def _create_detail_meta(self, root, version):
+        title = self._create_text_elem('title', "About This Version",
+                                       type='text')
+
+        updated = self._create_text_elem('updated', version['updated'])
+
+        uri = version['links'][0]['href']
+        id = self._create_text_elem('id', uri)
+
+        link = self._xml_doc.createElement('link')
+        link.setAttribute('rel', 'self')
+        link.setAttribute('href', uri)
+
+        author = self._xml_doc.createElement('author')
+        author_name = self._create_text_elem('name', 'Rackspace')
+        author_uri = self._create_text_elem('uri', 'http://www.rackspace.com/')
+        author.appendChild(author_name)
+        author.appendChild(author_uri)
+
+        root.appendChild(title)
+        root.appendChild(updated)
+        root.appendChild(id)
+        root.appendChild(author)
+        root.appendChild(link)
+
+    def _create_list_meta(self, root, versions):
+        title = self._create_text_elem('title', "Available API Versions",
                                        type='text')
         # Set this updated to the most recently updated version
         recent = self._get_most_recent_update(versions)
@@ -307,6 +332,7 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
 
         base_url = self._get_base_url(versions[0]['links'][0]['href'])
         id = self._create_text_elem('id', base_url)
+
         link = self._xml_doc.createElement('link')
         link.setAttribute('rel', 'self')
         link.setAttribute('href', base_url)
@@ -341,7 +367,10 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
                 link_node = self._xml_doc.createElement('link')
                 link_node.setAttribute('rel', link['rel'])
                 link_node.setAttribute('href', link['href'])
-            entry.appendChild(link_node)
+                if 'type' in link:
+                    link_node.setAttribute('type', link['type'])
+
+                entry.appendChild(link_node)
 
             content = self._create_text_elem('content',
                 'Version %s %s (%s)' %
@@ -356,14 +385,18 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
     def index(self, data):
         self._xml_doc = minidom.Document()
         node = self._xml_doc.createElementNS(self.xmlns, 'feed')
-        self._create_meta(node, data['versions'])
+        self._create_list_meta(node, data['versions'])
         self._create_version_entries(node, data['versions'])
 
         return self.to_xml_string(node)
 
     def detail(self, data):
-        #TODO
-        pass
+        self._xml_doc = minidom.Document()
+        node = self._xml_doc.createElementNS(self.xmlns, 'feed')
+        self._create_detail_meta(node, data['version'])
+        self._create_version_entries(node, [data['version']])
+
+        return self.to_xml_string(node)
 
 def create_resource(version='1.0'):
     controller = {
