@@ -902,7 +902,6 @@ class CloudController(object):
         image_name = kwargs.get('image_name')
         availability_zone = kwargs.get('placement', {}).get(
                                                 'AvailabilityZone')
-        #storage = ast.literal_eval(kwargs.get('storage', '[]'))
         storage = kwargs.get('storage', [])
         shared = kwargs.get('shared', False)
 

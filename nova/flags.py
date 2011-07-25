@@ -378,20 +378,6 @@ DEFINE_integer('max_vcs_in_vsa', 32,
 DEFINE_integer('vsa_part_size_gb', 100,
                'default partition size for shared capacity')
 
-DEFINE_string('vsa_status_creating', 'creating',
-              'VSA creating (not ready yet)')
-DEFINE_string('vsa_status_launching', 'launching',
-              'Launching VCs (all BE volumes were created)')
-DEFINE_string('vsa_status_created', 'created',
-              'VSA fully created and ready for use')
-DEFINE_string('vsa_status_partial', 'partial',
-              'Some BE storage allocations failed')
-DEFINE_string('vsa_status_failed', 'failed',
-              'Some BE storage allocations failed')
-DEFINE_string('vsa_status_deleting', 'deleting',
-              'VSA started the deletion procedure')
-
-
 # The service to use for image search and retrieval
 DEFINE_string('image_service', 'nova.image.glance.GlanceImageService',
               'The service to use for retrieving and searching for images.')

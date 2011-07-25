@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright (c) 2011 Zadara Storage Inc.
+# Copyright (c) 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,10 +18,6 @@
 #    under the License.
 
 """Starter script for Nova VSA."""
-
-import eventlet
-eventlet.monkey_patch()
-
 import gettext
 import os
 import sys

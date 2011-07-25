@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 Zadara Storage Inc.
+# Copyright (c) 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,6 +25,7 @@ from nova import rpc
 from nova import db
 from nova import flags
 from nova import utils
+from nova.vsa.api import VsaState
 from nova.volume import api as volume_api
 from nova.scheduler import driver
 from nova.scheduler import simple
@@ -301,7 +303,7 @@ class VsaScheduler(simple.SimpleScheduler):
         except:
             if vsa_id:
                 db.vsa_update(context, vsa_id,
-                    dict(status=FLAGS.vsa_status_failed))
+                    dict(status=VsaState.FAILED))
 
             for vol in volume_params:
                 if 'capabilities' in vol:
@@ -346,7 +348,7 @@ class VsaScheduler(simple.SimpleScheduler):
         except:
             if volume_ref['to_vsa_id']:
                 db.vsa_update(context, volume_ref['to_vsa_id'],
-                                dict(status=FLAGS.vsa_status_failed))
+                                dict(status=VsaState.FAILED))
             raise
             #return super(VsaScheduler, self).schedule_create_volume(context,
             #            volume_id, *_args, **_kwargs)

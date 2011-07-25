@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 Zadara Storage Inc.
+# Copyright (c) 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,12 +20,10 @@
 Handles all requests relating to Virtual Storage Arrays (VSAs).
 """
 
-#import datetime
 import sys
 import base64
 
 from xml.etree import ElementTree
-from xml.etree.ElementTree import Element, SubElement
 
 from nova import db
 from nova import exception
@@ -45,6 +44,15 @@ flags.DEFINE_boolean('vsa_multi_vol_creation', True,
                   'Ask scheduler to create multiple volumes in one call')
 
 LOG = logging.getLogger('nova.vsa')
+
+
+class VsaState:
+    CREATING = 'creating'       # VSA creating (not ready yet)
+    LAUNCHING = 'launching'     # Launching VCs (all BE volumes were created)
+    CREATED = 'created'         # VSA fully created and ready for use
+    PARTIAL = 'partial'         # Some BE storage allocations failed
+    FAILED = 'failed'           # Some BE storage allocations failed
+    DELETING = 'deleting'       # VSA started the deletion procedure
 
 
 class API(base.Base):
@@ -160,7 +168,7 @@ class API(base.Base):
             'instance_type_id': instance_type['id'],
             'image_ref': vc_image_href,
             'vc_count': vc_count,
-            'status': FLAGS.vsa_status_creating,
+            'status': VsaState.CREATING,
         }
         LOG.info(_("Creating VSA: %s") % options)
 
@@ -178,7 +186,7 @@ class API(base.Base):
                                                            storage, shared)
         except exception.ApiError:
             self.update_vsa_status(context, vsa_id,
-                        status=FLAGS.vsa_status_failed)
+                        status=VsaState.FAILED)
             raise
 
         # after creating DB entry, re-check and set some defaults
@@ -227,7 +235,7 @@ class API(base.Base):
                                     availability_zone=availability_zone)
                 except:
                     self.update_vsa_status(context, vsa_id,
-                                    status=FLAGS.vsa_status_partial)
+                                           status=VsaState.PARTIAL)
                     raise
 
         if len(volume_params) == 0:
@@ -369,7 +377,9 @@ class API(base.Base):
         return self.db.vsa_get_all_by_project(context, context.project_id)
 
     def generate_user_data(self, context, vsa, volumes):
-        e_vsa = Element("vsa")
+        SubElement = ElementTree.SubElement
+
+        e_vsa = ElementTree.Element("vsa")
 
         e_vsa_detail = SubElement(e_vsa, "id")
         e_vsa_detail.text = str(vsa['id'])

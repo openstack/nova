@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 Zadara Storage Inc.
+# Copyright (c) 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -118,7 +119,6 @@ class DriveTypeController(object):
             drive_types.delete(context, id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        # return exc.HTTPAccepted()
 
 
 class Drive_types(extensions.ExtensionDescriptor):

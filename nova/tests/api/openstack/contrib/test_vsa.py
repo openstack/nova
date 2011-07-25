@@ -234,6 +234,7 @@ def _get_default_volume_param():
         'availability_zone': 'nova',
         'created_at': None,
         'attach_status': 'detached',
+        'name': 'vol name',
         'display_name': 'Default vol name',
         'display_description': 'Default vol description',
         'from_vsa_id': None,
@@ -386,7 +387,8 @@ class VSAVolumeApiTest(test.TestCase):
 
     def test_vsa_volume_update(self):
         obj_num = 234 if self.test_objs == "volumes" else 345
-        update = {"status": "available"}
+        update = {"status": "available",
+                  "displayName": "Test Display name"}
         body = {self.test_obj: update}
         req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/%s' % \
                 (self.test_objs, obj_num))

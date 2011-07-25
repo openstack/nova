@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 Zadara Storage Inc.
+# Copyright (c) 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -153,7 +154,6 @@ class VsaController(object):
             self.vsa_api.delete(context, vsa_id=id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        # return exc.HTTPAccepted()
 
 
 class VsaVolumeDriveController(volumes.VolumeController):
@@ -193,6 +193,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
 
         d = translation(context, vol)
         d['vsaId'] = vol[self.direction]
+        d['name'] = vol['name']
         return d
 
     def _check_volume_ownership(self, context, vsa_id, id):
@@ -265,15 +266,17 @@ class VsaVolumeDriveController(volumes.VolumeController):
             return faults.Fault(exc.HTTPBadRequest())
 
         vol = body[self.object]
-        updatable_fields = ['display_name',
-                            'display_description',
-                            'status',
-                            'provider_location',
-                            'provider_auth']
+        updatable_fields = [{'displayName': 'display_name'},
+                            {'displayDescription': 'display_description'},
+                            {'status': 'status'},
+                            {'providerLocation': 'provider_location'},
+                            {'providerAuth': 'provider_auth'}]
         changes = {}
         for field in updatable_fields:
-            if field in vol:
-                changes[field] = vol[field]
+            key = field.keys()[0]
+            val = field[key]
+            if key in vol:
+                changes[val] = vol[key]
 
         obj = self.object
         LOG.audit(_("Update %(obj)s with id: %(id)s, changes: %(changes)s"),

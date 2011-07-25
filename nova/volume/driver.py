@@ -507,15 +507,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
 
         if not iscsi_properties['target_discovered']:
-            # zadara-begin: Bug in cactus. _run_iscsiadm() cannot accept
-            # multiple args for iscsi-command. Like in --op new. Hence
-            # using a local version here which does the same thing
-            (out, err) = self._execute('sudo', 'iscsiadm', '--op', 'new',
-                                   '-m', 'node',
-                                   '-T', iscsi_properties['target_iqn'],
-                                   '-p', iscsi_properties['target_portal'])
-            # self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
-            # zadara-end
+            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
 
         if iscsi_properties.get('auth_method'):
             self._iscsiadm_update(iscsi_properties,
@@ -567,15 +559,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
         self._run_iscsiadm(iscsi_properties, "--logout")
-        # zadara-begin: Bug in cactus. _run_iscsiadm() cannot accept
-        # multiple args for iscsi-command. Like in --op delete. Hence
-        # using a local version here which does the same thing
-        (out, err) = self._execute('sudo', 'iscsiadm', '--op', 'delete',
-                                   '-m', 'node',
-                                   '-T', iscsi_properties['target_iqn'],
-                                   '-p', iscsi_properties['target_portal'])
-        #self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
-        # zadara-end
+        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
 
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""
@@ -916,6 +900,7 @@ class ZadaraBEDriver(ISCSIDriver):
             ret = self._common_be_export(context, volume, iscsi_target)
         except:
             raise exception.ProcessExecutionError
+        return ret
 
     def remove_export(self, context, volume):
         """Removes BE export for a volume."""

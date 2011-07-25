@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 Zadara Storage Inc.
+# Copyright (c) 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -30,6 +31,7 @@ from nova import exception
 from nova import compute
 from nova import volume
 from nova import vsa
+from nova.vsa.api import VsaState
 from nova.compute import instance_types
 
 
@@ -114,9 +116,9 @@ class VsaManager(manager.SchedulerDependentManager):
         """Start VCs for VSA """
 
         vsa_id = vsa['id']
-        if vsa['status'] == FLAGS.vsa_status_creating:
+        if vsa['status'] == VsaState.CREATING:
             self.vsa_api.update_vsa_status(context, vsa_id,
-                            FLAGS.vsa_status_launching)
+                                           VsaState.LAUNCHING)
         else:
             return
 
@@ -144,8 +146,7 @@ class VsaManager(manager.SchedulerDependentManager):
         if has_failed_volumes:
             LOG.info(_("VSA ID %(vsa_id)d: Delete all BE volumes"), locals())
             self.vsa_api.delete_be_volumes(context, vsa_id, force_delete=True)
-            self.vsa_api.update_vsa_status(context, vsa_id,
-                                            FLAGS.vsa_status_failed)
+            self.vsa_api.update_vsa_status(context, vsa_id, VsaState.FAILED)
             return
 
         # create user-data record for VC
@@ -170,5 +171,4 @@ class VsaManager(manager.SchedulerDependentManager):
                 user_data=storage_data,
                 vsa_id=vsa_id)
 
-        self.vsa_api.update_vsa_status(context, vsa_id,
-                                        FLAGS.vsa_status_created)
+        self.vsa_api.update_vsa_status(context, vsa_id, VsaState.CREATED)
