@@ -487,10 +487,12 @@ class Resource(wsgi.Application):
             action_result = self.dispatch(request, action, args)
         except webob.exc.HTTPException as ex:
             LOG.info(_("HTTP exception thrown: %s"), unicode(ex))
-            return faults.Fault(ex)
+            action_result = faults.Fault(ex)
 
-        if isinstance(action_result, dict) or action_result is None:
-            response = self.serializer.serialize(action_result, accept, action)
+        if type(action_result) is dict or action_result is None:
+            response = self.serializer.serialize(action_result,
+                                                 accept,
+                                                 action=action)
         else:
             response = action_result
 
