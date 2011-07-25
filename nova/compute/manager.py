@@ -163,7 +163,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if instance['state'] == power_state.RUNNING and state != power_state.RUNNING \
                 and FLAGS.start_guests_on_host_boot:
                 LOG.debug(_('Rebooting instance %(name)s after nova-compute restart.'))
-                self.reboot_instance(admin_context, instance[id])
+                self.reboot_instance(admin_context, instance['id'])
             else:
                 self.db.instance_set_state(admin_context, instance['id'], state)
 
