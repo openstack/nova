@@ -166,6 +166,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.info(_('Rebooting instance %(inst_name)s after '
                             'nova-compute restart.'), locals())
                 self.reboot_instance(context, instance['id'])
+            elif drv_state == power_state.RUNNING:
+                try: # Hyper-V and VMWareAPI drivers will raise and exception
+                    self.driver.ensure_filtering_rules_for_instance(instance)
+                except NotImplementedError:
+                    pass
 
     def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
