@@ -71,9 +71,12 @@ class CreateInstanceHelper(object):
         if not body:
             raise exc.HTTPUnprocessableEntity()
 
-        context = req.environ['nova.context']
+        if not 'server' in body:
+            raise exc.HTTPUnprocessableEntity()
 
-        password = self.controller._get_server_admin_password(body['server'])
+        server_dict = body['server']
+        context = req.environ['nova.context']
+        password = self.controller._get_server_admin_password(server_dict)
 
         key_name = None
         key_data = None
@@ -95,7 +98,7 @@ class CreateInstanceHelper(object):
                                                                     locals())
             raise exc.HTTPBadRequest(explanation=msg)
 
-        personality = body['server'].get('personality')
+        personality = server_dict.get('personality')
 
         injected_files = []
         if personality:
@@ -107,18 +110,18 @@ class CreateInstanceHelper(object):
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        if not 'name' in body['server']:
+        if not 'name' in server_dict:
             msg = _("Server name is not defined")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        zone_blob = body['server'].get('blob')
-        name = body['server']['name']
+        zone_blob = server_dict.get('blob')
+        name = server_dict['name']
         self._validate_server_name(name)
         name = name.strip()
 
-        reservation_id = body['server'].get('reservation_id')
-        min_count = body['server'].get('min_count')
-        max_count = body['server'].get('max_count')
+        reservation_id = server_dict.get('reservation_id')
+        min_count = server_dict.get('min_count')
+        max_count = server_dict.get('max_count')
         # min_count and max_count are optional.  If they exist, they come
         # in as strings.  We want to default 'min_count' to 1, and default
         # 'max_count' to be 'min_count'.
@@ -145,7 +148,7 @@ class CreateInstanceHelper(object):
                                   display_description=name,
                                   key_name=key_name,
                                   key_data=key_data,
-                                  metadata=body['server'].get('metadata', {}),
+                                  metadata=server_dict.get('metadata', {}),
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,
