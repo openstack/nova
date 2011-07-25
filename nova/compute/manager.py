@@ -155,7 +155,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             db_state = instance['state']
             drv_state = self._update_state(context, instance['id'])
 
-            expect_running = (db_state == power_state.RUNNING != drv_state)
+            expect_running = db_state == power_state.RUNNING \
+                             and drv_state != db_state
 
             LOG.debug(_('Current state of %(inst_name)s is %(drv_state)s, '
                         'state in DB is %(db_state)s.'), locals())
