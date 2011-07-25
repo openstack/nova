@@ -88,6 +88,7 @@ class Versions(wsgi.Resource):
         return dict(versions=versions)
 
     def _versions_multi_choice(self, request):
+        #TODO
         version_objs = [
             {
                 "id": "v1.1",
@@ -109,18 +110,87 @@ class Versions(wsgi.Resource):
 
 
 class VersionV10(object):
-    def index(self, req):
-        return "test index 1.0"
+    def detail(self, req):
+        #TODO
+        return {
+            "version" : { 
+                "id": "v1.0",
+                "status": "CURRENT",
+                "updated": "2011-01-21T11:33:21-06:00", 
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://servers.api.openstack.org/v1.0/"
+                    },
+                    {
+                        "rel": "describedby",
+                        "type": "application/pdf",
+                        "href": "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.0/cs-devguide-20110125.pdf"
+                    }, 
+                    {
+                        "rel": "describedby",
+                        "type": "application/vnd.sun.wadl+xml",
+                        "href": "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.0/application.wadl"
+                    },
+                ],
+                "media-types": [
+                    {
+                        "base" : "application/xml",
+                        "type" : "application/vnd.openstack.compute-v1.0+xml"
+                    },
+                    {
+                        "base" : "application/json",
+                        "type" : "application/vnd.openstack.compute-v1.0+json"
+                    }
+                ],
+            },
+        }
 
 
 class VersionV11(object):
-    def index(self, req):
-        return "test index 1.1"
+    def detail(self, req):
+        return {
+            "version" : { 
+                "id": "v1.1",
+                "status": "CURRENT",
+                "updated": "2011-01-21T11:33:21-06:00",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://servers.api.openstack.org/v1.1/"
+                    },
+                    {
+                        "rel": "describedby",
+                        "type": "application/pdf",
+                        "href": "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.1/cs-devguide-20110125.pdf"
+                    }, 
+                    {
+                        "rel": "describedby",
+                        "type": "application/vnd.sun.wadl+xml",
+                        "href": "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.1/application.wadl"
+                    },
+                ],
+                "media-types": [
+                    {
+                        "base" : "application/xml",
+                        "type" : "application/vnd.openstack.compute-v1.1+xml"
+                    },
+                    {
+                        "base" : "application/json",
+                        "type" : "application/vnd.openstack.compute-v1.1+json"
+                    }
+                ],
+            },
+        }
+
 
 class VersionsRequestDeserializer(wsgi.RequestDeserializer):
     def get_action_args(self, request_environment):
         """Parse dictionary created by routes library."""
-
         args = {}
         if request_environment['PATH_INFO'] == '/':
             args['action'] = 'index'
@@ -128,6 +198,7 @@ class VersionsRequestDeserializer(wsgi.RequestDeserializer):
             args['action'] = 'multi'
 
         return args
+
 
 class VersionsXMLSerializer(wsgi.XMLDictSerializer):
     def _versions_to_xml(self, versions):
@@ -158,6 +229,9 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
         return self.to_xml_string(node)
 
+    def detail(self,data):
+        return "<xml></xml>"
+
     def multi(self, data):
         self._xml_doc = minidom.Document()
         node = self._versions_to_xml(data['versions'])
@@ -167,6 +241,7 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
 class VersionsAtomSerializer(wsgi.XMLDictSerializer):
     def __init__(self, metadata=None, xmlns=None):
+        self.metadata = metadata or {}
         if not xmlns:
             self.xmlns = ATOM_XMLNS
         else:
@@ -260,14 +335,9 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
 
         return self.to_xml_string(node)
 
-    def multi(self, data):
-        self._xml_doc = minidom.Document()
-        node = self._xml_doc.createElementNS(self.xmlns, 'feed')
-        self._create_meta(node, data['versions'])
-        self._create_version_entries(node, data['versions'])
-
-        return self.to_xml_string(node)
-
+    def detail(self, data):
+        #TODO
+        pass
 
 def create_resource(version='1.0'):
     controller = {

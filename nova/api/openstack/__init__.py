@@ -118,7 +118,7 @@ class APIRouter(base_wsgi.Router):
 
         mapper.connect("versions", "/", 
                     controller=versions.create_resource(version), 
-                    action="index")
+                    action="detail")
 
         mapper.resource("console", "consoles",
                     controller=consoles.create_resource(),

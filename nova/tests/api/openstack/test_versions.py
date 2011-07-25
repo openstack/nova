@@ -72,99 +72,132 @@ class VersionsTest(test.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        print res.body
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
-        versions = json.loads(res.body)["versions"]
-        expected = [
-            {
-                "version" : {
-                    "id" : "v1.0",
-                    "status" : "CURRENT",
-                    "updated" : "2011-01-21T11:33:21-06:00",
-                    "links": [
-                        {
-                            "rel" : "self",
-                            "href" : "http://servers.api.openstack.org/v1.0/"
-                        },
-                        {
-                            "rel" : "describedby",
-                            "type" : "application/pdf",
-                            "href" : "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/cs-devguide-20110125.pdf"
-                        },
-                        {
-                            "rel" : "describedby",
-                            "type" : "application/vnd.sun.wadl+xml",
-                            "href" : "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/application.wadl"
-                        }
-                    ],
-                    "media-types": [
-                        {
-                            "base" : "application/xml",
-                            "type" : "application/"
-                                "vnd.openstack.compute-v1.0+xml"
-                        },
-                        {
-                            "base" : "application/json",
-                            "type" : "application/"
-                                "vnd.openstack.compute-v1.0+json"
-                        }
-                    ]
-                }
+        version = json.loads(res.body)
+        expected = {
+            "version" : {
+                "id" : "v1.0",
+                "status" : "CURRENT",
+                "updated" : "2011-01-21T11:33:21-06:00",
+                "links": [
+                    {
+                        "rel" : "self",
+                        "href" : "http://servers.api.openstack.org/v1.0/"
+                    },
+                    {
+                        "rel" : "describedby",
+                        "type" : "application/pdf",
+                        "href" : "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.0/cs-devguide-20110125.pdf"
+                    },
+                    {
+                        "rel" : "describedby",
+                        "type" : "application/vnd.sun.wadl+xml",
+                        "href" : "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.0/application.wadl"
+                    }
+                ],
+                "media-types": [
+                    {
+                        "base" : "application/xml",
+                        "type" : "application/"
+                            "vnd.openstack.compute-v1.0+xml"
+                    },
+                    {
+                        "base" : "application/json",
+                        "type" : "application/"
+                            "vnd.openstack.compute-v1.0+json"
+                    }
+                ]
             }
-        ]
-        self.assertEqual(versions, expected)
+        }
+        self.assertEqual(expected, version)
 
     def test_get_version_1_1_detail(self):
         req = webob.Request.blank('/v1.1/')
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        print res.body
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
-        versions = json.loads(res.body)["versions"]
-        expected = [
-            {
-                "version" : {
-                    "id" : "v1.1",
-                    "status" : "CURRENT",
-                    "updated" : "2011-01-21T11:33:21-06:00",
-                    "links": [
-                        {
-                            "rel" : "self",
-                            "href" : "http://servers.api.openstack.org/v1.1/"
-                        },
-                        {
-                            "rel" : "describedby",
-                            "type" : "application/pdf",
-                            "href" : "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/cs-devguide-20110125.pdf"
-                        },
-                        {
-                            "rel" : "describedby",
-                            "type" : "application/vnd.sun.wadl+xml",
-                            "href" : "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/application.wadl"
-                        }
-                    ],
-                    "media-types": [
-                        {
-                            "base" : "application/xml",
-                            "type" : "application/"
-                                "vnd.openstack.compute-v1.1+xml"
-                        },
-                        {
-                            "base" : "application/json",
-                            "type" : "application/"
-                                "vnd.openstack.compute-v1.1+json"
-                        }
-                    ]
-                }
+        version = json.loads(res.body)
+        expected = {
+            "version" : {
+                "id" : "v1.1",
+                "status" : "CURRENT",
+                "updated" : "2011-01-21T11:33:21-06:00",
+                "links": [
+                    {
+                        "rel" : "self",
+                        "href" : "http://servers.api.openstack.org/v1.1/"
+                    },
+                    {
+                        "rel" : "describedby",
+                        "type" : "application/pdf",
+                        "href" : "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.1/cs-devguide-20110125.pdf"
+                    },
+                    {
+                        "rel" : "describedby",
+                        "type" : "application/vnd.sun.wadl+xml",
+                        "href" : "http://docs.rackspacecloud.com/"
+                            "servers/api/v1.1/application.wadl"
+                    }
+                ],
+                "media-types": [
+                    {
+                        "base" : "application/xml",
+                        "type" : "application/"
+                            "vnd.openstack.compute-v1.1+xml"
+                    },
+                    {
+                        "base" : "application/json",
+                        "type" : "application/"
+                            "vnd.openstack.compute-v1.1+json"
+                    }
+                ]
             }
-        ]
-        self.assertEqual(versions, expected)
+        }
+        self.assertEqual(expected, version)
+
+    def test_get_version_1_0_detail_xml(self):
+        pass
+
+    def test_get_version_1_1_detail_xml(self):
+        req = webob.Request.blank('/v1.1/')
+        req.accept = "application/xml"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/xml")
+        expected = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <version xmlns="http://docs.openstack.org/common/api/v1.0"
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                id="v1.1" status="CURRENT" updated="2011-01-21T11:33:21-06:00">
+
+                 <media-types>
+                     <media-type base="application/xml"
+                        type="application/vnd.openstack.compute-v1.1+xml"/>
+                     <media-type base="application/json"
+                        type="application/vnd.openstack.compute-v1.1+json"/>
+                 </media-types>
+
+                 <atom:link rel="self"
+                            href="http://servers.api.openstack.org/v1.0/"/>
+
+                <atom:link rel="describedby"
+                           type="application/pdf"
+                           href="http://docs.rackspacecloud.com/
+                           servers/api/v1.1/cs-devguide-20110125.pdf" />
+
+                <atom:link rel="describedby"
+                           type="application/vnd.sun.wadl+xml"
+                           href="http://docs.rackspacecloud.com/
+                           servers/api/v1.1/application.wadl" />
+            </version>""".replace("  ", "").replace("\n", "")
+
+        actual = res.body.replace("  ", "").replace("\n", "")
+        self.assertEqual(expected, actual)
 
     def test_get_version_list_xml(self):
         req = webob.Request.blank('/')
@@ -265,7 +298,7 @@ class VersionsTest(test.TestCase):
 
         self.assertEqual(actual, expected)
 
-    def test_xml_serializer(self):
+    def test_versions_list_xml_serializer(self):
         versions_data = {
             'versions': [
                 {
@@ -291,11 +324,41 @@ class VersionsTest(test.TestCase):
             </versions>""".replace("  ", "").replace("\n", "")
 
         serializer = versions.VersionsXMLSerializer()
-        response = serializer.default(versions_data)
+        response = serializer.index(versions_data)
         response = response.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, response)
 
-    def test_atom_serializer(self):
+    def test_versions_detail_xml_serializer(self):
+        versions_data = {
+            'versions': [
+                {
+                    "id": "2.7.1",
+                    "updated": "2011-07-18T11:30:00Z",
+                    "status": "DEPRECATED",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://test/2.7.1",
+                        }
+                    ],
+                },
+            ]
+        }
+
+        expected = """
+            <versions>
+                <version id="2.7.1" status="DEPRECATED"
+                 updated="2011-07-18T11:30:00Z">
+                    <atom:link href="http://test/2.7.1" rel="self"/>
+                </version>
+            </versions>""".replace("  ", "").replace("\n", "")
+
+        serializer = versions.VersionsXMLSerializer()
+        response = serializer.index(versions_data)
+        response = response.replace("  ", "").replace("\n", "")
+        self.assertEqual(expected, response)
+
+    def test_versions_list_atom_serializer(self):
         versions_data = {
             'versions': [
                 {
@@ -350,7 +413,65 @@ class VersionsTest(test.TestCase):
             </feed>""".replace("  ", "").replace("\n", "")
 
         serializer = versions.VersionsAtomSerializer()
-        response = serializer.default(versions_data)
-        print response
+        response = serializer.index(versions_data)
+        response = response.replace("  ", "").replace("\n", "")
+        self.assertEqual(expected, response)
+
+    def test_version_detail_atom_serializer(self):
+        versions_data = {
+            'versions': [
+                {
+                    "id": "2.9.8",
+                    "updated": "2011-07-20T11:40:00Z",
+                    "status": "CURRENT",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://test/2.9.8",
+                        }
+                    ],
+                },
+            ]
+        }
+
+        expected = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+                <title type="text">
+                    Available API Versions
+                </title>
+                <updated>
+                    2011-07-20T11:40:00Z
+                </updated>
+                <id>
+                    http://test/
+                </id>
+                <author>
+                    <name>
+                        Rackspace
+                    </name>
+                    <uri>
+                        http://www.rackspace.com/
+                    </uri>
+                </author>
+                <link href="http://test/" rel="self"/>
+                <entry>
+                    <id>
+                        http://test/2.9.8
+                    </id>
+                    <title type="text">
+                        Version 2.9.8
+                    </title>
+                    <updated>
+                        2011-07-20T11:40:00Z
+                    </updated>
+                    <link href="http://test/2.9.8" rel="self"/>
+                    <content type="text">
+                        Version 2.9.8 CURRENT (2011-07-20T11:40:00Z)
+                    </content>
+                </entry>
+            </feed>""".replace("  ", "").replace("\n", "")
+
+        serializer = versions.VersionsAtomSerializer()
+        response = serializer.index(versions_data)
         response = response.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, response)
