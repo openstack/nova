@@ -1348,7 +1348,7 @@ def main():
     actions = methods_of(command_object)
     if len(argv) < 1:
         if hasattr(command_object, '__call__'):
-            action = '__call__'
+            action = ''
             fn = command_object.__call__
         else:
             print script_name + " category action [<args>]"
@@ -1364,7 +1364,7 @@ def main():
     # For not decorated methods
     options = getattr(fn, 'options', [])
 
-    usage = "%%prog %s %s <args> [options]" % (sys.argv[2], sys.argv[3])
+    usage = "%%prog %s %s <args> [options]" % (category, action)
     parser = OptionParser(usage=usage)
     for ar, kw in options:
         parser.add_option(*ar, **kw)
