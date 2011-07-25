@@ -30,8 +30,9 @@ from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
-from nova.api.openstack import servers
 from nova.api.openstack import create_instance_helper
+from nova.api.openstack import servers
+from nova.api.openstack import wsgi
 import nova.compute.api
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -2198,6 +2199,62 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
                           "http://localhost:8774/v1.1/flavors/1")
         self.assertEquals(request['body']["server"]["imageRef"],
                           "http://localhost:8774/v1.1/images/1")
+
+
+class TextAddressesXMLSerialization(test.TestCase):
+
+    serializer = nova.api.openstack.ips.IPXMLSerializer()
+
+    def test_show(self):
+        fixture = {
+            'network_2': [
+                {'addr': '192.168.0.1', 'version': 4},
+                {'addr': 'fe80::beef', 'version': 6},
+            ],
+        }
+        output = self.serializer.serialize(fixture, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <network xmlns="http://docs.openstack.org/compute/api/v1.1"
+                     id="network_2">
+                <ip version="4" addr="192.168.0.1"/>
+                <ip version="6" addr="fe80::beef"/>
+            </network>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index(self):
+        fixture = {
+            'addresses': {
+                'network_1': [
+                    {'addr': '192.168.0.3', 'version': 4},
+                    {'addr': '192.168.0.5', 'version': 4},
+                ],
+                'network_2': [
+                    {'addr': '192.168.0.1', 'version': 4},
+                    {'addr': 'fe80::beef', 'version': 6},
+                ],
+            },
+        }
+        output = self.serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <addresses xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <network id="network_2">
+                    <ip version="4" addr="192.168.0.1"/>
+                    <ip version="6" addr="fe80::beef"/>
+                </network>
+                <network id="network_1">
+                    <ip version="4" addr="192.168.0.3"/>
+                    <ip version="4" addr="192.168.0.5"/>
+                </network>
+            </addresses>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
 
 
 class TestServerInstanceCreation(test.TestCase):
