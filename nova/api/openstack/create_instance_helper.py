@@ -77,6 +77,8 @@ class CreateInstanceHelper(object):
 
         key_name = None
         key_data = None
+        # TODO(vish): Key pair access should move into a common library
+        #             instead of being accessed directly from the db.
         key_pairs = db.key_pair_get_all_by_user(context.elevated(),
                                                 context.user_id)
         if key_pairs:
