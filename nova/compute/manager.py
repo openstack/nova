@@ -146,9 +146,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              *args, **kwargs)
 
     def init_host(self):
-        """Initialization for a standalone compute service.
-
-        Reboots instances marked as running in DB if they is not running."""
+        """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
         instances = self.db.instance_get_all_by_host(context, self.host)
@@ -157,12 +155,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             db_state = instance['state']
             drv_state = self._update_state(context, instance['id'])
 
-            expect_running = db_state == power_state.RUNNING != drv_state
+            expect_running = (db_state == power_state.RUNNING != drv_state)
 
             LOG.debug(_('Current state of %(inst_name)s is %(drv_state)s, '
                         'state in DB is %(db_state)s.'), locals())
 
-            if expect_running and FLAGS.start_guests_on_host_boot:
+            if (expect_running and FLAGS.resume_guests_state_on_host_boot)\
+               or FLAGS.start_guests_on_host_boot:
                 LOG.info(_('Rebooting instance %(inst_name)s after '
                             'nova-compute restart.'), locals())
                 self.reboot_instance(context, instance['id'])
