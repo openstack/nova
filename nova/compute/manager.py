@@ -170,7 +170,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 try: # Hyper-V and VMWareAPI drivers will raise and exception
                     self.driver.ensure_filtering_rules_for_instance(instance)
                 except NotImplementedError:
-                    pass
+                    LOG.warning(_('Hypervisor driver does not support firewall rules'))
 
     def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
