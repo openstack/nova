@@ -108,7 +108,7 @@ class OverLimitFault(webob.exc.HTTPException):
         xml_serializer = {
             '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
             '1.1': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V11),
-        }[common.get_version_from_href(req.url)]
+        }[common.get_version_from_href(request.url)]
 
         serializer = {
             'application/xml': xml_serializer,
