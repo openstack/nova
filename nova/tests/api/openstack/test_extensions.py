@@ -368,13 +368,13 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
             for key, value in link.items():
                 self.assertEqual(link_nodes[i].get(key), value)
 
-    def test_serialize_extenstions(self):
+    def test_serialize_extensions(self):
         serializer = extensions.ExtensionsXMLSerializer()
         data = {
             "extensions": [
                 {
                     "name": "Public Image Extension",
-                    "namespace": "http://foo.com/servers/api/ext/pie/v1.0",
+                    "namespace": "http://foo.com/api/ext/pie/v1.0",
                     "alias": "RS-PIE",
                     "updated": "2011-01-22T13:25:27-06:00",
                     "description": "Adds the capability to share an image.",
@@ -382,18 +382,18 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
                         {
                             "rel": "describedby",
                             "type": "application/pdf",
-                            "href": "http://foo.com/servers/api/ext/cs-pie.pdf"
+                            "href": "http://foo.com/api/ext/cs-pie.pdf"
                         },
                         {
                             "rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/servers/api/ext/cs-pie.wadl"
+                            "href": "http://foo.com/api/ext/cs-pie.wadl"
                         }
                     ]
                 },
                 {
                     "name": "Cloud Block Storage",
-                    "namespace": "http://foo.com/servers/api/ext/cbs/v1.0",
+                    "namespace": "http://foo.com/api/ext/cbs/v1.0",
                     "alias": "RS-CBS",
                     "updated": "2011-01-12T11:22:33-06:00",
                     "description": "Allows mounting cloud block storage.",
@@ -401,12 +401,12 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
                         {
                             "rel": "describedby",
                             "type": "application/pdf",
-                            "href": "http://foo.com/servers/api/ext/cs-cbs.pdf"
+                            "href": "http://foo.com/api/ext/cs-cbs.pdf"
                         },
                         {
                             "rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/servers/api/ext/cs-cbs.wadl"
+                            "href": "http://foo.com/api/ext/cs-cbs.wadl"
                         }
                     ]
                 }
