@@ -44,6 +44,7 @@ import functools
 
 from eventlet import greenthread
 
+import nova.context
 from nova import exception
 from nova import flags
 import nova.image
@@ -145,34 +146,26 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              *args, **kwargs)
 
     def init_host(self):
-        """Initialization for a standalone compute service."""
-        # NOTE(nsokolov): based on itoumsn's implementation from libvirt driver
-        from nova import context
+        """Initialization for a standalone compute service.
+
+        Reboots instances marked as running in DB if they is not running."""
         self.driver.init_host(host=self.host)
-        admin_context = context.get_admin_context()
-        for instance in self.db.instance_get_all_by_host(admin_context,
-                                                         self.host):
-            try:
-                LOG.debug(_('Checking state of %s'), instance['name'])
-                state = self.driver.get_info(instance['name'])['state']
-            except exception.NotFound:
-                state = power_state.SHUTOFF
+        context = nova.context.get_admin_context()
+        instances = self.db.instance_get_all_by_host(context, self.host)
+        for instance in instances:
+            inst_name = instance['name']
+            db_state = instance['state']
+            drv_state = self._update_state(context, instance['id'])
 
-            LOG.debug(_('Current state of %(name)s is %(state)s, state in '
-                        'DB is %(db_state)s.'),  {'name': instance['name'],
-                                                  'state': state,
-                                                  'db_state':
-                                                      instance['state']})
+            expect_running = db_state == power_state.RUNNING != drv_state
 
-            if instance['state'] == power_state.RUNNING \
-               and state != power_state.RUNNING \
-               and FLAGS.start_guests_on_host_boot:
-                LOG.debug(_('Rebooting instance %(name)s after nova-compute '
-                            ' restart.'), {'name': instance['name']})
-                self.reboot_instance(admin_context, instance['id'])
-            else:
-                self.db.instance_set_state(admin_context, instance['id'],
-                                           state)
+            LOG.debug(_('Current state of %(inst_name)s is %(drv_state)s, '
+                        'state in DB is %(db_state)s.'), locals())
+
+            if expect_running and FLAGS.start_guests_on_host_boot:
+                LOG.info(_('Rebooting instance %(inst_name)s after '
+                            'nova-compute restart.'), locals())
+                self.reboot_instance(context, instance['id'])
 
     def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
@@ -180,6 +173,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if state is None:
             try:
+                LOG.debug(_('Checking state of %s'), instance_ref['name'])
                 info = self.driver.get_info(instance_ref['name'])
             except exception.NotFound:
                 info = None
