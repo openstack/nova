@@ -188,9 +188,6 @@ def get_version_from_href(href):
         #if no version was found, try finding /v#.# at the end of the string
         if not version:
             version = re.findall(r'[/][v][0-9]+\.[0-9]+$', href)
-        print href
-        print "    "
-        print version
         version = re.findall(r'[0-9]+\.[0-9]', version[0])[0]
     except IndexError:
         version = '1.0'
