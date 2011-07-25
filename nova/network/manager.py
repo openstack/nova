@@ -300,12 +300,10 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    """Constant to indicate whether this manager requires VIF to create a
-    bridge."""
+    # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
 
-    """Constant to indicate whether this manager requires VIF to create a
-    VLAN tag."""
+    # If True, this manager requires VIF to create VLAN tag.
     SHOULD_CREATE_VLAN = False
 
     timeout_fixed_ips = True

@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011 Midokura KK
 # Copyright (C) 2011 Nicira, Inc
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,7 +30,7 @@ LOG = logging.getLogger('nova.virt.libvirt.vif')
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('libvirt_ovs_integration_bridge', 'br-int',
+flags.DEFINE_string('libvirt_ovs_bridge', 'br-int',
                     'Name of Integration Bridge used by Open vSwitch')
 
 
@@ -99,12 +100,12 @@ class LibvirtOpenVswitchDriver(VIFDriver):
     def plug(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
+        iface_id = "nova-" + vif_id
         if not linux_net._device_exists(dev):
-            iface_id = "nova-" + vif_id
             utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
             utils.execute('sudo', 'ip', 'link', 'set', dev, 'up')
         utils.execute('sudo', 'ovs-vsctl', '--', '--may-exist', 'add-port',
-                FLAGS.libvirt_ovs_integration_bridge, dev,
+                FLAGS.libvirt_ovs_bridge, dev,
                 '--', 'set', 'Interface', dev,
                 "external-ids:iface-id=%s" % iface_id,
                 '--', 'set', 'Interface', dev,
@@ -119,8 +120,15 @@ class LibvirtOpenVswitchDriver(VIFDriver):
         return result
 
     def unplug(self, instance, network, mapping):
+        """Unplug the VIF from the network by deleting the port from
+        the bridge."""
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
-        utils.execute('sudo', 'ovs-vsctl', 'del-port',
-                FLAGS.flat_network_bridge, dev)
-        utils.execute('sudo', 'ip', 'link', 'delete', dev)
+        try:
+            utils.execute('sudo', 'ovs-vsctl', 'del-port',
+                          FLAGS.flat_network_bridge, dev)
+            utils.execute('sudo', 'ip', 'link', 'delete', dev)
+        except:
+            LOG.warning(_("Failed while unplugging vif of instance '%s'"),
+                        instance['name'])
+            raise

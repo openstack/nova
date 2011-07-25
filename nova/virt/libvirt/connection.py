@@ -311,13 +311,8 @@ class LibvirtConnection(driver.ComputeDriver):
                             locals())
                 raise
 
-            try:
-                for (network, mapping) in network_info:
-                    self.vif_driver.unplug(instance, network, mapping)
-            except:
-                LOG.warning(_("Failed while unplugging vif of instance '%s'"),
-                            instance['name'])
-                raise
+            for (network, mapping) in network_info:
+                self.vif_driver.unplug(instance, network, mapping)
 
         def _wait_for_destroy():
             """Called at an interval until the VM is gone."""

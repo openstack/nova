@@ -876,13 +876,8 @@ class VMOps(object):
         self._destroy_vm(instance, vm_ref)
 
         if network_info:
-            try:
-                for (network, mapping) in network_info:
-                    self.vif_driver.unplug(instance, network, mapping)
-            except:
-                LOG.warning(_("Failed while unplugging vif of instance '%s'"),
-                            instance['name'])
-                raise
+            for (network, mapping) in network_info:
+                self.vif_driver.unplug(instance, network, mapping)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
