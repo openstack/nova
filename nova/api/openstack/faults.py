@@ -19,6 +19,7 @@
 import webob.dec
 import webob.exc
 
+from nova.api.openstack import common
 from nova.api.openstack import wsgi
 
 
@@ -61,9 +62,13 @@ class Fault(webob.exc.HTTPException):
 
         content_type = req.best_match_content_type()
 
+        xml_serializer = {
+            '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
+            '1.1': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V11),
+        }[common.get_version_from_href(req.url)]
+
         serializer = {
-            'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                      xmlns=wsgi.XMLNS_V10),
+            'application/xml': xml_serializer,
             'application/json': wsgi.JSONDictSerializer(),
         }[content_type]
 
@@ -100,9 +105,13 @@ class OverLimitFault(webob.exc.HTTPException):
         content_type = request.best_match_content_type()
         metadata = {"attributes": {"overLimitFault": "code"}}
 
+        xml_serializer = {
+            '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
+            '1.1': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V11),
+        }[common.get_version_from_href(req.url)]
+
         serializer = {
-            'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                      xmlns=wsgi.XMLNS_V10),
+            'application/xml': xml_serializer,
             'application/json': wsgi.JSONDictSerializer(),
         }[content_type]
 
