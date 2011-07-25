@@ -165,7 +165,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.debug(_('Rebooting instance %(name)s after nova-compute restart.'))
                 self.reboot_instance(admin_context, instance[id])
             else:
-                self.db.instance_set_state(ctxt, instance['id'], state)
+                self.db.instance_set_state(admin_context, instance['id'], state)
 
     def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
