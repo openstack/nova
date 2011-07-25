@@ -111,8 +111,10 @@ def create_network_spec(client_factory, network_name, mac_address,
     # not come up on boot if set to dynamic.
     backing = None
     if (network_ref['type'] == "DistributedVirtualPortgroup"):
+        backing_name = \
+         'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo'
         backing = \
-         client_factory.create('ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo')
+         client_factory.create(backing_name)
         portgroup = \
          client_factory.create('ns0:DistributedVirtualSwitchPortConnection')
         portgroup.switchUuid = network_ref['dvsw']
@@ -292,9 +294,11 @@ def get_dummy_vm_create_spec(client_factory, name, data_store_name):
     return config_spec
 
 
-def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask, gateway, broadcast, dns):
+def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask,
+                               gateway, broadcast, dns):
     """Builds the machine id change config spec."""
-    machine_id_str = "%s;%s;%s;%s;%s;%s" % (mac, ip_addr, netmask, gateway, broadcast, dns)
+    machine_id_str = "%s;%s;%s;%s;%s;%s" % (mac, ip_addr, netmask,
+                                            gateway, broadcast, dns)
     virtual_machine_config_spec = \
         client_factory.create('ns0:VirtualMachineConfigSpec')
 
