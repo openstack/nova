@@ -256,6 +256,13 @@ class ResponseSerializerTest(test.TestCase):
         self.assertEqual(response.body, 'pew_json')
         self.assertEqual(response.status_int, 404)
 
+    def test_serialize_response_None(self):
+        response = self.serializer.serialize(None, 'application/json')
+        print response
+        self.assertEqual(response.headers['Content-Type'], 'application/json')
+        self.assertEqual(response.body, '')
+        self.assertEqual(response.status_int, 404)
+
     def test_serialize_response_dict_to_unknown_content_type(self):
         self.assertRaises(exception.InvalidContentType,
                           self.serializer.serialize,

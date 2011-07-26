@@ -538,7 +538,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         # because the element hasn't changed definition
         expected = minidom.parseString("""
             <itemNotFound code="404"
-                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+                    xmlns="http://docs.openstack.org/compute/api/v1.1">
                 <message>
                     Image not found.
                 </message>
