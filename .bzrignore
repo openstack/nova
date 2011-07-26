@@ -13,3 +13,5 @@ nova/vcsversion.py
 clean.sqlite
 run_tests.log
 tests.sqlite
+.coverage
+covhtml

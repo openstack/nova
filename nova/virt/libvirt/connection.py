@@ -335,21 +335,20 @@ class LibvirtConnection(driver.ComputeDriver):
     def attach_volume(self, instance_name, device_path, mountpoint):
         virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
-        if device_path.startswith('/dev/'):
+        (type, protocol, name) = \
+            self._get_volume_device_info(vol['device_path'])
+        if type == 'block':
             xml = """<disk type='block'>
                          <driver name='qemu' type='raw'/>
                          <source dev='%s'/>
                          <target dev='%s' bus='virtio'/>
                      </disk>""" % (device_path, mount_device)
-        elif ':' in device_path:
-            (protocol, name) = device_path.split(':')
+        elif type == 'network':
             xml = """<disk type='network'>
                          <driver name='qemu' type='raw'/>
                          <source protocol='%s' name='%s'/>
                          <target dev='%s' bus='virtio'/>
-                     </disk>""" % (protocol,
-                                   name,
-                                   mount_device)
+                     </disk>""" % (protocol, name, mount_device)
         else:
             raise exception.InvalidDevicePath(path=device_path)
 
@@ -881,9 +880,12 @@ class LibvirtConnection(driver.ComputeDriver):
             address = mapping['ips'][0]['ip']
             netmask = mapping['ips'][0]['netmask']
             address_v6 = None
+            gateway_v6 = None
+            netmask_v6 = None
             if FLAGS.use_ipv6:
                 address_v6 = mapping['ip6s'][0]['ip']
                 netmask_v6 = mapping['ip6s'][0]['netmask']
+                gateway_v6 = mapping['gateway6']
             net_info = {'name': 'eth%d' % ifc_num,
                    'address': address,
                    'netmask': netmask,
@@ -891,7 +893,7 @@ class LibvirtConnection(driver.ComputeDriver):
                    'broadcast': mapping['broadcast'],
                    'dns': mapping['dns'],
                    'address_v6': address_v6,
-                   'gateway6': mapping['gateway6'],
+                   'gateway6': gateway_v6,
                    'netmask_v6': netmask_v6}
             nets.append(net_info)
 
@@ -928,7 +930,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _get_nic_for_xml(self, network, mapping):
         # Assume that the gateway also acts as the dhcp server.
-        dhcp_server = mapping['gateway']
         gateway6 = mapping.get('gateway6')
         mac_id = mapping['mac'].replace(':', '')
 
@@ -951,7 +952,7 @@ class LibvirtConnection(driver.ComputeDriver):
             'bridge_name': network['bridge'],
             'mac_address': mapping['mac'],
             'ip_address': mapping['ips'][0]['ip'],
-            'dhcp_server': dhcp_server,
+            'dhcp_server': mapping['dhcp_server'],
             'extra_params': extra_params,
         }
 
@@ -970,6 +971,16 @@ class LibvirtConnection(driver.ComputeDriver):
             if vol_mount_device == mount_device_:
                 return True
         return False
+
+    @exception.wrap_exception
+    def _get_volume_device_info(self, device_path):
+        if device_path.startswith('/dev/'):
+            return ('block', None, None)
+        elif ':' in device_path:
+            (protocol, name) = device_path.split(':')
+            return ('network', protocol, name)
+        else:
+            raise exception.InvalidDevicePath(path=device_path)
 
     def _prepare_xml_info(self, instance, rescue=False, network_info=None,
                           block_device_mapping=None):
@@ -993,6 +1004,9 @@ class LibvirtConnection(driver.ComputeDriver):
 
         for vol in block_device_mapping:
             vol['mount_device'] = _strip_dev(vol['mount_device'])
+            (vol['type'], vol['protocol'], vol['name']) = \
+                self._get_volume_device_info(vol['device_path'])
+
         ebs_root = self._volume_in_mapping(self.root_mount_device,
                                            block_device_mapping)
         if self._volume_in_mapping(self.local_mount_device,
@@ -1014,10 +1028,9 @@ class LibvirtConnection(driver.ComputeDriver):
                     'ebs_root': ebs_root,
                     'volumes': block_device_mapping}
 
-        if FLAGS.vnc_enabled:
-            if FLAGS.libvirt_type != 'lxc' or FLAGS.libvirt_type != 'uml':
-                xml_info['vncserver_host'] = FLAGS.vncserver_host
-                xml_info['vnc_keymap'] = FLAGS.vnc_keymap
+        if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
+            xml_info['vncserver_host'] = FLAGS.vncserver_host
+            xml_info['vnc_keymap'] = FLAGS.vnc_keymap
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

@@ -433,7 +433,7 @@ class VersionsTest(test.TestCase):
                         {
                             "rel": "self",
                             "href": "http://test/2.7.1",
-                        }
+                        },
                     ],
                 },
             ]
@@ -527,7 +527,7 @@ class VersionsTest(test.TestCase):
                         {
                             "rel": "self",
                             "href": "http://test/2.9.8",
-                        }
+                        },
                     ],
                 },
             ]

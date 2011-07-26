@@ -105,8 +105,8 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                               self.instance_type_id)
         self.assertEquals(expected_specs, actual_specs)
 
-    def test_instance_type_get_by_id_with_extra_specs(self):
-        instance_type = db.api.instance_type_get_by_id(
+    def test_instance_type_get_with_extra_specs(self):
+        instance_type = db.api.instance_type_get(
                             context.get_admin_context(),
                             self.instance_type_id)
         self.assertEquals(instance_type['extra_specs'],
@@ -115,7 +115,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                                xpu_arch="fermi",
                                xpus="2",
                                xpu_model="Tesla 2050"))
-        instance_type = db.api.instance_type_get_by_id(
+        instance_type = db.api.instance_type_get(
                             context.get_admin_context(),
                             5)
         self.assertEquals(instance_type['extra_specs'], {})
@@ -136,7 +136,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                             "m1.small")
         self.assertEquals(instance_type['extra_specs'], {})
 
-    def test_instance_type_get_by_id_with_extra_specs(self):
+    def test_instance_type_get_with_extra_specs(self):
         instance_type = db.api.instance_type_get_by_flavor_id(
                             context.get_admin_context(),
                             105)
