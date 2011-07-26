@@ -271,75 +271,73 @@ class VersionsTest(test.TestCase):
         self.assertEqual(expected, actual)
 
     def test_get_version_1_0_detail_atom(self):
-        #TODO
         req = webob.Request.blank('/v1.0/')
-        req.accept = "application/xml"
+        req.accept = "application/atom+xml"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/xml")
+        self.assertEqual("application/atom+xml", res.content_type)
         expected = """
-        <version id="v1.0" status="CURRENT" 
-            updated="2011-01-21T11:33:21Z" 
-            xmlns="http://docs.openstack.org/common/api/v1.0" 
-            xmlns:atom="http://www.w3.org/2005/Atom">
-
-            <media-types>
-                <media-type base="application/xml"
-                     type="application/vnd.openstack.compute-v1.0+xml"/>
-                <media-type base="application/json"
-                     type="application/vnd.openstack.compute-v1.0+json"/>
-            </media-types>
-
-            <atom:link href="http://servers.api.openstack.org/v1.0/"
-                 rel="self"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.0/cs-devguide-20110125.pdf"
-                 rel="describedby"
-                 type="application/pdf"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.0/application.wadl"
-                 rel="describedby" 
-                type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "")
+        <feed xmlns="http://www.w3.org/2005/Atom">
+            <title type="text">About This Version</title>
+            <updated>2011-01-21T11:33:21Z</updated>
+            <id>http://servers.api.openstack.org/v1.0/</id>
+            <author>
+                <name>Rackspace</name>
+                <uri>http://www.rackspace.com/</uri>
+            </author>
+            <link href="http://servers.api.openstack.org/v1.0/" rel="self"/>
+            <entry>
+                <id>http://servers.api.openstack.org/v1.0/</id>
+                <title type="text">Version v1.0</title>
+                <updated>2011-01-21T11:33:21Z</updated>
+                <link href="http://servers.api.openstack.org/v1.0/" rel="self"/>
+                <link href="http://docs.rackspacecloud.com/servers/
+                    api/v1.0/cs-devguide-20110125.pdf"
+                     rel="describedby" type="application/pdf"/>
+                <link href="http://docs.rackspacecloud.com/servers/
+                    api/v1.0/application.wadl"
+                     rel="describedby" type="application/vnd.sun.wadl+xml"/>
+                <content type="text">
+                    Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)
+                </content>
+            </entry>
+        </feed>""".replace("  ", "").replace("\n", "")
 
         actual = res.body.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, actual)
 
     def test_get_version_1_1_detail_atom(self):
-        #TODO
         req = webob.Request.blank('/v1.1/')
-        req.accept = "application/xml"
+        req.accept = "application/atom+xml"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/xml")
+        self.assertEqual("application/atom+xml", res.content_type)
         expected = """
-        <version id="v1.1" status="CURRENT" 
-            updated="2011-01-21T11:33:21Z" 
-            xmlns="http://docs.openstack.org/common/api/v1.1" 
-            xmlns:atom="http://www.w3.org/2005/Atom">
-
-            <media-types>
-                <media-type base="application/xml"
-                     type="application/vnd.openstack.compute-v1.1+xml"/>
-                <media-type base="application/json"
-                     type="application/vnd.openstack.compute-v1.1+json"/>
-            </media-types>
-
-            <atom:link href="http://servers.api.openstack.org/v1.1/"
-                 rel="self"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.1/cs-devguide-20110125.pdf"
-                 rel="describedby"
-                 type="application/pdf"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.1/application.wadl"
-                 rel="describedby" 
-                type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "")
+        <feed xmlns="http://www.w3.org/2005/Atom">
+            <title type="text">About This Version</title>
+            <updated>2011-01-21T11:33:21Z</updated>
+            <id>http://servers.api.openstack.org/v1.1/</id>
+            <author>
+                <name>Rackspace</name>
+                <uri>http://www.rackspace.com/</uri>
+            </author>
+            <link href="http://servers.api.openstack.org/v1.1/" rel="self"/>
+            <entry>
+                <id>http://servers.api.openstack.org/v1.1/</id>
+                <title type="text">Version v1.1</title>
+                <updated>2011-01-21T11:33:21Z</updated>
+                <link href="http://servers.api.openstack.org/v1.1/" rel="self"/>
+                <link href="http://docs.rackspacecloud.com/servers/
+                    api/v1.1/cs-devguide-20110125.pdf"
+                     rel="describedby" type="application/pdf"/>
+                <link href="http://docs.rackspacecloud.com/servers/
+                    api/v1.1/application.wadl"
+                     rel="describedby" type="application/vnd.sun.wadl+xml"/>
+                <content type="text">
+                    Version v1.1 CURRENT (2011-01-21T11:33:21Z)
+                </content>
+            </entry>
+        </feed>""".replace("  ", "").replace("\n", "")
 
         actual = res.body.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, actual)
@@ -621,7 +619,6 @@ class VersionsTest(test.TestCase):
                 #self.assertEqual(val, media_node.get(key))
 
     def test_version_detail_atom_serializer(self):
-        #TODO
         versions_data = {
             "version" : { 
                 "id": "v1.1",

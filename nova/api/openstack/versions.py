@@ -115,7 +115,7 @@ class VersionV10(object):
         return {
             "version" : { 
                 "id": "v1.0",
-                "status": "CURRENT",
+                "status": "DEPRECATED",
                 "updated": "2011-01-21T11:33:21Z", 
                 "links": [
                     {
@@ -415,7 +415,15 @@ def create_resource(version='1.0'):
         'application/xml': VersionsXMLSerializer(),
         'application/atom+xml': VersionsAtomSerializer(),
     }
-
     serializer = wsgi.ResponseSerializer(body_serializers)
 
-    return wsgi.Resource(controller, serializer=serializer)
+    supported_content_types = ('application/json',
+                               'application/xml',
+                               'application/atom+xml')
+    deserializer = wsgi.RequestDeserializer(
+        supported_content_types=supported_content_types)
+
+
+
+    return wsgi.Resource(controller, serializer=serializer,
+                         deserializer=deserializer)
