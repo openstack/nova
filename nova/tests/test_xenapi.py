@@ -647,7 +647,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.flags(xenapi_inject_image=False)
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
-        conn.rescue(instance, None)
+        conn.rescue(instance, None, [])
 
     def test_unrescue(self):
         instance = self._create_instance()
