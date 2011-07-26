@@ -384,11 +384,63 @@ class VersionsTest(test.TestCase):
 
         self.assertEqual(expected, actual)
 
-    def test_multi_choice_servers_list(self):
+    def test_multi_choice_image(self):
+        req = webob.Request.blank('/images/1')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 300)
+        self.assertEqual(res.content_type, "application/json")
+
+        expected = {
+        "choices": [
+            {
+                "id": "v1.1",
+                "status": "CURRENT",
+                "links": [
+                    {
+                        "href": "http://localhost:80/v1.1/images/1",
+                        "rel": "self",
+                    },
+                ],
+                "media-types": [
+                    {
+                        "base": "application/xml",
+                        "type": "application/vnd.openstack.compute-v1.1+xml"
+                    },
+                    {
+                        "base": "application/json",
+                        "type": "application/vnd.openstack.compute-v1.1+json"
+                    },
+                ],
+            },
+            {
+                "id": "v1.0",
+                "status": "DEPRECATED",
+                "links": [
+                    {
+                        "href": "http://localhost:80/v1.0/images/1",
+                        "rel": "self",
+                    },
+                ],
+                "media-types": [
+                    {
+                        "base": "application/xml",
+                        "type": "application/vnd.openstack.compute-v1.0+xml"
+                    },
+                    {
+                        "base": "application/json",
+                        "type": "application/vnd.openstack.compute-v1.0+json"
+                    },
+                ],
+            },
+        ], }
+
+        self.assertDictMatch(expected, json.loads(res.body))
+
+    def test_multi_choice_server(self):
         req = webob.Request.blank('/servers/2')
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        print res.body
         self.assertEqual(res.status_int, 300)
         self.assertEqual(res.content_type, "application/json")
 
