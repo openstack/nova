@@ -173,10 +173,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     instance = {
         "id": int(id),
-        "created_at": datetime.datetime.strptime("2010-10-10 12:00:00",
-                                                  "%Y-%m-%d %H:%M:%S"),
-        "updated_at": datetime.datetime.strptime("2010-11-11 11:00:00",
-                                                  "%Y-%m-%d %H:%M:%S"),
+        "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
+        "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
@@ -1046,17 +1044,13 @@ class ServersTest(test.TestCase):
         def instance_create(context, inst):
             inst_type = instance_types.get_instance_type_by_flavor_id(3)
             image_ref = 'http://localhost/images/2'
-            created_at = datetime.datetime.strptime("2010-10-10 12:00:00",
-                                                      "%Y-%m-%d %H:%M:%S"),
-            updated_at = datetime.datetime.strptime("2010-11-11 11:00:00",
-                                                      "%Y-%m-%d %H:%M:%S"),
             return {'id': 1,
                     'display_name': 'server_test',
                     'uuid': FAKE_UUID,
                     'instance_type': dict(inst_type),
                     'image_ref': image_ref,
-                    "created_at": created_at,
-                    "updated_at": updated_at,
+                    "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
+                    "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
                    }
 
         def server_update(context, id, params):
@@ -2906,10 +2900,8 @@ class ServersViewBuilderV11Test(test.TestCase):
         pass
 
     def _get_instance(self):
-        created_at = datetime.datetime.strptime("2010-10-10 12:00:00",
-                                                 "%Y-%m-%d %H:%M:%S"),
-        updated_at = datetime.datetime.strptime("2010-11-11 11:00:00",
-                                                  "%Y-%m-%d %H:%M:%S"),
+        created_at = datetime.datetime(2010, 10, 10, 12, 0, 0)
+        updated_at = datetime.datetime(2010, 11, 11, 11, 0, 0)
         instance = {
             "id": 1,
             "created_at": created_at,
