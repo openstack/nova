@@ -487,11 +487,20 @@ class ControllerV11(Controller):
             raise exc.HTTPNotFound()
 
     def _image_ref_from_req_data(self, data):
-        return data['server']['imageRef']
+        try:
+            return data['server']['imageRef']
+        except (TypeError, KeyError):
+            msg = _("Missing imageRef attribute")
+            raise exc.HTTPBadRequest(explanation=msg)
 
     def _flavor_id_from_req_data(self, data):
-        href = data['server']['flavorRef']
-        return common.get_id_from_href(href)
+        try:
+            flavor_ref = data['server']['flavorRef']
+        except (TypeError, KeyError):
+            msg = _("Missing flavorRef attribute")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return common.get_id_from_href(flavor_ref)
 
     def _build_view(self, req, instance, is_detail=False):
         base_url = req.application_url
