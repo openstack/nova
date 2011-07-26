@@ -139,7 +139,7 @@ class HyperVConnection(driver.ComputeDriver):
 
         return instance_infos
 
-    def spawn(self, instance, network_info=None, block_device_mapping=None):
+    def spawn(self, instance, network_info, block_device_mapping=None):
         """ Create a new VM and start it."""
         vm = self._lookup(instance.name)
         if vm is not None:
@@ -368,14 +368,14 @@ class HyperVConnection(driver.ComputeDriver):
                     wmi_obj.Properties_.Item(prop).Value
         return newinst
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot the specified instance."""
         vm = self._lookup(instance.name)
         if vm is None:
             raise exception.InstanceNotFound(instance_id=instance.id)
         self._set_vm_state(instance.name, 'Reboot')
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         """Destroy the VM. Also destroy the associated VHD disk files"""
         LOG.debug(_("Got request to destroy vm %s"), instance.name)
         vm = self._lookup(instance.name)
