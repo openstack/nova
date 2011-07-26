@@ -1293,6 +1293,7 @@ class ServersTest(test.TestCase):
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual(1, server['id'])
+        self.assertEqual(0, server['progress'])
         self.assertEqual('server_test', server['name'])
         self.assertEqual(expected_flavor, server['flavor'])
         self.assertEqual(expected_image, server['image'])
