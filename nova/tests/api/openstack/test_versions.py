@@ -18,6 +18,8 @@
 import json
 import stubout
 import webob
+import xml.etree.ElementTree
+
 
 from nova import context
 from nova import test
@@ -166,6 +168,21 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/xml")
+        root = xml.etree.ElementTree.XML(res.body)
+        self.assertEqual(root.tag.split('}')[1], "version")
+        self.assertEqual(root.tag.split('}')[0].strip('{'),
+                         "http://docs.openstack.org/common/api/v1.0")
+
+        children = list(root)
+        media_types = children[0]
+        media_type_nodes = list(media_types)
+        links = (children[1], children[2], children[3])
+
+        self.assertEqual(media_types.tag.split('}')[1], 'media-types')
+        for media_node in media_type_nodes:
+            self.assertEqual(media_node.tag.split('}')[1], 'media-type')
+
+
         expected = """
         <version id="v1.0" status="CURRENT" 
             updated="2011-01-21T11:33:21Z" 
@@ -472,37 +489,32 @@ class VersionsTest(test.TestCase):
             },
         }
 
-        expected = """
-        <version id="v1.0" status="CURRENT" 
-            updated="2011-01-21T11:33:21Z" 
-            xmlns="http://docs.openstack.org/common/api/v1.0" 
-            xmlns:atom="http://www.w3.org/2005/Atom">
-
-            <media-types>
-                <media-type base="application/xml"
-                     type="application/vnd.openstack.compute-v1.0+xml"/>
-                <media-type base="application/json"
-                     type="application/vnd.openstack.compute-v1.0+json"/>
-            </media-types>
-
-            <atom:link href="http://servers.api.openstack.org/v1.0/"
-                 rel="self"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.0/cs-devguide-20110125.pdf"
-                 rel="describedby"
-                 type="application/pdf"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.0/application.wadl"
-                 rel="describedby" 
-                type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "")
-
         serializer = versions.VersionsXMLSerializer()
         response = serializer.detail(version_data)
-        response = response.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, response)
+
+        root = xml.etree.ElementTree.XML(response)
+        self.assertEqual(root.tag.split('}')[1], "version")
+        self.assertEqual(root.tag.split('}')[0].strip('{'),
+                         "http://docs.openstack.org/common/api/v1.0")
+
+        children = list(root)
+        media_types = children[0]
+        media_type_nodes = list(media_types)
+        links = (children[1], children[2], children[3])
+
+        self.assertEqual(media_types.tag.split('}')[1], 'media-types')
+        for i, media_node in enumerate(media_type_nodes):
+            self.assertEqual(media_node.tag.split('}')[1], 'media-type')
+            for key, val in version_data['version']['media-types'][i].items():
+                self.assertEqual(val, media_node.get(key))
+
+        for i, link in enumerate(links):
+            self.assertEqual(link.tag.split('}')[0].strip('{'),
+                             'http://www.w3.org/2005/Atom')
+            self.assertEqual(link.tag.split('}')[1], 'link')
+            for key, val in version_data['version']['links'][i].items():
+                self.assertEqual(val, link.get(key))
+
 
     def test_versions_list_atom_serializer(self):
         versions_data = {
@@ -562,6 +574,51 @@ class VersionsTest(test.TestCase):
         response = serializer.index(versions_data)
         response = response.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, response)
+
+        root = xml.etree.ElementTree.XML(response)
+        self.assertEqual(root.tag.split('}')[1], "feed")
+        self.assertEqual(root.tag.split('}')[0].strip('{'),
+                         "http://www.w3.org/2005/Atom")
+
+        children = list(root)
+        title = children[0]
+        updated = children[1]
+        id = children[2]
+        author = children[3]
+        link = children[4]
+        entry = children[5]
+
+        self.assertEqual(title.tag.split('}')[1], 'title')
+        self.assertEqual(title.text, 'Available API Versions')
+        self.assertEqual(updated.tag.split('}')[1], 'updated')
+        self.assertEqual(updated.text, '2011-07-20T11:40:00Z')
+        self.assertEqual(id.tag.split('}')[1], 'id')
+        self.assertEqual(id.text, 'http://test/')
+
+        self.assertEqual(author.tag.split('}')[1], 'author')
+        author_name = list(author)[0]
+        author_uri = list(author)[1]
+        self.assertEqual(author_name.tag.split('}')[1], 'name')
+        self.assertEqual(author_name.text, 'Rackspace')
+        self.assertEqual(author_uri.tag.split('}')[1], 'uri')
+        self.assertEqual(author_uri.text, 'http://www.rackspace.com/')
+
+        self.assertEqual(link.get('href'), 'http://test/')
+        self.assertEqual(link.get('rel'), 'self')
+
+        self.assertEqual(entry.tag.split('}')[1], 'entry')
+        entry_children = list(entry)
+        entry_id = entry_children[0]
+        entry_title = entry_children[1]
+        entry_updated = entry_children[1]
+         
+
+
+        #self.assertEqual(media_types.tag.split('}')[1], 'media-types')
+        #for i, media_node in enumerate(media_type_nodes):
+            #self.assertEqual(media_node.tag.split('}')[1], 'media-type')
+            #for key, val in version_data['version']['media-types'][i].items():
+                #self.assertEqual(val, media_node.get(key))
 
     def test_version_detail_atom_serializer(self):
         #TODO

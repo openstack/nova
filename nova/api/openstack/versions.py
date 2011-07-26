@@ -201,6 +201,13 @@ class VersionsRequestDeserializer(wsgi.RequestDeserializer):
 
 
 class VersionsXMLSerializer(wsgi.XMLDictSerializer):
+    #TODO(wwolf): this is temporary until we get rid of toprettyxml 
+    # in the base class (XMLDictSerializer), which I plan to do in 
+    # another branch
+    def to_xml_string(self, node, has_atom=False):
+        self._add_xmlns(node, has_atom)
+        return node.toxml(encoding='UTF-8')
+
     def _versions_to_xml(self, versions):
         root = self._xml_doc.createElement('versions')
 
