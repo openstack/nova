@@ -78,14 +78,15 @@ class FloatingIPController(object):
 
         return _translate_floating_ips_view(floating_ips)
 
-    def create(self, req, body):
+    def create(self, req):
         context = req.environ['nova.context']
 
         try:
             address = self.network_api.allocate_floating_ip(context)
             ip = self.network_api.get_floating_ip_by_ip(context, address)
         except rpc.RemoteError as ex:
-            if ex.exc_type == 'NoMoreAddresses':
+            # NOTE(tr3buchet) - why does this block exist?
+            if ex.exc_type == 'NoMoreFloatingIps':
                 raise exception.NoMoreFloatingIps()
             else:
                 raise
@@ -123,7 +124,7 @@ class FloatingIPController(object):
                 "floating_ip": floating_ip,
                 "fixed_ip": fixed_ip}}
 
-    def disassociate(self, req, id, body):
+    def disassociate(self, req, id):
         """ POST /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
         floating_ip = self.network_api.get_floating_ip(context, id)

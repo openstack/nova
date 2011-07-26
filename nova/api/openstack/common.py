@@ -53,10 +53,10 @@ def get_pagination_params(request):
             params[param] = int(request.GET[param])
         except ValueError:
             msg = _('%s param must be an integer') % param
-            raise webob.exc.HTTPBadRequest(msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         if params[param] < 0:
             msg = _('%s param must be positive') % param
-            raise webob.exc.HTTPBadRequest(msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
     return params
 
@@ -77,18 +77,22 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     try:
         offset = int(request.GET.get('offset', 0))
     except ValueError:
-        raise webob.exc.HTTPBadRequest(_('offset param must be an integer'))
+        msg = _('offset param must be an integer')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
 
     try:
         limit = int(request.GET.get('limit', max_limit))
     except ValueError:
-        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+        msg = _('limit param must be an integer')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
 
     if limit < 0:
-        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+        msg = _('limit param must be positive')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
 
     if offset < 0:
-        raise webob.exc.HTTPBadRequest(_('offset param must be positive'))
+        msg = _('offset param must be positive')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
 
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
@@ -111,7 +115,8 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
                 start_index = i + 1
                 break
         if start_index < 0:
-            raise webob.exc.HTTPBadRequest(_('marker [%s] not found' % marker))
+            msg = _('marker [%s] not found') % marker
+            raise webob.exc.HTTPBadRequest(explanation=msg)
     range_end = start_index + limit
     return items[start_index:range_end]
 
@@ -133,4 +138,57 @@ def get_id_from_href(href):
         return int(urlparse(href).path.split('/')[-1])
     except:
         LOG.debug(_("Error extracting id from href: %s") % href)
-        raise webob.exc.HTTPBadRequest(_('could not parse id from href'))
+        raise ValueError(_('could not parse id from href'))
+
+
+def remove_version_from_href(href):
+    """Removes the first api version from the href.
+
+    Given: 'http://www.nova.com/v1.1/123'
+    Returns: 'http://www.nova.com/123'
+
+    Given: 'http://www.nova.com/v1.1'
+    Returns: 'http://www.nova.com'
+
+    """
+    try:
+        #removes the first instance that matches /v#.#/
+        new_href = re.sub(r'[/][v][0-9]+\.[0-9]+[/]', '/', href, count=1)
+
+        #if no version was found, try finding /v#.# at the end of the string
+        if new_href == href:
+            new_href = re.sub(r'[/][v][0-9]+\.[0-9]+$', '', href, count=1)
+    except:
+        LOG.debug(_("Error removing version from href: %s") % href)
+        msg = _('could not parse version from href')
+        raise ValueError(msg)
+
+    if new_href == href:
+        msg = _('href does not contain version')
+        raise ValueError(msg)
+    return new_href
+
+
+def get_version_from_href(href):
+    """Returns the api version in the href.
+
+    Returns the api version in the href.
+    If no version is found, 1.0 is returned
+
+    Given: 'http://www.nova.com/123'
+    Returns: '1.0'
+
+    Given: 'http://www.nova.com/v1.1'
+    Returns: '1.1'
+
+    """
+    try:
+        #finds the first instance that matches /v#.#/
+        version = re.findall(r'[/][v][0-9]+\.[0-9]+[/]', href)
+        #if no version was found, try finding /v#.# at the end of the string
+        if not version:
+            version = re.findall(r'[/][v][0-9]+\.[0-9]+$', href)
+        version = re.findall(r'[0-9]+\.[0-9]', version[0])[0]
+    except IndexError:
+        version = '1.0'
+    return version

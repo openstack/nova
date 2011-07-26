@@ -262,14 +262,6 @@ def generate_uid(topic, size=8):
     return '%s-%s' % (topic, ''.join(choices))
 
 
-def generate_mac():
-    mac = [0x02, 0x16, 0x3e,
-           random.randint(0x00, 0x7f),
-           random.randint(0x00, 0xff),
-           random.randint(0x00, 0xff)]
-    return ':'.join(map(lambda x: '%02x' % x, mac))
-
-
 # Default symbols to use for passwords. Avoids visually confusing characters.
 # ~6 bits per symbol
 DEFAULT_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0,1
@@ -280,6 +272,22 @@ DEFAULT_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0,1
 # ~5 bits per symbol
 EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
                            'ABCDEFGHJKLMNPQRSTUVWXYZ')  # Removed: I, O
+
+
+def usage_from_instance(instance_ref, **kw):
+    usage_info = dict(
+          tenant_id=instance_ref['project_id'],
+          user_id=instance_ref['user_id'],
+          instance_id=instance_ref['id'],
+          instance_type=instance_ref['instance_type']['name'],
+          instance_type_id=instance_ref['instance_type_id'],
+          display_name=instance_ref['display_name'],
+          created_at=str(instance_ref['created_at']),
+          launched_at=str(instance_ref['launched_at']) \
+                      if instance_ref['launched_at'] else '',
+          image_ref=instance_ref['image_ref'])
+    usage_info.update(kw)
+    return usage_info
 
 
 def generate_password(length=20, symbols=DEFAULT_PASSWORD_SYMBOLS):
@@ -754,6 +762,17 @@ def is_uuid_like(val):
     if not isinstance(val, basestring):
         return False
     return (len(val) == 36) and (val.count('-') == 4)
+
+
+def bool_from_str(val):
+    """Convert a string representation of a bool into a bool value"""
+
+    if not val:
+        return False
+    try:
+        return True if int(val) else False
+    except ValueError:
+        return val.lower() == 'true'
 
 
 class Bootstrapper(object):

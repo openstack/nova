@@ -33,9 +33,10 @@ import tempfile
 import time
 
 import XenAPIPlugin
+import pluginlib_nova as pluginlib
 
-from pluginlib_nova import *
-configure_logging("xenhost")
+
+pluginlib.configure_logging("xenhost")
 
 host_data_pattern = re.compile(r"\s*(\S+) \([^\)]+\) *: ?(.*)")
 
@@ -65,14 +66,49 @@ def _run_command(cmd):
     return proc.stdout.read()
 
 
+def _get_host_uuid():
+    cmd = "xe host-list | grep uuid"
+    resp = _run_command(cmd)
+    return resp.split(":")[-1].strip()
+
+
+@jsonify
+def set_host_enabled(self, arg_dict):
+    """Sets this host's ability to accept new instances.
+    It will otherwise continue to operate normally.
+    """
+    enabled = arg_dict.get("enabled")
+    if enabled is None:
+        raise pluginlib.PluginError(
+                _("Missing 'enabled' argument to set_host_enabled"))
+    if enabled == "true":
+        result = _run_command("xe host-enable")
+    elif enabled == "false":
+        result = _run_command("xe host-disable")
+    else:
+        raise pluginlib.PluginError(_("Illegal enabled status: %s") % enabled)
+    # Should be empty string
+    if result:
+        raise pluginlib.PluginError(result)
+    # Return the current enabled status
+    host_uuid = _get_host_uuid()
+    cmd = "xe host-param-list uuid=%s | grep enabled" % host_uuid
+    resp = _run_command(cmd)
+    # Response should be in the format: "enabled ( RO): true"
+    host_enabled = resp.strip().split()[-1]
+    if host_enabled == "true":
+        status = "enabled"
+    else:
+        status = "disabled"
+    return {"status": status}
+
+
 @jsonify
 def host_data(self, arg_dict):
     """Runs the commands on the xenstore host to return the current status
     information.
     """
-    cmd = "xe host-list | grep uuid"
-    resp = _run_command(cmd)
-    host_uuid = resp.split(":")[-1].strip()
+    host_uuid = _get_host_uuid()
     cmd = "xe host-param-list uuid=%s" % host_uuid
     resp = _run_command(cmd)
     parsed_data = parse_response(resp)
@@ -180,4 +216,5 @@ def cleanup(dct):
 
 if __name__ == "__main__":
     XenAPIPlugin.dispatch(
-        {"host_data": host_data})
+            {"host_data": host_data,
+            "set_host_enabled": set_host_enabled})
