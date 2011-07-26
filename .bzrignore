@@ -15,4 +15,5 @@ run_tests.log
 tests.sqlite
 nova/tests/instance-*
 tags
-
+.coverage
+covhtml
