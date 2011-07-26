@@ -670,25 +670,26 @@ class CloudController(object):
             prevalues = kwargs['ip_permissions']
         except KeyError:
             prevalues.append(kwargs)
-        postvalues = []
+        rule_id = None
         for values in prevalues:
             rulesvalues = self._rule_args_to_dict(context, values)
             if not rulesvalues:
                 err = "%s Not enough parameters to build a valid rule"
                 raise exception.ApiError(_(err % rulesvalues))
 
-            rule_id = None
             for values_for_rule in rulesvalues:
                 values_for_rule['parent_group_id'] = security_group.id
                 rule_id = self._security_group_rule_exists(security_group,
                                                            values_for_rule)
                 if rule_id:
                     db.security_group_rule_destroy(context, rule_id)
-                    self.compute_api.trigger_security_group_rules_refresh(context,
-                                            security_group_id=security_group['id'])
-            if rule_id:
-                return True
-            raise exception.ApiError(_("No rule for the specified parameters."))
+        if rule_id:
+            # NOTE(vish): we removed a rule, so refresh
+            self.compute_api.trigger_security_group_rules_refresh(
+                    context,
+                    security_group_id=security_group['id'])
+            return True
+        raise exception.ApiError(_("No rule for the specified parameters."))
 
     # TODO(soren): This has only been tested with Boto as the client.
     #              Unfortunately, it seems Boto is using an old API
@@ -734,15 +735,17 @@ class CloudController(object):
                 postvalues.append(values_for_rule)
 
         for values_for_rule in postvalues:
-            security_group_rule = db.security_group_rule_create(context,
-                                                               values_for_rule)
+            security_group_rule = db.security_group_rule_create(
+                    context,
+                    values_for_rule)
 
-        self.compute_api.trigger_security_group_rules_refresh(context,
-                                  security_group_id=security_group['id'])
+        if postvalues:
+            self.compute_api.trigger_security_group_rules_refresh(
+                    context,
+                    security_group_id=security_group['id'])
+            return True
 
-        group = db.security_group_get_by_name(context, context.project_id,
-                                              security_group['name'])
-        return True
+        raise exception.ApiError(_("No rule for the specified parameters."))
 
     def _get_source_project_id(self, context, source_security_group_owner_id):
         if source_security_group_owner_id:
