@@ -45,6 +45,10 @@ class API(base.Base):
                                                      context.project_id)
         return ips
 
+    def get_vifs_by_instance(self, context, instance_id):
+        vifs = self.db.virtual_interface_get_by_instance(context, instance_id)
+        return vifs
+
     def allocate_floating_ip(self, context):
         """Adds a floating ip to a project."""
         # NOTE(vish): We don't know which network host should get the ip
