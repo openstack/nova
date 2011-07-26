@@ -54,9 +54,13 @@ def _create_network_info(count=1, ipv6=None):
     fake_ip = '0.0.0.0/0'
     fake_ip_2 = '0.0.0.1/0'
     fake_ip_3 = '0.0.0.1/0'
+    fake_vlan = 100
+    fake_bridge_interface = 'eth0'
     network = {'bridge': fake,
                'cidr': fake_ip,
-               'cidr_v6': fake_ip}
+               'cidr_v6': fake_ip,
+               'vlan': fake_vlan,
+               'bridge_interface': fake_bridge_interface}
     mapping = {'mac': fake,
                'dhcp_server': fake,
                'gateway': fake,
@@ -219,9 +223,19 @@ class LibvirtConnTestCase(test.TestCase):
             def setattr(self, key, val):
                 self.__setattr__(key, val)
 
+        # A fake VIF driver
+        class FakeVIFDriver(object):
+
+            def __init__(self, **kwargs):
+                pass
+
+            def setattr(self, key, val):
+                self.__setattr__(key, val)
+
         # Creating mocks
         fake = FakeLibvirtConnection()
         fakeip = FakeIptablesFirewallDriver
+        fakevif = FakeVIFDriver()
         # Customizing above fake if necessary
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
@@ -229,6 +243,8 @@ class LibvirtConnTestCase(test.TestCase):
         # Inevitable mocks for connection.LibvirtConnection
         self.mox.StubOutWithMock(connection.utils, 'import_class')
         connection.utils.import_class(mox.IgnoreArg()).AndReturn(fakeip)
+        self.mox.StubOutWithMock(connection.utils, 'import_object')
+        connection.utils.import_object(mox.IgnoreArg()).AndReturn(fakevif)
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
         connection.LibvirtConnection._conn = fake
 
@@ -279,22 +295,6 @@ class LibvirtConnTestCase(test.TestCase):
         result = conn._prepare_xml_info(instance_ref, False,
                                         _create_network_info(2))
         self.assertTrue(len(result['nics']) == 2)
-
-    def test_get_nic_for_xml_v4(self):
-        conn = connection.LibvirtConnection(True)
-        network, mapping = _create_network_info()[0]
-        self.flags(use_ipv6=False)
-        params = conn._get_nic_for_xml(network, mapping)['extra_params']
-        self.assertTrue(params.find('PROJNETV6') == -1)
-        self.assertTrue(params.find('PROJMASKV6') == -1)
-
-    def test_get_nic_for_xml_v6(self):
-        conn = connection.LibvirtConnection(True)
-        network, mapping = _create_network_info()[0]
-        self.flags(use_ipv6=True)
-        params = conn._get_nic_for_xml(network, mapping)['extra_params']
-        self.assertTrue(params.find('PROJNETV6') > -1)
-        self.assertTrue(params.find('PROJMASKV6') > -1)
 
     @test.skip_test("skipping libvirt tests depends on get_network_info shim")
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
@@ -722,6 +722,9 @@ class LibvirtConnTestCase(test.TestCase):
                 return vdmock
 
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.mox.StubOutWithMock(self.compute, "recover_live_migration")
+        self.compute.recover_live_migration(self.context, instance_ref,
+                                            dest='dest')
 
         # Start test
         self.mox.ReplayAll()

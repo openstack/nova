@@ -210,7 +210,7 @@ class XenAPIConnection(driver.ComputeDriver):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, image_id)
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
 
@@ -224,9 +224,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """
         self._vmops.inject_file(instance, b64_path, b64_contents)
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         """Destroy VM instance"""
-        self._vmops.destroy(instance)
+        self._vmops.destroy(instance, network_info)
 
     def pause(self, instance, callback):
         """Pause VM instance"""
@@ -249,11 +249,11 @@ class XenAPIConnection(driver.ComputeDriver):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
-    def rescue(self, instance, callback):
+    def rescue(self, instance, callback, network_info):
         """Rescue the specified instance"""
         self._vmops.rescue(instance, callback)
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""
         self._vmops.unrescue(instance, callback)
 
@@ -268,6 +268,9 @@ class XenAPIConnection(driver.ComputeDriver):
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance"""
         self._vmops.inject_network_info(instance, network_info)
+
+    def plug_vifs(self, instance_ref, network_info):
+        self._vmops.plug_vifs(instance_ref, network_info)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
@@ -322,7 +325,7 @@ class XenAPIConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         return
 
-    def unfilter_instance(self, instance_ref):
+    def unfilter_instance(self, instance_ref, network_info):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
