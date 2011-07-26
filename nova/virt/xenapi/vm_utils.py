@@ -684,7 +684,6 @@ class VMHelper(HelperBase):
             return cls._determine_is_pv_glance(
               session, vdi_ref, disk_image_type, os_type)
         else:
-            print FLAGS.image_service
             # 1. Objecstore
             return cls._determine_is_pv_objectstore(session, instance_id,
                                                     vdi_ref)
