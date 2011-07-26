@@ -67,7 +67,7 @@ class VsaVolumesTestCase(test.TestCase):
 
     def test_vsa_volume_create_delete(self):
         """ Check if volume properly created and deleted. """
-        vols1 = self.volume_api.get_all_by_vsa(self.context, 
+        vols1 = self.volume_api.get_all_by_vsa(self.context,
                                                 self.vsa_id, "from")
         volume_param = _default_volume_param()
         volume_param['from_vsa_id'] = self.vsa_id
@@ -82,7 +82,7 @@ class VsaVolumesTestCase(test.TestCase):
         self.assertEqual(volume_ref['status'],
                          'available')
 
-        vols2 = self.volume_api.get_all_by_vsa(self.context, 
+        vols2 = self.volume_api.get_all_by_vsa(self.context,
                                                 self.vsa_id, "from")
         self.assertEqual(len(vols1) + 1, len(vols2))
 
@@ -90,7 +90,7 @@ class VsaVolumesTestCase(test.TestCase):
         vols3 = self.volume_api.get_all_by_vsa(self.context,
                                                 self.vsa_id, "from")
         self.assertEqual(len(vols3) + 1, len(vols2))
-        
+
     def test_vsa_volume_delete_nonavail_volume(self):
         """ Check volume deleton in different states. """
         volume_param = _default_volume_param()
