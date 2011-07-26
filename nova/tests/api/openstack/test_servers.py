@@ -706,7 +706,7 @@ class ServersTest(test.TestCase):
                 'fixed_ipv6': '2001:4860::12',
             },
         ]
-        new_return_server = return_server_with_interfaces(interfaces)
+        new_return_server = return_server_with_attributes(interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
