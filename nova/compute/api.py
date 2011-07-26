@@ -475,7 +475,6 @@ class API(base.Base):
                                                                      context,
                                                                      group_id))
 
-        LOG.info('rules: %r', security_group_rules)
         # ..then we distill the security groups to which they belong..
         security_groups = set()
         for rule in security_group_rules:
@@ -484,14 +483,12 @@ class API(base.Base):
                                                     rule['parent_group_id'])
             security_groups.add(security_group)
 
-        LOG.info('security_groups: %r', security_groups)
         # ..then we find the instances that are members of these groups..
         instances = set()
         for security_group in security_groups:
             for instance in security_group['instances']:
                 instances.add(instance)
 
-        LOG.info('instances: %r', instances)
         # ...then we find the hosts where they live...
         hosts = set()
         for instance in instances:
@@ -501,7 +498,6 @@ class API(base.Base):
         # ...and finally we tell these nodes to refresh their view of this
         # particular security group.
         for host in hosts:
-            LOG.info('host: %r', host)
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "refresh_security_group_members",
