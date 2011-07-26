@@ -2205,6 +2205,7 @@ def volume_update(context, volume_id, values):
         volume_ref = volume_get(context, volume_id, session=session)
         volume_ref.update(values)
         volume_ref.save(session=session)
+        return volume_ref
 
 
 ###################

@@ -60,8 +60,9 @@ class VsaTestCase(test.TestCase):
                 raise exception.ImageNotFound
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
-        self.stubs.Set(nova.image.fake._FakeImageService, 'show_by_name',
-                fake_show_by_name)
+        self.stubs.Set(nova.image.fake._FakeImageService,
+                        'show_by_name',
+                        fake_show_by_name)
 
     def tearDown(self):
         self.stubs.UnsetAll()

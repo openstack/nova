@@ -80,6 +80,10 @@ class API(base.Base):
 
         volume = self.db.volume_create(context, options)
         if from_vsa_id is not None:  # for FE VSA volumes do nothing
+            now = utils.utcnow()
+            volume = self.db.volume_update(context,
+                                volume['id'], {'status': 'available',
+                                               'launched_at': now})
             return volume
 
         rpc.cast(context,
@@ -100,13 +104,17 @@ class API(base.Base):
 
     def delete(self, context, volume_id):
         volume = self.get(context, volume_id)
-        if volume['status'] != "available":
-            raise exception.ApiError(_("Volume status must be available"))
 
         if volume['from_vsa_id'] is not None:
+            if volume['status'] == "in-use":
+                raise exception.ApiError(_("Volume is in use. "\
+                                           "Detach it first"))
             self.db.volume_destroy(context, volume['id'])
             LOG.debug(_("volume %d: deleted successfully"), volume['id'])
             return
+
+        if volume['status'] != "available":
+            raise exception.ApiError(_("Volume status must be available"))
 
         now = utils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
