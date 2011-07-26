@@ -868,7 +868,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         self.network_api.add_fixed_ip_to_instance(context, instance_id,
-                                                           network_id)
+                                                  self.host, network_id)
         self.inject_network_info(context, instance_id)
         self.reset_network(context, instance_id)
 
