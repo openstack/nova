@@ -630,8 +630,8 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         node.setAttribute('uuid', str(server['uuid']))
         node.setAttribute('hostId', str(server['hostId']))
         node.setAttribute('name', server['name'])
-        node.setAttribute('created', server['created'])
-        node.setAttribute('updated', server['updated'])
+        node.setAttribute('created', str(server['created']))
+        node.setAttribute('updated', str(server['updated']))
         node.setAttribute('status', server['status'])
         if 'progress' in server:
             node.setAttribute('progress', str(server['progress']))
@@ -655,17 +655,19 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         for link_node in link_nodes:
             server_node.appendChild(link_node)
 
-        image_node = self._create_basic_entity_node(xml_doc,
+        if 'image' in server:
+            image_node = self._create_basic_entity_node(xml_doc,
                                                     server['image']['id'],
                                                     server['image']['links'],
                                                     'image')
-        server_node.appendChild(image_node)
+            server_node.appendChild(image_node)
 
-        flavor_node = self._create_basic_entity_node(xml_doc,
+        if 'flavor' in server:
+            flavor_node = self._create_basic_entity_node(xml_doc,
                                                     server['flavor']['id'],
                                                     server['flavor']['links'],
                                                     'flavor')
-        server_node.appendChild(flavor_node)
+            server_node.appendChild(flavor_node)
 
         metadata = server.get('metadata', {}).items()
         if len(metadata) > 0:
