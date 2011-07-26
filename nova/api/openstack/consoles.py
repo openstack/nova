@@ -16,10 +16,10 @@
 #    under the License.
 
 from webob import exc
+import webob
 
 from nova import console
 from nova import exception
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -71,12 +71,12 @@ class Controller(object):
                                         int(server_id),
                                         int(id))
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         return _translate_detail_keys(console)
 
     def update(self, req, server_id, id):
         """You can't update a console"""
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
     def delete(self, req, server_id, id):
         """Deletes a console"""
@@ -85,8 +85,8 @@ class Controller(object):
                                             int(server_id),
                                             int(id))
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+            raise exc.HTTPNotFound()
+        return webob.Response(status_int=202)
 
 
 def create_resource():

@@ -82,7 +82,7 @@ class ViewBuilder(object):
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
 
-        if compute_api.has_finished_migration(ctxt, inst['id']):
+        if compute_api.has_finished_migration(ctxt, inst['uuid']):
             inst_dict['status'] = 'RESIZE-CONFIRM'
 
         # Return the metadata as a dictionary

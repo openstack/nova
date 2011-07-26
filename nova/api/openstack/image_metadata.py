@@ -62,7 +62,7 @@ class Controller(object):
         if id in metadata:
             return {'meta': {id: metadata[id]}}
         else:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def create(self, req, image_id, body):
         context = req.environ['nova.context']
@@ -97,24 +97,39 @@ class Controller(object):
         self._check_quota_limit(context, metadata)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
+        return dict(meta=meta)
 
-        return req.body
+    def update_all(self, req, image_id, body):
+        context = req.environ['nova.context']
+        img = self.image_service.show(context, image_id)
+        metadata = body.get('metadata', {})
+        self._check_quota_limit(context, metadata)
+        img['properties'] = metadata
+        self.image_service.update(context, image_id, img, None)
+        return dict(metadata=metadata)
 
     def delete(self, req, image_id, id):
         context = req.environ['nova.context']
         img = self.image_service.show(context, image_id)
         metadata = self._get_metadata(context, image_id)
         if not id in metadata:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         metadata.pop(id)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
 
 
 def create_resource():
+    headers_serializer = common.MetadataHeadersSerializer()
+
+    body_deserializers = {
+        'application/xml': common.MetadataXMLDeserializer(),
+    }
+
     body_serializers = {
         'application/xml': common.MetadataXMLSerializer(),
     }
-    serializer = wsgi.ResponseSerializer(body_serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
+    deserializer = wsgi.RequestDeserializer(body_deserializers)
 
-    return wsgi.Resource(Controller(), serializer=serializer)
+    return wsgi.Resource(Controller(), deserializer, serializer)

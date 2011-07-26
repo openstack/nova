@@ -61,6 +61,7 @@ import os
 import sys
 import time
 
+from optparse import OptionParser
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -103,6 +104,14 @@ flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
+# Decorators for actions
+def args(*args, **kwargs):
+    def _decorator(func):
+        func.__dict__.setdefault('options', []).insert(0, (args, kwargs))
+        return func
+    return _decorator
+
+
 def param2id(object_id):
     """Helper function to convert various id types to internal id.
     args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
@@ -120,10 +129,11 @@ class VpnCommands(object):
         self.manager = manager.AuthManager()
         self.pipe = pipelib.CloudPipe()
 
+    @args('--project', dest="project", metavar='<Project name>',
+            help='Project name')
     def list(self, project=None):
-        """Print a listing of the VPN data for one or all projects.
+        """Print a listing of the VPN data for one or all projects."""
 
-        args: [project=all]"""
         print "%-12s\t" % 'project',
         print "%-20s\t" % 'ip:port',
         print "%-20s\t" % 'private_ip',
@@ -165,17 +175,23 @@ class VpnCommands(object):
                 self.pipe.launch_vpn_instance(p.id)
                 time.sleep(10)
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
     def run(self, project_id):
         """Start the VPN for a given project."""
         self.pipe.launch_vpn_instance(project_id)
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
+    @args('--ip', dest="ip", metavar='<IP Address>', help='IP Address')
+    @args('--port', dest="port", metavar='<Port>', help='Port')
     def change(self, project_id, ip, port):
         """Change the ip and port for a vpn.
 
         this will update all networks associated with a project
         not sure if that's the desired behavior or not, patches accepted
 
-        args: project, ip, port"""
+        """
         # TODO(tr3buchet): perhaps this shouldn't update all networks
         # associated with a project in the future
         project = self.manager.get_project(project_id)
@@ -210,10 +226,10 @@ class ShellCommands(object):
         Falls back to Python shell if unavailable"""
         self.run('python')
 
+    @args('--shell', dest="shell", metavar='<bpython|ipython|python >',
+            help='Python shell')
     def run(self, shell=None):
-        """Runs a Python interactive interpreter.
-
-        args: [shell=bpython]"""
+        """Runs a Python interactive interpreter."""
         if not shell:
             shell = 'bpython'
 
@@ -247,6 +263,7 @@ class ShellCommands(object):
                 readline.parse_and_bind("tab:complete")
             code.interact()
 
+    @args('--path', dest='path', metavar='<path>', help='Script path')
     def script(self, path):
         """Runs the script from the specifed path with flags set properly.
         arguments: path"""
@@ -259,10 +276,13 @@ class RoleCommands(object):
     def __init__(self):
         self.manager = manager.AuthManager()
 
+    @args('--user', dest="user", metavar='<user name>', help='User name')
+    @args('--role', dest="role", metavar='<user role>', help='User role')
+    @args('--project', dest="project", metavar='<Project name>',
+            help='Project name')
     def add(self, user, role, project=None):
         """adds role to user
-        if project is specified, adds project specific role
-        arguments: user, role [project]"""
+        if project is specified, adds project specific role"""
         if project:
             projobj = self.manager.get_project(project)
             if not projobj.has_member(user):
@@ -270,17 +290,23 @@ class RoleCommands(object):
                 return
         self.manager.add_role(user, role, project)
 
+    @args('--user', dest="user", metavar='<user name>', help='User name')
+    @args('--role', dest="role", metavar='<user role>', help='User role')
+    @args('--project', dest="project", metavar='<Project name>',
+            help='Project name')
     def has(self, user, role, project=None):
         """checks to see if user has role
         if project is specified, returns True if user has
-        the global role and the project role
-        arguments: user, role [project]"""
+        the global role and the project role"""
         print self.manager.has_role(user, role, project)
 
+    @args('--user', dest="user", metavar='<user name>', help='User name')
+    @args('--role', dest="role", metavar='<user role>', help='User role')
+    @args('--project', dest="project", metavar='<Project name>',
+            help='Project name')
     def remove(self, user, role, project=None):
         """removes role from user
-        if project is specified, removes project specific role
-        arguments: user, role [project]"""
+        if project is specified, removes project specific role"""
         self.manager.remove_role(user, role, project)
 
 
@@ -304,32 +330,37 @@ class UserCommands(object):
     def __init__(self):
         self.manager = manager.AuthManager()
 
+    @args('--name', dest="name", metavar='<admin name>', help='Admin name')
+    @args('--access', dest="access", metavar='<access>', help='Access')
+    @args('--secret', dest="secret", metavar='<secret>', help='Secret')
     def admin(self, name, access=None, secret=None):
-        """creates a new admin and prints exports
-        arguments: name [access] [secret]"""
+        """creates a new admin and prints exports"""
         try:
             user = self.manager.create_user(name, access, secret, True)
         except exception.DBError, e:
             _db_error(e)
         self._print_export(user)
 
+    @args('--name', dest="name", metavar='<name>', help='User name')
+    @args('--access', dest="access", metavar='<access>', help='Access')
+    @args('--secret', dest="secret", metavar='<secret>', help='Secret')
     def create(self, name, access=None, secret=None):
-        """creates a new user and prints exports
-        arguments: name [access] [secret]"""
+        """creates a new user and prints exports"""
         try:
             user = self.manager.create_user(name, access, secret, False)
         except exception.DBError, e:
             _db_error(e)
         self._print_export(user)
 
+    @args('--name', dest="name", metavar='<name>', help='User name')
     def delete(self, name):
         """deletes an existing user
         arguments: name"""
         self.manager.delete_user(name)
 
+    @args('--name', dest="name", metavar='<admin name>', help='User name')
     def exports(self, name):
-        """prints access and secrets for user in export format
-        arguments: name"""
+        """prints access and secrets for user in export format"""
         user = self.manager.get_user(name)
         if user:
             self._print_export(user)
@@ -337,11 +368,17 @@ class UserCommands(object):
             print "User %s doesn't exist" % name
 
     def list(self):
-        """lists all users
-        arguments: <none>"""
+        """lists all users"""
         for user in self.manager.get_users():
             print user.name
 
+    @args('--name', dest="name", metavar='<name>', help='User name')
+    @args('--access', dest="access_key", metavar='<access>',
+            help='Access key')
+    @args('--secret', dest="secret_key", metavar='<secret>',
+            help='Secret key')
+    @args('--is_admin', dest='is_admin', metavar="<'T'|'F'>",
+            help='Is admin?')
     def modify(self, name, access_key, secret_key, is_admin):
         """update a users keys & admin flag
         arguments: accesskey secretkey admin
@@ -355,9 +392,11 @@ class UserCommands(object):
             is_admin = False
         self.manager.modify_user(name, access_key, secret_key, is_admin)
 
+    @args('--name', dest="user_id", metavar='<name>', help='User name')
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
     def revoke(self, user_id, project_id=None):
-        """revoke certs for a user
-        arguments: user_id [project_id]"""
+        """revoke certs for a user"""
         if project_id:
             crypto.revoke_certs_by_user_and_project(user_id, project_id)
         else:
@@ -370,45 +409,62 @@ class ProjectCommands(object):
     def __init__(self):
         self.manager = manager.AuthManager()
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
+    @args('--user', dest="user_id", metavar='<name>', help='User name')
     def add(self, project_id, user_id):
-        """Adds user to project
-        arguments: project_id user_id"""
+        """Adds user to project"""
         try:
             self.manager.add_to_project(user_id, project_id)
         except exception.UserNotFound as ex:
             print ex
             raise
 
+    @args('--project', dest="name", metavar='<Project name>',
+            help='Project name')
+    @args('--user', dest="project_manager", metavar='<user>',
+            help='Project manager')
+    @args('--desc', dest="description", metavar='<description>',
+            help='Description')
     def create(self, name, project_manager, description=None):
-        """Creates a new project
-        arguments: name project_manager [description]"""
+        """Creates a new project"""
         try:
             self.manager.create_project(name, project_manager, description)
         except exception.UserNotFound as ex:
             print ex
             raise
 
+    @args('--project', dest="name", metavar='<Project name>',
+            help='Project name')
+    @args('--user', dest="project_manager", metavar='<user>',
+            help='Project manager')
+    @args('--desc', dest="description", metavar='<description>',
+            help='Description')
     def modify(self, name, project_manager, description=None):
-        """Modifies a project
-        arguments: name project_manager [description]"""
+        """Modifies a project"""
         try:
             self.manager.modify_project(name, project_manager, description)
         except exception.UserNotFound as ex:
             print ex
             raise
 
+    @args('--project', dest="name", metavar='<Project name>',
+            help='Project name')
     def delete(self, name):
-        """Deletes an existing project
-        arguments: name"""
+        """Deletes an existing project"""
         try:
             self.manager.delete_project(name)
         except exception.ProjectNotFound as ex:
             print ex
             raise
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
+    @args('--user', dest="user_id", metavar='<name>', help='User name')
+    @args('--file', dest="filename", metavar='<filename>',
+            help='File name(Default: novarc)')
     def environment(self, project_id, user_id, filename='novarc'):
-        """Exports environment variables to an sourcable file
-        arguments: project_id user_id [filename='novarc]"""
+        """Exports environment variables to an sourcable file"""
         try:
             rc = self.manager.get_environment_rc(user_id, project_id)
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
@@ -420,15 +476,18 @@ class ProjectCommands(object):
             with open(filename, 'w') as f:
                 f.write(rc)
 
+    @args('--user', dest="username", metavar='<username>', help='User name')
     def list(self, username=None):
-        """Lists all projects
-        arguments: [username]"""
+        """Lists all projects"""
         for project in self.manager.get_projects(username):
             print project.name
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
+    @args('--key', dest="key", metavar='<key>', help='Key')
+    @args('--value', dest="value", metavar='<value>', help='Value')
     def quota(self, project_id, key=None, value=None):
-        """Set or display quotas for project
-        arguments: project_id [key] [value]"""
+        """Set or display quotas for project"""
         ctxt = context.get_admin_context()
         if key:
             if value.lower() == 'unlimited':
@@ -443,18 +502,21 @@ class ProjectCommands(object):
                 value = 'unlimited'
             print '%s: %s' % (key, value)
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
+    @args('--user', dest="user_id", metavar='<name>', help='User name')
     def remove(self, project_id, user_id):
-        """Removes user from project
-        arguments: project_id user_id"""
+        """Removes user from project"""
         try:
             self.manager.remove_from_project(user_id, project_id)
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
             print ex
             raise
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
     def scrub(self, project_id):
-        """Deletes data associated with project
-        arguments: project_id"""
+        """Deletes data associated with project"""
         admin_context = context.get_admin_context()
         networks = db.project_get_networks(admin_context, project_id)
         for network in networks:
@@ -463,9 +525,13 @@ class ProjectCommands(object):
         for group in groups:
             db.security_group_destroy(admin_context, group['id'])
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
+    @args('--user', dest="user_id", metavar='<name>', help='User name')
+    @args('--file', dest="filename", metavar='<filename>',
+            help='File name(Default: nova.zip)')
     def zipfile(self, project_id, user_id, filename='nova.zip'):
-        """Exports credentials for project to a zip file
-        arguments: project_id user_id [filename='nova.zip]"""
+        """Exports credentials for project to a zip file"""
         try:
             zip_file = self.manager.get_credentials(user_id, project_id)
             if filename == "-":
@@ -479,12 +545,12 @@ class ProjectCommands(object):
         except db.api.NoMoreNetworks:
             print _('No more networks available. If this is a new '
                     'installation, you need\nto call something like this:\n\n'
-                    '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+                    '  nova-manage network create pvt 10.0.0.0/8 10 64\n\n')
         except exception.ProcessExecutionError, e:
             print e
-            print _("The above error may show that the certificate db has not "
-                    "been created.\nPlease create a database by running a "
-                    "nova-api server on this host.")
+            print _("The above error may show that the certificate db has "
+                    "not been created.\nPlease create a database by running "
+                    "a nova-api server on this host.")
 
 AccountCommands = ProjectCommands
 
@@ -492,15 +558,16 @@ AccountCommands = ProjectCommands
 class FixedIpCommands(object):
     """Class for managing fixed ip."""
 
+    @args('--host', dest="host", metavar='<host>', help='Host')
     def list(self, host=None):
-        """Lists all fixed ips (optionally by host) arguments: [host]"""
+        """Lists all fixed ips (optionally by host)"""
         ctxt = context.get_admin_context()
 
         try:
             if host is None:
                 fixed_ips = db.fixed_ip_get_all(ctxt)
             else:
-                fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+                fixed_ips = db.fixed_ip_get_all_by_instance_host(ctxt, host)
         except exception.NotFound as ex:
             print "error: %s" % ex
             sys.exit(2)
@@ -518,7 +585,7 @@ class FixedIpCommands(object):
                 instance = fixed_ip['instance']
                 hostname = instance['hostname']
                 host = instance['host']
-                mac_address = fixed_ip['mac_address']['address']
+                mac_address = fixed_ip['virtual_interface']['address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
                     fixed_ip['network']['cidr'],
                     fixed_ip['address'],
@@ -528,23 +595,23 @@ class FixedIpCommands(object):
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
+    @args('--ip_range', dest="range", metavar='<range>', help='IP range')
     def create(self, range):
-        """Creates floating ips for zone by range
-        arguments: ip_range"""
+        """Creates floating ips for zone by range"""
         for address in netaddr.IPNetwork(range):
             db.floating_ip_create(context.get_admin_context(),
                                   {'address': str(address)})
 
+    @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     def delete(self, ip_range):
-        """Deletes floating ips by range
-        arguments: range"""
+        """Deletes floating ips by range"""
         for address in netaddr.IPNetwork(ip_range):
             db.floating_ip_destroy(context.get_admin_context(),
                                    str(address))
 
+    @args('--host', dest="host", metavar='<host>', help='Host')
     def list(self, host=None):
         """Lists all floating ips (optionally by host)
-        arguments: [host]
         Note: if host is given, only active floating IPs are returned"""
         ctxt = context.get_admin_context()
         if host is None:
@@ -563,19 +630,32 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
+    @args('--label', dest="label", metavar='<label>',
+            help='Label(ex: public)')
+    @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
+            help='Network')
+    @args('--num_networks', dest="num_networks", metavar='<number>',
+            help='How many networks create')
+    @args('--network_size', dest="network_size", metavar='<number>',
+            help='How many hosts in network')
+    @args('--vlan', dest="vlan_start", metavar='<vlan id>', help='vlan id')
+    @args('--vpn', dest="vpn_start", help='vpn start')
+    @args('--fixed_range_v6', dest="fixed_range_v6", help='fixed ipv6 range')
+    @args('--gateway_v6', dest="gateway_v6", help='ipv6 gateway')
+    @args('--flat_network_bridge', dest="flat_network_bridge",
+            metavar='<flat network bridge>', help='Flat_network_bridge')
+    @args('--bridge_interface', dest="bridge_interface",
+            metavar='<bridge interface>', help='Bridge_interface')
+    @args('--multi_host', dest="multi_host", metavar="<'T'|'F'>",
+            help='Multi host')
+    @args('--dns1', dest="dns1", metavar="<DNS Address>", help='First DNS')
+    @args('--dns2', dest="dns2", metavar="<DNS Address>", help='Second DNS')
     def create(self, label=None, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None,
+               network_size=None, multi_host=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, gateway_v6=None,
-               flat_network_bridge=None, bridge_interface=None):
-        """Creates fixed ips for host by range
-        arguments: label, fixed_range, [num_networks=FLAG],
-                   [network_size=FLAG], [vlan_start=FLAG],
-                   [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
-                   [flat_network_bridge=FLAG], [bridge_interface=FLAG]
-        If you wish to use a later argument fill in the gaps with 0s
-        Ex: network create private 10.0.0.0/8 1 15 0 0 0 0 xenbr1 eth1
-            network create private 10.0.0.0/8 1 15
-        """
+               flat_network_bridge=None, bridge_interface=None,
+               dns1=None, dns2=None):
+        """Creates fixed ips for host by range"""
         if not label:
             msg = _('a label (ex: public) is required to create networks.')
             print msg
@@ -589,6 +669,10 @@ class NetworkCommands(object):
             num_networks = FLAGS.num_networks
         if not network_size:
             network_size = FLAGS.network_size
+        if not multi_host:
+            multi_host = FLAGS.multi_host
+        else:
+            multi_host = multi_host == 'T'
         if not vlan_start:
             vlan_start = FLAGS.vlan_start
         if not vpn_start:
@@ -601,12 +685,15 @@ class NetworkCommands(object):
             bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
         if not gateway_v6:
             gateway_v6 = FLAGS.gateway_v6
+        if not dns1 and FLAGS.flat_network_dns:
+            dns1 = FLAGS.flat_network_dns
         net_manager = utils.import_object(FLAGS.network_manager)
 
         try:
             net_manager.create_networks(context.get_admin_context(),
                                         label=label,
                                         cidr=fixed_range,
+                                        multi_host=multi_host,
                                         num_networks=int(num_networks),
                                         network_size=int(network_size),
                                         vlan_start=int(vlan_start),
@@ -614,27 +701,35 @@ class NetworkCommands(object):
                                         cidr_v6=fixed_range_v6,
                                         gateway_v6=gateway_v6,
                                         bridge=flat_network_bridge,
-                                        bridge_interface=bridge_interface)
+                                        bridge_interface=bridge_interface,
+                                        dns1=dns1,
+                                        dns2=dns2)
         except ValueError, e:
             print e
             raise e
 
     def list(self):
         """List all created networks"""
-        print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (_('network'),
+        print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
+                                                  _('network'),
                                                   _('netmask'),
                                                   _('start address'),
-                                                  _('DNS'),
+                                                  _('DNS1'),
+                                                  _('DNS2'),
                                                   _('VlanID'),
                                                   'project')
         for network in db.network_get_all(context.get_admin_context()):
-            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
+                                        network.cidr,
                                         network.netmask,
                                         network.dhcp_start,
-                                        network.dns,
+                                        network.dns1,
+                                        network.dns2,
                                         network.vlan,
                                         network.project_id)
 
+    @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
+            help='Network to delete')
     def delete(self, fixed_range):
         """Deletes a network"""
         network = db.network_get_by_cidr(context.get_admin_context(), \
@@ -648,12 +743,10 @@ class NetworkCommands(object):
 class VmCommands(object):
     """Class for mangaging VM instances."""
 
+    @args('--host', dest="host", metavar='<host>', help='Host')
     def list(self, host=None):
-        """Show a list of all instances
+        """Show a list of all instances"""
 
-        :param host: show all instance on specified host.
-        :param instance: show specificed instance.
-        """
         print "%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s" \
               "  %-10s %-10s %-10s %-5s" % (
             _('instance'),
@@ -691,13 +784,11 @@ class VmCommands(object):
                 instance['availability_zone'],
                 instance['launch_index'])
 
+    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
+    @args('--dest', dest='dest', metavar='<Destanation>',
+            help='destanation node')
     def live_migration(self, ec2_id, dest):
-        """Migrates a running instance to a new machine.
-
-        :param ec2_id: instance id which comes from euca-describe-instance.
-        :param dest: destination host name.
-
-        """
+        """Migrates a running instance to a new machine."""
 
         ctxt = context.get_admin_context()
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
@@ -727,9 +818,13 @@ class VmCommands(object):
 class ServiceCommands(object):
     """Enable and disable running services"""
 
+    @args('--host', dest='host', metavar='<host>', help='Host')
+    @args('--service', dest='service', metavar='<service>',
+            help='Nova service')
     def list(self, host=None, service=None):
-        """Show a list of all running services. Filter by host & service name.
-        args: [host] [service]"""
+        """
+        Show a list of all running services. Filter by host & service name.
+        """
         ctxt = context.get_admin_context()
         now = utils.utcnow()
         services = db.service_get_all(ctxt)
@@ -748,9 +843,11 @@ class ServiceCommands(object):
                                               active, art,
                                               svc['updated_at'])
 
+    @args('--host', dest='host', metavar='<host>', help='Host')
+    @args('--service', dest='service', metavar='<service>',
+            help='Nova service')
     def enable(self, host, service):
-        """Enable scheduling for a service
-        args: host service"""
+        """Enable scheduling for a service"""
         ctxt = context.get_admin_context()
         svc = db.service_get_by_args(ctxt, host, service)
         if not svc:
@@ -758,9 +855,11 @@ class ServiceCommands(object):
             return
         db.service_update(ctxt, svc['id'], {'disabled': False})
 
+    @args('--host', dest='host', metavar='<host>', help='Host')
+    @args('--service', dest='service', metavar='<service>',
+            help='Nova service')
     def disable(self, host, service):
-        """Disable scheduling for a service
-        args: host service"""
+        """Disable scheduling for a service"""
         ctxt = context.get_admin_context()
         svc = db.service_get_by_args(ctxt, host, service)
         if not svc:
@@ -768,12 +867,9 @@ class ServiceCommands(object):
             return
         db.service_update(ctxt, svc['id'], {'disabled': True})
 
+    @args('--host', dest='host', metavar='<host>', help='Host')
     def describe_resource(self, host):
-        """Describes cpu/memory/hdd info for host.
-
-        :param host: hostname.
-
-        """
+        """Describes cpu/memory/hdd info for host."""
 
         result = rpc.call(context.get_admin_context(),
                      FLAGS.scheduler_topic,
@@ -801,12 +897,9 @@ class ServiceCommands(object):
                                                   val['memory_mb'],
                                                   val['local_gb'])
 
+    @args('--host', dest='host', metavar='<host>', help='Host')
     def update_resource(self, host):
-        """Updates available vcpu/memory/disk info for host.
-
-        :param host: hostname.
-
-        """
+        """Updates available vcpu/memory/disk info for host."""
 
         ctxt = context.get_admin_context()
         service_refs = db.service_get_all_by_host(ctxt, host)
@@ -850,6 +943,8 @@ class DbCommands(object):
     def __init__(self):
         pass
 
+    @args('--version', dest='version', metavar='<version>',
+            help='Database version')
     def sync(self, version=None):
         """Sync the database up to the most recent version."""
         return migration.db_sync(version)
@@ -869,14 +964,18 @@ class VersionCommands(object):
         print _("%s (%s)") %\
                 (version.version_string(), version.version_string_with_vcs())
 
+    def __call__(self):
+        self.list()
+
 
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
+    @args('--volume', dest='volume_id', metavar='<volume id>',
+            help='Volume ID')
     def delete(self, volume_id):
         """Delete a volume, bypassing the check that it
-        must be available.
-        args: volume_id_id"""
+        must be available."""
         ctxt = context.get_admin_context()
         volume = db.volume_get(ctxt, param2id(volume_id))
         host = volume['host']
@@ -897,11 +996,12 @@ class VolumeCommands(object):
                  {"method": "delete_volume",
                   "args": {"volume_id": volume['id']}})
 
+    @args('--volume', dest='volume_id', metavar='<volume id>',
+            help='Volume ID')
     def reattach(self, volume_id):
         """Re-attach a volume that has previously been attached
         to an instance.  Typically called after a compute host
-        has been rebooted.
-        args: volume_id_id"""
+        has been rebooted."""
         ctxt = context.get_admin_context()
         volume = db.volume_get(ctxt, param2id(volume_id))
         if not volume['instance_id']:
@@ -928,12 +1028,23 @@ class InstanceTypeCommands(object):
             val["flavorid"], val["swap"], val["rxtx_quota"],
             val["rxtx_cap"], deleted)
 
+    @args('--name', dest='name', metavar='<name>',
+            help='Name of instance type/flavor')
+    @args('--memory', dest='memory', metavar='<memory size>',
+            help='Memory size')
+    @args('--cpu', dest='vcpus', metavar='<num cores>', help='Number cpus')
+    @args('--local_gb', dest='local_gb', metavar='<local_gb>',
+            help='local_gb')
+    @args('--flavor', dest='flavorid', metavar='<flavor  id>',
+            help='Flavor ID')
+    @args('--swap', dest='swap', metavar='<swap>', help='Swap')
+    @args('--rxtx_quota', dest='rxtx_quota', metavar='<rxtx_quota>',
+            help='rxtx_quota')
+    @args('--rxtx_cap', dest='rxtx_cap', metavar='<rxtx_cap>',
+            help='rxtx_cap')
     def create(self, name, memory, vcpus, local_gb, flavorid,
                swap=0, rxtx_quota=0, rxtx_cap=0):
-        """Creates instance types / flavors
-           arguments: name memory vcpus local_gb flavorid [swap] [rxtx_quota]
-                      [rxtx_cap]
-        """
+        """Creates instance types / flavors"""
         try:
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
@@ -956,9 +1067,10 @@ class InstanceTypeCommands(object):
         else:
             print "%s created" % name
 
+    @args('--name', dest='name', metavar='<name>',
+            help='Name of instance type/flavor')
     def delete(self, name, purge=None):
-        """Marks instance types / flavors as deleted
-        arguments: name"""
+        """Marks instance types / flavors as deleted"""
         try:
             if purge == "--purge":
                 instance_types.purge(name)
@@ -977,9 +1089,10 @@ class InstanceTypeCommands(object):
         else:
             print "%s %s" % (name, verb)
 
+    @args('--name', dest='name', metavar='<name>',
+            help='Name of instance type/flavor')
     def list(self, name=None):
-        """Lists all active or specific instance types / flavors
-        arguments: [name]"""
+        """Lists all active or specific instance types / flavors"""
         try:
             if name is None:
                 inst_types = instance_types.get_all_types()
@@ -1027,11 +1140,18 @@ class ImageCommands(object):
         except Exception as exc:
             print _("Failed to register %(path)s: %(exc)s") % locals()
 
+    @args('--image', dest='image', metavar='<image>', help='Image')
+    @args('--kernel', dest='kernel', metavar='<kernel>', help='Kernel')
+    @args('--ram', dest='ramdisk', metavar='<ramdisk>', help='RAM disk')
+    @args('--owner', dest='owner', metavar='<owner>', help='Image owner')
+    @args('--name', dest='name', metavar='<name>', help='Image name')
+    @args('--public', dest='is_public', metavar="<'T'|'F'>",
+            help='Image public or not')
+    @args('--arch', dest='architecture', metavar='<arch>',
+            help='Architecture')
     def all_register(self, image, kernel, ramdisk, owner, name=None,
                  is_public='T', architecture='x86_64'):
-        """Uploads an image, kernel, and ramdisk into the image_service
-        arguments: image kernel ramdisk owner [name] [is_public='T']
-                   [architecture='x86_64']"""
+        """Uploads an image, kernel, and ramdisk into the image_service"""
         kernel_id = self.kernel_register(kernel, owner, None,
                                    is_public, architecture)
         ramdisk_id = self.ramdisk_register(ramdisk, owner, None,
@@ -1040,31 +1160,51 @@ class ImageCommands(object):
                             architecture, 'ami', 'ami',
                             kernel_id, ramdisk_id)
 
+    @args('--path', dest='path', metavar='<path>', help='Image path')
+    @args('--owner', dest='owner', metavar='<owner>', help='Image owner')
+    @args('--name', dest='name', metavar='<name>', help='Image name')
+    @args('--public', dest='is_public', metavar="<'T'|'F'>",
+            help='Image public or not')
+    @args('--arch', dest='architecture', metavar='<arch>',
+            help='Architecture')
+    @args('--cont_format', dest='container_format',
+            metavar='<container format>',
+            help='Container format(default bare)')
+    @args('--disk_format', dest='disk_format', metavar='<disk format>',
+            help='Disk format(default: raw)')
+    @args('--kernel', dest='kernel_id', metavar='<kernel>', help='Kernel')
+    @args('--ram', dest='ramdisk_id', metavar='<ramdisk>', help='RAM disk')
     def image_register(self, path, owner, name=None, is_public='T',
                        architecture='x86_64', container_format='bare',
                        disk_format='raw', kernel_id=None, ramdisk_id=None):
-        """Uploads an image into the image_service
-        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
-                   [container_format='bare'] [disk_format='raw']
-                   [kernel_id=None] [ramdisk_id=None]
-        """
+        """Uploads an image into the image_service"""
         return self._register(container_format, disk_format, path,
                               owner, name, is_public, architecture,
                               kernel_id, ramdisk_id)
 
+    @args('--path', dest='path', metavar='<path>', help='Image path')
+    @args('--owner', dest='owner', metavar='<owner>', help='Image owner')
+    @args('--name', dest='name', metavar='<name>', help='Image name')
+    @args('--public', dest='is_public', metavar="<'T'|'F'>",
+            help='Image public or not')
+    @args('--arch', dest='architecture', metavar='<arch>',
+            help='Architecture')
     def kernel_register(self, path, owner, name=None, is_public='T',
                architecture='x86_64'):
-        """Uploads a kernel into the image_service
-        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
-        """
+        """Uploads a kernel into the image_service"""
         return self._register('aki', 'aki', path, owner, name,
                               is_public, architecture)
 
+    @args('--path', dest='path', metavar='<path>', help='Image path')
+    @args('--owner', dest='owner', metavar='<owner>', help='Image owner')
+    @args('--name', dest='name', metavar='<name>', help='Image name')
+    @args('--public', dest='is_public', metavar="<'T'|'F'>",
+            help='Image public or not')
+    @args('--arch', dest='architecture', metavar='<arch>',
+            help='Architecture')
     def ramdisk_register(self, path, owner, name=None, is_public='T',
                 architecture='x86_64'):
-        """Uploads a ramdisk into the image_service
-        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
-        """
+        """Uploads a ramdisk into the image_service"""
         return self._register('ari', 'ari', path, owner, name,
                               is_public, architecture)
 
@@ -1113,9 +1253,10 @@ class ImageCommands(object):
             except Exception as exc:
                 print _("Failed to convert %(old)s: %(exc)s") % locals()
 
+    @args('--dir', dest='directory', metavar='<path>',
+            help='Images directory')
     def convert(self, directory):
-        """Uploads old objectstore images in directory to new service
-        arguments: directory"""
+        """Uploads old objectstore images in directory to new service"""
         machine_images = {}
         other_images = {}
         directory = os.path.abspath(directory)
@@ -1140,8 +1281,7 @@ class AgentBuildCommands(object):
 
     def create(self, os, architecture, version, url, md5hash,
                 hypervisor='xen'):
-        """Creates a new agent build.
-        arguments: os architecture version url md5hash [hypervisor='xen']"""
+        """Creates a new agent build."""
         ctxt = context.get_admin_context()
         agent_build = db.agent_build_create(ctxt,
                                             {'hypervisor': hypervisor,
@@ -1152,8 +1292,7 @@ class AgentBuildCommands(object):
                                              'md5hash': md5hash})
 
     def delete(self, os, architecture, hypervisor='xen'):
-        """Deletes an existing agent build.
-        arguments: os architecture [hypervisor='xen']"""
+        """Deletes an existing agent build."""
         ctxt = context.get_admin_context()
         agent_build_ref = db.agent_build_get_by_triple(ctxt,
                                   hypervisor, os, architecture)
@@ -1187,9 +1326,7 @@ class AgentBuildCommands(object):
 
     def modify(self, os, architecture, version, url, md5hash,
                hypervisor='xen'):
-        """Update an existing agent build.
-        arguments: os architecture version url md5hash [hypervisor='xen']
-        """
+        """Update an existing agent build."""
         ctxt = context.get_admin_context()
         agent_build_ref = db.agent_build_get_by_triple(ctxt,
                                   hypervisor, os, architecture)
@@ -1285,21 +1422,42 @@ def main():
     command_object = fn()
     actions = methods_of(command_object)
     if len(argv) < 1:
-        print script_name + " category action [<args>]"
-        print _("Available actions for %s category:") % category
-        for k, _v in actions:
-            print "\t%s" % k
-        sys.exit(2)
-    action = argv.pop(0)
-    matches = lazy_match(action, actions)
-    action, fn = matches[0]
+        if hasattr(command_object, '__call__'):
+            action = ''
+            fn = command_object.__call__
+        else:
+            print script_name + " category action [<args>]"
+            print _("Available actions for %s category:") % category
+            for k, _v in actions:
+                print "\t%s" % k
+            sys.exit(2)
+    else:
+        action = argv.pop(0)
+        matches = lazy_match(action, actions)
+        action, fn = matches[0]
+
+    # For not decorated methods
+    options = getattr(fn, 'options', [])
+
+    usage = "%%prog %s %s <args> [options]" % (category, action)
+    parser = OptionParser(usage=usage)
+    for ar, kw in options:
+        parser.add_option(*ar, **kw)
+    (opts, fn_args) = parser.parse_args(argv)
+    fn_kwargs = vars(opts)
+
+    for k, v in fn_kwargs.items():
+        if v is None:
+            del fn_kwargs[k]
+
     # call the action with the remaining arguments
     try:
-        fn(*argv)
+        fn(*fn_args, **fn_kwargs)
         sys.exit(0)
     except TypeError:
         print _("Possible wrong number of arguments supplied")
-        print "%s %s: %s" % (category, action, fn.__doc__)
+        print fn.__doc__
+        parser.print_help()
         raise
     except Exception:
         print _("Command failed, please check log for more info")

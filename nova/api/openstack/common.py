@@ -55,10 +55,10 @@ def get_pagination_params(request):
             params[param] = int(request.GET[param])
         except ValueError:
             msg = _('%s param must be an integer') % param
-            raise webob.exc.HTTPBadRequest(msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         if params[param] < 0:
             msg = _('%s param must be positive') % param
-            raise webob.exc.HTTPBadRequest(msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
     return params
 
@@ -79,18 +79,22 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     try:
         offset = int(request.GET.get('offset', 0))
     except ValueError:
-        raise webob.exc.HTTPBadRequest(_('offset param must be an integer'))
+        msg = _('offset param must be an integer')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
 
     try:
         limit = int(request.GET.get('limit', max_limit))
     except ValueError:
-        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+        msg = _('limit param must be an integer')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
 
     if limit < 0:
-        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+        msg = _('limit param must be positive')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
 
     if offset < 0:
-        raise webob.exc.HTTPBadRequest(_('offset param must be positive'))
+        msg = _('offset param must be positive')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
 
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
@@ -113,7 +117,8 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
                 start_index = i + 1
                 break
         if start_index < 0:
-            raise webob.exc.HTTPBadRequest(_('marker [%s] not found' % marker))
+            msg = _('marker [%s] not found') % marker
+            raise webob.exc.HTTPBadRequest(explanation=msg)
     range_end = start_index + limit
     return items[start_index:range_end]
 
@@ -166,6 +171,57 @@ def remove_version_from_href(href):
     return new_href
 
 
+def get_version_from_href(href):
+    """Returns the api version in the href.
+
+    Returns the api version in the href.
+    If no version is found, 1.0 is returned
+
+    Given: 'http://www.nova.com/123'
+    Returns: '1.0'
+
+    Given: 'http://www.nova.com/v1.1'
+    Returns: '1.1'
+
+    """
+    try:
+        #finds the first instance that matches /v#.#/
+        version = re.findall(r'[/][v][0-9]+\.[0-9]+[/]', href)
+        #if no version was found, try finding /v#.# at the end of the string
+        if not version:
+            version = re.findall(r'[/][v][0-9]+\.[0-9]+$', href)
+        version = re.findall(r'[0-9]+\.[0-9]', version[0])[0]
+    except IndexError:
+        version = '1.0'
+    return version
+
+
+class MetadataXMLDeserializer(wsgi.MetadataXMLDeserializer):
+
+    def _extract_metadata_container(self, datastring):
+        dom = minidom.parseString(datastring)
+        metadata_node = self.find_first_child_named(dom, "metadata")
+        metadata = self.extract_metadata(metadata_node)
+        return {'body': {'metadata': metadata}}
+
+    def create(self, datastring):
+        return self._extract_metadata_container(datastring)
+
+    def update_all(self, datastring):
+        return self._extract_metadata_container(datastring)
+
+    def update(self, datastring):
+        dom = minidom.parseString(datastring)
+        metadata_item = self.extract_metadata(dom)
+        return {'body': {'meta': metadata_item}}
+
+
+class MetadataHeadersSerializer(wsgi.ResponseHeadersSerializer):
+
+    def delete(self, response, data):
+        response.status_int = 204
+
+
 class MetadataXMLSerializer(wsgi.XMLDictSerializer):
     def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(MetadataXMLSerializer, self).__init__(xmlns=xmlns)
@@ -199,6 +255,9 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
     def create(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
 
+    def update_all(self, metadata_dict):
+        return self._meta_list_to_xml_string(metadata_dict)
+
     def _meta_item_to_xml_string(self, meta_item_dict):
         xml_doc = minidom.Document()
         item_key, item_value = meta_item_dict.items()[0]
@@ -212,3 +271,6 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
 
     def update(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
+
+    def default(self, *args, **kwargs):
+        return ''
