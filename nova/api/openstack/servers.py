@@ -153,8 +153,7 @@ class Controller(object):
 
     @scheduler_api.redirect_handler
     def action(self, req, id, body):
-        """Multi-purpose method used to reboot, rebuild, or
-        resize a server"""
+        """Multi-purpose method used to take actions on a server"""
 
         self.actions = {
             'changePassword': self._action_change_password,
@@ -166,7 +165,6 @@ class Controller(object):
             'migrate': self._action_migrate,
             'createImage': self._action_create_image,
         }
-
 
         for key in self.actions.keys():
             if key in body:
@@ -665,7 +663,6 @@ class ControllerV11(Controller):
             msg = _("Invalid image_type '%s'") % image_type
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-
         # build location of newly-created image entity
         image_ref = os.path.join(req.application_url,
                                  'images',
@@ -681,10 +678,6 @@ class ControllerV11(Controller):
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_new_style(server)
-
-
-
-
 
 
 class HeadersSerializer(wsgi.ResponseHeadersSerializer):
