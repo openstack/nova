@@ -16,6 +16,7 @@
 #    under the License.
 
 import base64
+import datetime
 import json
 import unittest
 from xml.dom import minidom
@@ -172,8 +173,10 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     instance = {
         "id": int(id),
-        "created_at": "2010-10-10T12:00:00Z",
-        "updated_at": "2010-11-11T11:00:00Z",
+        "created_at": datetime.datetime.strptime("2010-10-10 12:00:00",
+                                                  "%Y-%m-%d %H:%M:%S"),
+        "updated_at": datetime.datetime.strptime("2010-11-11 11:00:00",
+                                                  "%Y-%m-%d %H:%M:%S"),
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
@@ -1048,8 +1051,10 @@ class ServersTest(test.TestCase):
                     'uuid': FAKE_UUID,
                     'instance_type': dict(inst_type),
                     'image_ref': image_ref,
-                    'created_at': '2010-10-10T12:00:00Z',
-                    'updated_at': '2010-11-11T11:00:00Z',
+                    "created_at": datetime.datetime.strptime("2010-10-10 12:00:00",
+                                                              "%Y-%m-%d %H:%M:%S"),
+                    "updated_at": datetime.datetime.strptime("2010-11-11 11:00:00",
+                                                              "%Y-%m-%d %H:%M:%S"),
                    }
 
         def server_update(context, id, params):
@@ -2901,8 +2906,10 @@ class ServersViewBuilderV11Test(test.TestCase):
     def _get_instance(self):
         instance = {
             "id": 1,
-            "created_at": "2010-10-10T12:00:00Z",
-            "updated_at": "2010-11-11T11:00:00Z",
+            "created_at": datetime.datetime.strptime("2010-10-10 12:00:00",
+                                                      "%Y-%m-%d %H:%M:%S"),
+            "updated_at": datetime.datetime.strptime("2010-11-11 11:00:00",
+                                                      "%Y-%m-%d %H:%M:%S"),
             "admin_pass": "",
             "user_id": "",
             "project_id": "",
