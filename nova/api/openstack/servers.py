@@ -493,51 +493,19 @@ class ControllerV11(Controller):
 
     def _image_ref_from_req_data(self, data):
         try:
-            image = data['server']['image']
+            return data['server']['imageRef']
         except (TypeError, KeyError):
-            msg = _("Missing image entity")
+            msg = _("Missing imageRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            links = image.get('links', [])
-        except AttributeError:
-            msg = _("Malformed image entity")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        image_ref = self._href_from_bookmark_links(links)
-
-        if image_ref is None:
-            try:
-                return image['id']
-            except KeyError:
-                msg = _("Missing id attribute on image entity")
-                raise exc.HTTPBadRequest(explanation=msg)
-        else:
-            return image_ref
 
     def _flavor_id_from_req_data(self, data):
         try:
-            flavor = data['server']['flavor']
+            flavor_ref = data['server']['flavorRef']
         except (TypeError, KeyError):
-            msg = _("Missing flavor entity")
+            msg = _("Missing flavorRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        try:
-            links = flavor.get('links', [])
-        except AttributeError:
-            msg = _("Malformed flavor entity")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        flavor_ref = self._href_from_bookmark_links(links)
-
-        if flavor_ref is None:
-            try:
-                return flavor['id']
-            except (KeyError, AttributeError):
-                msg = _("Missing id attribute in flavor entity")
-                raise exc.HTTPBadRequest(explanation=msg)
-        else:
-            return common.get_id_from_href(flavor_ref)
+        return common.get_id_from_href(flavor_ref)
 
     def _build_view(self, req, instance, is_detail=False):
         base_url = req.application_url

@@ -1267,18 +1267,8 @@ class ServersTest(test.TestCase):
         body = {
             'server': {
                 'name': 'server_test',
-                'image': {
-                    'id': 2,
-                    'links': [
-                        {'rel': 'bookmark', 'href': image_href},
-                    ],
-                },
-                'flavor': {
-                    'id': 3,
-                    'links': [
-                        {'rel': 'bookmark', 'href': flavor_ref},
-                    ],
-                },
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
@@ -1299,14 +1289,14 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        print res.body
         self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(1, server['id'])
         self.assertEqual('server_test', server['name'])
         self.assertEqual(expected_flavor, server['flavor'])
         self.assertEqual(expected_image, server['image'])
-        self.assertEqual(res.status_int, 200)
-        #self.assertEqual(1, server['id'])
 
     def test_create_instance_v1_1_invalid_flavor_href(self):
         self._setup_for_create_instance()
@@ -1360,7 +1350,7 @@ class ServersTest(test.TestCase):
         self._setup_for_create_instance()
 
         image_id = "2"
-        flavor_ref = 'http://localhost/flavors/3'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
         expected_flavor = {
             "id": "3",
             "links": [
@@ -1394,6 +1384,7 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        print res.body
         self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(expected_flavor, server['flavor'])
@@ -1428,8 +1419,8 @@ class ServersTest(test.TestCase):
         body = {
             'server': {
                 'name': 'server_test',
-                'image': {'id': 3},
-                'flavor': {'id': 3},
+                'imageRef': 3,
+                'flavorRef': 3,
                 'adminPass': 'testpass',
             },
         }
@@ -1452,8 +1443,8 @@ class ServersTest(test.TestCase):
         body = {
             'server': {
                 'name': 'server_test',
-                'image': {'id': 3},
-                'flavor': {'id': 3},
+                'imageRef': 3,
+                'flavorRef': 3,
                 'adminPass': '',
             },
         }
