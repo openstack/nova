@@ -548,7 +548,6 @@ class VersionsTest(test.TestCase):
         link = children[4]
         entry = children[5]
 
-        self.assertEqual(root.tag.split('}')[1], 'feed')
         self.assertEqual(title.tag.split('}')[1], 'title')
         self.assertEqual(title.text, 'Available API Versions')
         self.assertEqual(updated.tag.split('}')[1], 'updated')
@@ -626,34 +625,65 @@ class VersionsTest(test.TestCase):
             },
         }
 
-        expected = """
-        <feed xmlns="http://www.w3.org/2005/Atom">
-            <title type="text">About This Version</title>
-            <updated>2011-01-21T11:33:21Z</updated>
-            <id>http://servers.api.openstack.org/v1.1/</id>
-            <author>
-                <name>Rackspace</name>
-                <uri>http://www.rackspace.com/</uri>
-            </author>
-            <link href="http://servers.api.openstack.org/v1.1/" rel="self"/>
-            <entry>
-                <id>http://servers.api.openstack.org/v1.1/</id>
-                <title type="text">Version v1.1</title>
-                <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://servers.api.openstack.org/v1.1/" rel="self"/>
-                <link href="http://docs.rackspacecloud.com/servers/
-                    api/v1.1/cs-devguide-20110125.pdf"
-                     rel="describedby" type="application/pdf"/>
-                <link href="http://docs.rackspacecloud.com/servers/
-                    api/v1.1/application.wadl"
-                     rel="describedby" type="application/vnd.sun.wadl+xml"/>
-                <content type="text">
-                    Version v1.1 CURRENT (2011-01-21T11:33:21Z)
-                </content>
-            </entry>
-        </feed>""".replace("  ", "").replace("\n", "")
-
         serializer = versions.VersionsAtomSerializer()
         response = serializer.detail(versions_data)
-        response = response.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, response)
+
+        root = xml.etree.ElementTree.XML(response)
+        self.assertEqual(root.tag.split('}')[1], "feed")
+        self.assertEqual(root.tag.split('}')[0].strip('{'),
+                         "http://www.w3.org/2005/Atom")
+
+        children = list(root)
+        title = children[0]
+        updated = children[1]
+        id = children[2]
+        author = children[3]
+        link = children[4]
+        entry = children[5]
+
+        self.assertEqual(root.tag.split('}')[1], 'feed')
+        self.assertEqual(title.tag.split('}')[1], 'title')
+        self.assertEqual(title.text, 'About This Version')
+        self.assertEqual(updated.tag.split('}')[1], 'updated')
+        self.assertEqual(updated.text, '2011-01-21T11:33:21Z')
+        self.assertEqual(id.tag.split('}')[1], 'id')
+        self.assertEqual(id.text, 'http://servers.api.openstack.org/v1.1/')
+
+        self.assertEqual(author.tag.split('}')[1], 'author')
+        author_name = list(author)[0]
+        author_uri = list(author)[1]
+        self.assertEqual(author_name.tag.split('}')[1], 'name')
+        self.assertEqual(author_name.text, 'Rackspace')
+        self.assertEqual(author_uri.tag.split('}')[1], 'uri')
+        self.assertEqual(author_uri.text, 'http://www.rackspace.com/')
+
+        self.assertEqual(link.get('href'),
+                         'http://servers.api.openstack.org/v1.1/')
+        self.assertEqual(link.get('rel'), 'self')
+
+        self.assertEqual(entry.tag.split('}')[1], 'entry')
+        entry_children = list(entry)
+        entry_id = entry_children[0]
+        entry_title = entry_children[1]
+        entry_updated = entry_children[2]
+        entry_links = (entry_children[3], entry_children[4], entry_children[5])
+        entry_content = entry_children[6]
+
+        self.assertEqual(entry_id.tag.split('}')[1], "id")
+        self.assertEqual(entry_id.text,
+                         "http://servers.api.openstack.org/v1.1/")
+        self.assertEqual(entry_title.tag.split('}')[1], "title")
+        self.assertEqual(entry_title.get('type'), "text")
+        self.assertEqual(entry_title.text, "Version v1.1")
+        self.assertEqual(entry_updated.tag.split('}')[1], "updated")
+        self.assertEqual(entry_updated.text, "2011-01-21T11:33:21Z")
+
+        for i, link in enumerate(versions_data["version"]["links"]):
+            self.assertEqual(entry_links[i].tag.split('}')[1], "link")
+            for key, val in versions_data["version"]["links"][i].items():
+                self.assertEqual(entry_links[i].get(key), val)
+
+        self.assertEqual(entry_content.tag.split('}')[1], "content")
+        self.assertEqual(entry_content.get('type'), "text")
+        self.assertEqual(entry_content.text,
+                         "Version v1.1 CURRENT (2011-01-21T11:33:21Z)")
