@@ -549,10 +549,8 @@ class CloudController(object):
                     final = self._rule_dict_last_step(context, **groups_value)
                     finalset.append(final)
             else:
-                if rule:
-                    final = self._rule_dict_last_step(context, **rule)
-                    finalset.append(final)
-        LOG.warn(finalset)
+                final = self._rule_dict_last_step(context, **rule)
+                finalset.append(final)
         return finalset
 
     def _cidr_args_split(self, kwargs):
