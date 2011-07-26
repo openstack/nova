@@ -80,7 +80,7 @@ class VersionsTest(test.TestCase):
         expected = {
             "version" : {
                 "id" : "v1.0",
-                "status" : "CURRENT",
+                "status" : "DEPRECATED",
                 "updated" : "2011-01-21T11:33:21Z",
                 "links": [
                     {
@@ -184,7 +184,7 @@ class VersionsTest(test.TestCase):
 
 
         expected = """
-        <version id="v1.0" status="CURRENT" 
+        <version id="v1.0" status="DEPRECATED" 
             updated="2011-01-21T11:33:21Z" 
             xmlns="http://docs.openstack.org/common/api/v1.0" 
             xmlns:atom="http://www.w3.org/2005/Atom">
@@ -609,6 +609,9 @@ class VersionsTest(test.TestCase):
         entry_id = entry_children[0]
         entry_title = entry_children[1]
         entry_updated = entry_children[1]
+        entry_link = entry_children[1]
+        entry_content = entry_children[1]
+        self.assertEqual(entry_id.text, "http://test/2.9.8")
          
 
 
