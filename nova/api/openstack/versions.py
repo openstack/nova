@@ -205,7 +205,6 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
     # in the base class (XMLDictSerializer), which I plan to do in 
     # another branch
     def to_xml_string(self, node, has_atom=False):
-        print "TOXML"
         self._add_xmlns(node, has_atom)
         return node.toxml(encoding='UTF-8')
 
@@ -278,7 +277,6 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
     # in the base class (XMLDictSerializer), which I plan to do in 
     # another branch
     def to_xml_string(self, node, has_atom=False):
-        print "TOXML"
         self._add_xmlns(node, has_atom)
         return node.toxml(encoding='UTF-8')
 
