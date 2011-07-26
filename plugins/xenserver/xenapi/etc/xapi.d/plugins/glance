@@ -412,8 +412,8 @@ def copy_kernel_vdi(session, args):
 
 def remove_kernel_ramdisk(session, args):
     """Removes kernel and/or ramdisk from dom0's file system"""
-    kernel_file = exists(args, 'kernel-file')
-    ramdisk_file = exists(args, 'ramdisk-file')
+    kernel_file = optional(args, 'kernel-file')
+    ramdisk_file = optional(args, 'ramdisk-file')
     if kernel_file:
         os.remove(kernel_file)
     if ramdisk_file:

@@ -139,7 +139,9 @@ class FloatingIpTest(test.TestCase):
     def test_floating_ip_allocate(self):
         req = webob.Request.blank('/v1.1/os-floating-ips')
         req.method = 'POST'
+        req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
+        print res
         self.assertEqual(res.status_int, 200)
         ip = json.loads(res.body)['allocated']
         expected = {
@@ -177,6 +179,7 @@ class FloatingIpTest(test.TestCase):
     def test_floating_ip_disassociate(self):
         req = webob.Request.blank('/v1.1/os-floating-ips/1/disassociate')
         req.method = 'POST'
+        req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         ip = json.loads(res.body)['disassociated']

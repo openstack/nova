@@ -22,7 +22,6 @@ from nova import flags
 from nova import image
 from nova import quota
 from nova import utils
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -62,7 +61,7 @@ class Controller(object):
         if id in metadata:
             return {'meta': {id: metadata[id]}}
         else:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def create(self, req, image_id, body):
         context = req.environ['nova.context']
@@ -97,33 +96,67 @@ class Controller(object):
         self._check_quota_limit(context, metadata)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
+        return dict(meta=meta)
 
-        return req.body
+    def update_all(self, req, image_id, body):
+        context = req.environ['nova.context']
+        img = self.image_service.show(context, image_id)
+        metadata = body.get('metadata', {})
+        self._check_quota_limit(context, metadata)
+        img['properties'] = metadata
+        self.image_service.update(context, image_id, img, None)
+        return dict(metadata=metadata)
 
     def delete(self, req, image_id, id):
         context = req.environ['nova.context']
         img = self.image_service.show(context, image_id)
         metadata = self._get_metadata(context, image_id)
         if not id in metadata:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         metadata.pop(id)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
 
 
+class ImageMetadataXMLDeserializer(wsgi.MetadataXMLDeserializer):
+
+    def _extract_metadata_container(self, datastring):
+        dom = minidom.parseString(datastring)
+        metadata_node = self.find_first_child_named(dom, "metadata")
+        metadata = self.extract_metadata(metadata_node)
+        return {'body': {'metadata': metadata}}
+
+    def create(self, datastring):
+        return self._extract_metadata_container(datastring)
+
+    def update_all(self, datastring):
+        return self._extract_metadata_container(datastring)
+
+    def update(self, datastring):
+        dom = minidom.parseString(datastring)
+        metadata_item = self.extract_metadata(dom)
+        return {'body': {'meta': metadata_item}}
+
+
+class HeadersSerializer(wsgi.ResponseHeadersSerializer):
+
+    def delete(self, response, data):
+        response.status_int = 204
+
+
 class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
-    def __init__(self):
-        xmlns = wsgi.XMLNS_V11
+    def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(ImageMetadataXMLSerializer, self).__init__(xmlns=xmlns)
 
     def _meta_item_to_xml(self, doc, key, value):
         node = doc.createElement('meta')
-        node.setAttribute('key', key)
-        text = doc.createTextNode(value)
+        doc.appendChild(node)
+        node.setAttribute('key', '%s' % key)
+        text = doc.createTextNode('%s' % value)
         node.appendChild(text)
         return node
 
-    def _meta_list_to_xml(self, xml_doc, meta_items):
+    def meta_list_to_xml(self, xml_doc, meta_items):
         container_node = xml_doc.createElement('metadata')
         for (key, value) in meta_items:
             item_node = self._meta_item_to_xml(xml_doc, key, value)
@@ -133,9 +166,10 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
     def _meta_list_to_xml_string(self, metadata_dict):
         xml_doc = minidom.Document()
         items = metadata_dict['metadata'].items()
-        container_node = self._meta_list_to_xml(xml_doc, items)
+        container_node = self.meta_list_to_xml(xml_doc, items)
+        xml_doc.appendChild(container_node)
         self._add_xmlns(container_node)
-        return container_node.toprettyxml(indent='    ')
+        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
 
     def index(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
@@ -143,12 +177,16 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
     def create(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
 
+    def update_all(self, metadata_dict):
+        return self._meta_list_to_xml_string(metadata_dict)
+
     def _meta_item_to_xml_string(self, meta_item_dict):
         xml_doc = minidom.Document()
         item_key, item_value = meta_item_dict.items()[0]
         item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
+        xml_doc.appendChild(item_node)
         self._add_xmlns(item_node)
-        return item_node.toprettyxml(indent='    ')
+        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
 
     def show(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
@@ -156,10 +194,21 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
     def update(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
 
+    def default(self, *args, **kwargs):
+        return ''
+
 
 def create_resource():
-    serializers = {
-        'application/xml': ImageMetadataXMLSerializer(),
+    headers_serializer = HeadersSerializer()
+
+    body_deserializers = {
+        'application/xml': ImageMetadataXMLDeserializer(),
     }
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    body_serializers = {
+        'application/xml': ImageMetadataXMLSerializer(),
+    }
+    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
+    deserializer = wsgi.RequestDeserializer(body_deserializers)
+
+    return wsgi.Resource(Controller(), deserializer, serializer)

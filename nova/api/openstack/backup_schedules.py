@@ -19,7 +19,6 @@ import time
 
 from webob import exc
 
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -34,22 +33,22 @@ class Controller(object):
     def __init__(self):
         pass
 
-    def index(self, req, server_id):
+    def index(self, req, server_id, **kwargs):
         """ Returns the list of backup schedules for a given instance """
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
-    def show(self, req, server_id, id):
+    def show(self, req, server_id, id, **kwargs):
         """ Returns a single backup schedule for a given instance """
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
-    def create(self, req, server_id, body):
+    def create(self, req, server_id, **kwargs):
         """ No actual update method required, since the existing API allows
         both create and update through a POST """
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
-    def delete(self, req, server_id, id):
+    def delete(self, req, server_id, id, **kwargs):
         """ Deletes an existing backup schedule """
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
 
 def create_resource():
@@ -59,9 +58,10 @@ def create_resource():
         },
     }
 
-    serializers = {
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V10,
                                                   metadata=metadata),
     }
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+    return wsgi.Resource(Controller(), serializer=serializer)

@@ -49,31 +49,36 @@ def get_ip_version(cidr):
 
 
 def get_network_info(instance):
+    # TODO(tr3buchet): this function needs to go away! network info
+    #                  MUST be passed down from compute
     # TODO(adiantum) If we will keep this function
     # we should cache network_info
     admin_context = context.get_admin_context()
 
-    ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
-                                                   instance['id'])
+    fixed_ips = db.fixed_ip_get_by_instance(admin_context, instance['id'])
+    vifs = db.virtual_interface_get_by_instance(admin_context, instance['id'])
     networks = db.network_get_all_by_instance(admin_context,
                                               instance['id'])
-    flavor = db.instance_type_get_by_id(admin_context,
+    flavor = db.instance_type_get(admin_context,
                                         instance['instance_type_id'])
     network_info = []
 
-    for network in networks:
-        network_ips = [ip for ip in ip_addresses
-                       if ip['network_id'] == network['id']]
+    for vif in vifs:
+        network = vif['network']
+
+        # determine which of the instance's IPs belong to this network
+        network_ips = [fixed_ip['address'] for fixed_ip in fixed_ips if
+                       fixed_ip['network_id'] == network['id']]
 
         def ip_dict(ip):
             return {
-                'ip': ip['address'],
+                'ip': ip,
                 'netmask': network['netmask'],
                 'enabled': '1'}
 
         def ip6_dict():
             prefix = network['cidr_v6']
-            mac = instance['mac_address']
+            mac = vif['address']
             project_id = instance['project_id']
             return  {
                 'ip': ipv6.to_global(prefix, mac, project_id),
@@ -84,10 +89,15 @@ def get_network_info(instance):
             'label': network['label'],
             'gateway': network['gateway'],
             'broadcast': network['broadcast'],
-            'mac': instance['mac_address'],
+            'mac': vif['address'],
             'rxtx_cap': flavor['rxtx_cap'],
-            'dns': [network['dns']],
+            'dns': [],
             'ips': [ip_dict(ip) for ip in network_ips]}
+
+        if network['dns1']:
+            mapping['dns'].append(network['dns1'])
+        if network['dns2']:
+            mapping['dns'].append(network['dns2'])
 
         if FLAGS.use_ipv6:
             mapping['ip6s'] = [ip6_dict()]
