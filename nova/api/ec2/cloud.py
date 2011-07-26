@@ -539,15 +539,20 @@ class CloudController(object):
             return rules
         if 'ip_ranges' in kwargs:
             rules = self._cidr_args_split(kwargs)
+        else:
+            rules = [kwargs]
         finalset = []
         for rule in rules:
             if 'groups' in rule:
                 groups_values = self._groups_args_split(rule)
                 for groups_value in groups_values:
-                    finalset.append(groups_value)
+                    final = self._rule_dict_last_step(context, **groups_value)
+                    finalset.append(final)
             else:
                 if rule:
-                    finalset.append(rule)
+                    final = self._rule_dict_last_step(context, **rule)
+                    finalset.append(final)
+        LOG.warn(finalset)
         return finalset
 
     def _cidr_args_split(self, kwargs):
@@ -590,6 +595,9 @@ class CloudController(object):
                     db.security_group_get_by_name(context.elevated(),
                                                   source_project_id,
                                                   source_security_group_name)
+            notfound = exception.SecurityGroupNotFound
+            if not source_security_group:
+                raise notfound(security_group_id=source_security_group_name)
             values['group_id'] = source_security_group['id']
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
@@ -628,7 +636,7 @@ class CloudController(object):
         for rule in security_group.rules:
             if 'group_id' in values:
                 if rule['group_id'] == values['group_id']:
-                    return True
+                    return rule['id']
             else:
                 is_duplicate = True
                 for key in ('cidr', 'from_port', 'to_port', 'protocol'):
@@ -636,7 +644,7 @@ class CloudController(object):
                         is_duplicate = False
                         break
                 if is_duplicate:
-                    return True
+                    return rule['id']
         return False
 
     def revoke_security_group_ingress(self, context, group_name=None,
@@ -659,23 +667,30 @@ class CloudController(object):
 
         msg = "Revoke security group ingress %s"
         LOG.audit(_(msg), security_group['name'], context=context)
+        prevalues = []
+        try:
+            prevalues = kwargs['ip_permissions']
+        except KeyError:
+            prevalues.append(kwargs)
+        postvalues = []
+        for values in prevalues:
+            rulesvalues = self._rule_args_to_dict(context, values)
+            if not rulesvalues:
+                err = "%s Not enough parameters to build a valid rule"
+                raise exception.ApiError(_(err % rulesvalues))
 
-        criteria = self._rule_args_to_dict(context, kwargs)[0]
-        if criteria is None:
-            raise exception.ApiError(_("Not enough parameters to build a "
-                                       "valid rule."))
-
-        for rule in security_group.rules:
-            match = True
-            for (k, v) in criteria.iteritems():
-                if getattr(rule, k, False) != v:
-                    match = False
-            if match:
-                db.security_group_rule_destroy(context, rule['id'])
-                self.compute_api.trigger_security_group_rules_refresh(context,
-                                        security_group_id=security_group['id'])
+            rule_id = None
+            for values_for_rule in rulesvalues:
+                values_for_rule['parent_group_id'] = security_group.id
+                rule_id = self._security_group_rule_exists(security_group,
+                                                           values_for_rule)
+                if rule_id:
+                    db.security_group_rule_destroy(context, rule_id)
+                    self.compute_api.trigger_security_group_rules_refresh(context,
+                                            security_group_id=security_group['id'])
+            if rule_id:
                 return True
-        raise exception.ApiError(_("No rule for the specified parameters."))
+            raise exception.ApiError(_("No rule for the specified parameters."))
 
     # TODO(soren): This has only been tested with Boto as the client.
     #              Unfortunately, it seems Boto is using an old API

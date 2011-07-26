@@ -213,7 +213,11 @@ class ApiEc2TestCase(test.TestCase):
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
         # pylint: disable=E1103
-        self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
+        if boto.Version >= '2':
+            self.ec2.new_http_connection(host or '%s:8773' % (self.host),
+                is_secure).AndReturn(self.http)
+        else:
+            self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
         return self.http
 
     def test_return_valid_isoformat(self):
@@ -400,6 +404,8 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEquals(int(group.rules[0].from_port), 80)
         self.assertEquals(int(group.rules[0].to_port), 81)
         self.assertEquals(len(group.rules[0].grants), 1)
+        from nova import log
+        log.warn(group.rules[0].grants[0].__dict__)
         self.assertEquals(str(group.rules[0].grants[0]), '0.0.0.0/0')
 
         self.expect_http()
