@@ -28,6 +28,7 @@ from nova import log as logging
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import create_instance_helper as helper
+from nova.api.openstack import ips
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
@@ -608,6 +609,7 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
     def __init__(self):
         self.metadata_serializer = common.MetadataXMLSerializer()
+        self.addresses_serializer = ips.IPXMLSerializer()
 
     def _create_basic_entity_node(self, xml_doc, id, links, name):
         basic_node = xml_doc.createElement(name)
@@ -621,23 +623,7 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         return self.metadata_serializer.meta_list_to_xml(xml_doc, metadata)
 
     def _create_addresses_node(self, xml_doc, addresses):
-        addresses_node = xml_doc.createElement('addresses')
-        for name, network_dict in addresses.items():
-            network_node = self._create_network_node(xml_doc,
-                                                     name,
-                                                     network_dict)
-            addresses_node.appendChild(network_node)
-        return addresses_node
-
-    def _create_network_node(self, xml_doc, network_name, network_dict):
-        network_node = xml_doc.createElement('network')
-        network_node.setAttribute('id', network_name)
-        for ip in network_dict:
-            ip_node = xml_doc.createElement('ip')
-            ip_node.setAttribute('version', str(ip['version']))
-            ip_node.setAttribute('addr', ip['addr'])
-            network_node.appendChild(ip_node)
-        return network_node
+        return self.addresses_serializer.networks_to_xml(xml_doc, addresses)
 
     def _add_server_attributes(self, node, server):
         node.setAttribute('id', str(server['id']))
