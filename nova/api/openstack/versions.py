@@ -25,6 +25,80 @@ from nova.api.openstack import wsgi
 
 
 ATOM_XMLNS = "http://www.w3.org/2005/Atom"
+VERSIONS = { 
+    "v1.0": {
+        "version" : { 
+            "id": "v1.0",
+            "status": "DEPRECATED",
+            "updated": "2011-01-21T11:33:21Z", 
+            "links": [
+                {
+                    "rel": "self",
+                    "href": "http://servers.api.openstack.org/v1.0/"
+                },
+                {
+                    "rel": "describedby",
+                    "type": "application/pdf",
+                    "href": "http://docs.rackspacecloud.com/"
+                    "servers/api/v1.0/cs-devguide-20110125.pdf"
+                }, 
+                {
+                    "rel": "describedby",
+                    "type": "application/vnd.sun.wadl+xml",
+                    "href": "http://docs.rackspacecloud.com/"
+                    "servers/api/v1.0/application.wadl"
+                },
+            ],
+            "media-types": [
+                {
+                    "base" : "application/xml",
+                    "type" : "application/vnd.openstack.compute-v1.0+xml"
+                },
+                {
+                    "base" : "application/json",
+                    "type" : "application/vnd.openstack.compute-v1.0+json"
+                }
+            ],
+        },
+    },
+    "v1.1": {
+        "version" : { 
+            "id": "v1.1",
+            "status": "CURRENT",
+            "updated": "2011-01-21T11:33:21Z",
+            "links": [
+                {
+                    "rel": "self",
+                    "href": "http://servers.api.openstack.org/v1.1/"
+                },
+                {
+                    "rel": "describedby",
+                    "type": "application/pdf",
+                    "href": "http://docs.rackspacecloud.com/"
+                        "servers/api/v1.1/cs-devguide-20110125.pdf"
+                }, 
+                {
+                    "rel": "describedby",
+                    "type": "application/vnd.sun.wadl+xml",
+                    "href": "http://docs.rackspacecloud.com/"
+                        "servers/api/v1.1/application.wadl"
+                },
+            ],
+            "media-types": [
+                {
+                    "base" : "application/xml",
+                    "type" : "application/vnd.openstack.compute-v1.1+xml"
+                },
+                {
+                    "base" : "application/json",
+                    "type" : "application/vnd.openstack.compute-v1.1+json"
+                }
+            ],
+        },
+    },
+}
+
+
 
 
 class Versions(wsgi.Resource):
@@ -43,11 +117,15 @@ class Versions(wsgi.Resource):
             }
         }
 
+        headers_serializer = VersionsHeadersSerializer()
+
         body_serializers = {
             'application/atom+xml': VersionsAtomSerializer(metadata=metadata),
             'application/xml': VersionsXMLSerializer(metadata=metadata),
         }
-        serializer = wsgi.ResponseSerializer(body_serializers)
+        serializer = wsgi.ResponseSerializer(
+            body_serializers=body_serializers,
+            headers_serializer=headers_serializer)
 
         supported_content_types = ('application/json',
                                    'application/xml',
@@ -93,100 +171,41 @@ class Versions(wsgi.Resource):
             {
                 "id": "v1.1",
                 "status": "CURRENT",
-                #TODO(wwolf) get correct value for these
-                "updated": "2011-07-18T11:30:00Z",
+                "links": [
+                    {
+                        "rel": "self",
+                    }
+                ],
+                "media-types": VERSIONS['v1.1']['version']['media-types'],
             },
             {
                 "id": "v1.0",
                 "status": "DEPRECATED",
-                #TODO(wwolf) get correct value for these
-                "updated": "2010-10-09T11:30:00Z",
+                "links": [
+                    {
+                        "rel": "self",
+                    }
+                ],
+                "media-types": VERSIONS['v1.0']['version']['media-types'],
             },
         ]
 
         builder = nova.api.openstack.views.versions.get_view_builder(request)
-        versions = [builder.build(version) for version in version_objs]
-        return dict(versions=versions)
+        choices = [
+            builder.build_choices(version, request) 
+            for version in version_objs]
+
+        return dict(choices=choices)
 
 
 class VersionV10(object):
-    def detail(self, req):
-        #TODO
-        return {
-            "version" : { 
-                "id": "v1.0",
-                "status": "DEPRECATED",
-                "updated": "2011-01-21T11:33:21Z", 
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://servers.api.openstack.org/v1.0/"
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.0/cs-devguide-20110125.pdf"
-                    }, 
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.0/application.wadl"
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base" : "application/xml",
-                        "type" : "application/vnd.openstack.compute-v1.0+xml"
-                    },
-                    {
-                        "base" : "application/json",
-                        "type" : "application/vnd.openstack.compute-v1.0+json"
-                    }
-                ],
-            },
-        }
+    def show(self, req):
+        return VERSIONS['v1.0']
 
 
 class VersionV11(object):
-    def detail(self, req):
-        return {
-            "version" : { 
-                "id": "v1.1",
-                "status": "CURRENT",
-                "updated": "2011-01-21T11:33:21Z",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://servers.api.openstack.org/v1.1/"
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.1/cs-devguide-20110125.pdf"
-                    }, 
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.1/application.wadl"
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base" : "application/xml",
-                        "type" : "application/vnd.openstack.compute-v1.1+xml"
-                    },
-                    {
-                        "base" : "application/json",
-                        "type" : "application/vnd.openstack.compute-v1.1+json"
-                    }
-                ],
-            },
-        }
-
+    def show(self, req):
+        return VERSIONS['v1.1']
 
 class VersionsRequestDeserializer(wsgi.RequestDeserializer):
     def get_action_args(self, request_environment):
@@ -259,7 +278,7 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
         return self.to_xml_string(node)
 
-    def detail(self,data):
+    def show(self,data):
         self._xml_doc = minidom.Document()
         node = self._create_version_node(data['version'], True)
 
@@ -404,13 +423,19 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
 
         return self.to_xml_string(node)
 
-    def detail(self, data):
+    def show(self, data):
         self._xml_doc = minidom.Document()
         node = self._xml_doc.createElementNS(self.xmlns, 'feed')
         self._create_detail_meta(node, data['version'])
         self._create_version_entries(node, [data['version']])
 
         return self.to_xml_string(node)
+
+
+class VersionsHeadersSerializer(wsgi.ResponseHeadersSerializer):
+    def multi(self, response, data):
+        response.status_int = 300
+
 
 def create_resource(version='1.0'):
     controller = {

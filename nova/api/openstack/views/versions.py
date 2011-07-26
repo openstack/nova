@@ -31,6 +31,11 @@ class ViewBuilder(object):
         """
         self.base_url = base_url
 
+    def build_choices(self, version_data, request):
+        version_data['links'][0]['href'] = self._build_versioned_link(request,
+                                             version_data['id'])
+        return version_data
+
     def build(self, version_data):
         """Generic method used to generate a version entity."""
         version = {
@@ -41,6 +46,9 @@ class ViewBuilder(object):
         }
 
         return version
+
+    def _build_versioned_link(self, req, version):
+        return '%s://%s/%s%s' % (req.scheme, req.host, version, req.path)
 
     def _build_links(self, version_data):
         """Generate a container of links that refer to the provided version."""
