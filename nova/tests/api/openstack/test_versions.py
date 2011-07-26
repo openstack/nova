@@ -533,7 +533,6 @@ class VersionsTest(test.TestCase):
 
         serializer = versions.VersionsAtomSerializer()
         response = serializer.index(versions_data)
-        print response
 
         root = xml.etree.ElementTree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "feed")
