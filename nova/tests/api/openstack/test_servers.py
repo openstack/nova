@@ -2530,77 +2530,85 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
 
     def test_minimal_request(self):
         serial_request = """
-<server name="new-server-test">
-    <image id="1"/>
-    <flavor id="2"/>
-</server>"""
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1", "links": []},
-                "flavor": {"id": "2", "links": []},
+                "imageRef": "1",
+                "flavorRef": "2",
+                "metadata": {},
+                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
 
-    def test_image_link(self):
+    def test_admin_pass(self):
         serial_request = """
-<server xmlns:atom="http://www.w3.org/2005/Atom" name="new-server-test">
-    <image id="1">
-        <atom:link rel="bookmark" href="http://localhost:8774/v1.1/images/2"/>
-    </image>
-    <flavor id="3"/>
-</server>"""
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2"
+        adminPass="1234"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {
-                    "id": "1",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost:8774/v1.1/images/2",
-                        },
-                    ],
-                },
-                "flavor": {"id": "3", "links": []},
+                "imageRef": "1",
+                "flavorRef": "2",
+                "adminPass": "1234",
+                "metadata": {},
+                "personality": [],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+
+    def test_image_link(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="http://localhost:8774/v1.1/images/2"
+        flavorRef="3"/>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "http://localhost:8774/v1.1/images/2",
+                "flavorRef": "3",
+                "metadata": {},
+                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
 
     def test_flavor_link(self):
         serial_request = """
-<server xmlns:atom="http://www.w3.org/2005/Atom" name="new-server-test">
-    <image id="1"/>
-    <flavor id="2">
-        <atom:link rel="bookmark" href="http://localhost:8774/v1.1/flavors/3"/>
-    </flavor>
-</server>"""
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="http://localhost:8774/v1.1/flavors/3"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1", "links": []},
-                "flavor": {
-                    "id": "2",
-                    "links": [
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost:8774/v1.1/flavors/3",
-                        },
-                    ],
-                },
+                "imageRef": "1",
+                "flavorRef": "http://localhost:8774/v1.1/flavors/3",
+                "metadata": {},
+                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
 
     def test_empty_metadata_personality(self):
         serial_request = """
-<server name="new-server-test">
-    <image id="1"/>
-    <flavor id="2"/>
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2">
     <metadata/>
     <personality/>
 </server>"""
@@ -2608,8 +2616,8 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1", "links": []},
-                "flavor": {"id": "2", "links": []},
+                "imageRef": "1",
+                "flavorRef": "2",
                 "metadata": {},
                 "personality": [],
             },
@@ -2618,9 +2626,10 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
 
     def test_multiple_metadata_items(self):
         serial_request = """
-<server name="new-server-test">
-    <image id="1"/>
-    <flavor id="2"/>
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2">
     <metadata>
         <meta key="one">two</meta>
         <meta key="open">snack</meta>
@@ -2630,18 +2639,20 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1", "links": []},
-                "flavor": {"id": "2", "links": []},
+                "imageRef": "1",
+                "flavorRef": "2",
                 "metadata": {"one": "two", "open": "snack"},
+                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
 
     def test_multiple_personality_files(self):
         serial_request = """
-<server name="new-server-test">
-    <image id="1"/>
-    <flavor id="2"/>
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2">
     <personality>
         <file path="/etc/banner.txt">MQ==</file>
         <file path="/etc/hosts">Mg==</file>
@@ -2651,8 +2662,9 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {"id": "1", "links": []},
-                "flavor": {"id": "2", "links": []},
+                "imageRef": "1",
+                "flavorRef": "2",
+                "metadata": {},
                 "personality": [
                     {"path": "/etc/banner.txt", "contents": "MQ=="},
                     {"path": "/etc/hosts", "contents": "Mg=="},
@@ -2662,59 +2674,27 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         self.assertEquals(request['body'], expected)
 
     def test_spec_request(self):
-        image_self_link = "http://servers.api.openstack.org/v1.1/1234/" + \
-                          "images/52415800-8b69-11e0-9b19-734f6f006e54"
         image_bookmark_link = "http://servers.api.openstack.org/1234/" + \
                               "images/52415800-8b69-11e0-9b19-734f6f006e54"
         serial_request = """
 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
-        xmlns:atom="http://www.w3.org/2005/Atom"
+        imageRef="%s"
+        flavorRef="52415800-8b69-11e0-9b19-734f1195ff37"
         name="new-server-test">
-  <image id="52415800-8b69-11e0-9b19-734f6f006e54"
-         name="CentOS 5.2"
-         updated="2010-10-10T12:00:00Z"
-         created="2010-08-10T12:00:00Z"
-         status="ACTIVE">
-      <atom:link
-          rel="self"
-          href="%s"/>
-      <atom:link
-          rel="bookmark"
-          href="%s"/>
-  </image>
-  <flavor id="52415800-8b69-11e0-9b19-734f1195ff37" />
   <metadata>
     <meta key="My Server Name">Apache1</meta>
   </metadata>
   <personality>
     <file path="/etc/banner.txt">Mg==</file>
   </personality>
-</server>""" % (image_self_link, image_bookmark_link)
+</server>""" % (image_bookmark_link)
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
                 "name": "new-server-test",
-                "image": {
-                    "id": "52415800-8b69-11e0-9b19-734f6f006e54",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://servers.api.openstack.org/" + \
-                                    "v1.1/1234/images/52415800-8b69-11" + \
-                                    "e0-9b19-734f6f006e54",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://servers.api.openstack.org/" + \
-                                    "1234/images/52415800-8b69-11e0-9b" + \
-                                    "19-734f6f006e54",
-                        },
-                    ],
-                },
-                "flavor": {
-                    "id": "52415800-8b69-11e0-9b19-734f1195ff37",
-                    "links": [],
-                },
+                "imageRef": "http://servers.api.openstack.org/1234/" + \
+                            "images/52415800-8b69-11e0-9b19-734f6f006e54",
+                "flavorRef": "52415800-8b69-11e0-9b19-734f1195ff37",
                 "metadata": {"My Server Name": "Apache1"},
                 "personality": [
                     {

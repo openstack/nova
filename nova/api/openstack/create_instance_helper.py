@@ -303,79 +303,30 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
         """Marshal the server attribute of a parsed request"""
         server = {}
         server_node = self.find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId"]:
+
+        attributes = ["name", "imageId", "flavorId", "imageRef",
+                     "flavorRef", "adminPass"]
+        for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
-        image = self._extract_image(server_node)
-        if image is not None:
-            server["image"] = image
-        flavor = self._extract_flavor(server_node)
-        if flavor is not None:
-            server["flavor"] = flavor
+
         metadata_node = self.find_first_child_named(server_node, "metadata")
-        metadata = self.extract_metadata(metadata_node)
-        if metadata is not None:
-            server["metadata"] = metadata
-        personality = self._extract_personality(server_node)
-        if personality is not None:
-            server["personality"] = personality
+        server["metadata"] = self.extract_metadata(metadata_node)
+
+        server["personality"] = self._extract_personality(server_node)
+
         return server
-
-    def _extract_image(self, server_node):
-        """Retrieve an image entity from the server node"""
-        image_node = self.find_first_child_named(server_node, "image")
-        if image_node is None:
-            return  None
-
-        image = {}
-        image_id = image_node.getAttribute('id')
-        if image_id is not None:
-            image['id'] = image_id
-
-        image['links'] = self._extract_links_from_node(image_node)
-
-        return image
-
-    def _extract_flavor(self, server_node):
-        """Retrieve a flavor entity from the server node"""
-        flavor_node = self.find_first_child_named(server_node, "flavor")
-        if flavor_node is None:
-            return  None
-
-        flavor = {}
-        flavor_id = flavor_node.getAttribute('id')
-        if flavor_id:
-            flavor['id'] = flavor_id
-
-        flavor['links'] = self._extract_links_from_node(flavor_node)
-
-        return flavor
-
-    def _extract_links_from_node(self, parent_node):
-        """Retrieve link entities from a links container provided node"""
-        links = []
-
-        for link_node in self.find_children_named(parent_node, 'atom:link'):
-            link = {
-                'rel': link_node.getAttribute('rel'),
-                'href': link_node.getAttribute('href'),
-            }
-            if link['rel'] is not None and link['href'] is not None:
-                links.append(link)
-
-        return links
 
     def _extract_personality(self, server_node):
         """Marshal the personality attribute of a parsed request"""
         personality_node = \
                 self.find_first_child_named(server_node, "personality")
-        if personality_node is None:
-            return None
         personality = []
-        for file_node in self.find_children_named(personality_node, "file"):
-            item = {}
-            if file_node.hasAttribute("path"):
-                item["path"] = file_node.getAttribute("path")
-            item["contents"] = self.extract_text(file_node)
-            personality.append(item)
+        if personality_node is not None:
+            for file_node in self.find_children_named(personality_node, "file"):
+                item = {}
+                if file_node.hasAttribute("path"):
+                    item["path"] = file_node.getAttribute("path")
+                item["contents"] = self.extract_text(file_node)
+                personality.append(item)
         return personality
