@@ -1046,15 +1046,17 @@ class ServersTest(test.TestCase):
         def instance_create(context, inst):
             inst_type = instance_types.get_instance_type_by_flavor_id(3)
             image_ref = 'http://localhost/images/2'
+            created_at = datetime.datetime.strptime("2010-10-10 12:00:00",
+                                                      "%Y-%m-%d %H:%M:%S"),
+            updated_at = datetime.datetime.strptime("2010-11-11 11:00:00",
+                                                      "%Y-%m-%d %H:%M:%S"),
             return {'id': 1,
                     'display_name': 'server_test',
                     'uuid': FAKE_UUID,
                     'instance_type': dict(inst_type),
                     'image_ref': image_ref,
-                    "created_at": datetime.datetime.strptime("2010-10-10 12:00:00",
-                                                              "%Y-%m-%d %H:%M:%S"),
-                    "updated_at": datetime.datetime.strptime("2010-11-11 11:00:00",
-                                                              "%Y-%m-%d %H:%M:%S"),
+                    "created_at": created_at,
+                    "updated_at": updated_at,
                    }
 
         def server_update(context, id, params):
@@ -2904,12 +2906,14 @@ class ServersViewBuilderV11Test(test.TestCase):
         pass
 
     def _get_instance(self):
+        created_at = datetime.datetime.strptime("2010-10-10 12:00:00",
+                                                 "%Y-%m-%d %H:%M:%S"),
+        updated_at = datetime.datetime.strptime("2010-11-11 11:00:00",
+                                                  "%Y-%m-%d %H:%M:%S"),
         instance = {
             "id": 1,
-            "created_at": datetime.datetime.strptime("2010-10-10 12:00:00",
-                                                      "%Y-%m-%d %H:%M:%S"),
-            "updated_at": datetime.datetime.strptime("2010-11-11 11:00:00",
-                                                      "%Y-%m-%d %H:%M:%S"),
+            "created_at": created_at,
+            "updated_at": updated_at,
             "admin_pass": "",
             "user_id": "",
             "project_id": "",
