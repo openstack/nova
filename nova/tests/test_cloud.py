@@ -121,7 +121,6 @@ class CloudTestCase(test.TestCase):
                                   public_ip=address)
         db.floating_ip_destroy(self.context, address)
 
-    @test.skip_test("Skipping this pending future merge")
     def test_allocate_address(self):
         address = "10.10.10.10"
         allocate = self.cloud.allocate_address
@@ -161,13 +160,10 @@ class CloudTestCase(test.TestCase):
         # ApiError: Floating ip is in use.  Disassociate it before releasing.
         self.assertRaises(exception.ApiError, release, self.context, address)
 
-    @test.skip_test("Skipping this pending future merge")
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
         address = "10.10.10.10"
-        db.floating_ip_create(self.context,
-                              {'address': address,
-                               'host': self.network.host})
+        db.floating_ip_create(self.context, {'address': address})
         self.cloud.allocate_address(self.context)
         # TODO(jkoelker) Probably need to query for instance_type_id and
         #                make sure we get a valid one
@@ -175,11 +171,14 @@ class CloudTestCase(test.TestCase):
                                                  'instance_type_id': 1})
         networks = db.network_get_all(self.context)
         for network in networks:
-            self.network.set_network_host(self.context, network['id'])
+            db.network_update(self.context, network['id'],
+                              {'host': self.network.host})
         project_id = self.context.project_id
         type_id = inst['instance_type_id']
         ips = self.network.allocate_for_instance(self.context,
                                                  instance_id=inst['id'],
+                                                 host=inst['host'],
+                                                 vpn=None,
                                                  instance_type_id=type_id,
                                                  project_id=project_id)
         # TODO(jkoelker) Make this mas bueno
@@ -405,8 +404,6 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 
-    # NOTE(jkoelker): this test relies on fixed_ip being in instances
-    @test.skip_test("EC2 stuff needs fixed_ip in instance_ref")
     def test_describe_snapshots(self):
         """Makes sure describe_snapshots works and filters results."""
         vol = db.volume_create(self.context, {})
@@ -1041,12 +1038,6 @@ class CloudTestCase(test.TestCase):
         self.cloud.delete_key_pair(self.context, 'test')
 
     def test_run_instances(self):
-        # stub out the rpc call
-        def stub_cast(*args, **kwargs):
-            pass
-
-        self.stubs.Set(rpc, 'cast', stub_cast)
-
         kwargs = {'image_id': FLAGS.default_image,
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1}
@@ -1056,7 +1047,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['imageId'], 'ami-00000001')
         self.assertEqual(instance['displayName'], 'Server 1')
         self.assertEqual(instance['instanceId'], 'i-00000001')
-        self.assertEqual(instance['instanceState']['name'], 'scheduling')
+        self.assertEqual(instance['instanceState']['name'], 'running')
         self.assertEqual(instance['instanceType'], 'm1.small')
 
     def test_run_instances_image_state_none(self):
@@ -1128,16 +1119,15 @@ class CloudTestCase(test.TestCase):
         self.assertEqual('c00l 1m4g3', inst['display_name'])
         db.instance_destroy(self.context, inst['id'])
 
-    # NOTE(jkoelker): This test relies on mac_address in instance
-    @test.skip_test("EC2 stuff needs mac_address in instance_ref")
     def test_update_of_instance_wont_update_private_fields(self):
         inst = db.instance_create(self.context, {})
+        host = inst['host']
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.update_instance(self.context, ec2_id,
                                    display_name='c00l 1m4g3',
-                                   mac_address='DE:AD:BE:EF')
+                                   host='otherhost')
         inst = db.instance_get(self.context, inst['id'])
-        self.assertEqual(None, inst['mac_address'])
+        self.assertEqual(host, inst['host'])
         db.instance_destroy(self.context, inst['id'])
 
     def test_update_of_volume_display_fields(self):
@@ -1193,7 +1183,6 @@ class CloudTestCase(test.TestCase):
         elevated = self.context.elevated(read_deleted=True)
         self._wait_for_state(elevated, instance_id, is_deleted)
 
-    @test.skip_test("skipping, test is hanging with multinic for rpc reasons")
     def test_stop_start_instance(self):
         """Makes sure stop/start instance works"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
@@ -1251,7 +1240,6 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(vol['status'], "available")
         self.assertEqual(vol['attach_status'], "detached")
 
-    @test.skip_test("skipping, test is hanging with multinic for rpc reasons")
     def test_stop_start_with_volume(self):
         """Make sure run instance with block device mapping works"""
 
@@ -1320,7 +1308,6 @@ class CloudTestCase(test.TestCase):
 
         self._restart_compute_service()
 
-    @test.skip_test("skipping, test is hanging with multinic for rpc reasons")
     def test_stop_with_attached_volume(self):
         """Make sure attach info is reflected to block device mapping"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
@@ -1396,7 +1383,6 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
         return result['snapshotId']
 
-    @test.skip_test("skipping, test is hanging with multinic for rpc reasons")
     def test_run_with_snapshot(self):
         """Makes sure run/stop/start instance with snapshot works."""
         vol = self._volume_create()
