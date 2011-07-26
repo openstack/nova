@@ -494,12 +494,11 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
     group_id = Column(Integer, ForeignKey('security_groups.id'))
-    grantee_group = relationship("SecurityGroup", 
+    grantee_group = relationship("SecurityGroup",
                                  foreign_keys=group_id,
                                  primaryjoin='and_('
         'SecurityGroupIngressRule.group_id == SecurityGroup.id,'
         'SecurityGroupIngressRule.deleted == False)')
-
 
 
 class ProviderFirewallRule(BASE, NovaBase):

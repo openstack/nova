@@ -215,8 +215,8 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
 
         db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({ 'security_groups':
-                                                             [ { 'id': 0 } ] })
+                        mox.IgnoreArg()).AndReturn({'security_groups':
+                                                             [{'id': 0}]})
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.1')
