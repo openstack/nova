@@ -167,3 +167,28 @@ def remove_version_from_href(href):
         msg = _('href does not contain version')
         raise ValueError(msg)
     return new_href
+
+
+def get_version_from_href(href):
+    """Returns the api version in the href.
+
+    Returns the api version in the href.
+    If no version is found, 1.0 is returned
+
+    Given: 'http://www.nova.com/123'
+    Returns: '1.0'
+
+    Given: 'http://www.nova.com/v1.1'
+    Returns: '1.1'
+
+    """
+    try:
+        #finds the first instance that matches /v#.#/
+        version = re.findall(r'[/][v][0-9]+\.[0-9]+[/]', href)
+        #if no version was found, try finding /v#.# at the end of the string
+        if not version:
+            version = re.findall(r'[/][v][0-9]+\.[0-9]+$', href)
+        version = re.findall(r'[0-9]+\.[0-9]', version[0])[0]
+    except IndexError:
+        version = '1.0'
+    return version
