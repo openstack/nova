@@ -1289,7 +1289,6 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
-        print res.body
         self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
@@ -1384,7 +1383,6 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
-        print res.body
         self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(expected_flavor, server['flavor'])
@@ -1429,11 +1427,8 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
-
         res = req.get_response(fakes.wsgi_app())
-
         self.assertEqual(res.status_int, 200)
-
         server = json.loads(res.body)['server']
         self.assertEqual(server['adminPass'], body['server']['adminPass'])
 
