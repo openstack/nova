@@ -293,6 +293,30 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
     and personality attributes
     """
 
+    def action(self, string):
+        dom = minidom.parseString(string)
+        action_node = dom.childNodes[0]
+        action_name = action_node.tagName
+
+        action_deserializer = {
+            'createImage': self._action_create_image,
+        }.get(action_name, self.default)
+
+        action_data = action_deserializer(action_node)
+
+        return {'body': {action_name: action_data}}
+
+    def _action_create_image(self, node):
+        data = {}
+        attributes = ['name', 'image_type', 'backup_type', 'rotation']
+        for attribute in attributes:
+            value = node.getAttribute(attribute)
+            if value:
+                data[attribute] = value
+        metadata_node = self.find_first_child_named(node, 'metadata')
+        data['metadata'] = self.extract_metadata(metadata_node)
+        return data
+
     def create(self, string):
         """Deserialize an xml-formatted server create request"""
         dom = minidom.parseString(string)

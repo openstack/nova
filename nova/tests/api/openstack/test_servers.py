@@ -2301,6 +2301,47 @@ class ServersTest(test.TestCase):
         self.assertEqual(400, response.status_int)
 
 
+class TestServerActionXMLDeserializer(test.TestCase):
+
+    def setUp(self):
+        self.deserializer = create_instance_helper.ServerXMLDeserializer()
+
+    def tearDown(self):
+        pass
+
+    def test_create_image(self):
+        serial_request = """
+<createImage xmlns="http://docs.openstack.org/compute/api/v1.1"
+             name="new-server-test"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "createImage": {
+                "name": "new-server-test",
+                "metadata": {},
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_create_image_with_metadata(self):
+        serial_request = """
+<createImage xmlns="http://docs.openstack.org/compute/api/v1.1"
+             name="new-server-test">
+    <metadata>
+        <meta key="key1">value1</meta>
+    </metadata>
+</createImage>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "createImage": {
+                "name": "new-server-test",
+                "metadata": {"key1": "value1"},
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+
+
+
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def setUp(self):
@@ -2595,7 +2636,7 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
                           "http://localhost:8774/v1.1/images/1")
 
 
-class TextAddressesXMLSerialization(test.TestCase):
+class TestAddressesXMLSerialization(test.TestCase):
 
     serializer = nova.api.openstack.ips.IPXMLSerializer()
 
