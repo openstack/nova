@@ -116,8 +116,8 @@ class APIRouter(base_wsgi.Router):
                                     'select': 'POST',
                                     'boot': 'POST'})
 
-        mapper.connect("versions", "/", 
-                    controller=versions.create_resource(version), 
+        mapper.connect("versions", "/",
+                    controller=versions.create_resource(version),
                     action='show')
 
         mapper.resource("console", "consoles",

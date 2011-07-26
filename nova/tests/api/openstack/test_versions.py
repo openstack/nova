@@ -35,7 +35,6 @@ class VersionsTest(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
 
-
     def tearDown(self):
         super(VersionsTest, self).tearDown()
 
@@ -182,12 +181,11 @@ class VersionsTest(test.TestCase):
         for media_node in media_type_nodes:
             self.assertEqual(media_node.tag.split('}')[1], 'media-type')
 
-
         expected = """
-        <version id="v1.0" status="DEPRECATED" 
-            updated="2011-01-21T11:33:21Z" 
-            xmlns="http://docs.openstack.org/common/api/v1.0" 
-            xmlns:atom="http://www.w3.org/2005/Atom">
+        <version id="v1.0" status="DEPRECATED"
+             updated="2011-01-21T11:33:21Z"
+             xmlns="http://docs.openstack.org/common/api/v1.0"
+             xmlns:atom="http://www.w3.org/2005/Atom">
 
             <media-types>
                 <media-type base="application/xml"
@@ -206,8 +204,8 @@ class VersionsTest(test.TestCase):
 
             <atom:link href="http://docs.rackspacecloud.com/servers/
                 api/v1.0/application.wadl"
-                 rel="describedby" 
-                type="application/vnd.sun.wadl+xml"/>
+                 rel="describedby"
+                 type="application/vnd.sun.wadl+xml"/>
         </version>""".replace("  ", "").replace("\n", "")
 
         actual = res.body.replace("  ", "").replace("\n", "")
@@ -220,10 +218,10 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/xml")
         expected = """
-        <version id="v1.1" status="CURRENT" 
-            updated="2011-01-21T11:33:21Z" 
-            xmlns="http://docs.openstack.org/common/api/v1.1" 
-            xmlns:atom="http://www.w3.org/2005/Atom">
+        <version id="v1.1" status="CURRENT"
+             updated="2011-01-21T11:33:21Z"
+             xmlns="http://docs.openstack.org/common/api/v1.1"
+             xmlns:atom="http://www.w3.org/2005/Atom">
 
             <media-types>
                 <media-type base="application/xml"
@@ -242,8 +240,8 @@ class VersionsTest(test.TestCase):
 
             <atom:link href="http://docs.rackspacecloud.com/servers/
                 api/v1.1/application.wadl"
-                 rel="describedby" 
-                type="application/vnd.sun.wadl+xml"/>
+                 rel="describedby"
+                 type="application/vnd.sun.wadl+xml"/>
         </version>""".replace("  ", "").replace("\n", "")
 
         actual = res.body.replace("  ", "").replace("\n", "")
@@ -290,7 +288,8 @@ class VersionsTest(test.TestCase):
                 <id>http://servers.api.openstack.org/v1.0/</id>
                 <title type="text">Version v1.0</title>
                 <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://servers.api.openstack.org/v1.0/" rel="self"/>
+                <link href="http://servers.api.openstack.org/v1.0/"
+                     rel="self"/>
                 <link href="http://docs.rackspacecloud.com/servers/
                     api/v1.0/cs-devguide-20110125.pdf"
                      rel="describedby" type="application/pdf"/>
@@ -326,7 +325,8 @@ class VersionsTest(test.TestCase):
                 <id>http://servers.api.openstack.org/v1.1/</id>
                 <title type="text">Version v1.1</title>
                 <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://servers.api.openstack.org/v1.1/" rel="self"/>
+                <link href="http://servers.api.openstack.org/v1.1/"
+                     rel="self"/>
                 <link href="http://docs.rackspacecloud.com/servers/
                     api/v1.1/cs-devguide-20110125.pdf"
                      rel="describedby" type="application/pdf"/>
@@ -407,13 +407,13 @@ class VersionsTest(test.TestCase):
                     {
                         "base": "application/xml",
                         "type": "application/vnd.openstack.compute-v1.1+xml"
-                    }, 
+                    },
                     {
                         "base": "application/json",
                         "type": "application/vnd.openstack.compute-v1.1+json"
                     },
                 ],
-            }, 
+            },
             {
                 "id": "v1.0",
                 "status": "DEPRECATED",
@@ -432,12 +432,11 @@ class VersionsTest(test.TestCase):
                         "base": "application/json",
                         "type": "application/vnd.openstack.compute-v1.0+json"
                     },
-                ], 
+                ],
             },
-        ],}
+        ], }
 
         self.assertDictMatch(expected, json.loads(res.body))
-
 
     def test_view_builder(self):
         base_url = "http://example.org/"
@@ -507,10 +506,10 @@ class VersionsTest(test.TestCase):
 
     def test_version_detail_xml_serializer(self):
         version_data = {
-            "version" : { 
+            "version" : {
                 "id": "v1.0",
                 "status": "CURRENT",
-                "updated": "2011-01-21T11:33:21Z", 
+                "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
                         "rel": "self",
@@ -521,7 +520,7 @@ class VersionsTest(test.TestCase):
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
                             "servers/api/v1.0/cs-devguide-20110125.pdf"
-                    }, 
+                    },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
@@ -567,7 +566,6 @@ class VersionsTest(test.TestCase):
             self.assertEqual(link.tag.split('}')[1], 'link')
             for key, val in version_data['version']['links'][i].items():
                 self.assertEqual(val, link.get(key))
-
 
     def test_versions_list_atom_serializer(self):
         versions_data = {
@@ -644,7 +642,7 @@ class VersionsTest(test.TestCase):
 
     def test_version_detail_atom_serializer(self):
         versions_data = {
-            "version" : { 
+            "version" : {
                 "id": "v1.1",
                 "status": "CURRENT",
                 "updated": "2011-01-21T11:33:21Z",
@@ -658,7 +656,7 @@ class VersionsTest(test.TestCase):
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
                             "servers/api/v1.1/cs-devguide-20110125.pdf"
-                    }, 
+                    },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",

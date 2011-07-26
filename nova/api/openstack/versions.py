@@ -25,12 +25,12 @@ from nova.api.openstack import wsgi
 
 
 ATOM_XMLNS = "http://www.w3.org/2005/Atom"
-VERSIONS = { 
+VERSIONS = {
     "v1.0": {
-        "version" : { 
+        "version" : {
             "id": "v1.0",
             "status": "DEPRECATED",
-            "updated": "2011-01-21T11:33:21Z", 
+            "updated": "2011-01-21T11:33:21Z",
             "links": [
                 {
                     "rel": "self",
@@ -41,7 +41,7 @@ VERSIONS = {
                     "type": "application/pdf",
                     "href": "http://docs.rackspacecloud.com/"
                     "servers/api/v1.0/cs-devguide-20110125.pdf"
-                }, 
+                },
                 {
                     "rel": "describedby",
                     "type": "application/vnd.sun.wadl+xml",
@@ -62,7 +62,7 @@ VERSIONS = {
         },
     },
     "v1.1": {
-        "version" : { 
+        "version" : {
             "id": "v1.1",
             "status": "CURRENT",
             "updated": "2011-01-21T11:33:21Z",
@@ -76,7 +76,7 @@ VERSIONS = {
                     "type": "application/pdf",
                     "href": "http://docs.rackspacecloud.com/"
                         "servers/api/v1.1/cs-devguide-20110125.pdf"
-                }, 
+                },
                 {
                     "rel": "describedby",
                     "type": "application/vnd.sun.wadl+xml",
@@ -97,8 +97,6 @@ VERSIONS = {
         },
     },
 }
-
-
 
 
 class Versions(wsgi.Resource):
@@ -192,7 +190,7 @@ class Versions(wsgi.Resource):
 
         builder = nova.api.openstack.views.versions.get_view_builder(request)
         choices = [
-            builder.build_choices(version, request) 
+            builder.build_choices(version, request)
             for version in version_objs]
 
         return dict(choices=choices)
@@ -207,6 +205,7 @@ class VersionV11(object):
     def show(self, req):
         return VERSIONS['v1.1']
 
+
 class VersionsRequestDeserializer(wsgi.RequestDeserializer):
     def get_action_args(self, request_environment):
         """Parse dictionary created by routes library."""
@@ -220,8 +219,8 @@ class VersionsRequestDeserializer(wsgi.RequestDeserializer):
 
 
 class VersionsXMLSerializer(wsgi.XMLDictSerializer):
-    #TODO(wwolf): this is temporary until we get rid of toprettyxml 
-    # in the base class (XMLDictSerializer), which I plan to do in 
+    #TODO(wwolf): this is temporary until we get rid of toprettyxml
+    # in the base class (XMLDictSerializer), which I plan to do in
     # another branch
     def to_xml_string(self, node, has_atom=False):
         self._add_xmlns(node, has_atom)
@@ -244,7 +243,7 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
             base.appendChild(node)
 
         return base
-            
+
     def _create_version_node(self, version, create_ns=False):
         version_node = self._xml_doc.createElement('version')
         if create_ns:
@@ -278,7 +277,7 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
         return self.to_xml_string(node)
 
-    def show(self,data):
+    def show(self, data):
         self._xml_doc = minidom.Document()
         node = self._create_version_node(data['version'], True)
 
@@ -292,8 +291,8 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
 
 class VersionsAtomSerializer(wsgi.XMLDictSerializer):
-    #TODO(wwolf): this is temporary until we get rid of toprettyxml 
-    # in the base class (XMLDictSerializer), which I plan to do in 
+    #TODO(wwolf): this is temporary until we get rid of toprettyxml
+    # in the base class (XMLDictSerializer), which I plan to do in
     # another branch
     def to_xml_string(self, node, has_atom=False):
         self._add_xmlns(node, has_atom)
@@ -454,8 +453,6 @@ def create_resource(version='1.0'):
                                'application/atom+xml')
     deserializer = wsgi.RequestDeserializer(
         supported_content_types=supported_content_types)
-
-
 
     return wsgi.Resource(controller, serializer=serializer,
                          deserializer=deserializer)
