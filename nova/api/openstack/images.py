@@ -98,6 +98,20 @@ class Controller(object):
         self._image_service.delete(context, id)
         return webob.exc.HTTPNoContent()
 
+    def get_builder(self, request):
+        """Indicates that you must use a Controller subclass."""
+        raise NotImplementedError()
+
+    def _server_id_from_req(self, req, data):
+        raise NotImplementedError()
+
+    def _get_extra_properties(self, req, data):
+        return {}
+
+
+class ControllerV10(Controller):
+    """Version 1.0 specific controller logic."""
+
     def create(self, req, body):
         """Snapshot or backup a server instance and save the image.
 
@@ -156,20 +170,6 @@ class Controller(object):
                    "%s" % image_type)
 
         return dict(image=self.get_builder(req).build(image, detail=True))
-
-    def get_builder(self, request):
-        """Indicates that you must use a Controller subclass."""
-        raise NotImplementedError()
-
-    def _server_id_from_req(self, req, data):
-        raise NotImplementedError()
-
-    def _get_extra_properties(self, req, data):
-        return {}
-
-
-class ControllerV10(Controller):
-    """Version 1.0 specific controller logic."""
 
     def get_builder(self, request):
         """Property to get the ViewBuilder class we need to use."""
@@ -278,6 +278,9 @@ class ControllerV11(Controller):
                                       server_ref)
         return {'instance_ref': server_ref}
 
+    def create(self, *args, **kwargs):
+        raise webob.exc.HTTPMethodNotAllowed()
+
 
 class ImageXMLSerializer(wsgi.XMLDictSerializer):
 
@@ -364,12 +367,6 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
         return self.to_xml_string(node, True)
 
     def show(self, image_dict):
-        xml_doc = minidom.Document()
-        node = self._image_to_xml_detailed(xml_doc,
-                                       image_dict['image'])
-        return self.to_xml_string(node, True)
-
-    def create(self, image_dict):
         xml_doc = minidom.Document()
         node = self._image_to_xml_detailed(xml_doc,
                                        image_dict['image'])

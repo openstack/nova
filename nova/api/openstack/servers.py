@@ -14,6 +14,7 @@
 #    under the License.
 
 import base64
+import os
 import traceback
 
 from webob import exc
@@ -155,19 +156,25 @@ class Controller(object):
         """Multi-purpose method used to reboot, rebuild, or
         resize a server"""
 
-        actions = {
+        self.actions = {
             'changePassword': self._action_change_password,
             'reboot': self._action_reboot,
             'resize': self._action_resize,
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,
-            'migrate': self._action_migrate}
+            'migrate': self._action_migrate,
+            'createImage': self._action_create_image,
+        }
 
-        for key in actions.keys():
+
+        for key in self.actions.keys():
             if key in body:
-                return actions[key](body, req, id)
+                return self.actions[key](body, req, id)
         raise exc.HTTPNotImplemented()
+
+    def _action_create_image(self, input_dict, req, id):
+        return exc.HTTPNotImplemented()
 
     def _action_change_password(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
@@ -585,12 +592,90 @@ class ControllerV11(Controller):
 
         return webob.Response(status_int=202)
 
+    def _action_create_image(self, input_dict, req, instance_id):
+        """Snapshot or backup a server instance and save the image.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
+
+        """
+        entity = input_dict.get('createImage', {})
+
+        def get_param(param):
+            try:
+                return entity[param]
+            except KeyError:
+                msg = _("Missing required param: %s") % param
+                raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ['nova.context']
+
+        image_name = get_param("name")
+        image_type = entity.get("image_type", "snapshot")
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url,
+                                  'servers',
+                                  str(instance_id))
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        if image_type == "snapshot":
+            image = self.compute_api.snapshot(context,
+                                              instance_id,
+                                              image_name,
+                                              extra_properties=props)
+
+        elif image_type == "backup":
+            # NOTE(sirp): Unlike snapshot, backup is not a customer facing
+            # API call; rather, it's used by the internal backup scheduler
+            if not FLAGS.allow_admin_api:
+                msg = _("Admin API Required")
+                raise webob.exc.HTTPBadRequest(explanation=msg)
+
+            backup_type = get_param("backup_type")
+            rotation = int(get_param("rotation"))
+
+            image = self.compute_api.backup(context,
+                                            instance_id,
+                                            image_name,
+                                            backup_type,
+                                            rotation,
+                                            extra_properties=props)
+        else:
+            msg = _("Invalid image_type '%s'") % image_type
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+
+        # build location of newly-created image entity
+        image_ref = os.path.join(req.application_url,
+                                 'images',
+                                 str(image['id']))
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
+
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_new_style(server)
+
+
+
+
 
 
 class HeadersSerializer(wsgi.ResponseHeadersSerializer):

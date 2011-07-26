@@ -263,6 +263,16 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'resume', fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
+
+        fakes.stub_out_glance(self.stubs)
+        fakes.stub_out_compute_api_snapshot(self.stubs)
+        service_class = 'nova.image.glance.GlanceImageService'
+        self.service = utils.import_object(service_class)
+        self.context = context.RequestContext(1, None)
+        self.service.delete_all()
+        self.sent_to_glance = {}
+        fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
+
         self.allow_admin = FLAGS.allow_admin_api
 
         self.webreq = common.webob_factory('/v1.0/servers')
@@ -2233,6 +2243,62 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
+
+    def test_create_image_v1_1(self):
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        location = response.headers['Location']
+        self.assertEqual('http://localhost/v1.1/images/123', location)
+
+    def test_create_image_v1_1_with_metadata(self):
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+                'metadata': {'key': 'asdf'},
+            },
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        location = response.headers['Location']
+        self.assertEqual('http://localhost/v1.1/images/123', location)
+
+    def test_create_image_v1_1_no_name(self):
+        body = {
+            'createImage': {},
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_v1_1_bad_metadata(self):
+        body = {
+            'createImage': {
+                'name': 'geoff',
+                'metadata': 'henry',
+            },
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
 
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
