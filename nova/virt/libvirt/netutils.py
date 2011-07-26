@@ -59,7 +59,7 @@ def get_network_info(instance):
     vifs = db.virtual_interface_get_by_instance(admin_context, instance['id'])
     networks = db.network_get_all_by_instance(admin_context,
                                               instance['id'])
-    flavor = db.instance_type_get_by_id(admin_context,
+    flavor = db.instance_type_get(admin_context,
                                         instance['instance_type_id'])
     network_info = []
 
@@ -91,8 +91,13 @@ def get_network_info(instance):
             'broadcast': network['broadcast'],
             'mac': vif['address'],
             'rxtx_cap': flavor['rxtx_cap'],
-            'dns': [network['dns']],
+            'dns': [],
             'ips': [ip_dict(ip) for ip in network_ips]}
+
+        if network['dns1']:
+            mapping['dns'].append(network['dns1'])
+        if network['dns2']:
+            mapping['dns'].append(network['dns2'])
 
         if FLAGS.use_ipv6:
             mapping['ip6s'] = [ip6_dict()]

@@ -25,6 +25,7 @@ import re
 import time
 import urllib
 import webob.exc
+from xml.dom import minidom
 
 from collections import defaultdict
 
@@ -76,6 +77,58 @@ class LimitsControllerV11(LimitsController):
         return limits_views.ViewBuilderV11()
 
 
+class LimitsXMLSerializer(wsgi.XMLDictSerializer):
+
+    xmlns = wsgi.XMLNS_V11
+
+    def __init__(self):
+        pass
+
+    def _create_rates_node(self, xml_doc, rates):
+        rates_node = xml_doc.createElement('rates')
+        for rate in rates:
+            rate_node = xml_doc.createElement('rate')
+            rate_node.setAttribute('uri', rate['uri'])
+            rate_node.setAttribute('regex', rate['regex'])
+
+            for limit in rate['limit']:
+                limit_node = xml_doc.createElement('limit')
+                limit_node.setAttribute('value', str(limit['value']))
+                limit_node.setAttribute('verb', limit['verb'])
+                limit_node.setAttribute('remaining', str(limit['remaining']))
+                limit_node.setAttribute('unit', limit['unit'])
+                limit_node.setAttribute('next-available',
+                                        str(limit['next-available']))
+                rate_node.appendChild(limit_node)
+
+            rates_node.appendChild(rate_node)
+        return rates_node
+
+    def _create_absolute_node(self, xml_doc, absolutes):
+        absolute_node = xml_doc.createElement('absolute')
+        for key, value in absolutes.iteritems():
+            limit_node = xml_doc.createElement('limit')
+            limit_node.setAttribute('name', key)
+            limit_node.setAttribute('value', str(value))
+            absolute_node.appendChild(limit_node)
+        return absolute_node
+
+    def _limits_to_xml(self, xml_doc, limits):
+        limits_node = xml_doc.createElement('limits')
+        rates_node = self._create_rates_node(xml_doc, limits['rate'])
+        limits_node.appendChild(rates_node)
+
+        absolute_node = self._create_absolute_node(xml_doc, limits['absolute'])
+        limits_node.appendChild(absolute_node)
+
+        return limits_node
+
+    def index(self, limits_dict):
+        xml_doc = minidom.Document()
+        node = self._limits_to_xml(xml_doc, limits_dict['limits'])
+        return self.to_xml_string(node, False)
+
+
 def create_resource(version='1.0'):
     controller = {
         '1.0': LimitsControllerV10,
@@ -97,9 +150,13 @@ def create_resource(version='1.0'):
         },
     }
 
+    xml_serializer = {
+        '1.0': wsgi.XMLDictSerializer(xmlns=xmlns, metadata=metadata),
+        '1.1': LimitsXMLSerializer(),
+    }[version]
+
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns,
-                                                  metadata=metadata),
+        'application/xml': xml_serializer,
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers)

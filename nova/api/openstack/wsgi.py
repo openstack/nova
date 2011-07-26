@@ -13,6 +13,7 @@ from nova import wsgi
 
 XMLNS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XMLNS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
+XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
 LOG = logging.getLogger('nova.api.openstack.wsgi')
 
@@ -20,21 +21,22 @@ LOG = logging.getLogger('nova.api.openstack.wsgi')
 class Request(webob.Request):
     """Add some Openstack API-specific logic to the base webob.Request."""
 
-    def best_match_content_type(self):
+    def best_match_content_type(self, supported_content_types=None):
         """Determine the requested response content-type.
 
         Based on the query extension then the Accept header.
 
         """
-        supported = ('application/json', 'application/xml')
+        supported_content_types = supported_content_types or \
+            ('application/json', 'application/xml')
 
         parts = self.path.rsplit('.', 1)
         if len(parts) > 1:
             ctype = 'application/{0}'.format(parts[1])
-            if ctype in supported:
+            if ctype in supported_content_types:
                 return ctype
 
-        bm = self.accept.best_match(supported)
+        bm = self.accept.best_match(supported_content_types)
 
         # default to application/json if we don't find a preference
         return bm or 'application/json'
@@ -134,20 +136,20 @@ class XMLDeserializer(TextDeserializer):
                                                                  listnames)
             return result
 
-    def _find_first_child_named(self, parent, name):
+    def find_first_child_named(self, parent, name):
         """Search a nodes children for the first child with a given name"""
         for node in parent.childNodes:
             if node.nodeName == name:
                 return node
         return None
 
-    def _find_children_named(self, parent, name):
+    def find_children_named(self, parent, name):
         """Return all of a nodes children who have the given name"""
         for node in parent.childNodes:
             if node.nodeName == name:
                 yield node
 
-    def _extract_text(self, node):
+    def extract_text(self, node):
         """Get the text field contained by the given node"""
         if len(node.childNodes) == 1:
             child = node.childNodes[0]
@@ -157,6 +159,19 @@ class XMLDeserializer(TextDeserializer):
 
     def default(self, datastring):
         return {'body': self._from_xml(datastring)}
+
+
+class MetadataXMLDeserializer(XMLDeserializer):
+
+    def extract_metadata(self, metadata_node):
+        """Marshal the metadata attribute of a parsed request"""
+        if metadata_node is None:
+            return None
+        metadata = {}
+        for meta_node in self.find_children_named(metadata_node, "meta"):
+            key = meta_node.getAttribute("key")
+            metadata[key] = self.extract_text(meta_node)
+        return metadata
 
 
 class RequestHeadersDeserializer(ActionDispatcher):
@@ -172,7 +187,12 @@ class RequestHeadersDeserializer(ActionDispatcher):
 class RequestDeserializer(object):
     """Break up a Request object into more useful pieces."""
 
-    def __init__(self, body_deserializers=None, headers_deserializer=None):
+    def __init__(self, body_deserializers=None, headers_deserializer=None,
+                 supported_content_types=None):
+
+        self.supported_content_types = supported_content_types or \
+                ('application/json', 'application/xml')
+
         self.body_deserializers = {
             'application/xml': XMLDeserializer(),
             'application/json': JSONDeserializer(),
@@ -234,7 +254,7 @@ class RequestDeserializer(object):
             raise exception.InvalidContentType(content_type=content_type)
 
     def get_expected_content_type(self, request):
-        return request.best_match_content_type()
+        return request.best_match_content_type(self.supported_content_types)
 
     def get_action_args(self, request_environment):
         """Parse dictionary created by routes library."""
@@ -411,8 +431,9 @@ class ResponseSerializer(object):
 
     def serialize_body(self, response, data, content_type, action):
         response.headers['Content-Type'] = content_type
-        serializer = self.get_body_serializer(content_type)
-        response.body = serializer.serialize(data, action)
+        if data is not None:
+            serializer = self.get_body_serializer(content_type)
+            response.body = serializer.serialize(data, action)
 
     def get_body_serializer(self, content_type):
         try:
@@ -433,6 +454,7 @@ class Resource(wsgi.Application):
     serialized by requested content type.
 
     """
+
     def __init__(self, controller, deserializer=None, serializer=None):
         """
         :param controller: object that implement methods created by routes lib
@@ -457,14 +479,17 @@ class Resource(wsgi.Application):
             action, args, accept = self.deserializer.deserialize(request)
         except exception.InvalidContentType:
             msg = _("Unsupported Content-Type")
-            return webob.exc.HTTPBadRequest(explanation=msg)
+            return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
         except exception.MalformedRequestBody:
             msg = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
-        action_result = self.dispatch(request, action, args)
+        try:
+            action_result = self.dispatch(request, action, args)
+        except webob.exc.HTTPException as ex:
+            LOG.info(_("HTTP exception thrown: %s"), unicode(ex))
+            action_result = faults.Fault(ex)
 
-        #TODO(bcwaldon): find a more elegant way to pass through non-dict types
         if type(action_result) is dict or action_result is None:
             response = self.serializer.serialize(action_result,
                                                  accept,
