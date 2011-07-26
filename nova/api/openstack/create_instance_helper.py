@@ -319,11 +319,10 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
     def _extract_personality(self, server_node):
         """Marshal the personality attribute of a parsed request"""
-        personality_node = \
-                self.find_first_child_named(server_node, "personality")
+        node = self.find_first_child_named(server_node, "personality")
         personality = []
-        if personality_node is not None:
-            for file_node in self.find_children_named(personality_node, "file"):
+        if node is not None:
+            for file_node in self.find_children_named(node, "file"):
                 item = {}
                 if file_node.hasAttribute("path"):
                     item["path"] = file_node.getAttribute("path")

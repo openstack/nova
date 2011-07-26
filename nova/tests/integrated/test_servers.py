@@ -49,30 +49,31 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         post = {'server': server}
 
-        # Without an image, this throws 400.
+        # Without an imageRef, this throws 500.
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        # With an invalid image entity, this throws 400.
-        bookmark = {'rel': 'bookmark', 'href': self.user.get_invalid_image()}
-        server['image'] = {'links': [bookmark]}
+        # With an invalid imageRef, this throws 500.
+        server['imageRef'] = self.user.get_invalid_image()
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        # Add a valid image entity
-        server['image'] = good_server.get('image', {})
+        # Add a valid imageId/imageRef
+        server['imageId'] = good_server.get('imageId')
+        server['imageRef'] = good_server.get('imageRef')
 
-        # Without a flavor entity, this throws 400
+        # Without flavorId, this throws 500
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        # Set a valid flavor etity
-        server['flavor'] = good_server.get('flavor', {})
+        # Set a valid flavorId/flavorRef
+        server['flavorRef'] = good_server.get('flavorRef')
+        server['flavorId'] = good_server.get('flavorId')
 
-        # Without a name, this throws 400
+        # Without a name, this throws 500
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
@@ -284,25 +285,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Cleanup
         self._delete_server(created_server_id)
 
-    def test_rename_server(self):
-        """Test building and renaming a server."""
-
-        # Create a server
-        server = self._build_minimal_create_server_request()
-        created_server = self.api.post_server({'server': server})
-        LOG.debug("created_server: %s" % created_server)
-        server_id = created_server['id']
-        self.assertTrue(server_id)
-
-        # Rename the server to 'new-name'
-        self.api.put_server(server_id, {'server': {'name': 'new-name'}})
-
-        # Check the name of the server
-        created_server = self.api.get_server(server_id)
-        self.assertEqual(created_server['name'], 'new-name')
-
-        # Cleanup
-        self._delete_server(server_id)
 
 if __name__ == "__main__":
     unittest.main()

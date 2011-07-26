@@ -2247,6 +2247,8 @@ class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
                 "name": "new-server-test",
                 "imageId": "1",
                 "flavorId": "1",
+                "metadata": {},
+                "personality": [],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2262,6 +2264,7 @@ class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
                 "imageId": "1",
                 "flavorId": "1",
                 "metadata": {},
+                "personality": [],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2276,6 +2279,7 @@ class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
                 "name": "new-server-test",
                 "imageId": "1",
                 "flavorId": "1",
+                "metadata": {},
                 "personality": [],
                 }}
         self.assertEquals(request['body'], expected)
@@ -2556,7 +2560,6 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
-
 
     def test_image_link(self):
         serial_request = """

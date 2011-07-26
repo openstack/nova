@@ -205,12 +205,12 @@ class _IntegratedTestBase(test.TestCase):
             image_href = 'http://fake.server/%s' % image_href
 
         # We now have a valid imageId
-        server['image'] = {'links': [{'rel':'bookmark', 'href': image_href}]}
+        server['imageRef'] = image_href
 
         # Set a valid flavorId
         flavor = self.api.get_flavors()[0]
         LOG.debug("Using flavor: %s" % flavor)
-        server['flavor'] = {'id': flavor['id']}
+        server['flavorRef'] = 'http://fake.server/%s' % flavor['id']
 
         # Set a valid server name
         server_name = self.user.get_unused_server_name()
