@@ -676,7 +676,7 @@ class NetworkCommands(object):
                 subnet = 32 - int(math.log(network_size, 2))
                 oversize_msg = _('Subnet(s) too large, defaulting to /%s.'
                                  '  To override, specify network_size flag.'
-                                 % subnet)
+                                ) % subnet
                 print oversize_msg
         if not multi_host:
             multi_host = FLAGS.multi_host
