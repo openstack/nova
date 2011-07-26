@@ -205,6 +205,7 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
     # in the base class (XMLDictSerializer), which I plan to do in 
     # another branch
     def to_xml_string(self, node, has_atom=False):
+        print "TOXML"
         self._add_xmlns(node, has_atom)
         return node.toxml(encoding='UTF-8')
 
@@ -273,6 +274,14 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
 
 class VersionsAtomSerializer(wsgi.XMLDictSerializer):
+    #TODO(wwolf): this is temporary until we get rid of toprettyxml 
+    # in the base class (XMLDictSerializer), which I plan to do in 
+    # another branch
+    def to_xml_string(self, node, has_atom=False):
+        print "TOXML"
+        self._add_xmlns(node, has_atom)
+        return node.toxml(encoding='UTF-8')
+
     def __init__(self, metadata=None, xmlns=None):
         self.metadata = metadata or {}
         if not xmlns:

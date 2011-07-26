@@ -531,47 +531,9 @@ class VersionsTest(test.TestCase):
             ]
         }
 
-        expected = """
-            <feed xmlns="http://www.w3.org/2005/Atom">
-                <title type="text">
-                    Available API Versions
-                </title>
-                <updated>
-                    2011-07-20T11:40:00Z
-                </updated>
-                <id>
-                    http://test/
-                </id>
-                <author>
-                    <name>
-                        Rackspace
-                    </name>
-                    <uri>
-                        http://www.rackspace.com/
-                    </uri>
-                </author>
-                <link href="http://test/" rel="self"/>
-                <entry>
-                    <id>
-                        http://test/2.9.8
-                    </id>
-                    <title type="text">
-                        Version 2.9.8
-                    </title>
-                    <updated>
-                        2011-07-20T11:40:00Z
-                    </updated>
-                    <link href="http://test/2.9.8" rel="self"/>
-                    <content type="text">
-                        Version 2.9.8 CURRENT (2011-07-20T11:40:00Z)
-                    </content>
-                </entry>
-            </feed>""".replace("  ", "").replace("\n", "")
-
         serializer = versions.VersionsAtomSerializer()
         response = serializer.index(versions_data)
-        response = response.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, response)
+        print response
 
         root = xml.etree.ElementTree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "feed")
@@ -608,18 +570,23 @@ class VersionsTest(test.TestCase):
         entry_children = list(entry)
         entry_id = entry_children[0]
         entry_title = entry_children[1]
-        entry_updated = entry_children[1]
-        entry_link = entry_children[1]
-        entry_content = entry_children[1]
+        entry_updated = entry_children[2]
+        entry_link = entry_children[3]
+        entry_content = entry_children[4]
+        self.assertEqual(entry_id.tag.split('}')[1], "id")
         self.assertEqual(entry_id.text, "http://test/2.9.8")
-         
-
-
-        #self.assertEqual(media_types.tag.split('}')[1], 'media-types')
-        #for i, media_node in enumerate(media_type_nodes):
-            #self.assertEqual(media_node.tag.split('}')[1], 'media-type')
-            #for key, val in version_data['version']['media-types'][i].items():
-                #self.assertEqual(val, media_node.get(key))
+        self.assertEqual(entry_title.tag.split('}')[1], "title")
+        self.assertEqual(entry_title.get('type'), "text")
+        self.assertEqual(entry_title.text, "Version 2.9.8")
+        self.assertEqual(entry_updated.tag.split('}')[1], "updated")
+        self.assertEqual(entry_updated.text, "2011-07-20T11:40:00Z")
+        self.assertEqual(entry_link.tag.split('}')[1], "link")
+        self.assertEqual(entry_link.get('href'), "http://test/2.9.8")
+        self.assertEqual(entry_link.get('rel'), "self")
+        self.assertEqual(entry_content.tag.split('}')[1], "content")
+        self.assertEqual(entry_content.get('type'), "text")
+        self.assertEqual(entry_content.text,
+                         "Version 2.9.8 CURRENT (2011-07-20T11:40:00Z)")
 
     def test_version_detail_atom_serializer(self):
         versions_data = {
