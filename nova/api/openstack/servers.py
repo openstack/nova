@@ -480,17 +480,6 @@ class ControllerV11(Controller):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-    def _href_from_bookmark_links(self, links):
-        for link in links:
-            try:
-                if link.get('rel') == 'bookmark':
-                    href = link.get('href')
-                    if href is not None:
-                        return href
-            except AttributeError:
-                msg = _("Malformed link entity")
-                raise exc.HTTPBadRequest(explanation=msg)
-
     def _image_ref_from_req_data(self, data):
         try:
             return data['server']['imageRef']
