@@ -548,6 +548,7 @@ class VersionsTest(test.TestCase):
         link = children[4]
         entry = children[5]
 
+        self.assertEqual(root.tag.split('}')[1], 'feed')
         self.assertEqual(title.tag.split('}')[1], 'title')
         self.assertEqual(title.text, 'Available API Versions')
         self.assertEqual(updated.tag.split('}')[1], 'updated')
