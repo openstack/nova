@@ -809,3 +809,14 @@ class Bootstrapper(object):
         for key in FLAGS:
             value = FLAGS.get(key, None)
             logging.audit(_("%(key)s : %(value)s" % locals()))
+
+
+def load_module(name):
+    mod = __import__(name)
+
+    components = name.split('.')
+
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+
+    return mod

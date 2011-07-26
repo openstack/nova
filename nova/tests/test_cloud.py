@@ -50,7 +50,7 @@ class CloudTestCase(test.TestCase):
         self.flags(connection_type='fake',
                    stub_network=True)
 
-        self.conn = rpc.Connection.instance()
+        self.conn = rpc.create_connection()
 
         # set up our cloud
         self.cloud = cloud.CloudController()
@@ -269,63 +269,24 @@ class CloudTestCase(test.TestCase):
         delete = self.cloud.delete_security_group
         self.assertRaises(exception.ApiError, delete, self.context)
 
-    def test_authorize_security_group_ingress(self):
+    def test_authorize_revoke_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
         sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
-
-    def test_authorize_security_group_ingress_ip_permissions_ip_ranges(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
-        authz = self.cloud.authorize_security_group_ingress
-        kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
-                                      'ip_ranges':
-                                         {'1': {'cidr_ip': u'0.0.0.0/0'},
-                                          '2': {'cidr_ip': u'10.10.10.10/32'}},
-                                      'ip_protocol': u'tcp'}]}
-        self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
-
-    def test_authorize_security_group_ingress_ip_permissions_groups(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
-        authz = self.cloud.authorize_security_group_ingress
-        kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
-                  'ip_ranges':{'1': {'cidr_ip': u'0.0.0.0/0'},
-                                '2': {'cidr_ip': u'10.10.10.10/32'}},
-                  'groups': {'1': {'user_id': u'someuser',
-                                   'group_name': u'somegroup1'},
-                             '2': {'user_id': u'someuser',
-                                   'group_name': u'othergroup2'}},
-                  'ip_protocol': u'tcp'}]}
-        self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
-
-    def test_revoke_security_group_ingress(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
-        authz = self.cloud.authorize_security_group_ingress
-        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        authz(self.context, group_id=sec['id'], **kwargs)
+        authz(self.context, group_name=sec['name'], **kwargs)
         revoke = self.cloud.revoke_security_group_ingress
         self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
 
-    def test_revoke_security_group_ingress_by_id(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
-        authz = self.cloud.authorize_security_group_ingress
-        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        authz(self.context, group_id=sec['id'], **kwargs)
-        revoke = self.cloud.revoke_security_group_ingress
-        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
-
-    def test_authorize_security_group_ingress_by_id(self):
+    def test_authorize_revoke_security_group_ingress_by_id(self):
         sec = db.security_group_create(self.context,
                                        {'project_id': self.context.project_id,
                                         'name': 'test'})
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        self.assertTrue(authz(self.context, group_id=sec['id'], **kwargs))
+        authz(self.context, group_id=sec['id'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
 
     def test_authorize_security_group_ingress_missing_protocol_params(self):
         sec = db.security_group_create(self.context,
@@ -946,21 +907,6 @@ class CloudTestCase(test.TestCase):
         ec2_instance_id = self._run_instance(**kwargs)
         self._wait_for_running(ec2_instance_id)
         return ec2_instance_id
-
-    def test_rescue_unrescue_instance(self):
-        instance_id = self._run_instance(
-            image_id='ami-1',
-            instance_type=FLAGS.default_instance_type,
-            max_count=1)
-        self.cloud.rescue_instance(context=self.context,
-                                   instance_id=instance_id)
-        # NOTE(vish): This currently does no validation, it simply makes sure
-        #             that the code path doesn't throw an exception.
-        self.cloud.unrescue_instance(context=self.context,
-                                   instance_id=instance_id)
-        # TODO(soren): We need this until we can stop polling in the rpc code
-        #              for unit tests.
-        self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_console_output(self):
         instance_id = self._run_instance(
