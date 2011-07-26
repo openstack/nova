@@ -533,7 +533,52 @@ class CloudController(object):
             g['ipPermissions'] += [r]
         return g
 
-    def _revoke_rule_args_to_dict(self, context, to_port=None, from_port=None,
+    def _rule_args_to_dict(self, context, kwargs):
+        rules = []
+        if not 'groups' in kwargs and not 'ip_ranges' in kwargs:
+            rule = self._rule_dict_last_step(context, **kwargs)
+            if rule:
+                rules.append(rule)
+            return rules
+        if 'ip_ranges' in kwargs:
+            rules = self._cidr_args_split(kwargs)
+        finalset = []
+        for rule in rules:
+            if 'groups' in rule:
+                groups_values = self._groups_args_split(rule)
+                for groups_value in groups_values:
+                    finalset.append(groups_value)
+            else:
+                if rule:
+                    finalset.append(rule)
+        return finalset
+
+    def _cidr_args_split(self, kwargs):
+        cidr_args_split = []
+        cidrs = kwargs['ip_ranges']
+        for key, cidr in cidrs.iteritems():
+            mykwargs = kwargs.copy()
+            del mykwargs['ip_ranges']
+            mykwargs['cidr_ip'] = cidr['cidr_ip']
+            cidr_args_split.append(mykwargs)
+        return cidr_args_split
+
+    def _groups_args_split(self, kwargs):
+        groups_args_split = []
+        groups = kwargs['groups']
+        for key, group in groups.iteritems():
+            mykwargs = kwargs.copy()
+            del mykwargs['groups']
+            if 'group_name' in group:
+                mykwargs['source_security_group_name'] = group['group_name']
+            if 'user_id' in group:
+                mykwargs['source_security_group_owner_id'] = group['user_id']
+            if 'group_id' in group:
+                mykwargs['source_security_group_id'] = group['group_id']
+            groups_args_split.append(mykwargs)
+        return groups_args_split
+
+    def _rule_dict_last_step(self, context, to_port=None, from_port=None,
                                   ip_protocol=None, cidr_ip=None, user_id=None,
                                   source_security_group_name=None,
                                   source_security_group_owner_id=None):
@@ -618,7 +663,7 @@ class CloudController(object):
         msg = "Revoke security group ingress %s"
         LOG.audit(_(msg), security_group['name'], context=context)
 
-        criteria = self._revoke_rule_args_to_dict(context, **kwargs)
+        criteria = self._rule_args_to_dict(context, kwargs)[0]
         if criteria is None:
             raise exception.ApiError(_("Not enough parameters to build a "
                                        "valid rule."))
@@ -659,21 +704,34 @@ class CloudController(object):
 
         msg = "Authorize security group ingress %s"
         LOG.audit(_(msg), security_group['name'], context=context)
-        values = self._revoke_rule_args_to_dict(context, **kwargs)
-        if values is None:
-            raise exception.ApiError(_("Not enough parameters to build a "
-                                       "valid rule."))
-        values['parent_group_id'] = security_group.id
+        prevalues = []
+        try:
+            prevalues = kwargs['ip_permissions']
+        except KeyError:
+            prevalues.append(kwargs)
+        postvalues = []
+        for values in prevalues:
+            rulesvalues = self._rule_args_to_dict(context, values)
+            if not rulesvalues:
+                err = "%s Not enough parameters to build a valid rule"
+                raise exception.ApiError(_(err % rulesvalues))
+            for values_for_rule in rulesvalues:
+                values_for_rule['parent_group_id'] = security_group.id
+                if self._security_group_rule_exists(security_group,
+                                                    values_for_rule):
+                    err = '%s - This rule already exists in group'
+                    raise exception.ApiError(_(err) % values_for_rule)
+                postvalues.append(values_for_rule)
 
-        if self._security_group_rule_exists(security_group, values):
-            raise exception.ApiError(_('This rule already exists in group %s')
-                                     % group_name)
-
-        security_group_rule = db.security_group_rule_create(context, values)
+        for values_for_rule in postvalues:
+            security_group_rule = db.security_group_rule_create(context,
+                                                               values_for_rule)
 
         self.compute_api.trigger_security_group_rules_refresh(context,
-                                      security_group_id=security_group['id'])
+                                  security_group_id=security_group['id'])
 
+        group = db.security_group_get_by_name(context, context.project_id,
+                                              security_group['name'])
         return True
 
     def _get_source_project_id(self, context, source_security_group_owner_id):
@@ -1296,7 +1354,7 @@ class CloudController(object):
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        self._do_instance(self.compute_api.rescue, contect, instnace_id)
+        self._do_instance(self.compute_api.rescue, context, instance_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):

@@ -59,7 +59,7 @@ class API(base.Base):
             # Check quotas for non-VSA volumes only
             if quota.allowed_volumes(context, 1, size) < 1:
                 pid = context.project_id
-                LOG.warn(_("Quota exceeeded for %(pid)s, tried to create"
+                LOG.warn(_("Quota exceeded for %(pid)s, tried to create"
                         " %(size)sG volume") % locals())
                 raise quota.QuotaError(_("Volume quota exceeded. You cannot "
                                          "create a volume of size %sG") % size)

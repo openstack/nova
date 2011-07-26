@@ -127,7 +127,7 @@ class API(base.Base):
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
             pid = context.project_id
-            msg = _("Quota exceeeded for %(pid)s, tried to set "
+            msg = _("Quota exceeded for %(pid)s, tried to set "
                     "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
             raise quota.QuotaError(msg, "MetadataLimitExceeded")
@@ -138,7 +138,7 @@ class API(base.Base):
         for k, v in metadata.iteritems():
             if len(k) > 255 or len(v) > 255:
                 pid = context.project_id
-                msg = _("Quota exceeeded for %(pid)s, metadata property "
+                msg = _("Quota exceeded for %(pid)s, metadata property "
                         "key or value too long") % locals()
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
@@ -165,7 +165,7 @@ class API(base.Base):
                                                 instance_type)
         if num_instances < min_count:
             pid = context.project_id
-            LOG.warn(_("Quota exceeeded for %(pid)s,"
+            LOG.warn(_("Quota exceeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
             if num_instances <= 0:
                 message = _("Instance quota exceeded. You cannot run any "
