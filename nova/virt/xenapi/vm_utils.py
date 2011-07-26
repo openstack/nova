@@ -411,7 +411,10 @@ class VMHelper(HelperBase):
         """
         image_type is interpreted as an ImageType instance
         Related flags:
-            xenapi_image_service = ['glance', 'objectstore']
+            image_service = [
+                'nova.image.glance.GlanceImageService',
+                'nova.image.s3.S3ImageService',
+            ]
             glance_address = 'address for glance services'
             glance_port = 'port for glance services'
 
@@ -420,7 +423,7 @@ class VMHelper(HelperBase):
         """
         access = AuthManager().get_access_key(user, project)
 
-        if FLAGS.xenapi_image_service == 'glance':
+        if FLAGS.image_service == 'nova.image.glance.GlanceImageService':
             return cls._fetch_image_glance(session, instance_id, image,
                                            access, image_type)
         else:
@@ -600,9 +603,7 @@ class VMHelper(HelperBase):
             else:
                 return ImageType.DISK_RAW
 
-        # FIXME(sirp): can we unify the ImageService and xenapi_image_service
-        # abstractions?
-        if FLAGS.xenapi_image_service == 'glance':
+        if FLAGS.image_service == 'nova.image.glance.GlanceImageService':
             image_type = determine_from_glance()
         else:
             image_type = determine_from_instance()
@@ -678,11 +679,12 @@ class VMHelper(HelperBase):
 
             4. Glance (DISK): pv is assumed
         """
-        if FLAGS.xenapi_image_service == 'glance':
+        if FLAGS.image_service == 'nova.image.glance.GlanceImageService':
             # 2, 3, 4: Glance
             return cls._determine_is_pv_glance(
               session, vdi_ref, disk_image_type, os_type)
         else:
+            print FLAGS.image_service
             # 1. Objecstore
             return cls._determine_is_pv_objectstore(session, instance_id,
                                                     vdi_ref)
