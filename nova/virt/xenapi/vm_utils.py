@@ -359,7 +359,7 @@ class VMHelper(HelperBase):
         return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
     @classmethod
-    def upload_image(cls, session, instance, vdi_uuids, image_id):
+    def upload_image(cls, context, session, instance, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
@@ -384,7 +384,7 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def fetch_image(cls, session, instance_id, image, user, project,
+    def fetch_image(cls, context, session, instance_id, image, user, project,
                     image_type):
         """
         image_type is interpreted as an ImageType instance
@@ -399,16 +399,16 @@ class VMHelper(HelperBase):
         access = AuthManager().get_access_key(user, project)
 
         if FLAGS.xenapi_image_service == 'glance':
-            return cls._fetch_image_glance(session, instance_id, image,
-                                           access, image_type)
+            return cls._fetch_image_glance(context, session, instance_id,
+                                           image, access, image_type)
         else:
             return cls._fetch_image_objectstore(session, instance_id, image,
                                                 access, user.secret,
                                                 image_type)
 
     @classmethod
-    def _fetch_image_glance_vhd(cls, session, instance_id, image, access,
-                                image_type):
+    def _fetch_image_glance_vhd(cls, context, session, instance_id, image,
+                                access, image_type):
         """Tell glance to download an image and put the VHDs into the SR
 
         Returns: A list of dictionaries that describe VDIs
@@ -455,8 +455,8 @@ class VMHelper(HelperBase):
         return vdis
 
     @classmethod
-    def _fetch_image_glance_disk(cls, session, instance_id, image, access,
-                                 image_type):
+    def _fetch_image_glance_disk(cls, context, session, instance_id, image,
+                                 access, image_type):
         """Fetch the image from Glance
 
         NOTE:
@@ -589,7 +589,7 @@ class VMHelper(HelperBase):
         return image_type
 
     @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, access,
+    def _fetch_image_glance(cls, context, session, instance_id, image, access,
                             image_type):
         """Fetch image from glance based on image type.
 
@@ -597,10 +597,10 @@ class VMHelper(HelperBase):
                  A list of dictionaries that describe VDIs, otherwise
         """
         if image_type == ImageType.DISK_VHD:
-            return cls._fetch_image_glance_vhd(
+            return cls._fetch_image_glance_vhd(context,
                 session, instance_id, image, access, image_type)
         else:
-            return cls._fetch_image_glance_disk(
+            return cls._fetch_image_glance_disk(context,
                 session, instance_id, image, access, image_type)
 
     @classmethod
