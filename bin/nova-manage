@@ -670,7 +670,16 @@ class NetworkCommands(object):
             bridge_required = ['nova.network.manager.FlatManager',
                                'nova.network.manager.FlatDHCPManager']
             if FLAGS.network_manager in bridge_required:
-                raise exception.NetworkNotCreated(req='--bridge')
+                # TODO(tr3buchet) - swap print statement and following line for
+                #                   raise statement in diablo 4
+                print _('--bridge parameter required or FLAG '
+                        'flat_network_bridge must be set to create networks\n'
+                        'WARNING! ACHTUNG! Setting the bridge to br100 '
+                        'automatically is deprecated and will be removed in '
+                        'Diablo milestone 4. Prepare yourself accordingly.')
+                time.sleep(10)
+                bridge = 'br100'
+                #raise exception.NetworkNotCreated(req='--bridge')
 
         bridge_interface = bridge_interface or FLAGS.flat_interface or \
                            FLAGS.vlan_interface
