@@ -25,6 +25,7 @@ from nova.api.openstack import wsgi
 
 
 ATOM_XMLNS = "http://www.w3.org/2005/Atom"
+OS_XMLNS_BASE = "http://docs.openstack.org/common/api/"
 VERSIONS = {
     "v1.0": {
         "version" : {
@@ -226,8 +227,10 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
         self._add_xmlns(node, has_atom)
         return node.toxml(encoding='UTF-8')
 
-    def _versions_to_xml(self, versions):
-        root = self._xml_doc.createElement('versions')
+    def _versions_to_xml(self, versions, name="versions", xmlns=None):
+        root = self._xml_doc.createElement(name)
+        root.setAttribute("xmlns", "%sv1.0" % OS_XMLNS_BASE)
+        root.setAttribute("xmlns:atom", ATOM_XMLNS)
 
         for version in versions:
             root.appendChild(self._create_version_node(version))
@@ -247,14 +250,15 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
     def _create_version_node(self, version, create_ns=False):
         version_node = self._xml_doc.createElement('version')
         if create_ns:
-            xmlns = "http://docs.openstack.org/common/api/%s" % version['id']
+            xmlns = "%s%s" % (OS_XMLNS_BASE, version['id'])
             xmlns_atom = "http://www.w3.org/2005/Atom"
             version_node.setAttribute('xmlns', xmlns)
             version_node.setAttribute('xmlns:atom', xmlns_atom)
 
         version_node.setAttribute('id', version['id'])
         version_node.setAttribute('status', version['status'])
-        version_node.setAttribute('updated', version['updated'])
+        if 'updated' in version:
+            version_node.setAttribute('updated', version['updated'])
 
         if 'media-types' in version:
             media_types = self._create_media_types(version['media-types'])
@@ -285,7 +289,8 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
     def multi(self, data):
         self._xml_doc = minidom.Document()
-        node = self._versions_to_xml(data['versions'])
+        node = self._versions_to_xml(data['choices'], 'choices',
+                         xmlns="%sv1.0" % OS_XMLNS_BASE)
 
         return self.to_xml_string(node)
 

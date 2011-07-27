@@ -27,6 +27,9 @@ from nova.tests.api.openstack import fakes
 from nova.api.openstack import versions
 from nova.api.openstack import views
 
+ATOM_XMLNS = versions.ATOM_XMLNS
+OS_XMLNS_BASE = versions.OS_XMLNS_BASE
+
 
 class VersionsTest(test.TestCase):
     def setUp(self):
@@ -170,7 +173,7 @@ class VersionsTest(test.TestCase):
         root = xml.etree.ElementTree.XML(res.body)
         self.assertEqual(root.tag.split('}')[1], "version")
         self.assertEqual(root.tag.split('}')[0].strip('{'),
-                         "http://docs.openstack.org/common/api/v1.0")
+                         "%sv1.0" % OS_XMLNS_BASE)
 
         children = list(root)
         media_types = children[0]
@@ -184,7 +187,7 @@ class VersionsTest(test.TestCase):
         expected = """
         <version id="v1.0" status="DEPRECATED"
              updated="2011-01-21T11:33:21Z"
-             xmlns="http://docs.openstack.org/common/api/v1.0"
+             xmlns="%sv1.0"
              xmlns:atom="http://www.w3.org/2005/Atom">
 
             <media-types>
@@ -206,7 +209,7 @@ class VersionsTest(test.TestCase):
                 api/v1.0/application.wadl"
                  rel="describedby"
                  type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "")
+        </version>""".replace("  ", "").replace("\n", "") % OS_XMLNS_BASE
 
         actual = res.body.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, actual)
@@ -220,7 +223,7 @@ class VersionsTest(test.TestCase):
         expected = """
         <version id="v1.1" status="CURRENT"
              updated="2011-01-21T11:33:21Z"
-             xmlns="http://docs.openstack.org/common/api/v1.1"
+             xmlns="%sv1.1"
              xmlns:atom="http://www.w3.org/2005/Atom">
 
             <media-types>
@@ -242,7 +245,8 @@ class VersionsTest(test.TestCase):
                 api/v1.1/application.wadl"
                  rel="describedby"
                  type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "")
+        </version>""".replace("  ", "").replace("\n", "") % OS_XMLNS_BASE
+
 
         actual = res.body.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, actual)
@@ -254,7 +258,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/xml")
 
-        expected = """<versions>
+        expected = """
+        <versions xmlns="%sv1.0" xmlns:atom="%s">
             <version id="v1.1" status="CURRENT" updated="2011-07-18T11:30:00Z">
                 <atom:link href="http://localhost/v1.1/" rel="self"/>
             </version>
@@ -262,7 +267,8 @@ class VersionsTest(test.TestCase):
                  updated="2010-10-09T11:30:00Z">
                 <atom:link href="http://localhost/v1.0/" rel="self"/>
             </version>
-        </versions>""".replace("  ", "").replace("\n", "")
+        </versions>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
+                                                              ATOM_XMLNS)
 
         actual = res.body.replace("  ", "").replace("\n", "")
 
@@ -437,6 +443,36 @@ class VersionsTest(test.TestCase):
 
         self.assertDictMatch(expected, json.loads(res.body))
 
+    def test_multi_choice_image_xml(self):
+        req = webob.Request.blank('/images/1')
+        req.accept = "application/xml"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 300)
+        self.assertEqual(res.content_type, "application/xml")
+
+        expected = """
+        <choices xmlns="%sv1.0" xmlns:atom="%s">
+          <version id="v1.1" status="CURRENT">
+            <media-types>
+              <media-type base="application/xml"
+                 type="application/vnd.openstack.compute-v1.1+xml"/>
+              <media-type base="application/json"
+                 type="application/vnd.openstack.compute-v1.1+json"/>
+            </media-types>
+            <atom:link href="http://localhost:80/v1.1/images/1" rel="self"/>
+          </version>
+          <version id="v1.0" status="DEPRECATED">
+            <media-types>
+              <media-type base="application/xml"
+                 type="application/vnd.openstack.compute-v1.0+xml"/>
+              <media-type base="application/json"
+                 type="application/vnd.openstack.compute-v1.0+json"/>
+            </media-types>
+            <atom:link href="http://localhost:80/v1.0/images/1" rel="self"/>
+          </version>
+        </choices>""".replace("  ", "").replace("\n","") % (OS_XMLNS_BASE,
+                                                            ATOM_XMLNS)
+
     def test_multi_choice_server(self):
         req = webob.Request.blank('/servers/2')
         req.accept = "application/json"
@@ -544,17 +580,50 @@ class VersionsTest(test.TestCase):
         }
 
         expected = """
-            <versions>
+            <versions xmlns="%sv1.0" xmlns:atom="%s">
                 <version id="2.7.1" status="DEPRECATED"
                  updated="2011-07-18T11:30:00Z">
                     <atom:link href="http://test/2.7.1" rel="self"/>
                 </version>
-            </versions>""".replace("  ", "").replace("\n", "")
+            </versions>""".replace("  ", "").replace("\n", "") % (
+                OS_XMLNS_BASE,ATOM_XMLNS)
 
         serializer = versions.VersionsXMLSerializer()
         response = serializer.index(versions_data)
         response = response.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, response)
+
+    def test_versions_multi_xml_serializer(self):
+        versions_data = {
+            'choices': [
+                {
+                    "id": "2.7.1",
+                    "updated": "2011-07-18T11:30:00Z",
+                    "status": "DEPRECATED",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://test/2.7.1/images",
+                        },
+                    ],
+                },
+            ]
+        }
+
+        expected = """
+        <choices xmlns="%sv1.0" xmlns:atom="%s">
+            <version id="2.7.1" status="DEPRECATED"
+             updated="2011-07-18T11:30:00Z">
+                <atom:link href="http://test/2.7.1/images" rel="self"/>
+            </version>
+        </choices>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
+                                                              ATOM_XMLNS)
+
+        serializer = versions.VersionsXMLSerializer()
+        response = serializer.multi(versions_data)
+        response = response.replace("  ", "").replace("\n", "")
+        self.assertEqual(expected, response)
+
 
     def test_version_detail_xml_serializer(self):
         version_data = {
