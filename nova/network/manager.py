@@ -613,17 +613,31 @@ class NetworkManager(manager.SchedulerDependentManager):
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
+        net_v6 = {}
+        if FLAGS.use_ipv6:
+            project_net_v6 = netaddr.IPNetwork(cidr_v6)
+            significant_bits_v6 = 64
+            network_size_v6 = 1 << 64
+            start_v6 = index * network_size_v6
+            cidr_v6 = '%s/%s' % (project_net_v6[start_v6],
+                                 significant_bits_v6)
+            net_v6['cidr_v6'] = cidr_v6
+
+            if gateway_v6:
+                # use a pre-defined gateway if one is provided
+                net_v6['gateway_v6'] = str(gateway_v6)
+            else:
+                net_v6['gateway_v6'] = str(project_net_v6[1])
+
+            net_v6['netmask_v6'] = str(project_net_v6._prefixlen)
+
         fixed_net = netaddr.IPNetwork(cidr)
-        fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
-        significant_bits_v6 = 64
-        network_size_v6 = 1 << 64
         for index in range(num_networks):
             start = index * network_size
-            start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = '%s/%s' % (fixed_net[start], significant_bits)
             project_net = netaddr.IPNetwork(cidr)
-            net = {}
+            net = dict(net_v6)
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
             net['dns1'] = dns1
@@ -638,21 +652,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                 net['label'] = '%s_%d' % (label, index)
             else:
                 net['label'] = label
-
-            if FLAGS.use_ipv6:
-                cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
-                                     significant_bits_v6)
-                net['cidr_v6'] = cidr_v6
-
-                project_net_v6 = netaddr.IPNetwork(cidr_v6)
-
-                if gateway_v6:
-                    # use a pre-defined gateway if one is provided
-                    net['gateway_v6'] = str(gateway_v6)
-                else:
-                    net['gateway_v6'] = str(project_net_v6[1])
-
-                net['netmask_v6'] = str(project_net_v6._prefixlen)
 
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
