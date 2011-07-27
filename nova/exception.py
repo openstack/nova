@@ -373,7 +373,7 @@ class StorageRepositoryNotFound(NotFound):
 
 
 class NetworkNotCreated(NovaException):
-    message = _("A %(req)s is required to create a network.")
+    message = _("%(req)s is required to create a network.")
 
 
 class NetworkNotFound(NotFound):
