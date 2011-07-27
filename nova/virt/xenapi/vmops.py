@@ -569,7 +569,7 @@ class VMOps(object):
 
         return new_cow_uuid
 
-    def resize_instance(self, instance, vdi_uuid, resize_instance):
+    def resize_instance(self, instance, vdi_uuid):
         """Resize a running instance by changing its RAM and disk size."""
         #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
