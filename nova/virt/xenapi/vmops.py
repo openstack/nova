@@ -257,7 +257,7 @@ class VMOps(object):
             userdevice += 1
 
         # Alter the image before VM start for, e.g. network injection
-        if FLAGS.xenapi_inject_image:
+        if FLAGS.flat_injected:
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 
@@ -1098,7 +1098,7 @@ class VMOps(object):
             LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
                 ' network %(network_ref)s.') % locals())
 
-    def plug_vifs(instance, network_info):
+    def plug_vifs(self, instance, network_info):
         """Set up VIF networking on the host."""
         for (network, mapping) in network_info:
             self.vif_driver.plug(self._session, instance, network, mapping)

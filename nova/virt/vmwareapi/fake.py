@@ -402,6 +402,16 @@ def _remove_file(file_path):
                     lst_files.remove(file)
 
 
+def fake_plug_vifs(*args, **kwargs):
+    """Fakes plugging vifs."""
+    pass
+
+
+def fake_get_network(*args, **kwargs):
+    """Fake get network."""
+    return [{'type': 'fake'}]
+
+
 def fake_fetch_image(image, instance, **kwargs):
     """Fakes fetch image call. Just adds a reference to the db for the file."""
     ds_name = kwargs.get("datastore_name")
