@@ -84,9 +84,7 @@ function run_pep8 {
   srcfiles+=" `find tools/*`"
   srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
   # Just run PEP8 in current environment
-  #${wrapper} pep8 --repeat --show-pep8 --show-source \
-  #--exclude=vcsversion.py ${srcfiles}
-  pep8 --repeat --show-pep8 --show-source \
+  ${wrapper} pep8 --repeat --show-pep8 --show-source \
   --exclude=vcsversion.py ${srcfiles}
 }
 
