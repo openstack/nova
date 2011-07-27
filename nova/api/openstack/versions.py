@@ -143,20 +143,14 @@ class Versions(wsgi.Resource):
             return self._versions_multi_choice(request)
 
     def _versions_list(self, request):
-        version_objs = [
-            {
-                "id": "v1.1",
-                "status": "CURRENT",
-                #TODO(wwolf) get correct value for these
-                "updated": "2011-07-18T11:30:00Z",
-            },
-            {
-                "id": "v1.0",
-                "status": "DEPRECATED",
-                #TODO(wwolf) get correct value for these
-                "updated": "2010-10-09T11:30:00Z",
-            },
-        ]
+        version_objs = []
+        for version in VERSIONS:
+            version = VERSIONS[version]['version']
+            version_objs.append({
+                "id": version['id'],
+                "status": version['status'],
+                "updated": version['updated'],
+            })
 
         builder = nova.api.openstack.views.versions.get_view_builder(request)
         versions = [builder.build(version) for version in version_objs]
@@ -164,28 +158,19 @@ class Versions(wsgi.Resource):
 
     def _versions_multi_choice(self, request):
         #TODO
-        version_objs = [
-            {
-                "id": "v1.1",
-                "status": "CURRENT",
+        version_objs = []
+        for version in VERSIONS:
+            version = VERSIONS[version]['version']
+            version_objs.append({
+                "id": version['id'],
+                "status": version['status'],
                 "links": [
                     {
-                        "rel": "self",
+                        "rel": "self"
                     }
                 ],
-                "media-types": VERSIONS['v1.1']['version']['media-types'],
-            },
-            {
-                "id": "v1.0",
-                "status": "DEPRECATED",
-                "links": [
-                    {
-                        "rel": "self",
-                    }
-                ],
-                "media-types": VERSIONS['v1.0']['version']['media-types'],
-            },
-        ]
+                "media-types": version['media-types']
+            })
 
         builder = nova.api.openstack.views.versions.get_view_builder(request)
         choices = [

@@ -53,7 +53,7 @@ class VersionsTest(test.TestCase):
             {
                 "id": "v1.1",
                 "status": "CURRENT",
-                "updated": "2011-07-18T11:30:00Z",
+                "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
                         "rel": "self",
@@ -63,7 +63,7 @@ class VersionsTest(test.TestCase):
             {
                 "id": "v1.0",
                 "status": "DEPRECATED",
-                "updated": "2010-10-09T11:30:00Z",
+                "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
                         "rel": "self",
@@ -259,11 +259,11 @@ class VersionsTest(test.TestCase):
 
         expected = """
         <versions xmlns="%s" xmlns:atom="%s">
-            <version id="v1.1" status="CURRENT" updated="2011-07-18T11:30:00Z">
+            <version id="v1.1" status="CURRENT" updated="2011-01-21T11:33:21Z">
                 <atom:link href="http://localhost/v1.1/" rel="self"/>
             </version>
             <version id="v1.0" status="DEPRECATED"
-                 updated="2010-10-09T11:30:00Z">
+                 updated="2011-01-21T11:33:21Z">
                 <atom:link href="http://localhost/v1.0/" rel="self"/>
             </version>
         </versions>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
@@ -357,7 +357,7 @@ class VersionsTest(test.TestCase):
         expected = """
         <feed xmlns="http://www.w3.org/2005/Atom">
             <title type="text">Available API Versions</title>
-            <updated>2011-07-18T11:30:00Z</updated>
+            <updated>2011-01-21T11:33:21Z</updated>
             <id>http://localhost/</id>
             <author>
                 <name>Rackspace</name>
@@ -367,19 +367,19 @@ class VersionsTest(test.TestCase):
             <entry>
                 <id>http://localhost/v1.1/</id>
                 <title type="text">Version v1.1</title>
-                <updated>2011-07-18T11:30:00Z</updated>
+                <updated>2011-01-21T11:33:21Z</updated>
                 <link href="http://localhost/v1.1/" rel="self"/>
                 <content type="text">
-                    Version v1.1 CURRENT (2011-07-18T11:30:00Z)
+                    Version v1.1 CURRENT (2011-01-21T11:33:21Z)
                 </content>
             </entry>
             <entry>
                 <id>http://localhost/v1.0/</id>
                 <title type="text">Version v1.0</title>
-                <updated>2010-10-09T11:30:00Z</updated>
+                <updated>2011-01-21T11:33:21Z</updated>
                 <link href="http://localhost/v1.0/" rel="self"/>
                 <content type="text">
-                    Version v1.0 DEPRECATED (2010-10-09T11:30:00Z)
+                    Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)
                 </content>
             </entry>
         </feed>
