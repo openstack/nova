@@ -280,7 +280,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         return db.service_create(context.get_admin_context(), service_ref)
 
-    @test.skip_test("Please review this test to ensure intent")
     def test_preparing_xml_info(self):
         conn = connection.LibvirtConnection(True)
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -296,27 +295,23 @@ class LibvirtConnTestCase(test.TestCase):
                                         _create_network_info(2))
         self.assertTrue(len(result['nics']) == 2)
 
-    @test.skip_test("skipping libvirt tests depends on get_network_info shim")
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_uri(instance_data,
                                 expect_kernel=False, expect_ramdisk=False)
 
-    @test.skip_test("skipping libvirt tests depends on get_network_info shim")
     def test_xml_and_uri_no_ramdisk(self):
         instance_data = dict(self.test_instance)
         instance_data['kernel_id'] = 'aki-deadbeef'
         self._check_xml_and_uri(instance_data,
                                 expect_kernel=True, expect_ramdisk=False)
 
-    @test.skip_test("skipping libvirt tests depends on get_network_info shim")
     def test_xml_and_uri_no_kernel(self):
         instance_data = dict(self.test_instance)
         instance_data['ramdisk_id'] = 'ari-deadbeef'
         self._check_xml_and_uri(instance_data,
                                 expect_kernel=False, expect_ramdisk=False)
 
-    @test.skip_test("skipping libvirt tests depends on get_network_info shim")
     def test_xml_and_uri(self):
         instance_data = dict(self.test_instance)
         instance_data['ramdisk_id'] = 'ari-deadbeef'
@@ -324,7 +319,6 @@ class LibvirtConnTestCase(test.TestCase):
         self._check_xml_and_uri(instance_data,
                                 expect_kernel=True, expect_ramdisk=True)
 
-    @test.skip_test("skipping libvirt tests depends on get_network_info shim")
     def test_xml_and_uri_rescue(self):
         instance_data = dict(self.test_instance)
         instance_data['ramdisk_id'] = 'ari-deadbeef'
@@ -332,7 +326,6 @@ class LibvirtConnTestCase(test.TestCase):
         self._check_xml_and_uri(instance_data, expect_kernel=True,
                                 expect_ramdisk=True, rescue=True)
 
-    @test.skip_test("skipping libvirt tests depends on get_network_info shim")
     def test_lxc_container_and_uri(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
@@ -743,7 +736,6 @@ class LibvirtConnTestCase(test.TestCase):
         db.volume_destroy(self.context, volume_ref['id'])
         db.instance_destroy(self.context, instance_ref['id'])
 
-    @test.skip_test("test needs rewrite: instance no longer has mac_address")
     def test_spawn_with_network_info(self):
         # Skip if non-libvirt environment
         if not self.lazy_load_library_exists():
@@ -895,7 +887,6 @@ class IptablesFirewallTestCase(test.TestCase):
                                    'project_id': 'fake',
                                    'instance_type_id': 1})
 
-    @test.skip_test("skipping libvirt tests depends on get_network_info shim")
     def test_static_filters(self):
         instance_ref = self._create_instance_ref()
         ip = '10.11.12.13'
@@ -1047,7 +1038,6 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEquals(ipv6_network_rules,
                           ipv6_rules_per_network * networks_count)
 
-    @test.skip_test("skipping libvirt tests")
     def test_do_refresh_security_group_rules(self):
         instance_ref = self._create_instance_ref()
         self.mox.StubOutWithMock(self.fw,
@@ -1058,7 +1048,6 @@ class IptablesFirewallTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.fw.do_refresh_security_group_rules("fake")
 
-    @test.skip_test("skip libvirt test project_get_network no longer exists")
     def test_unfilter_instance_undefines_nwfilter(self):
         # Skip if non-libvirt environment
         if not self.lazy_load_library_exists():
@@ -1092,7 +1081,6 @@ class IptablesFirewallTestCase(test.TestCase):
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])
 
-    @test.skip_test("skip libvirt test project_get_network no longer exists")
     def test_provider_firewall_rules(self):
         # setup basic instance data
         instance_ref = self._create_instance_ref()
@@ -1259,7 +1247,6 @@ class NWFilterTestCase(test.TestCase):
         inst.update(params)
         return db.instance_type_create(context, inst)['id']
 
-    @test.skip_test('Skipping this test')
     def test_creates_base_rule_first(self):
         # These come pre-defined by libvirt
         self.defined_filters = ['no-mac-spoofing',
@@ -1293,13 +1280,13 @@ class NWFilterTestCase(test.TestCase):
 
         ip = '10.11.12.13'
 
-        #network_ref = db.project_get_networks(self.context, 'fake')[0]
-        #fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        network_ref = db.project_get_networks(self.context, 'fake')[0]
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
 
-        #admin_ctxt = context.get_admin_context()
-        #db.fixed_ip_create(admin_ctxt, fixed_ip)
-        #db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
-        #                                    'instance_id': inst_id})
+        admin_ctxt = context.get_admin_context()
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': inst_id})
 
         self._setup_networking(instance_ref['id'], ip=ip)
 
@@ -1336,7 +1323,6 @@ class NWFilterTestCase(test.TestCase):
                                                  "fake")
         self.assertEquals(len(result), 3)
 
-    @test.skip_test("skip libvirt test project_get_network no longer exists")
     def test_unfilter_instance_undefines_nwfilters(self):
         admin_ctxt = context.get_admin_context()
 

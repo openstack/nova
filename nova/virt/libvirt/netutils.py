@@ -89,6 +89,7 @@ def get_network_info(instance):
             'label': network['label'],
             'gateway': network['gateway'],
             'broadcast': network['broadcast'],
+            'dhcp_server': network['gateway'],
             'mac': vif['address'],
             'rxtx_cap': flavor['rxtx_cap'],
             'dns': [],
