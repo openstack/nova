@@ -412,6 +412,15 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(snapshot['status'], 'active')
         self.assertEquals(snapshot['name'], snapshot_name)
 
+    def test_attach_invalid_device(self):
+        self.create_fake_libvirt_mock()
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
+        self.mox.ReplayAll()
+        conn = connection.LibvirtConnection(False)
+        self.assertRaises(exception.InvalidDevicePath,
+                          conn.attach_volume,
+                          "fake", "bad/device/path", "/dev/fake")
+
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
         network_info = _create_network_info(2)
