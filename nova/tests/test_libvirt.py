@@ -88,7 +88,7 @@ def _setup_networking(instance_id, ip='1.2.3.4'):
                 'virtual_interface_id': vif_ref['id']}
     db.fixed_ip_create(ctxt, fixed_ip)
     db.fixed_ip_update(ctxt, ip, {'allocated': True,
-                                        'instance_id': instance_id})
+                                  'instance_id': instance_id})
 
 
 class CacheConcurrencyTestCase(test.TestCase):
@@ -177,13 +177,13 @@ class LibvirtConnTestCase(test.TestCase):
         self.context = context.get_admin_context()
         FLAGS.instances_path = ''
         self.call_libvirt_dependant_setup = False
+        self.test_ip = '10.11.12.13'
 
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
         super(LibvirtConnTestCase, self).tearDown()
 
-    test_ip = '10.11.12.13'
     test_instance = {'memory_kb':     '1024000',
                      'basepath':      '/some/path',
                      'bridge_name':   'br100',
@@ -425,24 +425,7 @@ class LibvirtConnTestCase(test.TestCase):
         user_context = context.RequestContext(project=self.project,
                                               user=self.user)
         instance_ref = db.instance_create(user_context, instance)
-        # Re-get the instance so it's bound to an actual session
-        instance_ref = db.instance_get(user_context, instance_ref['id'])
-        network_ref = db.project_get_networks(context.get_admin_context(),
-                                             self.project.id)[0]
-
-        vif = {'address': '56:12:12:12:12:12',
-               'network_id': network_ref['id'],
-               'instance_id': instance_ref['id']}
-        vif_ref = db.virtual_interface_create(self.context, vif)
-        fixed_ip = {'address': self.test_ip,
-                    'network_id': network_ref['id'],
-                    'virtual_interface_id': vif_ref['id']}
-
-        ctxt = context.get_admin_context()
-        fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
-        db.fixed_ip_update(ctxt, self.test_ip,
-                                 {'allocated': True,
-                                  'instance_id': instance_ref['id']})
+        _setup_networking(instance_ref['id'], self.test_ip)
 
         self.flags(libvirt_type='lxc')
         conn = connection.LibvirtConnection(True)
@@ -474,7 +457,7 @@ class LibvirtConnTestCase(test.TestCase):
         network_ref = db.project_get_networks(context.get_admin_context(),
                                              self.project.id)[0]
 
-        _setup_networking(instance_ref['id'], ip=self.test_ip)
+        _setup_networking(instance_ref['id'], self.test_ip)
 
         type_uri_map = {'qemu': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'qemu'),
@@ -822,6 +805,7 @@ class IptablesFirewallTestCase(test.TestCase):
                 """setup_basic_rules in nwfilter calls this."""
                 pass
         self.fake_libvirt_connection = FakeLibvirtConnection()
+        self.test_ip = '10.11.12.13'
         self.fw = firewall.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
 
@@ -889,24 +873,9 @@ class IptablesFirewallTestCase(test.TestCase):
 
     def test_static_filters(self):
         instance_ref = self._create_instance_ref()
-        ip = '10.11.12.13'
+        _setup_networking(instance_ref['id'], self.test_ip)
 
-        network_ref = db.project_get_networks(self.context,
-                                               'fake',
-                                               associate=True)[0]
-        vif = {'address': '56:12:12:12:12:12',
-               'network_id': network_ref['id'],
-               'instance_id': instance_ref['id']}
-        vif_ref = db.virtual_interface_create(self.context, vif)
-
-        fixed_ip = {'address': ip,
-                    'network_id': network_ref['id'],
-                    'virtual_interface_id': vif_ref['id']}
         admin_ctxt = context.get_admin_context()
-        db.fixed_ip_create(admin_ctxt, fixed_ip)
-        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
-                                            'instance_id': instance_ref['id']})
-
         secgroup = db.security_group_create(admin_ctxt,
                                             {'user_id': 'fake',
                                              'project_id': 'fake',
@@ -1061,22 +1030,13 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.nwfilter._conn.nwfilterLookupByName =\
                                fakefilter.nwfilterLookupByName
         instance_ref = self._create_instance_ref()
-        inst_id = instance_ref['id']
-        instance = db.instance_get(self.context, inst_id)
 
-        ip = '10.11.12.13'
-        network_ref = db.project_get_networks(self.context, 'fake')[0]
-        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
-        db.fixed_ip_create(admin_ctxt, fixed_ip)
-        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
-                                            'instance_id': inst_id})
-
-        _setup_networking(inst_id, ip)
-        self.fw.setup_basic_filtering(instance)
-        self.fw.prepare_instance_filter(instance)
-        self.fw.apply_instance_filter(instance)
+        _setup_networking(instance_ref['id'], self.test_ip)
+        self.fw.setup_basic_filtering(instance_ref)
+        self.fw.prepare_instance_filter(instance_ref)
+        self.fw.apply_instance_filter(instance_ref)
         original_filter_count = len(fakefilter.filters)
-        self.fw.unfilter_instance(instance)
+        self.fw.unfilter_instance(instance_ref)
 
         # should undefine just the instance filter
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
@@ -1087,13 +1047,7 @@ class IptablesFirewallTestCase(test.TestCase):
         # setup basic instance data
         instance_ref = self._create_instance_ref()
         nw_info = _create_network_info(1)
-        ip = '10.11.12.13'
-        network_ref = db.project_get_networks(self.context, 'fake')[0]
-        admin_ctxt = context.get_admin_context()
-        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
-        db.fixed_ip_create(admin_ctxt, fixed_ip)
-        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
-                                            'instance_id': instance_ref['id']})
+        _setup_networking(instance_ref['id'], self.test_ip)
         # FRAGILE: peeks at how the firewall names chains
         chain_name = 'inst-%s' % instance_ref['id']
 
@@ -1105,6 +1059,7 @@ class IptablesFirewallTestCase(test.TestCase):
                       if rule.chain == 'provider']
         self.assertEqual(0, len(rules))
 
+        admin_ctxt = context.get_admin_context()
         # add a rule and send the update message, check for 1 rule
         provider_fw0 = db.provider_fw_rule_create(admin_ctxt,
                                                   {'protocol': 'tcp',
@@ -1163,6 +1118,7 @@ class NWFilterTestCase(test.TestCase):
 
         self.fake_libvirt_connection = Mock()
 
+        self.test_ip = '10.11.12.13'
         self.fw = firewall.NWFilterFirewall(
                                          lambda: self.fake_libvirt_connection)
 
@@ -1280,17 +1236,7 @@ class NWFilterTestCase(test.TestCase):
         instance_ref = self._create_instance()
         inst_id = instance_ref['id']
 
-        ip = '10.11.12.13'
-
-        network_ref = db.project_get_networks(self.context, 'fake')[0]
-        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
-
-        admin_ctxt = context.get_admin_context()
-        db.fixed_ip_create(admin_ctxt, fixed_ip)
-        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
-                                            'instance_id': inst_id})
-
-        _setup_networking(instance_ref['id'], ip=ip)
+        _setup_networking(instance_ref['id'], self.test_ip)
 
         def _ensure_all_called():
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
@@ -1315,7 +1261,7 @@ class NWFilterTestCase(test.TestCase):
         self.fw.apply_instance_filter(instance)
         _ensure_all_called()
         self.teardown_security_group()
-        db.instance_destroy(admin_ctxt, instance_ref['id'])
+        db.instance_destroy(context.get_admin_context, instance_ref['id'])
 
     def test_create_network_filters(self):
         instance_ref = self._create_instance()
@@ -1342,12 +1288,7 @@ class NWFilterTestCase(test.TestCase):
 
         instance = db.instance_get(self.context, inst_id)
 
-        ip = '10.11.12.13'
-        network_ref = db.project_get_networks(self.context, 'fake')[0]
-        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
-        db.fixed_ip_create(admin_ctxt, fixed_ip)
-        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
-                                            'instance_id': inst_id})
+        _setup_networking(instance_ref['id'], self.test_ip)
         self.fw.setup_basic_filtering(instance)
         self.fw.prepare_instance_filter(instance)
         self.fw.apply_instance_filter(instance)
