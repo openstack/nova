@@ -471,6 +471,16 @@ class VersionsTest(test.TestCase):
           </version>
         </choices>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
                                                             ATOM_XMLNS)
+    def test_multi_choice_server_atom(self):
+        """
+        Make sure multi choice responses do not have content-type
+        application/atom+xml (should use default of json)
+        """
+        req = webob.Request.blank('/servers/2')
+        req.accept = "application/atom+xml"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 300)
+        self.assertEqual(res.content_type, "application/json")
 
     def test_multi_choice_server(self):
         req = webob.Request.blank('/servers/2')

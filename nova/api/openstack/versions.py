@@ -159,7 +159,8 @@ class VersionsRequestDeserializer(wsgi.RequestDeserializer):
         supported_content_types = list(self.supported_content_types)
         if request.path != '/':
             # Remove atom+xml accept type for 300 responses
-            del supported_content_types[2]
+            if 'application/atom+xml' in supported_content_types:
+                supported_content_types.remove('application/atom+xml')
 
         return request.best_match_content_type(supported_content_types)
 
