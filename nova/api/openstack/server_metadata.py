@@ -72,13 +72,13 @@ class Controller(object):
 
     def update(self, req, server_id, id, body):
         try:
-           meta_item = body['meta']
+            meta_item = body['meta']
         except (TypeError, KeyError):
             expl = _('Malformed request body')
             raise exc.HTTPBadRequest(explanation=expl)
 
         try:
-           meta_value = meta_item.pop(id)
+            meta_value = meta_item.pop(id)
         except (AttributeError, KeyError):
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
@@ -94,7 +94,7 @@ class Controller(object):
 
     def update_all(self, req, server_id, body):
         try:
-           metadata = body['metadata']
+            metadata = body['metadata']
         except (TypeError, KeyError):
             expl = _('Malformed request body')
             raise exc.HTTPBadRequest(explanation=expl)

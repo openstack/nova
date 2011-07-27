@@ -326,7 +326,7 @@ class MetadataXMLSerializationTest(test.TestCase):
                 <meta key="three">four</meta>
                 <meta key="one">two</meta>
             </metadata>
-        """.replace("  ", "").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -344,7 +344,7 @@ class MetadataXMLSerializationTest(test.TestCase):
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
                 <meta key="None">None</meta>
             </metadata>
-        """.replace("  ", "").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -362,7 +362,7 @@ class MetadataXMLSerializationTest(test.TestCase):
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
                 <meta key="three">Jos\xe9</meta>
             </metadata>
-        """.encode("UTF-8").replace("  ", "").replace("\n",""))
+        """.encode("UTF-8").replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -379,7 +379,7 @@ class MetadataXMLSerializationTest(test.TestCase):
         expected = minidom.parseString("""
             <meta xmlns="http://docs.openstack.org/compute/api/v1.1"
                  key="one">two</meta>
-        """.replace("  ", "").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -399,7 +399,7 @@ class MetadataXMLSerializationTest(test.TestCase):
                 <meta key="key6">value6</meta>
                 <meta key="key4">value4</meta>
             </metadata>
-        """.replace("  ", "").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -416,7 +416,7 @@ class MetadataXMLSerializationTest(test.TestCase):
         expected = minidom.parseString("""
             <meta xmlns="http://docs.openstack.org/compute/api/v1.1"
                  key="one">two</meta>
-        """.replace("  ", "").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -438,7 +438,7 @@ class MetadataXMLSerializationTest(test.TestCase):
                 <meta key="key9">value9</meta>
                 <meta key="key1">value1</meta>
             </metadata>
-        """.replace("  ", "").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 

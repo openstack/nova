@@ -100,9 +100,9 @@ class ServerMetaDataTest(unittest.TestCase):
         self.assertEqual('application/json', res.headers['Content-Type'])
         expected = {
             'metadata': {
-                'key1':'value1',
-                'key2':'value2',
-                'key3':'value3',
+                'key1': 'value1',
+                'key2': 'value2',
+                'key3': 'value3',
             },
         }
         self.assertEqual(expected, res_dict)
@@ -124,7 +124,7 @@ class ServerMetaDataTest(unittest.TestCase):
                 <meta key="key2">value2</meta>
                 <meta key="key1">value1</meta>
             </metadata>
-        """.replace("  ", "").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected_metadata.toxml(), actual_metadata.toxml())
 
@@ -168,7 +168,7 @@ class ServerMetaDataTest(unittest.TestCase):
         expected_metadata = minidom.parseString("""
             <meta xmlns="http://docs.openstack.org/compute/api/v1.1"
                  key="key2">value2</meta>
-        """.replace("  ", "").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         self.assertEqual(expected_metadata.toxml(), actual_metadata.toxml())
 
@@ -239,7 +239,7 @@ class ServerMetaDataTest(unittest.TestCase):
                 <meta key="key2">value2</meta>
                 <meta key="key1">value1</meta>
             </metadata>
-        """.replace("  ","").replace("\n",""))
+        """.replace("  ", "").replace("\n", ""))
 
         req.body = str(request_metadata.toxml())
         response = req.get_response(fakes.wsgi_app())
@@ -422,4 +422,3 @@ class ServerMetaDataTest(unittest.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
-
