@@ -23,7 +23,6 @@ from nova import rpc
 
 from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import extensions
-from nova.api.openstack import faults
 from nova.compute import instance_types
 from nova.api.openstack import servers
 from nova.api.openstack import wsgi
@@ -39,7 +38,10 @@ class CreateInstanceHelperEx(helper.CreateInstanceHelper):
         the network information if it is provided
         """
         if not body:
-            raise faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
+
+        if not 'server' in body:
+            raise exc.HTTPUnprocessableEntity()
 
         context = req.environ['nova.context']
 
@@ -63,7 +65,7 @@ class CreateInstanceHelperEx(helper.CreateInstanceHelper):
         except Exception, e:
             msg = _("Cannot find requested image %(image_href)s: %(e)s" %
                                                                     locals())
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
         personality = body['server'].get('personality')
 
@@ -129,11 +131,11 @@ class CreateInstanceHelperEx(helper.CreateInstanceHelper):
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
         except rpc.RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % \
                     {'err_type': err.exc_type, 'err_msg': err.value}
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
         # Let the caller deal with unhandled exceptions.
 
@@ -168,17 +170,16 @@ class CreateInstanceHelperEx(helper.CreateInstanceHelper):
                     if id == network_id:
                         expl = _("Duplicate networks (%s) are not allowed")\
                                 % network_id
-                        raise faults.Fault(exc.HTTPBadRequest(
-                                               explanation=expl))
+                        raise exc.HTTPBadRequest(explanation=expl)
 
                 networks.append((network_id, fixed_ip))
             except KeyError as key:
                 expl = _('Bad network format: missing %s') % key
-                raise faults.Fault(exc.HTTPBadRequest(explanation=expl))
+                raise exc.HTTPBadRequest(explanation=expl)
             except ValueError:
                 expl = _("Bad networks format: network id should "
                          "be integer (%s)") % network_id
-                raise faults.Fault(exc.HTTPBadRequest(explanation=expl))
+                raise exc.HTTPBadRequest(explanation=expl)
             except TypeError:
                 expl = _('Bad networks format')
                 raise exc.HTTPBadRequest(explanation=expl)
@@ -193,6 +194,39 @@ class CreateServerExtController(servers.ControllerV11):
     def __init__(self):
         super(CreateServerExtController, self).__init__()
         self.helper = CreateInstanceHelperEx(self)
+
+
+class ServerXMLDeserializer(helper.ServerXMLDeserializer):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles networks element
+    """
+    def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
+        server = super(ServerXMLDeserializer, self)._extract_server(node)
+        server_node = self.find_first_child_named(node, 'server')
+        networks = self._extract_networks(server_node)
+        if networks is not None:
+            server["networks"] = networks
+        return server
+
+    def _extract_networks(self, server_node):
+        """Marshal the networks attribute of a parsed request"""
+        networks_node = \
+                self.find_first_child_named(server_node, "networks")
+        if networks_node is None:
+            return None
+        networks = []
+        for network_node in self.find_children_named(networks_node,
+                                                      "network"):
+            item = {}
+            if network_node.hasAttribute("id"):
+                item["id"] = network_node.getAttribute("id")
+            if network_node.hasAttribute("fixed_ip"):
+                item["fixed_ip"] = network_node.getAttribute("fixed_ip")
+            networks.append(item)
+        return networks
 
 
 class Createserverext(extensions.ExtensionDescriptor):
@@ -227,7 +261,7 @@ class Createserverext(extensions.ExtensionDescriptor):
         }
 
         body_deserializers = {
-            'application/xml': helper.ServerXMLDeserializer(),
+            'application/xml': ServerXMLDeserializer(),
         }
 
         serializer = wsgi.ResponseSerializer(body_serializers,

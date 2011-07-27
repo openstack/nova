@@ -27,7 +27,6 @@ from nova.scheduler import api
 
 from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import common
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -127,11 +126,8 @@ class Controller(object):
         Returns a reservation ID (a UUID).
         """
         result = None
-        try:
-            extra_values, result = self.helper.create_instance(req, body,
-                                    self.compute_api.create_all_at_once)
-        except faults.Fault, f:
-            return f
+        extra_values, result = self.helper.create_instance(req, body,
+                                self.compute_api.create_all_at_once)
 
         reservation_id = result
         return {'reservation_id': reservation_id}

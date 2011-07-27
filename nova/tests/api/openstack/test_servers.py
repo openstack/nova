@@ -30,8 +30,9 @@ from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
-from nova.api.openstack import servers
 from nova.api.openstack import create_instance_helper
+from nova.api.openstack import servers
+from nova.api.openstack import wsgi
 import nova.compute.api
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -77,6 +78,12 @@ def return_virtual_interface_instance_nonexistant(interfaces):
     return _return_virtual_interface_by_instance
 
 
+def return_server_with_attributes(**kwargs):
+    def _return_server(context, id):
+        return stub_instance(id, **kwargs)
+    return _return_server
+
+
 def return_server_with_addresses(private, public):
     def _return_server(context, id):
         return stub_instance(id, private_address=private,
@@ -84,15 +91,15 @@ def return_server_with_addresses(private, public):
     return _return_server
 
 
-def return_server_with_interfaces(interfaces):
-    def _return_server(context, id):
-        return stub_instance(id, interfaces=interfaces)
-    return _return_server
-
-
 def return_server_with_power_state(power_state):
     def _return_server(context, id):
         return stub_instance(id, power_state=power_state)
+    return _return_server
+
+
+def return_server_with_uuid_and_power_state(power_state):
+    def _return_server(context, id):
+        return stub_instance(id, uuid=FAKE_UUID, power_state=power_state)
     return _return_server
 
 
@@ -142,14 +149,15 @@ def instance_addresses(context, instance_id):
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
                   host=None, power_state=0, reservation_id="",
-                  uuid=FAKE_UUID, interfaces=None):
+                  uuid=FAKE_UUID, image_ref="10", flavor_id="1",
+                  interfaces=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
     if interfaces is None:
         interfaces = []
 
-    inst_type = instance_types.get_instance_type_by_flavor_id(1)
+    inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
 
     if public_addresses is None:
         public_addresses = list()
@@ -164,10 +172,12 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     instance = {
         "id": int(id),
+        "created_at": "2010-10-10T12:00:00Z",
+        "updated_at": "2010-11-11T11:00:00Z",
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
-        "image_ref": "10",
+        "image_ref": image_ref,
         "kernel_id": "",
         "ramdisk_id": "",
         "launch_index": 0,
@@ -223,6 +233,7 @@ class MockSetAdminPassword(object):
 class ServersTest(test.TestCase):
 
     def setUp(self):
+        self.maxDiff = None
         super(ServersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.reset_fake_data()
@@ -299,24 +310,274 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_v1_1(self):
+        image_bookmark = "http://localhost/images/10"
+        flavor_ref = "http://localhost/v1.1/flavors/1"
+        flavor_id = "1"
+        flavor_bookmark = "http://localhost/flavors/1"
+
+        public_ip = '192.168.0.3'
+        private_ip = '172.19.0.1'
+        interfaces = [
+            {
+                'network': {'label': 'public'},
+                'fixed_ips': [
+                    {'address': public_ip},
+                ],
+            },
+            {
+                'network': {'label': 'private'},
+                'fixed_ips': [
+                    {'address': private_ip},
+                ],
+            },
+        ]
+        new_return_server = return_server_with_attributes(
+            interfaces=interfaces)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], 1)
-        self.assertEqual(res_dict['server']['name'], 'server1')
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": FAKE_UUID,
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 0,
+                "name": "server1",
+                "status": "BUILD",
+                "hostId": '',
+                "image": {
+                    "id": "10",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    "public": [
+                        {
+                            "version": 4,
+                            "addr": public_ip,
+                        },
+                    ],
+                    "private": [
+                        {
+                            "version": 4,
+                            "addr": private_ip,
+                        },
+                    ],
+                },
+                "metadata": {
+                    "seq": "1",
+                },
+                "links": [
+                    {
+                        "rel": "self",
+                        #FIXME(wwolf) Do we want the links to be id or uuid?
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
 
-        expected_links = [
+        self.assertDictMatch(res_dict, expected_server)
+
+    def test_get_server_with_active_status_by_id_v1_1(self):
+        image_bookmark = "http://localhost/images/10"
+        flavor_ref = "http://localhost/v1.1/flavors/1"
+        flavor_id = "1"
+        flavor_bookmark = "http://localhost/flavors/1"
+        private_ip = "192.168.0.3"
+        public_ip = "1.2.3.4"
+
+        interfaces = [
             {
-                "rel": "self",
-                "href": "http://localhost/v1.1/servers/1",
+                'network': {'label': 'public'},
+                'fixed_ips': [
+                    {'address': public_ip},
+                ],
             },
             {
-                "rel": "bookmark",
-                "href": "http://localhost/servers/1",
+                'network': {'label': 'private'},
+                'fixed_ips': [
+                    {'address': private_ip},
+                ],
             },
         ]
+        new_return_server = return_server_with_attributes(
+            interfaces=interfaces, power_state=1)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        self.assertEqual(res_dict['server']['links'], expected_links)
+        req = webob.Request.blank('/v1.1/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": FAKE_UUID,
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 100,
+                "name": "server1",
+                "status": "ACTIVE",
+                "hostId": '',
+                "image": {
+                    "id": "10",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                      {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    "public": [
+                        {
+                            "version": 4,
+                            "addr": public_ip,
+                        },
+                    ],
+                    "private": [
+                        {
+                            "version": 4,
+                            "addr": private_ip,
+                        },
+                    ],
+                },
+                "metadata": {
+                    "seq": "1",
+                },
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        self.assertDictMatch(res_dict, expected_server)
+
+    def test_get_server_with_id_image_ref_by_id_v1_1(self):
+        image_ref = "10"
+        image_bookmark = "http://localhost/images/10"
+        flavor_ref = "http://localhost/v1.1/flavors/1"
+        flavor_id = "1"
+        flavor_bookmark = "http://localhost/flavors/1"
+        private_ip = "192.168.0.3"
+        public_ip = "1.2.3.4"
+
+        interfaces = [
+            {
+                'network': {'label': 'public'},
+                'fixed_ips': [
+                    {'address': public_ip},
+                ],
+            },
+            {
+                'network': {'label': 'private'},
+                'fixed_ips': [
+                    {'address': private_ip},
+                ],
+            },
+        ]
+        new_return_server = return_server_with_attributes(
+            interfaces=interfaces, power_state=1, image_ref=image_ref,
+            flavor_id=flavor_id)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        req = webob.Request.blank('/v1.1/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": FAKE_UUID,
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 100,
+                "name": "server1",
+                "status": "ACTIVE",
+                "hostId": '',
+                "image": {
+                    "id": "10",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                      {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    "public": [
+                        {
+                            "version": 4,
+                            "addr": public_ip,
+                        },
+                    ],
+                    "private": [
+                        {
+                            "version": 4,
+                            "addr": private_ip,
+                        },
+                    ],
+                },
+                "metadata": {
+                    "seq": "1",
+                },
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_by_id_with_addresses_xml(self):
         private = "192.168.0.3"
@@ -451,7 +712,8 @@ class ServersTest(test.TestCase):
                 'fixed_ipv6': '2001:4860::12',
             },
         ]
-        new_return_server = return_server_with_interfaces(interfaces)
+        new_return_server = return_server_with_attributes(
+            interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
@@ -494,7 +756,8 @@ class ServersTest(test.TestCase):
                 'fixed_ipv6': '2001:4860::12',
             },
         ]
-        new_return_server = return_server_with_interfaces(interfaces)
+        new_return_server = return_server_with_attributes(
+            interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/servers/1')
@@ -702,20 +965,20 @@ class ServersTest(test.TestCase):
         for i, s in enumerate(res_dict['servers']):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s.get('imageId', None), None)
+            self.assertEqual(s.get('image', None), None)
 
             expected_links = [
-            {
-                "rel": "self",
-                "href": "http://localhost/v1.1/servers/%d" % (i,),
-            },
-            {
-                "rel": "bookmark",
-                "href": "http://localhost/servers/%d" % (i,),
-            },
-        ]
+                {
+                    "rel": "self",
+                    "href": "http://localhost/v1.1/servers/%s" % s['id'],
+                },
+                {
+                    "rel": "bookmark",
+                    "href": "http://localhost/servers/%s" % s['id'],
+                },
+            ]
 
-        self.assertEqual(s['links'], expected_links)
+            self.assertEqual(s['links'], expected_links)
 
     def test_get_servers_with_limit(self):
         req = webob.Request.blank('/v1.0/servers?limit=3')
@@ -761,13 +1024,13 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/servers?marker=2')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
-        self.assertEqual([s['id'] for s in servers], [3, 4])
+        self.assertEqual([s['name'] for s in servers], ["server3", "server4"])
 
     def test_get_servers_with_limit_and_marker(self):
         req = webob.Request.blank('/v1.1/servers?limit=2&marker=1')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
-        self.assertEqual([s['id'] for s in servers], [2, 3])
+        self.assertEqual([s['name'] for s in servers], ['server2', 'server3'])
 
     def test_get_servers_with_bad_marker(self):
         req = webob.Request.blank('/v1.1/servers?limit=2&marker=asdf')
@@ -778,8 +1041,16 @@ class ServersTest(test.TestCase):
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):
-            return {'id': 1, 'display_name': 'server_test',
-                    'uuid': FAKE_UUID}
+            inst_type = instance_types.get_instance_type_by_flavor_id(3)
+            image_ref = 'http://localhost/images/2'
+            return {'id': 1,
+                    'display_name': 'server_test',
+                    'uuid': FAKE_UUID,
+                    'instance_type': dict(inst_type),
+                    'image_ref': image_ref,
+                    'created_at': '2010-10-10T12:00:00Z',
+                    'updated_at': '2010-11-11T11:00:00Z',
+                   }
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -948,6 +1219,18 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_create_instance_no_server_entity(self):
+        self._setup_for_create_instance()
+
+        body = {}
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 422)
+
     def test_create_instance_whitespace_name(self):
         self._setup_for_create_instance()
 
@@ -974,8 +1257,26 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_href = 'http://localhost/images/2'
+        flavor_ref = 'http://localhost/flavors/3'
+        expected_flavor = {
+            "id": "3",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/flavors/3',
+                },
+            ],
+        }
+        expected_image = {
+            "id": "2",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/images/2',
+                },
+            ],
+        }
         body = {
             'server': {
                 'name': 'server_test',
@@ -1000,9 +1301,42 @@ class ServersTest(test.TestCase):
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
-        self.assertEqual(1, server['id'])
-        self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_href, server['imageRef'])
+        self.assertEqual(expected_flavor, server['flavor'])
+        self.assertEqual(expected_image, server['image'])
+        self.assertEqual(res.status_int, 200)
+        #self.assertEqual(1, server['id'])
+
+    def test_create_instance_v1_1_invalid_flavor_href(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/asdf'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_bad_flavor_href(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/17'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
@@ -1023,8 +1357,26 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1_local_href(self):
         self._setup_for_create_instance()
 
-        image_id = 2
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_id = "2"
+        flavor_ref = 'http://localhost/flavors/3'
+        expected_flavor = {
+            "id": "3",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/flavors/3',
+                },
+            ],
+        }
+        expected_image = {
+            "id": "2",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/images/2',
+                },
+            ],
+        }
         body = {
             'server': {
                 'name': 'server_test',
@@ -1041,9 +1393,8 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         server = json.loads(res.body)['server']
-        self.assertEqual(1, server['id'])
-        self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_id, server['imageRef'])
+        self.assertEqual(expected_flavor, server['flavor'])
+        self.assertEqual(expected_image, server['image'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_with_admin_pass_v1_0(self):
@@ -1291,6 +1642,24 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['metadata']['seq'], str(i))
 
     def test_get_all_server_details_v1_1(self):
+        expected_flavor = {
+            "id": "1",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/flavors/1',
+                },
+            ],
+        }
+        expected_image = {
+            "id": "10",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/images/10',
+                },
+            ],
+        }
         req = webob.Request.blank('/v1.1/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
@@ -1299,8 +1668,8 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageRef'], 10)
-            self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
+            self.assertEqual(s['image'], expected_image)
+            self.assertEqual(s['flavor'], expected_flavor)
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], str(i))
 
@@ -1521,6 +1890,8 @@ class ServersTest(test.TestCase):
         state = power_state.BUILDING
         new_return_server = return_server_with_power_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_with_uuid_and_power_state(state))
 
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
@@ -1569,6 +1940,8 @@ class ServersTest(test.TestCase):
         state = power_state.BUILDING
         new_return_server = return_server_with_power_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_with_uuid_and_power_state(state))
 
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
@@ -1788,7 +2161,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
+        self.assertEqual(res.status_int, 500)
 
     def test_resized_server_has_correct_status(self):
         req = self.webreq('/1', 'GET')
@@ -2185,163 +2558,61 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         self.assertEquals(request['body']["server"]["imageRef"],
                           "http://localhost:8774/v1.1/images/1")
 
-    def test_request_with_empty_networks(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks/>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [],
-                }}
-        self.assertEquals(request['body'], expected)
 
-    def test_request_with_one_network(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
+class TextAddressesXMLSerialization(test.TestCase):
 
-    def test_request_with_two_networks(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
-       <network id="2" fixed_ip="10.0.2.12"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"},
-                             {"id": "2", "fixed_ip": "10.0.2.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
+    serializer = nova.api.openstack.ips.IPXMLSerializer()
 
-    def test_request_with_second_network_node_ignored(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
-    </networks>
-    <networks>
-       <network id="2" fixed_ip="10.0.2.12"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
+    def test_show(self):
+        fixture = {
+            'network_2': [
+                {'addr': '192.168.0.1', 'version': 4},
+                {'addr': 'fe80::beef', 'version': 6},
+            ],
+        }
+        output = self.serializer.serialize(fixture, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
 
-    def test_request_with_one_network_missing_id(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network fixed_ip="10.0.1.12"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"fixed_ip": "10.0.1.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
+        expected = minidom.parseString("""
+            <network xmlns="http://docs.openstack.org/compute/api/v1.1"
+                     id="network_2">
+                <ip version="4" addr="192.168.0.1"/>
+                <ip version="6" addr="fe80::beef"/>
+            </network>
+        """.replace("  ", ""))
 
-    def test_request_with_one_network_missing_fixed_ip(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network id="1"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1"}],
-                }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(expected.toxml(), actual.toxml())
 
-    def test_request_with_one_network_empty_id(self):
-        serial_request = """
-    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
-     name="new-server-test" imageId="1" flavorId="1">
-        <networks>
-           <network id="" fixed_ip="10.0.1.12"/>
-        </networks>
-    </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "", "fixed_ip": "10.0.1.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
+    def test_index(self):
+        fixture = {
+            'addresses': {
+                'network_1': [
+                    {'addr': '192.168.0.3', 'version': 4},
+                    {'addr': '192.168.0.5', 'version': 4},
+                ],
+                'network_2': [
+                    {'addr': '192.168.0.1', 'version': 4},
+                    {'addr': 'fe80::beef', 'version': 6},
+                ],
+            },
+        }
+        output = self.serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
 
-    def test_request_with_one_network_empty_fixed_ip(self):
-        serial_request = """
-    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
-     name="new-server-test" imageId="1" flavorId="1">
-        <networks>
-           <network id="1" fixed_ip=""/>
-        </networks>
-    </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": ""}],
-                }}
-        self.assertEquals(request['body'], expected)
+        expected = minidom.parseString("""
+            <addresses xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <network id="network_2">
+                    <ip version="4" addr="192.168.0.1"/>
+                    <ip version="6" addr="fe80::beef"/>
+                </network>
+                <network id="network_1">
+                    <ip version="4" addr="192.168.0.3"/>
+                    <ip version="4" addr="192.168.0.5"/>
+                </network>
+            </addresses>
+        """.replace("  ", ""))
 
-    def test_request_with_networks_duplicate_ids(self):
-        serial_request = """
-    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
-     name="new-server-test" imageId="1" flavorId="1">
-        <networks>
-           <network id="1" fixed_ip="10.0.1.12"/>
-           <network id="1" fixed_ip="10.0.2.12"/>
-        </networks>
-    </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"},
-                             {"id": "1", "fixed_ip": "10.0.2.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(expected.toxml(), actual.toxml())
 
 
 class TestServerInstanceCreation(test.TestCase):
@@ -2668,3 +2939,249 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
         kernel_id, ramdisk_id = create_instance_helper.CreateInstanceHelper. \
                                 _do_get_kernel_ramdisk_from_image(image_meta)
         return kernel_id, ramdisk_id
+
+
+class ServersViewBuilderV11Test(test.TestCase):
+
+    def setUp(self):
+        self.instance = self._get_instance()
+        self.view_builder = self._get_view_builder()
+
+    def tearDown(self):
+        pass
+
+    def _get_instance(self):
+        instance = {
+            "id": 1,
+            "created_at": "2010-10-10T12:00:00Z",
+            "updated_at": "2010-11-11T11:00:00Z",
+            "admin_pass": "",
+            "user_id": "",
+            "project_id": "",
+            "image_ref": "5",
+            "kernel_id": "",
+            "ramdisk_id": "",
+            "launch_index": 0,
+            "key_name": "",
+            "key_data": "",
+            "state": 0,
+            "state_description": "",
+            "memory_mb": 0,
+            "vcpus": 0,
+            "local_gb": 0,
+            "hostname": "",
+            "host": "",
+            "instance_type": {
+               "flavorid": 1,
+            },
+            "user_data": "",
+            "reservation_id": "",
+            "mac_address": "",
+            "scheduled_at": utils.utcnow(),
+            "launched_at": utils.utcnow(),
+            "terminated_at": utils.utcnow(),
+            "availability_zone": "",
+            "display_name": "test_server",
+            "display_description": "",
+            "locked": False,
+            "metadata": [],
+            #"address": ,
+            #"floating_ips": [{"address":ip} for ip in public_addresses]}
+            "uuid": "deadbeef-feed-edee-beef-d0ea7beefedd"}
+
+        return instance
+
+    def _get_view_builder(self):
+        base_url = "http://localhost/v1.1"
+        views = nova.api.openstack.views
+        address_builder = views.addresses.ViewBuilderV11()
+        flavor_builder = views.flavors.ViewBuilderV11(base_url)
+        image_builder = views.images.ViewBuilderV11(base_url)
+
+        view_builder = nova.api.openstack.views.servers.ViewBuilderV11(
+            address_builder,
+            flavor_builder,
+            image_builder,
+            base_url
+            )
+        return view_builder
+
+    def test_build_server(self):
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": self.instance['uuid'],
+                "name": "test_server",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, False)
+        self.assertDictMatch(output, expected_server)
+
+    def test_build_server_detail(self):
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": self.instance['uuid'],
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": '',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {},
+                "metadata": {},
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, True)
+        self.assertDictMatch(output, expected_server)
+
+    def test_build_server_detail_active_status(self):
+        #set the power state of the instance to running
+        self.instance['state'] = 1
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": self.instance['uuid'],
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 100,
+                "name": "test_server",
+                "status": "ACTIVE",
+                "hostId": '',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {},
+                "metadata": {},
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, True)
+        self.assertDictMatch(output, expected_server)
+
+    def test_build_server_detail_with_metadata(self):
+
+        metadata = []
+        metadata.append(InstanceMetadata(key="Open", value="Stack"))
+        metadata.append(InstanceMetadata(key="Number", value=1))
+        self.instance['metadata'] = metadata
+
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": self.instance['uuid'],
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": '',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {},
+                "metadata": {
+                    "Open": "Stack",
+                    "Number": "1",
+                },
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, True)
+        self.assertDictMatch(output, expected_server)

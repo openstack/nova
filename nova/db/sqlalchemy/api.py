@@ -1227,9 +1227,9 @@ def instance_get_active_by_window(context, begin, end=None):
     """Return instances that were continuously active over the given window"""
     session = get_session()
     query = session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
                    filter(models.Instance.launched_at < begin)
     if end:
@@ -1323,7 +1323,7 @@ def instance_get_project_vpn(context, project_id):
                    options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
@@ -3133,7 +3133,7 @@ def instance_type_get_all(context, inactive=False):
 
 
 @require_context
-def instance_type_get_by_id(context, id):
+def instance_type_get(context, id):
     """Returns a dict describing specific instance_type"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\

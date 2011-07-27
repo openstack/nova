@@ -128,7 +128,7 @@ class API(base.Base):
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
             pid = context.project_id
-            msg = _("Quota exceeeded for %(pid)s, tried to set "
+            msg = _("Quota exceeded for %(pid)s, tried to set "
                     "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
             raise quota.QuotaError(msg, "MetadataLimitExceeded")
@@ -139,7 +139,7 @@ class API(base.Base):
         for k, v in metadata.iteritems():
             if len(k) > 255 or len(v) > 255:
                 pid = context.project_id
-                msg = _("Quota exceeeded for %(pid)s, metadata property "
+                msg = _("Quota exceeded for %(pid)s, metadata property "
                         "key or value too long") % locals()
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
@@ -176,7 +176,7 @@ class API(base.Base):
                                                 instance_type)
         if num_instances < min_count:
             pid = context.project_id
-            LOG.warn(_("Quota exceeeded for %(pid)s,"
+            LOG.warn(_("Quota exceeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
             if num_instances <= 0:
                 message = _("Instance quota exceeded. You cannot run any "
@@ -485,10 +485,10 @@ class API(base.Base):
 
         return [dict(x.iteritems()) for x in instances]
 
-    def has_finished_migration(self, context, instance_id):
+    def has_finished_migration(self, context, instance_uuid):
         """Returns true if an instance has a finished migration."""
         try:
-            db.migration_get_by_instance_and_status(context, instance_id,
+            db.migration_get_by_instance_and_status(context, instance_uuid,
                     'finished')
             return True
         except exception.NotFound:
@@ -579,6 +579,7 @@ class API(base.Base):
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
 
+    @scheduler_api.reroute_compute("update")
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
@@ -794,6 +795,7 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
+    @scheduler_api.reroute_compute("backup")
     def backup(self, context, instance_id, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
@@ -810,6 +812,7 @@ class API(base.Base):
                             extra_properties=extra_properties)
         return recv_meta
 
+    @scheduler_api.reroute_compute("snapshot")
     def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
 
@@ -852,10 +855,12 @@ class API(base.Base):
                                    params=params)
         return recv_meta
 
+    @scheduler_api.reroute_compute("reboot")
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, name=None,
             metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
@@ -1042,6 +1047,7 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("set_admin_password")
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
         host = self._find_host(context, instance_id)
