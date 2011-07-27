@@ -232,6 +232,16 @@ class LibvirtConnTestCase(test.TestCase):
             def setattr(self, key, val):
                 self.__setattr__(key, val)
 
+            def plug(self, instance, network, mapping):
+                return {
+                    'id': 'fake',
+                    'bridge_name': 'fake',
+                    'mac_address': 'fake',
+                    'ip_address': 'fake',
+                    'dhcp_server': 'fake',
+                    'extra_params': 'fake'
+                }
+
         # Creating mocks
         fake = FakeLibvirtConnection()
         fakeip = FakeIptablesFirewallDriver
