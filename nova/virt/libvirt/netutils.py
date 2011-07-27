@@ -56,7 +56,6 @@ def get_network_info(instance):
     # we should cache network_info
     admin_context = context.get_admin_context()
 
-
     try:
         fixed_ips = db.fixed_ip_get_by_instance(admin_context, instance['id'])
     except exception.FixedIpNotFoundForInstance:
