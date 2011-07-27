@@ -614,6 +614,11 @@ class NetworkManager(manager.SchedulerDependentManager):
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
         fixed_net = netaddr.IPNetwork(cidr)
+        if FLAGS.use_ipv6:
+            fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
+            significant_bits_v6 = 64
+            network_size_v6 = 1 << 64
+
         for index in range(num_networks):
             start = index * network_size
             significant_bits = 32 - int(math.log(network_size, 2))
@@ -636,13 +641,11 @@ class NetworkManager(manager.SchedulerDependentManager):
                 net['label'] = label
 
             if FLAGS.use_ipv6:
-                project_net_v6 = netaddr.IPNetwork(cidr_v6)
-                significant_bits_v6 = 64
-                network_size_v6 = 1 << 64
-                start_v6 = index * network_size_v6
-                cidr_v6 = '%s/%s' % (project_net_v6[start_v6],
+                cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
+
+                project_net_v6 = netaddr.IPNetwork(cidr_v6)
 
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
