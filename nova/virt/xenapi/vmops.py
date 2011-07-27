@@ -542,7 +542,7 @@ class VMOps(object):
 
         finally:
             if template_vm_ref:
-                self._destroy(instance, template_vm_ref
+                self._destroy(instance, template_vm_ref,
                         shutdown=False, destroy_kernel_ramdisk=False)
 
         # TODO(mdietz): we could also consider renaming these to something
