@@ -196,7 +196,17 @@ def get_version_from_href(href):
     return version
 
 
-class MetadataXMLDeserializer(wsgi.MetadataXMLDeserializer):
+class MetadataXMLDeserializer(wsgi.XMLDeserializer):
+
+    def extract_metadata(self, metadata_node):
+        """Marshal the metadata attribute of a parsed request"""
+        if metadata_node is None:
+            return None
+        metadata = {}
+        for meta_node in self.find_children_named(metadata_node, "meta"):
+            key = meta_node.getAttribute("key")
+            metadata[key] = self.extract_text(meta_node)
+        return metadata
 
     def _extract_metadata_container(self, datastring):
         dom = minidom.parseString(datastring)

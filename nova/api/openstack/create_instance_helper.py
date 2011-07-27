@@ -28,6 +28,7 @@ from nova import quota
 from nova import utils
 
 from nova.compute import instance_types
+from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova.auth import manager as auth_manager
 
@@ -285,13 +286,15 @@ class CreateInstanceHelper(object):
         return password
 
 
-class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
+class ServerXMLDeserializer(wsgi.XMLDeserializer):
     """
     Deserializer to handle xml-formatted server create requests.
 
     Handles standard server attributes as well as optional metadata
     and personality attributes
     """
+
+    metadata_deserializer = common.MetadataXMLDeserializer()
 
     def create(self, string):
         """Deserialize an xml-formatted server create request"""
@@ -307,7 +310,7 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
         metadata_node = self.find_first_child_named(server_node, "metadata")
-        metadata = self.extract_metadata(metadata_node)
+        metadata = self.metadata_deserializer.extract_metadata(metadata_node)
         if metadata is not None:
             server["metadata"] = metadata
         personality = self._extract_personality(server_node)
