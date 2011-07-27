@@ -255,7 +255,7 @@ class VMOps(object):
             userdevice += 1
 
         # Alter the image before VM start for, e.g. network injection
-        if FLAGS.xenapi_inject_image:
+        if FLAGS.flat_injected:
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 
