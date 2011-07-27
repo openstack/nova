@@ -1240,7 +1240,7 @@ class NWFilterTestCase(test.TestCase):
 
         def _ensure_all_called():
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
-                                                       '00A0C914C829')
+                                                       '561212121212')
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',
@@ -1261,7 +1261,7 @@ class NWFilterTestCase(test.TestCase):
         self.fw.apply_instance_filter(instance)
         _ensure_all_called()
         self.teardown_security_group()
-        db.instance_destroy(context.get_admin_context, instance_ref['id'])
+        db.instance_destroy(context.get_admin_context(), instance_ref['id'])
 
     def test_create_network_filters(self):
         instance_ref = self._create_instance()
