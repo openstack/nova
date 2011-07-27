@@ -535,6 +535,8 @@ class VersionsTest(test.TestCase):
 
         self.assertDictMatch(expected, json.loads(res.body))
 
+
+class VersionsViewBuilderTests(VersionsTest):
     def test_view_builder(self):
         base_url = "http://example.org/"
 
@@ -580,6 +582,8 @@ class VersionsTest(test.TestCase):
 
         self.assertEqual(actual, expected)
 
+
+class VersionsSerializerTests(VersionsTest):
     def test_versions_list_xml_serializer(self):
         versions_data = {
             'versions': [
