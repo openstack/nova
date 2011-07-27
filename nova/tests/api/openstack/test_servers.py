@@ -97,12 +97,6 @@ def return_server_with_power_state(power_state):
     return _return_server
 
 
-def return_server_with_uuid_and_power_state(power_state):
-    def _return_server(context, id):
-        return stub_instance(id, uuid=FAKE_UUID, power_state=power_state)
-    return _return_server
-
-
 def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
@@ -264,18 +258,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
 
-        fakes.stub_out_glance(self.stubs)
-        fakes.stub_out_compute_api_snapshot(self.stubs)
-        service_class = 'nova.image.glance.GlanceImageService'
-        self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(1, None)
-        self.service.delete_all()
-        self.sent_to_glance = {}
-        fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
-
         self.allow_admin = FLAGS.allow_admin_api
-
-        self.webreq = common.webob_factory('/v1.0/servers')
 
     def tearDown(self):
         self.stubs.UnsetAll()
