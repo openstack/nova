@@ -247,7 +247,7 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
         container_node = self.meta_list_to_xml(xml_doc, items)
         xml_doc.appendChild(container_node)
         self._add_xmlns(container_node)
-        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
+        return xml_doc.toxml('UTF-8')
 
     def index(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
@@ -264,7 +264,7 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
         item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
         xml_doc.appendChild(item_node)
         self._add_xmlns(item_node)
-        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
+        return xml_doc.toxml('UTF-8')
 
     def show(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
