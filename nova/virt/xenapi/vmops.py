@@ -122,7 +122,7 @@ class VMOps(object):
                                  [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
                                  network_info)
         if resize_instance:
-            self.resize_instance(instance, vdi_uuid, resize_instance)
+            self.resize_instance(instance, vdi_uuid)
         self._spawn(instance, vm_ref)
 
     def _start(self, instance, vm_ref=None):
