@@ -287,13 +287,30 @@ class CloudTestCase(test.TestCase):
                                       'ip_protocol': u'tcp'}]}
         self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
 
-    def test_authorize_security_group_ingress_ip_permissions_groups(self):
+    def test_authorize_security_group_fail_missing_source_group(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
         sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
                   'ip_ranges':{'1': {'cidr_ip': u'0.0.0.0/0'},
                                 '2': {'cidr_ip': u'10.10.10.10/32'}},
+                  'groups': {'1': {'user_id': u'someuser',
+                                   'group_name': u'somegroup1'}},
+                  'ip_protocol': u'tcp'}]}
+        self.assertRaises(exception.SecurityGroupNotFound, authz,
+                          self.context, group_name=sec['name'], **kwargs)
+
+    def test_authorize_security_group_ingress_ip_permissions_groups(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context,
+                                       {'project_id': 'someuser',
+                                        'name': 'somegroup1'})
+        sec = db.security_group_create(self.context,
+                                       {'project_id': 'someuser',
+                                        'name': 'othergroup2'})
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
                   'groups': {'1': {'user_id': u'someuser',
                                    'group_name': u'somegroup1'},
                              '2': {'user_id': u'someuser',
