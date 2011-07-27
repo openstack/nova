@@ -135,49 +135,13 @@ class Versions(wsgi.Resource):
 
     def dispatch(self, request, *args):
         """Respond to a request for all OpenStack API versions."""
+        builder = nova.api.openstack.views.versions.get_view_builder(request)
         if request.path == '/':
             # List Versions
-            return self._versions_list(request)
+            return builder.build(VERSIONS)
         else:
             # Versions Multiple Choice
-            return self._versions_multi_choice(request)
-
-    def _versions_list(self, request):
-        version_objs = []
-        for version in VERSIONS:
-            version = VERSIONS[version]['version']
-            version_objs.append({
-                "id": version['id'],
-                "status": version['status'],
-                "updated": version['updated'],
-            })
-
-        builder = nova.api.openstack.views.versions.get_view_builder(request)
-        versions = [builder.build(version) for version in version_objs]
-        return dict(versions=versions)
-
-    def _versions_multi_choice(self, request):
-        #TODO
-        version_objs = []
-        for version in VERSIONS:
-            version = VERSIONS[version]['version']
-            version_objs.append({
-                "id": version['id'],
-                "status": version['status'],
-                "links": [
-                    {
-                        "rel": "self"
-                    }
-                ],
-                "media-types": version['media-types']
-            })
-
-        builder = nova.api.openstack.views.versions.get_view_builder(request)
-        choices = [
-            builder.build_choices(version, request)
-            for version in version_objs]
-
-        return dict(choices=choices)
+            return builder.build_choices(VERSIONS, request)
 
 
 class VersionV10(object):

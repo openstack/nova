@@ -31,21 +31,37 @@ class ViewBuilder(object):
         """
         self.base_url = base_url
 
-    def build_choices(self, version_data, request):
-        version_data['links'][0]['href'] = self._build_versioned_link(request,
-                                             version_data['id'])
-        return version_data
+    def build_choices(self, VERSIONS, request):
+        version_objs = []
+        for version in VERSIONS:
+            version = VERSIONS[version]['version']
+            version_objs.append({
+                "id": version['id'],
+                "status": version['status'],
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": self._build_versioned_link(request,
+                                                           version['id'])
+                    }
+                ],
+                "media-types": version['media-types']
+            })
 
-    def build(self, version_data):
-        """Generic method used to generate a version entity."""
-        version = {
-            "id": version_data["id"],
-            "status": version_data["status"],
-            "updated": version_data["updated"],
-            "links": self._build_links(version_data),
-        }
+        return dict(choices=version_objs)
 
-        return version
+    def build(self, VERSIONS):
+        version_objs = []
+        for version in VERSIONS:
+            version = VERSIONS[version]['version']
+            version_objs.append({
+                "id": version['id'],
+                "status": version['status'],
+                "updated": version['updated'],
+                "links": self._build_links(version),
+            })
+
+        return dict(versions=version_objs)
 
     def _build_versioned_link(self, req, version):
         return '%s://%s/%s%s' % (req.scheme, req.host, version, req.path)

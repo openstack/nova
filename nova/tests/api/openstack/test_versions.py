@@ -529,20 +529,29 @@ class VersionsTest(test.TestCase):
         base_url = "http://example.org/"
 
         version_data = {
-            "id": "3.2.1",
-            "status": "CURRENT",
-            "updated": "2011-07-18T11:30:00Z"}
+            "v3.2.1": {
+                "version": {
+                    "id": "3.2.1",
+                    "status": "CURRENT",
+                    "updated": "2011-07-18T11:30:00Z",
+                }
+            }
+        }
 
         expected = {
-            "id": "3.2.1",
-            "status": "CURRENT",
-            "updated": "2011-07-18T11:30:00Z",
-            "links": [
+            "versions": [
                 {
-                    "rel": "self",
-                    "href": "http://example.org/3.2.1/",
-                },
-            ],
+                    "id": "3.2.1",
+                    "status": "CURRENT",
+                    "updated": "2011-07-18T11:30:00Z",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://example.org/3.2.1/",
+                        },
+                    ],
+                }
+            ]
         }
 
         builder = views.versions.ViewBuilder(base_url)
