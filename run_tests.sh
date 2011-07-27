@@ -11,6 +11,7 @@ function usage {
   echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -p, --pep8               Just run pep8"
+  echo "  -c, --coverage           Generate coverage report"
   echo "  -h, --help               Print this usage message"
   echo "  --hide-elapsed           Don't print the elapsed time for each test along with slow test list"
   echo ""
@@ -29,6 +30,7 @@ function process_option {
     -n|--no-recreate-db) let recreate_db=0;;
     -f|--force) let force=1;;
     -p|--pep8) let just_pep8=1;;
+    -c|--coverage) let coverage=1;;
     -*) noseopts="$noseopts $1";;
     *) noseargs="$noseargs $1"
   esac
@@ -43,11 +45,17 @@ noseargs=
 noseopts=
 wrapper=""
 just_pep8=0
+coverage=0
 recreate_db=1
 
 for arg in "$@"; do
   process_option $arg
 done
+
+# If enabled, tell nose to collect coverage data 
+if [ $coverage -eq 1 ]; then
+    noseopts="$noseopts --with-coverage --cover-package=nova"
+fi
 
 function run_tests {
   # Just run the test suites in current environment
@@ -108,6 +116,11 @@ then
   fi
 fi
 
+# Delete old coverage data from previous runs
+if [ $coverage -eq 1 ]; then
+    ${wrapper} coverage erase
+fi
+
 if [ $just_pep8 -eq 1 ]; then
     run_pep8
     exit
@@ -125,4 +138,9 @@ run_tests || exit
 # arguments (noseargs).
 if [ -z "$noseargs" ]; then
   run_pep8
+fi
+
+if [ $coverage -eq 1 ]; then
+    echo "Generating coverage report in covhtml/"
+    ${wrapper} coverage html -d covhtml -i
 fi

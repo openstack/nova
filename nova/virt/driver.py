@@ -61,11 +61,11 @@ class ComputeDriver(object):
         """Return a list of InstanceInfo for all registered VMs"""
         raise NotImplementedError()
 
-    def spawn(self, instance, network_info=None, block_device_mapping=None):
+    def spawn(self, instance, network_info, block_device_mapping=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
-    def destroy(self, instance, cleanup=True):
+    def destroy(self, instance, network_info, cleanup=True):
         """Destroy (shutdown and delete) the specified instance.
 
         The given parameter is an instance of nova.compute.service.Instance,
@@ -81,7 +81,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot specified VM"""
         raise NotImplementedError()
 
@@ -147,11 +147,11 @@ class ComputeDriver(object):
         """resume the specified instance"""
         raise NotImplementedError()
 
-    def rescue(self, instance, callback):
+    def rescue(self, instance, callback, network_info):
         """Rescue the specified instance"""
         raise NotImplementedError()
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""
         raise NotImplementedError()
 
@@ -225,7 +225,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def unfilter_instance(self, instance):
+    def unfilter_instance(self, instance, network_info):
         """Stop filtering instance"""
         raise NotImplementedError()
 
@@ -253,4 +253,8 @@ class ComputeDriver(object):
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
+        raise NotImplementedError()
+
+    def plug_vifs(self, instance, network_info):
+        """Plugs in VIFs to networks."""
         raise NotImplementedError()

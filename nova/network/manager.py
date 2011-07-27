@@ -258,7 +258,7 @@ class FloatingIP(object):
         # NOTE(tr3buchet): all networks hosts in zone now use the same pool
         LOG.debug("QUOTA: %s" % quota.allowed_floating_ips(context, 1))
         if quota.allowed_floating_ips(context, 1) < 1:
-            LOG.warn(_('Quota exceeeded for %s, tried to allocate '
+            LOG.warn(_('Quota exceeded for %s, tried to allocate '
                        'address'),
                      context.project_id)
             raise quota.QuotaError(_('Address quota exceeded. You cannot '
@@ -299,6 +299,12 @@ class NetworkManager(manager.SchedulerDependentManager):
         as the hosts pick them up one at time during their periodic task.
         The one at a time part is to flatten the layout to help scale
     """
+
+    # If True, this manager requires VIF to create a bridge.
+    SHOULD_CREATE_BRIDGE = False
+
+    # If True, this manager requires VIF to create VLAN tag.
+    SHOULD_CREATE_VLAN = False
 
     timeout_fixed_ips = True
 
@@ -370,8 +376,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         try:
             networks = self.db.network_get_all(context)
         except exception.NoNetworksFound:
-            # we don't care if no networks are found
-            pass
+            return []
 
         # return only networks which are not vlan networks
         return [network for network in networks if
@@ -427,7 +432,12 @@ class NetworkManager(manager.SchedulerDependentManager):
         and info = dict containing pertinent networking data
         """
         # TODO(tr3buchet) should handle floating IPs as well?
-        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        try:
+            fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        except exception.FixedIpNotFoundForInstance:
+            LOG.warn(_('No fixed IPs for instance %s'), instance_id)
+            fixed_ips = []
+
         vifs = self.db.virtual_interface_get_by_instance(context, instance_id)
         flavor = self.db.instance_type_get(context, instance_type_id)
         network_info = []
@@ -459,7 +469,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'id': network['id'],
                 'cidr': network['cidr'],
                 'cidr_v6': network['cidr_v6'],
-                'injected': network['injected']}
+                'injected': network['injected'],
+                'vlan': network['vlan'],
+                'bridge_interface': network['bridge_interface'],
+                'multi_host': network['multi_host']}
             if network['multi_host']:
                 dhcp_server = self._get_dhcp_ip(context, network, host)
             else:
@@ -473,13 +486,21 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'broadcast': network['broadcast'],
                 'mac': vif['address'],
                 'rxtx_cap': flavor['rxtx_cap'],
-                'dns': [network['dns']],
-                'ips': [ip_dict(ip) for ip in network_IPs]}
+                'dns': [],
+                'ips': [ip_dict(ip) for ip in network_IPs],
+                'should_create_bridge': self.SHOULD_CREATE_BRIDGE,
+                'should_create_vlan': self.SHOULD_CREATE_VLAN}
+
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
                 info['gateway6'] = network['gateway_v6']
+            if network['dns1']:
+                info['dns'].append(network['dns1'])
+            if network['dns2']:
+                info['dns'].append(network['dns2'])
+
             network_info.append((network_dict, info))
         return network_info
 
@@ -590,7 +611,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
-                        bridge_interface, **kwargs):
+                        bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
         fixed_net = netaddr.IPNetwork(cidr)
         fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
@@ -605,7 +626,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
-            net['dns'] = FLAGS.flat_network_dns
+            net['dns1'] = dns1
+            net['dns2'] = dns2
             net['cidr'] = cidr
             net['multi_host'] = multi_host
             net['netmask'] = str(project_net.netmask)
@@ -634,7 +656,8 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
-                del net['dns']
+                del net['dns1']
+                del net['dns2']
                 vlan = kwargs['vlan_start'] + index
                 net['vpn_private_address'] = str(project_net[2])
                 net['dhcp_start'] = str(project_net[3])
@@ -692,14 +715,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Sets up network on this host."""
         raise NotImplementedError()
 
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching network for compute hosts.
-
-        this code is run on and by the compute host, not on network
-        hosts
-        """
-        raise NotImplementedError()
-
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
@@ -743,18 +758,10 @@ class FlatManager(NetworkManager):
                                                      **kwargs)
         self.db.fixed_ip_disassociate(context, address)
 
-    def setup_compute_network(self, context, instance_id):
-        """Network is created manually.
-
-        this code is run on and by the compute host, not on network hosts
-        """
-        pass
-
     def _setup_network(self, context, network_ref):
         """Setup Network on this host."""
         net = {}
         net['injected'] = FLAGS.flat_injected
-        net['dns'] = FLAGS.flat_network_dns
         self.db.network_update(context, network_ref['id'], net)
 
 
@@ -767,6 +774,8 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
 
     """
 
+    SHOULD_CREATE_BRIDGE = True
+
     def init_host(self):
         """Do any initialization that needs to be run if this is a
         standalone service.
@@ -778,17 +787,6 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
         self.init_host_floating_ips()
 
         self.driver.metadata_forward()
-
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching networks for compute hosts.
-
-        this code is run on and by the compute host, not on network hosts
-        """
-        networks = db.network_get_all_by_instance(context, instance_id)
-        for network in networks:
-            if not network['multi_host']:
-                self.driver.ensure_bridge(network['bridge'],
-                                          network['bridge_interface'])
 
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
@@ -819,6 +817,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     instances in its subnet.
 
     """
+
+    SHOULD_CREATE_BRIDGE = True
+    SHOULD_CREATE_VLAN = True
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
@@ -858,17 +859,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Force adds another network to a project."""
         self.db.network_associate(context, project_id, force=True)
 
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching network for compute hosts.
-        this code is run on and by the compute host, not on network hosts
-        """
-        networks = self.db.network_get_all_by_instance(context, instance_id)
-        for network in networks:
-            if not network['multi_host']:
-                self.driver.ensure_vlan_bridge(network['vlan'],
-                                               network['bridge'],
-                                               network['bridge_interface'])
-
     def _get_networks_for_instance(self, context, instance_id, project_id):
         """Determine which networks an instance should connect to."""
         # get networks associated with project
@@ -893,7 +883,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
-        network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
         if not network_ref['vpn_public_address']:
             net = {}
             address = FLAGS.vpn_ip
@@ -901,6 +890,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             network_ref = db.network_update(context, network_ref['id'], net)
         else:
             address = network_ref['vpn_public_address']
+        network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
                                        network_ref['bridge_interface'],

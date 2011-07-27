@@ -164,10 +164,16 @@ class APIRouterV11(APIRouter):
 
     def _setup_routes(self, mapper):
         super(APIRouterV11, self)._setup_routes(mapper, '1.1')
-        mapper.resource("image_meta", "meta",
-                        controller=image_metadata.create_resource(),
+        image_metadata_controller = image_metadata.create_resource()
+        mapper.resource("image_meta", "metadata",
+                        controller=image_metadata_controller,
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
+
+        mapper.connect("metadata", "/images/{image_id}/metadata",
+                       controller=image_metadata_controller,
+                       action='update_all',
+                       conditions={"method": ['PUT']})
 
         mapper.resource("server_meta", "meta",
                         controller=server_metadata.create_resource(),
