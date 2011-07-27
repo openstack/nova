@@ -29,7 +29,78 @@ from nova.api.openstack import views
 
 ATOM_XMLNS = versions.ATOM_XMLNS
 OS_XMLNS_BASE = versions.OS_XMLNS_BASE
-VERSIONS = versions.VERSIONS
+VERSIONS = {
+    "v1.0": {
+        "version": {
+            "id": "v1.0",
+            "status": "DEPRECATED",
+            "updated": "2011-01-21T11:33:21Z",
+            "links": [
+                {
+                    "rel": "self",
+                    "href": "http://servers.api.openstack.org/v1.0/"
+                },
+                {
+                    "rel": "describedby",
+                    "type": "application/pdf",
+                    "href": "http://docs.rackspacecloud.com/"
+                    "servers/api/v1.0/cs-devguide-20110125.pdf"
+                },
+                {
+                    "rel": "describedby",
+                    "type": "application/vnd.sun.wadl+xml",
+                    "href": "http://docs.rackspacecloud.com/"
+                    "servers/api/v1.0/application.wadl"
+                },
+            ],
+            "media-types": [
+                {
+                    "base": "application/xml",
+                    "type": "application/vnd.openstack.compute-v1.0+xml"
+                },
+                {
+                    "base": "application/json",
+                    "type": "application/vnd.openstack.compute-v1.0+json"
+                }
+            ],
+        },
+    },
+    "v1.1": {
+        "version": {
+            "id": "v1.1",
+            "status": "CURRENT",
+            "updated": "2011-01-21T11:33:21Z",
+            "links": [
+                {
+                    "rel": "self",
+                    "href": "http://servers.api.openstack.org/v1.1/"
+                },
+                {
+                    "rel": "describedby",
+                    "type": "application/pdf",
+                    "href": "http://docs.rackspacecloud.com/"
+                        "servers/api/v1.1/cs-devguide-20110125.pdf"
+                },
+                {
+                    "rel": "describedby",
+                    "type": "application/vnd.sun.wadl+xml",
+                    "href": "http://docs.rackspacecloud.com/"
+                        "servers/api/v1.1/application.wadl"
+                },
+            ],
+            "media-types": [
+                {
+                    "base": "application/xml",
+                    "type": "application/vnd.openstack.compute-v1.1+xml"
+                },
+                {
+                    "base": "application/json",
+                    "type": "application/vnd.openstack.compute-v1.1+json"
+                }
+            ],
+        },
+    },
+}
 
 
 class VersionsTest(test.TestCase):
@@ -38,6 +109,8 @@ class VersionsTest(test.TestCase):
         self.context = context.get_admin_context()
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
+        #Stub out VERSIONS
+        versions.VERSIONS = VERSIONS
 
     def tearDown(self):
         super(VersionsTest, self).tearDown()
