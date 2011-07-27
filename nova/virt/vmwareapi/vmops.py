@@ -89,7 +89,7 @@ class VMWareVMOps(object):
         LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
         return lst_vm_names
 
-    def spawn(self, instance, network_info):
+    def spawn(self, context, instance, network_info):
         """
         Creates a VM instance.
 
@@ -329,7 +329,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Powered on the VM instance %s") % instance.name)
         _power_on_vm()
 
-    def snapshot(self, instance, snapshot_name):
+    def snapshot(self, context, instance, snapshot_name):
         """
         Create snapshot from a running VM instance.
         Steps followed are:

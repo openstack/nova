@@ -61,7 +61,8 @@ class ComputeDriver(object):
         """Return a list of InstanceInfo for all registered VMs"""
         raise NotImplementedError()
 
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance, network_info,
+              block_device_mapping=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
@@ -118,11 +119,11 @@ class ComputeDriver(object):
         off the instance copies over the COW disk"""
         raise NotImplementedError()
 
-    def snapshot(self, instance, image_id):
+    def snapshot(self, context, instance, image_id):
         """Create snapshot from a running VM instance."""
         raise NotImplementedError()
 
-    def finish_resize(self, instance, disk_info):
+    def finish_resize(self, context, instance, disk_info):
         """Completes a resize, turning on the migrated instance"""
         raise NotImplementedError()
 

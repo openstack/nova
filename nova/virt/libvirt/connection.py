@@ -399,7 +399,7 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception()
-    def snapshot(self, instance, image_href):
+    def snapshot(self, context, instance, image_href):
         """Create snapshot from a running VM instance.
 
         This command only works with qemu 0.14+, the qemu_img flag is
@@ -595,7 +595,8 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance, network_info,
+              block_device_mapping=None):
         xml = self.to_xml(instance, False, network_info=network_info,
                           block_device_mapping=block_device_mapping)
         block_device_mapping = block_device_mapping or []
