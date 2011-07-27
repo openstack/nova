@@ -225,10 +225,10 @@ class ViewBuilderV11(ViewBuilder):
         return os.path.join(common.remove_version_from_href(self.base_url),
             "servers", str(server_id))
 
-    def _convert_timeformat(self, time):
+    def _convert_timeformat(self, date_time):
         """Converts the given time into the common time format
 
-        :param time: should be a datetime
+        :param date_time: the datetime object to convert
 
         """
-        return time.strftime(utils.TIME_FORMAT)
+        return date_time.strftime(utils.TIME_FORMAT)
