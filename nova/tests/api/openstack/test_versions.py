@@ -29,6 +29,7 @@ from nova.api.openstack import views
 
 ATOM_XMLNS = versions.ATOM_XMLNS
 OS_XMLNS_BASE = versions.OS_XMLNS_BASE
+VERSIONS = versions.VERSIONS
 
 
 class VersionsTest(test.TestCase):
@@ -578,19 +579,26 @@ class VersionsTest(test.TestCase):
             ]
         }
 
-        expected = """
-            <versions xmlns="%sv1.0" xmlns:atom="%s">
-                <version id="2.7.1" status="DEPRECATED"
-                 updated="2011-07-18T11:30:00Z">
-                    <atom:link href="http://test/2.7.1" rel="self"/>
-                </version>
-            </versions>""".replace("  ", "").replace("\n", "") % (
-                OS_XMLNS_BASE, ATOM_XMLNS)
-
         serializer = versions.VersionsXMLSerializer()
         response = serializer.index(versions_data)
-        response = response.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, response)
+
+        root = xml.etree.ElementTree.XML(response)
+        self.assertEqual(root.tag.split('}')[1], "versions")
+        self.assertEqual(root.tag.split('}')[0].strip('{'),
+                         "%sv1.0" % OS_XMLNS_BASE)
+        version = list(root)[0]
+        self.assertEqual(version.tag.split('}')[1], "version")
+        self.assertEqual(version.get('id'),
+                         versions_data['versions'][0]['id'])
+        self.assertEqual(version.get('status'),
+                         versions_data['versions'][0]['status'])
+
+        link = list(version)[0]
+
+        self.assertEqual(link.tag.split('}')[1], "link")
+        self.assertEqual(link.tag.split('}')[0].strip('{'), ATOM_XMLNS)
+        for key, val in versions_data['versions'][0]['links'][0].items():
+            self.assertEqual(link.get(key), val)
 
     def test_versions_multi_xml_serializer(self):
         versions_data = {
@@ -599,6 +607,7 @@ class VersionsTest(test.TestCase):
                     "id": "2.7.1",
                     "updated": "2011-07-18T11:30:00Z",
                     "status": "DEPRECATED",
+                    "media-types": VERSIONS['v1.1']['version']['media-types'],
                     "links": [
                         {
                             "rel": "self",
@@ -609,19 +618,37 @@ class VersionsTest(test.TestCase):
             ]
         }
 
-        expected = """
-        <choices xmlns="%sv1.0" xmlns:atom="%s">
-            <version id="2.7.1" status="DEPRECATED"
-             updated="2011-07-18T11:30:00Z">
-                <atom:link href="http://test/2.7.1/images" rel="self"/>
-            </version>
-        </choices>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
-                                                              ATOM_XMLNS)
-
         serializer = versions.VersionsXMLSerializer()
         response = serializer.multi(versions_data)
-        response = response.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, response)
+
+        root = xml.etree.ElementTree.XML(response)
+        self.assertEqual(root.tag.split('}')[1], "choices")
+        self.assertEqual(root.tag.split('}')[0].strip('{'),
+                         "%sv1.0" % OS_XMLNS_BASE)
+        version = list(root)[0]
+        self.assertEqual(version.tag.split('}')[1], "version")
+        self.assertEqual(version.get('id'), versions_data['choices'][0]['id'])
+        self.assertEqual(version.get('status'),
+                         versions_data['choices'][0]['status'])
+
+        media_types = list(version)[0]
+        media_type_nodes = list(media_types)
+        self.assertEqual(media_types.tag.split('}')[1], "media-types")
+
+        set_types = versions_data['choices'][0]['media-types']
+        for i, type in enumerate(set_types):
+            node = media_type_nodes[i]
+            self.assertEqual(node.tag.split('}')[1], "media-type")
+            for key, val in set_types[i].items():
+                self.assertEqual(node.get(key), val)
+
+        link = list(version)[1]
+
+        self.assertEqual(link.tag.split('}')[1], "link")
+        self.assertEqual(link.tag.split('}')[0].strip('{'), ATOM_XMLNS)
+        for key, val in versions_data['choices'][0]['links'][0].items():
+            self.assertEqual(link.get(key), val)
+
 
     def test_version_detail_xml_serializer(self):
         version_data = {
