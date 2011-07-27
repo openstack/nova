@@ -737,17 +737,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
         conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
 
-        network = db.project_get_networks(context.get_admin_context(),
-                                          self.project.id)[0]
-        ip_dict = {'ip': self.test_ip,
-                   'netmask': network['netmask'],
-                   'enabled': '1'}
-        mapping = {'label': network['label'],
-                   'gateway': network['gateway'],
-                   'mac': instance['mac_address'],
-                   'dns': [network['dns']],
-                   'ips': [ip_dict]}
-        network_info = [(network, mapping)]
+        network_info = _create_network_info()
 
         try:
             conn.spawn(instance, network_info)
@@ -1293,7 +1283,6 @@ class NWFilterTestCase(test.TestCase):
         self.fw.prepare_instance_filter(instance)
         self.fw.apply_instance_filter(instance)
         original_filter_count = len(fakefilter.filters)
-        raise Exception(original_filter_count)
         self.fw.unfilter_instance(instance)
 
         # should undefine 2 filters: instance and instance-secgroup
