@@ -126,7 +126,7 @@ class LibvirtOpenVswitchDriver(VIFDriver):
         dev = "tap-%s" % vif_id
         try:
             utils.execute('sudo', 'ovs-vsctl', 'del-port',
-                          FLAGS.flat_network_bridge, dev)
+                          network['bridge'], dev)
             utils.execute('sudo', 'ip', 'link', 'delete', dev)
         except:
             LOG.warning(_("Failed while unplugging vif of instance '%s'"),
