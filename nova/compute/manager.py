@@ -430,7 +430,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
         instance_ref.injected_files = kwargs.get('injected_files', [])
-        self.driver.spawn(instance_ref, network_info)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                              instance_ref)
+        bd_mapping = self._setup_block_device_mapping(context, instance_id)
+        self.driver.spawn(instance_ref, network_info, bd_mapping)
 
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
