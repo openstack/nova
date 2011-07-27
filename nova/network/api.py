@@ -164,9 +164,10 @@ class API(base.Base):
                  {'method': 'deallocate_for_instance',
                   'args': args})
 
-    def add_fixed_ip_to_instance(self, context, instance_id, network_id):
+    def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
         """Adds a fixed ip to instance from specified network."""
         args = {'instance_id': instance_id,
+                'host': host,
                 'network_id': network_id}
         rpc.cast(context, FLAGS.network_topic,
                  {'method': 'add_fixed_ip_to_instance',
