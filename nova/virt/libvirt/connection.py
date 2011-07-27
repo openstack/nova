@@ -351,7 +351,7 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         (type, protocol, name) = \
-            self._get_volume_device_info(vol['device_path'])
+            self._get_volume_device_info(device_path)
         if type == 'block':
             xml = """<disk type='block'>
                          <driver name='qemu' type='raw'/>
