@@ -122,7 +122,8 @@ class ComputeDriver(object):
         """Create snapshot from a running VM instance."""
         raise NotImplementedError()
 
-    def finish_migration(self, instance, disk_info):
+    def finish_migration(self, instance, disk_info, network_info,
+                         resize_instance):
         """Completes a resize, turning on the migrated instance"""
         raise NotImplementedError()
 
