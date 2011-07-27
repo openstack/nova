@@ -175,7 +175,7 @@ class APIRouterV11(APIRouter):
                        action='update_all',
                        conditions={"method": ['PUT']})
 
-        mapper.resource("server_meta", "meta",
+        mapper.resource("server_meta", "metadata",
                         controller=server_metadata.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))

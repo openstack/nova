@@ -16,12 +16,13 @@
 #    under the License.
 
 from webob import exc
-from xml.dom import minidom
 
 from nova import flags
 from nova import image
 from nova import quota
 from nova import utils
+from nova.api.openstack import common
+from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -118,95 +119,15 @@ class Controller(object):
         self.image_service.update(context, image_id, img, None)
 
 
-class ImageMetadataXMLDeserializer(wsgi.MetadataXMLDeserializer):
-
-    def _extract_metadata_container(self, datastring):
-        dom = minidom.parseString(datastring)
-        metadata_node = self.find_first_child_named(dom, "metadata")
-        metadata = self.extract_metadata(metadata_node)
-        return {'body': {'metadata': metadata}}
-
-    def create(self, datastring):
-        return self._extract_metadata_container(datastring)
-
-    def update_all(self, datastring):
-        return self._extract_metadata_container(datastring)
-
-    def update(self, datastring):
-        dom = minidom.parseString(datastring)
-        metadata_item = self.extract_metadata(dom)
-        return {'body': {'meta': metadata_item}}
-
-
-class HeadersSerializer(wsgi.ResponseHeadersSerializer):
-
-    def delete(self, response, data):
-        response.status_int = 204
-
-
-class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
-    def __init__(self, xmlns=wsgi.XMLNS_V11):
-        super(ImageMetadataXMLSerializer, self).__init__(xmlns=xmlns)
-
-    def _meta_item_to_xml(self, doc, key, value):
-        node = doc.createElement('meta')
-        doc.appendChild(node)
-        node.setAttribute('key', '%s' % key)
-        text = doc.createTextNode('%s' % value)
-        node.appendChild(text)
-        return node
-
-    def meta_list_to_xml(self, xml_doc, meta_items):
-        container_node = xml_doc.createElement('metadata')
-        for (key, value) in meta_items:
-            item_node = self._meta_item_to_xml(xml_doc, key, value)
-            container_node.appendChild(item_node)
-        return container_node
-
-    def _meta_list_to_xml_string(self, metadata_dict):
-        xml_doc = minidom.Document()
-        items = metadata_dict['metadata'].items()
-        container_node = self.meta_list_to_xml(xml_doc, items)
-        xml_doc.appendChild(container_node)
-        self._add_xmlns(container_node)
-        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
-
-    def index(self, metadata_dict):
-        return self._meta_list_to_xml_string(metadata_dict)
-
-    def create(self, metadata_dict):
-        return self._meta_list_to_xml_string(metadata_dict)
-
-    def update_all(self, metadata_dict):
-        return self._meta_list_to_xml_string(metadata_dict)
-
-    def _meta_item_to_xml_string(self, meta_item_dict):
-        xml_doc = minidom.Document()
-        item_key, item_value = meta_item_dict.items()[0]
-        item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
-        xml_doc.appendChild(item_node)
-        self._add_xmlns(item_node)
-        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
-
-    def show(self, meta_item_dict):
-        return self._meta_item_to_xml_string(meta_item_dict['meta'])
-
-    def update(self, meta_item_dict):
-        return self._meta_item_to_xml_string(meta_item_dict['meta'])
-
-    def default(self, *args, **kwargs):
-        return ''
-
-
 def create_resource():
-    headers_serializer = HeadersSerializer()
+    headers_serializer = common.MetadataHeadersSerializer()
 
     body_deserializers = {
-        'application/xml': ImageMetadataXMLDeserializer(),
+        'application/xml': common.MetadataXMLDeserializer(),
     }
 
     body_serializers = {
-        'application/xml': ImageMetadataXMLSerializer(),
+        'application/xml': common.MetadataXMLSerializer(),
     }
     serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
     deserializer = wsgi.RequestDeserializer(body_deserializers)
