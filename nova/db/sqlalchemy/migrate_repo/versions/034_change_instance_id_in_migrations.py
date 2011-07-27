@@ -15,7 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.from sqlalchemy import *
 
-from sqlalchemy import Column, Integer, String, MetaData, Table
+from sqlalchemy import Column, ForeignKeyConstraint, Integer, String
+from sqlalchemy import MetaData, Table
+
 
 meta = MetaData()
 
@@ -33,6 +35,11 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
     migrations = Table('migrations', meta, autoload=True)
     migrations.create_column(instance_uuid)
+
+    if migrate_engine.name == "mysql":
+        migrate_engine.execute("ALTER TABLE migrations DROP FOREIGN KEY " \
+                "`migrations_ibfk_1`;")
+
     migrations.c.instance_id.drop()
 
 
