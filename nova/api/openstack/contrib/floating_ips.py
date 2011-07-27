@@ -27,7 +27,7 @@ from nova.api.openstack import extensions
 def _translate_floating_ip_view(floating_ip):
     result = {'id': floating_ip['id'],
               'ip': floating_ip['address']}
-    if 'fixed_ip' in floating_ip:
+    if 'fixed_ip' in floating_ip and floating_ip['fixed_ip']:
         result['fixed_ip'] = floating_ip['fixed_ip']['address']
     else:
         result['fixed_ip'] = None
