@@ -323,14 +323,10 @@ class MetadataXMLSerializationTest(test.TestCase):
 
         expected = minidom.parseString("""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="three">
-                    four
-                </meta>
-                <meta key="one">
-                    two
-                </meta>
+                <meta key="three">four</meta>
+                <meta key="one">two</meta>
             </metadata>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n",""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -346,11 +342,9 @@ class MetadataXMLSerializationTest(test.TestCase):
 
         expected = minidom.parseString("""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="None">
-                    None
-                </meta>
+                <meta key="None">None</meta>
             </metadata>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n",""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -366,11 +360,9 @@ class MetadataXMLSerializationTest(test.TestCase):
 
         expected = minidom.parseString(u"""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="three">
-                    Jos\xe9
-                </meta>
+                <meta key="three">Jos\xe9</meta>
             </metadata>
-        """.encode("UTF-8").replace("  ", ""))
+        """.encode("UTF-8").replace("  ", "").replace("\n",""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -385,10 +377,9 @@ class MetadataXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected = minidom.parseString("""
-            <meta xmlns="http://docs.openstack.org/compute/api/v1.1" key="one">
-                two
-            </meta>
-        """.replace("  ", ""))
+            <meta xmlns="http://docs.openstack.org/compute/api/v1.1"
+                 key="one">two</meta>
+        """.replace("  ", "").replace("\n",""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -405,14 +396,10 @@ class MetadataXMLSerializationTest(test.TestCase):
 
         expected = minidom.parseString("""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="key6">
-                    value6
-                </meta>
-                <meta key="key4">
-                    value4
-                </meta>
+                <meta key="key6">value6</meta>
+                <meta key="key4">value4</meta>
             </metadata>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n",""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -427,10 +414,9 @@ class MetadataXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected = minidom.parseString("""
-            <meta xmlns="http://docs.openstack.org/compute/api/v1.1" key="one">
-                two
-            </meta>
-        """.replace("  ", ""))
+            <meta xmlns="http://docs.openstack.org/compute/api/v1.1"
+                 key="one">two</meta>
+        """.replace("  ", "").replace("\n",""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -448,17 +434,11 @@ class MetadataXMLSerializationTest(test.TestCase):
 
         expected = minidom.parseString("""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="key2">
-                    value2
-                </meta>
-                <meta key="key9">
-                    value9
-                </meta>
-                <meta key="key1">
-                    value1
-                </meta>
+                <meta key="key2">value2</meta>
+                <meta key="key9">value9</meta>
+                <meta key="key1">value1</meta>
             </metadata>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n",""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
