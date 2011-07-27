@@ -22,7 +22,6 @@ from nova import image
 from nova import quota
 from nova import utils
 from nova.api.openstack import common
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
