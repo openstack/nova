@@ -387,6 +387,8 @@ class XMLDictSerializer(DictSerializer):
             link_node = xml_doc.createElement('atom:link')
             link_node.setAttribute('rel', link['rel'])
             link_node.setAttribute('href', link['href'])
+            if 'type' in link:
+                link_node.setAttribute('type', link['type'])
             link_nodes.append(link_node)
         return link_nodes
 

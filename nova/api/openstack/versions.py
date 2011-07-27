@@ -220,14 +220,9 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
             media_types = self._create_media_types(version['media-types'])
             version_node.appendChild(media_types)
 
-        for link in version['links']:
-            link_node = self._xml_doc.createElement('atom:link')
-            link_node.setAttribute('rel', link['rel'])
-            link_node.setAttribute('href', link['href'])
-            if 'type' in link:
-                link_node.setAttribute('type', link['type'])
-
-            version_node.appendChild(link_node)
+        link_nodes = self._create_link_nodes(self._xml_doc, version['links'])
+        for link in link_nodes:
+            version_node.appendChild(link)
 
         return version_node
 
