@@ -207,7 +207,7 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
         version_node = self._xml_doc.createElement('version')
         if create_ns:
             xmlns = OS_XMLNS_BASE
-            xmlns_atom = "http://www.w3.org/2005/Atom"
+            xmlns_atom = ATOM_XMLNS
             version_node.setAttribute('xmlns', xmlns)
             version_node.setAttribute('xmlns:atom', xmlns_atom)
 
