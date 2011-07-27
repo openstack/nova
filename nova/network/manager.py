@@ -68,7 +68,7 @@ LOG = logging.getLogger("nova.network.manager")
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('flat_network_bridge', 'br100',
+flags.DEFINE_string('flat_network_bridge', None,
                     'Bridge for simple network instances')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
@@ -720,9 +720,9 @@ class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
 
     FlatManager does not do any bridge or vlan creation.  The user is
-    responsible for setting up whatever bridge is specified in
-    flat_network_bridge (br100 by default).  This bridge needs to be created
-    on all compute hosts.
+    responsible for setting up whatever bridges are specified when creating
+    networks through nova-manage. This bridge needs to be created on all
+    compute hosts.
 
     The idea is to create a single network for the host with a command like:
     nova-manage network create 192.168.0.0/24 1 256. Creating multiple

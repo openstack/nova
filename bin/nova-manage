@@ -631,21 +631,24 @@ class NetworkCommands(object):
     """Class for managing networks."""
 
     @args('--label', dest="label", metavar='<label>',
-            help='Label(ex: public)')
+            help='Label for network (ex: public)')
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
-            help='Network')
+            help='IPv4 subnet (ex: 10.0.0.0/8)')
     @args('--num_networks', dest="num_networks", metavar='<number>',
-            help='How many networks create')
+            help='Number of networks to create')
     @args('--network_size', dest="network_size", metavar='<number>',
-            help='How many hosts in network')
+            help='Number of IPs per network')
     @args('--vlan', dest="vlan_start", metavar='<vlan id>', help='vlan id')
     @args('--vpn', dest="vpn_start", help='vpn start')
-    @args('--fixed_range_v6', dest="fixed_range_v6", help='fixed ipv6 range')
+    @args('--fixed_range_v6', dest="fixed_range_v6",
+          help='IPv6 subnet (ex: fe80::/64')
     @args('--gateway_v6', dest="gateway_v6", help='ipv6 gateway')
-    @args('--flat_network_bridge', dest="flat_network_bridge",
-            metavar='<flat network bridge>', help='Flat_network_bridge')
+    @args('--bridge', dest="bridge",
+            metavar='<bridge>',
+            help='VIFs on this network are connected to this bridge')
     @args('--bridge_interface', dest="bridge_interface",
-            metavar='<bridge interface>', help='Bridge_interface')
+            metavar='<bridge interface>',
+            help='the bridge is connected to this interface')
     @args('--multi_host', dest="multi_host", metavar="<'T'|'F'>",
             help='Multi host')
     @args('--dns1', dest="dns1", metavar="<DNS Address>", help='First DNS')
@@ -653,18 +656,31 @@ class NetworkCommands(object):
     def create(self, label=None, fixed_range=None, num_networks=None,
                network_size=None, multi_host=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, gateway_v6=None,
-               flat_network_bridge=None, bridge_interface=None,
-               dns1=None, dns2=None):
+               bridge=None, bridge_interface=None, dns1=None, dns2=None):
         """Creates fixed ips for host by range"""
+
+        # check for certain required inputs
         if not label:
-            msg = _('a label (ex: public) is required to create networks.')
-            print msg
-            raise TypeError(msg)
+            raise exception.NetworkNotCreated(req='label')
         if not fixed_range:
-            msg = _('Fixed range in the form of 10.0.0.0/8 is '
-                    'required to create networks.')
-            print msg
-            raise TypeError(msg)
+            raise exception.NetworkNotCreated(req='fixed range')
+
+        bridge = bridge or FLAGS.flat_network_bridge
+        if not bridge:
+            raise exception.NetworkNotCreated(req='bridge')
+            #TODO(tr3buchet) flat_network_bridge FLAG needs to go away
+            #                or be renamed to bridge
+
+        bridge_interface = bridge_interface or FLAGS.flat_interface or \
+                           FLAGS.vlan_interface
+        if not bridge_interface:
+            interface_required = ['nova.network.manager.FlatDHCPManager',
+                                  'nova.network.manager.VlanManager']
+            # ensure that bridge interface is set if certain managers are used
+            if FLAGS.network_manager in interface_required:
+                raise exception.NetworkNotCreated(req='bridge interface')
+
+        # sanitize other input using FLAGS if necessary
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
@@ -679,34 +695,27 @@ class NetworkCommands(object):
             vpn_start = FLAGS.vpn_start
         if not fixed_range_v6:
             fixed_range_v6 = FLAGS.fixed_range_v6
-        if not flat_network_bridge:
-            flat_network_bridge = FLAGS.flat_network_bridge
-        if not bridge_interface:
-            bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
         if not gateway_v6:
             gateway_v6 = FLAGS.gateway_v6
         if not dns1 and FLAGS.flat_network_dns:
             dns1 = FLAGS.flat_network_dns
-        net_manager = utils.import_object(FLAGS.network_manager)
 
-        try:
-            net_manager.create_networks(context.get_admin_context(),
-                                        label=label,
-                                        cidr=fixed_range,
-                                        multi_host=multi_host,
-                                        num_networks=int(num_networks),
-                                        network_size=int(network_size),
-                                        vlan_start=int(vlan_start),
-                                        vpn_start=int(vpn_start),
-                                        cidr_v6=fixed_range_v6,
-                                        gateway_v6=gateway_v6,
-                                        bridge=flat_network_bridge,
-                                        bridge_interface=bridge_interface,
-                                        dns1=dns1,
-                                        dns2=dns2)
-        except ValueError, e:
-            print e
-            raise e
+        # create the network
+        net_manager = utils.import_object(FLAGS.network_manager)
+        net_manager.create_networks(context.get_admin_context(),
+                                    label=label,
+                                    cidr=fixed_range,
+                                    multi_host=multi_host,
+                                    num_networks=int(num_networks),
+                                    network_size=int(network_size),
+                                    vlan_start=int(vlan_start),
+                                    vpn_start=int(vpn_start),
+                                    cidr_v6=fixed_range_v6,
+                                    gateway_v6=gateway_v6,
+                                    bridge=bridge,
+                                    bridge_interface=bridge_interface,
+                                    dns1=dns1,
+                                    dns2=dns2)
 
     def list(self):
         """List all created networks"""

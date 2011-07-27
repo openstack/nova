@@ -372,6 +372,10 @@ class StorageRepositoryNotFound(NotFound):
     message = _("Cannot find SR to read/write VDI.")
 
 
+class NetworkNotCreated(NovaException):
+    message = _("A %(req)s is required to create a network.")
+
+
 class NetworkNotFound(NotFound):
     message = _("Network %(network_id)s could not be found.")
 
