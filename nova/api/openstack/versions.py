@@ -28,7 +28,7 @@ ATOM_XMLNS = "http://www.w3.org/2005/Atom"
 OS_XMLNS_BASE = "http://docs.openstack.org/common/api/"
 VERSIONS = {
     "v1.0": {
-        "version" : {
+        "version": {
             "id": "v1.0",
             "status": "DEPRECATED",
             "updated": "2011-01-21T11:33:21Z",
@@ -52,18 +52,18 @@ VERSIONS = {
             ],
             "media-types": [
                 {
-                    "base" : "application/xml",
-                    "type" : "application/vnd.openstack.compute-v1.0+xml"
+                    "base": "application/xml",
+                    "type": "application/vnd.openstack.compute-v1.0+xml"
                 },
                 {
-                    "base" : "application/json",
-                    "type" : "application/vnd.openstack.compute-v1.0+json"
+                    "base": "application/json",
+                    "type": "application/vnd.openstack.compute-v1.0+json"
                 }
             ],
         },
     },
     "v1.1": {
-        "version" : {
+        "version": {
             "id": "v1.1",
             "status": "CURRENT",
             "updated": "2011-01-21T11:33:21Z",
@@ -87,12 +87,12 @@ VERSIONS = {
             ],
             "media-types": [
                 {
-                    "base" : "application/xml",
-                    "type" : "application/vnd.openstack.compute-v1.1+xml"
+                    "base": "application/xml",
+                    "type": "application/vnd.openstack.compute-v1.1+xml"
                 },
                 {
-                    "base" : "application/json",
-                    "type" : "application/vnd.openstack.compute-v1.1+json"
+                    "base": "application/json",
+                    "type": "application/vnd.openstack.compute-v1.1+json"
                 }
             ],
         },

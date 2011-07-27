@@ -81,37 +81,37 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/json")
         version = json.loads(res.body)
         expected = {
-            "version" : {
-                "id" : "v1.0",
-                "status" : "DEPRECATED",
-                "updated" : "2011-01-21T11:33:21Z",
+            "version": {
+                "id": "v1.0",
+                "status": "DEPRECATED",
+                "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
-                        "rel" : "self",
-                        "href" : "http://servers.api.openstack.org/v1.0/"
+                        "rel": "self",
+                        "href": "http://servers.api.openstack.org/v1.0/"
                     },
                     {
-                        "rel" : "describedby",
-                        "type" : "application/pdf",
-                        "href" : "http://docs.rackspacecloud.com/"
+                        "rel": "describedby",
+                        "type": "application/pdf",
+                        "href": "http://docs.rackspacecloud.com/"
                             "servers/api/v1.0/cs-devguide-20110125.pdf"
                     },
                     {
-                        "rel" : "describedby",
-                        "type" : "application/vnd.sun.wadl+xml",
-                        "href" : "http://docs.rackspacecloud.com/"
+                        "rel": "describedby",
+                        "type": "application/vnd.sun.wadl+xml",
+                        "href": "http://docs.rackspacecloud.com/"
                             "servers/api/v1.0/application.wadl"
                     }
                 ],
                 "media-types": [
                     {
-                        "base" : "application/xml",
-                        "type" : "application/"
+                        "base": "application/xml",
+                        "type": "application/"
                             "vnd.openstack.compute-v1.0+xml"
                     },
                     {
-                        "base" : "application/json",
-                        "type" : "application/"
+                        "base": "application/json",
+                        "type": "application/"
                             "vnd.openstack.compute-v1.0+json"
                     }
                 ]
@@ -127,37 +127,37 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/json")
         version = json.loads(res.body)
         expected = {
-            "version" : {
-                "id" : "v1.1",
-                "status" : "CURRENT",
-                "updated" : "2011-01-21T11:33:21Z",
+            "version": {
+                "id": "v1.1",
+                "status": "CURRENT",
+                "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
-                        "rel" : "self",
-                        "href" : "http://servers.api.openstack.org/v1.1/"
+                        "rel": "self",
+                        "href": "http://servers.api.openstack.org/v1.1/"
                     },
                     {
-                        "rel" : "describedby",
-                        "type" : "application/pdf",
-                        "href" : "http://docs.rackspacecloud.com/"
+                        "rel": "describedby",
+                        "type": "application/pdf",
+                        "href": "http://docs.rackspacecloud.com/"
                             "servers/api/v1.1/cs-devguide-20110125.pdf"
                     },
                     {
-                        "rel" : "describedby",
-                        "type" : "application/vnd.sun.wadl+xml",
-                        "href" : "http://docs.rackspacecloud.com/"
+                        "rel": "describedby",
+                        "type": "application/vnd.sun.wadl+xml",
+                        "href": "http://docs.rackspacecloud.com/"
                             "servers/api/v1.1/application.wadl"
                     }
                 ],
                 "media-types": [
                     {
-                        "base" : "application/xml",
-                        "type" : "application/"
+                        "base": "application/xml",
+                        "type": "application/"
                             "vnd.openstack.compute-v1.1+xml"
                     },
                     {
-                        "base" : "application/json",
-                        "type" : "application/"
+                        "base": "application/json",
+                        "type": "application/"
                             "vnd.openstack.compute-v1.1+json"
                     }
                 ]
@@ -651,7 +651,7 @@ class VersionsTest(test.TestCase):
 
     def test_version_detail_xml_serializer(self):
         version_data = {
-            "version" : {
+            "version": {
                 "id": "v1.0",
                 "status": "CURRENT",
                 "updated": "2011-01-21T11:33:21Z",
@@ -675,12 +675,12 @@ class VersionsTest(test.TestCase):
                 ],
                 "media-types": [
                     {
-                        "base" : "application/xml",
-                        "type" : "application/vnd.openstack.compute-v1.0+xml"
+                        "base": "application/xml",
+                        "type": "application/vnd.openstack.compute-v1.0+xml"
                     },
                     {
-                        "base" : "application/json",
-                        "type" : "application/vnd.openstack.compute-v1.0+json"
+                        "base": "application/json",
+                        "type": "application/vnd.openstack.compute-v1.0+json"
                     }
                 ],
             },
@@ -787,7 +787,7 @@ class VersionsTest(test.TestCase):
 
     def test_version_detail_atom_serializer(self):
         versions_data = {
-            "version" : {
+            "version": {
                 "id": "v1.1",
                 "status": "CURRENT",
                 "updated": "2011-01-21T11:33:21Z",
@@ -811,12 +811,12 @@ class VersionsTest(test.TestCase):
                 ],
                 "media-types": [
                     {
-                        "base" : "application/xml",
-                        "type" : "application/vnd.openstack.compute-v1.1+xml"
+                        "base": "application/xml",
+                        "type": "application/vnd.openstack.compute-v1.1+xml"
                     },
                     {
-                        "base" : "application/json",
-                        "type" : "application/vnd.openstack.compute-v1.1+json"
+                        "base": "application/json",
+                        "type": "application/vnd.openstack.compute-v1.1+json"
                     }
                 ],
             },
