@@ -222,6 +222,16 @@ class CreateserverextTest(test.TestCase):
             self._run_create_instance_with_mock_compute_api(request)
         self.assertEquals(response.status_int, 422)
 
+    def test_create_instance_with_no_server_name(self):
+        server = {}
+        server['imageRef'] = 1
+        server['flavorRef'] = 1
+        body_dict = {'server': server}
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+
     def test_create_instance_with_no_personality(self):
         request, response, injected_files = \
                 self._create_instance_with_personality_json(personality=None)
