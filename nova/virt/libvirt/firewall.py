@@ -46,7 +46,7 @@ class FirewallDriver(object):
         At this point, the instance isn't running yet."""
         raise NotImplementedError()
 
-    def unfilter_instance(self, instance):
+    def unfilter_instance(self, instance, network_info=None):
         """Stop filtering instance"""
         raise NotImplementedError()
 
@@ -300,9 +300,10 @@ class NWFilterFirewall(FirewallDriver):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
-    def unfilter_instance(self, instance):
+    def unfilter_instance(self, instance, network_info=None):
         """Clear out the nwfilter rules."""
-        network_info = netutils.get_network_info(instance)
+        if not network_info:
+            network_info = netutils.get_network_info(instance)
         instance_name = instance.name
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
@@ -542,11 +543,11 @@ class IptablesFirewallDriver(FirewallDriver):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
-    def unfilter_instance(self, instance):
+    def unfilter_instance(self, instance, network_info=None):
         if self.instances.pop(instance['id'], None):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
-            self.nwfilter.unfilter_instance(instance)
+            self.nwfilter.unfilter_instance(instance, network_info)
         else:
             LOG.info(_('Attempted to unfilter instance %s which is not '
                      'filtered'), instance['id'])

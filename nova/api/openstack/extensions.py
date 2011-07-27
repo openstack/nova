@@ -23,6 +23,7 @@ import sys
 import routes
 import webob.dec
 import webob.exc
+from xml.etree import ElementTree
 
 from nova import exception
 from nova import flags
@@ -194,7 +195,7 @@ class ExtensionsResource(wsgi.Resource):
     def show(self, req, id):
         # NOTE(dprince): the extensions alias is used as the 'id' for show
         ext = self.extension_manager.extensions[id]
-        return self._translate(ext)
+        return dict(extension=self._translate(ext))
 
     def delete(self, req, id):
         raise faults.Fault(webob.exc.HTTPNotFound())
@@ -258,15 +259,18 @@ class ExtensionMiddleware(base_wsgi.Middleware):
 
         mapper = routes.Mapper()
 
+        serializer = wsgi.ResponseSerializer(
+            {'application/xml': ExtensionsXMLSerializer()})
         # extended resources
         for resource in ext_mgr.get_resources():
             LOG.debug(_('Extended resource: %s'),
                         resource.collection)
             mapper.resource(resource.collection, resource.collection,
-                            controller=wsgi.Resource(resource.controller),
-                            collection=resource.collection_actions,
-                            member=resource.member_actions,
-                            parent_resource=resource.parent)
+                controller=wsgi.Resource(
+                    resource.controller, serializer=serializer),
+                collection=resource.collection_actions,
+                member=resource.member_actions,
+                parent_resource=resource.parent)
 
         # extended actions
         action_resources = self._action_ext_resources(application, ext_mgr,
@@ -462,3 +466,40 @@ class ResourceExtension(object):
         self.parent = parent
         self.collection_actions = collection_actions
         self.member_actions = member_actions
+
+
+class ExtensionsXMLSerializer(wsgi.XMLDictSerializer):
+
+    def show(self, ext_dict):
+        ext = self._create_ext_elem(ext_dict['extension'])
+        return self._to_xml(ext)
+
+    def index(self, exts_dict):
+        exts = ElementTree.Element('extensions')
+        for ext_dict in exts_dict['extensions']:
+            exts.append(self._create_ext_elem(ext_dict))
+        return self._to_xml(exts)
+
+    def _create_ext_elem(self, ext_dict):
+        """Create an extension xml element from a dict."""
+        ext_elem = ElementTree.Element('extension')
+        ext_elem.set('name', ext_dict['name'])
+        ext_elem.set('namespace', ext_dict['namespace'])
+        ext_elem.set('alias', ext_dict['alias'])
+        ext_elem.set('updated', ext_dict['updated'])
+        desc = ElementTree.Element('description')
+        desc.text = ext_dict['description']
+        ext_elem.append(desc)
+        for link in ext_dict.get('links', []):
+            elem = ElementTree.Element('atom:link')
+            elem.set('rel', link['rel'])
+            elem.set('href', link['href'])
+            elem.set('type', link['type'])
+            ext_elem.append(elem)
+        return ext_elem
+
+    def _to_xml(self, root):
+        """Convert the xml tree object to an xml string."""
+        root.set('xmlns', wsgi.XMLNS_V11)
+        root.set('xmlns:atom', wsgi.XMLNS_ATOM)
+        return ElementTree.tostring(root, encoding='UTF-8')

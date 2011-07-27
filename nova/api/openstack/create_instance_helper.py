@@ -71,9 +71,12 @@ class CreateInstanceHelper(object):
         if not body:
             raise exc.HTTPUnprocessableEntity()
 
-        context = req.environ['nova.context']
+        if not 'server' in body:
+            raise exc.HTTPUnprocessableEntity()
 
-        password = self.controller._get_server_admin_password(body['server'])
+        server_dict = body['server']
+        context = req.environ['nova.context']
+        password = self.controller._get_server_admin_password(server_dict)
 
         key_name = None
         key_data = None
@@ -95,7 +98,7 @@ class CreateInstanceHelper(object):
                                                                     locals())
             raise exc.HTTPBadRequest(explanation=msg)
 
-        personality = body['server'].get('personality')
+        personality = server_dict.get('personality')
 
         injected_files = []
         if personality:
@@ -107,18 +110,18 @@ class CreateInstanceHelper(object):
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        if not 'name' in body['server']:
+        if not 'name' in server_dict:
             msg = _("Server name is not defined")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        zone_blob = body['server'].get('blob')
-        name = body['server']['name']
+        zone_blob = server_dict.get('blob')
+        name = server_dict['name']
         self._validate_server_name(name)
         name = name.strip()
 
-        reservation_id = body['server'].get('reservation_id')
-        min_count = body['server'].get('min_count')
-        max_count = body['server'].get('max_count')
+        reservation_id = server_dict.get('reservation_id')
+        min_count = server_dict.get('min_count')
+        max_count = server_dict.get('max_count')
         # min_count and max_count are optional.  If they exist, they come
         # in as strings.  We want to default 'min_count' to 1, and default
         # 'max_count' to be 'min_count'.
@@ -145,7 +148,7 @@ class CreateInstanceHelper(object):
                                   display_description=name,
                                   key_name=key_name,
                                   key_data=key_data,
-                                  metadata=body['server'].get('metadata', {}),
+                                  metadata=server_dict.get('metadata', {}),
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,
@@ -282,7 +285,7 @@ class CreateInstanceHelper(object):
         return password
 
 
-class ServerXMLDeserializer(wsgi.XMLDeserializer):
+class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
     """
     Deserializer to handle xml-formatted server create requests.
 
@@ -299,11 +302,12 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
     def _extract_server(self, node):
         """Marshal the server attribute of a parsed request"""
         server = {}
-        server_node = self._find_first_child_named(node, 'server')
+        server_node = self.find_first_child_named(node, 'server')
         for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
-        metadata = self._extract_metadata(server_node)
+        metadata_node = self.find_first_child_named(server_node, "metadata")
+        metadata = self.extract_metadata(metadata_node)
         if metadata is not None:
             server["metadata"] = metadata
         personality = self._extract_personality(server_node)
@@ -311,49 +315,17 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
             server["personality"] = personality
         return server
 
-    def _extract_metadata(self, server_node):
-        """Marshal the metadata attribute of a parsed request"""
-        metadata_node = self._find_first_child_named(server_node, "metadata")
-        if metadata_node is None:
-            return None
-        metadata = {}
-        for meta_node in self._find_children_named(metadata_node, "meta"):
-            key = meta_node.getAttribute("key")
-            metadata[key] = self._extract_text(meta_node)
-        return metadata
-
     def _extract_personality(self, server_node):
         """Marshal the personality attribute of a parsed request"""
         personality_node = \
-                self._find_first_child_named(server_node, "personality")
+                self.find_first_child_named(server_node, "personality")
         if personality_node is None:
             return None
         personality = []
-        for file_node in self._find_children_named(personality_node, "file"):
+        for file_node in self.find_children_named(personality_node, "file"):
             item = {}
             if file_node.hasAttribute("path"):
                 item["path"] = file_node.getAttribute("path")
-            item["contents"] = self._extract_text(file_node)
+            item["contents"] = self.extract_text(file_node)
             personality.append(item)
         return personality
-
-    def _find_first_child_named(self, parent, name):
-        """Search a nodes children for the first child with a given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                return node
-        return None
-
-    def _find_children_named(self, parent, name):
-        """Return all of a nodes children who have the given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                yield node
-
-    def _extract_text(self, node):
-        """Get the text field contained by the given node"""
-        if len(node.childNodes) == 1:
-            child = node.childNodes[0]
-            if child.nodeType == child.TEXT_NODE:
-                return child.nodeValue
-        return ""
