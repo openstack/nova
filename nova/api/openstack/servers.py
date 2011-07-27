@@ -447,7 +447,6 @@ class ControllerV10(Controller):
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
-        instance_id = int(instance_id)
 
         try:
             image_id = info["rebuild"]["imageId"]
@@ -459,7 +458,7 @@ class ControllerV10(Controller):
         try:
             self.compute_api.rebuild(context, instance_id, image_id)
         except exception.BuildInProgress:
-            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             raise exc.HTTPConflict(explanation=msg)
 
@@ -560,7 +559,6 @@ class ControllerV11(Controller):
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
-        instance_id = int(instance_id)
 
         try:
             image_href = info["rebuild"]["imageRef"]
@@ -581,7 +579,7 @@ class ControllerV11(Controller):
             self.compute_api.rebuild(context, instance_id, image_href, name,
                                      metadata, personalities)
         except exception.BuildInProgress:
-            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             raise exc.HTTPConflict(explanation=msg)
 
