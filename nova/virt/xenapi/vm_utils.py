@@ -520,7 +520,7 @@ class VMHelper(HelperBase):
         # DISK restores
         LOG.debug(_("Fetching image %(image)s") % locals())
         LOG.debug(_("Image Type: %s"), ImageType.to_string(image_type))
-        sr_ref = None
+
         if image_type == ImageType.DISK_ISO:
             sr_ref = safe_find_iso_sr(session)
             LOG.debug(_("ISO: Found sr possibly containing the ISO image"))

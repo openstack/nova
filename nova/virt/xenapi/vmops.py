@@ -238,6 +238,21 @@ class VMOps(object):
 
             raise vm_create_error
 
+        # Add disks to VM
+        self._attach_disks(instance, disk_image_type, vm_ref, first_vdi_ref,
+            vdis)
+
+        # Alter the image before VM start for, e.g. network injection
+        if FLAGS.xenapi_inject_image:
+            VMHelper.preconfigure_instance(self._session, instance,
+                                           first_vdi_ref, network_info)
+
+        self.create_vifs(vm_ref, instance, network_info)
+        self.inject_network_info(instance, network_info, vm_ref)
+        return vm_ref
+
+    def _attach_disks(self, instance, disk_image_type, vm_ref, first_vdi_ref,
+            vdis):
         # device 0 reserved for RW disk
         userdevice = 0
 
@@ -253,7 +268,7 @@ class VMOps(object):
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=False)
 
-            # device 1 reserved for rescue disk so use '2', we've used '0'
+            # device 1 reserved for rescue disk and we've used '0'
             userdevice = 2
             VMHelper.create_cd_vbd(session=self._session, vm_ref=vm_ref,
                     vdi_ref=cd_vdi_ref, userdevice=userdevice, bootable=True)
@@ -264,7 +279,7 @@ class VMOps(object):
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=True)
             # set user device to next free value
-            # userdevice 1 is reserved for rescue, we've used '0'
+            # userdevice 1 is reserved for rescue and we've used '0'
             userdevice = 2
 
         # Attach any other disks
@@ -277,15 +292,6 @@ class VMOps(object):
                     vdi_ref=vdi_ref, userdevice=userdevice,
                     bootable=False)
             userdevice += 1
-
-        # Alter the image before VM start for, e.g. network injection
-        if FLAGS.xenapi_inject_image:
-            VMHelper.preconfigure_instance(self._session, instance,
-                                           first_vdi_ref, network_info)
-
-        self.create_vifs(vm_ref, instance, network_info)
-        self.inject_network_info(instance, network_info, vm_ref)
-        return vm_ref
 
     def _spawn(self, instance, vm_ref):
         """Spawn a new instance."""
