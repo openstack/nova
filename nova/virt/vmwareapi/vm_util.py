@@ -110,7 +110,8 @@ def create_network_spec(client_factory, network_name, mac_address,
     # ephemeral. Invalid configuration if set to static and the NIC does
     # not come up on boot if set to dynamic.
     backing = None
-    if (network_ref['type'] == "DistributedVirtualPortgroup"):
+    if (network_ref and
+        network_ref['type'] == "DistributedVirtualPortgroup"):
         backing_name = \
          'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo'
         backing = \
