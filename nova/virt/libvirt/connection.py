@@ -364,9 +364,6 @@ class LibvirtConnection(driver.ComputeDriver):
                          <source protocol='%s' name='%s'/>
                          <target dev='%s' bus='virtio'/>
                      </disk>""" % (protocol, name, mount_device)
-        else:
-            raise exception.InvalidDevicePath(path=device_path)
-
         virt_dom.attachDevice(xml)
 
     def _get_disk_xml(self, xml, device):
@@ -955,7 +952,6 @@ class LibvirtConnection(driver.ComputeDriver):
                 return True
         return False
 
-    @exception.wrap_exception
     def _get_volume_device_info(self, device_path):
         if device_path.startswith('/dev/'):
             return ('block', None, None)
