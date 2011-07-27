@@ -206,6 +206,14 @@ class VersionV11(object):
 
 
 class VersionsRequestDeserializer(wsgi.RequestDeserializer):
+    def get_expected_content_type(self, request):
+        supported_content_types = list(self.supported_content_types)
+        if request.path != '/':
+            # Remove atom+xml accept type for 300 responses
+            del supported_content_types[2]
+
+        return request.best_match_content_type(supported_content_types)
+
     def get_action_args(self, request_environment):
         """Parse dictionary created by routes library."""
         args = {}
