@@ -1065,11 +1065,13 @@ class IptablesFirewallTestCase(test.TestCase):
         instance = db.instance_get(self.context, inst_id)
 
         ip = '10.11.12.13'
-        network_ref = db.project_get_network(self.context, 'fake')
+        network_ref = db.project_get_networks(self.context, 'fake')[0]
         fixed_ip = {'address': ip, 'network_id': network_ref['id']}
         db.fixed_ip_create(admin_ctxt, fixed_ip)
         db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
                                             'instance_id': inst_id})
+
+        _setup_networking(inst_id, ip)
         self.fw.setup_basic_filtering(instance)
         self.fw.prepare_instance_filter(instance)
         self.fw.apply_instance_filter(instance)
@@ -1086,7 +1088,7 @@ class IptablesFirewallTestCase(test.TestCase):
         instance_ref = self._create_instance_ref()
         nw_info = _create_network_info(1)
         ip = '10.11.12.13'
-        network_ref = db.project_get_network(self.context, 'fake')
+        network_ref = db.project_get_networks(self.context, 'fake')[0]
         admin_ctxt = context.get_admin_context()
         fixed_ip = {'address': ip, 'network_id': network_ref['id']}
         db.fixed_ip_create(admin_ctxt, fixed_ip)
@@ -1288,7 +1290,7 @@ class NWFilterTestCase(test.TestCase):
         db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
                                             'instance_id': inst_id})
 
-        self._setup_networking(instance_ref['id'], ip=ip)
+        _setup_networking(instance_ref['id'], ip=ip)
 
         def _ensure_all_called():
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
@@ -1341,7 +1343,7 @@ class NWFilterTestCase(test.TestCase):
         instance = db.instance_get(self.context, inst_id)
 
         ip = '10.11.12.13'
-        network_ref = db.project_get_network(self.context, 'fake')
+        network_ref = db.project_get_networks(self.context, 'fake')[0]
         fixed_ip = {'address': ip, 'network_id': network_ref['id']}
         db.fixed_ip_create(admin_ctxt, fixed_ip)
         db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
@@ -1350,6 +1352,7 @@ class NWFilterTestCase(test.TestCase):
         self.fw.prepare_instance_filter(instance)
         self.fw.apply_instance_filter(instance)
         original_filter_count = len(fakefilter.filters)
+        raise Exception(original_filter_count)
         self.fw.unfilter_instance(instance)
 
         # should undefine 2 filters: instance and instance-secgroup
