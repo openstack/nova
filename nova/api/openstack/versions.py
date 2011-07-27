@@ -104,9 +104,7 @@ class Versions(wsgi.Resource):
     @classmethod
     def factory(cls, global_config, **local_config):
         """Paste factory."""
-        def _factory(app):
-            return cls(app, **local_config)
-        return _factory
+        return cls()
 
     def __init__(self):
         metadata = {
