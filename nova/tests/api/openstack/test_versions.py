@@ -173,8 +173,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
         root = xml.etree.ElementTree.XML(res.body)
         self.assertEqual(root.tag.split('}')[1], "version")
-        self.assertEqual(root.tag.split('}')[0].strip('{'),
-                         "%sv1.0" % OS_XMLNS_BASE)
+        self.assertEqual(root.tag.split('}')[0].strip('{'), OS_XMLNS_BASE)
 
         children = list(root)
         media_types = children[0]
@@ -188,7 +187,7 @@ class VersionsTest(test.TestCase):
         expected = """
         <version id="v1.0" status="DEPRECATED"
              updated="2011-01-21T11:33:21Z"
-             xmlns="%sv1.0"
+             xmlns="%s"
              xmlns:atom="http://www.w3.org/2005/Atom">
 
             <media-types>
@@ -224,7 +223,7 @@ class VersionsTest(test.TestCase):
         expected = """
         <version id="v1.1" status="CURRENT"
              updated="2011-01-21T11:33:21Z"
-             xmlns="%sv1.1"
+             xmlns="%s"
              xmlns:atom="http://www.w3.org/2005/Atom">
 
             <media-types>
@@ -259,7 +258,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
 
         expected = """
-        <versions xmlns="%sv1.0" xmlns:atom="%s">
+        <versions xmlns="%s" xmlns:atom="%s">
             <version id="v1.1" status="CURRENT" updated="2011-07-18T11:30:00Z">
                 <atom:link href="http://localhost/v1.1/" rel="self"/>
             </version>
@@ -451,7 +450,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
 
         expected = """
-        <choices xmlns="%sv1.0" xmlns:atom="%s">
+        <choices xmlns="%s" xmlns:atom="%s">
           <version id="v1.1" status="CURRENT">
             <media-types>
               <media-type base="application/xml"
@@ -584,8 +583,7 @@ class VersionsTest(test.TestCase):
 
         root = xml.etree.ElementTree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "versions")
-        self.assertEqual(root.tag.split('}')[0].strip('{'),
-                         "%sv1.0" % OS_XMLNS_BASE)
+        self.assertEqual(root.tag.split('}')[0].strip('{'), OS_XMLNS_BASE)
         version = list(root)[0]
         self.assertEqual(version.tag.split('}')[1], "version")
         self.assertEqual(version.get('id'),
@@ -623,8 +621,7 @@ class VersionsTest(test.TestCase):
 
         root = xml.etree.ElementTree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "choices")
-        self.assertEqual(root.tag.split('}')[0].strip('{'),
-                         "%sv1.0" % OS_XMLNS_BASE)
+        self.assertEqual(root.tag.split('}')[0].strip('{'), OS_XMLNS_BASE)
         version = list(root)[0]
         self.assertEqual(version.tag.split('}')[1], "version")
         self.assertEqual(version.get('id'), versions_data['choices'][0]['id'])
