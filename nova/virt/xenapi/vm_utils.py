@@ -377,7 +377,8 @@ class VMHelper(HelperBase):
                   'glance_host': glance_host,
                   'glance_port': glance_port,
                   'sr_path': cls.get_sr_path(session),
-                  'os_type': os_type}
+                  'os_type': os_type,
+                  'auth_token': getattr(context, 'auth_token', None)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
@@ -429,7 +430,8 @@ class VMHelper(HelperBase):
                   'glance_host': glance_host,
                   'glance_port': glance_port,
                   'uuid_stack': uuid_stack,
-                  'sr_path': cls.get_sr_path(session)}
+                  'sr_path': cls.get_sr_path(session),
+                  'auth_token': getattr(context, 'auth_token', None)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
@@ -475,6 +477,7 @@ class VMHelper(HelperBase):
         sr_ref = safe_find_sr(session)
 
         glance_client, image_id = nova.image.get_glance_client(image)
+        glance_client.set_auth_token(getattr(context, 'auth_token', None))
         meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
