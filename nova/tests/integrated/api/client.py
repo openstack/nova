@@ -71,8 +71,8 @@ class TestOpenStackClient(object):
         self.auth_uri = auth_uri
 
     def request(self, url, method='GET', body=None, headers=None):
-        if headers is None:
-            headers = {}
+        _headers = {'Content-Type': 'application/json'}
+        _headers.update(headers or {})
 
         parsed_url = urlparse.urlparse(url)
         port = parsed_url.port
@@ -94,9 +94,8 @@ class TestOpenStackClient(object):
         LOG.info(_("Doing %(method)s on %(relative_url)s") % locals())
         if body:
             LOG.info(_("Body: %s") % body)
-            headers.setdefault('Content-Type', 'application/json')
 
-        conn.request(method, relative_url, body, headers)
+        conn.request(method, relative_url, body, _headers)
         response = conn.getresponse()
         return response
 
@@ -173,9 +172,20 @@ class TestOpenStackClient(object):
         response = self.api_request(relative_uri, **kwargs)
         return self._decode_json(response)
 
+    def api_put(self, relative_uri, body, **kwargs):
+        kwargs['method'] = 'PUT'
+        if body:
+            headers = kwargs.setdefault('headers', {})
+            headers['Content-Type'] = 'application/json'
+            kwargs['body'] = json.dumps(body)
+
+        kwargs.setdefault('check_response_status', [200, 202, 204])
+        response = self.api_request(relative_uri, **kwargs)
+        return self._decode_json(response)
+
     def api_delete(self, relative_uri, **kwargs):
         kwargs['method'] = 'DELETE'
-        kwargs.setdefault('check_response_status', [200, 202])
+        kwargs.setdefault('check_response_status', [200, 202, 204])
         return self.api_request(relative_uri, **kwargs)
 
     def get_server(self, server_id):
@@ -187,6 +197,9 @@ class TestOpenStackClient(object):
 
     def post_server(self, server):
         return self.api_post('/servers', server)['server']
+
+    def put_server(self, server_id, server):
+        return self.api_put('/servers/%s' % server_id, server)
 
     def post_server_action(self, server_id, data):
         return self.api_post('/servers/%s/action' % server_id, data)

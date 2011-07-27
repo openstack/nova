@@ -262,14 +262,6 @@ def generate_uid(topic, size=8):
     return '%s-%s' % (topic, ''.join(choices))
 
 
-def generate_mac():
-    mac = [0x02, 0x16, 0x3e,
-           random.randint(0x00, 0x7f),
-           random.randint(0x00, 0xff),
-           random.randint(0x00, 0xff)]
-    return ':'.join(map(lambda x: '%02x' % x, mac))
-
-
 # Default symbols to use for passwords. Avoids visually confusing characters.
 # ~6 bits per symbol
 DEFAULT_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0,1
@@ -770,6 +762,17 @@ def is_uuid_like(val):
     if not isinstance(val, basestring):
         return False
     return (len(val) == 36) and (val.count('-') == 4)
+
+
+def bool_from_str(val):
+    """Convert a string representation of a bool into a bool value"""
+
+    if not val:
+        return False
+    try:
+        return True if int(val) else False
+    except ValueError:
+        return val.lower() == 'true'
 
 
 class Bootstrapper(object):

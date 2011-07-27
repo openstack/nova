@@ -40,7 +40,7 @@ def split_datastore_path(datastore_path):
 
 def get_vm_create_spec(client_factory, instance, data_store_name,
                        network_name="vmnet0",
-                       os_type="otherGuest"):
+                       os_type="otherGuest", network_ref=None):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = instance.name
@@ -61,8 +61,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.numCPUs = int(instance.vcpus)
     config_spec.memoryMB = int(instance.memory_mb)
 
+    mac_address = None
+    if instance['mac_addresses']:
+        mac_address = instance['mac_addresses'][0]['address']
+
     nic_spec = create_network_spec(client_factory,
-                                    network_name, instance.mac_address)
+                                    network_name, mac_address)
 
     device_config_spec = [nic_spec]
 
@@ -89,7 +93,8 @@ def create_controller_spec(client_factory, key):
     return virtual_device_config
 
 
-def create_network_spec(client_factory, network_name, mac_address):
+def create_network_spec(client_factory, network_name, mac_address,
+                        network_ref=None):
     """
     Builds a config spec for the addition of a new network
     adapter to the VM.
@@ -101,9 +106,24 @@ def create_network_spec(client_factory, network_name, mac_address):
     # Get the recommended card type for the VM based on the guest OS of the VM
     net_device = client_factory.create('ns0:VirtualPCNet32')
 
-    backing = \
-        client_factory.create('ns0:VirtualEthernetCardNetworkBackingInfo')
-    backing.deviceName = network_name
+    # NOTE(asomya): Only works on ESXi if the portgroup binding is set to
+    # ephemeral. Invalid configuration if set to static and the NIC does
+    # not come up on boot if set to dynamic.
+    backing = None
+    if (network_ref['type'] == "DistributedVirtualPortgroup"):
+        backing_name = \
+         'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo'
+        backing = \
+         client_factory.create(backing_name)
+        portgroup = \
+         client_factory.create('ns0:DistributedVirtualSwitchPortConnection')
+        portgroup.switchUuid = network_ref['dvsw']
+        portgroup.portgroupKey = network_ref['dvpg']
+        backing.port = portgroup
+    else:
+        backing = \
+         client_factory.create('ns0:VirtualEthernetCardNetworkBackingInfo')
+        backing.deviceName = network_name
 
     connectable_spec = \
         client_factory.create('ns0:VirtualDeviceConnectInfo')
@@ -274,9 +294,11 @@ def get_dummy_vm_create_spec(client_factory, name, data_store_name):
     return config_spec
 
 
-def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask, gateway):
+def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask,
+                               gateway, broadcast, dns):
     """Builds the machine id change config spec."""
-    machine_id_str = "%s;%s;%s;%s" % (mac, ip_addr, netmask, gateway)
+    machine_id_str = "%s;%s;%s;%s;%s;%s" % (mac, ip_addr, netmask,
+                                            gateway, broadcast, dns)
     virtual_machine_config_spec = \
         client_factory.create('ns0:VirtualMachineConfigSpec')
 

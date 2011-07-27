@@ -1,4 +1,7 @@
+Adam Gandelman <adamg@canonical.com>
+Adam Johnson <adjohn@gmail.com>
 Alex Meade <alex.meade@rackspace.com>
+Alexander Sakhnov <asakhnov@mirantis.com>
 Andrey Brindeyev <abrindeyev@griddynamics.com>
 Andy Smith <code@term.ie>
 Andy Southgate <andy.southgate@citrix.com>
@@ -6,6 +9,7 @@ Anne Gentle <anne@openstack.org>
 Anthony Young <sleepsonthefloor@gmail.com>
 Antony Messerli <ant@openstack.org>
 Armando Migliaccio <Armando.Migliaccio@eu.citrix.com>
+Arvind Somya <asomya@cisco.com>
 Bilal Akhtar <bilalakhtar@ubuntu.com>
 Brian Lamar <brian.lamar@rackspace.com>
 Brian Schott <bschott@isi.edu>
@@ -17,9 +21,11 @@ Christian Berendt <berendt@b1-systems.de>
 Chuck Short <zulcss@ubuntu.com>
 Cory Wright <corywright@gmail.com>
 Dan Prince <dan.prince@rackspace.com>
+Dan Wendlandt <dan@nicira.com>
 Dave Walker <DaveWalker@ubuntu.com>
 David Pravec <David.Pravec@danix.org>
 Dean Troyer <dtroyer@gmail.com>
+Devendra Modium <dmodium@isi.edu>
 Devin Carlen <devin.carlen@gmail.com>
 Donal Lafferty <donal.lafferty@citrix.com>
 Ed Leafe <ed@leafe.com>
@@ -44,6 +50,7 @@ John Dewey <john@dewey.ws>
 John Tran <jtran@attinteractive.com>
 Jonathan Bryce <jbryce@jbryce.com>
 Jordan Rinke <jordan@openstack.org>
+Joseph Suh <jsuh@isi.edu>
 Josh Durgin <joshd@hq.newdream.net>
 Josh Kearney <josh@jk0.org>
 Josh Kleinpeter <josh@kleinpeter.org>
@@ -63,12 +70,14 @@ Masanori Itoh <itoumsn@nttdata.co.jp>
 Matt Dietz <matt.dietz@rackspace.com>
 Michael Gundlach <michael.gundlach@rackspace.com>
 Mike Scherbakov <mihgen@gmail.com>
+Mohammed Naser <mnaser@vexxhost.com>
 Monsyne Dragon <mdragon@rackspace.com>
 Monty Taylor <mordred@inaugust.com>
 MORITA Kazutaka <morita.kazutaka@gmail.com>
 Muneyuki Noguchi <noguchimn@nttdata.co.jp>
 Nachi Ueno <ueno.nachi@lab.ntt.co.jp>
 Naveed Massjouni <naveedm9@gmail.com>
+Nikolay Sokolov <nsokolov@griddynamics.com>
 Nirmal Ranganathan <nirmal.ranganathan@rackspace.com>
 Paul Voccio <paul@openstack.org>
 Renuka Apte <renuka.apte@citrix.com>
@@ -78,10 +87,13 @@ Rick Harris <rconradharris@gmail.com>
 Rob Kost <kost@isi.edu>
 Ryan Lane <rlane@wikimedia.org>
 Ryan Lucio <rlucio@internap.com>
+Ryu Ishimoto <ryu@midokura.jp>
 Salvatore Orlando <salvatore.orlando@eu.citrix.com>
 Sandy Walsh <sandy.walsh@rackspace.com>
 Sateesh Chodapuneedi <sateesh.chodapuneedi@citrix.com>
+Scott Moser <smoser@ubuntu.com>
 Soren Hansen <soren.hansen@rackspace.com>
+Stephanie Reese <reese.sm@gmail.com>
 Thierry Carrez <thierry@openstack.org>
 Todd Willey <todd@ansolabs.com>
 Trey Morris <trey.morris@rackspace.com>

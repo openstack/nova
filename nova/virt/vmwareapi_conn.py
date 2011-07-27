@@ -124,21 +124,21 @@ class VMWareESXConnection(driver.ComputeDriver):
         """List VM instances."""
         return self._vmops.list_instances()
 
-    def spawn(self, instance, network_info=None, block_device_mapping=None):
+    def spawn(self, instance, network_info, block_device_mapping=None):
         """Create VM instance."""
-        self._vmops.spawn(instance)
+        self._vmops.spawn(instance, network_info)
 
     def snapshot(self, instance, name):
         """Create snapshot from a running VM instance."""
         self._vmops.snapshot(instance, name)
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot VM instance."""
-        self._vmops.reboot(instance)
+        self._vmops.reboot(instance, network_info)
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         """Destroy VM instance."""
-        self._vmops.destroy(instance)
+        self._vmops.destroy(instance, network_info)
 
     def pause(self, instance, callback):
         """Pause VM instance."""
@@ -189,6 +189,14 @@ class VMWareESXConnection(driver.ComputeDriver):
     def update_available_resource(self, ctxt, host):
         """This method is supported only by libvirt."""
         return
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        pass
+
+    def plug_vifs(self, instance, network_info):
+        """Plugs in VIFs to networks."""
+        self._vmops.plug_vifs(instance, network_info)
 
 
 class VMWareAPISession(object):

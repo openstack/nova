@@ -15,6 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE(vish): this forces the fixtures from tests/__init.py:setup() to work
+from nova.tests import *
+
 import webob.dec
 from nova import test
 

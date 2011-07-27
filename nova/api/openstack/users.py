@@ -19,7 +19,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 from nova.auth import manager
 
@@ -69,7 +68,7 @@ class Controller(object):
             user = None
 
         if user is None:
-            raise faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         return dict(user=_translate_keys(user))
 
@@ -105,8 +104,10 @@ def create_resource():
         },
     }
 
-    serializers = {
+    body_serializers = {
         'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
     }
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    serializer = wsgi.ResponseSerializer(body_serializers)
+
+    return wsgi.Resource(Controller(), serializer=serializer)

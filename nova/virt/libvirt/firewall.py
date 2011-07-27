@@ -46,7 +46,7 @@ class FirewallDriver(object):
         At this point, the instance isn't running yet."""
         raise NotImplementedError()
 
-    def unfilter_instance(self, instance):
+    def unfilter_instance(self, instance, network_info=None):
         """Stop filtering instance"""
         raise NotImplementedError()
 
@@ -300,9 +300,10 @@ class NWFilterFirewall(FirewallDriver):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
-    def unfilter_instance(self, instance):
+    def unfilter_instance(self, instance, network_info=None):
         """Clear out the nwfilter rules."""
-        network_info = netutils.get_network_info(instance)
+        if not network_info:
+            network_info = netutils.get_network_info(instance)
         instance_name = instance.name
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
@@ -542,11 +543,11 @@ class IptablesFirewallDriver(FirewallDriver):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
-    def unfilter_instance(self, instance):
+    def unfilter_instance(self, instance, network_info=None):
         if self.instances.pop(instance['id'], None):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
-            self.nwfilter.unfilter_instance(instance)
+            self.nwfilter.unfilter_instance(instance, network_info)
         else:
             LOG.info(_('Attempted to unfilter instance %s which is not '
                      'filtered'), instance['id'])
@@ -620,7 +621,7 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules += ['-j $provider']
         ipv6_rules += ['-j $provider']
 
-        dhcp_servers = [network['gateway'] for (network, _m) in network_info]
+        dhcp_servers = [info['gateway'] for (_n, info) in network_info]
 
         for dhcp_server in dhcp_servers:
             ipv4_rules.append('-s %s -p udp --sport 67 --dport 68 '
@@ -637,7 +638,7 @@ class IptablesFirewallDriver(FirewallDriver):
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            gateways_v6 = [network['gateway_v6'] for (network, _m) in
+            gateways_v6 = [mapping['gateway6'] for (_n, mapping) in
                            network_info]
             for gateway_v6 in gateways_v6:
                 ipv6_rules.append(
@@ -645,8 +646,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
             #Allow project network traffic
             if FLAGS.allow_project_net_traffic:
-                cidrv6s = [network['cidr_v6'] for (network, _m)
-                          in network_info]
+                cidrv6s = [network['cidr_v6'] for (network, _m) in
+                           network_info]
 
                 for cidrv6 in cidrv6s:
                     ipv6_rules.append('-s %s -j ACCEPT' % (cidrv6,))

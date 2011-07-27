@@ -161,12 +161,12 @@ class PaginationParamsTest(test.TestCase):
     def test_no_params(self):
         """ Test no params. """
         req = Request.blank('/')
-        self.assertEqual(common.get_pagination_params(req), (0, 0))
+        self.assertEqual(common.get_pagination_params(req), {})
 
     def test_valid_marker(self):
         """ Test valid marker param. """
         req = Request.blank('/?marker=1')
-        self.assertEqual(common.get_pagination_params(req), (1, 0))
+        self.assertEqual(common.get_pagination_params(req), {'marker': 1})
 
     def test_invalid_marker(self):
         """ Test invalid marker param. """
@@ -177,10 +177,91 @@ class PaginationParamsTest(test.TestCase):
     def test_valid_limit(self):
         """ Test valid limit param. """
         req = Request.blank('/?limit=10')
-        self.assertEqual(common.get_pagination_params(req), (0, 10))
+        self.assertEqual(common.get_pagination_params(req), {'limit': 10})
 
     def test_invalid_limit(self):
         """ Test invalid limit param. """
         req = Request.blank('/?limit=-2')
         self.assertRaises(
             webob.exc.HTTPBadRequest, common.get_pagination_params, req)
+
+    def test_valid_limit_and_marker(self):
+        """ Test valid limit and marker parameters. """
+        req = Request.blank('/?limit=20&marker=40')
+        self.assertEqual(common.get_pagination_params(req),
+                         {'marker': 40, 'limit': 20})
+
+
+class MiscFunctionsTest(test.TestCase):
+
+    def test_remove_version_from_href(self):
+        fixture = 'http://www.testsite.com/v1.1/images'
+        expected = 'http://www.testsite.com/images'
+        actual = common.remove_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
+    def test_remove_version_from_href_2(self):
+        fixture = 'http://www.testsite.com/v1.1/'
+        expected = 'http://www.testsite.com/'
+        actual = common.remove_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
+    def test_remove_version_from_href_3(self):
+        fixture = 'http://www.testsite.com/v10.10'
+        expected = 'http://www.testsite.com'
+        actual = common.remove_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
+    def test_remove_version_from_href_4(self):
+        fixture = 'http://www.testsite.com/v1.1/images/v10.5'
+        expected = 'http://www.testsite.com/images/v10.5'
+        actual = common.remove_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
+    def test_remove_version_from_href_bad_request(self):
+        fixture = 'http://www.testsite.com/1.1/images'
+        self.assertRaises(ValueError,
+                          common.remove_version_from_href,
+                          fixture)
+
+    def test_remove_version_from_href_bad_request_2(self):
+        fixture = 'http://www.testsite.com/v/images'
+        self.assertRaises(ValueError,
+                          common.remove_version_from_href,
+                          fixture)
+
+    def test_remove_version_from_href_bad_request_3(self):
+        fixture = 'http://www.testsite.com/v1.1images'
+        self.assertRaises(ValueError,
+                          common.remove_version_from_href,
+                          fixture)
+
+    def test_get_id_from_href(self):
+        fixture = 'http://www.testsite.com/dir/45'
+        actual = common.get_id_from_href(fixture)
+        expected = 45
+        self.assertEqual(actual, expected)
+
+    def test_get_id_from_href_bad_request(self):
+        fixture = 'http://45'
+        self.assertRaises(ValueError,
+                          common.get_id_from_href,
+                          fixture)
+
+    def test_get_version_from_href(self):
+        fixture = 'http://www.testsite.com/v1.1/images'
+        expected = '1.1'
+        actual = common.get_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
+    def test_get_version_from_href_2(self):
+        fixture = 'http://www.testsite.com/v1.1'
+        expected = '1.1'
+        actual = common.get_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
+    def test_get_version_from_href_default(self):
+        fixture = 'http://www.testsite.com/images'
+        expected = '1.0'
+        actual = common.get_version_from_href(fixture)
+        self.assertEqual(actual, expected)

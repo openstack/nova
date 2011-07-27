@@ -129,7 +129,7 @@ class FakeConnection(driver.ComputeDriver):
             info_list.append(self._map_to_instance_info(instance))
         return info_list
 
-    def spawn(self, instance, network_info=None, block_device_mapping=None):
+    def spawn(self, instance, network_info, block_device_mapping=None):
         """
         Create a new instance/VM/domain on the virtualization platform.
 
@@ -167,7 +167,7 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """
         Reboot the specified instance.
 
@@ -240,13 +240,13 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def rescue(self, instance):
+    def rescue(self, instance, callback, network_info):
         """
         Rescue the specified instance.
         """
         pass
 
-    def unrescue(self, instance):
+    def unrescue(self, instance, callback, network_info):
         """
         Unrescue the specified instance.
         """
@@ -293,7 +293,7 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         key = instance.name
         if key in self.instances:
             del self.instances[key]
@@ -499,7 +499,7 @@ class FakeConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         return
 
-    def unfilter_instance(self, instance_ref):
+    def unfilter_instance(self, instance_ref, network_info=None):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
@@ -514,3 +514,7 @@ class FakeConnection(driver.ComputeDriver):
     def get_host_stats(self, refresh=False):
         """Return fake Host Status of ram, disk, network."""
         return self.host_status
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        pass
