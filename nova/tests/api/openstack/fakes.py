@@ -104,8 +104,7 @@ def stub_out_key_pair_funcs(stubs, have_key_pair=True):
 
 def stub_out_image_service(stubs):
     def fake_get_image_service(image_href):
-        image_id = int(str(image_href).split('/')[-1])
-        return (nova.image.fake.FakeImageService(), image_id)
+        return (nova.image.fake.FakeImageService(), image_href)
     stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
     stubs.Set(nova.image, 'get_default_image_service',
         lambda: nova.image.fake.FakeImageService())
