@@ -247,7 +247,6 @@ class VersionsTest(test.TestCase):
                  type="application/vnd.sun.wadl+xml"/>
         </version>""".replace("  ", "").replace("\n", "") % OS_XMLNS_BASE
 
-
         actual = res.body.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, actual)
 
@@ -470,7 +469,7 @@ class VersionsTest(test.TestCase):
             </media-types>
             <atom:link href="http://localhost:80/v1.0/images/1" rel="self"/>
           </version>
-        </choices>""".replace("  ", "").replace("\n","") % (OS_XMLNS_BASE,
+        </choices>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
                                                             ATOM_XMLNS)
 
     def test_multi_choice_server(self):
@@ -586,7 +585,7 @@ class VersionsTest(test.TestCase):
                     <atom:link href="http://test/2.7.1" rel="self"/>
                 </version>
             </versions>""".replace("  ", "").replace("\n", "") % (
-                OS_XMLNS_BASE,ATOM_XMLNS)
+                OS_XMLNS_BASE, ATOM_XMLNS)
 
         serializer = versions.VersionsXMLSerializer()
         response = serializer.index(versions_data)
@@ -623,7 +622,6 @@ class VersionsTest(test.TestCase):
         response = serializer.multi(versions_data)
         response = response.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, response)
-
 
     def test_version_detail_xml_serializer(self):
         version_data = {
