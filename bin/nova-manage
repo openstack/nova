@@ -667,16 +667,16 @@ class NetworkCommands(object):
 
         bridge = bridge or FLAGS.flat_network_bridge
         if not bridge:
-            raise exception.NetworkNotCreated(req='bridge')
-            #TODO(tr3buchet) flat_network_bridge FLAG needs to go away
-            #                or be renamed to bridge
+            bridge_required = ['nova.network.manager.FlatManager',
+                               'nova.network.manager.FlatDHCPManager']
+            if FLAGS.network_manager in bridge_required:
+                raise exception.NetworkNotCreated(req='bridge')
 
         bridge_interface = bridge_interface or FLAGS.flat_interface or \
                            FLAGS.vlan_interface
         if not bridge_interface:
             interface_required = ['nova.network.manager.FlatDHCPManager',
                                   'nova.network.manager.VlanManager']
-            # ensure that bridge interface is set if certain managers are used
             if FLAGS.network_manager in interface_required:
                 raise exception.NetworkNotCreated(req='bridge interface')
 
