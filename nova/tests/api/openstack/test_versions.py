@@ -649,7 +649,6 @@ class VersionsTest(test.TestCase):
         for key, val in versions_data['choices'][0]['links'][0].items():
             self.assertEqual(link.get(key), val)
 
-
     def test_version_detail_xml_serializer(self):
         version_data = {
             "version" : {
