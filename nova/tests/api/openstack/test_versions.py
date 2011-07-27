@@ -471,6 +471,7 @@ class VersionsTest(test.TestCase):
           </version>
         </choices>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
                                                             ATOM_XMLNS)
+
     def test_multi_choice_server_atom(self):
         """
         Make sure multi choice responses do not have content-type
