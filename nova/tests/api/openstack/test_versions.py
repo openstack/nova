@@ -30,74 +30,70 @@ from nova.api.openstack import wsgi
 
 VERSIONS = {
     "v1.0": {
-        "version": {
-            "id": "v1.0",
-            "status": "DEPRECATED",
-            "updated": "2011-01-21T11:33:21Z",
-            "links": [
-                {
-                    "rel": "self",
-                    "href": "http://servers.api.openstack.org/v1.0/"
-                },
-                {
-                    "rel": "describedby",
-                    "type": "application/pdf",
-                    "href": "http://docs.rackspacecloud.com/"
-                    "servers/api/v1.0/cs-devguide-20110125.pdf"
-                },
-                {
-                    "rel": "describedby",
-                    "type": "application/vnd.sun.wadl+xml",
-                    "href": "http://docs.rackspacecloud.com/"
-                    "servers/api/v1.0/application.wadl"
-                },
-            ],
-            "media-types": [
-                {
-                    "base": "application/xml",
-                    "type": "application/vnd.openstack.compute-v1.0+xml"
-                },
-                {
-                    "base": "application/json",
-                    "type": "application/vnd.openstack.compute-v1.0+json"
-                }
-            ],
-        },
+        "id": "v1.0",
+        "status": "DEPRECATED",
+        "updated": "2011-01-21T11:33:21Z",
+        "links": [
+            {
+                "rel": "self",
+                "href": ""
+            },
+            {
+                "rel": "describedby",
+                "type": "application/pdf",
+                "href": "http://docs.rackspacecloud.com/"
+                "servers/api/v1.0/cs-devguide-20110125.pdf"
+            },
+            {
+                "rel": "describedby",
+                "type": "application/vnd.sun.wadl+xml",
+                "href": "http://docs.rackspacecloud.com/"
+                "servers/api/v1.0/application.wadl"
+            },
+        ],
+        "media-types": [
+            {
+                "base": "application/xml",
+                "type": "application/vnd.openstack.compute-v1.0+xml"
+            },
+            {
+                "base": "application/json",
+                "type": "application/vnd.openstack.compute-v1.0+json"
+            }
+        ],
     },
     "v1.1": {
-        "version": {
-            "id": "v1.1",
-            "status": "CURRENT",
-            "updated": "2011-01-21T11:33:21Z",
-            "links": [
-                {
-                    "rel": "self",
-                    "href": "http://servers.api.openstack.org/v1.1/"
-                },
-                {
-                    "rel": "describedby",
-                    "type": "application/pdf",
-                    "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/cs-devguide-20110125.pdf"
-                },
-                {
-                    "rel": "describedby",
-                    "type": "application/vnd.sun.wadl+xml",
-                    "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/application.wadl"
-                },
-            ],
-            "media-types": [
-                {
-                    "base": "application/xml",
-                    "type": "application/vnd.openstack.compute-v1.1+xml"
-                },
-                {
-                    "base": "application/json",
-                    "type": "application/vnd.openstack.compute-v1.1+json"
-                }
-            ],
-        },
+        "id": "v1.1",
+        "status": "CURRENT",
+        "updated": "2011-01-21T11:33:21Z",
+        "links": [
+            {
+                "rel": "self",
+                "href": ""
+            },
+            {
+                "rel": "describedby",
+                "type": "application/pdf",
+                "href": "http://docs.rackspacecloud.com/"
+                    "servers/api/v1.1/cs-devguide-20110125.pdf"
+            },
+            {
+                "rel": "describedby",
+                "type": "application/vnd.sun.wadl+xml",
+                "href": "http://docs.rackspacecloud.com/"
+                    "servers/api/v1.1/application.wadl"
+            },
+        ],
+        "media-types": [
+            {
+                "base": "application/xml",
+                "type": "application/vnd.openstack.compute-v1.1+xml"
+            },
+            {
+                "base": "application/json",
+                "type": "application/vnd.openstack.compute-v1.1+json"
+            }
+        ],
     },
 }
 
@@ -160,7 +156,7 @@ class VersionsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://servers.api.openstack.org/v1.0/"
+                        "href": "http://localhost/v1.0/"
                     },
                     {
                         "rel": "describedby",
@@ -206,7 +202,7 @@ class VersionsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://servers.api.openstack.org/v1.1/"
+                        "href": "http://localhost/v1.1/"
                     },
                     {
                         "rel": "describedby",
@@ -269,7 +265,7 @@ class VersionsTest(test.TestCase):
                      type="application/vnd.openstack.compute-v1.0+json"/>
             </media-types>
 
-            <atom:link href="http://servers.api.openstack.org/v1.0/"
+            <atom:link href="http://localhost/v1.0/"
                  rel="self"/>
 
             <atom:link href="http://docs.rackspacecloud.com/servers/
@@ -305,7 +301,7 @@ class VersionsTest(test.TestCase):
                      type="application/vnd.openstack.compute-v1.1+json"/>
             </media-types>
 
-            <atom:link href="http://servers.api.openstack.org/v1.1/"
+            <atom:link href="http://localhost/v1.1/"
                  rel="self"/>
 
             <atom:link href="http://docs.rackspacecloud.com/servers/
@@ -355,17 +351,17 @@ class VersionsTest(test.TestCase):
         <feed xmlns="http://www.w3.org/2005/Atom">
             <title type="text">About This Version</title>
             <updated>2011-01-21T11:33:21Z</updated>
-            <id>http://servers.api.openstack.org/v1.0/</id>
+            <id>http://localhost/v1.0/</id>
             <author>
                 <name>Rackspace</name>
                 <uri>http://www.rackspace.com/</uri>
             </author>
-            <link href="http://servers.api.openstack.org/v1.0/" rel="self"/>
+            <link href="http://localhost/v1.0/" rel="self"/>
             <entry>
-                <id>http://servers.api.openstack.org/v1.0/</id>
+                <id>http://localhost/v1.0/</id>
                 <title type="text">Version v1.0</title>
                 <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://servers.api.openstack.org/v1.0/"
+                <link href="http://localhost/v1.0/"
                      rel="self"/>
                 <link href="http://docs.rackspacecloud.com/servers/
                     api/v1.0/cs-devguide-20110125.pdf"
@@ -392,17 +388,17 @@ class VersionsTest(test.TestCase):
         <feed xmlns="http://www.w3.org/2005/Atom">
             <title type="text">About This Version</title>
             <updated>2011-01-21T11:33:21Z</updated>
-            <id>http://servers.api.openstack.org/v1.1/</id>
+            <id>http://localhost/v1.1/</id>
             <author>
                 <name>Rackspace</name>
                 <uri>http://www.rackspace.com/</uri>
             </author>
-            <link href="http://servers.api.openstack.org/v1.1/" rel="self"/>
+            <link href="http://localhost/v1.1/" rel="self"/>
             <entry>
-                <id>http://servers.api.openstack.org/v1.1/</id>
+                <id>http://localhost/v1.1/</id>
                 <title type="text">Version v1.1</title>
                 <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://servers.api.openstack.org/v1.1/"
+                <link href="http://localhost/v1.1/"
                      rel="self"/>
                 <link href="http://docs.rackspacecloud.com/servers/
                     api/v1.1/cs-devguide-20110125.pdf"
@@ -475,7 +471,7 @@ class VersionsTest(test.TestCase):
                 "status": "CURRENT",
                 "links": [
                     {
-                        "href": "http://localhost:80/v1.1/images/1",
+                        "href": "http://localhost/v1.1/images/1",
                         "rel": "self",
                     },
                 ],
@@ -495,7 +491,7 @@ class VersionsTest(test.TestCase):
                 "status": "DEPRECATED",
                 "links": [
                     {
-                        "href": "http://localhost:80/v1.0/images/1",
+                        "href": "http://localhost/v1.0/images/1",
                         "rel": "self",
                     },
                 ],
@@ -530,7 +526,7 @@ class VersionsTest(test.TestCase):
               <media-type base="application/json"
                  type="application/vnd.openstack.compute-v1.1+json"/>
             </media-types>
-            <atom:link href="http://localhost:80/v1.1/images/1" rel="self"/>
+            <atom:link href="http://localhost/v1.1/images/1" rel="self"/>
           </version>
           <version id="v1.0" status="DEPRECATED">
             <media-types>
@@ -539,7 +535,7 @@ class VersionsTest(test.TestCase):
               <media-type base="application/json"
                  type="application/vnd.openstack.compute-v1.0+json"/>
             </media-types>
-            <atom:link href="http://localhost:80/v1.0/images/1" rel="self"/>
+            <atom:link href="http://localhost/v1.0/images/1" rel="self"/>
           </version>
         </choices>""".replace("  ", "").replace("\n", "") % (wsgi.XMLNS_V11,
                                                             wsgi.XMLNS_ATOM)
@@ -569,7 +565,7 @@ class VersionsTest(test.TestCase):
                 "status": "CURRENT",
                 "links": [
                     {
-                        "href": "http://localhost:80/v1.1/servers/2",
+                        "href": "http://localhost/v1.1/servers/2",
                         "rel": "self",
                     },
                 ],
@@ -589,7 +585,7 @@ class VersionsTest(test.TestCase):
                 "status": "DEPRECATED",
                 "links": [
                     {
-                        "href": "http://localhost:80/v1.0/servers/2",
+                        "href": "http://localhost/v1.0/servers/2",
                         "rel": "self",
                     },
                 ],
@@ -615,11 +611,9 @@ class VersionsViewBuilderTests(test.TestCase):
 
         version_data = {
             "v3.2.1": {
-                "version": {
-                    "id": "3.2.1",
-                    "status": "CURRENT",
-                    "updated": "2011-07-18T11:30:00Z",
-                }
+                "id": "3.2.1",
+                "status": "CURRENT",
+                "updated": "2011-07-18T11:30:00Z",
             }
         }
 
@@ -640,7 +634,7 @@ class VersionsViewBuilderTests(test.TestCase):
         }
 
         builder = views.versions.ViewBuilder(base_url)
-        output = builder.build(version_data)
+        output = builder.build_versions(version_data)
 
         self.assertEqual(output, expected)
 
@@ -701,7 +695,7 @@ class VersionsSerializerTests(test.TestCase):
                     "id": "2.7.1",
                     "updated": "2011-07-18T11:30:00Z",
                     "status": "DEPRECATED",
-                    "media-types": VERSIONS['v1.1']['version']['media-types'],
+                    "media-types": VERSIONS['v1.1']['media-types'],
                     "links": [
                         {
                             "rel": "self",
@@ -751,7 +745,7 @@ class VersionsSerializerTests(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://servers.api.openstack.org/v1.0/"
+                        "href": "http://localhost/v1.0/"
                     },
                     {
                         "rel": "describedby",
@@ -886,7 +880,7 @@ class VersionsSerializerTests(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://servers.api.openstack.org/v1.1/"
+                        "href": "http://localhost/v1.1/"
                     },
                     {
                         "rel": "describedby",
@@ -936,7 +930,7 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(updated.tag.split('}')[1], 'updated')
         self.assertEqual(updated.text, '2011-01-21T11:33:21Z')
         self.assertEqual(id.tag.split('}')[1], 'id')
-        self.assertEqual(id.text, 'http://servers.api.openstack.org/v1.1/')
+        self.assertEqual(id.text, 'http://localhost/v1.1/')
 
         self.assertEqual(author.tag.split('}')[1], 'author')
         author_name = list(author)[0]
@@ -947,7 +941,7 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(author_uri.text, 'http://www.rackspace.com/')
 
         self.assertEqual(link.get('href'),
-                         'http://servers.api.openstack.org/v1.1/')
+                         'http://localhost/v1.1/')
         self.assertEqual(link.get('rel'), 'self')
 
         self.assertEqual(entry.tag.split('}')[1], 'entry')
@@ -960,7 +954,7 @@ class VersionsSerializerTests(test.TestCase):
 
         self.assertEqual(entry_id.tag.split('}')[1], "id")
         self.assertEqual(entry_id.text,
-                         "http://servers.api.openstack.org/v1.1/")
+                         "http://localhost/v1.1/")
         self.assertEqual(entry_title.tag.split('}')[1], "title")
         self.assertEqual(entry_title.get('type'), "text")
         self.assertEqual(entry_title.text, "Version v1.1")

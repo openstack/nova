@@ -26,74 +26,70 @@ from nova.api.openstack import wsgi
 
 VERSIONS = {
     "v1.0": {
-        "version": {
-            "id": "v1.0",
-            "status": "DEPRECATED",
-            "updated": "2011-01-21T11:33:21Z",
-            "links": [
-                {
-                    "rel": "self",
-                    "href": "http://servers.api.openstack.org/v1.0/"
-                },
-                {
-                    "rel": "describedby",
-                    "type": "application/pdf",
-                    "href": "http://docs.rackspacecloud.com/"
-                    "servers/api/v1.0/cs-devguide-20110125.pdf"
-                },
-                {
-                    "rel": "describedby",
-                    "type": "application/vnd.sun.wadl+xml",
-                    "href": "http://docs.rackspacecloud.com/"
-                    "servers/api/v1.0/application.wadl"
-                },
-            ],
-            "media-types": [
-                {
-                    "base": "application/xml",
-                    "type": "application/vnd.openstack.compute-v1.0+xml"
-                },
-                {
-                    "base": "application/json",
-                    "type": "application/vnd.openstack.compute-v1.0+json"
-                }
-            ],
-        },
+        "id": "v1.0",
+        "status": "DEPRECATED",
+        "updated": "2011-01-21T11:33:21Z",
+        "links": [
+            {
+                "rel": "self",
+                "href": ""
+            },
+            {
+                "rel": "describedby",
+                "type": "application/pdf",
+                "href": "http://docs.rackspacecloud.com/"
+                "servers/api/v1.0/cs-devguide-20110125.pdf"
+            },
+            {
+                "rel": "describedby",
+                "type": "application/vnd.sun.wadl+xml",
+                "href": "http://docs.rackspacecloud.com/"
+                "servers/api/v1.0/application.wadl"
+            },
+        ],
+        "media-types": [
+            {
+                "base": "application/xml",
+                "type": "application/vnd.openstack.compute-v1.0+xml"
+            },
+            {
+                "base": "application/json",
+                "type": "application/vnd.openstack.compute-v1.0+json"
+            }
+        ],
     },
     "v1.1": {
-        "version": {
-            "id": "v1.1",
-            "status": "CURRENT",
-            "updated": "2011-01-21T11:33:21Z",
-            "links": [
-                {
-                    "rel": "self",
-                    "href": "http://servers.api.openstack.org/v1.1/"
-                },
-                {
-                    "rel": "describedby",
-                    "type": "application/pdf",
-                    "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/cs-devguide-20110125.pdf"
-                },
-                {
-                    "rel": "describedby",
-                    "type": "application/vnd.sun.wadl+xml",
-                    "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/application.wadl"
-                },
-            ],
-            "media-types": [
-                {
-                    "base": "application/xml",
-                    "type": "application/vnd.openstack.compute-v1.1+xml"
-                },
-                {
-                    "base": "application/json",
-                    "type": "application/vnd.openstack.compute-v1.1+json"
-                }
-            ],
-        },
+        "id": "v1.1",
+        "status": "CURRENT",
+        "updated": "2011-01-21T11:33:21Z",
+        "links": [
+            {
+                "rel": "self",
+                "href": ""
+            },
+            {
+                "rel": "describedby",
+                "type": "application/pdf",
+                "href": "http://docs.rackspacecloud.com/"
+                    "servers/api/v1.1/cs-devguide-20110125.pdf"
+            },
+            {
+                "rel": "describedby",
+                "type": "application/vnd.sun.wadl+xml",
+                "href": "http://docs.rackspacecloud.com/"
+                    "servers/api/v1.1/application.wadl"
+            },
+        ],
+        "media-types": [
+            {
+                "base": "application/xml",
+                "type": "application/vnd.openstack.compute-v1.1+xml"
+            },
+            {
+                "base": "application/json",
+                "type": "application/vnd.openstack.compute-v1.1+json"
+            }
+        ],
     },
 }
 
@@ -136,7 +132,7 @@ class Versions(wsgi.Resource):
         builder = nova.api.openstack.views.versions.get_view_builder(request)
         if request.path == '/':
             # List Versions
-            return builder.build(VERSIONS)
+            return builder.build_versions(VERSIONS)
         else:
             # Versions Multiple Choice
             return builder.build_choices(VERSIONS, request)
@@ -144,12 +140,14 @@ class Versions(wsgi.Resource):
 
 class VersionV10(object):
     def show(self, req):
-        return VERSIONS['v1.0']
+        builder = nova.api.openstack.views.versions.get_view_builder(req)
+        return builder.build_version(VERSIONS['v1.0'])
 
 
 class VersionV11(object):
     def show(self, req):
-        return VERSIONS['v1.1']
+        builder = nova.api.openstack.views.versions.get_view_builder(req)
+        return builder.build_version(VERSIONS['v1.1'])
 
 
 class VersionsRequestDeserializer(wsgi.RequestDeserializer):
