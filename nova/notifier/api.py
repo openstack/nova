@@ -84,7 +84,7 @@ def notify(publisher_id, event_type, priority, payload):
     # Ensure everything is JSON serializable.
     for k, v in payload.iteritems():
         if not isinstance(v, (basestring, int, long, float)):
-            payload[k] = str(v)
+            payload[k] = unicode(v)
 
     driver = utils.import_object(FLAGS.notification_driver)
     msg = dict(message_id=str(uuid.uuid4()),
