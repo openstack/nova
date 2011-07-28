@@ -36,8 +36,11 @@ def upgrade(migrate_engine):
     migrations.create_column(instance_uuid)
 
     if migrate_engine.name == "mysql":
-        migrate_engine.execute("ALTER TABLE migrations DROP FOREIGN KEY " \
-                "`migrations_ibfk_1`;")
+        try:
+            migrate_engine.execute("ALTER TABLE migrations DROP FOREIGN KEY " \
+                    "`migrations_ibfk_1`;")
+        except Exception:  # Don't care, just fail silently.
+            pass
 
     migrations.c.instance_id.drop()
 
