@@ -583,8 +583,9 @@ class ComputeTestCase(test.TestCase):
         the same host"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
+        inst_ref = db.instance_get(self.context, instance_id)
         self.assertRaises(exception.Error, self.compute.prep_resize,
-                self.context, instance_id, 1)
+                self.context, inst_ref['uuid'], 1)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_migrate(self):
