@@ -2304,6 +2304,152 @@ class ServersTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
 
+    def test_create_backup(self):
+        """The happy path for creating backups"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_v1_1(self):
+        """The happy path for creating backups through v1.1 api"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_admin_api_off(self):
+        """The happy path for creating backups"""
+        FLAGS.allow_admin_api = False
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(501, response.status_int)
+
+    def test_create_backup_with_metadata(self):
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+                'metadata': {'123': 'asdf'},
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_no_name(self):
+        """Name is required for backups"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_rotation(self):
+        """Rotation is required for backup requests"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_backup_type(self):
+        """Backup Type (daily or weekly) is required for backup requests"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'rotation': 1,
+            },
+        }
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_bad_entity(self):
+        FLAGS.allow_admin_api = True
+
+        body = {'createBackup': 'go'}
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
 
 class TestServerActionXMLDeserializer(test.TestCase):
 
@@ -2342,6 +2488,29 @@ class TestServerActionXMLDeserializer(test.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
+
+    def test_create_backup_with_metadata(self):
+        serial_request = """
+<createBackup xmlns="http://docs.openstack.org/compute/api/v1.1"
+             name="new-server-test"
+             rotation="12"
+             backup_type="daily">
+    <metadata>
+        <meta key="key1">value1</meta>
+    </metadata>
+</createBackup>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "createBackup": {
+                "name": "new-server-test",
+                "rotation": "12",
+                "backup_type": "daily",
+                "metadata": {"key1": "value1"},
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+
 
 
 class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):

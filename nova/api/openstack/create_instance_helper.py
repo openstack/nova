@@ -300,6 +300,7 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
         action_deserializer = {
             'createImage': self._action_create_image,
+            'createBackup': self._action_create_image,
         }.get(action_name, self.default)
 
         action_data = action_deserializer(action_node)
@@ -308,7 +309,16 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
     def _action_create_image(self, node):
         data = {}
-        attributes = ['name', 'image_type', 'backup_type', 'rotation']
+        value = node.getAttribute('name')
+        if value:
+            data['name'] = value
+        metadata_node = self.find_first_child_named(node, 'metadata')
+        data['metadata'] = self.extract_metadata(metadata_node)
+        return data
+
+    def _action_create_image(self, node):
+        data = {}
+        attributes = ['name', 'backup_type', 'rotation']
         for attribute in attributes:
             value = node.getAttribute(attribute)
             if value:
