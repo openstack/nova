@@ -337,13 +337,11 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         fixture = FakeZoneAwareScheduler()
         test_data = {"foo": "bar"}
 
-        crypto = self.mox.CreateMockAnything()
-        crypto.decryptor(mox.IgnoreArg()).AndReturn(lambda blob: blob)
-        """
-        def _decryptor(i):
-            return lambda blob: blob
-        """
+        class StubDecryptor(object):
+            def decryptor(self, key):
+                return lambda blob: blob
+
         self.stubs.Set(zone_aware_scheduler, 'crypto',
-                       crypto)
+                       StubDecryptor())
         
         self.assertEqual(fixture._decrypt_blob(test_data), json.dumps(test_data))

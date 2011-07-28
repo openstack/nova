@@ -819,7 +819,7 @@ class XenAPIImageTypeTestCase(test.TestCase):
     def test_from_string(self):
         """Can convert from string to type id."""
         self.assertEquals(
-            vm_utils.ImageType.to_string(vm_utils.ImageType.KERNEL_STR),
+            vm_utils.ImageType.from_string(vm_utils.ImageType.KERNEL_STR),
             vm_utils.ImageType.KERNEL)
 
 
