@@ -109,8 +109,8 @@ class ExtensionControllerTest(unittest.TestCase):
                 'updated': '2011-01-22T13:25:27-06:00',
                 'description': 'The Fox In Socks Extension',
                 'alias': 'FOXNSOX',
-                'links': []
-            }
+                'links': [],
+            },
         )
 
     def test_get_extension_json(self):
@@ -127,8 +127,8 @@ class ExtensionControllerTest(unittest.TestCase):
                 "updated": "2011-01-22T13:25:27-06:00",
                 "description": "The Fox In Socks Extension",
                 "alias": "FOXNSOX",
-                "links": []
-            }
+                "links": [],
+            },
         )
 
     def test_list_extensions_xml(self):
@@ -342,15 +342,15 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
                     {
                         'rel': 'describedby',
                         'type': 'application/pdf',
-                        'href': 'http://docs.rack.com/servers/api/ext/cs.pdf'
+                        'href': 'http://docs.rack.com/servers/api/ext/cs.pdf',
                     },
                     {
                         'rel': 'describedby',
                         'type': 'application/vnd.sun.wadl+xml',
-                        'href': 'http://docs.rack.com/servers/api/ext/cs.wadl'
-                    }
-                ]
-            }
+                        'href': 'http://docs.rack.com/servers/api/ext/cs.wadl',
+                    },
+                ],
+            },
         }
 
         xml = serializer.serialize(data, 'show')
@@ -382,14 +382,14 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
                         {
                             "rel": "describedby",
                             "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-pie.pdf"
+                            "href": "http://foo.com/api/ext/cs-pie.pdf",
                         },
                         {
                             "rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-pie.wadl"
-                        }
-                    ]
+                            "href": "http://foo.com/api/ext/cs-pie.wadl",
+                        },
+                    ],
                 },
                 {
                     "name": "Cloud Block Storage",
@@ -401,16 +401,16 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
                         {
                             "rel": "describedby",
                             "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-cbs.pdf"
+                            "href": "http://foo.com/api/ext/cs-cbs.pdf",
                         },
                         {
                             "rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-cbs.wadl"
-                        }
-                    ]
-                }
-            ]
+                            "href": "http://foo.com/api/ext/cs-cbs.wadl",
+                        },
+                    ],
+                },
+            ],
         }
 
         xml = serializer.serialize(data, 'index')

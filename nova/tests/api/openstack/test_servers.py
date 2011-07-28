@@ -2950,7 +2950,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             address_builder,
             flavor_builder,
             image_builder,
-            base_url
+            base_url,
             )
         return view_builder
 
