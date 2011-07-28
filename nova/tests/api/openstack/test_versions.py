@@ -26,9 +26,8 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova.api.openstack import versions
 from nova.api.openstack import views
+from nova.api.openstack import wsgi
 
-ATOM_XMLNS = versions.ATOM_XMLNS
-OS_XMLNS_BASE = versions.OS_XMLNS_BASE
 VERSIONS = {
     "v1.0": {
         "version": {
@@ -246,7 +245,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
         root = xml.etree.ElementTree.XML(res.body)
         self.assertEqual(root.tag.split('}')[1], "version")
-        self.assertEqual(root.tag.split('}')[0].strip('{'), OS_XMLNS_BASE)
+        self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
 
         children = list(root)
         media_types = children[0]
@@ -282,7 +281,7 @@ class VersionsTest(test.TestCase):
                 api/v1.0/application.wadl"
                  rel="describedby"
                  type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "") % OS_XMLNS_BASE
+        </version>""".replace("  ", "").replace("\n", "") % wsgi.XMLNS_V11
 
         actual = res.body.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, actual)
@@ -318,7 +317,7 @@ class VersionsTest(test.TestCase):
                 api/v1.1/application.wadl"
                  rel="describedby"
                  type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "") % OS_XMLNS_BASE
+        </version>""".replace("  ", "").replace("\n", "") % wsgi.XMLNS_V11
 
         actual = res.body.replace("  ", "").replace("\n", "")
         self.assertEqual(expected, actual)
@@ -339,8 +338,8 @@ class VersionsTest(test.TestCase):
                  updated="2011-01-21T11:33:21Z">
                 <atom:link href="http://localhost/v1.0/" rel="self"/>
             </version>
-        </versions>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
-                                                              ATOM_XMLNS)
+        </versions>""".replace("  ", "").replace("\n", "") % (wsgi.XMLNS_V11,
+                                                              wsgi.XMLNS_ATOM)
 
         actual = res.body.replace("  ", "").replace("\n", "")
 
@@ -542,8 +541,8 @@ class VersionsTest(test.TestCase):
             </media-types>
             <atom:link href="http://localhost:80/v1.0/images/1" rel="self"/>
           </version>
-        </choices>""".replace("  ", "").replace("\n", "") % (OS_XMLNS_BASE,
-                                                            ATOM_XMLNS)
+        </choices>""".replace("  ", "").replace("\n", "") % (wsgi.XMLNS_V11,
+                                                            wsgi.XMLNS_ATOM)
 
     def test_multi_choice_server_atom(self):
         """
@@ -610,7 +609,7 @@ class VersionsTest(test.TestCase):
         self.assertDictMatch(expected, json.loads(res.body))
 
 
-class VersionsViewBuilderTests(VersionsTest):
+class VersionsViewBuilderTests(test.TestCase):
     def test_view_builder(self):
         base_url = "http://example.org/"
 
@@ -657,7 +656,7 @@ class VersionsViewBuilderTests(VersionsTest):
         self.assertEqual(actual, expected)
 
 
-class VersionsSerializerTests(VersionsTest):
+class VersionsSerializerTests(test.TestCase):
     def test_versions_list_xml_serializer(self):
         versions_data = {
             'versions': [
@@ -680,7 +679,7 @@ class VersionsSerializerTests(VersionsTest):
 
         root = xml.etree.ElementTree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "versions")
-        self.assertEqual(root.tag.split('}')[0].strip('{'), OS_XMLNS_BASE)
+        self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
         version = list(root)[0]
         self.assertEqual(version.tag.split('}')[1], "version")
         self.assertEqual(version.get('id'),
@@ -691,7 +690,7 @@ class VersionsSerializerTests(VersionsTest):
         link = list(version)[0]
 
         self.assertEqual(link.tag.split('}')[1], "link")
-        self.assertEqual(link.tag.split('}')[0].strip('{'), ATOM_XMLNS)
+        self.assertEqual(link.tag.split('}')[0].strip('{'), wsgi.XMLNS_ATOM)
         for key, val in versions_data['versions'][0]['links'][0].items():
             self.assertEqual(link.get(key), val)
 
@@ -718,7 +717,7 @@ class VersionsSerializerTests(VersionsTest):
 
         root = xml.etree.ElementTree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "choices")
-        self.assertEqual(root.tag.split('}')[0].strip('{'), OS_XMLNS_BASE)
+        self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
         version = list(root)[0]
         self.assertEqual(version.tag.split('}')[1], "version")
         self.assertEqual(version.get('id'), versions_data['choices'][0]['id'])
@@ -739,7 +738,7 @@ class VersionsSerializerTests(VersionsTest):
         link = list(version)[1]
 
         self.assertEqual(link.tag.split('}')[1], "link")
-        self.assertEqual(link.tag.split('}')[0].strip('{'), ATOM_XMLNS)
+        self.assertEqual(link.tag.split('}')[0].strip('{'), wsgi.XMLNS_ATOM)
         for key, val in versions_data['choices'][0]['links'][0].items():
             self.assertEqual(link.get(key), val)
 
@@ -785,8 +784,7 @@ class VersionsSerializerTests(VersionsTest):
 
         root = xml.etree.ElementTree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "version")
-        self.assertEqual(root.tag.split('}')[0].strip('{'),
-                         "http://docs.openstack.org/common/api/v1.0")
+        self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
 
         children = list(root)
         media_types = children[0]

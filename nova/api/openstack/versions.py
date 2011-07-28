@@ -24,8 +24,6 @@ import nova.api.openstack.views.versions
 from nova.api.openstack import wsgi
 
 
-ATOM_XMLNS = "http://www.w3.org/2005/Atom"
-OS_XMLNS_BASE = "http://docs.openstack.org/common/api/v1.0"
 VERSIONS = {
     "v1.0": {
         "version": {
@@ -185,8 +183,8 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
     def _versions_to_xml(self, versions, name="versions", xmlns=None):
         root = self._xml_doc.createElement(name)
-        root.setAttribute("xmlns", OS_XMLNS_BASE)
-        root.setAttribute("xmlns:atom", ATOM_XMLNS)
+        root.setAttribute("xmlns", wsgi.XMLNS_V11)
+        root.setAttribute("xmlns:atom", wsgi.XMLNS_ATOM)
 
         for version in versions:
             root.appendChild(self._create_version_node(version))
@@ -206,8 +204,8 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
     def _create_version_node(self, version, create_ns=False):
         version_node = self._xml_doc.createElement('version')
         if create_ns:
-            xmlns = OS_XMLNS_BASE
-            xmlns_atom = ATOM_XMLNS
+            xmlns = wsgi.XMLNS_V11
+            xmlns_atom = wsgi.XMLNS_ATOM
             version_node.setAttribute('xmlns', xmlns)
             version_node.setAttribute('xmlns:atom', xmlns_atom)
 
@@ -241,7 +239,7 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
     def multi(self, data):
         self._xml_doc = minidom.Document()
         node = self._versions_to_xml(data['choices'], 'choices',
-                         xmlns=OS_XMLNS_BASE)
+                         xmlns=wsgi.XMLNS_V11)
 
         return self.to_xml_string(node)
 
@@ -257,7 +255,7 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
     def __init__(self, metadata=None, xmlns=None):
         self.metadata = metadata or {}
         if not xmlns:
-            self.xmlns = ATOM_XMLNS
+            self.xmlns = wsgi.XMLNS_ATOM
         else:
             self.xmlns = xmlns
 
