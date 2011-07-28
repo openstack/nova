@@ -109,13 +109,13 @@ class ImageType:
     def from_string(cls, image_type_str):
         if image_type_str == ImageType.KERNEL_STR:
             return ImageType.KERNEL
-        elif image_type == ImageType.RAMDISK_STR:
+        elif image_type_str == ImageType.RAMDISK_STR:
             return ImageType.RAMDISK
-        elif image_type == ImageType.DISK_STR:
+        elif image_type_str == ImageType.DISK_STR:
             return ImageType.DISK
-        elif image_type == ImageType.DISK_RAW_STR:
+        elif image_type_str == ImageType.DISK_RAW_STR:
             return ImageType.DISK_RAW
-        elif image_type == ImageType.DISK_VHD_STR:
+        elif image_type_str == ImageType.DISK_VHD_STR:
             return ImageType.VHD
 
 
