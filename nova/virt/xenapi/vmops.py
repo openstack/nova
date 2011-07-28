@@ -52,6 +52,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('windows_version_timeout', 300,
                      'number of seconds to wait for windows agent to be '
                      'fully operational')
+flags.DEFINE_string('xenapi_vif_driver',
+                    'nova.virt.xenapi.vif.XenAPIBridgeDriver',
+                    'The XenAPI VIF driver using XenServer Network APIs.')
 
 
 def cmp_version(a, b):
@@ -78,6 +81,7 @@ class VMOps(object):
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
+        self.vif_driver = utils.import_object(FLAGS.xenapi_vif_driver)
 
     def list_instances(self):
         """List VM instances."""
@@ -251,11 +255,11 @@ class VMOps(object):
             userdevice += 1
 
         # Alter the image before VM start for, e.g. network injection
-        if FLAGS.xenapi_inject_image:
+        if FLAGS.flat_injected:
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 
-        self.create_vifs(vm_ref, network_info)
+        self.create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
         return vm_ref
 
@@ -467,7 +471,7 @@ class VMOps(object):
                     self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
-                self._destroy(instance, template_vm_ref,
+                self._destroy(instance, template_vm_ref, None,
                         shutdown=False, destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
@@ -837,7 +841,7 @@ class VMOps(object):
 
         self._session.call_xenapi("Async.VM.destroy", rescue_vm_ref)
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         """Destroy VM instance.
 
         This is the method exposed by xenapi_conn.destroy(). The rest of the
@@ -847,9 +851,9 @@ class VMOps(object):
         instance_id = instance.id
         LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
         vm_ref = VMHelper.lookup(self._session, instance.name)
-        return self._destroy(instance, vm_ref, shutdown=True)
+        return self._destroy(instance, vm_ref, network_info, shutdown=True)
 
-    def _destroy(self, instance, vm_ref, shutdown=True,
+    def _destroy(self, instance, vm_ref, network_info, shutdown=True,
                  destroy_kernel_ramdisk=True):
         """Destroys VM instance by performing:
 
@@ -870,6 +874,10 @@ class VMOps(object):
         if destroy_kernel_ramdisk:
             self._destroy_kernel_ramdisk(instance, vm_ref)
         self._destroy_vm(instance, vm_ref)
+
+        if network_info:
+            for (network, mapping) in network_info:
+                self.vif_driver.unplug(instance, network, mapping)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
@@ -1066,7 +1074,7 @@ class VMOps(object):
                 # catch KeyError for domid if instance isn't running
                 pass
 
-    def create_vifs(self, vm_ref, network_info):
+    def create_vifs(self, vm_ref, instance, network_info):
         """Creates vifs for an instance."""
 
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
@@ -1075,14 +1083,19 @@ class VMOps(object):
         self._session.get_xenapi().VM.get_record(vm_ref)
 
         for device, (network, info) in enumerate(network_info):
-            mac_address = info['mac']
-            bridge = network['bridge']
-            rxtx_cap = info.pop('rxtx_cap')
-            network_ref = \
-                NetworkHelper.find_network_with_bridge(self._session,
-                                                       bridge)
-            VMHelper.create_vif(self._session, vm_ref, network_ref,
-                                mac_address, device, rxtx_cap)
+            vif_rec = self.vif_driver.plug(self._session,
+                    vm_ref, instance, device, network, info)
+            network_ref = vif_rec['network']
+            LOG.debug(_('Creating VIF for VM %(vm_ref)s,' \
+                ' network %(network_ref)s.') % locals())
+            vif_ref = self._session.call_xenapi('VIF.create', vif_rec)
+            LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
+                ' network %(network_ref)s.') % locals())
+
+    def plug_vifs(self, instance, network_info):
+        """Set up VIF networking on the host."""
+        for (network, mapping) in network_info:
+            self.vif_driver.plug(self._session, instance, network, mapping)
 
     def reset_network(self, instance, vm_ref=None):
         """Creates uuid arg to pass to make_agent_call and calls it."""
