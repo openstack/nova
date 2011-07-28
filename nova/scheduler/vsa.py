@@ -65,40 +65,29 @@ class VsaScheduler(simple.SimpleScheduler):
                  {"method": "notification",
                   "args": {"event": event}})
 
-    def _compare_names(self, str1, str2):
-        result = str1.lower() == str2.lower()
-        # LOG.debug(_("Comparing %(str1)s and %(str2)s. "\
-        #            "Result %(result)s"), locals())
-        return result
-
-    def _compare_sizes_exact_match(self, cap_capacity, size_gb):
-        cap_capacity = BYTES_TO_GB(int(cap_capacity))
-        size_gb = int(size_gb)
-        result = cap_capacity == size_gb
-        # LOG.debug(_("Comparing %(cap_capacity)d and %(size_gb)d. "\
-        #            "Result %(result)s"), locals())
-        return result
-
-    def _compare_sizes_approxim(self, cap_capacity, size_gb):
-        cap_capacity = BYTES_TO_GB(int(cap_capacity))
-        size_gb = int(size_gb)
-        size_perc = size_gb * FLAGS.drive_type_approx_capacity_percent / 100
-
-        result = cap_capacity >= size_gb - size_perc and \
-                 cap_capacity <= size_gb + size_perc
-        # LOG.debug(_("Comparing %(cap_capacity)d and %(size_gb)d. "\
-        #            "Result %(result)s"), locals())
-        return result
-
     def _qosgrp_match(self, drive_type, qos_values):
+
+        def _compare_names(str1, str2):
+            result = str1.lower() == str2.lower()
+            return result
+
+        def _compare_sizes_approxim(cap_capacity, size_gb):
+            cap_capacity = BYTES_TO_GB(int(cap_capacity))
+            size_gb = int(size_gb)
+            size_perc = size_gb * \
+                FLAGS.drive_type_approx_capacity_percent / 100
+
+            result = cap_capacity >= size_gb - size_perc and \
+                     cap_capacity <= size_gb + size_perc
+            return result
 
         # Add more entries for additional comparisons
         compare_list = [{'cap1': 'DriveType',
                          'cap2': 'type',
-                         'cmp_func': self._compare_names},
+                         'cmp_func': _compare_names},
                         {'cap1': 'DriveCapacity',
                          'cap2': 'size_gb',
-                         'cmp_func': self._compare_sizes_approxim}]
+                         'cmp_func': _compare_sizes_approxim}]
 
         for cap in compare_list:
             if cap['cap1'] in qos_values.keys() and \
@@ -106,20 +95,23 @@ class VsaScheduler(simple.SimpleScheduler):
                cap['cmp_func'] is not None and \
                cap['cmp_func'](qos_values[cap['cap1']],
                                drive_type[cap['cap2']]):
-                # LOG.debug(("One of required capabilities found: %s:%s"),
-                #           cap['cap1'], drive_type[cap['cap2']])
                 pass
             else:
                 return False
         return True
 
+    def _get_service_states(self):
+        return self.zone_manager.service_states
+
     def _filter_hosts(self, topic, request_spec, host_list=None):
+
+        LOG.debug(_("_filter_hosts: %(request_spec)s"), locals())
 
         drive_type = request_spec['drive_type']
         LOG.debug(_("Filter hosts for drive type %s"), drive_type['name'])
 
         if host_list is None:
-            host_list = self.zone_manager.service_states.iteritems()
+            host_list = self._get_service_states().iteritems()
 
         filtered_hosts = []     # returns list of (hostname, capability_dict)
         for host, host_dict in host_list:
@@ -131,7 +123,6 @@ class VsaScheduler(simple.SimpleScheduler):
                 for qosgrp, qos_values in gos_info.iteritems():
                     if self._qosgrp_match(drive_type, qos_values):
                         if qos_values['AvailableCapacity'] > 0:
-                            # LOG.debug(_("Adding host %s to the list"), host)
                             filtered_hosts.append((host, gos_info))
                         else:
                             LOG.debug(_("Host %s has no free capacity. Skip"),
@@ -226,7 +217,7 @@ class VsaScheduler(simple.SimpleScheduler):
                   "args": {"volume_id": volume_ref['id'],
                            "snapshot_id": None}})
 
-    def _check_host_enforcement(self, availability_zone):
+    def _check_host_enforcement(self, context, availability_zone):
         if (availability_zone
             and ':' in availability_zone
             and context.is_admin):
@@ -273,15 +264,9 @@ class VsaScheduler(simple.SimpleScheduler):
             vol['capabilities'] = qos_cap
             self._consume_resource(qos_cap, vol['size'], -1)
 
-            # LOG.debug(_("Volume %(name)s assigned to host %(host)s"),
-            #           locals())
-
     def schedule_create_volumes(self, context, request_spec,
                                 availability_zone, *_args, **_kwargs):
         """Picks hosts for hosting multiple volumes."""
-
-        LOG.debug(_("Service states BEFORE %s"),
-                    self.zone_manager.service_states)
 
         num_volumes = request_spec.get('num_volumes')
         LOG.debug(_("Attempting to spawn %(num_volumes)d volume(s)") %
@@ -290,16 +275,13 @@ class VsaScheduler(simple.SimpleScheduler):
         vsa_id = request_spec.get('vsa_id')
         volume_params = request_spec.get('volumes')
 
-        host = self._check_host_enforcement(availability_zone)
+        host = self._check_host_enforcement(context, availability_zone)
 
         try:
             self._assign_hosts_to_volumes(context, volume_params, host)
 
             for vol in volume_params:
                 self._provision_volume(context, vol, vsa_id, availability_zone)
-
-            LOG.debug(_("Service states AFTER %s"),
-                        self.zone_manager.service_states)
         except:
             if vsa_id:
                 db.vsa_update(context, vsa_id,
@@ -309,8 +291,6 @@ class VsaScheduler(simple.SimpleScheduler):
                 if 'capabilities' in vol:
                     self._consume_resource(vol['capabilities'],
                                            vol['size'], 1)
-            LOG.debug(_("Service states AFTER %s"),
-                        self.zone_manager.service_states)
             raise
 
         return None
@@ -319,7 +299,8 @@ class VsaScheduler(simple.SimpleScheduler):
         """Picks the best host based on requested drive type capability."""
         volume_ref = db.volume_get(context, volume_id)
 
-        host = self._check_host_enforcement(volume_ref['availability_zone'])
+        host = self._check_host_enforcement(context,
+                                            volume_ref['availability_zone'])
         if host:
             now = utils.utcnow()
             db.volume_update(context, volume_id, {'host': host,
@@ -332,9 +313,6 @@ class VsaScheduler(simple.SimpleScheduler):
             return super(VsaScheduler, self).schedule_create_volume(context,
                         volume_id, *_args, **_kwargs)
         drive_type = dict(drive_type)
-
-        LOG.debug(_("Service states BEFORE %s"),
-                    self.zone_manager.service_states)
 
         LOG.debug(_("Spawning volume %(volume_id)s with drive type "\
                     "%(drive_type)s"), locals())
@@ -358,9 +336,6 @@ class VsaScheduler(simple.SimpleScheduler):
             db.volume_update(context, volume_id, {'host': host,
                                                   'scheduled_at': now})
             self._consume_resource(qos_cap, volume_ref['size'], -1)
-
-            LOG.debug(_("Service states AFTER %s"),
-                        self.zone_manager.service_states)
             return host
 
     def _consume_full_drive(self, qos_values, direction):

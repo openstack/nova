@@ -145,7 +145,7 @@ class VsaManager(manager.SchedulerDependentManager):
 
         if has_failed_volumes:
             LOG.info(_("VSA ID %(vsa_id)d: Delete all BE volumes"), locals())
-            self.vsa_api.delete_be_volumes(context, vsa_id, force_delete=True)
+            self.vsa_api.delete_vsa_volumes(context, vsa_id, "BE", True)
             self.vsa_api.update_vsa_status(context, vsa_id, VsaState.FAILED)
             return
 

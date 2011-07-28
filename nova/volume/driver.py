@@ -507,7 +507,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
 
         if not iscsi_properties['target_discovered']:
-            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
+            self._run_iscsiadm(iscsi_properties, '--op=new')
 
         if iscsi_properties.get('auth_method'):
             self._iscsiadm_update(iscsi_properties,
@@ -559,7 +559,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
         self._run_iscsiadm(iscsi_properties, "--logout")
-        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
+        self._run_iscsiadm(iscsi_properties, '--op=delete')
 
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""

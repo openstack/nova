@@ -61,7 +61,8 @@ class VsaVolumesTestCase(test.TestCase):
         self.vsa_id = vsa_ref['id']
 
     def tearDown(self):
-        self.vsa_api.delete(self.context, self.vsa_id)
+        if self.vsa_id:
+            self.vsa_api.delete(self.context, self.vsa_id)
         self.stubs.UnsetAll()
         super(VsaVolumesTestCase, self).tearDown()
 
@@ -106,3 +107,23 @@ class VsaVolumesTestCase(test.TestCase):
         self.volume_api.update(self.context,
                             volume_ref['id'], {'status': 'error'})
         self.volume_api.delete(self.context, volume_ref['id'])
+
+    def test_vsa_volume_delete_vsa_with_volumes(self):
+        """ Check volume deleton in different states. """
+
+        vols1 = self.volume_api.get_all_by_vsa(self.context,
+                                                self.vsa_id, "from")
+        for i in range(3):
+            volume_param = _default_volume_param()
+            volume_param['from_vsa_id'] = self.vsa_id
+            volume_ref = self.volume_api.create(self.context, **volume_param)
+
+        vols2 = self.volume_api.get_all_by_vsa(self.context,
+                                                self.vsa_id, "from")
+        self.assertEqual(len(vols1) + 3, len(vols2))
+
+        self.vsa_api.delete(self.context, self.vsa_id)
+
+        vols3 = self.volume_api.get_all_by_vsa(self.context,
+                                                self.vsa_id, "from")
+        self.assertEqual(len(vols1), len(vols3))

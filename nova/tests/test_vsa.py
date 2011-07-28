@@ -22,6 +22,7 @@ from xml.etree.ElementTree import Element, SubElement
 from nova import exception
 from nova import flags
 from nova import vsa
+from nova import volume
 from nova import db
 from nova import context
 from nova import test
@@ -50,6 +51,7 @@ class VsaTestCase(test.TestCase):
         super(VsaTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.vsa_api = vsa.API()
+        self.volume_api = volume.API()
 
         self.context_non_admin = context.RequestContext(None, None)
         self.context = context.get_admin_context()

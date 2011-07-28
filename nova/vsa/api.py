@@ -312,9 +312,8 @@ class API(base.Base):
     def _force_volume_delete(self, ctxt, volume):
         """Delete a volume, bypassing the check that it must be available."""
         host = volume['host']
-
-        if not host:
-            # Volume not yet assigned to host
+        if not host or volume['from_vsa_id']:
+            # Volume not yet assigned to host OR FE volume
             # Deleting volume from database and skipping rpc.
             self.db.volume_destroy(ctxt, volume['id'])
             return
@@ -324,41 +323,33 @@ class API(base.Base):
                  {"method": "delete_volume",
                   "args": {"volume_id": volume['id']}})
 
-    def delete_be_volumes(self, context, vsa_id, force_delete=True):
+    def delete_vsa_volumes(self, context, vsa_id, direction,
+                           force_delete=True):
+        if direction == "FE":
+            volumes = self.db.volume_get_all_assigned_from_vsa(context, vsa_id)
+        else:
+            volumes = self.db.volume_get_all_assigned_to_vsa(context, vsa_id)
 
-        be_volumes = self.db.volume_get_all_assigned_to_vsa(context, vsa_id)
-        for volume in be_volumes:
+        for volume in volumes:
             try:
                 vol_name = volume['name']
-                LOG.info(_("VSA ID %(vsa_id)s: Deleting BE volume "\
-                            "%(vol_name)s"), locals())
+                LOG.info(_("VSA ID %(vsa_id)s: Deleting %(direction)s "\
+                           "volume %(vol_name)s"), locals())
                 self.volume_api.delete(context, volume['id'])
             except exception.ApiError:
                 LOG.info(_("Unable to delete volume %s"), volume['name'])
                 if force_delete:
-                    LOG.info(_("VSA ID %(vsa_id)s: Forced delete. BE volume "\
-                                "%(vol_name)s"), locals())
+                    LOG.info(_("VSA ID %(vsa_id)s: Forced delete. "\
+                               "%(direction)s volume %(vol_name)s"), locals())
                     self._force_volume_delete(context, volume)
 
     def delete(self, context, vsa_id):
         """Terminate a VSA instance."""
         LOG.info(_("Going to try to terminate VSA ID %s"), vsa_id)
 
-        # allow deletion of volumes in "abnormal" state
-
-        # Delete all FE volumes
-        fe_volumes = self.db.volume_get_all_assigned_from_vsa(context, vsa_id)
-        for volume in fe_volumes:
-            try:
-                vol_name = volume['name']
-                LOG.info(_("VSA ID %(vsa_id)s: Deleting FE volume "\
-                            "%(vol_name)s"), locals())
-                self.volume_api.delete(context, volume['id'])
-            except exception.ApiError:
-                LOG.info(_("Unable to delete volume %s"), volume['name'])
-
-        # Delete all BE volumes
-        self.delete_be_volumes(context, vsa_id, force_delete=True)
+        # Delete all FrontEnd and BackEnd volumes
+        self.delete_vsa_volumes(context, vsa_id, "FE", force_delete=True)
+        self.delete_vsa_volumes(context, vsa_id, "BE", force_delete=True)
 
         # Delete all VC instances
         instances = self.db.instance_get_all_by_vsa(context, vsa_id)
