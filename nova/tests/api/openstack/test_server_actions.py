@@ -350,7 +350,7 @@ class ServerActionsTestV11(test.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
 
-    def test_server_change_password_v1_1(self):
+    def test_server_change_password(self):
         mock_method = MockSetAdminPassword()
         self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
         body = {'changePassword': {'adminPass': '1234pass'}}
@@ -363,7 +363,7 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(mock_method.instance_id, '1')
         self.assertEqual(mock_method.password, '1234pass')
 
-    def test_server_change_password_bad_request_v1_1(self):
+    def test_server_change_password_bad_request(self):
         body = {'changePassword': {'pass': '12345'}}
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
@@ -372,7 +372,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_change_password_empty_string_v1_1(self):
+    def test_server_change_password_empty_string(self):
         body = {'changePassword': {'adminPass': ''}}
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
@@ -381,7 +381,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_change_password_none_v1_1(self):
+    def test_server_change_password_none(self):
         body = {'changePassword': {'adminPass': None}}
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
@@ -390,7 +390,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_rebuild_accepted_minimum_v1_1(self):
+    def test_server_rebuild_accepted_minimum(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -405,7 +405,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
-    def test_server_rebuild_rejected_when_building_v1_1(self):
+    def test_server_rebuild_rejected_when_building(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -426,7 +426,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 409)
 
-    def test_server_rebuild_accepted_with_metadata_v1_1(self):
+    def test_server_rebuild_accepted_with_metadata(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -444,7 +444,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
-    def test_server_rebuild_accepted_with_bad_metadata_v1_1(self):
+    def test_server_rebuild_accepted_with_bad_metadata(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -460,7 +460,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_rebuild_bad_entity_v1_1(self):
+    def test_server_rebuild_bad_entity(self):
         body = {
             "rebuild": {
                 "imageId": 2,
@@ -475,7 +475,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_rebuild_bad_personality_v1_1(self):
+    def test_server_rebuild_bad_personality(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -494,7 +494,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_rebuild_personality_v1_1(self):
+    def test_server_rebuild_personality(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -513,7 +513,7 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
-    def test_resize_server_v11(self):
+    def test_resize_server(self):
 
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.content_type = 'application/json'
@@ -532,7 +532,7 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
 
-    def test_create_image_v1_1(self):
+    def test_create_image(self):
         body = {
             'createImage': {
                 'name': 'Snapshot 1',
@@ -547,7 +547,7 @@ class ServerActionsTestV11(test.TestCase):
         location = response.headers['Location']
         self.assertEqual('http://localhost/v1.1/images/123', location)
 
-    def test_create_image_v1_1_with_metadata(self):
+    def test_create_image_with_metadata(self):
         body = {
             'createImage': {
                 'name': 'Snapshot 1',
@@ -563,7 +563,7 @@ class ServerActionsTestV11(test.TestCase):
         location = response.headers['Location']
         self.assertEqual('http://localhost/v1.1/images/123', location)
 
-    def test_create_image_v1_1_no_name(self):
+    def test_create_image_no_name(self):
         body = {
             'createImage': {},
         }
@@ -574,7 +574,7 @@ class ServerActionsTestV11(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
 
-    def test_create_image_v1_1_bad_metadata(self):
+    def test_create_image_bad_metadata(self):
         body = {
             'createImage': {
                 'name': 'geoff',
