@@ -255,7 +255,7 @@ class VMOps(object):
             userdevice += 1
 
         # Alter the image before VM start for, e.g. network injection
-        if FLAGS.xenapi_inject_image:
+        if FLAGS.flat_injected:
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 
@@ -471,7 +471,7 @@ class VMOps(object):
                     self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
-                self._destroy(instance, template_vm_ref, None,
+                self._destroy(instance, template_vm_ref,
                         shutdown=False, destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
@@ -853,7 +853,7 @@ class VMOps(object):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         return self._destroy(instance, vm_ref, network_info, shutdown=True)
 
-    def _destroy(self, instance, vm_ref, network_info, shutdown=True,
+    def _destroy(self, instance, vm_ref, network_info=None, shutdown=True,
                  destroy_kernel_ramdisk=True):
         """Destroys VM instance by performing:
 
@@ -1092,7 +1092,7 @@ class VMOps(object):
             LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
                 ' network %(network_ref)s.') % locals())
 
-    def plug_vifs(instance, network_info):
+    def plug_vifs(self, instance, network_info):
         """Set up VIF networking on the host."""
         for (network, mapping) in network_info:
             self.vif_driver.plug(self._session, instance, network, mapping)

@@ -46,6 +46,7 @@ def get_network_with_the_name(session, network_name="vmnet0"):
                        "get_properties_for_a_collection_of_objects",
                        "Network", vm_networks, ["summary.name"])
     network_obj = {}
+    LOG.warn(vm_networks)
     for network in vm_networks:
         # Get network properties
         if network._type == 'DistributedVirtualPortgroup':
