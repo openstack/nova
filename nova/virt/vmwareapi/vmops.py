@@ -734,13 +734,14 @@ class VMWareVMOps(object):
         net_mask = network["netmask"]
         gateway = network["gateway"]
         broadcast = network["broadcast"]
-        dns = network["dns"]
+        # TODO(vish): add support for dns2
+        dns = network["dns1"]
 
         addresses = db.instance_get_fixed_addresses(admin_context,
                                                     instance['id'])
         ip_addr = addresses[0] if addresses else None
 
-        machine_id_chanfge_spec = \
+        machine_id_change_spec = \
             vm_util.get_machine_id_change_spec(client_factory, mac_address,
                                                ip_addr, net_mask, gateway,
                                                broadcast, dns)
@@ -750,7 +751,7 @@ class VMWareVMOps(object):
                    'ip_addr': ip_addr}))
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
-                           spec=machine_id_chanfge_spec)
+                           spec=machine_id_change_spec)
         self._session._wait_for_task(instance.id, reconfig_task)
         LOG.debug(_("Reconfigured VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %
