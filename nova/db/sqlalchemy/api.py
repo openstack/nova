@@ -34,6 +34,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import literal_column
+import datetime
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.db.sqlalchemy")
@@ -3297,7 +3298,7 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 def instance_type_extra_specs_get_item(context, instance_type_id, key):
     session = get_session()
 
-    sppec_result = session.query(models.InstanceTypeExtraSpecs).\
+    spec_result = session.query(models.InstanceTypeExtraSpecs).\
                     filter_by(instance_type_id=instance_type_id).\
                     filter_by(key=key).\
                     filter_by(deleted=False).\
