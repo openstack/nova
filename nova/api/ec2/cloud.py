@@ -965,6 +965,10 @@ class CloudController(object):
             vsa['vcType'] = p_vsa['vsa_instance_type'].get('name', None)
         else:
             vsa['vcType'] = None
+
+        vols = self.volume_api.get_all_by_vsa(context, p_vsa['id'], "to")
+        vsa['volCount'] = 0 if vols is None else len(vols)
+
         return vsa
 
     def create_vsa(self, context, **kwargs):

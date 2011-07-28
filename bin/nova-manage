@@ -1018,15 +1018,15 @@ class VsaCommands(object):
                                               project=project)
 
     def _list(self, vsas):
-        format_str = "%-5s %-15s %-25s %-30s %-5s %-10s %-10s %-10s %10s"
+        format_str = "%-5s %-15s %-25s %-10s %-6s %-9s %-10s %-10s %10s"
         if len(vsas):
             print format_str %\
                    (_('ID'),
                     _('vsa_id'),
                     _('displayName'),
-                    _('description'),
-                    _('count'),
                     _('vc_type'),
+                    _('vc_cnt'),
+                    _('drive_cnt'),
                     _('status'),
                     _('AZ'),
                     _('createTime'))
@@ -1036,9 +1036,9 @@ class VsaCommands(object):
                 (vsa['vsaId'],
                 vsa['name'],
                 vsa['displayName'],
-                vsa['displayDescription'],
-                vsa['vcCount'],
                 vsa['vcType'],
+                vsa['vcCount'],
+                vsa['volCount'],
                 vsa['status'],
                 vsa['availabilityZone'],
                 str(vsa['createTime']))
@@ -1053,7 +1053,8 @@ class VsaCommands(object):
     @args('--instance_type', dest='instance_type_name', metavar="<name>",
         help='Instance type name')
     @args('--image', dest='image_name', metavar="<name>", help='Image name')
-    @args('--shared', dest='shared', metavar="", help='Use shared drives')
+    @args('--shared', dest='shared', action="store_true", default=False,
+        help='Use shared drives')
     @args('--az', dest='az', metavar="<zone:host>", help='Availability zone')
     def create(self, storage='[]', name=None, description=None, vc_count=1,
                      instance_type_name=None, image_name=None, shared=None,
@@ -1079,9 +1080,9 @@ class VsaCommands(object):
         if instance_type_name == '':
             instance_type_name = None
 
-        if shared is None or shared == "--full_drives":
+        if shared in [None, False, "--full_drives"]:
             shared = False
-        elif shared == "--shared":
+        elif shared in [True, "--shared"]:
             shared = True
         else:
             raise ValueError(_('Shared parameter should be set either to "\
@@ -1181,7 +1182,7 @@ class VsaDriveTypeCommands(object):
                      visible=None, name=None):
         """Create drive type."""
 
-        if visible is None or visible in ["--show", "show"]:
+        if visible in [None, "--show", "show"]:
             visible = True
         elif visible in ["--hide", "hide"]:
             visible = False
@@ -1223,7 +1224,7 @@ class VsaDriveTypeCommands(object):
     def list(self, visible=None, name=None):
         """Describe all available VSA drive types (or particular one)."""
 
-        visible = False if visible == "--all" or visible == False else True
+        visible = False if visible in ["--all", False] else True
 
         if name is not None:
             name = [name]
@@ -1245,21 +1246,21 @@ class VsaDriveTypeCommands(object):
                      capabilities='', visible=None):
         """Update drive type."""
 
-        if visible is None or visible in ["--show", "show"]:
-            visible = True
-        elif visible in ["--hide", "hide"]:
-            visible = False
-        else:
-            raise ValueError(_('Visible parameter should be set to --show '\
-                               'or --hide'))
-
         values = {
             'type': type,
             'size_gb': size_gb,
             'rpm': rpm,
             'capabilities': capabilities,
-            'visible': visible
             }
+        if visible:
+            if visible in ["--show", "show"]:
+                values['visible'] = True
+            elif visible in ["--hide", "hide"]:
+                values['visible'] = False
+            else:
+                raise ValueError(_("Visible parameter should be set to "\
+                                   "--show or --hide"))
+
         self.controller.update_drive_type(context.get_admin_context(),
                                           name, **values)
 

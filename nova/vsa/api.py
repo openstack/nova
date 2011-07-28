@@ -205,12 +205,10 @@ class API(base.Base):
         # create volumes
         if FLAGS.vsa_multi_vol_creation:
             if len(volume_params) > 0:
-                #filter_class = 'nova.scheduler.vsa.InstanceTypeFilter'
                 request_spec = {
                     'num_volumes': len(volume_params),
                     'vsa_id': vsa_id,
                     'volumes': volume_params,
-                    #'filter': filter_class,
                 }
 
                 rpc.cast(context,
