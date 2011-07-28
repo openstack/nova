@@ -188,7 +188,7 @@ class CreateInstanceHelper(object):
         Overrides normal behavior in the case of xml content
         """
         if request.content_type == "application/xml":
-            deserializer = ServerCreateRequestXMLDeserializer()
+            deserializer = ServerXMLDeserializer()
             return deserializer.deserialize(request.body)
         else:
             return self._deserialize(request.body, request.get_content_type())
