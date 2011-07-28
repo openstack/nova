@@ -68,7 +68,7 @@ LOG = logging.getLogger("nova.network.manager")
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('flat_network_bridge', 'br100',
+flags.DEFINE_string('flat_network_bridge', None,
                     'Bridge for simple network instances')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
@@ -614,12 +614,13 @@ class NetworkManager(manager.SchedulerDependentManager):
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
         fixed_net = netaddr.IPNetwork(cidr)
-        fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
-        significant_bits_v6 = 64
-        network_size_v6 = 1 << 64
+        if FLAGS.use_ipv6:
+            fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
+            significant_bits_v6 = 64
+            network_size_v6 = 1 << 64
+
         for index in range(num_networks):
             start = index * network_size
-            start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = '%s/%s' % (fixed_net[start], significant_bits)
             project_net = netaddr.IPNetwork(cidr)
@@ -640,6 +641,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 net['label'] = label
 
             if FLAGS.use_ipv6:
+                start_v6 = index * network_size_v6
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
@@ -720,9 +722,9 @@ class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
 
     FlatManager does not do any bridge or vlan creation.  The user is
-    responsible for setting up whatever bridge is specified in
-    flat_network_bridge (br100 by default).  This bridge needs to be created
-    on all compute hosts.
+    responsible for setting up whatever bridges are specified when creating
+    networks through nova-manage. This bridge needs to be created on all
+    compute hosts.
 
     The idea is to create a single network for the host with a command like:
     nova-manage network create 192.168.0.0/24 1 256. Creating multiple
