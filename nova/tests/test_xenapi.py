@@ -807,6 +807,21 @@ class XenAPIMigrateInstance(test.TestCase):
         conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
                                                            network_info)
 
+class XenAPIImageTypeTestCase(test.TestCase):
+    """Test ImageType class."""
+
+    def test_to_string(self):
+        """Can convert from type id to type string."""
+        self.assertEquals(
+            vm_utils.ImageType.to_string(vm_utils.ImageType.KERNEL),
+            vm_utils.ImageType.KERNEL_STR)
+
+    def test_from_string(self):
+        """Can convert from string to type id."""
+        self.assertEquals(
+            vm_utils.ImageType.to_string(vm_utils.ImageType.KERNEL_STR),
+            vm_utils.ImageType.KERNEL)
+
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
     """Unit tests for code that detects the ImageType."""

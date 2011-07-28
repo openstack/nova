@@ -16,6 +16,9 @@
 Tests For Zone Aware Scheduler.
 """
 
+import json
+import mox
+
 import nova.db
 
 from nova import exception
@@ -327,3 +330,20 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         sched._provision_resource_from_blob(None, request_spec, 1,
                                             request_spec, {})
         self.assertTrue(was_called)
+
+    def test_decrypt_blob(self):
+        """Test that the decrypt method works."""
+
+        fixture = FakeZoneAwareScheduler()
+        test_data = {"foo": "bar"}
+
+        crypto = self.mox.CreateMockAnything()
+        crypto.decryptor(mox.IgnoreArg()).AndReturn(lambda blob: blob)
+        """
+        def _decryptor(i):
+            return lambda blob: blob
+        """
+        self.stubs.Set(zone_aware_scheduler, 'crypto',
+                       crypto)
+        
+        self.assertEqual(fixture._decrypt_blob(test_data), json.dumps(test_data))
