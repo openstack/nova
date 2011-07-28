@@ -31,6 +31,7 @@ from nova.db.sqlalchemy.session import get_session
 from nova import auth
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import utils
 
 
@@ -529,7 +530,8 @@ class Migration(BASE, NovaBase):
     dest_host = Column(String(255))
     old_flavor_id = Column(Integer())
     new_flavor_id = Column(Integer())
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance_uuid = Column(String(255), ForeignKey('instances.uuid'),
+            nullable=True)
     #TODO(_cerberus_): enum
     status = Column(String(255))
 
@@ -546,6 +548,7 @@ class Network(BASE, NovaBase):
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)
     cidr_v6 = Column(String(255), unique=True)
+    multi_host = Column(Boolean, default=False)
 
     gateway_v6 = Column(String(255))
     netmask_v6 = Column(String(255))
@@ -554,7 +557,8 @@ class Network(BASE, NovaBase):
     bridge_interface = Column(String(255))
     gateway = Column(String(255))
     broadcast = Column(String(255))
-    dns = Column(String(255))
+    dns1 = Column(String(255))
+    dns2 = Column(String(255))
 
     vlan = Column(Integer)
     vpn_public_address = Column(String(255))
@@ -577,6 +581,18 @@ class VirtualInterface(BASE, NovaBase):
     # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
     instance = relationship(Instance, backref=backref('virtual_interfaces'))
+
+    @property
+    def fixed_ipv6(self):
+        cidr_v6 = self.network.cidr_v6
+        if cidr_v6 is None:
+            ipv6_address = None
+        else:
+            project_id = self.instance.project_id
+            mac = self.address
+            ipv6_address = ipv6.to_global(cidr_v6, mac, project_id)
+
+        return ipv6_address
 
 
 # TODO(vish): can these both come from the same baseclass?
@@ -604,6 +620,7 @@ class FixedIp(BASE, NovaBase):
     # leased means dhcp bridge has leased the ip
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
+    host = Column(String(255))
 
 
 class FloatingIp(BASE, NovaBase):

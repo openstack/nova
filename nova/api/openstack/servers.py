@@ -17,6 +17,7 @@ import base64
 import traceback
 
 from webob import exc
+import webob
 
 from nova import compute
 from nova import db
@@ -26,7 +27,6 @@ from nova import log as logging
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import create_instance_helper as helper
-from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
@@ -155,17 +155,14 @@ class Controller(object):
                 req.environ['nova.context'], id)
             return self._build_view(req, instance, is_detail=True)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def create(self, req, body):
         """ Creates a new server for a given user """
         extra_values = None
         result = None
-        try:
-            extra_values, instances = self.helper.create_instance(
-                    req, body, self.compute_api.create)
-        except faults.Fault, f:
-            return f
+        extra_values, instances = self.helper.create_instance(
+                req, body, self.compute_api.create)
 
         # We can only return 1 instance via the API, if we happen to
         # build more than one...  instances is a list, so we'll just
@@ -185,7 +182,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
 
         if not body:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
 
         ctxt = req.environ['nova.context']
         update_dict = {}
@@ -200,7 +197,7 @@ class Controller(object):
         try:
             self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         return exc.HTTPNoContent()
 
@@ -224,7 +221,7 @@ class Controller(object):
         for key in actions.keys():
             if key in body:
                 return actions[key](body, req, id)
-        return faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
     def _action_change_password(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
@@ -234,7 +231,7 @@ class Controller(object):
             self.compute_api.confirm_resize(req.environ['nova.context'], id)
         except Exception, e:
             LOG.exception(_("Error in confirm-resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
+            raise exc.HTTPBadRequest()
         return exc.HTTPNoContent()
 
     def _action_revert_resize(self, input_dict, req, id):
@@ -242,8 +239,8 @@ class Controller(object):
             self.compute_api.revert_resize(req.environ['nova.context'], id)
         except Exception, e:
             LOG.exception(_("Error in revert-resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+            raise exc.HTTPBadRequest()
+        return webob.Response(status_int=202)
 
     def _action_resize(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
@@ -253,23 +250,23 @@ class Controller(object):
             reboot_type = input_dict['reboot']['type']
         else:
             LOG.exception(_("Missing argument 'type' for reboot"))
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
             self.compute_api.reboot(req.environ['nova.context'], id)
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     def _action_migrate(self, input_dict, req, id):
         try:
             self.compute_api.resize(req.environ['nova.context'], id)
         except Exception, e:
             LOG.exception(_("Error in migrate %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+            raise exc.HTTPBadRequest()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def lock(self, req, id):
@@ -284,8 +281,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::lock %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def unlock(self, req, id):
@@ -300,8 +297,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unlock %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_lock(self, req, id):
@@ -315,8 +312,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::get_lock %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def reset_network(self, req, id, body):
@@ -330,8 +327,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def inject_network_info(self, req, id, body):
@@ -345,8 +342,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::inject_network_info %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def pause(self, req, id, body):
@@ -357,8 +354,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def unpause(self, req, id, body):
@@ -369,8 +366,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def suspend(self, req, id, body):
@@ -381,8 +378,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def resume(self, req, id, body):
@@ -393,8 +390,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def rescue(self, req, id):
@@ -405,8 +402,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::rescue %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def unrescue(self, req, id):
@@ -417,8 +414,8 @@ class Controller(object):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::unrescue %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_ajax_console(self, req, id):
@@ -427,8 +424,8 @@ class Controller(object):
             self.compute_api.get_ajax_console(req.environ['nova.context'],
                 int(id))
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+            raise exc.HTTPNotFound()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_vnc_console(self, req, id):
@@ -437,8 +434,8 @@ class Controller(object):
             self.compute_api.get_vnc_console(req.environ['nova.context'],
                                              int(id))
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+            raise exc.HTTPNotFound()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def diagnostics(self, req, id):
@@ -469,8 +466,8 @@ class ControllerV10(Controller):
         try:
             self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+            raise exc.HTTPNotFound()
+        return webob.Response(status_int=202)
 
     def _items(self, req, is_detail):
         """Returns a list of servers based on the request.
@@ -532,40 +529,33 @@ class ControllerV10(Controller):
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
-        try:
-            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
-                flavor_id = input_dict['resize']['flavorId']
-                self.compute_api.resize(req.environ['nova.context'], id,
-                        flavor_id)
-            else:
-                LOG.exception(_("Missing 'flavorId' argument for resize"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
-        except Exception, e:
-            LOG.exception(_("Error in resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+        if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
+            flavor_id = input_dict['resize']['flavorId']
+            self.compute_api.resize(req.environ['nova.context'], id,
+                    flavor_id)
+        else:
+            LOG.exception(_("Missing 'flavorId' argument for resize"))
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
-        instance_id = int(instance_id)
 
         try:
             image_id = info["rebuild"]["imageId"]
         except (KeyError, TypeError):
             msg = _("Could not parse imageId from request.")
             LOG.debug(msg)
-            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.compute_api.rebuild(context, instance_id, image_id)
         except exception.BuildInProgress:
-            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
-            return faults.Fault(exc.HTTPConflict(explanation=msg))
+            raise exc.HTTPConflict(explanation=msg)
 
-        response = exc.HTTPAccepted()
-        response.empty_body = True
-        return response
+        return webob.Response(status_int=202)
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
@@ -580,7 +570,7 @@ class ControllerV11(Controller):
         try:
             self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def _items(self, req, is_detail):
         """Returns a list of servers based on the request.
@@ -643,7 +633,7 @@ class ControllerV11(Controller):
             msg = _("Invalid adminPass")
             return exc.HTTPBadRequest(explanation=msg)
         self.compute_api.set_admin_password(context, id, password)
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
@@ -655,7 +645,7 @@ class ControllerV11(Controller):
         except AttributeError as ex:
             msg = _("Unable to parse metadata key/value pairs.")
             LOG.debug(msg)
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
     def _decode_personalities(self, personalities):
         """Decode the Base64-encoded personalities."""
@@ -666,14 +656,14 @@ class ControllerV11(Controller):
             except (KeyError, TypeError):
                 msg = _("Unable to parse personality path/contents.")
                 LOG.info(msg)
-                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+                raise exc.HTTPBadRequest(explanation=msg)
 
             try:
                 personality["contents"] = base64.b64decode(contents)
             except TypeError:
                 msg = _("Personality content could not be Base64 decoded.")
                 LOG.info(msg)
-                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+                raise exc.HTTPBadRequest(explanation=msg)
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
@@ -685,22 +675,21 @@ class ControllerV11(Controller):
                         flavor_id)
             else:
                 LOG.exception(_("Missing 'flavorRef' argument for resize"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
+                raise exc.HTTPUnprocessableEntity()
         except Exception, e:
             LOG.exception(_("Error in resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+            raise exc.HTTPBadRequest()
+        return webob.Response(status_int=202)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
-        instance_id = int(instance_id)
 
         try:
             image_href = info["rebuild"]["imageRef"]
         except (KeyError, TypeError):
             msg = _("Could not parse imageRef from request.")
             LOG.debug(msg)
-            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
         personalities = info["rebuild"].get("personality", [])
         metadata = info["rebuild"].get("metadata")
@@ -714,13 +703,11 @@ class ControllerV11(Controller):
             self.compute_api.rebuild(context, instance_id, image_href, name,
                                      metadata, personalities)
         except exception.BuildInProgress:
-            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
-            return faults.Fault(exc.HTTPConflict(explanation=msg))
+            raise exc.HTTPConflict(explanation=msg)
 
-        response = exc.HTTPAccepted()
-        response.empty_body = True
-        return response
+        return webob.Response(status_int=202)
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11

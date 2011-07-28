@@ -50,7 +50,7 @@ class ViewBuilder(object):
             else:
                 server = self._build_simple(inst)
 
-            self._build_extra(server, inst)
+            self._build_extra(server['server'], inst)
 
         return server
 
@@ -69,7 +69,7 @@ class ViewBuilder(object):
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
 
-        if compute_api.has_finished_migration(ctxt, inst['id']):
+        if compute_api.has_finished_migration(ctxt, inst['uuid']):
             inst_dict['status'] = 'RESIZE-CONFIRM'
 
         # Return the metadata as a dictionary
@@ -86,7 +86,6 @@ class ViewBuilder(object):
         self._build_flavor(inst_dict, inst)
         self._build_addresses(inst_dict, inst)
 
-        inst_dict['uuid'] = inst['uuid']
         return dict(server=inst_dict)
 
     def _build_addresses(self, response, inst):
@@ -107,6 +106,9 @@ class ViewBuilder(object):
 
 class ViewBuilderV10(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
+
+    def _build_extra(self, response, inst):
+        response['uuid'] = inst['uuid']
 
     def _build_image(self, response, inst):
         if 'image_ref' in dict(inst):
@@ -132,18 +134,46 @@ class ViewBuilderV11(ViewBuilder):
         self.image_builder = image_builder
         self.base_url = base_url
 
+    def _build_detail(self, inst):
+        response = super(ViewBuilderV11, self)._build_detail(inst)
+        response['server']['created'] = inst['created_at']
+        response['server']['updated'] = inst['updated_at']
+        if 'status' in response['server']:
+            if response['server']['status'] == "ACTIVE":
+                response['server']['progress'] = 100
+            elif response['server']['status'] == "BUILD":
+                response['server']['progress'] = 0
+        return response
+
     def _build_image(self, response, inst):
         if 'image_ref' in dict(inst):
             image_href = inst['image_ref']
-            if str(image_href).isdigit():
-                image_href = int(image_href)
-            response['imageRef'] = image_href
+            image_id = str(common.get_id_from_href(image_href))
+            _bookmark = self.image_builder.generate_bookmark(image_id)
+            response['image'] = {
+                "id": image_id,
+                "links": [
+                    {
+                        "rel": "bookmark",
+                        "href": _bookmark,
+                    },
+                ]
+            }
 
     def _build_flavor(self, response, inst):
         if "instance_type" in dict(inst):
             flavor_id = inst["instance_type"]['flavorid']
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
-            response["flavorRef"] = flavor_ref
+            flavor_bookmark = self.flavor_builder.generate_bookmark(flavor_id)
+            response["flavor"] = {
+                "id": str(common.get_id_from_href(flavor_ref)),
+                "links": [
+                    {
+                        "rel": "bookmark",
+                        "href": flavor_bookmark,
+                    },
+                ]
+            }
 
     def _build_addresses(self, response, inst):
         interfaces = inst.get('virtual_interfaces', [])
@@ -151,6 +181,7 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
+        response['uuid'] = inst['uuid']
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
@@ -167,7 +198,7 @@ class ViewBuilderV11(ViewBuilder):
             },
         ]
 
-        response["server"]["links"] = links
+        response["links"] = links
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""

@@ -78,8 +78,8 @@ def wrap_db_error(f):
         except Exception, e:
             LOG.exception(_('DB exception wrapped.'))
             raise DBError(e)
-    return _wrap
     _wrap.func_name = f.func_name
+    return _wrap
 
 
 def wrap_exception(notifier=None, publisher_id=None, event_type=None,
@@ -116,7 +116,8 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                     notifier.notify(publisher_id, temp_type, temp_level,
                                     payload)
 
-                if not isinstance(e, Error):
+                if (not isinstance(e, Error) and
+                    not isinstance(e, NovaException)):
                     #exc_type, exc_value, exc_traceback = sys.exc_info()
                     LOG.exception(_('Uncaught exception'))
                     #logging.error(traceback.extract_stack(exc_traceback))
@@ -372,6 +373,10 @@ class StorageRepositoryNotFound(NotFound):
     message = _("Cannot find SR to read/write VDI.")
 
 
+class NetworkNotCreated(NovaException):
+    message = _("%(req)s is required to create a network.")
+
+
 class NetworkNotFound(NotFound):
     message = _("Network %(network_id)s could not be found.")
 
@@ -406,6 +411,11 @@ class FixedIpNotFoundForAddress(FixedIpNotFound):
 
 class FixedIpNotFoundForInstance(FixedIpNotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
+
+
+class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
+    message = _("Network host %(host)s has zero fixed ips "
+                "in network %(network_id)s.")
 
 
 class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):
