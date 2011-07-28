@@ -667,8 +667,6 @@ class ControllerV11(Controller):
 
         return webob.Response(status_int=202)
 
-
-
     def _action_create_image(self, input_dict, req, instance_id):
         """Snapshot a server instance."""
         entity = input_dict.get("createImage", {})

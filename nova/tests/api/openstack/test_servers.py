@@ -2511,8 +2511,6 @@ class TestServerActionXMLDeserializer(test.TestCase):
         self.assertEquals(request['body'], expected)
 
 
-
-
 class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
 
     def setUp(self):
