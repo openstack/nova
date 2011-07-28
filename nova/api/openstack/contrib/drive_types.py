@@ -18,18 +18,14 @@
 
 """ The Drive Types extension for Virtual Storage Arrays"""
 
-
 from webob import exc
 
 from nova.vsa import drive_types
 from nova import exception
-from nova import db
-from nova import quota
 from nova import log as logging
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import faults
-from nova.api.openstack import wsgi
 
 LOG = logging.getLogger("nova.api.drive_types")
 

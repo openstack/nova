@@ -3526,8 +3526,6 @@ def vsa_destroy(context, vsa_id):
     """
     session = get_session()
     with session.begin():
-        #vsa_ref = vsa_get(context, vsa_id, session=session)
-        #vsa_ref.delete(session=session)
         session.query(models.VirtualStorageArray).\
                 filter_by(id=vsa_id).\
                 update({'deleted': True,

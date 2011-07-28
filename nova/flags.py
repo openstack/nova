@@ -365,8 +365,6 @@ DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
               'Manager for volume')
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
-DEFINE_string('vsa_manager', 'nova.vsa.manager.VsaManager',
-              'Manager for vsa')
 DEFINE_string('vc_image_name', 'vc_image',
               'the VC image ID (for a VC image that exists in DB Glance)')
 # VSA constants and enums

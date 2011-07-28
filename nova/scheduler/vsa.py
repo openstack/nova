@@ -34,8 +34,6 @@ from nova import log as logging
 LOG = logging.getLogger('nova.scheduler.vsa')
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('gb_to_bytes_shift', 30,
-                    'Conversion shift between GB and bytes')
 flags.DEFINE_integer('drive_type_approx_capacity_percent', 10,
                     'The percentage range for capacity comparison')
 flags.DEFINE_integer('vsa_unique_hosts_per_alloc', 10,
@@ -45,11 +43,11 @@ flags.DEFINE_boolean('vsa_select_unique_drives', True,
 
 
 def BYTES_TO_GB(bytes):
-    return bytes >> FLAGS.gb_to_bytes_shift
+    return bytes >> 30
 
 
 def GB_TO_BYTES(gb):
-    return gb << FLAGS.gb_to_bytes_shift
+    return gb << 30
 
 
 class VsaScheduler(simple.SimpleScheduler):
@@ -68,8 +66,7 @@ class VsaScheduler(simple.SimpleScheduler):
     def _qosgrp_match(self, drive_type, qos_values):
 
         def _compare_names(str1, str2):
-            result = str1.lower() == str2.lower()
-            return result
+            return str1.lower() == str2.lower()
 
         def _compare_sizes_approxim(cap_capacity, size_gb):
             cap_capacity = BYTES_TO_GB(int(cap_capacity))
@@ -77,9 +74,8 @@ class VsaScheduler(simple.SimpleScheduler):
             size_perc = size_gb * \
                 FLAGS.drive_type_approx_capacity_percent / 100
 
-            result = cap_capacity >= size_gb - size_perc and \
-                     cap_capacity <= size_gb + size_perc
-            return result
+            return cap_capacity >= size_gb - size_perc and \
+                   cap_capacity <= size_gb + size_perc
 
         # Add more entries for additional comparisons
         compare_list = [{'cap1': 'DriveType',

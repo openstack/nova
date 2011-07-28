@@ -96,18 +96,6 @@ drive_types = Table('drive_types', meta,
        Column('visible', Boolean(create_constraint=True, name=None)),
        )
 
-#vsa_disk_association = Table('vsa_disk_association', meta,
-#       Column('created_at', DateTime(timezone=False)),
-#       Column('updated_at', DateTime(timezone=False)),
-#       Column('deleted_at', DateTime(timezone=False)),
-#       Column('deleted', Boolean(create_constraint=True, name=None)),
-#       Column('id', Integer(), primary_key=True, nullable=False),
-#       Column('drive_type_id', Integer(), ForeignKey('drive_types.id')),
-#       Column('vsa_id', Integer(), ForeignKey('virtual_storage_arrays.id')),
-#       Column('disk_num', Integer(), nullable=False),
-#       )
-
-#new_tables = (virtual_storage_arrays, drive_types, vsa_disk_association)
 new_tables = (virtual_storage_arrays, drive_types)
 
 #
