@@ -38,10 +38,7 @@ class RequestContext(object):
         self.roles = roles or []
         self.is_admin = is_admin
         if self.is_admin is None:
-            if 'admin' in self.roles:
-                self.is_admin = True
-            else:
-                self.is_admin = False
+            self.admin = 'admin' in self.roles
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
