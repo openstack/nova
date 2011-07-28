@@ -1099,6 +1099,7 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
@@ -1106,7 +1107,6 @@ class ServersTest(test.TestCase):
         self.assertEqual(2, server['flavorId'])
         self.assertEqual(3, server['imageId'])
         self.assertEqual(FAKE_UUID, server['uuid'])
-        self.assertEqual(res.status_int, 200)
 
     def test_create_instance(self):
         self._test_create_instance_helper()
@@ -1279,7 +1279,12 @@ class ServersTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
             },
         }
 
@@ -1293,11 +1298,11 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(1, server['id'])
+        self.assertEqual(0, server['progress'])
         self.assertEqual('server_test', server['name'])
         self.assertEqual(expected_flavor, server['flavor'])
         self.assertEqual(expected_image, server['image'])
-        self.assertEqual(res.status_int, 200)
-        #self.assertEqual(1, server['id'])
 
     def test_create_instance_v1_1_invalid_flavor_href(self):
         self._setup_for_create_instance()
@@ -1351,7 +1356,7 @@ class ServersTest(test.TestCase):
         self._setup_for_create_instance()
 
         image_id = "2"
-        flavor_ref = 'http://localhost/flavors/3'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
         expected_flavor = {
             "id": "3",
             "links": [
@@ -1385,10 +1390,10 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
+        self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(expected_flavor, server['flavor'])
         self.assertEqual(expected_image, server['image'])
-        self.assertEqual(res.status_int, 200)
 
     def test_create_instance_with_admin_pass_v1_0(self):
         self._setup_for_create_instance()
@@ -1411,7 +1416,7 @@ class ServersTest(test.TestCase):
         self.assertNotEqual(res['server']['adminPass'],
                             body['server']['adminPass'])
 
-    def test_create_instance_with_admin_pass_v1_1(self):
+    def test_create_instance_v1_1_admin_pass(self):
         self._setup_for_create_instance()
 
         image_href = 'http://localhost/v1.1/images/2'
@@ -1419,8 +1424,8 @@ class ServersTest(test.TestCase):
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
+                'imageRef': 3,
+                'flavorRef': 3,
                 'adminPass': 'testpass',
             },
         }
@@ -1430,19 +1435,18 @@ class ServersTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
         res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(server['adminPass'], body['server']['adminPass'])
 
-    def test_create_instance_with_empty_admin_pass_v1_1(self):
+    def test_create_instance_v1_1_admin_pass_empty(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
+                'imageRef': 3,
+                'flavorRef': 3,
                 'adminPass': '',
             },
         }
@@ -2235,7 +2239,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
 
 
-class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
+class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
 
     def setUp(self):
         self.deserializer = create_instance_helper.ServerXMLDeserializer()
@@ -2249,6 +2253,8 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
                 "name": "new-server-test",
                 "imageId": "1",
                 "flavorId": "1",
+                "metadata": {},
+                "personality": [],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2264,6 +2270,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
                 "imageId": "1",
                 "flavorId": "1",
                 "metadata": {},
+                "personality": [],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2278,6 +2285,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
                 "name": "new-server-test",
                 "imageId": "1",
                 "flavorId": "1",
+                "metadata": {},
                 "personality": [],
                 }}
         self.assertEquals(request['body'], expected)
@@ -2515,18 +2523,188 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         request = self.deserializer.deserialize(serial_request, 'create')
         self.assertEqual(request['body'], expected)
 
-    def test_request_xmlser_with_flavor_image_href(self):
+
+class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
+
+    def setUp(self):
+        self.deserializer = create_instance_helper.ServerXMLDeserializer()
+
+    def test_minimal_request(self):
         serial_request = """
-                <server xmlns="http://docs.openstack.org/compute/api/v1.1"
-                    name="new-server-test"
-                    imageRef="http://localhost:8774/v1.1/images/1"
-                    flavorRef="http://localhost:8774/v1.1/flavors/1">
-                </server>"""
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
-        self.assertEquals(request['body']["server"]["flavorRef"],
-                          "http://localhost:8774/v1.1/flavors/1")
-        self.assertEquals(request['body']["server"]["imageRef"],
-                          "http://localhost:8774/v1.1/images/1")
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "metadata": {},
+                "personality": [],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_admin_pass(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2"
+        adminPass="1234"/>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "adminPass": "1234",
+                "metadata": {},
+                "personality": [],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_image_link(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="http://localhost:8774/v1.1/images/2"
+        flavorRef="3"/>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "http://localhost:8774/v1.1/images/2",
+                "flavorRef": "3",
+                "metadata": {},
+                "personality": [],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_flavor_link(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="http://localhost:8774/v1.1/flavors/3"/>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "http://localhost:8774/v1.1/flavors/3",
+                "metadata": {},
+                "personality": [],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_empty_metadata_personality(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2">
+    <metadata/>
+    <personality/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "metadata": {},
+                "personality": [],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_multiple_metadata_items(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2">
+    <metadata>
+        <meta key="one">two</meta>
+        <meta key="open">snack</meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "metadata": {"one": "two", "open": "snack"},
+                "personality": [],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_multiple_personality_files(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2">
+    <personality>
+        <file path="/etc/banner.txt">MQ==</file>
+        <file path="/etc/hosts">Mg==</file>
+    </personality>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "metadata": {},
+                "personality": [
+                    {"path": "/etc/banner.txt", "contents": "MQ=="},
+                    {"path": "/etc/hosts", "contents": "Mg=="},
+                ],
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_spec_request(self):
+        image_bookmark_link = "http://servers.api.openstack.org/1234/" + \
+                              "images/52415800-8b69-11e0-9b19-734f6f006e54"
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        imageRef="%s"
+        flavorRef="52415800-8b69-11e0-9b19-734f1195ff37"
+        name="new-server-test">
+  <metadata>
+    <meta key="My Server Name">Apache1</meta>
+  </metadata>
+  <personality>
+    <file path="/etc/banner.txt">Mg==</file>
+  </personality>
+</server>""" % (image_bookmark_link)
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "http://servers.api.openstack.org/1234/" + \
+                            "images/52415800-8b69-11e0-9b19-734f6f006e54",
+                "flavorRef": "52415800-8b69-11e0-9b19-734f1195ff37",
+                "metadata": {"My Server Name": "Apache1"},
+                "personality": [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "Mg==",
+                    },
+                ],
+            },
+        }
+        self.assertEquals(request['body'], expected)
 
 
 class TextAddressesXMLSerialization(test.TestCase):
