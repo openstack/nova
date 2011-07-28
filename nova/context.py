@@ -98,7 +98,8 @@ class RequestContext(object):
                 'read_deleted': self.read_deleted,
                 'remote_address': self.remote_address,
                 'timestamp': utils.isotime(self.timestamp),
-                'request_id': self.request_id}
+                'request_id': self.request_id,
+                'auth_token': self.auth_token}
 
     @classmethod
     def from_dict(cls, values):
@@ -112,7 +113,8 @@ class RequestContext(object):
                               read_deleted,
                               self.remote_address,
                               self.timestamp,
-                              self.request_id)
+                              self.request_id,
+                              self.auth_token)
 
 
 def get_admin_context(read_deleted=False):

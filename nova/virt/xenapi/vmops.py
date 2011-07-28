@@ -209,8 +209,8 @@ class VMOps(object):
 
             if instance.vm_mode != vm_mode:
                 # Update database with normalized (or determined) value
-                db.instance_update(context, instance['id'],
-                                   {'vm_mode': vm_mode})
+                db.instance_update(context.get_admin_context(),
+                                   instance['id'], {'vm_mode': vm_mode})
             vm_ref = VMHelper.create_vm(self._session, instance,
                     kernel and kernel.get('file', None) or None,
                     ramdisk and ramdisk.get('file', None) or None,
