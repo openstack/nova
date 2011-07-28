@@ -3207,9 +3207,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
     def setUp(self):
         self.maxDiff = None
-
-    def tearDown(self):
-        pass
+        test.TestCase.setUp(self)
 
     def test_show(self):
         serializer = servers.ServerXMLSerializer()
@@ -3236,7 +3234,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 "flavor": {
                     "id": "1",
                     "links": [
-                                              {
+                        {
                             "rel": "bookmark",
                             "href": self.FLAVOR_BOOKMARK,
                         },
@@ -3358,7 +3356,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 "flavor": {
                     "id": "1",
                     "links": [
-                                              {
+                        {
                             "rel": "bookmark",
                             "href": self.FLAVOR_BOOKMARK,
                         },
@@ -3546,7 +3544,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 "flavor": {
                     "id": "1",
                     "links": [
-                                              {
+                        {
                             "rel": "bookmark",
                             "href": expected_flavor_bookmark,
                         },
@@ -3599,7 +3597,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 "flavor": {
                     "id": "1",
                     "links": [
-                                              {
+                        {
                             "rel": "bookmark",
                             "href": expected_flavor_bookmark,
                         },
