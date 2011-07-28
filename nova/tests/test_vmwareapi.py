@@ -19,6 +19,7 @@
 Test suite for VMWareAPI.
 """
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import test
@@ -42,7 +43,6 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.flags(vmwareapi_host_ip='test_url',
                    vmwareapi_host_username='test_username',
                    vmwareapi_host_password='test_pass')
-        self.manager = manager.AuthManager()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)

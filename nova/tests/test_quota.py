@@ -20,10 +20,8 @@ from nova import compute
 from nova import context
 from nova import db
 from nova import flags
-from nova import network
 from nova import quota
 from nova import test
-from nova import utils
 from nova import volume
 from nova.compute import instance_types
 
@@ -267,7 +265,7 @@ class QuotaTestCase(test.TestCase):
         address = '192.168.0.100'
         db.floating_ip_create(context.get_admin_context(),
                               {'address': address,
-                               'project_id': self.project.id})
+                               'project_id': self.project_id})
         self.assertRaises(quota.QuotaError,
                           self.network.allocate_floating_ip,
                           self.context,
