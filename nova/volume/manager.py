@@ -265,9 +265,6 @@ class VolumeManager(manager.SchedulerDependentManager):
         return error_list
 
     def _volume_stats_changed(self, stat1, stat2):
-        #LOG.info(_("stat1=%s"), stat1)
-        #LOG.info(_("stat2=%s"), stat2)
-
         if len(stat1) != len(stat2):
             return True
         for (k, v) in stat1.iteritems():

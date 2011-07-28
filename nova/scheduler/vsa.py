@@ -324,8 +324,6 @@ class VsaScheduler(simple.SimpleScheduler):
                 db.vsa_update(context, volume_ref['to_vsa_id'],
                                 dict(status=VsaState.FAILED))
             raise
-            #return super(VsaScheduler, self).schedule_create_volume(context,
-            #            volume_id, *_args, **_kwargs)
 
         if host:
             now = utils.utcnow()

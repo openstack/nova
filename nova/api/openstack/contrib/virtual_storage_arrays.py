@@ -180,8 +180,6 @@ class VsaVolumeDriveController(volumes.VolumeController):
                     ]}}}
 
     def __init__(self):
-        # self.compute_api = compute.API()
-        # self.vsa_api = vsa.API()
         self.volume_api = volume.API()
         super(VsaVolumeDriveController, self).__init__()
 
