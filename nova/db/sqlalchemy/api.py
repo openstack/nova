@@ -34,7 +34,6 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import literal_column
-import datetime
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.db.sqlalchemy")
@@ -3248,8 +3247,8 @@ def agent_build_destroy(context, agent_build_id):
     with session.begin():
         session.query(models.AgentBuild).\
                 filter_by(id=agent_build_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
