@@ -807,6 +807,7 @@ class XenAPIMigrateInstance(test.TestCase):
         conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
                                                            network_info)
 
+
 class XenAPIImageTypeTestCase(test.TestCase):
     """Test ImageType class."""
 

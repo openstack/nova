@@ -343,5 +343,6 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
 
         self.stubs.Set(zone_aware_scheduler, 'crypto',
                        StubDecryptor())
-        
-        self.assertEqual(fixture._decrypt_blob(test_data), json.dumps(test_data))
+
+        self.assertEqual(fixture._decrypt_blob(test_data),
+                         json.dumps(test_data))
