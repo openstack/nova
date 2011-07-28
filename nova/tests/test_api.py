@@ -216,7 +216,11 @@ class ApiEc2TestCase(test.TestCase):
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
         # pylint: disable=E1103
-        self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
+        if boto.Version >= '2':
+            self.ec2.new_http_connection(host or '%s:8773' % (self.host),
+                is_secure).AndReturn(self.http)
+        else:
+            self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
         return self.http
 
     def test_return_valid_isoformat(self):

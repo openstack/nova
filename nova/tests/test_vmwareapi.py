@@ -19,9 +19,6 @@
 Test suite for VMWareAPI.
 """
 
-import stubout
-
-from nova import context
 from nova import db
 from nova import flags
 from nova import test
@@ -40,47 +37,64 @@ FLAGS = flags.FLAGS
 class VMWareAPIVMTestCase(test.TestCase):
     """Unit tests for Vmware API connection calls."""
 
-    # NOTE(jkoelker): This is leaking stubs into the db module.
-    #                 Commenting out until updated for multi-nic.
-    #def setUp(self):
-    #    super(VMWareAPIVMTestCase, self).setUp()
-    #    self.flags(vmwareapi_host_ip='test_url',
-    #               vmwareapi_host_username='test_username',
-    #               vmwareapi_host_password='test_pass')
-    #    self.network = utils.import_object(FLAGS.network_manager)
-    #    self.user_id = 'fake'
-    #    self.project_id = 'fake'
-    #    self.context = context.RequestContext(self.user_id, self.project_id)
-    #    vmwareapi_fake.reset()
-    #    db_fakes.stub_out_db_instance_api(self.stubs)
-    #    stubs.set_stubs(self.stubs)
-    #    glance_stubs.stubout_glance_client(self.stubs,
-    #                                       glance_stubs.FakeGlance)
-    #    self.conn = vmwareapi_conn.get_connection(False)
+    def setUp(self):
+        super(VMWareAPIVMTestCase, self).setUp()
+        self.flags(vmwareapi_host_ip='test_url',
+                   vmwareapi_host_username='test_username',
+                   vmwareapi_host_password='test_pass')
+        self.manager = manager.AuthManager()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+        self.network = utils.import_object(FLAGS.network_manager)
+        vmwareapi_fake.reset()
+        db_fakes.stub_out_db_instance_api(self.stubs)
+        stubs.set_stubs(self.stubs)
+        glance_stubs.stubout_glance_client(self.stubs)
+        self.conn = vmwareapi_conn.get_connection(False)
+        # NOTE(vish): none of the network plugging code is actually
+        #             being tested
+        self.network_info = [({'bridge': 'fa0',
+                               'id': 0,
+                               'vlan': None,
+                               'bridge_interface': None,
+                               'injected': True},
+                          {'broadcast': '192.168.0.255',
+                           'dns': ['192.168.0.1'],
+                           'gateway': '192.168.0.1',
+                           'gateway6': 'dead:beef::1',
+                           'ip6s': [{'enabled': '1',
+                                     'ip': 'dead:beef::dcad:beff:feef:0',
+                                           'netmask': '64'}],
+                           'ips': [{'enabled': '1',
+                                    'ip': '192.168.0.100',
+                                    'netmask': '255.255.255.0'}],
+                           'label': 'fake',
+                           'mac': 'DE:AD:BE:EF:00:00',
+                           'rxtx_cap': 3})]
 
-    #def tearDown(self):
-    #    super(VMWareAPIVMTestCase, self).tearDown()
-    #    vmwareapi_fake.cleanup()
-    #    self.stubs.UnsetAll()
+    def tearDown(self):
+        super(VMWareAPIVMTestCase, self).tearDown()
+        vmwareapi_fake.cleanup()
 
     def _create_instance_in_the_db(self):
         values = {'name': 1,
                   'id': 1,
                   'project_id': self.project_id,
                   'user_id': self.user_id,
-                  'image_id': "1",
+                  'image_ref': "1",
                   'kernel_id': "1",
                   'ramdisk_id': "1",
+                  'mac_address': "de:ad:be:ef:be:ef",
                   'instance_type': 'm1.large',
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
                   }
-        self.instance = db.instance_create(values)
+        self.instance = db.instance_create(None, values)
 
     def _create_vm(self):
         """Create and spawn the VM."""
         self._create_instance_in_the_db()
         self.type_data = db.instance_type_get_by_name(None, 'm1.large')
-        self.conn.spawn(self.instance)
+        self.conn.spawn(self.instance, self.network_info)
         self._check_vm_record()
 
     def _check_vm_record(self):
@@ -124,24 +138,20 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.assertEquals(info["mem"], mem_kib)
         self.assertEquals(info["num_cpu"], self.type_data['vcpus'])
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_list_instances(self):
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 0)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_list_instances_1(self):
         self._create_vm()
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 1)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_spawn(self):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_snapshot(self):
         self._create_vm()
         info = self.conn.get_info(1)
@@ -150,27 +160,23 @@ class VMWareAPIVMTestCase(test.TestCase):
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_snapshot_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(Exception, self.conn.snapshot, self.instance,
                           "Test-Snapshot")
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_reboot(self):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.reboot(self.instance)
+        self.conn.reboot(self.instance, self.network_info)
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_reboot_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(Exception, self.conn.reboot, self.instance)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_reboot_not_poweredon(self):
         self._create_vm()
         info = self.conn.get_info(1)
@@ -180,7 +186,6 @@ class VMWareAPIVMTestCase(test.TestCase):
         self._check_vm_info(info, power_state.PAUSED)
         self.assertRaises(Exception, self.conn.reboot, self.instance)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_suspend(self):
         self._create_vm()
         info = self.conn.get_info(1)
@@ -189,13 +194,11 @@ class VMWareAPIVMTestCase(test.TestCase):
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.PAUSED)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_suspend_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(Exception, self.conn.suspend, self.instance,
                           self.dummy_callback_handler)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_resume(self):
         self._create_vm()
         info = self.conn.get_info(1)
@@ -207,13 +210,11 @@ class VMWareAPIVMTestCase(test.TestCase):
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_resume_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(Exception, self.conn.resume, self.instance,
                           self.dummy_callback_handler)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_resume_not_suspended(self):
         self._create_vm()
         info = self.conn.get_info(1)
@@ -221,49 +222,41 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.assertRaises(Exception, self.conn.resume, self.instance,
                           self.dummy_callback_handler)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_get_info(self):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_destroy(self):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 1)
-        self.conn.destroy(self.instance)
+        self.conn.destroy(self.instance, self.network_info)
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 0)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_destroy_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertEquals(self.conn.destroy(self.instance), None)
+        self.assertEquals(self.conn.destroy(self.instance, self.network_info),
+                          None)
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_pause(self):
         pass
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_unpause(self):
         pass
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_diagnostics(self):
         pass
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_get_console_output(self):
         pass
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def test_get_ajax_console(self):
         pass
 
-    @test.skip_test("DB stubbing not removed, needs updating for multi-nic")
     def dummy_callback_handler(self, ret):
         """
         Dummy callback function to be passed to suspend, resume, etc., calls.
