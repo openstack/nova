@@ -485,11 +485,6 @@ class SimpleDriverTestCase(test.TestCase):
         self.assertEqual(host, 'host2')
         volume1.delete_volume(self.context, volume_id1)
         db.volume_destroy(self.context, volume_id2)
-        dic = {'service_id': s_ref['id'],
-               'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
-               'vcpus_used': 16, 'memory_mb_used': 12, 'local_gb_used': 10,
-               'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
-               'cpu_info': ''}
 
     def test_doesnt_report_disabled_hosts_as_up(self):
         """Ensures driver doesn't find hosts before they are enabled"""
