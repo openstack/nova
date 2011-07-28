@@ -80,6 +80,12 @@ def notify(publisher_id, event_type, priority, payload):
     if priority not in log_levels:
         raise BadPriorityException(
                  _('%s not in valid priorities' % priority))
+
+    # Ensure everything is JSON serializable.
+    for k, v in payload.iteritems():
+        if not isinstance(v, (basestring, int, long, float)):
+            payload[k] = str(v)
+
     driver = utils.import_object(FLAGS.notification_driver)
     msg = dict(message_id=str(uuid.uuid4()),
                    publisher_id=publisher_id,
