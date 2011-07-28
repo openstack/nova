@@ -1312,7 +1312,7 @@ def instance_get_fixed_addresses_v6(context, instance_id):
         # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
         prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
         # return list containing ipv6 address for each tuple
-        return [ipv6.to_global_ipv6(*t) for t in prefix_mac_tuples]
+        return [ipv6.to_global(*t) for t in prefix_mac_tuples]
 
 
 @require_context
