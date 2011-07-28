@@ -132,15 +132,6 @@ class ServerActionsTest(test.TestCase):
 #        res = req.get_response(fakes.wsgi_app())
 #        self.assertEqual(res.status_int, 501)
 
-    def test_server_change_password_not_a_string_v1_1(self):
-        body = {'changePassword': {'adminPass': 1234}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
     def test_server_reboot(self):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
@@ -362,6 +353,15 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(res.status_int, 202)
         self.assertEqual(mock_method.instance_id, '1')
         self.assertEqual(mock_method.password, '1234pass')
+
+    def test_server_change_password_not_a_string(self):
+        body = {'changePassword': {'adminPass': 1234}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
     def test_server_change_password_bad_request(self):
         body = {'changePassword': {'pass': '12345'}}
