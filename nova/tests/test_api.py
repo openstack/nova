@@ -365,7 +365,7 @@ class ApiEc2TestCase(test.TestCase):
 
     def test_group_name_valid_chars_security_group(self):
         """ Test that we sanely handle invalid security group names.
-         API Spec states we should only accept alphanumeric characters, 
+         API Spec states we should only accept alphanumeric characters,
          spaces, dashes, and underscores. """
         self.expect_http()
         self.mox.ReplayAll()
@@ -380,16 +380,8 @@ class ApiEc2TestCase(test.TestCase):
         # dashes, and underscores.
         security_group_name = "aa #^% -=99"
 
-        try:
-            self.ec2.create_security_group(security_group_name, 'test group')
-        except EC2ResponseError, e:
-            if e.code == 'InvalidParameterValue':
-                pass
-            else:
-                self.fail("Unexpected EC2ResponseError: %s "
-                          "(expected InvalidParameterValue)" % e.code)
-        else:
-            self.fail('Exception not raised.')
+        self.assertRaises(EC2ResponseError, self.ec2.create_security_group,
+                          security_group_name, 'test group')
 
     def test_group_name_valid_length_security_group(self):
         """Test that we sanely handle invalid security group names.
@@ -406,16 +398,9 @@ class ApiEc2TestCase(test.TestCase):
         # Test block group_name > 255 chars
         security_group_name = "".join(random.choice("poiuytrewqasdfghjklmnbvc")
                                       for x in range(random.randint(256, 266)))
-        try:
-            self.ec2.create_security_group(security_group_name, 'test group')
-        except EC2ResponseError, e:
-            if e.code == 'InvalidParameterValue':
-                pass
-            else:
-                self.fail("Unexpected EC2ResponseError: %s "
-                          "(expected InvalidParameterValue)" % e.code)
-        else:
-            self.fail('Exception not raised.')
+
+        self.assertRaises(EC2ResponseError, self.ec2.create_security_group,
+                          security_group_name, 'test group')
 
     def test_authorize_revoke_security_group_cidr(self):
         """

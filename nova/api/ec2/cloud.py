@@ -695,7 +695,7 @@ class CloudController(object):
         if not re.match('^[a-zA-Z0-9_\- ]+$', str(group_name)):
             # Some validation to ensure that values match API spec.
             # - Alphanumeric characters, spaces, dashes, and underscores.
-            # TODO(Daviey): LP: #813685 extend beyond group_name checking, and 
+            # TODO(Daviey): LP: #813685 extend beyond group_name checking, and
             #  probably create a param validator that can be used elsewhere.
             err = _("Value (%s) for parameter GroupName is invalid."
                     " Content limited to Alphanumeric characters, "
