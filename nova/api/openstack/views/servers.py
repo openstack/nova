@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import hashlib
 import os
 
@@ -149,8 +150,10 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_detail(self, inst):
         response = super(ViewBuilderV11, self)._build_detail(inst)
-        response['server']['created'] = inst['created_at']
-        response['server']['updated'] = inst['updated_at']
+        response['server']['created'] = \
+            self._convert_timeformat(inst['created_at'])
+        response['server']['updated'] =  \
+            self._convert_timeformat(inst['updated_at'])
         if 'status' in response['server']:
             if response['server']['status'] == "ACTIVE":
                 response['server']['progress'] = 100
@@ -221,3 +224,11 @@ class ViewBuilderV11(ViewBuilder):
         """Create an url that refers to a specific flavor id."""
         return os.path.join(common.remove_version_from_href(self.base_url),
             "servers", str(server_id))
+
+    def _convert_timeformat(self, date_time):
+        """Converts the given time into the common time format
+
+        :param date_time: the datetime object to convert
+
+        """
+        return date_time.strftime(utils.TIME_FORMAT)

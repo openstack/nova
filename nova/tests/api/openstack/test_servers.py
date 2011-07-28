@@ -16,6 +16,7 @@
 #    under the License.
 
 import base64
+import datetime
 import json
 import unittest
 from xml.dom import minidom
@@ -172,8 +173,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     instance = {
         "id": int(id),
-        "created_at": "2010-10-10T12:00:00Z",
-        "updated_at": "2010-11-11T11:00:00Z",
+        "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
+        "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
@@ -1048,8 +1049,8 @@ class ServersTest(test.TestCase):
                     'uuid': FAKE_UUID,
                     'instance_type': dict(inst_type),
                     'image_ref': image_ref,
-                    'created_at': '2010-10-10T12:00:00Z',
-                    'updated_at': '2010-11-11T11:00:00Z',
+                    "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
+                    "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
                    }
 
         def server_update(context, id, params):
@@ -3077,10 +3078,12 @@ class ServersViewBuilderV11Test(test.TestCase):
         pass
 
     def _get_instance(self):
+        created_at = datetime.datetime(2010, 10, 10, 12, 0, 0)
+        updated_at = datetime.datetime(2010, 11, 11, 11, 0, 0)
         instance = {
             "id": 1,
-            "created_at": "2010-10-10T12:00:00Z",
-            "updated_at": "2010-11-11T11:00:00Z",
+            "created_at": created_at,
+            "updated_at": updated_at,
             "admin_pass": "",
             "user_id": "",
             "project_id": "",
