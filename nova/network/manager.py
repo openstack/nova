@@ -551,15 +551,17 @@ class NetworkManager(manager.SchedulerDependentManager):
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
         #             network_get_by_compute_host
-        address = self.db.fixed_ip_associate_pool(context.elevated(),
-                                                  network['id'],
-                                                  instance_id)
-        vif = self.db.virtual_interface_get_by_instance_and_network(context,
-                                                                instance_id,
-                                                                network['id'])
-        values = {'allocated': True,
-                  'virtual_interface_id': vif['id']}
-        self.db.fixed_ip_update(context, address, values)
+        address = None
+        if network['cidr']:
+            address = self.db.fixed_ip_associate_pool(context.elevated(),
+                                                      network['id'],
+                                                      instance_id)
+            get_vif = self.db.virtual_interface_get_by_instance_and_network
+            vif = get_vif(context, instance_id, network['id'])
+            values = {'allocated': True,
+                      'virtual_interface_id': vif['id']}
+            self.db.fixed_ip_update(context, address, values)
+
         self._setup_network(context, network)
         return address
 
