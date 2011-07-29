@@ -25,7 +25,6 @@ from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
-from nova.auth import manager
 from nova.api.ec2 import admin
 from nova.image import fake
 
@@ -51,11 +50,11 @@ class AdminApiTestCase(test.TestCase):
         self.volume = self.start_service('volume')
         self.image_service = utils.import_object(FLAGS.image_service)
 
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('admin', 'admin', 'admin', True)
-        self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.RequestContext(user=self.user,
-                                              project=self.project)
+        self.user_id = 'admin'
+        self.project_id = 'admin'
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id,
+                                              True)
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
@@ -72,11 +71,6 @@ class AdminApiTestCase(test.TestCase):
             greenthread.sleep(0.2)
 
         self.stubs.Set(rpc, 'cast', finish_cast)
-
-    def tearDown(self):
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
-        super(AdminApiTestCase, self).tearDown()
 
     def test_block_external_ips(self):
         """Make sure provider firewall rules are created."""

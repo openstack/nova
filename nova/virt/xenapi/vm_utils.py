@@ -37,7 +37,6 @@ import nova.image
 from nova.image import glance as glance_image_service
 from nova import log as logging
 from nova import utils
-from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import disk
@@ -369,7 +368,7 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def fetch_image(cls, ctx, session, instance_id, image, user, project,
+    def fetch_image(cls, ctx, session, instance_id, image, user_id, project_id,
                     image_type):
         """
         image_type is interpreted as an ImageType instance
@@ -381,19 +380,24 @@ class VMHelper(HelperBase):
         Returns: A single filename if image_type is KERNEL_RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-        access = AuthManager().get_access_key(user, project)
 
         if FLAGS.xenapi_image_service == 'glance':
             return cls._fetch_image_glance(ctx, session, instance_id,
-                                           image, access, image_type)
+                                           image, image_type)
         else:
+            # TODO(vish): this shouldn't be used anywhere anymore and
+            #             can probably be removed
+            from nova.auth.manager import AuthManager
+            manager = AuthManager()
+            access = manager.get_access_key(user_id, project_id)
+            secret = manager.get_user(user_id).secret
             return cls._fetch_image_objectstore(session, instance_id, image,
-                                                access, user.secret,
+                                                access, secret,
                                                 image_type)
 
     @classmethod
     def _fetch_image_glance_vhd(cls, ctx, session, instance_id, image,
-                                access, image_type):
+                                image_type):
         """Tell glance to download an image and put the VHDs into the SR
 
         Returns: A list of dictionaries that describe VDIs
@@ -442,7 +446,7 @@ class VMHelper(HelperBase):
 
     @classmethod
     def _fetch_image_glance_disk(cls, ctx, session, instance_id, image,
-                                 access, image_type):
+                                 image_type):
         """Fetch the image from Glance
 
         NOTE:
@@ -576,7 +580,7 @@ class VMHelper(HelperBase):
         return image_type
 
     @classmethod
-    def _fetch_image_glance(cls, ctx, session, instance_id, image, access,
+    def _fetch_image_glance(cls, ctx, session, instance_id, image,
                             image_type):
         """Fetch image from glance based on image type.
 
@@ -585,10 +589,10 @@ class VMHelper(HelperBase):
         """
         if image_type == ImageType.DISK_VHD:
             return cls._fetch_image_glance_vhd(ctx,
-                session, instance_id, image, access, image_type)
+                session, instance_id, image, image_type)
         else:
             return cls._fetch_image_glance_disk(ctx,
-                session, instance_id, image, access, image_type)
+                session, instance_id, image, image_type)
 
     @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
