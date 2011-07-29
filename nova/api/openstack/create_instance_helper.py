@@ -188,7 +188,7 @@ class CreateInstanceHelper(object):
         Overrides normal behavior in the case of xml content
         """
         if request.content_type == "application/xml":
-            deserializer = ServerCreateRequestXMLDeserializer()
+            deserializer = ServerXMLDeserializer()
             return deserializer.deserialize(request.body)
         else:
             return self._deserialize(request.body, request.get_content_type())
@@ -303,29 +303,29 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
         """Marshal the server attribute of a parsed request"""
         server = {}
         server_node = self.find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
+
+        attributes = ["name", "imageId", "flavorId", "imageRef",
+                     "flavorRef", "adminPass"]
+        for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
+
         metadata_node = self.find_first_child_named(server_node, "metadata")
-        metadata = self.extract_metadata(metadata_node)
-        if metadata is not None:
-            server["metadata"] = metadata
-        personality = self._extract_personality(server_node)
-        if personality is not None:
-            server["personality"] = personality
+        server["metadata"] = self.extract_metadata(metadata_node)
+
+        server["personality"] = self._extract_personality(server_node)
+
         return server
 
     def _extract_personality(self, server_node):
         """Marshal the personality attribute of a parsed request"""
-        personality_node = \
-                self.find_first_child_named(server_node, "personality")
-        if personality_node is None:
-            return None
+        node = self.find_first_child_named(server_node, "personality")
         personality = []
-        for file_node in self.find_children_named(personality_node, "file"):
-            item = {}
-            if file_node.hasAttribute("path"):
-                item["path"] = file_node.getAttribute("path")
-            item["contents"] = self.extract_text(file_node)
-            personality.append(item)
+        if node is not None:
+            for file_node in self.find_children_named(node, "file"):
+                item = {}
+                if file_node.hasAttribute("path"):
+                    item["path"] = file_node.getAttribute("path")
+                item["contents"] = self.extract_text(file_node)
+                personality.append(item)
         return personality
