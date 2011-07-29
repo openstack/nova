@@ -21,11 +21,9 @@ import stubout
 import unittest
 import webob
 from lxml import etree
-from StringIO import StringIO
 
 from nova import context
 from nova import flags
-from nova import utils
 from nova.api import openstack
 from nova.api.openstack import extensions
 from nova.api.openstack import flavors
