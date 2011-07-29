@@ -1681,7 +1681,7 @@ def network_get_by_cidr(context, cidr):
     session = get_session()
     result = session.query(models.Network).\
                 filter(or_(models.Network.cidr == cidr,
-                           models.Network.cidr_v6 == cidr).first()
+                           models.Network.cidr_v6 == cidr)).first()
 
     if not result:
         raise exception.NetworkNotFoundForCidr(cidr=cidr)
