@@ -149,26 +149,22 @@ class Service(object):
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
-        self.conn = rpc.Connection.instance(new=True)
+        self.conn = rpc.create_connection(new=True)
         logging.debug("Creating Consumer connection for Service %s" %
                       self.topic)
 
         # Share this same connection for these Consumers
-        consumer_all = rpc.TopicAdapterConsumer(
-                connection=self.conn,
-                topic=self.topic,
-                proxy=self)
-        consumer_node = rpc.TopicAdapterConsumer(
-                connection=self.conn,
-                topic='%s.%s' % (self.topic, self.host),
-                proxy=self)
-        fanout = rpc.FanoutAdapterConsumer(
-                connection=self.conn,
-                topic=self.topic,
-                proxy=self)
-        consumer_set = rpc.ConsumerSet(
-                connection=self.conn,
-                consumer_list=[consumer_all, consumer_node, fanout])
+        consumer_all = rpc.create_consumer(self.conn, self.topic, self,
+                                           fanout=False)
+
+        node_topic = '%s.%s' % (self.topic, self.host)
+        consumer_node = rpc.create_consumer(self.conn, node_topic, self,
+                                            fanout=False)
+
+        fanout = rpc.create_consumer(self.conn, self.topic, self, fanout=True)
+
+        consumers = [consumer_all, consumer_node, fanout]
+        consumer_set = rpc.create_consumer_set(self.conn, consumers)
 
         # Wait forever, processing these consumers
         def _wait():

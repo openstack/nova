@@ -38,7 +38,7 @@ class AdminApiTestCase(test.TestCase):
         super(AdminApiTestCase, self).setUp()
         self.flags(connection_type='fake')
 
-        self.conn = rpc.Connection.instance()
+        self.conn = rpc.create_connection()
 
         # set up our cloud
         self.api = admin.AdminController()
