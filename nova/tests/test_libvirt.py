@@ -239,7 +239,7 @@ class LibvirtConnTestCase(test.TestCase):
                     'mac_address': 'fake',
                     'ip_address': 'fake',
                     'dhcp_server': 'fake',
-                    'extra_params': 'fake'
+                    'extra_params': 'fake',
                 }
 
         # Creating mocks
