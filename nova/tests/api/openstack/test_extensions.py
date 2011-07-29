@@ -20,15 +20,19 @@ import os.path
 import stubout
 import unittest
 import webob
-from xml.etree import ElementTree
+from lxml import etree
+from StringIO import StringIO
 
 from nova import context
 from nova import flags
+from nova import utils
 from nova.api import openstack
 from nova.api.openstack import extensions
 from nova.api.openstack import flavors
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova.tests.api.openstack import fakes
+
 
 FLAGS = flags.FLAGS
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -140,7 +144,7 @@ class ExtensionControllerTest(unittest.TestCase):
         self.assertEqual(200, response.status_int)
         print response.body
 
-        root = ElementTree.XML(response.body)
+        root = etree.XML(response.body)
         self.assertEqual(root.tag.split('extensions')[0], NS)
 
         # Make sure we have all the extensions.
@@ -156,6 +160,8 @@ class ExtensionControllerTest(unittest.TestCase):
         self.assertEqual(fox_ext.findtext('{0}description'.format(NS)),
             'The Fox In Socks Extension')
 
+        xmlutil.validate_schema(root, 'extensions')
+
     def test_get_extension_xml(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
@@ -163,9 +169,10 @@ class ExtensionControllerTest(unittest.TestCase):
         request.accept = "application/xml"
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
-        print response.body
+        xml = response.body
+        print xml
 
-        root = ElementTree.XML(response.body)
+        root = etree.XML(xml)
         self.assertEqual(root.tag.split('extension')[0], NS)
         self.assertEqual(root.get('alias'), 'FOXNSOX')
         self.assertEqual(root.get('name'), 'Fox In Socks')
@@ -174,6 +181,8 @@ class ExtensionControllerTest(unittest.TestCase):
         self.assertEqual(root.get('updated'), '2011-01-22T13:25:27-06:00')
         self.assertEqual(root.findtext('{0}description'.format(NS)),
             'The Fox In Socks Extension')
+
+        xmlutil.validate_schema(root, 'extension')
 
 
 class ResourceExtensionTest(unittest.TestCase):
@@ -354,7 +363,8 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
         }
 
         xml = serializer.serialize(data, 'show')
-        root = ElementTree.XML(xml)
+        print xml
+        root = etree.XML(xml)
         ext_dict = data['extension']
         self.assertEqual(root.findtext('{0}description'.format(NS)),
             ext_dict['description'])
@@ -367,6 +377,8 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
         for i, link in enumerate(ext_dict['links']):
             for key, value in link.items():
                 self.assertEqual(link_nodes[i].get(key), value)
+
+        xmlutil.validate_schema(root, 'extension')
 
     def test_serialize_extensions(self):
         serializer = extensions.ExtensionsXMLSerializer()
@@ -415,7 +427,7 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
 
         xml = serializer.serialize(data, 'index')
         print xml
-        root = ElementTree.XML(xml)
+        root = etree.XML(xml)
         ext_elems = root.findall('{0}extension'.format(NS))
         self.assertEqual(len(ext_elems), 2)
         for i, ext_elem in enumerate(ext_elems):
@@ -431,3 +443,5 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
             for i, link in enumerate(ext_dict['links']):
                 for key, value in link.items():
                     self.assertEqual(link_nodes[i].get(key), value)
+
+        xmlutil.validate_schema(root, 'extensions')
