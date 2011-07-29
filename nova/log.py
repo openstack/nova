@@ -257,6 +257,7 @@ class NovaRootLogger(NovaLogger):
                 self.filelog = WatchedFileHandler(logpath)
                 self.addHandler(self.filelog)
                 self.logpath = logpath
+                os.chmod(self.logpath, FLAGS.logfile_mode)
         else:
             self.removeHandler(self.filelog)
             self.addHandler(self.streamlog)
