@@ -95,7 +95,7 @@ VERSIONS = {
 
 
 class Versions(wsgi.Resource):
-    eef __init__(self):
+    def __init__(self):
         metadata = {
             "attributes": {
                 "version": ["status", "id"],
