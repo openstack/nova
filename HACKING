@@ -10,13 +10,14 @@ Imports
 - thou shalt not import objects, only modules
 - thou shalt not import more than one module per line
 - thou shalt not make relative imports
+- thou shalt order your imports by the full module path
 - thou shalt organize your imports according to the following template
 
 ::
   # vim: tabstop=4 shiftwidth=4 softtabstop=4
-  {{stdlib imports in human alphabetical order}}
+  {{stdlib imports in human alphabetical order by module name}}
   \n
-  {{nova imports in human alphabetical order}}
+  {{nova imports in human alphabetical order by module name}}
   \n
   \n
   {{begin your code}}
@@ -42,11 +43,12 @@ Human Alphabetical Order Examples
   import time
   import unittest
 
-  from nova import flags
-  from nova import test
+  import nova.api.ec2
+  from nova.api import openstack
   from nova.auth import users
-  from nova.endpoint import api
+  import nova.flags
   from nova.endpoint import cloud
+  from nova import test
 
 Docstrings
 ----------
@@ -70,6 +72,61 @@ Docstrings
 
   :param foo: the foo parameter
   :param bar: the bar parameter
-  :returns: description of the return value
+  :returns: return_type -- description of the return value
+  :raises: AttributeError, KeyError
 
   """
+
+Dictionaries/Lists
+------------------
+  If a dictionary (dict) or list object is longer than 80 characters, its
+  items should be split with newlines. Embedded iterables should have their
+  items indented. Additionally, the last item in the dictionary should have
+  a trailing comma. This increases readability and simplifies future diffs.
+
+  Example:
+
+    my_dictionary = {
+        "image": {
+            "name": "Just a Snapshot",
+            "size": 2749573,
+            "properties": {
+                 "user_id": 12,
+                 "arch": "x86_64",
+            },
+            "things": [
+                "thing_one",
+                "thing_two",
+            ],
+            "status": "ACTIVE",
+        },
+    }
+
+Method Signatures
+-----------------
+  Calls to methods 80 characters or longer should format each argument with 
+  newlines. This is mainly for readability.
+
+    unnecessarily_long_function_name('string one',
+                                     'string two',
+                                     kwarg1=constants.ACTIVE,
+                                     kwarg2=['a', 'b', 'c'])
+
+
+  Rather than constructing parameters inline, it is better to break things up:
+
+    list_of_strings = [
+        'what_a_long_string',
+        'not as long',
+    ]
+
+    dict_of_numbers = {
+        'one': 1,
+        'two': 2,
+        'twenty four': 24,
+    }
+        
+    object_one.call_a_method('string three',
+                             'string four',
+                             kwarg1=list_of_strings,
+                             kwarg2=dict_of_numbers)
