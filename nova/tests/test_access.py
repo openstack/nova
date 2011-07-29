@@ -16,7 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
 import webob
 
 from nova import context
@@ -41,7 +40,7 @@ class FakeApiRequest(object):
 class AccessTestCase(test.TestCase):
     def _env_for(self, ctxt, action):
         env = {}
-        env['ec2.context'] = ctxt
+        env['nova.context'] = ctxt
         env['ec2.request'] = FakeApiRequest(action)
         return env
 
@@ -93,7 +92,11 @@ class AccessTestCase(test.TestCase):
         super(AccessTestCase, self).tearDown()
 
     def response_status(self, user, methodName):
-        ctxt = context.RequestContext(user, self.project)
+        roles = manager.AuthManager().get_active_roles(user, self.project)
+        ctxt = context.RequestContext(user.id,
+                                      self.project.id,
+                                      is_admin=user.is_admin(),
+                                      roles=roles)
         environ = self._env_for(ctxt, methodName)
         req = webob.Request.blank('/', environ)
         resp = req.get_response(self.mw)
@@ -105,30 +108,26 @@ class AccessTestCase(test.TestCase):
     def shouldDeny(self, user, methodName):
         self.assertEqual(401, self.response_status(user, methodName))
 
-    def test_001_allow_all(self):
+    def test_allow_all(self):
         users = [self.testadmin, self.testpmsys, self.testnet, self.testsys]
         for user in users:
             self.shouldAllow(user, '_allow_all')
 
-    def test_002_allow_none(self):
+    def test_allow_none(self):
         self.shouldAllow(self.testadmin, '_allow_none')
         users = [self.testpmsys, self.testnet, self.testsys]
         for user in users:
             self.shouldDeny(user, '_allow_none')
 
-    def test_003_allow_project_manager(self):
+    def test_allow_project_manager(self):
         for user in [self.testadmin, self.testpmsys]:
             self.shouldAllow(user, '_allow_project_manager')
         for user in [self.testnet, self.testsys]:
             self.shouldDeny(user, '_allow_project_manager')
 
-    def test_004_allow_sys_and_net(self):
+    def test_allow_sys_and_net(self):
         for user in [self.testadmin, self.testnet, self.testsys]:
             self.shouldAllow(user, '_allow_sys_and_net')
         # denied because it doesn't have the per project sysadmin
         for user in [self.testpmsys]:
             self.shouldDeny(user, '_allow_sys_and_net')
-
-if __name__ == "__main__":
-    # TODO: Implement use_fake as an option
-    unittest.main()

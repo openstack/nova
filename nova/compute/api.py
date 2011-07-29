@@ -689,7 +689,7 @@ class API(base.Base):
                     raise
                 instances = None
         elif project_id or not context.is_admin:
-            if not context.project:
+            if not context.project_id:
                 instances = self.db.instance_get_all_by_user(
                     context, context.user_id)
             else:
