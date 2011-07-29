@@ -17,7 +17,6 @@ Tests For Zone Aware Scheduler.
 """
 
 import json
-import mox
 
 import nova.db
 
