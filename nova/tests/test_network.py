@@ -55,7 +55,8 @@ networks = [{'id': 0,
              'bridge_interface': 'fake_fa0',
              'gateway': '192.168.0.1',
              'broadcast': '192.168.0.255',
-             'dns': '192.168.0.1',
+             'dns1': '192.168.0.1',
+             'dns2': '192.168.0.2',
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
@@ -73,7 +74,8 @@ networks = [{'id': 0,
              'bridge_interface': 'fake_fa1',
              'gateway': '192.168.1.1',
              'broadcast': '192.168.1.255',
-             'dns': '192.168.0.1',
+             'dns1': '192.168.0.1',
+             'dns2': '192.168.0.2',
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
@@ -147,7 +149,10 @@ class FlatNetworkTestCase(test.TestCase):
                      'cidr': '192.168.%s.0/24' % i,
                      'cidr_v6': '2001:db%s::/64' % i8,
                      'id': i,
-                     'injected': 'DONTCARE'}
+                     'multi_host': False,
+                     'injected': 'DONTCARE',
+                     'bridge_interface': 'fake_fa%s' % i,
+                     'vlan': None}
 
             self.assertDictMatch(nw[0], check)
 
@@ -160,7 +165,9 @@ class FlatNetworkTestCase(test.TestCase):
                      'ips': 'DONTCARE',
                      'label': 'test%s' % i,
                      'mac': 'DE:AD:BE:EF:00:0%s' % i,
-                     'rxtx_cap': 'DONTCARE'}
+                     'rxtx_cap': 'DONTCARE',
+                     'should_create_vlan': False,
+                     'should_create_bridge': False}
             self.assertDictMatch(nw[1], check)
 
             check = [{'enabled': 'DONTCARE',
