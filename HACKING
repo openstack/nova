@@ -8,11 +8,11 @@ Step 3: Read on
 
 General
 -------
-- Put two newlines twixt toplevel code (funcs, classes, etc)
-- Put one newline twixt methods in classes and anywhere else
+- Put two newlines between top-level code (funcs, classes, etc)
+- Put one newline between methods in classes and anywhere else
 - Do not write "except:", use "except Exception:" at the very least
-- Include your name with TODOs as in "TODO(termie)"
-- Do not name anything the same name as a builtin or reserved word
+- Include your name with TODOs as in "#TODO(termie)"
+- Do not name anything the same name as a built-in or reserved word
 
 
 Imports
