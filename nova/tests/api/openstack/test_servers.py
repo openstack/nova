@@ -2167,11 +2167,14 @@ class ServersTest(test.TestCase):
         self.assertEqual(self.resize_called, True)
 
     def test_resize_server_v11(self):
-
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.content_type = 'application/json'
         req.method = 'POST'
-        body_dict = dict(resize=dict(flavorRef="http://localhost/3"))
+        body_dict = {
+            "resize": {
+                "flavorRef": 3,
+            },
+        }
         req.body = json.dumps(body_dict)
 
         self.resize_called = False
@@ -2185,8 +2188,8 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
 
-    def test_resize_bad_flavor_fails(self):
-        req = self.webreq('/1/action', 'POST', dict(resize=dict(derp=3)))
+    def test_resize_bad_flavor_data(self):
+        req = self.webreq('/1/action', 'POST', {"resize": "bad_data"})
 
         self.resize_called = False
 
@@ -2196,14 +2199,54 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 422)
+        self.assertEqual(res.status_int, 400)
         self.assertEqual(self.resize_called, False)
+
+    def test_resize_invalid_flavorid(self):
+        req = self.webreq('/1/action', 'POST', {"resize": {"flavorId": 300}})
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_resize_nonint_flavorid(self):
+        req = self.webreq('/1/action', 'POST', {"resize": {"flavorId": "a"}})
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_resize_invalid_flavorid_v1_1(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        resize_body = {
+            "resize": {
+                "image": {
+                    "id": 300,
+                },
+            },
+        }
+        req.body = json.dumps(resize_body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_resize_nonint_flavorid_v1_1(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        resize_body = {
+            "resize": {
+                "image": {
+                    "id": "a",
+                },
+            },
+        }
+        req.body = json.dumps(resize_body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
     def test_resize_raises_fails(self):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(flavorId=3)))
 
         def resize_mock(*args):
-            raise Exception('hurr durr')
+            raise Exception("An error occurred.")
 
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
@@ -2241,7 +2284,7 @@ class ServersTest(test.TestCase):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
 
         def confirm_resize_mock(*args):
-            raise Exception('hurr durr')
+            raise Exception("An error occurred.")
 
         self.stubs.Set(nova.compute.api.API, 'confirm_resize',
                 confirm_resize_mock)
@@ -2268,7 +2311,7 @@ class ServersTest(test.TestCase):
         req = self.webreq('/1/action', 'POST', dict(revertResize=None))
 
         def revert_resize_mock(*args):
-            raise Exception('hurr durr')
+            raise Exception("An error occurred.")
 
         self.stubs.Set(nova.compute.api.API, 'revert_resize',
                 revert_resize_mock)

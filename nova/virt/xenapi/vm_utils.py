@@ -85,38 +85,22 @@ class ImageType:
     DISK = 2
     DISK_RAW = 3
     DISK_VHD = 4
+    _ids = (KERNEL, RAMDISK, DISK, DISK_RAW, DISK_VHD)
 
     KERNEL_STR = "kernel"
     RAMDISK_STR = "ramdisk"
     DISK_STR = "os"
     DISK_RAW_STR = "os_raw"
     DISK_VHD_STR = "vhd"
+    _strs = (KERNEL_STR, RAMDISK_STR, DISK_STR, DISK_RAW_STR, DISK_VHD_STR)
 
     @classmethod
     def to_string(cls, image_type):
-        if image_type == ImageType.KERNEL:
-            return ImageType.KERNEL_STR
-        elif image_type == ImageType.RAMDISK:
-            return ImageType.RAMDISK_STR
-        elif image_type == ImageType.DISK:
-            return ImageType.DISK_STR
-        elif image_type == ImageType.DISK_RAW:
-            return ImageType.DISK_RAW_STR
-        elif image_type == ImageType.DISK_VHD:
-            return ImageType.VHD_STR
+        return dict(zip(ImageType._ids, ImageType._strs)).get(image_type)
 
     @classmethod
     def from_string(cls, image_type_str):
-        if image_type_str == ImageType.KERNEL_STR:
-            return ImageType.KERNEL
-        elif image_type == ImageType.RAMDISK_STR:
-            return ImageType.RAMDISK
-        elif image_type == ImageType.DISK_STR:
-            return ImageType.DISK
-        elif image_type == ImageType.DISK_RAW_STR:
-            return ImageType.DISK_RAW
-        elif image_type == ImageType.DISK_VHD_STR:
-            return ImageType.VHD
+        return dict(zip(ImageType._strs, ImageType._ids)).get(image_type_str)
 
 
 class VMHelper(HelperBase):
