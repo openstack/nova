@@ -54,7 +54,7 @@ from xml.etree import ElementTree
 from eventlet import greenthread
 from eventlet import tpool
 
-from nova import context
+from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
@@ -174,7 +174,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def init_host(self, host):
         # Adopt existing VM's running here
-        ctxt = context.get_admin_context()
+        ctxt = nova_context.get_admin_context()
         for instance in db.instance_get_all_by_host(ctxt, host):
             try:
                 LOG.debug(_('Checking state of %s'), instance['name'])
@@ -396,7 +396,7 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception()
-    def snapshot(self, cxt, instance, image_href):
+    def snapshot(self, context, instance, image_href):
         """Create snapshot from a running VM instance.
 
         This command only works with qemu 0.14+, the qemu_img flag is
@@ -405,14 +405,13 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
         virt_dom = self._lookup_by_name(instance['name'])
-        elevated = context.get_admin_context()
 
         (image_service, image_id) = nova.image.get_image_service(
             instance['image_ref'])
-        base = image_service.show(elevated, image_id)
+        base = image_service.show(context, image_id)
         (snapshot_image_service, snapshot_image_id) = \
             nova.image.get_image_service(image_href)
-        snapshot = snapshot_image_service.show(elevated, snapshot_image_id)
+        snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],
@@ -463,7 +462,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # Upload that image to the image service
         with open(out_path) as image_file:
-            image_service.update(elevated,
+            image_service.update(context,
                                  image_href,
                                  metadata,
                                  image_file)
@@ -538,7 +537,7 @@ class LibvirtConnection(driver.ComputeDriver):
         dom.create()
 
     @exception.wrap_exception()
-    def rescue(self, instance, callback, network_info):
+    def rescue(self, context, instance, callback, network_info):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
@@ -553,7 +552,7 @@ class LibvirtConnection(driver.ComputeDriver):
         rescue_images = {'image_id': FLAGS.rescue_image_id,
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
-        self._create_image(instance, xml, '.rescue', rescue_images)
+        self._create_image(context, instance, xml, '.rescue', rescue_images)
         self._create_new_domain(xml)
 
         def _wait_for_rescue():
@@ -592,14 +591,14 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, cxt, instance, network_info,
+    def spawn(self, context, instance, network_info,
               block_device_mapping=None):
         xml = self.to_xml(instance, False, network_info=network_info,
                           block_device_mapping=block_device_mapping)
         block_device_mapping = block_device_mapping or []
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_image(instance, xml, network_info=network_info,
+        self._create_image(context, instance, xml, network_info=network_info,
                            block_device_mapping=block_device_mapping)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
@@ -770,9 +769,10 @@ class LibvirtConnection(driver.ComputeDriver):
             else:
                 utils.execute('cp', base, target)
 
-    def _fetch_image(self, target, image_id, user_id, project_id, size=None):
+    def _fetch_image(self, context, target, image_id, user_id, project_id,
+                     size=None):
         """Grab image and optionally attempt to resize it"""
-        images.fetch(image_id, target, user_id, project_id)
+        images.fetch(context, image_id, target, user_id, project_id)
         if size:
             disk.extend(target, size)
 
@@ -781,8 +781,9 @@ class LibvirtConnection(driver.ComputeDriver):
         utils.execute('truncate', target, '-s', "%dG" % local_gb)
         # TODO(vish): should we format disk by default?
 
-    def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
-                        network_info=None, block_device_mapping=None):
+    def _create_image(self, context, inst, libvirt_xml, suffix='',
+                      disk_images=None, network_info=None,
+                      block_device_mapping=None):
         block_device_mapping = block_device_mapping or []
 
         if not suffix:
@@ -818,6 +819,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if disk_images['kernel_id']:
             fname = '%08x' % int(disk_images['kernel_id'])
             self._cache_image(fn=self._fetch_image,
+                              context=context,
                               target=basepath('kernel'),
                               fname=fname,
                               image_id=disk_images['kernel_id'],
@@ -826,6 +828,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if disk_images['ramdisk_id']:
                 fname = '%08x' % int(disk_images['ramdisk_id'])
                 self._cache_image(fn=self._fetch_image,
+                                  context=context,
                                   target=basepath('ramdisk'),
                                   fname=fname,
                                   image_id=disk_images['ramdisk_id'],
@@ -844,6 +847,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if not self._volume_in_mapping(self.root_mount_device,
                                        block_device_mapping):
             self._cache_image(fn=self._fetch_image,
+                              context=context,
                               target=basepath('disk'),
                               fname=root_fname,
                               cow=FLAGS.use_cow_images,
@@ -880,7 +884,7 @@ class LibvirtConnection(driver.ComputeDriver):
         ifc_template = open(FLAGS.injected_network_template).read()
         ifc_num = -1
         have_injected_networks = False
-        admin_context = context.get_admin_context()
+        admin_context = nova_context.get_admin_context()
         for (network_ref, mapping) in network_info:
             ifc_num += 1
 

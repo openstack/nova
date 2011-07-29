@@ -660,7 +660,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.rescue(instance_ref, _update_state, network_info)
+        self.driver.rescue(context, instance_ref, _update_state, network_info)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

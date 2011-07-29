@@ -26,7 +26,7 @@ import urllib
 import urllib2
 import uuid
 
-from nova import context
+from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
@@ -89,7 +89,7 @@ class VMWareVMOps(object):
         LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
         return lst_vm_names
 
-    def spawn(self, cxt, instance, network_info):
+    def spawn(self, context, instance, network_info):
         """
         Creates a VM instance.
 
@@ -111,7 +111,7 @@ class VMWareVMOps(object):
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
 
-        network = db.network_get_by_instance(context.get_admin_context(),
+        network = db.network_get_by_instance(nova_context.get_admin_context(),
                                             instance['id'])
 
         net_name = network['bridge']
@@ -329,7 +329,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Powered on the VM instance %s") % instance.name)
         _power_on_vm()
 
-    def snapshot(self, cxt, instance, snapshot_name):
+    def snapshot(self, context, instance, snapshot_name):
         """
         Create snapshot from a running VM instance.
         Steps followed are:
@@ -721,11 +721,11 @@ class VMWareVMOps(object):
         Set the machine id of the VM for guest tools to pick up and change
         the IP.
         """
-        admin_context = context.get_admin_context()
+        admin_context = nova_context.get_admin_context()
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance.id)
-        network = db.network_get_by_instance(context.get_admin_context(),
+        network = db.network_get_by_instance(nova_context.get_admin_context(),
                                             instance['id'])
         mac_address = None
         if instance['mac_addresses']:

@@ -342,7 +342,7 @@ class VMHelper(HelperBase):
         return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
     @classmethod
-    def upload_image(cls, ctx, session, instance, vdi_uuids, image_id):
+    def upload_image(cls, context, session, instance, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
@@ -361,15 +361,15 @@ class VMHelper(HelperBase):
                   'glance_port': glance_port,
                   'sr_path': cls.get_sr_path(session),
                   'os_type': os_type,
-                  'auth_token': getattr(ctx, 'auth_token', None)}
+                  'auth_token': getattr(context, 'auth_token', None)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def fetch_image(cls, ctx, session, instance_id, image, user_id, project_id,
-                    image_type):
+    def fetch_image(cls, context, session, instance_id, image, user_id,
+                    project_id, image_type):
         """
         image_type is interpreted as an ImageType instance
         Related flags:
@@ -382,7 +382,7 @@ class VMHelper(HelperBase):
         """
 
         if FLAGS.xenapi_image_service == 'glance':
-            return cls._fetch_image_glance(ctx, session, instance_id,
+            return cls._fetch_image_glance(context, session, instance_id,
                                            image, image_type)
         else:
             # TODO(vish): this shouldn't be used anywhere anymore and
@@ -396,7 +396,7 @@ class VMHelper(HelperBase):
                                                 image_type)
 
     @classmethod
-    def _fetch_image_glance_vhd(cls, ctx, session, instance_id, image,
+    def _fetch_image_glance_vhd(cls, context, session, instance_id, image,
                                 image_type):
         """Tell glance to download an image and put the VHDs into the SR
 
@@ -419,7 +419,7 @@ class VMHelper(HelperBase):
                   'glance_port': glance_port,
                   'uuid_stack': uuid_stack,
                   'sr_path': cls.get_sr_path(session),
-                  'auth_token': getattr(ctx, 'auth_token', None)}
+                  'auth_token': getattr(context, 'auth_token', None)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
@@ -445,7 +445,7 @@ class VMHelper(HelperBase):
         return vdis
 
     @classmethod
-    def _fetch_image_glance_disk(cls, ctx, session, instance_id, image,
+    def _fetch_image_glance_disk(cls, context, session, instance_id, image,
                                  image_type):
         """Fetch the image from Glance
 
@@ -465,7 +465,7 @@ class VMHelper(HelperBase):
         sr_ref = safe_find_sr(session)
 
         glance_client, image_id = nova.image.get_glance_client(image)
-        glance_client.set_auth_token(getattr(ctx, 'auth_token', None))
+        glance_client.set_auth_token(getattr(context, 'auth_token', None))
         meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
@@ -580,7 +580,7 @@ class VMHelper(HelperBase):
         return image_type
 
     @classmethod
-    def _fetch_image_glance(cls, ctx, session, instance_id, image,
+    def _fetch_image_glance(cls, context, session, instance_id, image,
                             image_type):
         """Fetch image from glance based on image type.
 
@@ -588,10 +588,10 @@ class VMHelper(HelperBase):
                  A list of dictionaries that describe VDIs, otherwise
         """
         if image_type == ImageType.DISK_VHD:
-            return cls._fetch_image_glance_vhd(ctx,
+            return cls._fetch_image_glance_vhd(context,
                 session, instance_id, image, image_type)
         else:
-            return cls._fetch_image_glance_disk(ctx,
+            return cls._fetch_image_glance_disk(context,
                 session, instance_id, image, image_type)
 
     @classmethod
