@@ -38,13 +38,13 @@ VERSIONS = {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
-                "servers/api/v1.0/cs-devguide-20110125.pdf"
+                        "servers/api/v1.0/cs-devguide-20110125.pdf"
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
                 "href": "http://docs.rackspacecloud.com/"
-                "servers/api/v1.0/application.wadl"
+                        "servers/api/v1.0/application.wadl"
             },
         ],
         "media-types": [
@@ -71,13 +71,13 @@ VERSIONS = {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
-                    "servers/api/v1.1/cs-devguide-20110125.pdf"
+                        "servers/api/v1.1/cs-devguide-20110125.pdf"
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
                 "href": "http://docs.rackspacecloud.com/"
-                    "servers/api/v1.1/application.wadl"
+                        "servers/api/v1.1/application.wadl"
             },
         ],
         "media-types": [
@@ -95,12 +95,7 @@ VERSIONS = {
 
 
 class Versions(wsgi.Resource):
-    @classmethod
-    def factory(cls, global_config, **local_config):
-        """Paste factory."""
-        return cls()
-
-    def __init__(self):
+    eef __init__(self):
         metadata = {
             "attributes": {
                 "version": ["status", "id"],

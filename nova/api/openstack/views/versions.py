@@ -63,7 +63,6 @@ class ViewBuilder(object):
         return dict(versions=version_objs)
 
     def build_version(self, version):
-        
         for link in version['links']:
             if link['rel'] == 'self':
                 link['href'] = self.base_url.rstrip('/') + '/'
@@ -77,7 +76,7 @@ class ViewBuilder(object):
         links = [
             {
                 "rel": "self",
-                "href": href
+                "href": href,
             },
         ]
 
