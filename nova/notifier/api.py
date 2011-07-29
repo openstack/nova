@@ -82,9 +82,7 @@ def notify(publisher_id, event_type, priority, payload):
                  _('%s not in valid priorities' % priority))
 
     # Ensure everything is JSON serializable.
-    for k, v in payload.iteritems():
-        if not isinstance(v, (basestring, int, long, float)):
-            payload[k] = unicode(v)
+    payload = utils.to_primitive(payload)
 
     driver = utils.import_object(FLAGS.notification_driver)
     msg = dict(message_id=str(uuid.uuid4()),

@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import os
 import tempfile
 
@@ -306,3 +307,73 @@ class IsUUIDLikeTestCase(test.TestCase):
     def test_non_uuid_string_passed(self):
         val = 'foo-fooo'
         self.assertUUIDLike(val, False)
+
+
+class ToPrimitiveTestCase(test.TestCase):
+    def test_list(self):
+        self.assertEquals(utils.to_primitive([1, 2, 3]), [1, 2, 3])
+
+    def test_empty_list(self):
+        self.assertEquals(utils.to_primitive([]), [])
+
+    def test_tuple(self):
+        self.assertEquals(utils.to_primitive((1, 2, 3)), [1, 2, 3])
+        
+    def test_dict(self):
+        self.assertEquals(utils.to_primitive(dict(a=1, b=2, c=3)), 
+                          dict(a=1, b=2, c=3))
+
+    def test_empty_dict(self):
+        self.assertEquals(utils.to_primitive({}), {})
+
+    def test_datetime(self):
+        x = datetime.datetime(1,2,3,4,5,6,7)
+        self.assertEquals(utils.to_primitive(x), "0001-02-03 04:05:06.000007")
+
+    def test_iter(self):
+        class IterClass(object):
+            def __init__(self):
+                self.data = [1, 2, 3, 4, 5]
+                self.index = 0
+                
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.index == len(self.data):
+                    raise StopIteration
+                self.index = self.index + 1
+                return self.data[self.index - 1]
+
+        x = IterClass()
+        self.assertEquals(utils.to_primitive(x), [1, 2, 3, 4, 5])
+        
+    def test_iteritems(self):
+        class IterItemsClass(object):
+            def __init__(self):
+                self.data = dict(a=1, b=2, c=3).items()
+                self.index = 0
+                
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.index == len(self.data):
+                    raise StopIteration
+                self.index = self.index + 1
+                return self.data[self.index - 1]
+
+        x = IterItemsClass()
+        ordered = utils.to_primitive(x)
+        ordered.sort()
+        self.assertEquals(ordered, [['a', 1], ['b', 2], ['c', 3]])
+
+    def test_instance(self):
+        class MysteryClass(object):
+            a = 10
+
+            def __init__(self):
+                self.x = 1
+
+        x = MysteryClass()
+        self.assertEquals(utils.to_primitive(x), dict(x=1))

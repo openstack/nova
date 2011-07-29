@@ -521,6 +521,9 @@ def to_primitive(value):
         return to_primitive(dict(value.iteritems()))
     elif hasattr(value, '__iter__'):
         return to_primitive(list(value))
+    elif hasattr(value, '__dict__'):
+        # Class member variables not supported.
+        return to_primitive(value.__dict__)
     else:
         return value
 
