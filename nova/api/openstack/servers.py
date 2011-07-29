@@ -17,11 +17,10 @@ import base64
 import traceback
 
 from webob import exc
-import webob
 from xml.dom import minidom
+import webob
 
 from nova import compute
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -29,13 +28,14 @@ from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import ips
+from nova.api.openstack import wsgi
+from nova.compute import instance_types
+from nova.scheduler import api as scheduler_api
+import nova.api.openstack
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
-from nova.api.openstack import wsgi
-import nova.api.openstack
-from nova.scheduler import api as scheduler_api
 
 
 LOG = logging.getLogger('nova.api.openstack.servers')
@@ -438,13 +438,21 @@ class ControllerV10(Controller):
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
-        if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
-            flavor_id = input_dict['resize']['flavorId']
-            self.compute_api.resize(req.environ['nova.context'], id,
-                    flavor_id)
-        else:
-            LOG.exception(_("Missing 'flavorId' argument for resize"))
-            raise exc.HTTPUnprocessableEntity()
+        try:
+            flavor_id = input_dict["resize"]["flavorId"]
+        except (KeyError, TypeError):
+            msg = _("Resize requests require 'flavorId' attribute.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            i_type = instance_types.get_instance_type_by_flavor_id(flavor_id)
+        except exception.FlavorNotFound:
+            msg = _("Unable to locate requested flavor.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ["nova.context"]
+        self.compute_api.resize(context, id, i_type["id"])
+
         return webob.Response(status_int=202)
 
     def _action_rebuild(self, info, request, instance_id):
@@ -555,17 +563,26 @@ class ControllerV11(Controller):
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
-            if 'resize' in input_dict and 'flavorRef' in input_dict['resize']:
-                flavor_ref = input_dict['resize']['flavorRef']
-                flavor_id = common.get_id_from_href(flavor_ref)
-                self.compute_api.resize(req.environ['nova.context'], id,
-                        flavor_id)
-            else:
-                LOG.exception(_("Missing 'flavorRef' argument for resize"))
-                raise exc.HTTPUnprocessableEntity()
-        except Exception, e:
-            LOG.exception(_("Error in resize %s"), e)
-            raise exc.HTTPBadRequest()
+            flavor = input_dict["resize"]["flavor"]
+        except (KeyError, TypeError):
+            msg = _("Resize requests require a flavor to resize instance.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            flavor_id = flavor["id"]
+        except (KeyError, TypeError):
+            msg = _("Resize flavor requires 'id' attribute.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            i_type = instance_types.get_instance_type_by_flavor_id(flavor_id)
+        except exception.FlavorNotFound:
+            msg = _("Unable to locate requested flavor.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ["nova.context"]
+        self.compute_api.resize(context, id, i_type["id"])
+
         return webob.Response(status_int=202)
 
     def _action_rebuild(self, info, request, instance_id):
