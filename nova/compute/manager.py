@@ -1389,7 +1389,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration
         if block_migration:
-            self.driver.destroy(instance_ref)
+            self.driver.destroy(instance_ref, network_info)
 
         LOG.info(_('Migrating %(i_name)s to %(dest)s finished successfully.')
                  % locals())
@@ -1409,8 +1409,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.info(_('Post operation of migraton started for %s .')
                  % instance_ref.name)
+        network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.post_live_migration_at_destination(context,
                                                        instance_ref,
+                                                       network_info,
                                                        block_migration)
 
     def rollback_live_migration(self, context, instance_ref,

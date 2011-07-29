@@ -1620,7 +1620,9 @@ class LibvirtConnection(driver.ComputeDriver):
                                   user,
                                   project)
 
-    def post_live_migration_at_destination(self, ctxt, instance_ref,
+    def post_live_migration_at_destination(self, ctxt,
+                                           instance_ref,
+                                           network_info,
                                            block_migration):
         """Post operation of live migration at destination host.
 
@@ -1628,6 +1630,7 @@ class LibvirtConnection(driver.ComputeDriver):
         :params instance_ref:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
+        :params network_info: instance network infomation
         :params : block_migration: if true, post operation of block_migraiton.
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.
@@ -1639,7 +1642,7 @@ class LibvirtConnection(driver.ComputeDriver):
             # In case of block migration, destination does not have
             # libvirt.xml
             if not os.path.isfile(xml_path):
-                xml = self.to_xml(instance_ref)
+                xml = self.to_xml(instance_ref, network_info=network_info)
                 f = open(os.path.join(instance_dir, 'libvirt.xml'), 'w+')
                 f.write(xml)
                 f.close()
