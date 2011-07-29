@@ -1505,9 +1505,11 @@ class CloudTestCase(test.TestCase):
                     'ephemeral1': '/dev/sdd',
                     'ephemeral2': '/dev/sd3'}
 
-        self.assertEqual(self.cloud._get_instance_mapping(ctxt, instance_ref0),
+        self.assertEqual(self.cloud._format_instance_mapping(ctxt,
+                                                             instance_ref0),
                          cloud._DEFAULT_MAPPINGS)
-        self.assertEqual(self.cloud._get_instance_mapping(ctxt, instance_ref1),
+        self.assertEqual(self.cloud._format_instance_mapping(ctxt,
+                                                             instance_ref1),
                          expected)
 
     def test_describe_instance_attribute(self):

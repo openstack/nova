@@ -237,7 +237,7 @@ class CloudController(object):
             state = 'available'
         return image['properties'].get('image_state', state)
 
-    def _get_instance_mapping(self, ctxt, instance_ref):
+    def _format_instance_mapping(self, ctxt, instance_ref):
         root_device_name = instance_ref['root_device_name']
         if root_device_name is None:
             return _DEFAULT_MAPPINGS
@@ -287,7 +287,7 @@ class CloudController(object):
         security_groups = db.security_group_get_by_instance(ctxt,
                                                             instance_ref['id'])
         security_groups = [x['name'] for x in security_groups]
-        mappings = self._get_instance_mapping(ctxt, instance_ref)
+        mappings = self._format_instance_mapping(ctxt, instance_ref)
         data = {
             'user-data': self._format_user_data(instance_ref),
             'meta-data': {
