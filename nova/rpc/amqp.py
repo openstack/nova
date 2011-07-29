@@ -44,7 +44,7 @@ from nova import fakerabbit
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.rpc_backends.common import RemoteError, LOG
+from nova.rpc.common import RemoteError, LOG
 
 
 FLAGS = flags.FLAGS

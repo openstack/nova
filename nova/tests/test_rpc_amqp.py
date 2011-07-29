@@ -2,7 +2,7 @@ from nova import context
 from nova import flags
 from nova import log as logging
 from nova import rpc
-from nova.rpc_backends import amqp
+from nova.rpc import amqp
 from nova import test
 
 

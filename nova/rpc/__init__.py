@@ -18,12 +18,12 @@
 
 
 from nova.utils import import_object
-from nova.rpc_backends.common import RemoteError, LOG
+from nova.rpc.common import RemoteError, LOG
 from nova import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('rpc_backend',
-                    'nova.rpc_backends.amqp',
+                    'nova.rpc.amqp',
                     "The messaging module to use, defaults to AMQP.")
 
 RPCIMPL = import_object(FLAGS.rpc_backend)
