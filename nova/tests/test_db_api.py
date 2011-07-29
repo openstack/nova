@@ -66,7 +66,7 @@ class DbApiTestCase(test.TestCase):
         result = db.fixed_ip_get_all(self.context)
         values = {'instance_type_id': FLAGS.default_instance_type,
                   'image_ref': FLAGS.vpn_image_id,
-                  'project_id': self.project.id
+                  'project_id': self.project.id,
                  }
         instance = db.instance_create(self.context, values)
         result = db.instance_get_project_vpn(self.context, self.project.id)
@@ -76,7 +76,7 @@ class DbApiTestCase(test.TestCase):
         result = db.fixed_ip_get_all(self.context)
         values = {'instance_type_id': FLAGS.default_instance_type,
                   'image_ref': FLAGS.vpn_image_id,
-                  'project_id': self.project.id
+                  'project_id': self.project.id,
                  }
         instance = db.instance_create(self.context, values)
         _setup_networking(instance.id)
