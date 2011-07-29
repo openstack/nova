@@ -137,7 +137,7 @@ Calling Methods
 
 
 Internationalization (i18n) Strings
-----------------------------
+-----------------------------------
   In order to support multiple languages, we have a mechanism to support
   automatic translations of exception and log strings.
 
