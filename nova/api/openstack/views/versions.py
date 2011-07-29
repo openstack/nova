@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import os
 
 
@@ -63,11 +64,12 @@ class ViewBuilder(object):
         return dict(versions=version_objs)
 
     def build_version(self, version):
-        for link in version['links']:
-            if link['rel'] == 'self':
-                link['href'] = self.base_url.rstrip('/') + '/'
-
-        return dict(version=version)
+        reval = copy.deepcopy(version)
+        reval['links'].insert(0, {
+            "rel": "self",
+            "href": self.base_url.rstrip('/') + '/',
+        })
+        return dict(version=reval)
 
     def _build_links(self, version_data):
         """Generate a container of links that refer to the provided version."""

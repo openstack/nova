@@ -35,20 +35,16 @@ VERSIONS = {
         "updated": "2011-01-21T11:33:21Z",
         "links": [
             {
-                "rel": "self",
-                "href": ""
-            },
-            {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
-                "servers/api/v1.0/cs-devguide-20110125.pdf"
+                        "servers/api/v1.0/cs-devguide-20110125.pdf"
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
                 "href": "http://docs.rackspacecloud.com/"
-                "servers/api/v1.0/application.wadl"
+                        "servers/api/v1.0/application.wadl"
             },
         ],
         "media-types": [
@@ -68,20 +64,16 @@ VERSIONS = {
         "updated": "2011-01-21T11:33:21Z",
         "links": [
             {
-                "rel": "self",
-                "href": ""
-            },
-            {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
-                    "servers/api/v1.1/cs-devguide-20110125.pdf"
+                        "servers/api/v1.1/cs-devguide-20110125.pdf"
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
                 "href": "http://docs.rackspacecloud.com/"
-                    "servers/api/v1.1/application.wadl"
+                        "servers/api/v1.1/application.wadl"
             },
         ],
         "media-types": [
@@ -105,9 +97,11 @@ class VersionsTest(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
         #Stub out VERSIONS
+        self.old_versions = versions.VERSIONS
         versions.VERSIONS = VERSIONS
 
     def tearDown(self):
+        versions.VERSIONS = self.old_versions
         super(VersionsTest, self).tearDown()
 
     def test_get_version_list(self):
@@ -162,25 +156,25 @@ class VersionsTest(test.TestCase):
                         "rel": "describedby",
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.0/cs-devguide-20110125.pdf"
+                                "servers/api/v1.0/cs-devguide-20110125.pdf"
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
                         "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.0/application.wadl"
+                                "servers/api/v1.0/application.wadl"
                     }
                 ],
                 "media-types": [
                     {
                         "base": "application/xml",
                         "type": "application/"
-                            "vnd.openstack.compute-v1.0+xml"
+                                "vnd.openstack.compute-v1.0+xml"
                     },
                     {
                         "base": "application/json",
                         "type": "application/"
-                            "vnd.openstack.compute-v1.0+json"
+                                "vnd.openstack.compute-v1.0+json"
                     }
                 ]
             }
@@ -208,25 +202,25 @@ class VersionsTest(test.TestCase):
                         "rel": "describedby",
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.1/cs-devguide-20110125.pdf"
+                                "servers/api/v1.1/cs-devguide-20110125.pdf"
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
                         "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.1/application.wadl"
+                                "servers/api/v1.1/application.wadl"
                     }
                 ],
                 "media-types": [
                     {
                         "base": "application/xml",
                         "type": "application/"
-                            "vnd.openstack.compute-v1.1+xml"
+                                "vnd.openstack.compute-v1.1+xml"
                     },
                     {
                         "base": "application/json",
                         "type": "application/"
-                            "vnd.openstack.compute-v1.1+json"
+                                "vnd.openstack.compute-v1.1+json"
                     }
                 ]
             }
@@ -751,13 +745,13 @@ class VersionsSerializerTests(test.TestCase):
                         "rel": "describedby",
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.0/cs-devguide-20110125.pdf"
+                                "servers/api/v1.0/cs-devguide-20110125.pdf"
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
                         "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.0/application.wadl"
+                                "servers/api/v1.0/application.wadl"
                     },
                 ],
                 "media-types": [
@@ -886,13 +880,13 @@ class VersionsSerializerTests(test.TestCase):
                         "rel": "describedby",
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.1/cs-devguide-20110125.pdf"
+                                "servers/api/v1.1/cs-devguide-20110125.pdf"
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
                         "href": "http://docs.rackspacecloud.com/"
-                            "servers/api/v1.1/application.wadl"
+                                "servers/api/v1.1/application.wadl"
                     },
                 ],
                 "media-types": [

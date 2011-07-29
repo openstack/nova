@@ -31,10 +31,6 @@ VERSIONS = {
         "updated": "2011-01-21T11:33:21Z",
         "links": [
             {
-                "rel": "self",
-                "href": ""
-            },
-            {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
@@ -63,10 +59,6 @@ VERSIONS = {
         "status": "CURRENT",
         "updated": "2011-01-21T11:33:21Z",
         "links": [
-            {
-                "rel": "self",
-                "href": ""
-            },
             {
                 "rel": "describedby",
                 "type": "application/pdf",
