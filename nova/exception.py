@@ -700,7 +700,3 @@ class CannotResizeToSameSize(NovaException):
 
 class CannotResizeToSmallerSize(NovaException):
     message = _("Resizing to a smaller size is not supported.")
-
-
-class FlavorDoesNotExist(NovaException):
-    message = _("Requested flavor '%(flavor_id)s' does not exist.")

@@ -3041,13 +3041,18 @@ def instance_type_get_by_name(context, name):
 @require_context
 def instance_type_get_by_flavor_id(context, id):
     """Returns a dict describing specific flavor_id"""
+    try:
+        flavor_id = int(id)
+    except ValueError:
+        raise exception.FlavorNotFound(flavor_id=id)
+
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
                                     options(joinedload('extra_specs')).\
-                                    filter_by(flavorid=int(id)).\
+                                    filter_by(flavorid=flavor_id).\
                                     first()
     if not inst_type:
-        raise exception.FlavorNotFound(flavor_id=id)
+        raise exception.FlavorNotFound(flavor_id=flavor_id)
     else:
         return _dict_with_extra_specs(inst_type)
 

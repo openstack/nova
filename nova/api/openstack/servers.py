@@ -411,7 +411,7 @@ class Controller(object):
 
         try:
             self.compute_api.resize(context, instance_id, flavor_id)
-        except exception.FlavorDoesNotExist:
+        except exception.FlavorNotFound:
             msg = _("Unable to locate requested flavor.")
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.CannotResizeToSameSize:
