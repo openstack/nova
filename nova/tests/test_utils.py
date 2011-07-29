@@ -318,16 +318,16 @@ class ToPrimitiveTestCase(test.TestCase):
 
     def test_tuple(self):
         self.assertEquals(utils.to_primitive((1, 2, 3)), [1, 2, 3])
-        
+
     def test_dict(self):
-        self.assertEquals(utils.to_primitive(dict(a=1, b=2, c=3)), 
+        self.assertEquals(utils.to_primitive(dict(a=1, b=2, c=3)),
                           dict(a=1, b=2, c=3))
 
     def test_empty_dict(self):
         self.assertEquals(utils.to_primitive({}), {})
 
     def test_datetime(self):
-        x = datetime.datetime(1,2,3,4,5,6,7)
+        x = datetime.datetime(1, 2, 3, 4, 5, 6, 7)
         self.assertEquals(utils.to_primitive(x), "0001-02-03 04:05:06.000007")
 
     def test_iter(self):
@@ -335,7 +335,7 @@ class ToPrimitiveTestCase(test.TestCase):
             def __init__(self):
                 self.data = [1, 2, 3, 4, 5]
                 self.index = 0
-                
+
             def __iter__(self):
                 return self
 
@@ -347,13 +347,13 @@ class ToPrimitiveTestCase(test.TestCase):
 
         x = IterClass()
         self.assertEquals(utils.to_primitive(x), [1, 2, 3, 4, 5])
-        
+
     def test_iteritems(self):
         class IterItemsClass(object):
             def __init__(self):
                 self.data = dict(a=1, b=2, c=3).items()
                 self.index = 0
-                
+
             def __iter__(self):
                 return self
 
@@ -373,7 +373,14 @@ class ToPrimitiveTestCase(test.TestCase):
             a = 10
 
             def __init__(self):
-                self.x = 1
+                self.b = 1
 
         x = MysteryClass()
-        self.assertEquals(utils.to_primitive(x), dict(x=1))
+        self.assertEquals(utils.to_primitive(x, convert_instances=True),
+                          dict(b=1))
+
+        self.assertEquals(utils.to_primitive(x), x)
+
+    def test_typeerror(self):
+        x = bytearray  # Class, not instance
+        self.assertEquals(utils.to_primitive(x), u"<type 'bytearray'>")
