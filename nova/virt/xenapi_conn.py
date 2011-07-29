@@ -112,22 +112,15 @@ flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
                      5,
                      'Max number of times to poll for VHD to coalesce.'
                      '  Used only if connection_type=xenapi.')
-flags.DEFINE_bool('xenapi_inject_image',
-                  True,
-                  'Specifies whether an attempt to inject network/key'
-                  '  data into the disk image should be made.'
-                  '  Used only if connection_type=xenapi.')
 flags.DEFINE_string('xenapi_agent_path',
                     'usr/sbin/xe-update-networking',
                     'Specifies the path in which the xenapi guest agent'
                     '  should be located. If the agent is present,'
                     '  network configuration is not injected into the image'
                     '  Used only if connection_type=xenapi.'
-                    '  and xenapi_inject_image=True')
-
+                    '  and flat_injected=True')
 flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
                     'Base path to the storage repository')
-
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -198,13 +191,15 @@ class XenAPIConnection(driver.ComputeDriver):
         """Create VM instance"""
         self._vmops.spawn(instance, network_info)
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
         self._vmops.revert_resize(instance)
 
-    def finish_resize(self, instance, disk_info, network_info):
+    def finish_migration(self, instance, disk_info, network_info,
+                         resize_instance=False):
         """Completes a resize, turning on the migrated instance"""
-        self._vmops.finish_resize(instance, disk_info, network_info)
+        self._vmops.finish_migration(instance, disk_info, network_info,
+                                  resize_instance)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """

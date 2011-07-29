@@ -749,7 +749,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 local_gb=instance_type['local_gb'],
                 instance_type_id=instance_type['id']))
 
-        self.driver.revert_resize(instance_ref)
+        self.driver.revert_migration(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
         usage_info = utils.usage_from_instance(instance_ref)
@@ -847,20 +847,26 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
+
+        resize_instance = False
         instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
-        instance_type = self.db.instance_type_get_by_flavor_id(context,
-                migration_ref['new_flavor_id'])
-        self.db.instance_update(context, instance_ref.uuid,
-               dict(instance_type_id=instance_type['id'],
-                    memory_mb=instance_type['memory_mb'],
-                    vcpus=instance_type['vcpus'],
-                    local_gb=instance_type['local_gb']))
+        if migration_ref['old_flavor_id'] != migration_ref['new_flavor_id']:
+            instance_type = self.db.instance_type_get_by_flavor_id(context,
+                    migration_ref['new_flavor_id'])
+            self.db.instance_update(context, instance_ref.uuid,
+                   dict(instance_type_id=instance_type['id'],
+                        memory_mb=instance_type['memory_mb'],
+                        vcpus=instance_type['vcpus'],
+                        local_gb=instance_type['local_gb']))
+            resize_instance = True
 
         instance_ref = self.db.instance_get_by_uuid(context,
                                             instance_ref.uuid)
+
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.finish_resize(instance_ref, disk_info, network_info)
+        self.driver.finish_migration(instance_ref, disk_info, network_info,
+                                  resize_instance)
 
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })

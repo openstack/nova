@@ -518,6 +518,14 @@ class AuthManager(object):
             return drv.get_user_roles(User.safe_id(user),
                                       Project.safe_id(project))
 
+    def get_active_roles(self, user, project=None):
+        """Get all active roles for context"""
+        if project:
+            roles = FLAGS.allowed_roles + ['projectmanager']
+        else:
+            roles = FLAGS.global_roles
+        return [role for role in roles if self.has_role(user, role, project)]
+
     def get_project(self, pid):
         """Get project object by id"""
         with self.driver() as drv:
@@ -730,10 +738,6 @@ class AuthManager(object):
         with self.driver() as drv:
             drv.modify_user(uid, access_key, secret_key, admin)
 
-    @staticmethod
-    def get_key_pairs(context):
-        return db.key_pair_get_all_by_user(context.elevated(), context.user_id)
-
     def get_credentials(self, user, project=None, use_dmz=True):
         """Get credential zip for user in project"""
         if not isinstance(user, User):
@@ -785,7 +789,7 @@ class AuthManager(object):
         return read_buffer
 
     def get_environment_rc(self, user, project=None, use_dmz=True):
-        """Get credential zip for user in project"""
+        """Get environment rc for user in project"""
         if not isinstance(user, User):
             user = self.get_user(user)
         if project is None:

@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.virt.images')
 
 
-def fetch(image_href, path, _user, _project):
+def fetch(image_href, path, _user_id, _project_id):
     # TODO(vish): Improve context handling and add owner and auth data
     #             when it is added to glance.  Right now there is no
     #             auth checking in glance, so we assume that access was
