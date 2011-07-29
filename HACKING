@@ -136,7 +136,7 @@ Defining Methods
 Calling Methods
 ---------------
   Calls to methods 80 characters or longer should format each argument with 
-  newlines. This is mainly for readability.
+  newlines. This is not a requirement, but a guideline.
 
     unnecessarily_long_function_name('string one',
                                      'string two',
