@@ -110,17 +110,19 @@ class VMOps(object):
                 instance_infos.append(instance_info)
         return instance_infos
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._start(instance, vm_ref)
 
-    def finish_resize(self, context, instance, disk_info, network_info):
+    def finish_migration(self, ctx, instance, disk_info, network_info,
+                      resize_instance):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
-        vm_ref = self._create_vm(context, instance,
+        vm_ref = self._create_vm(ctx, instance,
                                  [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
                                  network_info)
-        self.resize_instance(instance, vdi_uuid)
+        if resize_instance:
+            self.resize_instance(instance, vdi_uuid)
         self._spawn(instance, vm_ref)
 
     def _start(self, instance, vm_ref=None):
@@ -133,20 +135,20 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def _create_disks(self, context, instance):
+    def _create_disks(self, ctx, instance):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        vdis = VMHelper.fetch_image(context, self._session,
+        vdis = VMHelper.fetch_image(ctx, self._session,
                 instance.id, instance.image_ref, user, project,
                 disk_image_type)
         return vdis
 
-    def spawn(self, context, instance, network_info):
+    def spawn(self, ctx, instance, network_info):
         vdis = None
         try:
-            vdis = self._create_disks(context, instance)
-            vm_ref = self._create_vm(context, instance, vdis, network_info)
+            vdis = self._create_disks(ctx, instance)
+            vm_ref = self._create_vm(ctx, instance, vdis, network_info)
             self._spawn(instance, vm_ref)
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
             LOG.exception(_("instance %s: Failed to spawn"),
@@ -160,7 +162,7 @@ class VMOps(object):
         """Spawn a rescue instance."""
         self.spawn(instance)
 
-    def _create_vm(self, context, instance, vdis, network_info):
+    def _create_vm(self, ctx, instance, vdis, network_info):
         """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -184,11 +186,11 @@ class VMOps(object):
         ramdisk = None
         try:
             if instance.kernel_id:
-                kernel = VMHelper.fetch_image(context, self._session,
+                kernel = VMHelper.fetch_image(ctx, self._session,
                         instance.id, instance.kernel_id, user, project,
                         ImageType.KERNEL)[0]
             if instance.ramdisk_id:
-                ramdisk = VMHelper.fetch_image(context, self._session,
+                ramdisk = VMHelper.fetch_image(ctx, self._session,
                         instance.id, instance.ramdisk_id, user, project,
                         ImageType.RAMDISK)[0]
             # Create the VM ref and attach the first disk
@@ -440,10 +442,10 @@ class VMOps(object):
             vm,
             "start")
 
-    def snapshot(self, context, instance, image_id):
+    def snapshot(self, ctx, instance, image_id):
         """Create snapshot from a running VM instance.
 
-        :param context: request context
+        :param ctx: request context
         :param instance: instance to be snapshotted
         :param image_id: id of image to upload to
 
@@ -468,7 +470,7 @@ class VMOps(object):
         try:
             template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
             # call plugin to ship snapshot off to glance
-            VMHelper.upload_image(context,
+            VMHelper.upload_image(ctx,
                     self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
@@ -569,18 +571,22 @@ class VMOps(object):
         return new_cow_uuid
 
     def resize_instance(self, instance, vdi_uuid):
-        """Resize a running instance by changing it's RAM and disk size."""
+        """Resize a running instance by changing its RAM and disk size."""
         #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
 
-        new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
-        instance_name = instance.name
-        instance_local_gb = instance.local_gb
-        LOG.debug(_("Resizing VDI %(vdi_uuid)s for instance %(instance_name)s."
-                " Expanding to %(instance_local_gb)d GB") % locals())
-        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        self._session.call_xenapi('VDI.resize_online', vdi_ref, new_disk_size)
-        LOG.debug(_("Resize instance %s complete") % (instance.name))
+        new_disk_size = instance.local_gb * 1024 * 1024 * 1024
+        if new_disk_size > 0:
+            instance_name = instance.name
+            instance_local_gb = instance.local_gb
+            LOG.debug(_("Resizing VDI %(vdi_uuid)s for instance"
+                        "%(instance_name)s. Expanding to %(instance_local_gb)d"
+                        " GB") % locals())
+            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+            # for an instance with no local storage
+            self._session.call_xenapi('VDI.resize_online', vdi_ref,
+                    str(new_disk_size))
+            LOG.debug(_("Resize instance %s complete") % (instance.name))
 
     def reboot(self, instance):
         """Reboot VM instance."""

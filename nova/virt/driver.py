@@ -65,7 +65,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def spawn(self, context, instance, network_info,
+    def spawn(self, cxt, instance, network_info,
               block_device_mapping=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
@@ -131,15 +131,16 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def snapshot(self, context, instance, image_id):
+    def snapshot(self, cxt, instance, image_id):
         """Create snapshot from a running VM instance."""
         raise NotImplementedError()
 
-    def finish_resize(self, context, instance, disk_info):
+    def finish_migration(self, cxt, instance, disk_info, network_info,
+                         resize_instance):
         """Completes a resize, turning on the migrated instance"""
         raise NotImplementedError()
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()

@@ -124,14 +124,14 @@ class VMWareESXConnection(driver.ComputeDriver):
         """List VM instances."""
         return self._vmops.list_instances()
 
-    def spawn(self, context, instance, network_info,
+    def spawn(self, cxt, instance, network_info,
               block_device_mapping=None):
         """Create VM instance."""
-        self._vmops.spawn(context, instance, network_info)
+        self._vmops.spawn(cxt, instance, network_info)
 
-    def snapshot(self, context, instance, name):
+    def snapshot(self, cxt, instance, name):
         """Create snapshot from a running VM instance."""
-        self._vmops.snapshot(context, instance, name)
+        self._vmops.snapshot(cxt, instance, name)
 
     def reboot(self, instance, network_info):
         """Reboot VM instance."""
