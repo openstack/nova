@@ -109,22 +109,15 @@ flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
                      5,
                      'Max number of times to poll for VHD to coalesce.'
                      '  Used only if connection_type=xenapi.')
-flags.DEFINE_bool('xenapi_inject_image',
-                  True,
-                  'Specifies whether an attempt to inject network/key'
-                  '  data into the disk image should be made.'
-                  '  Used only if connection_type=xenapi.')
 flags.DEFINE_string('xenapi_agent_path',
                     'usr/sbin/xe-update-networking',
                     'Specifies the path in which the xenapi guest agent'
                     '  should be located. If the agent is present,'
                     '  network configuration is not injected into the image'
                     '  Used only if connection_type=xenapi.'
-                    '  and xenapi_inject_image=True')
-
+                    '  and flat_injected=True')
 flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
                     'Base path to the storage repository')
-
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -195,19 +188,21 @@ class XenAPIConnection(driver.ComputeDriver):
         """Create VM instance"""
         self._vmops.spawn(instance, network_info)
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
         self._vmops.revert_resize(instance)
 
-    def finish_resize(self, instance, disk_info, network_info):
+    def finish_migration(self, instance, disk_info, network_info,
+                         resize_instance=False):
         """Completes a resize, turning on the migrated instance"""
-        self._vmops.finish_resize(instance, disk_info, network_info)
+        self._vmops.finish_migration(instance, disk_info, network_info,
+                                  resize_instance)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, image_id)
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
 
@@ -221,9 +216,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """
         self._vmops.inject_file(instance, b64_path, b64_contents)
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         """Destroy VM instance"""
-        self._vmops.destroy(instance)
+        self._vmops.destroy(instance, network_info)
 
     def pause(self, instance, callback):
         """Pause VM instance"""
@@ -246,11 +241,11 @@ class XenAPIConnection(driver.ComputeDriver):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
-    def rescue(self, instance, callback):
+    def rescue(self, instance, callback, network_info):
         """Rescue the specified instance"""
         self._vmops.rescue(instance, callback)
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""
         self._vmops.unrescue(instance, callback)
 
@@ -265,6 +260,9 @@ class XenAPIConnection(driver.ComputeDriver):
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance"""
         self._vmops.inject_network_info(instance, network_info)
+
+    def plug_vifs(self, instance_ref, network_info):
+        self._vmops.plug_vifs(instance_ref, network_info)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
@@ -319,7 +317,7 @@ class XenAPIConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         return
 
-    def unfilter_instance(self, instance_ref):
+    def unfilter_instance(self, instance_ref, network_info):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 

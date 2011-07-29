@@ -38,7 +38,6 @@ from nova import ipv6
 from nova import log as logging
 from nova import utils
 
-from nova.auth.manager import AuthManager
 from nova.compute import power_state
 from nova.virt import driver
 from nova.virt.xenapi.network_utils import NetworkHelper
@@ -52,6 +51,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('windows_version_timeout', 300,
                      'number of seconds to wait for windows agent to be '
                      'fully operational')
+flags.DEFINE_string('xenapi_vif_driver',
+                    'nova.virt.xenapi.vif.XenAPIBridgeDriver',
+                    'The XenAPI VIF driver using XenServer Network APIs.')
 
 
 def cmp_version(a, b):
@@ -78,6 +80,7 @@ class VMOps(object):
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
+        self.vif_driver = utils.import_object(FLAGS.xenapi_vif_driver)
 
     def list_instances(self):
         """List VM instances."""
@@ -106,17 +109,19 @@ class VMOps(object):
                 instance_infos.append(instance_info)
         return instance_infos
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._start(instance, vm_ref)
 
-    def finish_resize(self, instance, disk_info, network_info):
+    def finish_migration(self, instance, disk_info, network_info,
+                      resize_instance):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
         vm_ref = self._create_vm(instance,
                                  [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
                                  network_info)
-        self.resize_instance(instance, vdi_uuid)
+        if resize_instance:
+            self.resize_instance(instance, vdi_uuid)
         self._spawn(instance, vm_ref)
 
     def _start(self, instance, vm_ref=None):
@@ -130,11 +135,10 @@ class VMOps(object):
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
     def _create_disks(self, instance):
-        user = AuthManager().get_user(instance.user_id)
-        project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
         vdis = VMHelper.fetch_image(self._session,
-                instance.id, instance.image_ref, user, project,
+                instance.id, instance.image_ref,
+                instance.user_id, instance.project_id,
                 disk_image_type)
         return vdis
 
@@ -172,21 +176,18 @@ class VMOps(object):
                                   power_state.SHUTDOWN)
             return
 
-        user = AuthManager().get_user(instance.user_id)
-        project = AuthManager().get_project(instance.project_id)
-
         disk_image_type = VMHelper.determine_disk_image_type(instance)
         kernel = None
         ramdisk = None
         try:
             if instance.kernel_id:
                 kernel = VMHelper.fetch_image(self._session, instance.id,
-                        instance.kernel_id, user, project,
-                        ImageType.KERNEL)[0]
+                        instance.kernel_id, instance.user_id,
+                        instance.project_id, ImageType.KERNEL)[0]
             if instance.ramdisk_id:
                 ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                        instance.ramdisk_id, user, project,
-                        ImageType.RAMDISK)[0]
+                        instance.kernel_id, instance.user_id,
+                        instance.project_id, ImageType.RAMDISK)[0]
             # Create the VM ref and attach the first disk
             first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                     vdis[0]['vdi_uuid'])
@@ -251,11 +252,11 @@ class VMOps(object):
             userdevice += 1
 
         # Alter the image before VM start for, e.g. network injection
-        if FLAGS.xenapi_inject_image:
+        if FLAGS.flat_injected:
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 
-        self.create_vifs(vm_ref, network_info)
+        self.create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
         return vm_ref
 
@@ -564,18 +565,22 @@ class VMOps(object):
         return new_cow_uuid
 
     def resize_instance(self, instance, vdi_uuid):
-        """Resize a running instance by changing it's RAM and disk size."""
+        """Resize a running instance by changing its RAM and disk size."""
         #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
 
-        new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
-        instance_name = instance.name
-        instance_local_gb = instance.local_gb
-        LOG.debug(_("Resizing VDI %(vdi_uuid)s for instance %(instance_name)s."
-                " Expanding to %(instance_local_gb)d GB") % locals())
-        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        self._session.call_xenapi('VDI.resize_online', vdi_ref, new_disk_size)
-        LOG.debug(_("Resize instance %s complete") % (instance.name))
+        new_disk_size = instance.local_gb * 1024 * 1024 * 1024
+        if new_disk_size > 0:
+            instance_name = instance.name
+            instance_local_gb = instance.local_gb
+            LOG.debug(_("Resizing VDI %(vdi_uuid)s for instance"
+                        "%(instance_name)s. Expanding to %(instance_local_gb)d"
+                        " GB") % locals())
+            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+            # for an instance with no local storage
+            self._session.call_xenapi('VDI.resize_online', vdi_ref,
+                    str(new_disk_size))
+            LOG.debug(_("Resize instance %s complete") % (instance.name))
 
     def reboot(self, instance):
         """Reboot VM instance."""
@@ -837,7 +842,7 @@ class VMOps(object):
 
         self._session.call_xenapi("Async.VM.destroy", rescue_vm_ref)
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         """Destroy VM instance.
 
         This is the method exposed by xenapi_conn.destroy(). The rest of the
@@ -847,9 +852,9 @@ class VMOps(object):
         instance_id = instance.id
         LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
         vm_ref = VMHelper.lookup(self._session, instance.name)
-        return self._destroy(instance, vm_ref, shutdown=True)
+        return self._destroy(instance, vm_ref, network_info, shutdown=True)
 
-    def _destroy(self, instance, vm_ref, shutdown=True,
+    def _destroy(self, instance, vm_ref, network_info=None, shutdown=True,
                  destroy_kernel_ramdisk=True):
         """Destroys VM instance by performing:
 
@@ -870,6 +875,10 @@ class VMOps(object):
         if destroy_kernel_ramdisk:
             self._destroy_kernel_ramdisk(instance, vm_ref)
         self._destroy_vm(instance, vm_ref)
+
+        if network_info:
+            for (network, mapping) in network_info:
+                self.vif_driver.unplug(instance, network, mapping)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
@@ -1066,7 +1075,7 @@ class VMOps(object):
                 # catch KeyError for domid if instance isn't running
                 pass
 
-    def create_vifs(self, vm_ref, network_info):
+    def create_vifs(self, vm_ref, instance, network_info):
         """Creates vifs for an instance."""
 
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
@@ -1075,14 +1084,19 @@ class VMOps(object):
         self._session.get_xenapi().VM.get_record(vm_ref)
 
         for device, (network, info) in enumerate(network_info):
-            mac_address = info['mac']
-            bridge = network['bridge']
-            rxtx_cap = info.pop('rxtx_cap')
-            network_ref = \
-                NetworkHelper.find_network_with_bridge(self._session,
-                                                       bridge)
-            VMHelper.create_vif(self._session, vm_ref, network_ref,
-                                mac_address, device, rxtx_cap)
+            vif_rec = self.vif_driver.plug(self._session,
+                    vm_ref, instance, device, network, info)
+            network_ref = vif_rec['network']
+            LOG.debug(_('Creating VIF for VM %(vm_ref)s,' \
+                ' network %(network_ref)s.') % locals())
+            vif_ref = self._session.call_xenapi('VIF.create', vif_rec)
+            LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
+                ' network %(network_ref)s.') % locals())
+
+    def plug_vifs(self, instance, network_info):
+        """Set up VIF networking on the host."""
+        for (network, mapping) in network_info:
+            self.vif_driver.plug(self._session, instance, network, mapping)
 
     def reset_network(self, instance, vm_ref=None):
         """Creates uuid arg to pass to make_agent_call and calls it."""

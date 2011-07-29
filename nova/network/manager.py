@@ -68,7 +68,7 @@ LOG = logging.getLogger("nova.network.manager")
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('flat_network_bridge', 'br100',
+flags.DEFINE_string('flat_network_bridge', None,
                     'Bridge for simple network instances')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
@@ -300,6 +300,12 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
+    # If True, this manager requires VIF to create a bridge.
+    SHOULD_CREATE_BRIDGE = False
+
+    # If True, this manager requires VIF to create VLAN tag.
+    SHOULD_CREATE_VLAN = False
+
     timeout_fixed_ips = True
 
     def __init__(self, network_driver=None, *args, **kwargs):
@@ -426,7 +432,12 @@ class NetworkManager(manager.SchedulerDependentManager):
         and info = dict containing pertinent networking data
         """
         # TODO(tr3buchet) should handle floating IPs as well?
-        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        try:
+            fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        except exception.FixedIpNotFoundForInstance:
+            LOG.warn(_('No fixed IPs for instance %s'), instance_id)
+            fixed_ips = []
+
         vifs = self.db.virtual_interface_get_by_instance(context, instance_id)
         flavor = self.db.instance_type_get(context, instance_type_id)
         network_info = []
@@ -458,7 +469,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'id': network['id'],
                 'cidr': network['cidr'],
                 'cidr_v6': network['cidr_v6'],
-                'injected': network['injected']}
+                'injected': network['injected'],
+                'vlan': network['vlan'],
+                'bridge_interface': network['bridge_interface'],
+                'multi_host': network['multi_host']}
             if network['multi_host']:
                 dhcp_server = self._get_dhcp_ip(context, network, host)
             else:
@@ -473,7 +487,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'mac': vif['address'],
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [],
-                'ips': [ip_dict(ip) for ip in network_IPs]}
+                'ips': [ip_dict(ip) for ip in network_IPs],
+                'should_create_bridge': self.SHOULD_CREATE_BRIDGE,
+                'should_create_vlan': self.SHOULD_CREATE_VLAN}
+
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
             # TODO(tr3buchet): handle ip6 routes here as well
@@ -597,12 +614,13 @@ class NetworkManager(manager.SchedulerDependentManager):
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
         fixed_net = netaddr.IPNetwork(cidr)
-        fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
-        significant_bits_v6 = 64
-        network_size_v6 = 1 << 64
+        if FLAGS.use_ipv6:
+            fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
+            significant_bits_v6 = 64
+            network_size_v6 = 1 << 64
+
         for index in range(num_networks):
             start = index * network_size
-            start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = '%s/%s' % (fixed_net[start], significant_bits)
             project_net = netaddr.IPNetwork(cidr)
@@ -623,6 +641,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 net['label'] = label
 
             if FLAGS.use_ipv6:
+                start_v6 = index * network_size_v6
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
@@ -698,22 +717,14 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Sets up network on this host."""
         raise NotImplementedError()
 
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching network for compute hosts.
-
-        this code is run on and by the compute host, not on network
-        hosts
-        """
-        raise NotImplementedError()
-
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
 
     FlatManager does not do any bridge or vlan creation.  The user is
-    responsible for setting up whatever bridge is specified in
-    flat_network_bridge (br100 by default).  This bridge needs to be created
-    on all compute hosts.
+    responsible for setting up whatever bridges are specified when creating
+    networks through nova-manage. This bridge needs to be created on all
+    compute hosts.
 
     The idea is to create a single network for the host with a command like:
     nova-manage network create 192.168.0.0/24 1 256. Creating multiple
@@ -749,13 +760,6 @@ class FlatManager(NetworkManager):
                                                      **kwargs)
         self.db.fixed_ip_disassociate(context, address)
 
-    def setup_compute_network(self, context, instance_id):
-        """Network is created manually.
-
-        this code is run on and by the compute host, not on network hosts
-        """
-        pass
-
     def _setup_network(self, context, network_ref):
         """Setup Network on this host."""
         net = {}
@@ -772,6 +776,8 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
 
     """
 
+    SHOULD_CREATE_BRIDGE = True
+
     def init_host(self):
         """Do any initialization that needs to be run if this is a
         standalone service.
@@ -783,17 +789,6 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
         self.init_host_floating_ips()
 
         self.driver.metadata_forward()
-
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching networks for compute hosts.
-
-        this code is run on and by the compute host, not on network hosts
-        """
-        networks = db.network_get_all_by_instance(context, instance_id)
-        for network in networks:
-            if not network['multi_host']:
-                self.driver.ensure_bridge(network['bridge'],
-                                          network['bridge_interface'])
 
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
@@ -824,6 +819,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     instances in its subnet.
 
     """
+
+    SHOULD_CREATE_BRIDGE = True
+    SHOULD_CREATE_VLAN = True
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
@@ -862,17 +860,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     def add_network_to_project(self, context, project_id):
         """Force adds another network to a project."""
         self.db.network_associate(context, project_id, force=True)
-
-    def setup_compute_network(self, context, instance_id):
-        """Sets up matching network for compute hosts.
-        this code is run on and by the compute host, not on network hosts
-        """
-        networks = self.db.network_get_all_by_instance(context, instance_id)
-        for network in networks:
-            if not network['multi_host']:
-                self.driver.ensure_vlan_bridge(network['vlan'],
-                                               network['bridge'],
-                                               network['bridge_interface'])
 
     def _get_networks_for_instance(self, context, instance_id, project_id):
         """Determine which networks an instance should connect to."""

@@ -96,8 +96,8 @@ class CloudPipe(object):
     def launch_vpn_instance(self, project_id):
         LOG.debug(_("Launching VPN for %s") % (project_id))
         project = self.manager.get_project(project_id)
-        ctxt = context.RequestContext(user=project.project_manager,
-                                      project=project)
+        ctxt = context.RequestContext(user=project.project_manager_id,
+                                      project=project.id)
         key_name = self.setup_key_pair(ctxt)
         group_name = self.setup_security_group(ctxt)
 
@@ -112,11 +112,11 @@ class CloudPipe(object):
             security_group=[group_name])
 
     def setup_security_group(self, context):
-        group_name = '%s%s' % (context.project.id, FLAGS.vpn_key_suffix)
-        if db.security_group_exists(context, context.project.id, group_name):
+        group_name = '%s%s' % (context.project_id, FLAGS.vpn_key_suffix)
+        if db.security_group_exists(context, context.project_id, group_name):
             return group_name
-        group = {'user_id': context.user.id,
-                 'project_id': context.project.id,
+        group = {'user_id': context.user_id,
+                 'project_id': context.project_id,
                  'name': group_name,
                  'description': 'Group for vpn'}
         group_ref = db.security_group_create(context, group)
@@ -137,12 +137,12 @@ class CloudPipe(object):
         return group_name
 
     def setup_key_pair(self, context):
-        key_name = '%s%s' % (context.project.id, FLAGS.vpn_key_suffix)
+        key_name = '%s%s' % (context.project_id, FLAGS.vpn_key_suffix)
         try:
-            result = cloud._gen_key(context, context.user.id, key_name)
+            result = cloud._gen_key(context, context.user_id, key_name)
             private_key = result['private_key']
             try:
-                key_dir = os.path.join(FLAGS.keys_path, context.user.id)
+                key_dir = os.path.join(FLAGS.keys_path, context.user_id)
                 if not os.path.exists(key_dir):
                     os.makedirs(key_dir)
                 key_path = os.path.join(key_dir, '%s.pem' % key_name)
