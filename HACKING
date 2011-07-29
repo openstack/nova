@@ -74,6 +74,7 @@ Docstrings
   :param foo: the foo parameter
   :param bar: the bar parameter
   :returns: return_type -- description of the return value
+  :returns: description of the return value
   :raises: AttributeError, KeyError
 
   """
