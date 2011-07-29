@@ -116,16 +116,12 @@ Defining Methods
 ----------------
   Method signatures longer than 80 characters are very unreadable. If you
   encounter this problem, first you should determine if your method is
-  too big. Otherwise, you should compress your keyword arguments with a
-  '**kwargs' parameter. You should use the 'kwargs' in your method as a
-  dictionary to retrieve the necessary keyword arguments.
+  too big. If not, you can compress your keyword arguments with a
+  '**kwargs' parameter. You can then use 'kwargs' in your method as a
+  dictionary to retrieve the necessary keyword arguments. This is just a
+  guideline, not a requirement.
 
-  Example (BAD):
-
-    def my_method(argument_one, argument_two, kwarg_one='default_one',
-                  kwarg_two='default_two', kwarg_three='default_three'):
-
-  Example (GOOD): 
+  Example: 
 
     def my_method(argumet_one, argument_two, **kwargs):
         kwarg_one = kwargs.get('kwarg_one', 'default_one')
