@@ -43,8 +43,8 @@ from nova import version
 FLAGS = flags.FLAGS
 flags.DEFINE_string('logging_context_format_string',
                     '%(asctime)s %(levelname)s %(name)s '
-                    '[%(request_id)s %(user)s '
-                    '%(project)s] %(message)s',
+                    '[%(request_id)s %(user_id)s '
+                    '%(project_id)s] %(message)s',
                     'format string to use for log messages with context')
 flags.DEFINE_string('logging_default_format_string',
                     '%(asctime)s %(levelname)s %(name)s [-] '

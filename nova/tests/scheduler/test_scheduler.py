@@ -23,7 +23,6 @@ import datetime
 import mox
 import novaclient.exceptions
 import stubout
-import webob
 
 from mox import IgnoreArg
 from nova import context
@@ -34,12 +33,10 @@ from nova import service
 from nova import test
 from nova import rpc
 from nova import utils
-from nova.auth import manager as auth_manager
 from nova.scheduler import api
 from nova.scheduler import manager
 from nova.scheduler import driver
 from nova.compute import power_state
-from nova.db.sqlalchemy import models
 
 
 FLAGS = flags.FLAGS
@@ -250,23 +247,17 @@ class SimpleDriverTestCase(test.TestCase):
                    volume_driver='nova.volume.driver.FakeISCSIDriver',
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()
-        self.manager = auth_manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake')
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.get_admin_context()
-
-    def tearDown(self):
-        self.manager.delete_user(self.user)
-        self.manager.delete_project(self.project)
-        super(SimpleDriverTestCase, self).tearDown()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
 
     def _create_instance(self, **kwargs):
         """Create a test instance"""
         inst = {}
         inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
-        inst['user_id'] = self.user.id
-        inst['project_id'] = self.project.id
+        inst['user_id'] = self.user_id
+        inst['project_id'] = self.project_id
         inst['instance_type_id'] = '1'
         inst['vcpus'] = kwargs.get('vcpus', 1)
         inst['ami_launch_index'] = 0

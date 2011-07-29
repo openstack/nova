@@ -769,9 +769,9 @@ class LibvirtConnection(driver.ComputeDriver):
             else:
                 utils.execute('cp', base, target)
 
-    def _fetch_image(self, target, image_id, user, project, size=None):
+    def _fetch_image(self, target, image_id, user_id, project_id, size=None):
         """Grab image and optionally attempt to resize it"""
-        images.fetch(image_id, target, user, project)
+        images.fetch(image_id, target, user_id, project_id)
         if size:
             disk.extend(target, size)
 
@@ -809,9 +809,6 @@ class LibvirtConnection(driver.ComputeDriver):
         os.close(os.open(basepath('console.log', ''),
                          os.O_CREAT | os.O_WRONLY, 0660))
 
-        user = manager.AuthManager().get_user(inst['user_id'])
-        project = manager.AuthManager().get_project(inst['project_id'])
-
         if not disk_images:
             disk_images = {'image_id': inst['image_ref'],
                            'kernel_id': inst['kernel_id'],
@@ -823,16 +820,16 @@ class LibvirtConnection(driver.ComputeDriver):
                               target=basepath('kernel'),
                               fname=fname,
                               image_id=disk_images['kernel_id'],
-                              user=user,
-                              project=project)
+                              user_id=inst['user_id'],
+                              project_id=inst['project_id'])
             if disk_images['ramdisk_id']:
                 fname = '%08x' % int(disk_images['ramdisk_id'])
                 self._cache_image(fn=self._fetch_image,
                                   target=basepath('ramdisk'),
                                   fname=fname,
                                   image_id=disk_images['ramdisk_id'],
-                                  user=user,
-                                  project=project)
+                                  user_id=inst['user_id'],
+                                  project_id=inst['project_id'])
 
         root_fname = hashlib.sha1(disk_images['image_id']).hexdigest()
         size = FLAGS.minimum_root_size
@@ -850,8 +847,8 @@ class LibvirtConnection(driver.ComputeDriver):
                               fname=root_fname,
                               cow=FLAGS.use_cow_images,
                               image_id=disk_images['image_id'],
-                              user=user,
-                              project=project,
+                              user_id=inst['user_id'],
+                              project_id=inst['project_id'],
                               size=size)
 
         if inst_type['local_gb'] and not self._volume_in_mapping(
