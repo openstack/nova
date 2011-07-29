@@ -53,8 +53,8 @@ class MockSetAdminPassword(object):
 def _get_instance():
     instance = {
         "id": 1,
-        "created_at": "2010-10-10T12:00:00Z",
-        "updated_at": "2010-11-11T11:00:00Z",
+        "created_at": "2010-10-10 12:00:00",
+        "updated_at": "2010-11-11 11:00:00",
         "admin_pass": "",
         "user_id": "",
         "project_id": "",
