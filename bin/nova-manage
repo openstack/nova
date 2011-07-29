@@ -662,8 +662,9 @@ class NetworkCommands(object):
         # check for certain required inputs
         if not label:
             raise exception.NetworkNotCreated(req='--label')
-        if not fixed_range_v4:
-            raise exception.NetworkNotCreated(req='--fixed_range_v4')
+        if not (fixed_range_v4 or fixed_range_v6):
+            req = '--fixed_range_v4 or --fixed_range_v6'
+            raise exception.NetworkNotCreated(req=req)
 
         bridge = bridge or FLAGS.flat_network_bridge
         if not bridge:
