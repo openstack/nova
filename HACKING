@@ -50,6 +50,7 @@ Human Alphabetical Order Examples
   from nova.endpoint import cloud
   from nova import test
 
+
 Docstrings
 ----------
   """A one line docstring looks like this and ends in a period."""
@@ -77,6 +78,7 @@ Docstrings
 
   """
 
+
 Dictionaries/Lists
 ------------------
   If a dictionary (dict) or list object is longer than 80 characters, its
@@ -101,9 +103,38 @@ Dictionaries/Lists
             "status": "ACTIVE",
         },
     }
+  
+  Only use the dict constructor for casting. Do not use it to create a new
+  dictionary.
 
-Method Signatures
------------------
+  Example (BAD):
+    
+    my_dictionary = dict(key1='param1', key2='param2', key3=['a', 'b'])
+
+
+Defining Methods
+----------------
+  Method signatures longer than 80 characters are very unreadable. If you
+  encounter this problem, first you should determine if your method is
+  too big. Otherwise, you should compress your keyword arguments with a
+  '**kwargs' parameter. You should use the 'kwargs' in your method as a
+  dictionary to retrieve the necessary keyword arguments.
+
+  Example (BAD):
+
+    def my_method(argument_one, argument_two, kwarg_one='default_one',
+                  kwarg_two='default_two', kwarg_three='default_three'):
+
+  Example (GOOD): 
+
+    def my_method(argumet_one, argument_two, **kwargs):
+        kwarg_one = kwargs.get('kwarg_one', 'default_one')
+        kwarg_two = kwargs.get('kwarg_one', 'default_one')
+        kwarg_three = kwargs.get('kwarg_three', 'default_three')
+
+
+Calling Methods
+---------------
   Calls to methods 80 characters or longer should format each argument with 
   newlines. This is mainly for readability.
 
@@ -130,3 +161,26 @@ Method Signatures
                              'string four',
                              kwarg1=list_of_strings,
                              kwarg2=dict_of_numbers)
+
+Internationalization (i18n) Strings
+----------------------------
+  In order to support multiple languages, we have a mechanism to support
+  automatic translations of exception and log strings.
+
+  Example:
+    msg = _("An error occurred")
+    raise HTTPBadRequest(explanation=msg)
+  
+  If you have a variable to place within the string, first internationalize
+  the template string then do the replacement.
+
+  Example:
+    msg = _("Missing parameter: %s") % ("flavor",)
+    LOG.error(msg)
+ 
+  If you have multiple variables to place in the string, use keyword
+  parameters. This helps our translators reorder parameters when needed.
+
+  Example:
+    msg = _("The server with id %(s_id)s has no key %(m_key)s")
+    LOG.error(msg % (s_id="1234, m_key="imageId"))
