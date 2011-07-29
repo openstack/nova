@@ -465,7 +465,8 @@ class VMHelper(HelperBase):
         sr_ref = safe_find_sr(session)
 
         glance_client, image_id = nova.image.get_glance_client(image)
-        glance_client.set_auth_token(getattr(context, 'auth_token', None))
+        if hasattr(glance_client, 'set_auth_token'):
+            glance_client.set_auth_token(getattr(context, 'auth_token', None))
         meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size

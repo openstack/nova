@@ -85,7 +85,8 @@ class GlanceImageService(service.BaseImageService):
 
     def _set_client_context(self, context):
         """Sets the client's auth token."""
-        self.client.set_auth_token(context.auth_token)
+        if hasattr(self.client, 'set_auth_token'):
+            self.client.set_auth_token(context.auth_token)
 
     def index(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of images available."""
