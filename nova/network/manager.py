@@ -678,11 +678,11 @@ class NetworkManager(manager.SchedulerDependentManager):
             # None if network with cidr or cidr_v6 already exists
             network = self.db.network_create_safe(context, net)
 
-            if network:
+            if not network:
+                raise ValueError(_('Network already exists!'))
+
+            if network and cidr:
                 self._create_fixed_ips(context, network['id'])
-            else:
-                raise ValueError(_('Network with cidr %s already exists') %
-                                   cidr)
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201
