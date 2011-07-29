@@ -247,7 +247,7 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def rescue(self, context, instance, callback, network_info):
         """Rescue the specified instance"""
-        self._vmops.rescue(instance, callback, network_info)
+        self._vmops.rescue(context, instance, callback, network_info)
 
     def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""

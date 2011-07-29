@@ -227,7 +227,7 @@ def stub_out_vm_methods(stubs):
     def fake_release_bootlock(self, vm):
         pass
 
-    def fake_spawn_rescue(self, inst):
+    def fake_spawn_rescue(self, context, inst, network_info):
         inst._rescue = False
 
     stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
