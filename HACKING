@@ -105,13 +105,6 @@ Dictionaries/Lists
         },
     }
   
-  Only use the dict constructor for casting. Do not use it to create a new
-  dictionary.
-
-  Example (BAD):
-    
-    my_dictionary = dict(key1='param1', key2='param2', key3=['a', 'b'])
-
 
 Calling Methods
 ---------------
