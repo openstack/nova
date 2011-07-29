@@ -112,23 +112,6 @@ Dictionaries/Lists
     my_dictionary = dict(key1='param1', key2='param2', key3=['a', 'b'])
 
 
-Defining Methods
-----------------
-  Method signatures longer than 80 characters are very unreadable. If you
-  encounter this problem, first you should determine if your method is
-  too big. If not, you can compress your keyword arguments with a
-  '**kwargs' parameter. You can then use 'kwargs' in your method as a
-  dictionary to retrieve the necessary keyword arguments. This is just a
-  guideline, not a requirement.
-
-  Example: 
-
-    def my_method(argumet_one, argument_two, **kwargs):
-        kwarg_one = kwargs.get('kwarg_one', 'default_one')
-        kwarg_two = kwargs.get('kwarg_one', 'default_one')
-        kwarg_three = kwargs.get('kwarg_three', 'default_three')
-
-
 Calling Methods
 ---------------
   Calls to methods 80 characters or longer should format each argument with 
@@ -157,6 +140,7 @@ Calling Methods
                              'string four',
                              kwarg1=list_of_strings,
                              kwarg2=dict_of_numbers)
+
 
 Internationalization (i18n) Strings
 ----------------------------
