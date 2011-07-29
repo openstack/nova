@@ -632,6 +632,7 @@ class NetworkCommands(object):
 
     @args('--label', dest="label", metavar='<label>',
             help='Label for network (ex: public)')
+    @args('--fixed_range', dest="fixed_range", help='IP subnet (v4 or v6)')
     @args('--fixed_range_v4', dest="fixed_range_v4", metavar='<x.x.x.x/yy>',
             help='IPv4 subnet (ex: 10.0.0.0/8)')
     @args('--num_networks', dest="num_networks", metavar='<number>',
@@ -653,17 +654,18 @@ class NetworkCommands(object):
             help='Multi host')
     @args('--dns1', dest="dns1", metavar="<DNS Address>", help='First DNS')
     @args('--dns2', dest="dns2", metavar="<DNS Address>", help='Second DNS')
-    def create(self, label=None, fixed_range_v4=None, num_networks=None,
+    def create(self, label=None, fixed_range=None, num_networks=None,
                network_size=None, multi_host=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, gateway_v6=None,
-               bridge=None, bridge_interface=None, dns1=None, dns2=None):
+               bridge=None, bridge_interface=None, dns1=None, dns2=None,
+               fixed_range_v4=None):
         """Creates fixed ips for host by range"""
 
         # check for certain required inputs
         if not label:
             raise exception.NetworkNotCreated(req='--label')
-        if not (fixed_range_v4 or fixed_range_v6):
-            req = '--fixed_range_v4 or --fixed_range_v6'
+        if not fixed_range and not (fixed_range_v4 or fixed_range_v6):
+            req = 'one of --fixed_range --fixed_range_v4 or --fixed_range_v6'
             raise exception.NetworkNotCreated(req=req)
 
         bridge = bridge or FLAGS.flat_network_bridge
