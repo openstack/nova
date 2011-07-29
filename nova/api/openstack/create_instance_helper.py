@@ -20,6 +20,7 @@ import webob
 from webob import exc
 from xml.dom import minidom
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -29,7 +30,6 @@ from nova import utils
 
 from nova.compute import instance_types
 from nova.api.openstack import wsgi
-from nova.auth import manager as auth_manager
 
 
 LOG = logging.getLogger('nova.api.openstack.create_instance_helper')
@@ -80,7 +80,10 @@ class CreateInstanceHelper(object):
 
         key_name = None
         key_data = None
-        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
+        # TODO(vish): Key pair access should move into a common library
+        #             instead of being accessed directly from the db.
+        key_pairs = db.key_pair_get_all_by_user(context.elevated(),
+                                                context.user_id)
         if key_pairs:
             key_pair = key_pairs[0]
             key_name = key_pair['name']

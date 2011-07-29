@@ -155,7 +155,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         fakes.stub_out_compute_api_snapshot(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(1, None)
+        self.context = context.RequestContext('fake', 'fake')
         self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
@@ -168,7 +168,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         """Ensure instance_id is persisted as an image-property"""
         fixture = {'name': 'test image',
                    'is_public': False,
-                   'properties': {'instance_id': '42', 'user_id': '1'}}
+                   'properties': {'instance_id': '42', 'user_id': 'fake'}}
 
         image_id = self.service.create(self.context, fixture)['id']
         expected = fixture
@@ -178,7 +178,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         expected = {'id': image_id,
                     'name': 'test image',
                     'is_public': False,
-                    'properties': {'instance_id': '42', 'user_id': '1'}}
+                    'properties': {'instance_id': '42', 'user_id': 'fake'}}
         self.assertDictMatch(image_meta, expected)
 
         image_metas = self.service.detail(self.context)
@@ -331,11 +331,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.orig_image_service = FLAGS.image_service
         FLAGS.image_service = 'nova.image.glance.GlanceImageService'
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.fixtures = self._make_image_fixtures()
         fakes.stub_out_glance(self.stubs, initial_fixtures=self.fixtures)
@@ -352,7 +349,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         """Determine if this fixture is applicable for given user id."""
         is_public = fixture["is_public"]
         try:
-            uid = int(fixture["properties"]["user_id"])
+            uid = fixture["properties"]["user_id"]
         except KeyError:
             uid = None
         return uid == user_id or is_public
@@ -424,7 +421,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 },
                 "metadata": {
                     "instance_ref": "http://localhost/v1.1/servers/42",
-                    "user_id": "1",
+                    "user_id": "fake",
                 },
                 "links": [{
                     "rel": "self",
@@ -559,7 +556,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         fixtures = copy.copy(self.fixtures)
 
         for image in fixtures:
-            if not self._applicable_fixture(image, 1):
+            if not self._applicable_fixture(image, "fake"):
                 fixtures.remove(image)
                 continue
 
@@ -666,7 +663,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'queued snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
-                u'user_id': u'1',
+                u'user_id': u'fake',
             },
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -696,7 +693,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'saving snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
-                u'user_id': u'1',
+                u'user_id': u'fake',
             },
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -727,7 +724,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'active snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
-                u'user_id': u'1',
+                u'user_id': u'fake',
             },
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -757,7 +754,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'killed snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
-                u'user_id': u'1',
+                u'user_id': u'fake',
             },
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -1076,7 +1073,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         # Snapshot for User 1
         server_ref = 'http://localhost/v1.1/servers/42'
-        snapshot_properties = {'instance_ref': server_ref, 'user_id': '1'}
+        snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
         for status in ('queued', 'saving', 'active', 'killed'):
             add_fixture(id=image_id, name='%s snapshot' % status,
                         is_public=False, status=status,
@@ -1084,7 +1081,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             image_id += 1
 
         # Snapshot for User 2
-        other_snapshot_properties = {'instance_id': '43', 'user_id': '2'}
+        other_snapshot_properties = {'instance_id': '43', 'user_id': 'other'}
         add_fixture(id=image_id, name='someone elses snapshot',
                     is_public=False, status='active',
                     properties=other_snapshot_properties)
