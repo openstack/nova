@@ -613,34 +613,39 @@ class NetworkManager(manager.SchedulerDependentManager):
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
-        fixed_net = netaddr.IPNetwork(cidr)
-        if FLAGS.use_ipv6:
+        if cidr_v6:
             fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
             significant_bits_v6 = 64
             network_size_v6 = 1 << 64
 
-        for index in range(num_networks):
-            start = index * network_size
+        if cidr:
+            fixed_net = netaddr.IPNetwork(cidr)
             significant_bits = 32 - int(math.log(network_size, 2))
-            cidr = '%s/%s' % (fixed_net[start], significant_bits)
-            project_net = netaddr.IPNetwork(cidr)
+
+        for index in range(num_networks):
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
             net['dns1'] = dns1
             net['dns2'] = dns2
-            net['cidr'] = cidr
-            net['multi_host'] = multi_host
-            net['netmask'] = str(project_net.netmask)
-            net['gateway'] = str(project_net[1])
-            net['broadcast'] = str(project_net.broadcast)
-            net['dhcp_start'] = str(project_net[2])
+
+            if cidr:
+                start = index * network_size
+                project_net = netaddr.IPNetwork('%s/%s' % (fixed_net[start],
+                                                           significant_bits))
+                net['cidr'] = str(project_net)
+                net['multi_host'] = multi_host
+                net['netmask'] = str(project_net.netmask)
+                net['gateway'] = str(project_net[1])
+                net['broadcast'] = str(project_net.broadcast)
+                net['dhcp_start'] = str(project_net[2])
+
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, index)
             else:
                 net['label'] = label
 
-            if FLAGS.use_ipv6:
+            if cidr_v6:
                 start_v6 = index * network_size_v6
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
