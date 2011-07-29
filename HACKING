@@ -25,9 +25,9 @@ Imports
 
 ::
   # vim: tabstop=4 shiftwidth=4 softtabstop=4
-  {{stdlib imports in human alphabetical order by module name}}
+  {{stdlib imports in human alphabetical order}}
   \n
-  {{nova imports in human alphabetical order by module name}}
+  {{nova imports in human alphabetical order}}
   \n
   \n
   {{begin your code}}
