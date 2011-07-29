@@ -563,19 +563,13 @@ class ControllerV11(Controller):
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
-            flavor = input_dict["resize"]["flavor"]
+            flavor_ref = input_dict["resize"]["flavorRef"]
         except (KeyError, TypeError):
-            msg = _("Resize requests require a flavor to resize instance.")
+            msg = _("Resize requests require 'flavorRef' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            flavor_id = flavor["id"]
-        except (KeyError, TypeError):
-            msg = _("Resize flavor requires 'id' attribute.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            i_type = instance_types.get_instance_type_by_flavor_id(flavor_id)
+            i_type = instance_types.get_instance_type_by_flavor_id(flavor_ref)
         except exception.FlavorNotFound:
             msg = _("Unable to locate requested flavor.")
             raise exc.HTTPBadRequest(explanation=msg)

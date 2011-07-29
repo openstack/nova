@@ -2172,9 +2172,7 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         body_dict = {
             "resize": {
-                "flavor": {
-                    "id": 3,
-                },
+                "flavorRef": 3,
             },
         }
         req.body = json.dumps(body_dict)
