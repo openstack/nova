@@ -558,7 +558,6 @@ class VMHelper(HelperBase):
         log_disk_format(image_type)
         return image_type
 
-
     @classmethod
     def determine_is_pv(cls, session, instance_id, vdi_ref, disk_image_type,
                         os_type):
