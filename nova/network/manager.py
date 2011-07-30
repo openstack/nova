@@ -407,7 +407,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         host = kwargs.pop('host')
         project_id = kwargs.pop('project_id')
         type_id = kwargs.pop('instance_type_id')
-        requested_networks = kwargs.pop('requested_networks')
+        requested_networks = kwargs.get('requested_networks')
         vpn = kwargs.pop('vpn')
         admin_context = context.elevated()
         LOG.debug(_("network allocations for instance %s"), instance_id,

@@ -48,7 +48,6 @@ class CreateserverextTest(test.TestCase):
 
     def setUp(self):
         super(CreateserverextTest, self).setUp()
-        self.controller = createserverext.CreateServerExtController()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
@@ -82,8 +81,8 @@ class CreateserverextTest(test.TestCase):
                     self.networks = None
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'uuid': FAKE_UUID,
-                         'created_at': "2010-10-10T12:00:00Z",
-                         'updated_at': "2010-11-11T11:00:00Z"}]
+                         'created_at': "",
+                         'updated_at': ""}]
 
             def set_admin_password(self, *args, **kwargs):
                 pass
@@ -96,21 +95,9 @@ class CreateserverextTest(test.TestCase):
         compute_api = MockComputeAPI()
         self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
         self.stubs.Set(
-            createserverext.CreateInstanceHelperEx,
+            nova.api.openstack.create_instance_helper.CreateInstanceHelper,
             '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
         return compute_api
-
-    def _create_personality_request_dict(self, personality_files):
-        server = {}
-        server['name'] = 'new-server-test'
-        server['imageRef'] = 1
-        server['flavorRef'] = 1
-        if personality_files is not None:
-            personalities = []
-            for path, contents in personality_files:
-                personalities.append({'path': path, 'contents': contents})
-            server['personality'] = personalities
-        return {'server': server}
 
     def _create_networks_request_dict(self, networks):
         server = {}
@@ -176,20 +163,6 @@ class CreateserverextTest(test.TestCase):
         req.body = self._format_xml_request_body(body_dict)
         return req
 
-    def _create_instance_with_personality_json(self, personality):
-        body_dict = self._create_personality_request_dict(personality)
-        request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        return request, response, compute_api.injected_files
-
-    def _create_instance_with_personality_xml(self, personality):
-        body_dict = self._create_personality_request_dict(personality)
-        request = self._get_create_request_xml(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        return request, response, compute_api.injected_files
-
     def _create_instance_with_networks_json(self, networks):
         body_dict = self._create_networks_request_dict(networks)
         request = self._get_create_request_json(body_dict)
@@ -203,168 +176,6 @@ class CreateserverextTest(test.TestCase):
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         return request, response, compute_api.networks
-
-    def test_create_instance_with_no_server_element(self):
-        server = {}
-        server['name'] = 'new-server-test'
-        server['imageRef'] = 1
-        server['flavorRef'] = 1
-        body_dict = {'no-server': server}
-        request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 422)
-
-    def test_create_instance_with_no_request_body(self):
-        body_dict = None
-        request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 422)
-
-    def test_create_instance_with_no_server_name(self):
-        server = {}
-        server['imageRef'] = 1
-        server['flavorRef'] = 1
-        body_dict = {'server': server}
-        request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 400)
-
-    def test_create_instance_with_no_personality(self):
-        request, response, injected_files = \
-                self._create_instance_with_personality_json(personality=None)
-        self.assertEquals(response.status_int, 200)
-        self.assertEquals(injected_files, [])
-
-    def test_create_instance_with_no_personality_xml(self):
-        request, response, injected_files = \
-                self._create_instance_with_personality_xml(personality=None)
-        self.assertEquals(response.status_int, 200)
-        self.assertEquals(injected_files, [])
-
-    def test_create_instance_with_personality(self):
-        path = '/my/file/path'
-        contents = '#!/bin/bash\necho "Hello, World!"\n'
-        b64contents = base64.b64encode(contents)
-        personality = [(path, b64contents)]
-        request, response, injected_files = \
-            self._create_instance_with_personality_json(personality)
-        self.assertEquals(response.status_int, 200)
-        self.assertEquals(injected_files, [(path, contents)])
-
-    def test_create_instance_with_personality_xml(self):
-        path = '/my/file/path'
-        contents = '#!/bin/bash\necho "Hello, World!"\n'
-        b64contents = base64.b64encode(contents)
-        personality = [(path, b64contents)]
-        request, response, injected_files = \
-            self._create_instance_with_personality_xml(personality)
-        self.assertEquals(response.status_int, 200)
-        self.assertEquals(injected_files, [(path, contents)])
-
-    def test_create_instance_with_personality_no_path(self):
-        personality = [('/remove/this/path',
-            base64.b64encode('my\n\file\ncontents'))]
-        body_dict = self._create_personality_request_dict(personality)
-        del body_dict['server']['personality'][0]['path']
-        request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 400)
-        self.assertEquals(compute_api.injected_files, None)
-
-    def _test_create_instance_with_personality_no_path_xml(self):
-        personality = [('/remove/this/path',
-            base64.b64encode('my\n\file\ncontents'))]
-        body_dict = self._create_personality_request_dict(personality)
-        request = self._get_create_request_xml(body_dict)
-        request.body = request.body.replace(' path="/remove/this/path"', '')
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 400)
-        self.assertEquals(compute_api.injected_files, None)
-
-    def test_create_instance_with_personality_no_contents(self):
-        personality = [('/test/path',
-            base64.b64encode('remove\nthese\ncontents'))]
-        body_dict = self._create_personality_request_dict(personality)
-        del body_dict['server']['personality'][0]['contents']
-        request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 400)
-        self.assertEquals(compute_api.injected_files, None)
-
-    def test_create_instance_with_personality_not_a_list(self):
-        personality = [('/test/path', base64.b64encode('test\ncontents\n'))]
-        body_dict = self._create_personality_request_dict(personality)
-        body_dict['server']['personality'] = \
-            body_dict['server']['personality'][0]
-        request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 400)
-        self.assertEquals(compute_api.injected_files, None)
-
-    def test_create_instance_with_personality_with_non_b64_content(self):
-        path = '/my/file/path'
-        contents = '#!/bin/bash\necho "Oh no!"\n'
-        personality = [(path, contents)]
-        request, response, injected_files = \
-            self._create_instance_with_personality_json(personality)
-        self.assertEquals(response.status_int, 400)
-        self.assertEquals(injected_files, None)
-
-    def test_create_instance_with_null_personality(self):
-        personality = None
-        body_dict = self._create_personality_request_dict(personality)
-        body_dict['server']['personality'] = None
-        request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 200)
-
-    def test_create_instance_with_three_personalities(self):
-        files = [
-            ('/etc/sudoers', 'ALL ALL=NOPASSWD: ALL\n'),
-            ('/etc/motd', 'Enjoy your root access!\n'),
-            ('/etc/dovecot.conf', 'dovecot\nconfig\nstuff\n'),
-            ]
-        personality = []
-        for path, content in files:
-            personality.append((path, base64.b64encode(content)))
-        request, response, injected_files = \
-            self._create_instance_with_personality_json(personality)
-        self.assertEquals(response.status_int, 200)
-        self.assertEquals(injected_files, files)
-
-    def test_create_instance_personality_empty_content(self):
-        path = '/my/file/path'
-        contents = ''
-        personality = [(path, contents)]
-        request, response, injected_files = \
-            self._create_instance_with_personality_json(personality)
-        self.assertEquals(response.status_int, 200)
-        self.assertEquals(injected_files, [(path, contents)])
-
-    def test_create_instance_admin_pass_json(self):
-        request, response, dummy = \
-            self._create_instance_with_personality_json(None)
-        self.assertEquals(response.status_int, 200)
-        response = json.loads(response.body)
-        self.assertTrue('adminPass' in response['server'])
-        self.assertEqual(16, len(response['server']['adminPass']))
-
-    def test_create_instance_admin_pass_xml(self):
-        request, response, dummy = \
-            self._create_instance_with_personality_xml(None)
-        self.assertEquals(response.status_int, 200)
-        dom = minidom.parseString(response.body)
-        server = dom.childNodes[0]
-        self.assertEquals(server.nodeName, 'server')
-        self.assertEqual(16, len(server.getAttribute('adminPass')))
 
     def test_create_instance_with_no_networks(self):
         request, response, networks = \
@@ -498,167 +309,3 @@ class CreateserverextTest(test.TestCase):
             self._run_create_instance_with_mock_compute_api(request)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(compute_api.networks, [(1, None)])
-
-
-class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
-
-    def setUp(self):
-        self.deserializer = createserverext.ServerXMLDeserializer()
-
-    def test_request_with_empty_networks(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks/>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_one_network(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_two_networks(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
-       <network id="2" fixed_ip="10.0.2.12"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"},
-                             {"id": "2", "fixed_ip": "10.0.2.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_second_network_node_ignored(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
-    </networks>
-    <networks>
-       <network id="2" fixed_ip="10.0.2.12"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_one_network_missing_id(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network fixed_ip="10.0.1.12"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"fixed_ip": "10.0.1.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_one_network_missing_fixed_ip(self):
-        serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
- name="new-server-test" imageId="1" flavorId="1">
-    <networks>
-       <network id="1"/>
-    </networks>
-</server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1"}],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_one_network_empty_id(self):
-        serial_request = """
-    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
-     name="new-server-test" imageId="1" flavorId="1">
-        <networks>
-           <network id="" fixed_ip="10.0.1.12"/>
-        </networks>
-    </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "", "fixed_ip": "10.0.1.12"}],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_one_network_empty_fixed_ip(self):
-        serial_request = """
-    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
-     name="new-server-test" imageId="1" flavorId="1">
-        <networks>
-           <network id="1" fixed_ip=""/>
-        </networks>
-    </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": ""}],
-                }}
-        self.assertEquals(request['body'], expected)
-
-    def test_request_with_networks_duplicate_ids(self):
-        serial_request = """
-    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
-     name="new-server-test" imageId="1" flavorId="1">
-        <networks>
-           <network id="1" fixed_ip="10.0.1.12"/>
-           <network id="1" fixed_ip="10.0.2.12"/>
-        </networks>
-    </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
-        expected = {"server": {
-                "name": "new-server-test",
-                "imageId": "1",
-                "flavorId": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"},
-                             {"id": "1", "fixed_ip": "10.0.2.12"}],
-                }}
-        self.assertEquals(request['body'], expected)

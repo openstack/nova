@@ -30,6 +30,7 @@ from nova import utils
 
 from nova.compute import instance_types
 from nova.api.openstack import wsgi
+from nova.rpc.common import RemoteError
 
 LOG = logging.getLogger('nova.api.openstack.create_instance_helper')
 FLAGS = flags.FLAGS
@@ -106,6 +107,12 @@ class CreateInstanceHelper(object):
         if personality:
             injected_files = self._get_injected_files(personality)
 
+        requested_networks = server_dict.get('networks')
+
+        if requested_networks is not None:
+            requested_networks = self._get_requested_networks(
+                                                    requested_networks)
+
         try:
             flavor_id = self.controller._flavor_id_from_req_data(body)
         except ValueError as error:
@@ -156,7 +163,8 @@ class CreateInstanceHelper(object):
                                   zone_blob=zone_blob,
                                   reservation_id=reservation_id,
                                   min_count=min_count,
-                                  max_count=max_count))
+                                  max_count=max_count,
+                                  requested_networks=requested_networks))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
@@ -164,6 +172,10 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.FlavorNotFound as error:
             msg = _("Invalid flavorRef provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except RemoteError as err:
+            msg = "%(err_type)s: %(err_msg)s" % \
+                  {'err_type': err.exc_type, 'err_msg': err.value}
             raise exc.HTTPBadRequest(explanation=msg)
         # Let the caller deal with unhandled exceptions.
 
@@ -286,6 +298,53 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
         return password
 
+    def _validate_fixed_ip(self, value):
+        if not isinstance(value, basestring):
+            msg = _("Fixed IP is not a string or unicode")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        if value.strip() == '':
+            msg = _("Fixed IP is an empty string")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+    def _get_requested_networks(self, requested_networks):
+        """
+        Create a list of requested networks from the networks attribute
+        """
+        networks = []
+        for network in requested_networks:
+            try:
+                network_id = network['id']
+                network_id = int(network_id)
+                #fixed IP address is optional
+                #if the fixed IP address is not provided then
+                #it will use one of the available IP address from the network
+                fixed_ip = network.get('fixed_ip', None)
+                if fixed_ip is not None:
+                    self._validate_fixed_ip(fixed_ip)
+                # check if the network id is already present in the list,
+                # we don't want duplicate networks to be passed
+                # at the boot time
+                for id, ip in networks:
+                    if id == network_id:
+                        expl = _("Duplicate networks (%s) are not allowed")\
+                                % network_id
+                        raise exc.HTTPBadRequest(explanation=expl)
+
+                networks.append((network_id, fixed_ip))
+            except KeyError as key:
+                expl = _('Bad network format: missing %s') % key
+                raise exc.HTTPBadRequest(explanation=expl)
+            except ValueError:
+                expl = _("Bad networks format: network id should "
+                         "be integer (%s)") % network_id
+                raise exc.HTTPBadRequest(explanation=expl)
+            except TypeError:
+                expl = _('Bad networks format')
+                raise exc.HTTPBadRequest(explanation=expl)
+
+        return networks
+
 
 class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
     """
@@ -317,6 +376,10 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
         server["personality"] = self._extract_personality(server_node)
 
+        networks = self._extract_networks(server_node)
+        if networks:
+            server["networks"] = networks
+
         return server
 
     def _extract_personality(self, server_node):
@@ -331,3 +394,21 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
                 item["contents"] = self.extract_text(file_node)
                 personality.append(item)
         return personality
+
+    def _extract_networks(self, server_node):
+        """Marshal the networks attribute of a parsed request"""
+        networks_node = \
+                self.find_first_child_named(server_node, "networks")
+        if networks_node is None:
+            return None
+        networks = []
+        if networks_node is not None:
+            for network_node in self.find_children_named(networks_node,
+                                                          "network"):
+                item = {}
+                if network_node.hasAttribute("id"):
+                    item["id"] = network_node.getAttribute("id")
+                if network_node.hasAttribute("fixed_ip"):
+                    item["fixed_ip"] = network_node.getAttribute("fixed_ip")
+                networks.append(item)
+        return networks

@@ -1125,11 +1125,6 @@ class ServersTest(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
-        def project_get_requested_networks(context, requested_networks):
-            return [{'id': 1, 'host': 'localhost1'},
-                    {'id': 2, 'host': 'localhost2'},
-                   ]
-
         def queue_get_for(context, *args):
             return 'network_topic'
 
@@ -1141,8 +1136,6 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.db.api, 'project_get_networks',
                        project_get_networks)
-        self.stubs.Set(nova.db.api, 'project_get_requested_networks',
-                       project_get_requested_networks)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
         self.stubs.Set(nova.rpc, 'call', fake_method)
@@ -1294,29 +1287,6 @@ class ServersTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 422)
-
-    def test_create_instance_whitespace_name(self):
-        self._setup_for_create_instance()
-
-        body = {
-            'server': {
-                'name': '    ',
-                'imageId': 3,
-                'flavorId': 1,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                'personality': {},
-            },
-        }
-
-        req = webob.Request.blank('/v1.0/servers')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
 
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
@@ -2844,6 +2814,181 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         }
         self.assertEquals(request['body'], expected)
 
+    def test_request_with_empty_networks(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <networks/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <networks>
+       <network id="1" fixed_ip="10.0.1.12"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "personality": [],
+                "metadata": {},
+                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_two_networks(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <networks>
+       <network id="1" fixed_ip="10.0.1.12"/>
+       <network id="2" fixed_ip="10.0.2.12"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"},
+                             {"id": "2", "fixed_ip": "10.0.2.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_second_network_node_ignored(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <networks>
+       <network id="1" fixed_ip="10.0.1.12"/>
+    </networks>
+    <networks>
+       <network id="2" fixed_ip="10.0.2.12"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network_missing_id(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <networks>
+       <network fixed_ip="10.0.1.12"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                "networks": [{"fixed_ip": "10.0.1.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network_missing_fixed_ip(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <networks>
+       <network id="1"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                "networks": [{"id": "1"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network_empty_id(self):
+        serial_request = """
+    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+     name="new-server-test" imageId="1" flavorId="1">
+        <networks>
+           <network id="" fixed_ip="10.0.1.12"/>
+        </networks>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                "networks": [{"id": "", "fixed_ip": "10.0.1.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network_empty_fixed_ip(self):
+        serial_request = """
+    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+     name="new-server-test" imageId="1" flavorId="1">
+        <networks>
+           <network id="1" fixed_ip=""/>
+        </networks>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                "networks": [{"id": "1", "fixed_ip": ""}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_networks_duplicate_ids(self):
+        serial_request = """
+    <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+     name="new-server-test" imageId="1" flavorId="1">
+        <networks>
+           <network id="1" fixed_ip="10.0.1.12"/>
+           <network id="1" fixed_ip="10.0.2.12"/>
+        </networks>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"},
+                             {"id": "1", "fixed_ip": "10.0.2.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
 
 class TextAddressesXMLSerialization(test.TestCase):
 
@@ -2908,7 +3053,7 @@ class TestServerInstanceCreation(test.TestCase):
         fakes.stub_out_image_service(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
 
-    def _setup_mock_compute_api(self):
+    def _setup_mock_compute_api_for_personality(self):
 
         class MockComputeAPI(nova.compute.API):
 
@@ -2952,18 +3097,6 @@ class TestServerInstanceCreation(test.TestCase):
             server['personality'] = personalities
         return {'server': server}
 
-    def _create_networks_request_dict(self, networks):
-        server = {}
-        server['name'] = 'new-server-test'
-        server['imageId'] = 1
-        server['flavorId'] = 1
-        if networks is not None:
-            network_list = []
-            for id, fixed_ip in networks:
-                network_list.append({'id': id, 'fixed_ip': fixed_ip})
-            server['networks'] = network_list
-        return {'server': server}
-
     def _get_create_request_json(self, body_dict):
         req = webob.Request.blank('/v1.0/servers')
         req.headers['Content-Type'] = 'application/json'
@@ -2972,7 +3105,7 @@ class TestServerInstanceCreation(test.TestCase):
         return req
 
     def _run_create_instance_with_mock_compute_api(self, request):
-        compute_api = self._setup_mock_compute_api()
+        compute_api = self._setup_mock_compute_api_for_personality()
         response = request.get_response(fakes.wsgi_app())
         return compute_api, response
 
@@ -2997,14 +3130,6 @@ class TestServerInstanceCreation(test.TestCase):
                 item = (file['path'], file['contents'])
                 body_parts.append('<file path="%s">%s</file>' % item)
             body_parts.append('</personality>')
-        if 'networks' in server:
-            networks = server['networks']
-            body_parts.append('<networks>')
-            for network in networks:
-                item = (network['id'], network['fixed_ip'])
-                body_parts.append('<network id="%s" fixed_ip="%s"></network>'
-                                  % item)
-            body_parts.append('</networks>')
         body_parts.append('</server>')
         return ''.join(body_parts)
 

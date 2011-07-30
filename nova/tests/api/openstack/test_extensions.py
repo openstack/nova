@@ -30,10 +30,6 @@ from nova.api.openstack import wsgi
 from nova.tests.api.openstack import fakes
 
 
-from nova import log as logging
-
-LOG = logging.getLogger('nova.tests.api.openstack.test_extensions')
-
 FLAGS = flags.FLAGS
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
@@ -102,8 +98,6 @@ class ExtensionControllerTest(test.TestCase):
         data = json.loads(response.body)
         names = [x['name'] for x in data['extensions']]
         names.sort()
-        LOG.info("%%%%%%%%%%%%%%%%%%%%%%%%%")
-        LOG.info(names)
         self.assertEqual(names, ["Createserverext", "FlavorExtraSpecs",
                                  "Floating_ips", "Fox In Socks", "Hosts",
                                  "Multinic", "Volumes"])

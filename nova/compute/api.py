@@ -96,7 +96,6 @@ class API(base.Base):
         if not network_api:
             network_api = network.API()
         self.network_api = network_api
-        self.network_manager = utils.import_object(FLAGS.network_manager)
         if not volume_api:
             volume_api = volume.API()
         self.volume_api = volume_api
