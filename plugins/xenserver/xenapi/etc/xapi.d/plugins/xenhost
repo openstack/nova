@@ -103,6 +103,27 @@ def set_host_enabled(self, arg_dict):
     return {"status": status}
 
 
+def _powerstate(state):
+    host_uuid = _get_host_uuid()
+    cmd = "xe host-disable uuid=%(host_uuid)s" % locals()
+    _run_command(cmd)
+    cmd = "xe host-%(state)s uuid=%(host_uuid)s" % locals()
+    _run_command(cmd)
+    return {"powerstate": state}
+
+
+@jsonify
+def host_reboot(self, arg_dict):
+    """Reboots the host."""
+    return _powerstate("reboot")
+
+
+@jsonify
+def host_shutdown(self, arg_dict):
+    """Reboots the host."""
+    return _powerstate("shutdown")
+
+
 @jsonify
 def host_data(self, arg_dict):
     """Runs the commands on the xenstore host to return the current status
@@ -217,4 +238,6 @@ def cleanup(dct):
 if __name__ == "__main__":
     XenAPIPlugin.dispatch(
             {"host_data": host_data,
-            "set_host_enabled": set_host_enabled})
+            "set_host_enabled": set_host_enabled,
+            "host_shutdown": host_shutdown,
+            "host_reboot": host_reboot})

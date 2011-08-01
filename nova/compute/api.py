@@ -998,6 +998,11 @@ class API(base.Base):
         return self._call_compute_message("set_host_enabled", context,
                 instance_id=None, host=host, params={"enabled": enabled})
 
+    def set_host_powerstate(self, context, host, state):
+        """Reboots or shuts down the host."""
+        return self._call_compute_message("set_host_powerstate", context,
+                instance_id=None, host=host, params={"state": state})
+
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""

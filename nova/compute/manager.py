@@ -1,4 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -926,6 +926,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        context,
                                                        instance_id,
                                                        result))
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def set_host_powerstate(self, context, instance_id=None, host=None,
+            state=None):
+        """Reboots or shuts down the host."""
+        return self.driver.set_host_powerstate(host, state)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def set_host_enabled(self, context, instance_id=None, host=None,

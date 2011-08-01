@@ -48,6 +48,13 @@ def stub_set_host_enabled(context, host, enabled):
     return status
 
 
+def stub_set_host_powerstate(context, host, state):
+    # We'll simulate success and failure by assuming
+    # that 'host_c1' always succeeds, and 'host_c2'
+    # always fails
+    return state if  host == "host_c1" else "running"
+
+
 class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
 
@@ -62,6 +69,8 @@ class HostTestCase(test.TestCase):
         self.stubs.Set(scheduler_api, 'get_host_list', stub_get_host_list)
         self.stubs.Set(self.controller.compute_api, 'set_host_enabled',
                 stub_set_host_enabled)
+        self.stubs.Set(self.controller.compute_api, 'set_host_powerstate',
+                stub_set_host_powerstate)
 
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""

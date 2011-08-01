@@ -78,6 +78,12 @@ class HostController(object):
                 else:
                     explanation = _("Invalid status: '%s'") % raw_val
                     raise webob.exc.HTTPBadRequest(explanation=explanation)
+            elif key == "powerstate":
+                if val in ("reboot", "shutdown"):
+                    return self._set_powerstate(req, id, val)
+                else:
+                    explanation = _("Invalid powerstate: '%s'") % raw_val
+                    raise webob.exc.HTTPBadRequest(explanation=explanation)
             else:
                 explanation = _("Invalid update setting: '%s'") % raw_key
                 raise webob.exc.HTTPBadRequest(explanation=explanation)
@@ -90,6 +96,15 @@ class HostController(object):
         result = self.compute_api.set_host_enabled(context, host=host,
                 enabled=enabled)
         return {"host": host, "status": result}
+
+    def _set_powerstate(self, req, host, state):
+        """Reboots or shuts down the host."""
+        context = req.environ['nova.context']
+        LOG.audit(_("Changing powerstate of host %(host)s to %(state)s.")
+                % locals())
+        result = self.compute_api.set_host_powerstate(context, host=host,
+                state=state)
+        return {"host": host, "powerstate": result}
 
 
 class Hosts(extensions.ExtensionDescriptor):

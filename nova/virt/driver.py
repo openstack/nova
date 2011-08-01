@@ -251,6 +251,10 @@ class ComputeDriver(object):
         """Poll for rescued instances"""
         raise NotImplementedError()
 
+    def set_host_powerstate(self, host, state):
+        """Reboots or shuts down the host."""
+        raise NotImplementedError()
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         raise NotImplementedError()
