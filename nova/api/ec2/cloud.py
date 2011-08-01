@@ -27,6 +27,7 @@ import netaddr
 import os
 import urllib
 import tempfile
+import time
 import shutil
 
 from nova import compute
@@ -73,6 +74,95 @@ def _gen_key(context, user_id, key_name):
     key['fingerprint'] = fingerprint
     db.key_pair_create(context, key)
     return {'private_key': private_key, 'fingerprint': fingerprint}
+
+
+# TODO(yamahata): hypervisor dependent default device name
+_DEFAULT_ROOT_DEVICE_NAME = '/dev/sda1'
+
+
+def _parse_block_device_mapping(bdm):
+    """Parse BlockDeviceMappingItemType into flat hash
+    BlockDevicedMapping.<N>.DeviceName
+    BlockDevicedMapping.<N>.Ebs.SnapshotId
+    BlockDevicedMapping.<N>.Ebs.VolumeSize
+    BlockDevicedMapping.<N>.Ebs.DeleteOnTermination
+    BlockDevicedMapping.<N>.Ebs.NoDevice
+    BlockDevicedMapping.<N>.VirtualName
+    => remove .Ebs and allow volume id in SnapshotId
+    """
+    ebs = bdm.pop('ebs', None)
+    if ebs:
+        ec2_id = ebs.pop('snapshot_id', None)
+        if ec2_id:
+            id = ec2utils.ec2_id_to_id(ec2_id)
+            if ec2_id.startswith('snap-'):
+                bdm['snapshot_id'] = id
+            elif ec2_id.startswith('vol-'):
+                bdm['volume_id'] = id
+            ebs.setdefault('delete_on_termination', True)
+        bdm.update(ebs)
+    return bdm
+
+
+def _properties_get_mappings(properties):
+    return ec2utils.mappings_prepend_dev(properties.get('mappings', []))
+
+
+def _format_block_device_mapping(bdm):
+    """Contruct BlockDeviceMappingItemType
+    {'device_name': '...', 'snapshot_id': , ...}
+    => BlockDeviceMappingItemType
+    """
+    keys = (('deviceName', 'device_name'),
+             ('virtualName', 'virtual_name'))
+    item = {}
+    for name, k in keys:
+        if k in bdm:
+            item[name] = bdm[k]
+    if bdm.get('no_device'):
+        item['noDevice'] = True
+    if ('snapshot_id' in bdm) or ('volume_id' in bdm):
+        ebs_keys = (('snapshotId', 'snapshot_id'),
+                    ('snapshotId', 'volume_id'),        # snapshotId is abused
+                    ('volumeSize', 'volume_size'),
+                    ('deleteOnTermination', 'delete_on_termination'))
+        ebs = {}
+        for name, k in ebs_keys:
+            if k in bdm:
+                if k == 'snapshot_id':
+                    ebs[name] = ec2utils.id_to_ec2_snap_id(bdm[k])
+                elif k == 'volume_id':
+                    ebs[name] = ec2utils.id_to_ec2_vol_id(bdm[k])
+                else:
+                    ebs[name] = bdm[k]
+        assert 'snapshotId' in ebs
+        item['ebs'] = ebs
+    return item
+
+
+def _format_mappings(properties, result):
+    """Format multiple BlockDeviceMappingItemType"""
+    mappings = [{'virtualName': m['virtual'], 'deviceName': m['device']}
+                for m in _properties_get_mappings(properties)
+                if (m['virtual'] == 'swap' or
+                    m['virtual'].startswith('ephemeral'))]
+
+    block_device_mapping = [_format_block_device_mapping(bdm) for bdm in
+                            properties.get('block_device_mapping', [])]
+
+    # NOTE(yamahata): overwrite mappings with block_device_mapping
+    for bdm in block_device_mapping:
+        for i in range(len(mappings)):
+            if bdm['deviceName'] == mappings[i]['deviceName']:
+                del mappings[i]
+                break
+        mappings.append(bdm)
+
+    # NOTE(yamahata): trim ebs.no_device == true. Is this necessary?
+    mappings = [bdm for bdm in mappings if not (bdm.get('noDevice', False))]
+
+    if mappings:
+        result['blockDeviceMapping'] = mappings
 
 
 class CloudController(object):
@@ -166,6 +256,9 @@ class CloudController(object):
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
         image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
+        security_groups = db.security_group_get_by_instance(ctxt,
+                                                            instance_ref['id'])
+        security_groups = [x['name'] for x in security_groups]
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -176,7 +269,7 @@ class CloudController(object):
                     # TODO(vish): replace with real data
                     'ami': 'sda1',
                     'ephemeral0': 'sda2',
-                    'root': '/dev/sda1',
+                    'root': _DEFAULT_ROOT_DEVICE_NAME,
                     'swap': 'sda3'},
                 'hostname': hostname,
                 'instance-action': 'none',
@@ -189,7 +282,7 @@ class CloudController(object):
                 'public-ipv4': floating_ip or '',
                 'public-keys': keys,
                 'reservation-id': instance_ref['reservation_id'],
-                'security-groups': '',
+                'security-groups': security_groups,
                 'mpi': mpi}}
 
         for image_type in ['kernel', 'ramdisk']:
@@ -304,9 +397,8 @@ class CloudController(object):
 
     def _format_snapshot(self, context, snapshot):
         s = {}
-        s['snapshotId'] = ec2utils.id_to_ec2_id(snapshot['id'], 'snap-%08x')
-        s['volumeId'] = ec2utils.id_to_ec2_id(snapshot['volume_id'],
-                                              'vol-%08x')
+        s['snapshotId'] = ec2utils.id_to_ec2_snap_id(snapshot['id'])
+        s['volumeId'] = ec2utils.id_to_ec2_vol_id(snapshot['volume_id'])
         s['status'] = snapshot['status']
         s['startTime'] = snapshot['created_at']
         s['progress'] = snapshot['progress']
@@ -438,7 +530,55 @@ class CloudController(object):
             g['ipPermissions'] += [r]
         return g
 
-    def _revoke_rule_args_to_dict(self, context, to_port=None, from_port=None,
+    def _rule_args_to_dict(self, context, kwargs):
+        rules = []
+        if not 'groups' in kwargs and not 'ip_ranges' in kwargs:
+            rule = self._rule_dict_last_step(context, **kwargs)
+            if rule:
+                rules.append(rule)
+            return rules
+        if 'ip_ranges' in kwargs:
+            rules = self._cidr_args_split(kwargs)
+        else:
+            rules = [kwargs]
+        finalset = []
+        for rule in rules:
+            if 'groups' in rule:
+                groups_values = self._groups_args_split(rule)
+                for groups_value in groups_values:
+                    final = self._rule_dict_last_step(context, **groups_value)
+                    finalset.append(final)
+            else:
+                final = self._rule_dict_last_step(context, **rule)
+                finalset.append(final)
+        return finalset
+
+    def _cidr_args_split(self, kwargs):
+        cidr_args_split = []
+        cidrs = kwargs['ip_ranges']
+        for key, cidr in cidrs.iteritems():
+            mykwargs = kwargs.copy()
+            del mykwargs['ip_ranges']
+            mykwargs['cidr_ip'] = cidr['cidr_ip']
+            cidr_args_split.append(mykwargs)
+        return cidr_args_split
+
+    def _groups_args_split(self, kwargs):
+        groups_args_split = []
+        groups = kwargs['groups']
+        for key, group in groups.iteritems():
+            mykwargs = kwargs.copy()
+            del mykwargs['groups']
+            if 'group_name' in group:
+                mykwargs['source_security_group_name'] = group['group_name']
+            if 'user_id' in group:
+                mykwargs['source_security_group_owner_id'] = group['user_id']
+            if 'group_id' in group:
+                mykwargs['source_security_group_id'] = group['group_id']
+            groups_args_split.append(mykwargs)
+        return groups_args_split
+
+    def _rule_dict_last_step(self, context, to_port=None, from_port=None,
                                   ip_protocol=None, cidr_ip=None, user_id=None,
                                   source_security_group_name=None,
                                   source_security_group_owner_id=None):
@@ -453,6 +593,9 @@ class CloudController(object):
                     db.security_group_get_by_name(context.elevated(),
                                                   source_project_id,
                                                   source_security_group_name)
+            notfound = exception.SecurityGroupNotFound
+            if not source_security_group:
+                raise notfound(security_group_id=source_security_group_name)
             values['group_id'] = source_security_group['id']
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
@@ -491,7 +634,7 @@ class CloudController(object):
         for rule in security_group.rules:
             if 'group_id' in values:
                 if rule['group_id'] == values['group_id']:
-                    return True
+                    return rule['id']
             else:
                 is_duplicate = True
                 for key in ('cidr', 'from_port', 'to_port', 'protocol'):
@@ -499,7 +642,7 @@ class CloudController(object):
                         is_duplicate = False
                         break
                 if is_duplicate:
-                    return True
+                    return rule['id']
         return False
 
     def revoke_security_group_ingress(self, context, group_name=None,
@@ -522,22 +665,30 @@ class CloudController(object):
 
         msg = "Revoke security group ingress %s"
         LOG.audit(_(msg), security_group['name'], context=context)
+        prevalues = []
+        try:
+            prevalues = kwargs['ip_permissions']
+        except KeyError:
+            prevalues.append(kwargs)
+        rule_id = None
+        for values in prevalues:
+            rulesvalues = self._rule_args_to_dict(context, values)
+            if not rulesvalues:
+                err = "%s Not enough parameters to build a valid rule"
+                raise exception.ApiError(_(err % rulesvalues))
 
-        criteria = self._revoke_rule_args_to_dict(context, **kwargs)
-        if criteria is None:
-            raise exception.ApiError(_("Not enough parameters to build a "
-                                       "valid rule."))
-
-        for rule in security_group.rules:
-            match = True
-            for (k, v) in criteria.iteritems():
-                if getattr(rule, k, False) != v:
-                    match = False
-            if match:
-                db.security_group_rule_destroy(context, rule['id'])
-                self.compute_api.trigger_security_group_rules_refresh(context,
-                                        security_group_id=security_group['id'])
-                return True
+            for values_for_rule in rulesvalues:
+                values_for_rule['parent_group_id'] = security_group.id
+                rule_id = self._security_group_rule_exists(security_group,
+                                                           values_for_rule)
+                if rule_id:
+                    db.security_group_rule_destroy(context, rule_id)
+        if rule_id:
+            # NOTE(vish): we removed a rule, so refresh
+            self.compute_api.trigger_security_group_rules_refresh(
+                    context,
+                    security_group_id=security_group['id'])
+            return True
         raise exception.ApiError(_("No rule for the specified parameters."))
 
     # TODO(soren): This has only been tested with Boto as the client.
@@ -564,22 +715,37 @@ class CloudController(object):
 
         msg = "Authorize security group ingress %s"
         LOG.audit(_(msg), security_group['name'], context=context)
-        values = self._revoke_rule_args_to_dict(context, **kwargs)
-        if values is None:
-            raise exception.ApiError(_("Not enough parameters to build a "
-                                       "valid rule."))
-        values['parent_group_id'] = security_group.id
+        prevalues = []
+        try:
+            prevalues = kwargs['ip_permissions']
+        except KeyError:
+            prevalues.append(kwargs)
+        postvalues = []
+        for values in prevalues:
+            rulesvalues = self._rule_args_to_dict(context, values)
+            if not rulesvalues:
+                err = "%s Not enough parameters to build a valid rule"
+                raise exception.ApiError(_(err % rulesvalues))
+            for values_for_rule in rulesvalues:
+                values_for_rule['parent_group_id'] = security_group.id
+                if self._security_group_rule_exists(security_group,
+                                                    values_for_rule):
+                    err = '%s - This rule already exists in group'
+                    raise exception.ApiError(_(err) % values_for_rule)
+                postvalues.append(values_for_rule)
 
-        if self._security_group_rule_exists(security_group, values):
-            raise exception.ApiError(_('This rule already exists in group %s')
-                                     % group_name)
+        for values_for_rule in postvalues:
+            security_group_rule = db.security_group_rule_create(
+                    context,
+                    values_for_rule)
 
-        security_group_rule = db.security_group_rule_create(context, values)
+        if postvalues:
+            self.compute_api.trigger_security_group_rules_refresh(
+                    context,
+                    security_group_id=security_group['id'])
+            return True
 
-        self.compute_api.trigger_security_group_rules_refresh(context,
-                                      security_group_id=security_group['id'])
-
-        return True
+        raise exception.ApiError(_("No rule for the specified parameters."))
 
     def _get_source_project_id(self, context, source_security_group_owner_id):
         if source_security_group_owner_id:
@@ -683,7 +849,7 @@ class CloudController(object):
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
-        v['volumeId'] = ec2utils.id_to_ec2_id(volume['id'], 'vol-%08x')
+        v['volumeId'] = ec2utils.id_to_ec2_vol_id(volume['id'])
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
@@ -705,8 +871,7 @@ class CloudController(object):
         else:
             v['attachmentSet'] = [{}]
         if volume.get('snapshot_id') != None:
-            v['snapshotId'] = ec2utils.id_to_ec2_id(volume['snapshot_id'],
-                                                    'snap-%08x')
+            v['snapshotId'] = ec2utils.id_to_ec2_snap_id(volume['snapshot_id'])
         else:
             v['snapshotId'] = None
 
@@ -769,7 +934,7 @@ class CloudController(object):
                 'instanceId': ec2utils.id_to_ec2_id(instance_id),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
+                'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
     def detach_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
@@ -781,7 +946,7 @@ class CloudController(object):
                 'instanceId': ec2utils.id_to_ec2_id(instance['id']),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
+                'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
     def _convert_to_set(self, lst, label):
         if lst is None or lst == []:
@@ -804,6 +969,37 @@ class CloudController(object):
         i = self._format_instances(context, reservation_id=reservation_id)
         assert len(i) == 1
         return i[0]
+
+    def _format_instance_bdm(self, context, instance_id, root_device_name,
+                             result):
+        """Format InstanceBlockDeviceMappingResponseItemType"""
+        root_device_type = 'instance-store'
+        mapping = []
+        for bdm in db.block_device_mapping_get_all_by_instance(context,
+                                                               instance_id):
+            volume_id = bdm['volume_id']
+            if (volume_id is None or bdm['no_device']):
+                continue
+
+            if (bdm['device_name'] == root_device_name and
+                (bdm['snapshot_id'] or bdm['volume_id'])):
+                assert not bdm['virtual_name']
+                root_device_type = 'ebs'
+
+            vol = self.volume_api.get(context, volume_id=volume_id)
+            LOG.debug(_("vol = %s\n"), vol)
+            # TODO(yamahata): volume attach time
+            ebs = {'volumeId': volume_id,
+                   'deleteOnTermination': bdm['delete_on_termination'],
+                   'attachTime': vol['attach_time'] or '-',
+                   'status': vol['status'], }
+            res = {'deviceName': bdm['device_name'],
+                   'ebs': ebs, }
+            mapping.append(res)
+
+        if mapping:
+            result['blockDeviceMapping'] = mapping
+        result['rootDeviceType'] = root_device_type
 
     def _format_instances(self, context, instance_id=None, **kwargs):
         # TODO(termie): this method is poorly named as its name does not imply
@@ -866,6 +1062,10 @@ class CloudController(object):
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
             i['displayDescription'] = instance['display_description']
+            i['rootDeviceName'] = (instance.get('root_device_name') or
+                                   _DEFAULT_ROOT_DEVICE_NAME)
+            self._format_instance_bdm(context, instance_id,
+                                      i['rootDeviceName'], i)
             host = instance['host']
             zone = self._get_availability_zone_by_host(context, host)
             i['placement'] = {'availabilityZone': zone}
@@ -953,23 +1153,7 @@ class CloudController(object):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
         for bdm in kwargs.get('block_device_mapping', []):
-            # NOTE(yamahata)
-            # BlockDevicedMapping.<N>.DeviceName
-            # BlockDevicedMapping.<N>.Ebs.SnapshotId
-            # BlockDevicedMapping.<N>.Ebs.VolumeSize
-            # BlockDevicedMapping.<N>.Ebs.DeleteOnTermination
-            # BlockDevicedMapping.<N>.VirtualName
-            # => remove .Ebs and allow volume id in SnapshotId
-            ebs = bdm.pop('ebs', None)
-            if ebs:
-                ec2_id = ebs.pop('snapshot_id')
-                id = ec2utils.ec2_id_to_id(ec2_id)
-                if ec2_id.startswith('snap-'):
-                    bdm['snapshot_id'] = id
-                elif ec2_id.startswith('vol-'):
-                    bdm['volume_id'] = id
-                ebs.setdefault('delete_on_termination', True)
-                bdm.update(ebs)
+            _parse_block_device_mapping(bdm)
 
         image = self._get_image(context, kwargs['image_id'])
 
@@ -1037,7 +1221,7 @@ class CloudController(object):
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        self._do_instance(self.compute_api.rescue, contect, instnace_id)
+        self._do_instance(self.compute_api.rescue, context, instance_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
@@ -1088,12 +1272,16 @@ class CloudController(object):
     def _get_image(self, context, ec2_id):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
-            return self.image_service.show(context, internal_id)
+            image = self.image_service.show(context, internal_id)
         except (exception.InvalidEc2Id, exception.ImageNotFound):
             try:
                 return self.image_service.show_by_name(context, ec2_id)
             except exception.NotFound:
                 raise exception.ImageNotFound(image_id=ec2_id)
+        image_type = ec2_id.split('-')[0]
+        if self._image_type(image.get('container_format')) != image_type:
+            raise exception.ImageNotFound(image_id=ec2_id)
+        return image
 
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
@@ -1124,6 +1312,20 @@ class CloudController(object):
         i['imageType'] = display_mapping.get(image_type)
         i['isPublic'] = image.get('is_public') == True
         i['architecture'] = image['properties'].get('architecture')
+
+        properties = image['properties']
+        root_device_name = ec2utils.properties_root_device_name(properties)
+        root_device_type = 'instance-store'
+        for bdm in properties.get('block_device_mapping', []):
+            if (bdm.get('device_name') == root_device_name and
+                ('snapshot_id' in bdm or 'volume_id' in bdm) and
+                not bdm.get('no_device')):
+                root_device_type = 'ebs'
+        i['rootDeviceName'] = (root_device_name or _DEFAULT_ROOT_DEVICE_NAME)
+        i['rootDeviceType'] = root_device_type
+
+        _format_mappings(properties, i)
+
         return i
 
     def describe_images(self, context, image_id=None, **kwargs):
@@ -1148,30 +1350,64 @@ class CloudController(object):
         self.image_service.delete(context, internal_id)
         return {'imageId': image_id}
 
+    def _register_image(self, context, metadata):
+        image = self.image_service.create(context, metadata)
+        image_type = self._image_type(image.get('container_format'))
+        image_id = self.image_ec2_id(image['id'], image_type)
+        return image_id
+
     def register_image(self, context, image_location=None, **kwargs):
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
         metadata = {'properties': {'image_location': image_location}}
-        image = self.image_service.create(context, metadata)
-        image_type = self._image_type(image.get('container_format'))
-        image_id = self.image_ec2_id(image['id'],
-                                     image_type)
+
+        if 'root_device_name' in kwargs:
+            metadata['properties']['root_device_name'] = \
+            kwargs.get('root_device_name')
+
+        mappings = [_parse_block_device_mapping(bdm) for bdm in
+                    kwargs.get('block_device_mapping', [])]
+        if mappings:
+            metadata['properties']['block_device_mapping'] = mappings
+
+        image_id = self._register_image(context, metadata)
         msg = _("Registered image %(image_location)s with"
                 " id %(image_id)s") % locals()
         LOG.audit(msg, context=context)
         return {'imageId': image_id}
 
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
-        if attribute != 'launchPermission':
+        def _block_device_mapping_attribute(image, result):
+            _format_mappings(image['properties'], result)
+
+        def _launch_permission_attribute(image, result):
+            result['launchPermission'] = []
+            if image['is_public']:
+                result['launchPermission'].append({'group': 'all'})
+
+        def _root_device_name_attribute(image, result):
+            result['rootDeviceName'] = \
+                    ec2utils.properties_root_device_name(image['properties'])
+            if result['rootDeviceName'] is None:
+                result['rootDeviceName'] = _DEFAULT_ROOT_DEVICE_NAME
+
+        supported_attributes = {
+            'blockDeviceMapping': _block_device_mapping_attribute,
+            'launchPermission': _launch_permission_attribute,
+            'rootDeviceName': _root_device_name_attribute,
+            }
+
+        fn = supported_attributes.get(attribute)
+        if fn is None:
             raise exception.ApiError(_('attribute not supported: %s')
                                      % attribute)
         try:
             image = self._get_image(context, image_id)
         except exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
-        result = {'imageId': image_id, 'launchPermission': []}
-        if image['is_public']:
-            result['launchPermission'].append({'group': 'all'})
+
+        result = {'imageId': image_id}
+        fn(image, result)
         return result
 
     def modify_image_attribute(self, context, image_id, attribute,
@@ -1202,3 +1438,109 @@ class CloudController(object):
         internal_id = ec2utils.ec2_id_to_id(image_id)
         result = self.image_service.update(context, internal_id, dict(kwargs))
         return result
+
+    # TODO(yamahata): race condition
+    # At the moment there is no way to prevent others from
+    # manipulating instances/volumes/snapshots.
+    # As other code doesn't take it into consideration, here we don't
+    # care of it for now. Ostrich algorithm
+    def create_image(self, context, instance_id, **kwargs):
+        # NOTE(yamahata): name/description are ignored by register_image(),
+        #                 do so here
+        no_reboot = kwargs.get('no_reboot', False)
+
+        ec2_instance_id = instance_id
+        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+        instance = self.compute_api.get(context, instance_id)
+
+        # stop the instance if necessary
+        restart_instance = False
+        if not no_reboot:
+            state_description = instance['state_description']
+
+            # if the instance is in subtle state, refuse to proceed.
+            if state_description not in ('running', 'stopping', 'stopped'):
+                raise exception.InstanceNotRunning(instance_id=ec2_instance_id)
+
+            if state_description == 'running':
+                restart_instance = True
+                self.compute_api.stop(context, instance_id=instance_id)
+
+            # wait instance for really stopped
+            start_time = time.time()
+            while state_description != 'stopped':
+                time.sleep(1)
+                instance = self.compute_api.get(context, instance_id)
+                state_description = instance['state_description']
+                # NOTE(yamahata): timeout and error. 1 hour for now for safety.
+                #                 Is it too short/long?
+                #                 Or is there any better way?
+                timeout = 1 * 60 * 60 * 60
+                if time.time() > start_time + timeout:
+                    raise exception.ApiError(
+                        _('Couldn\'t stop instance with in %d sec') % timeout)
+
+        src_image = self._get_image(context, instance['image_ref'])
+        properties = src_image['properties']
+        if instance['root_device_name']:
+            properties['root_device_name'] = instance['root_device_name']
+
+        mapping = []
+        bdms = db.block_device_mapping_get_all_by_instance(context,
+                                                           instance_id)
+        for bdm in bdms:
+            if bdm.no_device:
+                continue
+            m = {}
+            for attr in ('device_name', 'snapshot_id', 'volume_id',
+                         'volume_size', 'delete_on_termination', 'no_device',
+                         'virtual_name'):
+                val = getattr(bdm, attr)
+                if val is not None:
+                    m[attr] = val
+
+            volume_id = m.get('volume_id')
+            if m.get('snapshot_id') and volume_id:
+                # create snapshot based on volume_id
+                vol = self.volume_api.get(context, volume_id=volume_id)
+                # NOTE(yamahata): Should we wait for snapshot creation?
+                #                 Linux LVM snapshot creation completes in
+                #                 short time, it doesn't matter for now.
+                snapshot = self.volume_api.create_snapshot_force(
+                    context, volume_id=volume_id, name=vol['display_name'],
+                    description=vol['display_description'])
+                m['snapshot_id'] = snapshot['id']
+                del m['volume_id']
+
+            if m:
+                mapping.append(m)
+
+        for m in _properties_get_mappings(properties):
+            virtual_name = m['virtual']
+            if virtual_name in ('ami', 'root'):
+                continue
+
+            assert (virtual_name == 'swap' or
+                    virtual_name.startswith('ephemeral'))
+            device_name = m['device']
+            if device_name in [b['device_name'] for b in mapping
+                               if not b.get('no_device', False)]:
+                continue
+
+            # NOTE(yamahata): swap and ephemeral devices are specified in
+            #                 AMI, but disabled for this instance by user.
+            #                 So disable those device by no_device.
+            mapping.append({'device_name': device_name, 'no_device': True})
+
+        if mapping:
+            properties['block_device_mapping'] = mapping
+
+        for attr in ('status', 'location', 'id'):
+            src_image.pop(attr, None)
+
+        image_id = self._register_image(context, src_image)
+
+        if restart_instance:
+            self.compute_api.start(context, instance_id=instance_id)
+
+        return {'imageId': image_id}

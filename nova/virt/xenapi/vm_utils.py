@@ -23,6 +23,7 @@ import json
 import os
 import pickle
 import re
+import sys
 import tempfile
 import time
 import urllib
@@ -36,7 +37,6 @@ import nova.image
 from nova.image import glance as glance_image_service
 from nova import log as logging
 from nova import utils
-from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import disk
@@ -71,17 +71,35 @@ KERNEL_DIR = '/boot/guest'
 class ImageType:
     """
     Enumeration class for distinguishing different image types
-        0 - kernel/ramdisk image (goes on dom0's filesystem)
-        1 - disk image (local SR, partitioned by objectstore plugin)
-        2 - raw disk image (local SR, NOT partitioned by plugin)
-        3 - vhd disk image (local SR, NOT inspected by XS, PV assumed for
+        0 - kernel image (goes on dom0's filesystem)
+        1 - ramdisk image (goes on dom0's filesystem)
+        2 - disk image (local SR, partitioned by objectstore plugin)
+        3 - raw disk image (local SR, NOT partitioned by plugin)
+        4 - vhd disk image (local SR, NOT inspected by XS, PV assumed for
             linux, HVM assumed for Windows)
     """
 
-    KERNEL_RAMDISK = 0
-    DISK = 1
-    DISK_RAW = 2
-    DISK_VHD = 3
+    KERNEL = 0
+    RAMDISK = 1
+    DISK = 2
+    DISK_RAW = 3
+    DISK_VHD = 4
+    _ids = (KERNEL, RAMDISK, DISK, DISK_RAW, DISK_VHD)
+
+    KERNEL_STR = "kernel"
+    RAMDISK_STR = "ramdisk"
+    DISK_STR = "os"
+    DISK_RAW_STR = "os_raw"
+    DISK_VHD_STR = "vhd"
+    _strs = (KERNEL_STR, RAMDISK_STR, DISK_STR, DISK_RAW_STR, DISK_VHD_STR)
+
+    @classmethod
+    def to_string(cls, image_type):
+        return dict(zip(ImageType._ids, ImageType._strs)).get(image_type)
+
+    @classmethod
+    def from_string(cls, image_type_str):
+        return dict(zip(ImageType._strs, ImageType._ids)).get(image_type_str)
 
 
 class VMHelper(HelperBase):
@@ -145,7 +163,6 @@ class VMHelper(HelperBase):
             'VCPUs_max': vcpus,
             'VCPUs_params': {},
             'xenstore_data': {}}
-
         # Complete VM configuration record according to the image type
         # non-raw/raw with PV kernel/raw in HVM mode
         if use_pv_kernel:
@@ -240,26 +257,13 @@ class VMHelper(HelperBase):
             raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
 
     @classmethod
-    def create_vif(cls, session, vm_ref, network_ref, mac_address,
-                   dev, rxtx_cap=0):
-        """Create a VIF record.  Returns a Deferred that gives the new
-        VIF reference."""
-        vif_rec = {}
-        vif_rec['device'] = str(dev)
-        vif_rec['network'] = network_ref
-        vif_rec['VM'] = vm_ref
-        vif_rec['MAC'] = mac_address
-        vif_rec['MTU'] = '1500'
-        vif_rec['other_config'] = {}
-        vif_rec['qos_algorithm_type'] = "ratelimit" if rxtx_cap else ''
-        vif_rec['qos_algorithm_params'] = \
-                {"kbps": str(rxtx_cap * 1024)} if rxtx_cap else {}
-        LOG.debug(_('Creating VIF for VM %(vm_ref)s,'
-                ' network %(network_ref)s.') % locals())
-        vif_ref = session.call_xenapi('VIF.create', vif_rec)
-        LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
-                ' network %(network_ref)s.') % locals())
-        return vif_ref
+    def destroy_vdi(cls, session, vdi_ref):
+        try:
+            task = session.call_xenapi('Async.VDI.destroy', vdi_ref)
+            session.wait_for_task(task)
+        except cls.XenAPI.Failure, exc:
+            LOG.exception(exc)
+            raise StorageError(_('Unable to destroy VDI %s') % vdi_ref)
 
     @classmethod
     def create_vdi(cls, session, sr_ref, name_label, virtual_size, read_only):
@@ -363,7 +367,7 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def fetch_image(cls, session, instance_id, image, user, project,
+    def fetch_image(cls, session, instance_id, image, user_id, project_id,
                     image_type):
         """
         image_type is interpreted as an ImageType instance
@@ -375,18 +379,23 @@ class VMHelper(HelperBase):
         Returns: A single filename if image_type is KERNEL_RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-        access = AuthManager().get_access_key(user, project)
 
         if FLAGS.xenapi_image_service == 'glance':
-            return cls._fetch_image_glance(session, instance_id, image,
-                                           access, image_type)
+            return cls._fetch_image_glance(session, instance_id,
+                                           image, image_type)
         else:
+            # TODO(vish): this shouldn't be used anywhere anymore and
+            #             can probably be removed
+            from nova.auth.manager import AuthManager
+            manager = AuthManager()
+            access = manager.get_access_key(user_id, project_id)
+            secret = manager.get_user(user_id).secret
             return cls._fetch_image_objectstore(session, instance_id, image,
-                                                access, user.secret,
+                                                access, secret,
                                                 image_type)
 
     @classmethod
-    def _fetch_image_glance_vhd(cls, session, instance_id, image, access,
+    def _fetch_image_glance_vhd(cls, session, instance_id, image,
                                 image_type):
         """Tell glance to download an image and put the VHDs into the SR
 
@@ -394,12 +403,12 @@ class VMHelper(HelperBase):
         """
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
-
         sr_ref = safe_find_sr(session)
 
-        # NOTE(sirp): The Glance plugin runs under Python 2.4 which does not
-        # have the `uuid` module. To work around this, we generate the uuids
-        # here (under Python 2.6+) and pass them as arguments
+        # NOTE(sirp): The Glance plugin runs under Python 2.4
+        # which does not have the `uuid` module. To work around this,
+        # we generate the uuids here (under Python 2.6+) and
+        # pass them as arguments
         uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
 
         glance_host, glance_port = \
@@ -434,7 +443,7 @@ class VMHelper(HelperBase):
         return vdis
 
     @classmethod
-    def _fetch_image_glance_disk(cls, session, instance_id, image, access,
+    def _fetch_image_glance_disk(cls, session, instance_id, image,
                                  image_type):
         """Fetch the image from Glance
 
@@ -449,18 +458,20 @@ class VMHelper(HelperBase):
         # FIXME(sirp): Since the Glance plugin seems to be required for the
         # VHD disk, it may be worth using the plugin for both VHD and RAW and
         # DISK restores
+        LOG.debug(_("Fetching image %(image)s") % locals())
+        LOG.debug(_("Image Type: %s"), ImageType.to_string(image_type))
         sr_ref = safe_find_sr(session)
 
         glance_client, image_id = nova.image.get_glance_client(image)
         meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
-        LOG.debug(_("Size for image %(image)s:%(virtual_size)d") % locals())
-
+        LOG.debug(_("Size for image %(image)s:" +
+                    "%(virtual_size)d") % locals())
         if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
-        elif image_type == ImageType.KERNEL_RAMDISK and \
+        elif image_type in (ImageType.KERNEL, ImageType.RAMDISK) and \
              vdi_size > FLAGS.max_kernel_ramdisk_size:
             max_size = FLAGS.max_kernel_ramdisk_size
             raise exception.Error(
@@ -469,29 +480,45 @@ class VMHelper(HelperBase):
 
         name_label = get_name_label_for_image(image)
         vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
-
-        with_vdi_attached_here(session, vdi_ref, False,
-                               lambda dev:
-                               _stream_disk(dev, image_type,
-                                            virtual_size, image_file))
-        if image_type == ImageType.KERNEL_RAMDISK:
-            #we need to invoke a plugin for copying VDI's
-            #content into proper path
-            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
-            fn = "copy_kernel_vdi"
-            args = {}
-            args['vdi-ref'] = vdi_ref
-            #let the plugin copy the correct number of bytes
-            args['image-size'] = str(vdi_size)
-            task = session.async_call_plugin('glance', fn, args)
-            filename = session.wait_for_task(task, instance_id)
-            #remove the VDI as it is not needed anymore
-            session.get_xenapi().VDI.destroy(vdi_ref)
-            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
-            return filename
-        else:
+        # From this point we have a VDI on Xen host;
+        # If anything goes wrong, we need to remember its uuid.
+        try:
+            filename = None
             vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
-            return [dict(vdi_type='os', vdi_uuid=vdi_uuid)]
+            with_vdi_attached_here(session, vdi_ref, False,
+                                   lambda dev:
+                                   _stream_disk(dev, image_type,
+                                                virtual_size, image_file))
+            if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
+                # We need to invoke a plugin for copying the
+                # content of the VDI into the proper path.
+                LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
+                fn = "copy_kernel_vdi"
+                args = {}
+                args['vdi-ref'] = vdi_ref
+                # Let the plugin copy the correct number of bytes.
+                args['image-size'] = str(vdi_size)
+                task = session.async_call_plugin('glance', fn, args)
+                filename = session.wait_for_task(task, instance_id)
+                # Remove the VDI as it is not needed anymore.
+                session.get_xenapi().VDI.destroy(vdi_ref)
+                LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
+                return [dict(vdi_type=ImageType.to_string(image_type),
+                             vdi_uuid=None,
+                             file=filename)]
+            else:
+                return [dict(vdi_type=ImageType.to_string(image_type),
+                             vdi_uuid=vdi_uuid,
+                             file=None)]
+        except (cls.XenAPI.Failure, IOError, OSError) as e:
+            # We look for XenAPI and OS failures.
+            LOG.exception(_("instance %s: Failed to fetch glance image"),
+                          instance_id, exc_info=sys.exc_info())
+            e.args = e.args + ([dict(vdi_type=ImageType.
+                                              to_string(image_type),
+                                    vdi_uuid=vdi_uuid,
+                                    file=filename)],)
+            raise e
 
     @classmethod
     def determine_disk_image_type(cls, instance):
@@ -506,7 +533,8 @@ class VMHelper(HelperBase):
            whether a kernel_id is specified.
         """
         def log_disk_format(image_type):
-            pretty_format = {ImageType.KERNEL_RAMDISK: 'KERNEL_RAMDISK',
+            pretty_format = {ImageType.KERNEL: 'KERNEL',
+                             ImageType.RAMDISK: 'RAMDISK',
                              ImageType.DISK: 'DISK',
                              ImageType.DISK_RAW: 'DISK_RAW',
                              ImageType.DISK_VHD: 'DISK_VHD'}
@@ -519,8 +547,8 @@ class VMHelper(HelperBase):
         def determine_from_glance():
             glance_disk_format2nova_type = {
                 'ami': ImageType.DISK,
-                'aki': ImageType.KERNEL_RAMDISK,
-                'ari': ImageType.KERNEL_RAMDISK,
+                'aki': ImageType.KERNEL,
+                'ari': ImageType.RAMDISK,
                 'raw': ImageType.DISK_RAW,
                 'vhd': ImageType.DISK_VHD}
             image_ref = instance.image_ref
@@ -549,32 +577,31 @@ class VMHelper(HelperBase):
         return image_type
 
     @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, access,
-                            image_type):
+    def _fetch_image_glance(cls, session, instance_id, image, image_type):
         """Fetch image from glance based on image type.
 
-        Returns: A single filename if image_type is KERNEL_RAMDISK
+        Returns: A single filename if image_type is KERNEL or RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
         if image_type == ImageType.DISK_VHD:
             return cls._fetch_image_glance_vhd(
-                session, instance_id, image, access, image_type)
+                session, instance_id, image, image_type)
         else:
             return cls._fetch_image_glance_disk(
-                session, instance_id, image, access, image_type)
+                session, instance_id, image, image_type)
 
     @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
                                  secret, image_type):
         """Fetch an image from objectstore.
 
-        Returns: A single filename if image_type is KERNEL_RAMDISK
+        Returns: A single filename if image_type is KERNEL or RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
         url = "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
                                                  image)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
-        if image_type == ImageType.KERNEL_RAMDISK:
+        if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
             fn = 'get_kernel'
         else:
             fn = 'get_vdi'
@@ -584,15 +611,20 @@ class VMHelper(HelperBase):
         args['password'] = secret
         args['add_partition'] = 'false'
         args['raw'] = 'false'
-        if image_type != ImageType.KERNEL_RAMDISK:
+        if not image_type in (ImageType.KERNEL, ImageType.RAMDISK):
             args['add_partition'] = 'true'
             if image_type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        uuid_or_fn = session.wait_for_task(task, instance_id)
-        if image_type != ImageType.KERNEL_RAMDISK:
-            return [dict(vdi_type='os', vdi_uuid=uuid_or_fn)]
-        return uuid_or_fn
+        vdi_uuid = None
+        filename = None
+        if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
+            filename = session.wait_for_task(task, instance_id)
+        else:
+            vdi_uuid = session.wait_for_task(task, instance_id)
+        return [dict(vdi_type=ImageType.to_string(image_type),
+                     vdi_uuid=vdi_uuid,
+                     file=filename)]
 
     @classmethod
     def determine_is_pv(cls, session, instance_id, vdi_ref, disk_image_type,

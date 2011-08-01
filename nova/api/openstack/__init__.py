@@ -125,6 +125,10 @@ class APIRouter(base_wsgi.Router):
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
+        mapper.resource("ip", "ips", controller=ips.create_resource(version),
+                        parent_resource=dict(member_name='server',
+                                             collection_name='servers'))
+
         mapper.resource("image", "images",
                         controller=images.create_resource(version),
                         collection={'detail': 'GET'})
@@ -144,9 +148,6 @@ class APIRouterV10(APIRouter):
 
     def _setup_routes(self, mapper):
         super(APIRouterV10, self)._setup_routes(mapper, '1.0')
-        mapper.resource("image", "images",
-                        controller=images.create_resource('1.0'),
-                        collection={'detail': 'GET'})
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
@@ -157,21 +158,22 @@ class APIRouterV10(APIRouter):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("ip", "ips", controller=ips.create_resource(),
-                        collection=dict(public='GET', private='GET'),
-                        parent_resource=dict(member_name='server',
-                                             collection_name='servers'))
-
 
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
         super(APIRouterV11, self)._setup_routes(mapper, '1.1')
-        mapper.resource("image_meta", "meta",
-                        controller=image_metadata.create_resource(),
+        image_metadata_controller = image_metadata.create_resource()
+        mapper.resource("image_meta", "metadata",
+                        controller=image_metadata_controller,
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
+
+        mapper.connect("metadata", "/images/{image_id}/metadata",
+                       controller=image_metadata_controller,
+                       action='update_all',
+                       conditions={"method": ['PUT']})
 
         mapper.resource("server_meta", "meta",
                         controller=server_metadata.create_resource(),

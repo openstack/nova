@@ -127,7 +127,7 @@ class DbDriver(object):
 
         try:
             project = db.project_create(context.get_admin_context(), values)
-        except exception.Duplicate:
+        except exception.DBError:
             raise exception.ProjectExists(project=name)
 
         for member in members:

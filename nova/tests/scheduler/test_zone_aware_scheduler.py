@@ -16,6 +16,8 @@
 Tests For Zone Aware Scheduler.
 """
 
+import json
+
 import nova.db
 
 from nova import exception
@@ -122,19 +124,19 @@ def fake_decrypt_blob_returns_child_info(blob):
 
 def fake_call_zone_method(context, method, specs, zones):
     return [
-        ('zone1', [
+        (1, [
             dict(weight=1, blob='AAAAAAA'),
             dict(weight=111, blob='BBBBBBB'),
             dict(weight=112, blob='CCCCCCC'),
             dict(weight=113, blob='DDDDDDD'),
         ]),
-        ('zone2', [
+        (2, [
             dict(weight=120, blob='EEEEEEE'),
             dict(weight=2, blob='FFFFFFF'),
             dict(weight=122, blob='GGGGGGG'),
             dict(weight=123, blob='HHHHHHH'),
         ]),
-        ('zone3', [
+        (3, [
             dict(weight=130, blob='IIIIIII'),
             dict(weight=131, blob='JJJJJJJ'),
             dict(weight=132, blob='KKKKKKK'),
@@ -327,3 +329,19 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         sched._provision_resource_from_blob(None, request_spec, 1,
                                             request_spec, {})
         self.assertTrue(was_called)
+
+    def test_decrypt_blob(self):
+        """Test that the decrypt method works."""
+
+        fixture = FakeZoneAwareScheduler()
+        test_data = {"foo": "bar"}
+
+        class StubDecryptor(object):
+            def decryptor(self, key):
+                return lambda blob: blob
+
+        self.stubs.Set(zone_aware_scheduler, 'crypto',
+                       StubDecryptor())
+
+        self.assertEqual(fixture._decrypt_blob(test_data),
+                         json.dumps(test_data))

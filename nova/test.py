@@ -31,6 +31,7 @@ import unittest
 
 import mox
 import nose.plugins.skip
+import nova.image.fake
 import shutil
 import stubout
 from eventlet import greenthread
@@ -98,9 +99,7 @@ class TestCase(unittest.TestCase):
         self.flag_overrides = {}
         self.injected = []
         self._services = []
-        self._monkey_patch_attach()
         self._original_flags = FLAGS.FlagValuesDict()
-        rpc.ConnectionPool = rpc.Pool(max_size=FLAGS.rpc_conn_pool_size)
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""
@@ -119,11 +118,11 @@ class TestCase(unittest.TestCase):
                 if hasattr(fake.FakeConnection, '_instance'):
                     del fake.FakeConnection._instance
 
+            if FLAGS.image_service == 'nova.image.fake.FakeImageService':
+                nova.image.fake.FakeImageService_reset()
+
             # Reset any overriden flags
             self.reset_flags()
-
-            # Reset our monkey-patches
-            rpc.Consumer.attach_to_eventlet = self.original_attach
 
             # Stop any timers
             for x in self.injected:
@@ -167,17 +166,6 @@ class TestCase(unittest.TestCase):
         svc.start()
         self._services.append(svc)
         return svc
-
-    def _monkey_patch_attach(self):
-        self.original_attach = rpc.Consumer.attach_to_eventlet
-
-        def _wrapped(inner_self):
-            rv = self.original_attach(inner_self)
-            self.injected.append(rv)
-            return rv
-
-        _wrapped.func_name = self.original_attach.func_name
-        rpc.Consumer.attach_to_eventlet = _wrapped
 
     # Useful assertions
     def assertDictMatch(self, d1, d2, approx_equal=False, tolerance=0.001):
@@ -248,3 +236,15 @@ class TestCase(unittest.TestCase):
         for d1, d2 in zip(L1, L2):
             self.assertDictMatch(d1, d2, approx_equal=approx_equal,
                                  tolerance=tolerance)
+
+    def assertSubDictMatch(self, sub_dict, super_dict):
+        """Assert a sub_dict is subset of super_dict."""
+        self.assertTrue(set(sub_dict.keys()).issubset(set(super_dict.keys())))
+        for k, sub_value in sub_dict.items():
+            super_value = super_dict[k]
+            if isinstance(sub_value, dict):
+                self.assertSubDictMatch(sub_value, super_value)
+            elif 'DONTCARE' in (sub_value, super_value):
+                continue
+            else:
+                self.assertEqual(sub_value, super_value)

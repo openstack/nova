@@ -81,7 +81,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
         try:
             json_entry = decryptor(blob)
-            return json.dumps(entry)
+            return json.dumps(json_entry)
         except M2Crypto.EVP.EVPError:
             pass
         return None
@@ -178,12 +178,14 @@ class ZoneAwareScheduler(driver.Scheduler):
         to adjust the weights returned from the child zones. Alters
         child_results in place.
         """
-        for zone, result in child_results:
+        for zone_id, result in child_results:
             if not result:
                 continue
 
+            assert isinstance(zone_id, int)
+
             for zone_rec in zones:
-                if zone_rec['api_url'] != zone:
+                if zone_rec['id'] != zone_id:
                     continue
 
                 for item in result:
@@ -196,7 +198,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                         item['raw_weight'] = raw_weight
                     except KeyError:
                         LOG.exception(_("Bad child zone scaling values "
-                                        "for Zone: %(zone)s") % locals())
+                                        "for Zone: %(zone_id)s") % locals())
 
     def schedule_run_instance(self, context, instance_id, request_spec,
                               *args, **kwargs):

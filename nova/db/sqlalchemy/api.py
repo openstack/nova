@@ -18,7 +18,6 @@
 """
 Implementation of SQLAlchemy backend.
 """
-import traceback
 import warnings
 
 from nova import db
@@ -33,7 +32,6 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import exists
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import literal_column
 
@@ -64,7 +62,7 @@ def is_user_context(context):
 def authorize_project_context(context, project_id):
     """Ensures a request has permission to access the given project."""
     if is_user_context(context):
-        if not context.project:
+        if not context.project_id:
             raise exception.NotAuthorized()
         elif context.project_id != project_id:
             raise exception.NotAuthorized()
@@ -73,7 +71,7 @@ def authorize_project_context(context, project_id):
 def authorize_user_context(context, user_id):
     """Ensures a request has permission to access the given user."""
     if is_user_context(context):
-        if not context.user:
+        if not context.user_id:
             raise exception.NotAuthorized()
         elif context.user_id != user_id:
             raise exception.NotAuthorized()
@@ -118,7 +116,22 @@ def require_context(f):
     return wrapper
 
 
+def require_instance_exists(f):
+    """Decorator to require the specified instance to exist.
+
+    Requres the wrapped function to use context and instance_id as
+    their first two arguments.
+    """
+
+    def wrapper(context, instance_id, *args, **kwargs):
+        db.api.instance_get(context, instance_id)
+        return f(context, instance_id, *args, **kwargs)
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+
 ###################
+
 
 @require_admin_context
 def service_destroy(context, service_id):
@@ -657,7 +670,7 @@ def fixed_ip_associate(context, address, instance_id):
 
 
 @require_admin_context
-def fixed_ip_associate_pool(context, network_id, instance_id):
+def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
@@ -667,6 +680,7 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
                                filter_by(reserved=False).\
                                filter_by(deleted=False).\
                                filter_by(instance=None).\
+                               filter_by(host=None).\
                                with_lockmode('update').\
                                first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
@@ -677,9 +691,12 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
             fixed_ip_ref.network = network_get(context,
                                            network_id,
                                            session=session)
-        fixed_ip_ref.instance = instance_get(context,
-                                             instance_id,
-                                             session=session)
+        if instance_id:
+            fixed_ip_ref.instance = instance_get(context,
+                                                 instance_id,
+                                                 session=session)
+        if host:
+            fixed_ip_ref.host = host
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
@@ -735,7 +752,7 @@ def fixed_ip_get_all(context, session=None):
 
 
 @require_admin_context
-def fixed_ip_get_all_by_host(context, host=None):
+def fixed_ip_get_all_by_instance_host(context, host=None):
     session = get_session()
 
     result = session.query(models.FixedIp).\
@@ -781,6 +798,20 @@ def fixed_ip_get_by_instance(context, instance_id):
                  all()
     if not rv:
         raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+    return rv
+
+
+@require_context
+def fixed_ip_get_by_network_host(context, network_id, host):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(network_id=network_id).\
+                 filter_by(host=host).\
+                 filter_by(deleted=False).\
+                 first()
+    if not rv:
+        raise exception.FixedIpNotFoundForNetworkHost(network_id=network_id,
+                                                      host=host)
     return rv
 
 
@@ -921,6 +952,7 @@ def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
 
 
 @require_context
+@require_instance_exists
 def virtual_interface_get_by_instance(context, instance_id):
     """Gets all virtual interfaces for instance.
 
@@ -1141,9 +1173,9 @@ def instance_get_active_by_window(context, begin, end=None):
     """Return instances that were continuously active over the given window"""
     session = get_session()
     query = session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
                    filter(models.Instance.launched_at < begin)
     if end:
@@ -1237,7 +1269,7 @@ def instance_get_project_vpn(context, project_id):
                    options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
@@ -1280,7 +1312,7 @@ def instance_get_fixed_addresses_v6(context, instance_id):
         # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
         prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
         # return list containing ipv6 address for each tuple
-        return [ipv6.to_global_ipv6(*t) for t in prefix_mac_tuples]
+        return [ipv6.to_global(*t) for t in prefix_mac_tuples]
 
 
 @require_context
@@ -1317,7 +1349,11 @@ def instance_update(context, instance_id, values):
         instance_metadata_update_or_create(context, instance_id,
                                            values.pop('metadata'))
     with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
+        if utils.is_uuid_like(instance_id):
+            instance_ref = instance_get_by_uuid(context, instance_id,
+                                                session=session)
+        else:
+            instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
         instance_ref.save(session=session)
         return instance_ref
@@ -1464,8 +1500,6 @@ def network_associate(context, project_id, force=False):
     called by project_get_networks under certain conditions
     and network manager add_network_to_project()
 
-    only associates projects with networks that have configured hosts
-
     only associate if the project doesn't already have a network
     or if force is True
 
@@ -1481,7 +1515,6 @@ def network_associate(context, project_id, force=False):
         def network_query(project_filter):
             return session.query(models.Network).\
                            filter_by(deleted=False).\
-                           filter(models.Network.host != None).\
                            filter_by(project_id=project_filter).\
                            with_lockmode('update').\
                            first()
@@ -1688,9 +1721,16 @@ def network_get_all_by_instance(_context, instance_id):
 def network_get_all_by_host(context, host):
     session = get_session()
     with session.begin():
+        # NOTE(vish): return networks that have host set
+        #             or that have a fixed ip with host set
+        host_filter = or_(models.Network.host == host,
+                          models.FixedIp.host == host)
+
         return session.query(models.Network).\
                        filter_by(deleted=False).\
-                       filter_by(host=host).\
+                       join(models.Network.fixed_ips).\
+                       filter(host_filter).\
+                       filter_by(deleted=False).\
                        all()
 
 
@@ -1722,6 +1762,7 @@ def network_update(context, network_id, values):
         network_ref = network_get(context, network_id, session=session)
         network_ref.update(values)
         network_ref.save(session=session)
+        return network_ref
 
 
 ###################
@@ -2205,6 +2246,23 @@ def block_device_mapping_update(context, bdm_id, values):
                 filter_by(id=bdm_id).\
                 filter_by(deleted=False).\
                 update(values)
+
+
+@require_context
+def block_device_mapping_update_or_create(context, values):
+    session = get_session()
+    with session.begin():
+        result = session.query(models.BlockDeviceMapping).\
+                 filter_by(instance_id=values['instance_id']).\
+                 filter_by(device_name=values['device_name']).\
+                 filter_by(deleted=False).\
+                 first()
+        if not result:
+            bdm_ref = models.BlockDeviceMapping()
+            bdm_ref.update(values)
+            bdm_ref.save(session=session)
+        else:
+            result.update(values)
 
 
 @require_context
@@ -2765,13 +2823,13 @@ def migration_get(context, id, session=None):
 
 
 @require_admin_context
-def migration_get_by_instance_and_status(context, instance_id, status):
+def migration_get_by_instance_and_status(context, instance_uuid, status):
     session = get_session()
     result = session.query(models.Migration).\
-                     filter_by(instance_id=instance_id).\
+                     filter_by(instance_uuid=instance_uuid).\
                      filter_by(status=status).first()
     if not result:
-        raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
+        raise exception.MigrationNotFoundByStatus(instance_id=instance_uuid,
                                                   status=status)
     return result
 
@@ -2952,7 +3010,7 @@ def instance_type_get_all(context, inactive=False):
 
 
 @require_context
-def instance_type_get_by_id(context, id):
+def instance_type_get(context, id):
     """Returns a dict describing specific instance_type"""
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
@@ -3069,14 +3127,6 @@ def zone_get_all(context):
 
 
 ####################
-
-
-def require_instance_exists(func):
-    def new_func(context, instance_id, *args, **kwargs):
-        db.api.instance_get(context, instance_id)
-        return func(context, instance_id, *args, **kwargs)
-    new_func.__name__ = func.__name__
-    return new_func
 
 
 @require_context
@@ -3197,8 +3247,8 @@ def agent_build_destroy(context, agent_build_id):
     with session.begin():
         session.query(models.AgentBuild).\
                 filter_by(id=agent_build_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -3247,7 +3297,7 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 def instance_type_extra_specs_get_item(context, instance_type_id, key):
     session = get_session()
 
-    sppec_result = session.query(models.InstanceTypeExtraSpecs).\
+    spec_result = session.query(models.InstanceTypeExtraSpecs).\
                     filter_by(instance_type_id=instance_type_id).\
                     filter_by(key=key).\
                     filter_by(deleted=False).\

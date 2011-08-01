@@ -17,36 +17,35 @@
 
 from webob import exc
 
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
 class Controller(object):
     """ The Shared IP Groups Controller for the Openstack API """
 
-    def index(self, req):
+    def index(self, req, **kwargs):
         """ Returns a list of Shared IP Groups for the user """
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
-    def show(self, req, id):
+    def show(self, req, id, **kwargs):
         """ Shows in-depth information on a specific Shared IP Group """
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
-    def update(self, req, id, body):
+    def update(self, req, id, **kwargs):
         """ You can't update a Shared IP Group """
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
-    def delete(self, req, id):
+    def delete(self, req, id, **kwargs):
         """ Deletes a Shared IP Group """
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
-    def detail(self, req):
+    def detail(self, req, **kwargs):
         """ Returns a complete list of Shared IP Groups """
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
-    def create(self, req, body):
+    def create(self, req, **kwargs):
         """ Creates a new Shared IP group """
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise exc.HTTPNotImplemented()
 
 
 def create_resource():

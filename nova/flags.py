@@ -305,6 +305,8 @@ DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
 DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
+DEFINE_list('enabled_apis', ['ec2', 'osapi'],
+            'list of APIs to enable by default')
 DEFINE_string('ec2_host', '$my_ip', 'ip of api server')
 DEFINE_string('ec2_dmz_host', '$my_ip', 'internal ip of api server')
 DEFINE_integer('ec2_port', 8773, 'cloud controller port')
@@ -341,7 +343,7 @@ DEFINE_string('lock_path', os.path.join(os.path.dirname(__file__), '../'),
               'Directory for lock files')
 DEFINE_string('logdir', None, 'output to a per-service log file in named '
                               'directory')
-
+DEFINE_integer('logfile_mode', 0644, 'Default file mode of the logs.')
 DEFINE_string('sqlite_db', 'nova.sqlite', 'file name for sqlite')
 DEFINE_string('sql_connection',
               'sqlite:///$state_path/$sqlite_db',

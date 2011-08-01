@@ -24,11 +24,12 @@ import stubout
 import time
 import unittest
 import webob
-
-from xml.dom.minidom import parseString
+from xml.dom import minidom
 
 import nova.context
 from nova.api.openstack import limits
+from nova.api.openstack import views
+from nova import test
 
 
 TEST_LIMITS = [
@@ -166,7 +167,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         request = self._get_index_request("application/xml")
         response = request.get_response(self.controller)
 
-        expected = parseString("""
+        expected = minidom.parseString("""
             <limits
                 xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate/>
@@ -174,7 +175,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
             </limits>
         """.replace("  ", ""))
 
-        body = parseString(response.body.replace("  ", ""))
+        body = minidom.parseString(response.body.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), body.toxml())
 
@@ -184,7 +185,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         request = self._populate_limits(request)
         response = request.get_response(self.controller)
 
-        expected = parseString("""
+        expected = minidom.parseString("""
             <limits
                 xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate>
@@ -196,7 +197,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
                 <absolute/>
             </limits>
         """.replace("  ", ""))
-        body = parseString(response.body.replace("  ", ""))
+        body = minidom.parseString(response.body.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), body.toxml())
 
@@ -210,6 +211,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
         self.controller = limits.create_resource('1.1')
+        self.maxDiff = None
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -266,14 +268,14 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": 0,
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
                             },
                             {
                                 "verb": "POST",
-                                "next-available": 0,
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "HOUR",
                                 "value": 5,
                                 "remaining": 5,
@@ -286,7 +288,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": 0,
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 5,
                                 "remaining": 5,
@@ -328,7 +330,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": 0,
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
@@ -341,7 +343,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                         "limit": [
                             {
                                 "verb": "GET",
-                                "next-available": 0,
+                                "next-available": "1970-01-01T00:00:00Z",
                                 "unit": "MINUTE",
                                 "value": 10,
                                 "remaining": 10,
@@ -400,6 +402,10 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         self._test_index_absolute_limits_json(expected)
 
 
+class TestLimiter(limits.Limiter):
+    pass
+
+
 class LimitMiddlewareTest(BaseLimitTestSuite):
     """
     Tests for the `limits.RateLimitingMiddleware` class.
@@ -413,10 +419,14 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
     def setUp(self):
         """Prepare middleware for use through fake WSGI app."""
         BaseLimitTestSuite.setUp(self)
-        _limits = [
-            limits.Limit("GET", "*", ".*", 1, 60),
-        ]
-        self.app = limits.RateLimitingMiddleware(self._empty_app, _limits)
+        _limits = '(GET, *, .*, 1, MINUTE)'
+        self.app = limits.RateLimitingMiddleware(self._empty_app, _limits,
+                                                 "%s.TestLimiter" %
+                                                 self.__class__.__module__)
+
+    def test_limit_class(self):
+        """Test that middleware selected correct limiter class."""
+        assert isinstance(self.app._limiter, TestLimiter)
 
     def test_good_request(self):
         """Test successful GET request through middleware."""
@@ -450,7 +460,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 403)
 
-        root = parseString(response.body).childNodes[0]
+        root = minidom.parseString(response.body).childNodes[0]
         expected = "Only 1 GET request(s) can be made to * every minute."
 
         details = root.getElementsByTagName("details")
@@ -492,6 +502,72 @@ class LimitTest(BaseLimitTestSuite):
         self.assertEqual(4, limit.last_request)
 
 
+class ParseLimitsTest(BaseLimitTestSuite):
+    """
+    Tests for the default limits parser in the in-memory
+    `limits.Limiter` class.
+    """
+
+    def test_invalid(self):
+        """Test that parse_limits() handles invalid input correctly."""
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          ';;;;;')
+
+    def test_bad_rule(self):
+        """Test that parse_limits() handles bad rules correctly."""
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          'GET, *, .*, 20, minute')
+
+    def test_missing_arg(self):
+        """Test that parse_limits() handles missing args correctly."""
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          '(GET, *, .*, 20)')
+
+    def test_bad_value(self):
+        """Test that parse_limits() handles bad values correctly."""
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          '(GET, *, .*, foo, minute)')
+
+    def test_bad_unit(self):
+        """Test that parse_limits() handles bad units correctly."""
+        self.assertRaises(ValueError, limits.Limiter.parse_limits,
+                          '(GET, *, .*, 20, lightyears)')
+
+    def test_multiple_rules(self):
+        """Test that parse_limits() handles multiple rules correctly."""
+        try:
+            l = limits.Limiter.parse_limits('(get, *, .*, 20, minute);'
+                                            '(PUT, /foo*, /foo.*, 10, hour);'
+                                            '(POST, /bar*, /bar.*, 5, second);'
+                                            '(Say, /derp*, /derp.*, 1, day)')
+        except ValueError, e:
+            assert False, str(e)
+
+        # Make sure the number of returned limits are correct
+        self.assertEqual(len(l), 4)
+
+        # Check all the verbs...
+        expected = ['GET', 'PUT', 'POST', 'SAY']
+        self.assertEqual([t.verb for t in l], expected)
+
+        # ...the URIs...
+        expected = ['*', '/foo*', '/bar*', '/derp*']
+        self.assertEqual([t.uri for t in l], expected)
+
+        # ...the regexes...
+        expected = ['.*', '/foo.*', '/bar.*', '/derp.*']
+        self.assertEqual([t.regex for t in l], expected)
+
+        # ...the values...
+        expected = [20, 10, 5, 1]
+        self.assertEqual([t.value for t in l], expected)
+
+        # ...and the units...
+        expected = [limits.PER_MINUTE, limits.PER_HOUR,
+                    limits.PER_SECOND, limits.PER_DAY]
+        self.assertEqual([t.unit for t in l], expected)
+
+
 class LimiterTest(BaseLimitTestSuite):
     """
     Tests for the in-memory `limits.Limiter` class.
@@ -500,7 +576,8 @@ class LimiterTest(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.limiter = limits.Limiter(TEST_LIMITS)
+        userlimits = {'user:user3': ''}
+        self.limiter = limits.Limiter(TEST_LIMITS, **userlimits)
 
     def _check(self, num, verb, url, username=None):
         """Check and yield results from checks."""
@@ -605,6 +682,12 @@ class LimiterTest(BaseLimitTestSuite):
         results = list(self._check(10, "PUT", "/anything"))
         self.assertEqual(expected, results)
 
+    def test_user_limit(self):
+        """
+        Test user-specific limits.
+        """
+        self.assertEqual(self.limiter.levels['user3'], [])
+
     def test_multiple_users(self):
         """
         Tests involving multiple users.
@@ -617,6 +700,11 @@ class LimiterTest(BaseLimitTestSuite):
         # User2
         expected = [None] * 10 + [6.0] * 5
         results = list(self._check(15, "PUT", "/anything", "user2"))
+        self.assertEqual(expected, results)
+
+        # User3
+        expected = [None] * 20
+        results = list(self._check(20, "PUT", "/anything", "user3"))
         self.assertEqual(expected, results)
 
         self.time += 1.0
@@ -818,3 +906,195 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
             "made to /delayed every minute.")
 
         self.assertEqual((delay, error), expected)
+
+
+class LimitsViewBuilderV11Test(test.TestCase):
+
+    def setUp(self):
+        self.view_builder = views.limits.ViewBuilderV11()
+        self.rate_limits = [
+            {
+                "URI": "*",
+                "regex": ".*",
+                "value": 10,
+                "verb": "POST",
+                "remaining": 2,
+                "unit": "MINUTE",
+                "resetTime": 1311272226,
+            },
+            {
+                "URI": "*/servers",
+                "regex": "^/servers",
+                "value": 50,
+                "verb": "POST",
+                "remaining": 10,
+                "unit": "DAY",
+                "resetTime": 1311272226,
+            },
+        ]
+        self.absolute_limits = {
+            "metadata_items": 1,
+            "injected_files": 5,
+            "injected_file_content_bytes": 5,
+        }
+
+    def tearDown(self):
+        pass
+
+    def test_build_limits(self):
+        expected_limits = {
+            "limits": {
+                "rate": [
+                    {
+                        "uri": "*",
+                        "regex": ".*",
+                        "limit": [
+                            {
+                                "value": 10,
+                                "verb": "POST",
+                                "remaining": 2,
+                                "unit": "MINUTE",
+                                "next-available": "2011-07-21T18:17:06Z",
+                            },
+                        ]
+                    },
+                    {
+                        "uri": "*/servers",
+                        "regex": "^/servers",
+                        "limit": [
+                            {
+                                "value": 50,
+                                "verb": "POST",
+                                "remaining": 10,
+                                "unit": "DAY",
+                                "next-available": "2011-07-21T18:17:06Z",
+                            },
+                        ]
+                    },
+                ],
+                "absolute": {
+                    "maxServerMeta": 1,
+                    "maxImageMeta": 1,
+                    "maxPersonality": 5,
+                    "maxPersonalitySize": 5
+                }
+            }
+        }
+
+        output = self.view_builder.build(self.rate_limits,
+                                         self.absolute_limits)
+        self.assertDictMatch(output, expected_limits)
+
+    def test_build_limits_empty_limits(self):
+        expected_limits = {
+            "limits": {
+                "rate": [],
+                "absolute": {},
+            }
+        }
+
+        abs_limits = {}
+        rate_limits = []
+        output = self.view_builder.build(rate_limits, abs_limits)
+        self.assertDictMatch(output, expected_limits)
+
+
+class LimitsXMLSerializationTest(test.TestCase):
+
+    def setUp(self):
+        self.maxDiff = None
+
+    def tearDown(self):
+        pass
+
+    def test_index(self):
+        serializer = limits.LimitsXMLSerializer()
+
+        fixture = {
+            "limits": {
+                "rate": [
+                    {
+                        "uri": "*",
+                        "regex": ".*",
+                        "limit": [
+                            {
+                                "value": 10,
+                                "verb": "POST",
+                                "remaining": 2,
+                                "unit": "MINUTE",
+                                "next-available": "2011-12-15T22:42:45Z",
+                            },
+                        ]
+                    },
+                    {
+                        "uri": "*/servers",
+                        "regex": "^/servers",
+                        "limit": [
+                            {
+                                "value": 50,
+                                "verb": "POST",
+                                "remaining": 10,
+                                "unit": "DAY",
+                                "next-available": "2011-12-15T22:42:45Z"
+                            },
+                        ]
+                    },
+                ],
+                "absolute": {
+                    "maxServerMeta": 1,
+                    "maxImageMeta": 1,
+                    "maxPersonality": 5,
+                    "maxPersonalitySize": 10240
+                }
+            }
+        }
+
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
+            <rates>
+                <rate uri="*" regex=".*">
+                    <limit value="10" verb="POST" remaining="2"
+                        unit="MINUTE"
+                        next-available="2011-12-15T22:42:45Z"/>
+                </rate>
+                <rate uri="*/servers" regex="^/servers">
+                    <limit value="50" verb="POST" remaining="10"
+                        unit="DAY"
+                        next-available="2011-12-15T22:42:45Z"/>
+                </rate>
+            </rates>
+            <absolute>
+                <limit name="maxServerMeta" value="1"/>
+                <limit name="maxPersonality" value="5"/>
+                <limit name="maxImageMeta" value="1"/>
+                <limit name="maxPersonalitySize" value="10240"/>
+            </absolute>
+        </limits>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index_no_limits(self):
+        serializer = limits.LimitsXMLSerializer()
+
+        fixture = {
+            "limits": {
+                "rate": [],
+                "absolute": {},
+            }
+        }
+
+        output = serializer.serialize(fixture, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+        <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
+            <rates />
+            <absolute />
+        </limits>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
