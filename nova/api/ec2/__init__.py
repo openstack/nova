@@ -188,7 +188,8 @@ class Authenticate(wsgi.Middleware):
                     req.host,
                     req.path)
         # Be explicit for what exceptions are 403, the rest bubble as 500
-        except (exception.NotFound, exception.NotAuthorized) as ex:
+        except (exception.NotFound, exception.NotAuthorized,
+                exception.InvalidSignature) as ex:
             LOG.audit(_("Authentication Failure: %s"), unicode(ex))
             raise webob.exc.HTTPForbidden()
 

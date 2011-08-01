@@ -149,11 +149,7 @@ class User(AuthBase):
         return AuthManager().is_project_manager(self, project)
 
     def __repr__(self):
-        return "User('%s', '%s', '%s', '%s', %s)" % (self.id,
-                                                     self.name,
-                                                     self.access,
-                                                     self.secret,
-                                                     self.admin)
+        return "User('%s', '%s')" % (self.id, self.name)
 
 
 class Project(AuthBase):
@@ -200,9 +196,7 @@ class Project(AuthBase):
         return AuthManager().get_credentials(user, self)
 
     def __repr__(self):
-        return "Project('%s', '%s', '%s', '%s', %s)" % \
-            (self.id, self.name, self.project_manager_id, self.description,
-             self.member_ids)
+        return "Project('%s', '%s')" % (self.id, self.name)
 
 
 class AuthManager(object):
