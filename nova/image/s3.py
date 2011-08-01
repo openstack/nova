@@ -34,7 +34,6 @@ from nova import flags
 from nova import image
 from nova import log as logging
 from nova import utils
-from nova.auth import manager
 from nova.image import service
 from nova.api.ec2 import ec2utils
 
@@ -43,6 +42,10 @@ LOG = logging.getLogger("nova.image.s3")
 FLAGS = flags.FLAGS
 flags.DEFINE_string('image_decryption_dir', '/tmp',
                     'parent dir for tempdir used for image decryption')
+flags.DEFINE_string('s3_access_key', 'notchecked',
+                    'access key to use for s3 server for images')
+flags.DEFINE_string('s3_secret_key', 'notchecked',
+                    'secret key to use for s3 server for images')
 
 
 class S3ImageService(service.BaseImageService):
@@ -82,11 +85,10 @@ class S3ImageService(service.BaseImageService):
 
     @staticmethod
     def _conn(context):
-        # TODO(vish): is there a better way to get creds to sign
-        #             for the user?
-        access = manager.AuthManager().get_access_key(context.user,
-                                                      context.project)
-        secret = str(context.user.secret)
+        # NOTE(vish): access and secret keys for s3 server are not
+        #             checked in nova-objectstore
+        access = FLAGS.s3_access_key
+        secret = FLAGS.s3_secret_key
         calling = boto.s3.connection.OrdinaryCallingFormat()
         return boto.s3.connection.S3Connection(aws_access_key_id=access,
                                                aws_secret_access_key=secret,

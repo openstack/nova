@@ -19,7 +19,6 @@
 
 """Utilities and helper functions."""
 
-import base64
 import datetime
 import functools
 import inspect
@@ -30,7 +29,6 @@ import os
 import random
 import re
 import socket
-import string
 import struct
 import sys
 import time
@@ -50,7 +48,8 @@ from nova import version
 
 
 LOG = logging.getLogger("nova.utils")
-TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+PERFECT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 FLAGS = flags.FLAGS
 
 
@@ -361,16 +360,26 @@ def clear_time_override():
     utcnow.override_time = None
 
 
-def isotime(at=None):
-    """Returns iso formatted utcnow."""
+def strtime(at=None, fmt=PERFECT_TIME_FORMAT):
+    """Returns formatted utcnow."""
     if not at:
         at = utcnow()
-    return at.strftime(TIME_FORMAT)
+    return at.strftime(fmt)
+
+
+def parse_strtime(timestr, fmt=PERFECT_TIME_FORMAT):
+    """Turn a formatted time back into a datetime."""
+    return datetime.datetime.strptime(timestr, fmt)
+
+
+def isotime(at=None):
+    """Returns iso formatted utcnow."""
+    return strtime(at, ISO_TIME_FORMAT)
 
 
 def parse_isotime(timestr):
     """Turn an iso formatted time back into a datetime."""
-    return datetime.datetime.strptime(timestr, TIME_FORMAT)
+    return parse_strtime(timestr, ISO_TIME_FORMAT)
 
 
 def parse_mailmap(mailmap='.mailmap'):
