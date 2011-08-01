@@ -646,15 +646,9 @@ class NetworkManager(manager.SchedulerDependentManager):
                         all_req_nets.append(next_cidr)
                         break
         all_req_nets = list(set(all_req_nets))
-        if not used_nets:
-            return all_req_nets
         # after splitting ensure there were enough to satisfy the num_networks
         if len(all_req_nets) < num_networks:
             raise ValueError(_("Not enough subnets avail to satisfy requested num_networks"))
-        # if one of the split subnets were already defined, remove from create list
-        for req_cidr in all_req_nets:
-            if req_cidr in used_cidrs:
-                all_req_nets.remove(req_cidr)
         return all_req_nets
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
