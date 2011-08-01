@@ -462,7 +462,7 @@ class ControllerV10(Controller):
             msg = _("Resize requests require 'flavorId' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        return Controller.resize(self, req, id, flavor_id)
+        return self.resize(req, id, flavor_id)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -577,7 +577,7 @@ class ControllerV11(Controller):
             msg = _("Resize requests require 'flavorRef' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        return Controller.resize(self, req, id, flavor_ref)
+        return self.resize(req, id, flavor_ref)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
