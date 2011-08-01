@@ -615,8 +615,10 @@ class NetworkManager(manager.SchedulerDependentManager):
         req_net_ip = str(req_net.ip)
         req_size = network_size * num_networks
         if req_size > req_net.size:
-            raise ValueError(_("network_size * num_networks exceeds cidr size"))
-        adjusted_cidr = netaddr.IPNetwork(req_net_ip+'/'+str(significant_bits))
+            msg = "network_size * num_networks exceeds cidr size"
+            raise ValueError(_(msg))
+        adjusted_cidr_str = req_net_ip + '/' + str(significant_bits)
+        adjusted_cidr = netaddr.IPNetwork(adjusted_cidr_str)
         all_req_nets = [adjusted_cidr]
         try:
             used_nets = self.db.network_get_all(context)
@@ -627,7 +629,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             raise ValueError(_("cidr already in use"))
         for adjusted_cidr_supernet in adjusted_cidr.supernet():
             if adjusted_cidr_supernet in used_cidrs:
-                raise ValueError(_("requested cidr (%s) conflicts with existing supernet (%s)" % (str(adjusted_cidr), str(adjusted_cidr_supernet))))
+                msg = "requested cidr (%s) conflicts with existing supernet"
+                raise ValueError(_(msg % str(adjusted_cidr)))
         # split supernet into subnets
         if num_networks >= 2:
             next_cidr = adjusted_cidr
@@ -648,7 +651,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         all_req_nets = list(set(all_req_nets))
         # after splitting ensure there were enough to satisfy the num_networks
         if len(all_req_nets) < num_networks:
-            raise ValueError(_("Not enough subnets avail to satisfy requested num_networks"))
+            msg = "Not enough subnets avail to satisfy requested num_networks"
+            raise ValueError(_(msg))
         return all_req_nets
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
