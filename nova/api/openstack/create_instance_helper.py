@@ -20,6 +20,7 @@ import webob
 from webob import exc
 from xml.dom import minidom
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -29,7 +30,6 @@ from nova import utils
 
 from nova.compute import instance_types
 from nova.api.openstack import wsgi
-from nova.auth import manager as auth_manager
 
 
 LOG = logging.getLogger('nova.api.openstack.create_instance_helper')
@@ -80,7 +80,10 @@ class CreateInstanceHelper(object):
 
         key_name = None
         key_data = None
-        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
+        # TODO(vish): Key pair access should move into a common library
+        #             instead of being accessed directly from the db.
+        key_pairs = db.key_pair_get_all_by_user(context.elevated(),
+                                                context.user_id)
         if key_pairs:
             key_pair = key_pairs[0]
             key_name = key_pair['name']
@@ -188,7 +191,7 @@ class CreateInstanceHelper(object):
         Overrides normal behavior in the case of xml content
         """
         if request.content_type == "application/xml":
-            deserializer = ServerCreateRequestXMLDeserializer()
+            deserializer = ServerXMLDeserializer()
             return deserializer.deserialize(request.body)
         else:
             return self._deserialize(request.body, request.get_content_type())
@@ -303,29 +306,29 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
         """Marshal the server attribute of a parsed request"""
         server = {}
         server_node = self.find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
+
+        attributes = ["name", "imageId", "flavorId", "imageRef",
+                     "flavorRef", "adminPass"]
+        for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
+
         metadata_node = self.find_first_child_named(server_node, "metadata")
-        metadata = self.extract_metadata(metadata_node)
-        if metadata is not None:
-            server["metadata"] = metadata
-        personality = self._extract_personality(server_node)
-        if personality is not None:
-            server["personality"] = personality
+        server["metadata"] = self.extract_metadata(metadata_node)
+
+        server["personality"] = self._extract_personality(server_node)
+
         return server
 
     def _extract_personality(self, server_node):
         """Marshal the personality attribute of a parsed request"""
-        personality_node = \
-                self.find_first_child_named(server_node, "personality")
-        if personality_node is None:
-            return None
+        node = self.find_first_child_named(server_node, "personality")
         personality = []
-        for file_node in self.find_children_named(personality_node, "file"):
-            item = {}
-            if file_node.hasAttribute("path"):
-                item["path"] = file_node.getAttribute("path")
-            item["contents"] = self.extract_text(file_node)
-            personality.append(item)
+        if node is not None:
+            for file_node in self.find_children_named(node, "file"):
+                item = {}
+                if file_node.hasAttribute("path"):
+                    item["path"] = file_node.getAttribute("path")
+                item["contents"] = self.extract_text(file_node)
+                personality.append(item)
         return personality
