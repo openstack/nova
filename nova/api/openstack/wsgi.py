@@ -161,6 +161,18 @@ class XMLDeserializer(TextDeserializer):
         return {'body': self._from_xml(datastring)}
 
 
+class MetadataXMLDeserializer(XMLDeserializer):
+
+    def extract_metadata(self, metadata_node):
+        """Marshal the metadata attribute of a parsed request"""
+        metadata = {}
+        if metadata_node is not None:
+            for meta_node in self.find_children_named(metadata_node, "meta"):
+                key = meta_node.getAttribute("key")
+                metadata[key] = self.extract_text(meta_node)
+        return metadata
+
+
 class RequestHeadersDeserializer(ActionDispatcher):
     """Default request headers deserializer"""
 

@@ -15,7 +15,6 @@
 
 import json
 
-import stubout
 import webob
 
 from nova import flags
@@ -41,7 +40,7 @@ def fake_admin_check(self, req):
 class UsersTest(test.TestCase):
     def setUp(self):
         super(UsersTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
+        self.flags(allow_admin_api=True)
         self.stubs.Set(users.Controller, '__init__',
                        fake_init)
         self.stubs.Set(users.Controller, '_check_admin',
@@ -58,15 +57,9 @@ class UsersTest(test.TestCase):
         fakes.stub_out_auth(self.stubs)
 
         self.allow_admin = FLAGS.allow_admin_api
-        FLAGS.allow_admin_api = True
         fakemgr = fakes.FakeAuthManager()
         fakemgr.add_user(User('id1', 'guy1', 'acc1', 'secret1', False))
         fakemgr.add_user(User('id2', 'guy2', 'acc2', 'secret2', True))
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.allow_admin_api = self.allow_admin
-        super(UsersTest, self).tearDown()
 
     def test_get_user_list(self):
         req = webob.Request.blank('/v1.0/users')
