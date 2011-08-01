@@ -609,6 +609,54 @@ class NetworkManager(manager.SchedulerDependentManager):
                 network_ref = self.db.fixed_ip_get_network(context, address)
                 self._setup_network(context, network_ref)
 
+    def _validate_cidrs(self, context, cidr, num_networks, network_size):
+        significant_bits = 32 - int(math.log(network_size, 2))
+        req_net = netaddr.IPNetwork(cidr)
+        req_net_ip = str(req_net.ip)
+        req_size = network_size * num_networks
+        if req_size > req_net.size:
+            raise ValueError(_("network_size * num_networks exceeds cidr size"))
+        adjusted_cidr = netaddr.IPNetwork(req_net_ip+'/'+str(significant_bits))
+        all_req_nets = [adjusted_cidr]
+        try:
+            used_nets = self.db.network_get_all(context)
+        except exception.NoNetworksFound:
+            used_nets = []
+        used_cidrs = [netaddr.IPNetwork(net['cidr']) for net in used_nets]
+        if adjusted_cidr in used_cidrs:
+            raise ValueError(_("cidr already in use"))
+        for adjusted_cidr_supernet in adjusted_cidr.supernet():
+            if adjusted_cidr_supernet in used_cidrs:
+                raise ValueError(_("requested cidr (%s) conflicts with existing supernet (%s)" % (str(adjusted_cidr), str(adjusted_cidr_supernet))))
+        # split supernet into subnets
+        if num_networks >= 2:
+            next_cidr = adjusted_cidr
+            for used_cidr in used_cidrs:
+                # watch for smaller subnets conflicting
+                if used_cidr.size < next_cidr.size:
+                    for ucsupernet in used_cidr.supernet():
+                        if ucsupernet.size == next_cidr.size:
+                            used_cidrs.append(ucsupernet)
+            for index in range(1, num_networks):
+                while True:
+                    next_cidr = next_cidr.next()
+                    if next_cidr in used_cidrs:
+                        continue
+                    else:
+                        all_req_nets.append(next_cidr)
+                        break
+        all_req_nets = list(set(all_req_nets))
+        if not used_nets:
+            return all_req_nets
+        # after splitting ensure there were enough to satisfy the num_networks
+        if len(all_req_nets) < num_networks:
+            raise ValueError(_("Not enough subnets avail to satisfy requested num_networks"))
+        # if one of the split subnets were already defined, remove from create list
+        for req_cidr in all_req_nets:
+            if req_cidr in used_cidrs:
+                all_req_nets.remove(req_cidr)
+        return all_req_nets
+
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, **kwargs):
