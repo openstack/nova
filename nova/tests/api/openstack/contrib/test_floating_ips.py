@@ -74,12 +74,8 @@ class FloatingIpTest(test.TestCase):
     def setUp(self):
         super(FloatingIpTest, self).setUp()
         self.controller = FloatingIPController()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(network.api.API, "get_floating_ip",
                        network_api_get_floating_ip)
         self.stubs.Set(network.api.API, "list_floating_ips",
@@ -96,7 +92,6 @@ class FloatingIpTest(test.TestCase):
         self._create_floating_ip()
 
     def tearDown(self):
-        self.stubs.UnsetAll()
         self._delete_floating_ip()
         super(FloatingIpTest, self).tearDown()
 
