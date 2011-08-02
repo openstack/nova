@@ -1325,7 +1325,8 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/images/2'
+        # proper local hrefs must start with 'http://localhost/v1.1/'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/flavors/3'
         expected_flavor = {
             "id": "3",
