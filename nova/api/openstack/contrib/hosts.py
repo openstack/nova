@@ -133,6 +133,11 @@ class Hosts(extensions.ExtensionDescriptor):
         return "2011-06-29T00:00:00+00:00"
 
     def get_resources(self):
-        resources = [extensions.ResourceExtension('os-hosts', HostController(),
-                collection_actions={'update': 'PUT'}, member_actions={})]
+        resources = []
+        # If we are not in an admin env, don't add the resource. Regular users
+        # shouldn't have access to the host.
+        if FLAGS.allow_admin_api:
+            resources = [extensions.ResourceExtension('os-hosts',
+                    HostController(), collection_actions={'update': 'PUT'},
+                    member_actions={})]
         return resources
