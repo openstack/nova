@@ -51,10 +51,10 @@ FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 class TestDriver(driver.Scheduler):
     """Scheduler Driver for Tests"""
-    def schedule(self, context, topic, *args, **kwargs):
+    def schedule(context, topic, *args, **kwargs):
         return 'fallback_host'
 
-    def schedule_named_method(self, context, topic, num):
+    def schedule_named_method(context, topic, num):
         return 'named_host'
 
 
