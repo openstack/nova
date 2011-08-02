@@ -79,7 +79,15 @@ class HostController(object):
                     explanation = _("Invalid status: '%s'") % raw_val
                     raise webob.exc.HTTPBadRequest(explanation=explanation)
             elif key == "powerstate":
-                if val in ("reboot", "shutdown"):
+                if val == "startup":
+                    # The only valid values for 'state' are 'reboot' or
+                    # 'shutdown'. For completeness' sake there is the
+                    # 'startup' option to start up a host, but this is not
+                    # technically feasible now, as we run the host on the
+                    # XenServer box.
+                    msg = _("Host startup on XenServer is not supported."))
+                    raise webob.exc.HTTPBadRequest(explanation=msg)
+                elif val in ("reboot", "shutdown"):
                     return self._set_powerstate(req, id, val)
                 else:
                     explanation = _("Invalid powerstate: '%s'") % raw_val
@@ -98,10 +106,9 @@ class HostController(object):
         return {"host": host, "status": result}
 
     def _set_powerstate(self, req, host, state):
-        """Reboots or shuts down the host."""
+        """Reboots or shuts down the host.
+        """
         context = req.environ['nova.context']
-        LOG.audit(_("Changing powerstate of host %(host)s to %(state)s.")
-                % locals())
         result = self.compute_api.set_host_powerstate(context, host=host,
                 state=state)
         return {"host": host, "powerstate": result}
