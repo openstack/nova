@@ -106,6 +106,11 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(view['floating_ip']['fixed_ip'], None)
         self.assertEqual(view['floating_ip']['instance_id'], None)
 
+    def test_translate_floating_ip_view_dict(self):
+        floating_ip = {'id': 0, 'address': '10.0.0.10', 'fixed_ip': None}
+        view = _translate_floating_ip_view(floating_ip)
+        self.assertTrue('floating_ip' in view)
+
     def test_floating_ips_list(self):
         req = webob.Request.blank('/v1.1/os-floating-ips')
         res = req.get_response(fakes.wsgi_app())
