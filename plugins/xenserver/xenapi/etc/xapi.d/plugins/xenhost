@@ -105,10 +105,20 @@ def set_host_enabled(self, arg_dict):
 
 def _powerstate(state):
     host_uuid = _get_host_uuid()
-    cmd = "xe host-disable uuid=%(host_uuid)s" % locals()
-    _run_command(cmd)
-    cmd = "xe host-%(state)s uuid=%(host_uuid)s" % locals()
-    _run_command(cmd)
+    # Host must be disabled first
+    result = _run_command("xe host-disable")
+    if result:
+        raise pluginlib.PluginError(result)
+    # All running VMs must be shutdown
+    result = _run_command("xe vm-shutdown --multiple power-state=running")
+    if result:
+        raise pluginlib.PluginError(result)
+    cmds = {"reboot": "xe host-reboot", "startup": "xe host-power-on",
+            "shutdown": "xe host-shutdown"}
+    result = _run_command(cmds[state])
+    # Should be empty string
+    if result:
+        raise pluginlib.PluginError(result)
     return {"powerstate": state}
 
 
@@ -122,6 +132,12 @@ def host_reboot(self, arg_dict):
 def host_shutdown(self, arg_dict):
     """Reboots the host."""
     return _powerstate("shutdown")
+
+
+@jsonify
+def host_start(self, arg_dict):
+    """Starts the host."""
+    return _powerstate("startup")
 
 
 @jsonify
@@ -240,4 +256,5 @@ if __name__ == "__main__":
             {"host_data": host_data,
             "set_host_enabled": set_host_enabled,
             "host_shutdown": host_shutdown,
-            "host_reboot": host_reboot})
+            "host_reboot": host_reboot,
+            "host_start": host_start})
