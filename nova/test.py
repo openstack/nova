@@ -67,6 +67,37 @@ class skip_test(object):
         _skipper.__doc__ = func.__doc__
         return _skipper
 
+class skip_if(object):
+    """Decorator that skips a test if contition is true."""
+    def __init__(self, condition, msg):
+        self.condition = condition
+        self.message = msg
+
+    def __call__(self, func):
+        def _skipper(*args, **kw):
+            """Wrapped skipper function."""
+            if self.condition:
+                raise nose.SkipTest(self.message)
+        _skipper.__name__ = func.__name__
+        _skipper.__doc__ = func.__doc__
+        return _skipper
+
+
+class skip_unless(object):
+    """Decorator that skips a test if condition is false."""
+    def __init__(self, condition, msg):
+        self.condition = condition
+        self.message = msg
+
+    def __call__(self, func):
+        def _skipper(*args, **kw):
+            """Wrapped skipper function."""
+            if not self.condition:
+                raise nose.SkipTest(self.message)
+        _skipper.__name__ = func.__name__
+        _skipper.__doc__ = func.__doc__
+        return _skipper
+
 
 def skip_if_fake(func):
     """Decorator that skips a test if running in fake mode."""
