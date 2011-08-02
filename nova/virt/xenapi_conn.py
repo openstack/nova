@@ -339,6 +339,10 @@ class XenAPIConnection(driver.ComputeDriver):
         """Sets the specified host's ability to accept new instances."""
         return self._vmops.set_host_enabled(host, enabled)
 
+    def set_power_state(self, host, power_state):
+        """Reboots, shuts down or starts up the host."""
+        return self._vmops.set_power_state(host, power_state)
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""

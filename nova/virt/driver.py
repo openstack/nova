@@ -259,6 +259,10 @@ class ComputeDriver(object):
         """Sets the specified host's ability to accept new instances."""
         raise NotImplementedError()
 
+    def set_power_state(self, host, power_state):
+        """Reboots, shuts down or starts up the host."""
+        raise NotImplementedError()
+
     def plug_vifs(self, instance, network_info):
         """Plugs in VIFs to networks."""
         raise NotImplementedError()

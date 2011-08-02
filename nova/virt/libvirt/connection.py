@@ -1087,8 +1087,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def get_disks(self, instance_name):
         """
-        Note that this function takes an instance name, not an Instance, so
-        that it can be called by monitor.
+        Note that this function takes an instance name.
 
         Returns a list of all block devices for this domain.
         """
@@ -1129,8 +1128,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def get_interfaces(self, instance_name):
         """
-        Note that this function takes an instance name, not an Instance, so
-        that it can be called by monitor.
+        Note that this function takes an instance name.
 
         Returns a list of all network interfaces for this instance.
         """
@@ -1345,16 +1343,14 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def block_stats(self, instance_name, disk):
         """
-        Note that this function takes an instance name, not an Instance, so
-        that it can be called by monitor.
+        Note that this function takes an instance name.
         """
         domain = self._lookup_by_name(instance_name)
         return domain.blockStats(disk)
 
     def interface_stats(self, instance_name, interface):
         """
-        Note that this function takes an instance name, not an Instance, so
-        that it can be called by monitor.
+        Note that this function takes an instance name.
         """
         domain = self._lookup_by_name(instance_name)
         return domain.interfaceStats(interface)
@@ -1589,4 +1585,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
+        pass
+
+    def set_power_state(self, host, power_state):
+        """Reboots, shuts down or starts up the host."""
         pass
