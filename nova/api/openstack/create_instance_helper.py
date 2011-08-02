@@ -317,7 +317,7 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
         attributes = ('name', 'backup_type', 'rotation')
         return self._deserialize_image_action(node, attributes)
 
-    def _deserialize_image_action(self, node, allowed_attribtues):
+    def _deserialize_image_action(self, node, allowed_attributes):
         data = {}
         for attribute in allowed_attributes:
             value = node.getAttribute(attribute)
