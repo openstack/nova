@@ -101,9 +101,6 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
-flags.DEFINE_string('xenapi_image_service',
-                    'glance',
-                    'Where to get VM images: glance or objectstore.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
                    'The interval used for polling of coalescing vhds.'
@@ -191,13 +188,15 @@ class XenAPIConnection(driver.ComputeDriver):
         """Create VM instance"""
         self._vmops.spawn(instance, network_info)
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
         self._vmops.revert_resize(instance)
 
-    def finish_resize(self, instance, disk_info, network_info):
+    def finish_migration(self, instance, disk_info, network_info,
+                         resize_instance=False):
         """Completes a resize, turning on the migrated instance"""
-        self._vmops.finish_resize(instance, disk_info, network_info)
+        self._vmops.finish_migration(instance, disk_info, network_info,
+                                  resize_instance)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """

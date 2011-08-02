@@ -33,11 +33,12 @@ LOG = logging.getLogger('nova.tests.rpc')
 class RpcTestCase(test.TestCase):
     def setUp(self):
         super(RpcTestCase, self).setUp()
-        self.conn = rpc.Connection.instance(True)
+        self.conn = rpc.create_connection(True)
         self.receiver = TestReceiver()
-        self.consumer = rpc.TopicAdapterConsumer(connection=self.conn,
-                                            topic='test',
-                                            proxy=self.receiver)
+        self.consumer = rpc.create_consumer(self.conn,
+                                            'test',
+                                            self.receiver,
+                                            False)
         self.consumer.attach_to_eventlet()
         self.context = context.get_admin_context()
 
@@ -129,6 +130,8 @@ class RpcTestCase(test.TestCase):
                 """Calls echo in the passed queue"""
                 LOG.debug(_("Nested received %(queue)s, %(value)s")
                         % locals())
+                # TODO: so, it will replay the context and use the same REQID?
+                # that's bizarre.
                 ret = rpc.call(context,
                                queue,
                                {"method": "echo",
@@ -137,10 +140,11 @@ class RpcTestCase(test.TestCase):
                 return value
 
         nested = Nested()
-        conn = rpc.Connection.instance(True)
-        consumer = rpc.TopicAdapterConsumer(connection=conn,
-                                       topic='nested',
-                                       proxy=nested)
+        conn = rpc.create_connection(True)
+        consumer = rpc.create_consumer(conn,
+                                       'nested',
+                                       nested,
+                                       False)
         consumer.attach_to_eventlet()
         value = 42
         result = rpc.call(self.context,
@@ -148,47 +152,6 @@ class RpcTestCase(test.TestCase):
                                      "args": {"queue": "test",
                                               "value": value}})
         self.assertEqual(value, result)
-
-    def test_connectionpool_single(self):
-        """Test that ConnectionPool recycles a single connection."""
-        conn1 = rpc.ConnectionPool.get()
-        rpc.ConnectionPool.put(conn1)
-        conn2 = rpc.ConnectionPool.get()
-        rpc.ConnectionPool.put(conn2)
-        self.assertEqual(conn1, conn2)
-
-    def test_connectionpool_double(self):
-        """Test that ConnectionPool returns and reuses separate connections.
-
-        When called consecutively we should get separate connections and upon
-        returning them those connections should be reused for future calls
-        before generating a new connection.
-
-        """
-        conn1 = rpc.ConnectionPool.get()
-        conn2 = rpc.ConnectionPool.get()
-
-        self.assertNotEqual(conn1, conn2)
-        rpc.ConnectionPool.put(conn1)
-        rpc.ConnectionPool.put(conn2)
-
-        conn3 = rpc.ConnectionPool.get()
-        conn4 = rpc.ConnectionPool.get()
-        self.assertEqual(conn1, conn3)
-        self.assertEqual(conn2, conn4)
-
-    def test_connectionpool_limit(self):
-        """Test connection pool limit and connection uniqueness."""
-        max_size = FLAGS.rpc_conn_pool_size
-        conns = []
-
-        for i in xrange(max_size):
-            conns.append(rpc.ConnectionPool.get())
-
-        self.assertFalse(rpc.ConnectionPool.free_items)
-        self.assertEqual(rpc.ConnectionPool.current_size,
-                rpc.ConnectionPool.max_size)
-        self.assertEqual(len(set(conns)), max_size)
 
 
 class TestReceiver(object):

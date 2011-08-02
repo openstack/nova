@@ -19,11 +19,11 @@
 Test suite for VMWareAPI.
 """
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import test
 from nova import utils
-from nova.auth import manager
 from nova.compute import power_state
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests.vmwareapi import db_fakes
@@ -43,10 +43,9 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.flags(vmwareapi_host_ip='test_url',
                    vmwareapi_host_username='test_username',
                    vmwareapi_host_password='test_pass')
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake',
-                                             admin=True)
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         self.network = utils.import_object(FLAGS.network_manager)
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
@@ -77,14 +76,12 @@ class VMWareAPIVMTestCase(test.TestCase):
     def tearDown(self):
         super(VMWareAPIVMTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
 
     def _create_instance_in_the_db(self):
         values = {'name': 1,
                   'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
+                  'project_id': self.project_id,
+                  'user_id': self.user_id,
                   'image_ref': "1",
                   'kernel_id': "1",
                   'ramdisk_id': "1",

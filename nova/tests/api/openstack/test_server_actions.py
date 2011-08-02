@@ -8,6 +8,7 @@ import webob
 
 from nova import context
 from nova import db
+from nova import flags
 from nova import utils
 from nova.api.openstack import create_instance_helper
 from nova.compute import instance_types
@@ -16,6 +17,10 @@ import nova.db.api
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
+
+
+FLAGS = flags.FLAGS
+FLAGS.verbose = True
 
 
 def return_server_by_id(context, id):
@@ -104,16 +109,12 @@ class ServerActionsTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db.api, 'instance_update', instance_update)
 
+        self.allow_admin = FLAGS.allow_admin_api
+
         self.webreq = common.webob_factory('/v1.0/servers')
 
     def tearDown(self):
         self.stubs.UnsetAll()
-
-    def test_server_actions(self):
-        req = webob.Request.blank("/v1.0/servers/1/actions")
-        req.method = "GET"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 404)
 
     def test_server_change_password(self):
         body = {'changePassword': {'adminPass': '1234pass'}}
@@ -218,7 +219,7 @@ class ServerActionsTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 422)
+        self.assertEqual(res.status_int, 400)
         self.assertEqual(self.resize_called, False)
 
     def test_resize_raises_fails(self):
@@ -315,6 +316,132 @@ class ServerActionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
+
+    def test_create_backup(self):
+        """The happy path for creating backups"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_admin_api_off(self):
+        """The happy path for creating backups"""
+        FLAGS.allow_admin_api = False
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(501, response.status_int)
+
+    def test_create_backup_with_metadata(self):
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+                'metadata': {'123': 'asdf'},
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_no_name(self):
+        """Name is required for backups"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_rotation(self):
+        """Rotation is required for backup requests"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_backup_type(self):
+        """Backup Type (daily or weekly) is required for backup requests"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'rotation': 1,
+            },
+        }
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_bad_entity(self):
+        FLAGS.allow_admin_api = True
+
+        body = {'createBackup': 'go'}
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
 
 class ServerActionsTestV11(test.TestCase):
@@ -587,6 +714,26 @@ class ServerActionsTestV11(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
+
+    def test_create_backup(self):
+        """The happy path for creating backups"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
 
 
 class TestServerActionXMLDeserializer(test.TestCase):

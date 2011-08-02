@@ -20,6 +20,7 @@ import webob
 from webob import exc
 from xml.dom import minidom
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -29,7 +30,6 @@ from nova import utils
 
 from nova.compute import instance_types
 from nova.api.openstack import wsgi
-from nova.auth import manager as auth_manager
 
 
 LOG = logging.getLogger('nova.api.openstack.create_instance_helper')
@@ -80,7 +80,10 @@ class CreateInstanceHelper(object):
 
         key_name = None
         key_data = None
-        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
+        # TODO(vish): Key pair access should move into a common library
+        #             instead of being accessed directly from the db.
+        key_pairs = db.key_pair_get_all_by_user(context.elevated(),
+                                                context.user_id)
         if key_pairs:
             key_pair = key_pairs[0]
             key_name = key_pair['name']
@@ -300,6 +303,7 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
         action_deserializer = {
             'createImage': self._action_create_image,
+            'createBackup': self._action_create_backup,
         }.get(action_name, self.default)
 
         action_data = action_deserializer(action_node)
@@ -307,9 +311,15 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
         return {'body': {action_name: action_data}}
 
     def _action_create_image(self, node):
+        return self._deserialize_image_action(node, ('name',))
+
+    def _action_create_backup(self, node):
+        attributes = ('name', 'backup_type', 'rotation')
+        return self._deserialize_image_action(node, attributes)
+
+    def _deserialize_image_action(self, node, allowed_attributes):
         data = {}
-        attributes = ['name', 'image_type', 'backup_type', 'rotation']
-        for attribute in attributes:
+        for attribute in allowed_attributes:
             value = node.getAttribute(attribute)
             if value:
                 data[attribute] = value

@@ -18,11 +18,11 @@ import os
 import traceback
 
 from webob import exc
+from xml.dom import minidom
 import webob
 from xml.dom import minidom
 
 from nova import compute
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -30,13 +30,14 @@ from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import ips
+from nova.api.openstack import wsgi
+from nova.compute import instance_types
+from nova.scheduler import api as scheduler_api
+import nova.api.openstack
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
-from nova.api.openstack import wsgi
-import nova.api.openstack
-from nova.scheduler import api as scheduler_api
 
 
 LOG = logging.getLogger('nova.api.openstack.servers')
@@ -168,10 +169,77 @@ class Controller(object):
             'createImage': self._action_create_image,
         }
 
+        if FLAGS.allow_admin_api:
+            admin_actions = {
+                'createBackup': self._action_create_backup,
+            }
+            self.actions.update(admin_actions)
+
         for key in self.actions.keys():
             if key in body:
                 return self.actions[key](body, req, id)
         raise exc.HTTPNotImplemented()
+
+    def _action_create_backup(self, input_dict, req, instance_id):
+        """Backup a server instance.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
+
+        """
+        entity = input_dict["createBackup"]
+
+        try:
+            image_name = entity["name"]
+            backup_type = entity["backup_type"]
+            rotation = entity["rotation"]
+
+        except KeyError as missing_key:
+            msg = _("createBackup entity requires %s attribute") % missing_key
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        except TypeError:
+            msg = _("Malformed createBackup entity")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            rotation = int(rotation)
+        except ValueError:
+            msg = _("createBackup attribute 'rotation' must be an integer")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url,
+                                  'servers',
+                                  str(instance_id))
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ["nova.context"]
+        image = self.compute_api.backup(context,
+                                        instance_id,
+                                        image_name,
+                                        backup_type,
+                                        rotation,
+                                        extra_properties=props)
+
+        # build location of newly-created image entity
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
 
     def _action_create_image(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
@@ -410,6 +478,24 @@ class Controller(object):
                 error=item.error))
         return dict(actions=actions)
 
+    def resize(self, req, instance_id, flavor_id):
+        """Begin the resize process with given instance/flavor."""
+        context = req.environ["nova.context"]
+
+        try:
+            self.compute_api.resize(context, instance_id, flavor_id)
+        except exception.FlavorNotFound:
+            msg = _("Unable to locate requested flavor.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.CannotResizeToSameSize:
+            msg = _("Resize requires a change in size.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.CannotResizeToSmallerSize:
+            msg = _("Resizing to a smaller size is not supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return webob.Response(status_int=202)
+
 
 class ControllerV10(Controller):
 
@@ -443,14 +529,13 @@ class ControllerV10(Controller):
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
-        if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
-            flavor_id = input_dict['resize']['flavorId']
-            self.compute_api.resize(req.environ['nova.context'], id,
-                    flavor_id)
-        else:
-            LOG.exception(_("Missing 'flavorId' argument for resize"))
-            raise exc.HTTPUnprocessableEntity()
-        return webob.Response(status_int=202)
+        try:
+            flavor_id = input_dict["resize"]["flavorId"]
+        except (KeyError, TypeError):
+            msg = _("Resize requests require 'flavorId' attribute.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return self.resize(req, id, flavor_id)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -560,18 +645,12 @@ class ControllerV11(Controller):
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
-            if 'resize' in input_dict and 'flavorRef' in input_dict['resize']:
-                flavor_ref = input_dict['resize']['flavorRef']
-                flavor_id = common.get_id_from_href(flavor_ref)
-                self.compute_api.resize(req.environ['nova.context'], id,
-                        flavor_id)
-            else:
-                LOG.exception(_("Missing 'flavorRef' argument for resize"))
-                raise exc.HTTPUnprocessableEntity()
-        except Exception, e:
-            LOG.exception(_("Error in resize %s"), e)
-            raise exc.HTTPBadRequest()
-        return webob.Response(status_int=202)
+            flavor_ref = input_dict["resize"]["flavorRef"]
+        except (KeyError, TypeError):
+            msg = _("Resize requests require 'flavorRef' attribute.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return self.resize(req, id, flavor_ref)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -602,29 +681,19 @@ class ControllerV11(Controller):
         return webob.Response(status_int=202)
 
     def _action_create_image(self, input_dict, req, instance_id):
-        """Snapshot or backup a server instance and save the image.
+        """Snapshot a server instance."""
+        entity = input_dict.get("createImage", {})
 
-        Images now have an `image_type` associated with them, which can be
-        'snapshot' or the backup type, like 'daily' or 'weekly'.
+        try:
+            image_name = entity["name"]
 
-        If the image_type is backup-like, then the rotation factor can be
-        included and that will cause the oldest backups that exceed the
-        rotation factor to be deleted.
+        except KeyError:
+            msg = _("createImage entity requires name attribute")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        """
-        entity = input_dict.get('createImage', {})
-
-        def get_param(param):
-            try:
-                return entity[param]
-            except KeyError:
-                msg = _("Missing required param: %s") % param
-                raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        context = req.environ['nova.context']
-
-        image_name = get_param("name")
-        image_type = entity.get("image_type", "snapshot")
+        except TypeError:
+            msg = _("Malformed createImage entity")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         # preserve link to server in image properties
         server_ref = os.path.join(req.application_url,
@@ -639,36 +708,15 @@ class ControllerV11(Controller):
             msg = _("Invalid metadata")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        if image_type == "snapshot":
-            image = self.compute_api.snapshot(context,
-                                              instance_id,
-                                              image_name,
-                                              extra_properties=props)
-
-        elif image_type == "backup":
-            # NOTE(sirp): Unlike snapshot, backup is not a customer facing
-            # API call; rather, it's used by the internal backup scheduler
-            if not FLAGS.allow_admin_api:
-                msg = _("Admin API Required")
-                raise webob.exc.HTTPBadRequest(explanation=msg)
-
-            backup_type = get_param("backup_type")
-            rotation = int(get_param("rotation"))
-
-            image = self.compute_api.backup(context,
-                                            instance_id,
-                                            image_name,
-                                            backup_type,
-                                            rotation,
-                                            extra_properties=props)
-        else:
-            msg = _("Invalid image_type '%s'") % image_type
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+        context = req.environ['nova.context']
+        image = self.compute_api.snapshot(context,
+                                          instance_id,
+                                          image_name,
+                                          extra_properties=props)
 
         # build location of newly-created image entity
-        image_ref = os.path.join(req.application_url,
-                                 'images',
-                                 str(image['id']))
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
 
         resp = webob.Response(status_int=202)
         resp.headers['Location'] = image_ref

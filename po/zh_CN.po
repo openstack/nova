@@ -17,11 +17,6 @@ msgstr ""
 "X-Launchpad-Export-Date: 2011-07-23 05:12+0000\n"
 "X-Generator: Launchpad (build 13405)\n"
 
-#: ../nova/twistd.py:266
-#, python-format
-msgid "Starting %s"
-msgstr "启动 %s 中"
-
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
 #: ../nova/scheduler/simple.py:122
@@ -134,28 +129,6 @@ msgstr ""
 #, python-format
 msgid "compute.api::resume %s"
 msgstr ""
-
-#: ../nova/twistd.py:157
-msgid "Wrong number of arguments."
-msgstr "错误参数个数。"
-
-#: ../nova/twistd.py:209
-#, python-format
-msgid "pidfile %s does not exist. Daemon not running?\n"
-msgstr "pidfile %s　不存在，守护进程是否运行？\n"
-
-#: ../nova/twistd.py:221
-msgid "No such process"
-msgstr "没有该进程"
-
-#: ../nova/twistd.py:230 ../nova/service.py:224
-#, python-format
-msgid "Serving %s"
-msgstr "正在为 %s 服务"
-
-#: ../nova/twistd.py:262 ../nova/service.py:225
-msgid "Full set of FLAGS:"
-msgstr "FLAGS全集："
 
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:731 ../nova/virt/libvirt_conn.py:741
@@ -1785,34 +1758,6 @@ msgstr ""
 msgid "Got exception: %s"
 msgstr ""
 
-#: ../nova/compute/monitor.py:259
-#, python-format
-msgid "updating %s..."
-msgstr ""
-
-#: ../nova/compute/monitor.py:289
-msgid "unexpected error during update"
-msgstr ""
-
-#: ../nova/compute/monitor.py:356
-#, python-format
-msgid "Cannot get blockstats for \"%(disk)s\" on \"%(iid)s\""
-msgstr ""
-
-#: ../nova/compute/monitor.py:379
-#, python-format
-msgid "Cannot get ifstats for \"%(interface)s\" on \"%(iid)s\""
-msgstr ""
-
-#: ../nova/compute/monitor.py:414
-msgid "unexpected exception getting connection"
-msgstr ""
-
-#: ../nova/compute/monitor.py:429
-#, python-format
-msgid "Found instance: %s"
-msgstr ""
-
 #: ../nova/volume/san.py:67
 #, python-format
 msgid "Could not find iSCSI export  for volume %s"
@@ -2268,10 +2213,6 @@ msgstr ""
 
 #: ../nova/wsgi.py:147
 msgid "You must implement __call__"
-msgstr ""
-
-#: ../bin/nova-instancemonitor.py:55
-msgid "Starting instance monitor"
 msgstr ""
 
 #: ../bin/nova-dhcpbridge.py:58
