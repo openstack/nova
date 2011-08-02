@@ -648,37 +648,38 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def rescue_instance(self, context, instance_id):
+    def rescue_instance(self, context, instance_uuid):
         """Rescue an instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        LOG.audit(_('instance %s: rescuing'), instance_uuid, context=context)
         self.db.instance_set_state(context,
-                                   instance_id,
+                                   instance_uuid,
                                    power_state.NOSTATE,
                                    'rescuing')
         _update_state = lambda result: self._update_state_callback(
-                self, context, instance_id, result)
+                self, context, instance_uuid, result)
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.rescue(instance_ref, _update_state, network_info)
-        self._update_state(context, instance_id)
+        self._update_state(context, instance_uuid)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def unrescue_instance(self, context, instance_id):
+    def unrescue_instance(self, context, instance_uuid):
         """Rescue an instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_('instance %s: unrescuing'), instance_id, context=context)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        LOG.audit(_('instance %s: unrescuing'), instance_uuid,
+                context=context)
         self.db.instance_set_state(context,
-                                   instance_id,
+                                   instance_uuid,
                                    power_state.NOSTATE,
                                    'unrescuing')
         _update_state = lambda result: self._update_state_callback(
-                self, context, instance_id, result)
+                self, context, instance_uuid, result)
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.unrescue(instance_ref, _update_state, network_info)
-        self._update_state(context, instance_id)
+        self._update_state(context, instance_uuid)
 
     @staticmethod
     def _update_state_callback(self, context, instance_id, result):
