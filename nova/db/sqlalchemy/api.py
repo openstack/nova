@@ -63,7 +63,7 @@ def is_user_context(context):
 def authorize_project_context(context, project_id):
     """Ensures a request has permission to access the given project."""
     if is_user_context(context):
-        if not context.project:
+        if not context.project_id:
             raise exception.NotAuthorized()
         elif context.project_id != project_id:
             raise exception.NotAuthorized()
@@ -72,7 +72,7 @@ def authorize_project_context(context, project_id):
 def authorize_user_context(context, user_id):
     """Ensures a request has permission to access the given user."""
     if is_user_context(context):
-        if not context.user:
+        if not context.user_id:
             raise exception.NotAuthorized()
         elif context.user_id != user_id:
             raise exception.NotAuthorized()
@@ -1174,9 +1174,9 @@ def instance_get_active_by_window(context, begin, end=None):
     """Return instances that were continuously active over the given window"""
     session = get_session()
     query = session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
                    filter(models.Instance.launched_at < begin)
     if end:
@@ -1270,7 +1270,7 @@ def instance_get_project_vpn(context, project_id):
                    options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
@@ -1313,7 +1313,7 @@ def instance_get_fixed_addresses_v6(context, instance_id):
         # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
         prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
         # return list containing ipv6 address for each tuple
-        return [ipv6.to_global_ipv6(*t) for t in prefix_mac_tuples]
+        return [ipv6.to_global(*t) for t in prefix_mac_tuples]
 
 
 @require_context
@@ -3264,8 +3264,8 @@ def agent_build_destroy(context, agent_build_id):
     with session.begin():
         session.query(models.AgentBuild).\
                 filter_by(id=agent_build_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -3314,7 +3314,7 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 def instance_type_extra_specs_get_item(context, instance_type_id, key):
     session = get_session()
 
-    sppec_result = session.query(models.InstanceTypeExtraSpecs).\
+    spec_result = session.query(models.InstanceTypeExtraSpecs).\
                     filter_by(instance_type_id=instance_type_id).\
                     filter_by(key=key).\
                     filter_by(deleted=False).\

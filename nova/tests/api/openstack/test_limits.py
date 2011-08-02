@@ -920,7 +920,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                 "verb": "POST",
                 "remaining": 2,
                 "unit": "MINUTE",
-                "resetTime": 1311272226
+                "resetTime": 1311272226,
             },
             {
                 "URI": "*/servers",
@@ -929,7 +929,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                 "verb": "POST",
                 "remaining": 10,
                 "unit": "DAY",
-                "resetTime": 1311272226
+                "resetTime": 1311272226,
             },
         ]
         self.absolute_limits = {
@@ -954,7 +954,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                                 "verb": "POST",
                                 "remaining": 2,
                                 "unit": "MINUTE",
-                                "next-available": "2011-07-21T18:17:06Z"
+                                "next-available": "2011-07-21T18:17:06Z",
                             },
                         ]
                     },
@@ -967,7 +967,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
                                 "verb": "POST",
                                 "remaining": 10,
                                 "unit": "DAY",
-                                "next-available": "2011-07-21T18:17:06Z"
+                                "next-available": "2011-07-21T18:17:06Z",
                             },
                         ]
                     },
@@ -989,7 +989,7 @@ class LimitsViewBuilderV11Test(test.TestCase):
         expected_limits = {
             "limits": {
                 "rate": [],
-                "absolute": {}
+                "absolute": {},
             }
         }
 
@@ -1022,7 +1022,7 @@ class LimitsXMLSerializationTest(test.TestCase):
                                 "verb": "POST",
                                 "remaining": 2,
                                 "unit": "MINUTE",
-                                "next-available": "2011-12-15T22:42:45Z"
+                                "next-available": "2011-12-15T22:42:45Z",
                             },
                         ]
                     },
@@ -1083,7 +1083,7 @@ class LimitsXMLSerializationTest(test.TestCase):
         fixture = {
             "limits": {
                 "rate": [],
-                "absolute": {}
+                "absolute": {},
             }
         }
 

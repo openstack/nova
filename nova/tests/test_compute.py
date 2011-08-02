@@ -19,10 +19,6 @@
 Tests For Compute
 """
 
-import mox
-import stubout
-
-from nova.auth import manager
 from nova import compute
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
@@ -67,10 +63,9 @@ class ComputeTestCase(test.TestCase):
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_api = compute.API()
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake')
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.RequestContext('fake', 'fake', False)
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
@@ -78,19 +73,14 @@ class ComputeTestCase(test.TestCase):
 
         self.stubs.Set(nova.image.fake._FakeImageService, 'show', fake_show)
 
-    def tearDown(self):
-        self.manager.delete_user(self.user)
-        self.manager.delete_project(self.project)
-        super(ComputeTestCase, self).tearDown()
-
     def _create_instance(self, params={}):
         """Create a test instance"""
         inst = {}
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
-        inst['user_id'] = self.user.id
-        inst['project_id'] = self.project.id
+        inst['user_id'] = self.user_id
+        inst['project_id'] = self.project_id
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
@@ -115,8 +105,8 @@ class ComputeTestCase(test.TestCase):
     def _create_group(self):
         values = {'name': 'testgroup',
                   'description': 'testgroup',
-                  'user_id': self.user.id,
-                  'project_id': self.project.id}
+                  'user_id': self.user_id,
+                  'project_id': self.project_id}
         return db.security_group_create(self.context, values)
 
     def _get_dummy_instance(self):
@@ -350,8 +340,8 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.create')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project.id)
-        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
@@ -374,8 +364,8 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.delete')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project.id)
-        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
@@ -420,7 +410,7 @@ class ComputeTestCase(test.TestCase):
         def fake(*args, **kwargs):
             pass
 
-        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
         context = self.context.elevated()
         instance_id = self._create_instance()
@@ -457,8 +447,8 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.resize.prep')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project.id)
-        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
@@ -531,8 +521,8 @@ class ComputeTestCase(test.TestCase):
         def fake(*args, **kwargs):
             pass
 
-        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
-        self.stubs.Set(self.compute.driver, 'revert_resize', fake)
+        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
+        self.stubs.Set(self.compute.driver, 'revert_migration', fake)
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
 
         self.compute.run_instance(self.context, instance_id)
@@ -583,8 +573,9 @@ class ComputeTestCase(test.TestCase):
         the same host"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
+        inst_ref = db.instance_get(self.context, instance_id)
         self.assertRaises(exception.Error, self.compute.prep_resize,
-                self.context, instance_id, 1)
+                self.context, inst_ref['uuid'], 1)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_migrate(self):
@@ -624,7 +615,6 @@ class ComputeTestCase(test.TestCase):
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
         volmock = self.mox.CreateMock(self.volume_manager)
-        netmock = self.mox.CreateMock(self.network_manager)
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
@@ -632,12 +622,11 @@ class ComputeTestCase(test.TestCase):
         for i in range(len(i_ref['volumes'])):
             vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
-        netmock.setup_compute_network(c, i_ref['id'])
+        drivermock.plug_vifs(i_ref, [])
         drivermock.ensure_filtering_rules_for_instance(i_ref)
 
         self.compute.db = dbmock
         self.compute.volume_manager = volmock
-        self.compute.network_manager = netmock
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
@@ -652,18 +641,16 @@ class ComputeTestCase(test.TestCase):
 
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
-        netmock = self.mox.CreateMock(self.network_manager)
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
         compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
-        netmock.setup_compute_network(c, i_ref['id'])
+        drivermock.plug_vifs(i_ref, [])
         drivermock.ensure_filtering_rules_for_instance(i_ref)
 
         self.compute.db = dbmock
-        self.compute.network_manager = netmock
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
@@ -684,18 +671,20 @@ class ComputeTestCase(test.TestCase):
         dbmock = self.mox.CreateMock(db)
         netmock = self.mox.CreateMock(self.network_manager)
         volmock = self.mox.CreateMock(self.volume_manager)
+        drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             volmock.setup_compute_volume(c, i_ref['volumes'][i]['id'])
         for i in range(FLAGS.live_migration_retry_count):
-            netmock.setup_compute_network(c, i_ref['id']).\
+            drivermock.plug_vifs(i_ref, []).\
                 AndRaise(exception.ProcessExecutionError())
 
         self.compute.db = dbmock
         self.compute.network_manager = netmock
         self.compute.volume_manager = volmock
+        self.compute.driver = drivermock
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ProcessExecutionError,
@@ -830,7 +819,7 @@ class ComputeTestCase(test.TestCase):
         for v in i_ref['volumes']:
             self.compute.volume_manager.remove_compute_volume(c, v['id'])
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
-        self.compute.driver.unfilter_instance(i_ref)
+        self.compute.driver.unfilter_instance(i_ref, [])
 
         # executing
         self.mox.ReplayAll()
@@ -850,7 +839,6 @@ class ComputeTestCase(test.TestCase):
 
     def test_run_kill_vm(self):
         """Detect when a vm is terminated behind the scenes"""
-        self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(compute_manager.ComputeManager,
                 '_report_driver_status', nop_report_driver_status)
 

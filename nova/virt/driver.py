@@ -92,7 +92,7 @@ class ComputeDriver(object):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
-    def destroy(self, instance, cleanup=True):
+    def destroy(self, instance, network_info, cleanup=True):
         """Destroy (shutdown and delete) the specified instance.
 
         The given parameter is an instance of nova.compute.service.Instance,
@@ -108,7 +108,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot specified VM"""
         raise NotImplementedError()
 
@@ -149,11 +149,12 @@ class ComputeDriver(object):
         """Create snapshot from a running VM instance."""
         raise NotImplementedError()
 
-    def finish_resize(self, instance, disk_info):
+    def finish_migration(self, instance, disk_info, network_info,
+                         resize_instance):
         """Completes a resize, turning on the migrated instance"""
         raise NotImplementedError()
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
         raise NotImplementedError()
 
@@ -173,11 +174,11 @@ class ComputeDriver(object):
         """resume the specified instance"""
         raise NotImplementedError()
 
-    def rescue(self, instance, callback):
+    def rescue(self, instance, callback, network_info):
         """Rescue the specified instance"""
         raise NotImplementedError()
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""
         raise NotImplementedError()
 
@@ -251,7 +252,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def unfilter_instance(self, instance):
+    def unfilter_instance(self, instance, network_info):
         """Stop filtering instance"""
         raise NotImplementedError()
 
@@ -279,4 +280,8 @@ class ComputeDriver(object):
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
+        raise NotImplementedError()
+
+    def plug_vifs(self, instance, network_info):
+        """Plugs in VIFs to networks."""
         raise NotImplementedError()
