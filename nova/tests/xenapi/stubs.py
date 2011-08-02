@@ -230,10 +230,14 @@ def stub_out_vm_methods(stubs):
     def fake_spawn_rescue(self, inst):
         inst._rescue = False
 
+    def fake_revert_migration(self, inst):
+        pass
+
     stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
     stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
     stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
     stubs.Set(vmops.VMOps, "spawn_rescue", fake_spawn_rescue)
+    stubs.Set(vmops.VMOps, "revert_migration", fake_revert_migration)
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):

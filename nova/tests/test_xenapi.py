@@ -669,6 +669,14 @@ class XenAPIVMTestCase(test.TestCase):
             self.conn.spawn(instance, network_info)
         return instance
 
+    def test_revert_migration(self):
+        instance = self._create_instance()
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        stubs.stubout_loopingcall_start(self.stubs)
+        conn = xenapi_conn.get_connection(False)
+        conn.revert_migration(instance)
+
+
 
 class XenAPIDiffieHellmanTestCase(test.TestCase):
     """Unit tests for Diffie-Hellman code."""
@@ -840,6 +848,7 @@ class XenAPIMigrateInstance(test.TestCase):
         # Resize instance would be determined by the compute call
         conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
                            network_info, resize_instance=False)
+
 
 
 class XenAPIImageTypeTestCase(test.TestCase):
