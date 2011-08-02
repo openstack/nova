@@ -99,8 +99,8 @@ class LibvirtOpenVswitchDriver(VIFDriver):
     def plug(self, instance, network, mapping):
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
+        iface_id = "nova-" + vif_id
         if not linux_net._device_exists(dev):
-            iface_id = "nova-" + vif_id
             utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
             utils.execute('sudo', 'ip', 'link', 'set', dev, 'up')
         utils.execute('sudo', 'ovs-vsctl', '--', '--may-exist', 'add-port',
