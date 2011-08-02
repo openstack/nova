@@ -14,6 +14,7 @@
 #    under the License.
 
 import base64
+import os
 import traceback
 
 from webob import exc
@@ -154,21 +155,93 @@ class Controller(object):
 
     @scheduler_api.redirect_handler
     def action(self, req, id, body):
-        """Multi-purpose method used to reboot, rebuild, or
-        resize a server"""
+        """Multi-purpose method used to take actions on a server"""
 
-        actions = {
+        self.actions = {
             'changePassword': self._action_change_password,
             'reboot': self._action_reboot,
             'resize': self._action_resize,
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,}
+            'createImage': self._action_create_image,
+        }
 
-        for key in actions.keys():
+        if FLAGS.allow_admin_api:
+            admin_actions = {
+                'createBackup': self._action_create_backup,
+            }
+            self.actions.update(admin_actions)
+
+        for key in self.actions.keys():
             if key in body:
-                return actions[key](body, req, id)
+                return self.actions[key](body, req, id)
+
         raise exc.HTTPNotImplemented()
+
+    def _action_create_backup(self, input_dict, req, instance_id):
+        """Backup a server instance.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
+
+        """
+        entity = input_dict["createBackup"]
+
+        try:
+            image_name = entity["name"]
+            backup_type = entity["backup_type"]
+            rotation = entity["rotation"]
+
+        except KeyError as missing_key:
+            msg = _("createBackup entity requires %s attribute") % missing_key
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        except TypeError:
+            msg = _("Malformed createBackup entity")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            rotation = int(rotation)
+        except ValueError:
+            msg = _("createBackup attribute 'rotation' must be an integer")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url,
+                                  'servers',
+                                  str(instance_id))
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ["nova.context"]
+        image = self.compute_api.backup(context,
+                                        instance_id,
+                                        image_name,
+                                        backup_type,
+                                        rotation,
+                                        extra_properties=props)
+
+        # build location of newly-created image entity
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
+
+    def _action_create_image(self, input_dict, req, id):
+        return exc.HTTPNotImplemented()
 
     def _action_change_password(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
@@ -606,6 +679,48 @@ class ControllerV11(Controller):
             raise exc.HTTPConflict(explanation=msg)
 
         return webob.Response(status_int=202)
+
+    def _action_create_image(self, input_dict, req, instance_id):
+        """Snapshot a server instance."""
+        entity = input_dict.get("createImage", {})
+
+        try:
+            image_name = entity["name"]
+
+        except KeyError:
+            msg = _("createImage entity requires name attribute")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        except TypeError:
+            msg = _("Malformed createImage entity")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url,
+                                  'servers',
+                                  str(instance_id))
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ['nova.context']
+        image = self.compute_api.snapshot(context,
+                                          instance_id,
+                                          image_name,
+                                          extra_properties=props)
+
+        # build location of newly-created image entity
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11

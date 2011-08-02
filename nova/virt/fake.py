@@ -340,8 +340,7 @@ class FakeConnection(driver.ComputeDriver):
         only useful for giving back to this layer as a parameter to
         disk_stats).  These IDs only need to be unique for a given instance.
 
-        Note that this function takes an instance ID, not a
-        compute.service.Instance, so that it can be called by compute.monitor.
+        Note that this function takes an instance ID.
         """
         return ['A_DISK']
 
@@ -353,8 +352,7 @@ class FakeConnection(driver.ComputeDriver):
         interface_stats).  These IDs only need to be unique for a given
         instance.
 
-        Note that this function takes an instance ID, not a
-        compute.service.Instance, so that it can be called by compute.monitor.
+        Note that this function takes an instance ID.
         """
         return ['A_VIF']
 
@@ -374,8 +372,7 @@ class FakeConnection(driver.ComputeDriver):
         having to do the aggregation.  On those platforms, this method is
         unused.
 
-        Note that this function takes an instance ID, not a
-        compute.service.Instance, so that it can be called by compute.monitor.
+        Note that this function takes an instance ID.
         """
         return [0L, 0L, 0L, 0L, None]
 
@@ -395,8 +392,7 @@ class FakeConnection(driver.ComputeDriver):
         having to do the aggregation.  On those platforms, this method is
         unused.
 
-        Note that this function takes an instance ID, not a
-        compute.service.Instance, so that it can be called by compute.monitor.
+        Note that this function takes an instance ID.
         """
         return [0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L]
 
