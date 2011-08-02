@@ -197,9 +197,6 @@ class ControllerV11(Controller):
     def create(self, *args, **kwargs):
         raise webob.exc.HTTPMethodNotAllowed()
 
-    def create(self, *args, **kwargs):
-        raise webob.exc.HTTPMethodNotAllowed()
-
 
 class ImageXMLSerializer(wsgi.XMLDictSerializer):
 

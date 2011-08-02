@@ -20,7 +20,6 @@ import traceback
 from webob import exc
 from xml.dom import minidom
 import webob
-from xml.dom import minidom
 
 from nova import compute
 from nova import exception
@@ -178,6 +177,7 @@ class Controller(object):
         for key in self.actions.keys():
             if key in body:
                 return self.actions[key](body, req, id)
+
         raise exc.HTTPNotImplemented()
 
     def _action_create_backup(self, input_dict, req, instance_id):
