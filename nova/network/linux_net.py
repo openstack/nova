@@ -840,10 +840,10 @@ class LinuxNetInterfaceDriver(object):
 class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     def plug(self, network):
-        self.driver.ensure_vlan_bridge(network['vlan'],
-                                       network['bridge'],
-                                       network['bridge_interface'],
-                                       network)
+        ensure_vlan_bridge(network['vlan'],
+                           network['bridge'],
+                           network['bridge_interface'],
+                           network)
         return network['bridge']
 
     def unplug(self, network):
