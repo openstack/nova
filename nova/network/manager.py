@@ -659,71 +659,64 @@ class NetworkManager(manager.SchedulerDependentManager):
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
-        fixed_net = netaddr.IPNetwork(cidr)
+        req_cidrs = self._validate_cidrs(context, cidr, num_networks, network_size)
+
         if FLAGS.use_ipv6:
             fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
             significant_bits_v6 = 64
             network_size_v6 = 1 << 64
 
-        for index in range(num_networks):
-            start = index * network_size
-            significant_bits = 32 - int(math.log(network_size, 2))
-            cidr = '%s/%s' % (fixed_net[start], significant_bits)
-            project_net = netaddr.IPNetwork(cidr)
+        count = 0
+        for req_cidr in req_cidrs:
+            count = count + 1
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
             net['dns1'] = dns1
             net['dns2'] = dns2
-            net['cidr'] = cidr
-            net['multi_host'] = multi_host
-            net['netmask'] = str(project_net.netmask)
-            net['gateway'] = str(project_net[1])
-            net['broadcast'] = str(project_net.broadcast)
-            net['dhcp_start'] = str(project_net[2])
+            net['cidr'] = str(req_cidr)
+            net['netmask'] = str(req_cidr.netmask)
+            net['gateway'] = str(req_cidr[1])
+            net['broadcast'] = str(req_cidr.broadcast)
+            net['dhcp_start'] = str(req_cidr[2])
             if num_networks > 1:
-                net['label'] = '%s_%d' % (label, index)
+                net['label'] = '%s_%d' % (label, count)
             else:
                 net['label'] = label
 
             if FLAGS.use_ipv6:
-                start_v6 = index * network_size_v6
+                start_v6 = count * network_size_v6
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
-
                 project_net_v6 = netaddr.IPNetwork(cidr_v6)
-
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
                     net['gateway_v6'] = str(gateway_v6)
                 else:
                     net['gateway_v6'] = str(project_net_v6[1])
-
                 net['netmask_v6'] = str(project_net_v6._prefixlen)
 
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
                 del net['dns1']
                 del net['dns2']
-                vlan = kwargs['vlan_start'] + index
-                net['vpn_private_address'] = str(project_net[2])
-                net['dhcp_start'] = str(project_net[3])
+                vlan = kwargs['vlan_start'] + count
+                net['vpn_private_address'] = str(req_cidr[2])
+                net['dhcp_start'] = str(req_cidr[3])
                 net['vlan'] = vlan
                 net['bridge'] = 'br%s' % vlan
 
                 # NOTE(vish): This makes ports unique accross the cloud, a more
                 #             robust solution would be to make them uniq per ip
-                net['vpn_public_port'] = kwargs['vpn_start'] + index
+                net['vpn_public_port'] = kwargs['vpn_start'] + count
 
-            # None if network with cidr or cidr_v6 already exists
             network = self.db.network_create_safe(context, net)
-
             if network:
                 self._create_fixed_ips(context, network['id'])
             else:
-                raise ValueError(_('Network with cidr %s already exists') %
-                                   cidr)
+                msg = "Error creating cidr %s, see log"
+                raise ValueError(_(msg) % str(cidr))
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201

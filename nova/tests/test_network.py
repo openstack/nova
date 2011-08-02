@@ -361,21 +361,36 @@ class CommonNetworkTestCase(test.TestCase):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
-                                      'cidr': '192.168.0.0/8'}])
+        fakecidr= [{'id': 1, 'cidr': '192.168.0.0/8'}]
+        manager.db.network_get_all(ctxt).AndReturn(fakecidr)
         self.mox.ReplayAll()
         args = [None, '192.168.0.0/24', 1, 256]
         # ValueError: requested cidr (192.168.0.0/24) conflicts
         #             with existing supernet
         self.assertRaises(ValueError, manager._validate_cidrs, *args)
-#
-#    def test_create_networks_cidr_already_used(self):
-#        mockany = self.mox.CreateMockAnything()
-#        manager = self.FakeNetworkManager()
-#        self.mox.StubOutWithMock(manager.db, 'network_get_by_cidr')
-#        manager.db.network_get_by_cidr(mox.IgnoreArg(), '192.168.0.0/24')\
-#                                       .AndReturn(mockany)
-#        self.mox.ReplayAll()
-#        args = [None, 'foo', '192.168.0.0/24', None, 1, 256,
-#                 'fd00::/48', None, None, None]
-#        self.assertRaises(ValueError, manager.create_networks, *args)
+
+    def test_create_networks(self):
+        cidr = '192.168.0.0/24'
+        manager = self.FakeNetworkManager()
+        self.mox.StubOutWithMock(manager.db, 'network_create_safe')
+        ignore = mox.IgnoreArg()
+        fakecidr= {'id': 1, 'cidr': cidr}
+        manager.db.network_create_safe(ignore, ignore).AndReturn(fakecidr)
+        self.mox.StubOutWithMock(manager, '_create_fixed_ips')
+        manager._create_fixed_ips(ignore, ignore).AndReturn('foo')
+        self.mox.ReplayAll()
+        args = [None, 'foo', cidr, None, 1, 256, 'fd00::/48', None, None,
+                None]
+        # making it to the end, without err, is enough validation
+        self.assertEqual(manager.create_networks(*args), None)
+
+    def test_create_networks_cidr_already_used(self):
+        manager = self.FakeNetworkManager()
+        self.mox.StubOutWithMock(manager.db, 'network_get_all')
+        ctxt = mox.IgnoreArg()
+        fakecidr= [{'id': 1, 'cidr': '192.168.0.0/24'}]
+        manager.db.network_get_all(ctxt).AndReturn(fakecidr)
+        self.mox.ReplayAll()
+        args = [None, 'foo', '192.168.0.0/24', None, 1, 256,
+                 'fd00::/48', None, None, None]
+        self.assertRaises(ValueError, manager.create_networks, *args)
