@@ -496,8 +496,8 @@ class ComputeTestCase(test.TestCase):
         db.instance_update(self.context, instance_id,
                 {'instance_type_id': inst_type['id']})
 
-        self.assertRaises(exception.ApiError, self.compute_api.resize,
-                context, instance_id, 1)
+        self.assertRaises(exception.CannotResizeToSmallerSize,
+                          self.compute_api.resize, context, instance_id, 1)
 
         self.compute.terminate_instance(context, instance_id)
 
@@ -508,8 +508,8 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.run_instance(self.context, instance_id)
 
-        self.assertRaises(exception.ApiError, self.compute_api.resize,
-                context, instance_id, 1)
+        self.assertRaises(exception.CannotResizeToSameSize,
+                          self.compute_api.resize, context, instance_id, 1)
 
         self.compute.terminate_instance(context, instance_id)
 

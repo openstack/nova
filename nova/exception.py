@@ -692,3 +692,11 @@ class PasteConfigNotFound(NotFound):
 
 class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
+
+
+class CannotResizeToSameSize(NovaException):
+    message = _("When resizing, instances must change size!")
+
+
+class CannotResizeToSmallerSize(NovaException):
+    message = _("Resizing to a smaller size is not supported.")
