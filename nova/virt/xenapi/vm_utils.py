@@ -369,30 +369,17 @@ class VMHelper(HelperBase):
     @classmethod
     def fetch_image(cls, session, instance_id, image, user_id, project_id,
                     image_type):
-        """
-        image_type is interpreted as an ImageType instance
-        Related flags:
-            xenapi_image_service = ['glance', 'objectstore']
-            glance_address = 'address for glance services'
-            glance_port = 'port for glance services'
+        """Fetch image from glance based on image type.
 
-        Returns: A single filename if image_type is KERNEL_RAMDISK
+        Returns: A single filename if image_type is KERNEL or RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-
-        if FLAGS.xenapi_image_service == 'glance':
-            return cls._fetch_image_glance(session, instance_id,
-                                           image, image_type)
+        if image_type == ImageType.DISK_VHD:
+            return cls._fetch_image_glance_vhd(
+                session, instance_id, image, image_type)
         else:
-            # TODO(vish): this shouldn't be used anywhere anymore and
-            #             can probably be removed
-            from nova.auth.manager import AuthManager
-            manager = AuthManager()
-            access = manager.get_access_key(user_id, project_id)
-            secret = manager.get_user(user_id).secret
-            return cls._fetch_image_objectstore(session, instance_id, image,
-                                                access, secret,
-                                                image_type)
+            return cls._fetch_image_glance_disk(
+                session, instance_id, image, image_type)
 
     @classmethod
     def _fetch_image_glance_vhd(cls, session, instance_id, image,
@@ -566,65 +553,10 @@ class VMHelper(HelperBase):
             else:
                 return ImageType.DISK_RAW
 
-        # FIXME(sirp): can we unify the ImageService and xenapi_image_service
-        # abstractions?
-        if FLAGS.xenapi_image_service == 'glance':
-            image_type = determine_from_glance()
-        else:
-            image_type = determine_from_instance()
+        image_type = determine_from_glance()
 
         log_disk_format(image_type)
         return image_type
-
-    @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, image_type):
-        """Fetch image from glance based on image type.
-
-        Returns: A single filename if image_type is KERNEL or RAMDISK
-                 A list of dictionaries that describe VDIs, otherwise
-        """
-        if image_type == ImageType.DISK_VHD:
-            return cls._fetch_image_glance_vhd(
-                session, instance_id, image, image_type)
-        else:
-            return cls._fetch_image_glance_disk(
-                session, instance_id, image, image_type)
-
-    @classmethod
-    def _fetch_image_objectstore(cls, session, instance_id, image, access,
-                                 secret, image_type):
-        """Fetch an image from objectstore.
-
-        Returns: A single filename if image_type is KERNEL or RAMDISK
-                 A list of dictionaries that describe VDIs, otherwise
-        """
-        url = "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
-                                                 image)
-        LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
-        if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
-            fn = 'get_kernel'
-        else:
-            fn = 'get_vdi'
-        args = {}
-        args['src_url'] = url
-        args['username'] = access
-        args['password'] = secret
-        args['add_partition'] = 'false'
-        args['raw'] = 'false'
-        if not image_type in (ImageType.KERNEL, ImageType.RAMDISK):
-            args['add_partition'] = 'true'
-            if image_type == ImageType.DISK_RAW:
-                args['raw'] = 'true'
-        task = session.async_call_plugin('objectstore', fn, args)
-        vdi_uuid = None
-        filename = None
-        if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
-            filename = session.wait_for_task(task, instance_id)
-        else:
-            vdi_uuid = session.wait_for_task(task, instance_id)
-        return [dict(vdi_type=ImageType.to_string(image_type),
-                     vdi_uuid=vdi_uuid,
-                     file=filename)]
 
     @classmethod
     def determine_is_pv(cls, session, instance_id, vdi_ref, disk_image_type,
@@ -633,68 +565,26 @@ class VMHelper(HelperBase):
         Determine whether the VM will use a paravirtualized kernel or if it
         will use hardware virtualization.
 
-            1. Objectstore (any image type):
-               We use plugin to figure out whether the VDI uses PV
+            1. Glance (VHD): then we use `os_type`, raise if not set
 
-            2. Glance (VHD): then we use `os_type`, raise if not set
-
-            3. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
+            2. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
                available
 
-            4. Glance (DISK): pv is assumed
-        """
-        if FLAGS.xenapi_image_service == 'glance':
-            # 2, 3, 4: Glance
-            return cls._determine_is_pv_glance(
-              session, vdi_ref, disk_image_type, os_type)
-        else:
-            # 1. Objecstore
-            return cls._determine_is_pv_objectstore(session, instance_id,
-                                                    vdi_ref)
-
-    @classmethod
-    def _determine_is_pv_objectstore(cls, session, instance_id, vdi_ref):
-        LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
-        fn = "is_vdi_pv"
-        args = {}
-        args['vdi-ref'] = vdi_ref
-        task = session.async_call_plugin('objectstore', fn, args)
-        pv_str = session.wait_for_task(task, instance_id)
-        pv = None
-        if pv_str.lower() == 'true':
-            pv = True
-        elif pv_str.lower() == 'false':
-            pv = False
-        LOG.debug(_("PV Kernel in VDI:%s"), pv)
-        return pv
-
-    @classmethod
-    def _determine_is_pv_glance(cls, session, vdi_ref, disk_image_type,
-                                os_type):
-        """
-        For a Glance image, determine if we need paravirtualization.
-
-        The relevant scenarios are:
-            2. Glance (VHD): then we use `os_type`, raise if not set
-
-            3. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
-               available
-
-            4. Glance (DISK): pv is assumed
+            3. Glance (DISK): pv is assumed
         """
 
         LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
         if disk_image_type == ImageType.DISK_VHD:
-            # 2. VHD
+            # 1. VHD
             if os_type == 'windows':
                 is_pv = False
             else:
                 is_pv = True
         elif disk_image_type == ImageType.DISK_RAW:
-            # 3. RAW
+            # 2. RAW
             is_pv = with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
         elif disk_image_type == ImageType.DISK:
-            # 4. Disk
+            # 3. Disk
             is_pv = True
         else:
             raise exception.Error(_("Unknown image format %(disk_image_type)s")
