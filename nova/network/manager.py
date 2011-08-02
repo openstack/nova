@@ -666,9 +666,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             significant_bits_v6 = 64
             network_size_v6 = 1 << 64
 
-        count = 0
-        for req_cidr in req_cidrs:
-            count = count + 1
+        for index in range(len(req_cidrs)):
+            req_cidr = req_cidrs[index]
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
@@ -680,12 +679,12 @@ class NetworkManager(manager.SchedulerDependentManager):
             net['broadcast'] = str(req_cidr.broadcast)
             net['dhcp_start'] = str(req_cidr[2])
             if num_networks > 1:
-                net['label'] = '%s_%d' % (label, count)
+                net['label'] = '%s_%d' % (label, index)
             else:
                 net['label'] = label
 
             if FLAGS.use_ipv6:
-                start_v6 = count * network_size_v6
+                start_v6 = index * network_size_v6
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
@@ -701,7 +700,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 # this bit here is for vlan-manager
                 del net['dns1']
                 del net['dns2']
-                vlan = kwargs['vlan_start'] + count
+                vlan = kwargs['vlan_start'] + index
                 net['vpn_private_address'] = str(req_cidr[2])
                 net['dhcp_start'] = str(req_cidr[3])
                 net['vlan'] = vlan
@@ -709,7 +708,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
                 # NOTE(vish): This makes ports unique accross the cloud, a more
                 #             robust solution would be to make them uniq per ip
-                net['vpn_public_port'] = kwargs['vpn_start'] + count
+                net['vpn_public_port'] = kwargs['vpn_start'] + index
 
             network = self.db.network_create_safe(context, net)
             if network:

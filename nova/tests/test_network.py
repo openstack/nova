@@ -254,7 +254,9 @@ class CommonNetworkTestCase(test.TestCase):
                 raise exception.NetworkNotFoundForCidr()
 
             def network_create_safe(self, context, net):
-                return {'foo': 'bar'}
+                fakenet = {}
+                fakenet['id'] = 999
+                return fakenet
 
             def network_get_all(self, context):
                 raise exception.NoNetworksFound()
@@ -265,6 +267,9 @@ class CommonNetworkTestCase(test.TestCase):
 
         def deallocate_fixed_ip(self, context, address):
             self.deallocate_called = address
+
+    def fake_create_fixed_ips(self, context, network_id):
+        return None 
 
     def test_remove_fixed_ip_from_instance(self):
         manager = self.FakeNetworkManager()
@@ -372,16 +377,11 @@ class CommonNetworkTestCase(test.TestCase):
     def test_create_networks(self):
         cidr = '192.168.0.0/24'
         manager = self.FakeNetworkManager()
-        self.mox.StubOutWithMock(manager.db, 'network_create_safe')
-        ignore = mox.IgnoreArg()
-        fakecidr= {'id': 1, 'cidr': cidr}
-        manager.db.network_create_safe(ignore, ignore).AndReturn(fakecidr)
-        self.mox.StubOutWithMock(manager, '_create_fixed_ips')
-        manager._create_fixed_ips(ignore, ignore).AndReturn('foo')
-        self.mox.ReplayAll()
+        self.stubs.Set(manager, '_create_fixed_ips',
+                                self.fake_create_fixed_ips)
         args = [None, 'foo', cidr, None, 1, 256, 'fd00::/48', None, None,
                 None]
-        # making it to the end, without err, is enough validation
+        result = manager.create_networks(*args)
         self.assertEqual(manager.create_networks(*args), None)
 
     def test_create_networks_cidr_already_used(self):
@@ -394,3 +394,12 @@ class CommonNetworkTestCase(test.TestCase):
         args = [None, 'foo', '192.168.0.0/24', None, 1, 256,
                  'fd00::/48', None, None, None]
         self.assertRaises(ValueError, manager.create_networks, *args)
+
+    def test_create_networks_many(self):
+        cidr = '192.168.0.0/16'
+        manager = self.FakeNetworkManager()
+        self.stubs.Set(manager, '_create_fixed_ips',
+                                self.fake_create_fixed_ips)
+        args = [None, 'foo', cidr, None, 10, 256, 'fd00::/48', None, None,
+                None]
+        self.assertEqual(manager.create_networks(*args), None)
