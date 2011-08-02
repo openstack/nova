@@ -49,10 +49,7 @@ def stub_set_host_enabled(context, host, enabled):
 
 
 def stub_set_host_powerstate(context, host, state):
-    # We'll simulate success and failure by assuming
-    # that 'host_c1' always succeeds, and 'host_c2'
-    # always fails
-    return state if host == "host_c1" else "running"
+    return state
 
 
 class FakeRequest(object):
@@ -96,12 +93,14 @@ class HostTestCase(test.TestCase):
         result_c2 = self.controller.update(self.req, "host_c2", body=en_body)
         self.assertEqual(result_c2["status"], "disabled")
 
-    def test_power_state(self):
+    def test_host_power_state(self):
         en_body = {"power_state": "reboot"}
         result_c1 = self.controller.update(self.req, "host_c1", body=en_body)
         self.assertEqual(result_c1["power_state"], "reboot")
+        # Test invalid power_state
+        en_body = {"power_state": "invalid"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c2", body=en_body)
+                self.req, "host_c1", body=en_body)
 
     def test_bad_power_state_value(self):
         bad_body = {"power_state": "bad"}
