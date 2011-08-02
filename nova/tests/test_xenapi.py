@@ -226,7 +226,7 @@ class XenAPIVMTestCase(test.TestCase):
                                'mac': 'DE:AD:BE:EF:00:00',
                                'rxtx_cap': 3})]
             instance = db.instance_create(self.context, values)
-            self.conn.spawn(instance, network_info)
+            self.conn.spawn(self.context, instance, network_info)
 
         gt1 = eventlet.spawn(_do_build, 1, self.project_id, self.user_id)
         gt2 = eventlet.spawn(_do_build, 2, self.project_id, self.user_id)
@@ -256,14 +256,15 @@ class XenAPIVMTestCase(test.TestCase):
         instance = self._create_instance()
 
         name = "MySnapshot"
-        self.assertRaises(exception.Error, self.conn.snapshot, instance, name)
+        self.assertRaises(exception.Error, self.conn.snapshot,
+                          self.context, instance, name)
 
     def test_instance_snapshot(self):
         stubs.stubout_instance_snapshot(self.stubs)
         instance = self._create_instance()
 
         name = "MySnapshot"
-        template_vm_ref = self.conn.snapshot(instance, name)
+        template_vm_ref = self.conn.snapshot(self.context, instance, name)
 
         def ensure_vm_was_torn_down():
             vm_labels = []
@@ -425,7 +426,7 @@ class XenAPIVMTestCase(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        self.conn.spawn(instance, network_info)
+        self.conn.spawn(self.context, instance, network_info)
         self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
         self.assertTrue(instance.os_type)
@@ -629,7 +630,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.flags(flat_injected=False)
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
-        conn.rescue(instance, None, [])
+        conn.rescue(self.context, instance, None, [])
 
     def test_unrescue(self):
         instance = self._create_instance()
@@ -666,7 +667,7 @@ class XenAPIVMTestCase(test.TestCase):
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
         if spawn:
-            self.conn.spawn(instance, network_info)
+            self.conn.spawn(self.context, instance, network_info)
         return instance
 
 
@@ -776,8 +777,9 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
-                           network_info, resize_instance=True)
+        conn.finish_migration(self.context, instance,
+                              dict(base_copy='hurr', cow='durr'),
+                              network_info, resize_instance=True)
         self.assertEqual(self.called, True)
 
     def test_finish_migrate_no_local_storage(self):
@@ -808,8 +810,9 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
-                           network_info, resize_instance=True)
+        conn.finish_migration(self.context, instance,
+                              dict(base_copy='hurr', cow='durr'),
+                              network_info, resize_instance=True)
 
     def test_finish_migrate_no_resize_vdi(self):
         instance = db.instance_create(self.context, self.values)
@@ -838,8 +841,9 @@ class XenAPIMigrateInstance(test.TestCase):
                            'rxtx_cap': 3})]
 
         # Resize instance would be determined by the compute call
-        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
-                           network_info, resize_instance=False)
+        conn.finish_migration(self.context, instance,
+                              dict(base_copy='hurr', cow='durr'),
+                              network_info, resize_instance=False)
 
 
 class XenAPIImageTypeTestCase(test.TestCase):
