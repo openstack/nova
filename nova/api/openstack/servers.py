@@ -19,7 +19,6 @@ import traceback
 from webob import exc
 from xml.dom import minidom
 import webob
-from xml.dom import minidom
 
 from nova import compute
 from nova import exception

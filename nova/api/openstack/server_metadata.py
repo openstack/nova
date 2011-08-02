@@ -53,7 +53,7 @@ class Controller(object):
             metadata = body['metadata']
         except (KeyError, TypeError):
             msg = _("Malformed request body")
-            raise exc.HTTPBadRequest(esplanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ['nova.context']
 
