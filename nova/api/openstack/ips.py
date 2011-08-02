@@ -16,6 +16,7 @@
 #    under the License.
 
 import time
+from xml.dom import minidom
 
 from webob import exc
 
@@ -100,16 +101,50 @@ class ControllerV11(Controller):
         return nova.api.openstack.views.addresses.ViewBuilderV11()
 
 
+class IPXMLSerializer(wsgi.XMLDictSerializer):
+    def __init__(self, xmlns=wsgi.XMLNS_V11):
+        super(IPXMLSerializer, self).__init__(xmlns=xmlns)
+
+    def _ip_to_xml(self, xml_doc, ip_dict):
+        ip_node = xml_doc.createElement('ip')
+        ip_node.setAttribute('addr', ip_dict['addr'])
+        ip_node.setAttribute('version', str(ip_dict['version']))
+        return ip_node
+
+    def _network_to_xml(self, xml_doc, network_id, ip_dicts):
+        network_node = xml_doc.createElement('network')
+        network_node.setAttribute('id', network_id)
+
+        for ip_dict in ip_dicts:
+            ip_node = self._ip_to_xml(xml_doc, ip_dict)
+            network_node.appendChild(ip_node)
+
+        return network_node
+
+    def networks_to_xml(self, xml_doc, networks_container):
+        addresses_node = xml_doc.createElement('addresses')
+        for (network_id, ip_dicts) in networks_container.items():
+            network_node = self._network_to_xml(xml_doc, network_id, ip_dicts)
+            addresses_node.appendChild(network_node)
+        return addresses_node
+
+    def show(self, network_container):
+        (network_id, ip_dicts) = network_container.items()[0]
+        xml_doc = minidom.Document()
+        node = self._network_to_xml(xml_doc, network_id, ip_dicts)
+        return self.to_xml_string(node, False)
+
+    def index(self, addresses_container):
+        xml_doc = minidom.Document()
+        node = self.networks_to_xml(xml_doc, addresses_container['addresses'])
+        return self.to_xml_string(node, False)
+
+
 def create_resource(version):
     controller = {
         '1.0': ControllerV10,
         '1.1': ControllerV11,
     }[version]()
-
-    xmlns = {
-        '1.0': wsgi.XMLNS_V10,
-        '1.1': wsgi.XMLNS_V11,
-    }[version]
 
     metadata = {
         'list_collections': {
@@ -118,10 +153,11 @@ def create_resource(version):
         },
     }
 
-    body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                  xmlns=xmlns),
-    }
-    serializer = wsgi.ResponseSerializer(body_serializers)
+    xml_serializer = {
+        '1.0': wsgi.XMLDictSerializer(metadata=metadata, xmlns=wsgi.XMLNS_V11),
+        '1.1': IPXMLSerializer(),
+    }[version]
+
+    serializer = wsgi.ResponseSerializer({'application/xml': xml_serializer})
 
     return wsgi.Resource(controller, serializer=serializer)

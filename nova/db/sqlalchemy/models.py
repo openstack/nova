@@ -177,14 +177,6 @@ class Instance(BASE, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    @property
-    def project(self):
-        return auth.manager.AuthManager().get_project(self.project_id)
-
     image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
@@ -465,14 +457,6 @@ class SecurityGroup(BASE, NovaBase):
         'Instance.deleted == False)',
                              backref='security_groups')
 
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    @property
-    def project(self):
-        return auth.manager.AuthManager().get_project(self.project_id)
-
 
 class SecurityGroupIngressRule(BASE, NovaBase):
     """Represents a rule in a security group."""
@@ -556,7 +540,8 @@ class Network(BASE, NovaBase):
     bridge_interface = Column(String(255))
     gateway = Column(String(255))
     broadcast = Column(String(255))
-    dns = Column(String(255))
+    dns1 = Column(String(255))
+    dns2 = Column(String(255))
 
     vlan = Column(Integer)
     vpn_public_address = Column(String(255))

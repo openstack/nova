@@ -37,7 +37,6 @@ import nova.image
 from nova.image import glance as glance_image_service
 from nova import log as logging
 from nova import utils
-from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import disk
@@ -85,38 +84,22 @@ class ImageType:
     DISK = 2
     DISK_RAW = 3
     DISK_VHD = 4
+    _ids = (KERNEL, RAMDISK, DISK, DISK_RAW, DISK_VHD)
 
     KERNEL_STR = "kernel"
     RAMDISK_STR = "ramdisk"
     DISK_STR = "os"
     DISK_RAW_STR = "os_raw"
     DISK_VHD_STR = "vhd"
+    _strs = (KERNEL_STR, RAMDISK_STR, DISK_STR, DISK_RAW_STR, DISK_VHD_STR)
 
     @classmethod
     def to_string(cls, image_type):
-        if image_type == ImageType.KERNEL:
-            return ImageType.KERNEL_STR
-        elif image_type == ImageType.RAMDISK:
-            return ImageType.RAMDISK_STR
-        elif image_type == ImageType.DISK:
-            return ImageType.DISK_STR
-        elif image_type == ImageType.DISK_RAW:
-            return ImageType.DISK_RAW_STR
-        elif image_type == ImageType.DISK_VHD:
-            return ImageType.VHD_STR
+        return dict(zip(ImageType._ids, ImageType._strs)).get(image_type)
 
     @classmethod
     def from_string(cls, image_type_str):
-        if image_type_str == ImageType.KERNEL_STR:
-            return ImageType.KERNEL
-        elif image_type == ImageType.RAMDISK_STR:
-            return ImageType.RAMDISK
-        elif image_type == ImageType.DISK_STR:
-            return ImageType.DISK
-        elif image_type == ImageType.DISK_RAW_STR:
-            return ImageType.DISK_RAW
-        elif image_type == ImageType.DISK_VHD_STR:
-            return ImageType.VHD
+        return dict(zip(ImageType._strs, ImageType._ids)).get(image_type_str)
 
 
 class VMHelper(HelperBase):
@@ -384,7 +367,7 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def fetch_image(cls, session, instance_id, image, user, project,
+    def fetch_image(cls, session, instance_id, image, user_id, project_id,
                     image_type):
         """
         image_type is interpreted as an ImageType instance
@@ -396,18 +379,23 @@ class VMHelper(HelperBase):
         Returns: A single filename if image_type is KERNEL_RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-        access = AuthManager().get_access_key(user, project)
 
         if FLAGS.xenapi_image_service == 'glance':
-            return cls._fetch_image_glance(session, instance_id, image,
-                                           access, image_type)
+            return cls._fetch_image_glance(session, instance_id,
+                                           image, image_type)
         else:
+            # TODO(vish): this shouldn't be used anywhere anymore and
+            #             can probably be removed
+            from nova.auth.manager import AuthManager
+            manager = AuthManager()
+            access = manager.get_access_key(user_id, project_id)
+            secret = manager.get_user(user_id).secret
             return cls._fetch_image_objectstore(session, instance_id, image,
-                                                access, user.secret,
+                                                access, secret,
                                                 image_type)
 
     @classmethod
-    def _fetch_image_glance_vhd(cls, session, instance_id, image, access,
+    def _fetch_image_glance_vhd(cls, session, instance_id, image,
                                 image_type):
         """Tell glance to download an image and put the VHDs into the SR
 
@@ -455,7 +443,7 @@ class VMHelper(HelperBase):
         return vdis
 
     @classmethod
-    def _fetch_image_glance_disk(cls, session, instance_id, image, access,
+    def _fetch_image_glance_disk(cls, session, instance_id, image,
                                  image_type):
         """Fetch the image from Glance
 
@@ -589,8 +577,7 @@ class VMHelper(HelperBase):
         return image_type
 
     @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, access,
-                            image_type):
+    def _fetch_image_glance(cls, session, instance_id, image, image_type):
         """Fetch image from glance based on image type.
 
         Returns: A single filename if image_type is KERNEL or RAMDISK
@@ -598,10 +585,10 @@ class VMHelper(HelperBase):
         """
         if image_type == ImageType.DISK_VHD:
             return cls._fetch_image_glance_vhd(
-                session, instance_id, image, access, image_type)
+                session, instance_id, image, image_type)
         else:
             return cls._fetch_image_glance_disk(
-                session, instance_id, image, access, image_type)
+                session, instance_id, image, image_type)
 
     @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,

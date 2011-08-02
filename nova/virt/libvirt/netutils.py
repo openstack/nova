@@ -25,6 +25,7 @@ import netaddr
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova import ipv6
 from nova import utils
@@ -55,10 +56,12 @@ def get_network_info(instance):
     # we should cache network_info
     admin_context = context.get_admin_context()
 
-    fixed_ips = db.fixed_ip_get_by_instance(admin_context, instance['id'])
+    try:
+        fixed_ips = db.fixed_ip_get_by_instance(admin_context, instance['id'])
+    except exception.FixedIpNotFoundForInstance:
+        fixed_ips = []
+
     vifs = db.virtual_interface_get_by_instance(admin_context, instance['id'])
-    networks = db.network_get_all_by_instance(admin_context,
-                                              instance['id'])
     flavor = db.instance_type_get(admin_context,
                                         instance['instance_type_id'])
     network_info = []
@@ -89,10 +92,16 @@ def get_network_info(instance):
             'label': network['label'],
             'gateway': network['gateway'],
             'broadcast': network['broadcast'],
+            'dhcp_server': network['gateway'],
             'mac': vif['address'],
             'rxtx_cap': flavor['rxtx_cap'],
-            'dns': [network['dns']],
+            'dns': [],
             'ips': [ip_dict(ip) for ip in network_ips]}
+
+        if network['dns1']:
+            mapping['dns'].append(network['dns1'])
+        if network['dns2']:
+            mapping['dns'].append(network['dns2'])
 
         if FLAGS.use_ipv6:
             mapping['ip6s'] = [ip6_dict()]

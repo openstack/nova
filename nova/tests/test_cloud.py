@@ -34,7 +34,6 @@ from nova import network
 from nova import rpc
 from nova import test
 from nova import utils
-from nova.auth import manager
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import fake
@@ -50,7 +49,7 @@ class CloudTestCase(test.TestCase):
         self.flags(connection_type='fake',
                    stub_network=True)
 
-        self.conn = rpc.Connection.instance()
+        self.conn = rpc.create_connection()
 
         # set up our cloud
         self.cloud = cloud.CloudController()
@@ -62,12 +61,11 @@ class CloudTestCase(test.TestCase):
         self.volume = self.start_service('volume')
         self.image_service = utils.import_object(FLAGS.image_service)
 
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('admin', 'admin', 'admin', True)
-        self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.RequestContext(user=self.user,
-                                              project=self.project)
-        host = self.network.host
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id,
+                                              True)
 
         def fake_show(meh, context, id):
             return {'id': 1, 'container_format': 'ami',
@@ -87,17 +85,15 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(rpc, 'cast', finish_cast)
 
     def tearDown(self):
-        networks = db.project_get_networks(self.context, self.project.id,
+        networks = db.project_get_networks(self.context, self.project_id,
                                            associate=False)
         for network in networks:
             db.network_disassociate(self.context, network['id'])
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
         super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
-        return cloud._gen_key(self.context, self.context.user.id, name)
+        return cloud._gen_key(self.context, self.context.user_id, name)
 
     def test_describe_regions(self):
         """Makes sure describe regions runs without raising an exception"""
@@ -121,7 +117,6 @@ class CloudTestCase(test.TestCase):
                                   public_ip=address)
         db.floating_ip_destroy(self.context, address)
 
-    @test.skip_test("Skipping this pending future merge")
     def test_allocate_address(self):
         address = "10.10.10.10"
         allocate = self.cloud.allocate_address
@@ -161,13 +156,10 @@ class CloudTestCase(test.TestCase):
         # ApiError: Floating ip is in use.  Disassociate it before releasing.
         self.assertRaises(exception.ApiError, release, self.context, address)
 
-    @test.skip_test("Skipping this pending future merge")
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
         address = "10.10.10.10"
-        db.floating_ip_create(self.context,
-                              {'address': address,
-                               'host': self.network.host})
+        db.floating_ip_create(self.context, {'address': address})
         self.cloud.allocate_address(self.context)
         # TODO(jkoelker) Probably need to query for instance_type_id and
         #                make sure we get a valid one
@@ -175,11 +167,14 @@ class CloudTestCase(test.TestCase):
                                                  'instance_type_id': 1})
         networks = db.network_get_all(self.context)
         for network in networks:
-            self.network.set_network_host(self.context, network['id'])
+            db.network_update(self.context, network['id'],
+                              {'host': self.network.host})
         project_id = self.context.project_id
         type_id = inst['instance_type_id']
         ips = self.network.allocate_for_instance(self.context,
                                                  instance_id=inst['id'],
+                                                 host=inst['host'],
+                                                 vpn=None,
                                                  instance_type_id=type_id,
                                                  project_id=project_id)
         # TODO(jkoelker) Make this mas bueno
@@ -269,12 +264,61 @@ class CloudTestCase(test.TestCase):
         delete = self.cloud.delete_security_group
         self.assertRaises(exception.ApiError, delete, self.context)
 
-    def test_authorize_revoke_security_group_ingress(self):
+    def test_authorize_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
         sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        authz(self.context, group_name=sec['name'], **kwargs)
+        self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
+
+    def test_authorize_security_group_ingress_ip_permissions_ip_ranges(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
+                                      'ip_ranges':
+                                         {'1': {'cidr_ip': u'0.0.0.0/0'},
+                                          '2': {'cidr_ip': u'10.10.10.10/32'}},
+                                      'ip_protocol': u'tcp'}]}
+        self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
+
+    def test_authorize_security_group_fail_missing_source_group(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
+                  'ip_ranges':{'1': {'cidr_ip': u'0.0.0.0/0'},
+                                '2': {'cidr_ip': u'10.10.10.10/32'}},
+                  'groups': {'1': {'user_id': u'someuser',
+                                   'group_name': u'somegroup1'}},
+                  'ip_protocol': u'tcp'}]}
+        self.assertRaises(exception.SecurityGroupNotFound, authz,
+                          self.context, group_name=sec['name'], **kwargs)
+
+    def test_authorize_security_group_ingress_ip_permissions_groups(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context,
+                                       {'project_id': 'someuser',
+                                        'name': 'somegroup1'})
+        sec = db.security_group_create(self.context,
+                                       {'project_id': 'someuser',
+                                        'name': 'othergroup2'})
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
+                  'groups': {'1': {'user_id': u'someuser',
+                                   'group_name': u'somegroup1'},
+                             '2': {'user_id': u'someuser',
+                                   'group_name': u'othergroup2'}},
+                  'ip_protocol': u'tcp'}]}
+        self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
+
+    def test_revoke_security_group_ingress(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        authz(self.context, group_id=sec['id'], **kwargs)
         revoke = self.cloud.revoke_security_group_ingress
         self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
 
@@ -366,8 +410,6 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 
-    # NOTE(jkoelker): this test relies on fixed_ip being in instances
-    @test.skip_test("EC2 stuff needs fixed_ip in instance_ref")
     def test_describe_snapshots(self):
         """Makes sure describe_snapshots works and filters results."""
         vol = db.volume_create(self.context, {})
@@ -936,7 +978,7 @@ class CloudTestCase(test.TestCase):
         key = RSA.load_key_string(private_key, callback=lambda: None)
         bio = BIO.MemoryBuffer()
         public_key = db.key_pair_get(self.context,
-                                    self.context.user.id,
+                                    self.context.user_id,
                                     'test')['public_key']
         key.save_pub_key_bio(bio)
         converted = crypto.ssl_pub_to_ssh_pub(bio.read())
@@ -960,7 +1002,7 @@ class CloudTestCase(test.TestCase):
                                                'mytestfprint')
         self.assertTrue(result1)
         keydata = db.key_pair_get(self.context,
-                                  self.context.user.id,
+                                  self.context.user_id,
                                   'testimportkey1')
         self.assertEqual('mytestpubkey', keydata['public_key'])
         self.assertEqual('mytestfprint', keydata['fingerprint'])
@@ -977,7 +1019,7 @@ class CloudTestCase(test.TestCase):
                                                dummypub)
         self.assertTrue(result2)
         keydata = db.key_pair_get(self.context,
-                                  self.context.user.id,
+                                  self.context.user_id,
                                   'testimportkey2')
         self.assertEqual(dummypub, keydata['public_key'])
         self.assertEqual(dummyfprint, keydata['fingerprint'])
@@ -987,12 +1029,6 @@ class CloudTestCase(test.TestCase):
         self.cloud.delete_key_pair(self.context, 'test')
 
     def test_run_instances(self):
-        # stub out the rpc call
-        def stub_cast(*args, **kwargs):
-            pass
-
-        self.stubs.Set(rpc, 'cast', stub_cast)
-
         kwargs = {'image_id': FLAGS.default_image,
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1}
@@ -1002,7 +1038,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['imageId'], 'ami-00000001')
         self.assertEqual(instance['displayName'], 'Server 1')
         self.assertEqual(instance['instanceId'], 'i-00000001')
-        self.assertEqual(instance['instanceState']['name'], 'scheduling')
+        self.assertEqual(instance['instanceState']['name'], 'running')
         self.assertEqual(instance['instanceType'], 'm1.small')
 
     def test_run_instances_image_state_none(self):
@@ -1074,16 +1110,15 @@ class CloudTestCase(test.TestCase):
         self.assertEqual('c00l 1m4g3', inst['display_name'])
         db.instance_destroy(self.context, inst['id'])
 
-    # NOTE(jkoelker): This test relies on mac_address in instance
-    @test.skip_test("EC2 stuff needs mac_address in instance_ref")
     def test_update_of_instance_wont_update_private_fields(self):
         inst = db.instance_create(self.context, {})
+        host = inst['host']
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.update_instance(self.context, ec2_id,
                                    display_name='c00l 1m4g3',
-                                   mac_address='DE:AD:BE:EF')
+                                   host='otherhost')
         inst = db.instance_get(self.context, inst['id'])
-        self.assertEqual(None, inst['mac_address'])
+        self.assertEqual(host, inst['host'])
         db.instance_destroy(self.context, inst['id'])
 
     def test_update_of_volume_display_fields(self):
@@ -1139,7 +1174,6 @@ class CloudTestCase(test.TestCase):
         elevated = self.context.elevated(read_deleted=True)
         self._wait_for_state(elevated, instance_id, is_deleted)
 
-    @test.skip_test("skipping, test is hanging with multinic for rpc reasons")
     def test_stop_start_instance(self):
         """Makes sure stop/start instance works"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
@@ -1197,7 +1231,6 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(vol['status'], "available")
         self.assertEqual(vol['attach_status'], "detached")
 
-    @test.skip_test("skipping, test is hanging with multinic for rpc reasons")
     def test_stop_start_with_volume(self):
         """Make sure run instance with block device mapping works"""
 
@@ -1266,7 +1299,6 @@ class CloudTestCase(test.TestCase):
 
         self._restart_compute_service()
 
-    @test.skip_test("skipping, test is hanging with multinic for rpc reasons")
     def test_stop_with_attached_volume(self):
         """Make sure attach info is reflected to block device mapping"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
@@ -1342,7 +1374,6 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
         return result['snapshotId']
 
-    @test.skip_test("skipping, test is hanging with multinic for rpc reasons")
     def test_run_with_snapshot(self):
         """Makes sure run/stop/start instance with snapshot works."""
         vol = self._volume_create()
