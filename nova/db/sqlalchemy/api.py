@@ -3202,9 +3202,8 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
     meta_ref = None
     for key, value in metadata.iteritems():
         try:
-            meta_ref = instance_metadata_get_item(context, instance_id, key,
-                                                        session)
-        except:
+            meta_ref = instance_metadata_get_item(context, instance_id, key)
+        except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
         meta_ref.update({"key": key, "value": value,
                             "instance_id": instance_id,
@@ -3322,11 +3321,9 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
     spec_ref = None
     for key, value in specs.iteritems():
         try:
-            spec_ref = instance_type_extra_specs_get_item(context,
-                                                          instance_type_id,
-                                                          key,
-                                                          session)
-        except:
+            spec_ref = instance_type_extra_specs_get_item(
+                context, instance_type_id, key)
+        except exception.InstanceTypeExtraSpecsNotFound, e:
             spec_ref = models.InstanceTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,
                          "instance_type_id": instance_type_id,
