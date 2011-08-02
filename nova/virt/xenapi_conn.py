@@ -101,9 +101,6 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
-flags.DEFINE_string('xenapi_image_service',
-                    'glance',
-                    'Where to get VM images: glance or objectstore.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
                    'The interval used for polling of coalescing vhds.'
