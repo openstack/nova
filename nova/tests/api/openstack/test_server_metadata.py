@@ -16,14 +16,12 @@
 #    under the License.
 
 import json
-import stubout
-import unittest
 import webob
 
 
 from nova import exception
 from nova import flags
-from nova.api import openstack
+from nova import test
 from nova.tests.api.openstack import fakes
 import nova.wsgi
 
@@ -76,20 +74,12 @@ def return_server_nonexistant(context, server_id):
     raise exception.InstanceNotFound()
 
 
-class ServerMetaDataTest(unittest.TestCase):
+class ServerMetaDataTest(test.TestCase):
 
     def setUp(self):
         super(ServerMetaDataTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get', return_server)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(ServerMetaDataTest, self).tearDown()
 
     def test_index(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_get',

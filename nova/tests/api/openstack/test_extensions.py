@@ -17,13 +17,12 @@
 
 import json
 import os.path
-import stubout
-import unittest
 import webob
 from xml.etree import ElementTree
 
 from nova import context
 from nova import flags
+from nova import test
 from nova.api import openstack
 from nova.api.openstack import extensions
 from nova.api.openstack import flavors
@@ -80,11 +79,12 @@ class StubExtensionManager(object):
         return request_extensions
 
 
-class ExtensionControllerTest(unittest.TestCase):
+class ExtensionControllerTest(test.TestCase):
 
     def setUp(self):
-        FLAGS.osapi_extensions_path = os.path.join(
-            os.path.dirname(__file__), "extensions")
+        super(ExtensionControllerTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_list_extensions_json(self):
         app = openstack.APIRouterV11()
@@ -172,7 +172,12 @@ class ExtensionControllerTest(unittest.TestCase):
             'The Fox In Socks Extension')
 
 
-class ResourceExtensionTest(unittest.TestCase):
+class ResourceExtensionTest(test.TestCase):
+
+    def setUp(self):
+        super(ResourceExtensionTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
@@ -210,13 +215,14 @@ class InvalidExtension(object):
         return "THIRD"
 
 
-class ExtensionManagerTest(unittest.TestCase):
+class ExtensionManagerTest(test.TestCase):
 
     response_body = "Try to say this Mr. Knox, sir..."
 
     def setUp(self):
-        FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
-                                                    "extensions")
+        super(ExtensionManagerTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_get_resources(self):
         app = openstack.APIRouterV11()
@@ -235,11 +241,12 @@ class ExtensionManagerTest(unittest.TestCase):
         self.assertTrue('THIRD' not in ext_mgr.extensions)
 
 
-class ActionExtensionTest(unittest.TestCase):
+class ActionExtensionTest(test.TestCase):
 
     def setUp(self):
-        FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
-                                                    "extensions")
+        super(ActionExtensionTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def _send_server_action_request(self, url, body):
         app = openstack.APIRouterV11()
@@ -273,19 +280,12 @@ class ActionExtensionTest(unittest.TestCase):
         self.assertEqual(404, response.status_int)
 
 
-class RequestExtensionTest(unittest.TestCase):
+class RequestExtensionTest(test.TestCase):
 
     def setUp(self):
         super(RequestExtensionTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
-        self.context = context.get_admin_context()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(RequestExtensionTest, self).tearDown()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_get_resources_with_stub_mgr(self):
 
@@ -323,7 +323,7 @@ class RequestExtensionTest(unittest.TestCase):
         self.assertEqual("Pig Bands!", response_data['big_bands'])
 
 
-class ExtensionsXMLSerializerTest(unittest.TestCase):
+class ExtensionsXMLSerializerTest(test.TestCase):
 
     def test_serialize_extenstion(self):
         serializer = extensions.ExtensionsXMLSerializer()
@@ -357,29 +357,30 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
 
     def test_serialize_extensions(self):
         serializer = extensions.ExtensionsXMLSerializer()
-        data = { "extensions": [{ 
-                 "name": "Public Image Extension",
-                 "namespace": "http://foo.com/api/ext/pie/v1.0",
-                 "alias": "RS-PIE",
-                 "updated": "2011-01-22T13:25:27-06:00",
-                 "description": "Adds the capability to share an image.",
-                 "links": [{"rel": "describedby",
+        data = {"extensions": [{
+                "name": "Public Image Extension",
+                "namespace": "http://foo.com/api/ext/pie/v1.0",
+                "alias": "RS-PIE",
+                "updated": "2011-01-22T13:25:27-06:00",
+                "description": "Adds the capability to share an image.",
+                "links": [{"rel": "describedby",
                             "type": "application/pdf",
+                            "type": "application/vnd.sun.wadl+xml",
                             "href": "http://foo.com/api/ext/cs-pie.pdf"},
                            {"rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
                             "href": "http://foo.com/api/ext/cs-pie.wadl"}]},
-                { "name": "Cloud Block Storage",
-                  "namespace": "http://foo.com/api/ext/cbs/v1.0",
-                  "alias": "RS-CBS",
-                  "updated": "2011-01-12T11:22:33-06:00",
-                  "description": "Allows mounting cloud block storage.",
-                  "links": [{"rel": "describedby",
+                {"name": "Cloud Block Storage",
+                 "namespace": "http://foo.com/api/ext/cbs/v1.0",
+                 "alias": "RS-CBS",
+                 "updated": "2011-01-12T11:22:33-06:00",
+                 "description": "Allows mounting cloud block storage.",
+                 "links": [{"rel": "describedby",
                              "type": "application/pdf",
                              "href": "http://foo.com/api/ext/cs-cbs.pdf"},
                             {"rel": "describedby",
                              "type": "application/vnd.sun.wadl+xml",
-                             "href": "http://foo.com/api/ext/cs-cbs.wadl" }]}]}
+                             "href": "http://foo.com/api/ext/cs-cbs.wadl"}]}]}
 
         xml = serializer.serialize(data, 'index')
         print xml

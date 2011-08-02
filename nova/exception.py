@@ -116,7 +116,8 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                     notifier.notify(publisher_id, temp_type, temp_level,
                                     payload)
 
-                if not isinstance(e, Error):
+                if (not isinstance(e, Error) and
+                    not isinstance(e, NovaException)):
                     #exc_type, exc_value, exc_traceback = sys.exc_info()
                     LOG.exception(_('Uncaught exception'))
                     #logging.error(traceback.extract_stack(exc_traceback))
@@ -375,6 +376,10 @@ class UserRoleNotFound(NotFound):
 
 class StorageRepositoryNotFound(NotFound):
     message = _("Cannot find SR to read/write VDI.")
+
+
+class NetworkNotCreated(NovaException):
+    message = _("%(req)s is required to create a network.")
 
 
 class NetworkNotFound(NotFound):

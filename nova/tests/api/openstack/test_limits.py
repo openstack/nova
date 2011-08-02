@@ -942,14 +942,14 @@ class LimitsViewBuilderV11Test(test.TestCase):
                                  "verb": "POST",
                                  "remaining": 2,
                                  "unit": "MINUTE",
-                                 "next-available": "2011-07-21T18:17:06Z" },]},
+                                 "next-available": "2011-07-21T18:17:06Z"}]},
                    {"uri": "*/servers",
                     "regex": "^/servers",
                     "limit": [{"value": 50,
                                "verb": "POST",
                                "remaining": 10,
                                "unit": "DAY",
-                               "next-available": "2011-07-21T18:17:06Z"},]},],
+                               "next-available": "2011-07-21T18:17:06Z"}]}],
                 "absolute": {"maxServerMeta": 1,
                              "maxImageMeta": 1,
                              "maxPersonality": 5,
@@ -979,7 +979,6 @@ class LimitsXMLSerializationTest(test.TestCase):
 
     def test_index(self):
         serializer = limits.LimitsXMLSerializer()
-
         fixture = {"limits": {
                    "rate": [{
                          "uri": "*",
@@ -997,7 +996,7 @@ class LimitsXMLSerializationTest(test.TestCase):
                               "verb": "POST",
                               "remaining": 10,
                               "unit": "DAY",
-                              "next-available": "2011-12-15T22:42:45Z"},]},],
+                              "next-available": "2011-12-15T22:42:45Z"}]}],
                     "absolute": {"maxServerMeta": 1,
                                  "maxImageMeta": 1,
                                  "maxPersonality": 5,
