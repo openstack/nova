@@ -40,6 +40,7 @@ from nova.api.openstack import servers
 from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
+from nova.api.openstack import versions
 from nova.api.openstack import wsgi
 from nova.api.openstack import zones
 
@@ -114,6 +115,10 @@ class APIRouter(base_wsgi.Router):
                                     'info': 'GET',
                                     'select': 'POST',
                                     'boot': 'POST'})
+
+        mapper.connect("versions", "/",
+                    controller=versions.create_resource(version),
+                    action='show')
 
         mapper.resource("console", "consoles",
                     controller=consoles.create_resource(),
