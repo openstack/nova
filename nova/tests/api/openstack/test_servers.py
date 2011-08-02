@@ -2315,7 +2315,7 @@ class ServersTest(test.TestCase):
         """This is basically the same as resize, only we provide the `migrate`
         attribute in the body's dict.
         """
-        req = self.webreq('/1/action', 'POST', dict(migrate=None))
+        req = self.webreq('/1/migrate', 'POST')
 
         self.resize_called = False
 
