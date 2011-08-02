@@ -376,10 +376,10 @@ class VMHelper(HelperBase):
                  A list of dictionaries that describe VDIs, otherwise
         """
         if image_type == ImageType.DISK_VHD:
-            return cls._fetch_image_glance_vhd(
+            return cls._fetch_image_glance_vhd(context,
                 session, instance_id, image, image_type)
         else:
-            return cls._fetch_image_glance_disk(
+            return cls._fetch_image_glance_disk(context,
                 session, instance_id, image, image_type)
 
     @classmethod
