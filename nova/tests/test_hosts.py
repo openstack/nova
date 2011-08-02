@@ -52,7 +52,7 @@ def stub_set_host_powerstate(context, host, state):
     # We'll simulate success and failure by assuming
     # that 'host_c1' always succeeds, and 'host_c2'
     # always fails
-    return state if  host == "host_c1" else "running"
+    return state if host == "host_c1" else "running"
 
 
 class FakeRequest(object):

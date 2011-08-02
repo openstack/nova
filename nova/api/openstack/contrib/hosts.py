@@ -85,7 +85,7 @@ class HostController(object):
                     # 'startup' option to start up a host, but this is not
                     # technically feasible now, as we run the host on the
                     # XenServer box.
-                    msg = _("Host startup on XenServer is not supported."))
+                    msg = _("Host startup on XenServer is not supported.")
                     raise webob.exc.HTTPBadRequest(explanation=msg)
                 elif val in ("reboot", "shutdown"):
                     return self._set_powerstate(req, id, val)
@@ -106,8 +106,7 @@ class HostController(object):
         return {"host": host, "status": result}
 
     def _set_powerstate(self, req, host, state):
-        """Reboots or shuts down the host.
-        """
+        """Reboots or shuts down the host."""
         context = req.environ['nova.context']
         result = self.compute_api.set_host_powerstate(context, host=host,
                 state=state)
