@@ -118,19 +118,6 @@ The :mod:`nova.virt.fake` Driver
     :show-inheritance:
 
 
-Monitoring
-----------
-
-The :mod:`nova.compute.monitor` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.compute.monitor
-    :noindex:
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
 Tests
 -----
 
