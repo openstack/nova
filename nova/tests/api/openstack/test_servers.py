@@ -2328,6 +2328,7 @@ class ServersTest(test.TestCase):
         """
         req = self.webreq('/1/migrate', 'POST')
 
+        FLAGS.allow_admin_api = True
         self.resize_called = False
 
         def resize_mock(*args):
@@ -2338,6 +2339,14 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
+
+    def test_migrate_server_no_admin_api_fails(self):
+        req = self.webreq('/1/migrate', 'POST')
+
+        FLAGS.allow_admin_api = False
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
 
     def test_shutdown_status(self):
         new_server = return_server_with_power_state(power_state.SHUTDOWN)

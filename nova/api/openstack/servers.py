@@ -163,7 +163,7 @@ class Controller(object):
             'resize': self._action_resize,
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
-            'rebuild': self._action_rebuild,}
+            'rebuild': self._action_rebuild,
             'createImage': self._action_create_image,
         }
 
