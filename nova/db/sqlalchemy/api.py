@@ -1680,7 +1680,8 @@ def network_get_by_bridge(context, bridge):
 def network_get_by_cidr(context, cidr):
     session = get_session()
     result = session.query(models.Network).\
-                filter_by(cidr=cidr).first()
+                filter(or_(models.Network.cidr == cidr,
+                           models.Network.cidr_v6 == cidr)).first()
 
     if not result:
         raise exception.NetworkNotFoundForCidr(cidr=cidr)
