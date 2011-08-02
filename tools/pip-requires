@@ -20,13 +20,13 @@ mox==0.5.3
 greenlet==0.3.1
 nose
 bzr
-Twisted>=10.1.0
 PasteDeploy
 paste
 sqlalchemy-migrate
 netaddr
 sphinx
 glance
+xattr>=0.6.0
 nova-adminclient
 suds==0.4
 coverage
