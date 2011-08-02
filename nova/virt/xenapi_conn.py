@@ -101,9 +101,6 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
-flags.DEFINE_string('xenapi_image_service',
-                    'glance',
-                    'Where to get VM images: glance or objectstore.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
                    'The interval used for polling of coalescing vhds.'
@@ -333,6 +330,10 @@ class XenAPIConnection(driver.ComputeDriver):
         """Return the current state of the host. If 'refresh' is
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
+
+    def set_host_powerstate(self, host, state):
+        """Reboots or shuts down the host."""
+        return self._vmops.set_host_powerstate(host, state)
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""

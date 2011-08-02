@@ -498,6 +498,10 @@ class HyperVConnection(driver.ComputeDriver):
         """See xenapi_conn.py implementation."""
         pass
 
+    def set_host_powerstate(self, host, state):
+        """Reboots or shuts down the host."""
+        pass
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         pass

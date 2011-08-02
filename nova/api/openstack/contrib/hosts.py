@@ -78,11 +78,19 @@ class HostController(object):
                 else:
                     explanation = _("Invalid status: '%s'") % raw_val
                     raise webob.exc.HTTPBadRequest(explanation=explanation)
-            elif key == "power_state":
-                if val in ("reboot", "off", "on"):
-                    return self._set_power_state(req, id, val)
+            elif key == "powerstate":
+                if val == "startup":
+                    # The only valid values for 'state' are 'reboot' or
+                    # 'shutdown'. For completeness' sake there is the
+                    # 'startup' option to start up a host, but this is not
+                    # technically feasible now, as we run the host on the
+                    # XenServer box.
+                    msg = _("Host startup on XenServer is not supported.")
+                    raise webob.exc.HTTPBadRequest(explanation=msg)
+                elif val in ("reboot", "shutdown"):
+                    return self._set_powerstate(req, id, val)
                 else:
-                    explanation = _("Invalid status: '%s'") % raw_val
+                    explanation = _("Invalid powerstate: '%s'") % raw_val
                     raise webob.exc.HTTPBadRequest(explanation=explanation)
             else:
                 explanation = _("Invalid update setting: '%s'") % raw_key
@@ -100,22 +108,12 @@ class HostController(object):
             raise webob.exc.HTTPBadRequest(explanation=result)
         return {"host": host, "status": result}
 
-    def _set_power_state(self, req, host, power_state):
-        """Turns the specified host on/off, or reboots the host."""
+    def _set_powerstate(self, req, host, state):
+        """Reboots or shuts down the host."""
         context = req.environ['nova.context']
-        if power_state == "on":
-            raise webob.exc.HTTPNotImplemented()
-        if power_state == "reboot":
-            msg = _("Rebooting host %(host)s")
-        else:
-            msg = _("Powering off host %(host)s.")
-        LOG.audit(msg % locals())
-        result = self.compute_api.set_power_state(context, host=host,
-                power_state=power_state)
-        if result != power_state:
-            # An error message was returned
-            raise webob.exc.HTTPBadRequest(explanation=result)
-        return {"host": host, "power_state": result}
+        result = self.compute_api.set_host_powerstate(context, host=host,
+                state=state)
+        return {"host": host, "powerstate": result}
 
 
 class Hosts(extensions.ExtensionDescriptor):
