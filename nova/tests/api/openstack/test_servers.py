@@ -1325,7 +1325,8 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/images/2'
+        # proper local hrefs must start with 'http://localhost/v1.1/'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/flavors/3'
         expected_flavor = {
             "id": "3",
@@ -2326,8 +2327,9 @@ class ServersTest(test.TestCase):
         """This is basically the same as resize, only we provide the `migrate`
         attribute in the body's dict.
         """
-        req = self.webreq('/1/action', 'POST', dict(migrate=None))
+        req = self.webreq('/1/migrate', 'POST')
 
+        FLAGS.allow_admin_api = True
         self.resize_called = False
 
         def resize_mock(*args):
@@ -2338,6 +2340,14 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
+
+    def test_migrate_server_no_admin_api_fails(self):
+        req = self.webreq('/1/migrate', 'POST')
+
+        FLAGS.allow_admin_api = False
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
 
     def test_shutdown_status(self):
         new_server = return_server_with_power_state(power_state.SHUTDOWN)

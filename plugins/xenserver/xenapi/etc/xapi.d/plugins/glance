@@ -67,12 +67,17 @@ def _copy_kernel_vdi(dest, copy_args):
 
 
 def _download_tarball(sr_path, staging_path, image_id, glance_host,
-                      glance_port):
+                      glance_port, auth_token):
     """Download the tarball image from Glance and extract it into the staging
     area.
     """
+    # Build request headers
+    headers = {}
+    if auth_token:
+        headers['x-auth-token'] = auth_token
+
     conn = httplib.HTTPConnection(glance_host, glance_port)
-    conn.request('GET', '/v1/images/%s' % image_id)
+    conn.request('GET', '/v1/images/%s' % image_id, headers=headers)
     resp = conn.getresponse()
     if resp.status == httplib.NOT_FOUND:
         raise Exception("Image '%s' not found in Glance" % image_id)
@@ -236,7 +241,8 @@ def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
         os.link(source, link_name)
 
 
-def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type):
+def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
+                    auth_token):
     """
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
@@ -262,6 +268,10 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type):
         'x-image-meta-disk-format': 'vhd',
         'x-image-meta-container-format': 'ovf',
         'x-image-meta-property-os-type': os_type}
+
+    # If we have an auth_token, set an x-auth-token header
+    if auth_token:
+        headers['x-auth-token'] = auth_token
 
     for header, value in headers.iteritems():
         conn.putheader(header, value)
@@ -364,11 +374,12 @@ def download_vhd(session, args):
     glance_port = params["glance_port"]
     uuid_stack = params["uuid_stack"]
     sr_path = params["sr_path"]
+    auth_token = params["auth_token"]
 
     staging_path = _make_staging_area(sr_path)
     try:
         _download_tarball(sr_path, staging_path, image_id, glance_host,
-                          glance_port)
+                          glance_port, auth_token)
         # Right now, it's easier to return a single string via XenAPI,
         # so we'll json encode the list of VHDs.
         return json.dumps(_import_vhds(sr_path, staging_path, uuid_stack))
@@ -386,12 +397,13 @@ def upload_vhd(session, args):
     glance_port = params["glance_port"]
     sr_path = params["sr_path"]
     os_type = params["os_type"]
+    auth_token = params["auth_token"]
 
     staging_path = _make_staging_area(sr_path)
     try:
         _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids)
         _upload_tarball(staging_path, image_id, glance_host, glance_port,
-                        os_type)
+                        os_type, auth_token)
     finally:
         _cleanup_staging_area(staging_path)
 
