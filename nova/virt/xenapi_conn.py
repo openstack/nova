@@ -441,7 +441,7 @@ class XenAPISession(object):
                 params = None
                 try:
                     params = eval(exc.details[3])
-                except:
+                except Exception:
                     raise exc
                 raise self.XenAPI.Failure(params)
             else:

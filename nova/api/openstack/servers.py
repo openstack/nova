@@ -290,7 +290,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.lock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::lock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -306,7 +306,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.unlock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unlock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -321,7 +321,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.get_lock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::get_lock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -336,7 +336,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.reset_network(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -351,7 +351,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.inject_network_info(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::inject_network_info %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -363,7 +363,7 @@ class Controller(object):
         ctxt = req.environ['nova.context']
         try:
             self.compute_api.pause(ctxt, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -375,7 +375,7 @@ class Controller(object):
         ctxt = req.environ['nova.context']
         try:
             self.compute_api.unpause(ctxt, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -387,7 +387,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.suspend(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -399,7 +399,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.resume(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -420,7 +420,7 @@ class Controller(object):
         context = req.environ["nova.context"]
         try:
             self.compute_api.rescue(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::rescue %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -432,7 +432,7 @@ class Controller(object):
         context = req.environ["nova.context"]
         try:
             self.compute_api.unrescue(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::unrescue %s"), readable)
             raise exc.HTTPUnprocessableEntity()
