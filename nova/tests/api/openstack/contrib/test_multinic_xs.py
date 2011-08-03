@@ -42,21 +42,13 @@ def compute_api_remove_fixed_ip(self, context, instance_id, address):
 class FixedIpTest(test.TestCase):
     def setUp(self):
         super(FixedIpTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(compute.api.API, "add_fixed_ip",
                        compute_api_add_fixed_ip)
         self.stubs.Set(compute.api.API, "remove_fixed_ip",
                        compute_api_remove_fixed_ip)
         self.context = context.get_admin_context()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(FixedIpTest, self).tearDown()
 
     def test_add_fixed_ip(self):
         global last_add_fixed_ip

@@ -32,7 +32,6 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
-from nova.auth import manager
 from nova.compute import power_state
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
@@ -154,35 +153,14 @@ class LibvirtConnTestCase(test.TestCase):
         super(LibvirtConnTestCase, self).setUp()
         connection._late_load_cheetah()
         self.flags(fake_call=True)
-        self.manager = manager.AuthManager()
-
-        try:
-            pjs = self.manager.get_projects()
-            pjs = [p for p in pjs if p.name == 'fake']
-            if 0 != len(pjs):
-                self.manager.delete_project(pjs[0])
-
-            users = self.manager.get_users()
-            users = [u for u in users if u.name == 'fake']
-            if 0 != len(users):
-                self.manager.delete_user(users[0])
-        except Exception, e:
-            pass
-
-        users = self.manager.get_users()
-        self.user = self.manager.create_user('fake', 'fake', 'fake',
-                                             admin=True)
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         self.network = utils.import_object(FLAGS.network_manager)
         self.context = context.get_admin_context()
         FLAGS.instances_path = ''
         self.call_libvirt_dependant_setup = False
         self.test_ip = '10.11.12.13'
-
-    def tearDown(self):
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
-        super(LibvirtConnTestCase, self).tearDown()
 
     test_instance = {'memory_kb':     '1024000',
                      'basepath':      '/some/path',
@@ -239,7 +217,7 @@ class LibvirtConnTestCase(test.TestCase):
                     'mac_address': 'fake',
                     'ip_address': 'fake',
                     'dhcp_server': 'fake',
-                    'extra_params': 'fake'
+                    'extra_params': 'fake',
                 }
 
         # Creating mocks
@@ -368,7 +346,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         conn = connection.LibvirtConnection(False)
-        conn.snapshot(instance_ref, recv_meta['id'])
+        conn.snapshot(self.context, instance_ref, recv_meta['id'])
 
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertEquals(snapshot['properties']['image_state'], 'available')
@@ -408,7 +386,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         conn = connection.LibvirtConnection(False)
-        conn.snapshot(instance_ref, recv_meta['id'])
+        conn.snapshot(self.context, instance_ref, recv_meta['id'])
 
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertEquals(snapshot['properties']['image_state'], 'available')
@@ -441,8 +419,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(parameters[1].get('value'), 'fake')
 
     def _check_xml_and_container(self, instance):
-        user_context = context.RequestContext(project=self.project,
-                                              user=self.user)
+        user_context = context.RequestContext(self.user_id,
+                                              self.project_id)
         instance_ref = db.instance_create(user_context, instance)
         _setup_networking(instance_ref['id'], self.test_ip)
 
@@ -470,11 +448,10 @@ class LibvirtConnTestCase(test.TestCase):
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
-        user_context = context.RequestContext(project=self.project,
-                                              user=self.user)
+        user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, instance)
         network_ref = db.project_get_networks(context.get_admin_context(),
-                                             self.project.id)[0]
+                                             self.project_id)[0]
 
         _setup_networking(instance_ref['id'], self.test_ip)
 
@@ -759,7 +736,7 @@ class LibvirtConnTestCase(test.TestCase):
         network_info = _create_network_info()
 
         try:
-            conn.spawn(instance, network_info)
+            conn.spawn(self.context, instance, network_info)
         except Exception, e:
             count = (0 <= str(e.message).find('Unexpected method call'))
 
@@ -802,11 +779,9 @@ class IptablesFirewallTestCase(test.TestCase):
     def setUp(self):
         super(IptablesFirewallTestCase, self).setUp()
 
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake',
-                                             admin=True)
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.RequestContext('fake', 'fake')
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         self.network = utils.import_object(FLAGS.network_manager)
 
         class FakeLibvirtConnection(object):
@@ -831,11 +806,6 @@ class IptablesFirewallTestCase(test.TestCase):
         connection.libvirt = __import__('libvirt')
         connection.libxml2 = __import__('libxml2')
         return True
-
-    def tearDown(self):
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
-        super(IptablesFirewallTestCase, self).tearDown()
 
     in_nat_rules = [
       '# Generated by iptables-save v1.4.10 on Sat Feb 19 00:03:19 2011',
@@ -1119,22 +1089,15 @@ class NWFilterTestCase(test.TestCase):
         class Mock(object):
             pass
 
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake',
-                                             admin=True)
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.RequestContext(self.user, self.project)
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
 
         self.fake_libvirt_connection = Mock()
 
         self.test_ip = '10.11.12.13'
         self.fw = firewall.NWFilterFirewall(
                                          lambda: self.fake_libvirt_connection)
-
-    def tearDown(self):
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
-        super(NWFilterTestCase, self).tearDown()
 
     def test_cidr_rule_nwfilter_xml(self):
         cloud_controller = cloud.CloudController()

@@ -274,6 +274,18 @@ class Middleware(Application):
         return self.process_response(response)
 
 
+class InjectContext(Middleware):
+    """Add a 'nova.context' to WSGI environ."""
+    def __init__(self, context, *args, **kwargs):
+        self.context = context
+        super(InjectContext, self).__init__(*args, **kwargs)
+
+    @webob.dec.wsgify(RequestClass=Request)
+    def __call__(self, req):
+        req.environ['nova.context'] = self.context
+        return self.application
+
+
 class Debug(Middleware):
     """Helper class for debugging a WSGI application.
 

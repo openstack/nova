@@ -177,14 +177,6 @@ class Instance(BASE, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    @property
-    def project(self):
-        return auth.manager.AuthManager().get_project(self.project_id)
-
     image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
@@ -464,14 +456,6 @@ class SecurityGroup(BASE, NovaBase):
         # may cause existing deployments to choke, so I'm leaving it
         'Instance.deleted == False)',
                              backref='security_groups')
-
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    @property
-    def project(self):
-        return auth.manager.AuthManager().get_project(self.project_id)
 
 
 class SecurityGroupIngressRule(BASE, NovaBase):

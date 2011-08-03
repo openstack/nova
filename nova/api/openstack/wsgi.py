@@ -13,6 +13,7 @@ from nova import wsgi
 
 XMLNS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XMLNS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
+
 XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
 LOG = logging.getLogger('nova.api.openstack.wsgi')
@@ -165,12 +166,11 @@ class MetadataXMLDeserializer(XMLDeserializer):
 
     def extract_metadata(self, metadata_node):
         """Marshal the metadata attribute of a parsed request"""
-        if metadata_node is None:
-            return None
         metadata = {}
-        for meta_node in self.find_children_named(metadata_node, "meta"):
-            key = meta_node.getAttribute("key")
-            metadata[key] = self.extract_text(meta_node)
+        if metadata_node is not None:
+            for meta_node in self.find_children_named(metadata_node, "meta"):
+                key = meta_node.getAttribute("key")
+                metadata[key] = self.extract_text(meta_node)
         return metadata
 
 
@@ -387,6 +387,8 @@ class XMLDictSerializer(DictSerializer):
             link_node = xml_doc.createElement('atom:link')
             link_node.setAttribute('rel', link['rel'])
             link_node.setAttribute('href', link['href'])
+            if 'type' in link:
+                link_node.setAttribute('type', link['type'])
             link_nodes.append(link_node)
         return link_nodes
 

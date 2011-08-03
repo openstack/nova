@@ -30,11 +30,11 @@ import webob
 from nova import context
 from nova import exception
 from nova import test
+from nova import wsgi
 from nova.api import ec2
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
-from nova.auth import manager
 
 
 class FakeHttplibSocket(object):
@@ -192,10 +192,13 @@ class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API"""
     def setUp(self):
         super(ApiEc2TestCase, self).setUp()
-        self.manager = manager.AuthManager()
         self.host = '127.0.0.1'
-        self.app = ec2.Authenticate(ec2.Requestify(ec2.Executor(),
-                       'nova.api.ec2.cloud.CloudController'))
+        # NOTE(vish): skipping the Authorizer
+        roles = ['sysadmin', 'netadmin']
+        ctxt = context.RequestContext('fake', 'fake', roles=roles)
+        self.app = wsgi.InjectContext(ctxt,
+                ec2.Requestify(ec2.Authorizer(ec2.Executor()),
+                               'nova.api.ec2.cloud.CloudController'))
 
     def expect_http(self, host=None, is_secure=False, api_version=None):
         """Returns a new EC2 connection"""
@@ -246,39 +249,25 @@ class ApiEc2TestCase(test.TestCase):
         self.expect_http(api_version='2010-10-30')
         self.mox.ReplayAll()
 
-        user = self.manager.create_user('fake', 'fake', 'fake')
-        project = self.manager.create_project('fake', 'fake', 'fake')
-
         # Any request should be fine
         self.ec2.get_all_instances()
         self.assertTrue(self.ec2.APIVersion in self.http.getresponsebody(),
                        'The version in the xmlns of the response does '
                        'not match the API version given in the request.')
 
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
-
     def test_describe_instances(self):
         """Test that, after creating a user and a project, the describe
         instances call to the API works properly"""
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake')
-        project = self.manager.create_project('fake', 'fake', 'fake')
         self.assertEqual(self.ec2.get_all_instances(), [])
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
 
     def test_terminate_invalid_instance(self):
         """Attempt to terminate an invalid instance"""
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake')
-        project = self.manager.create_project('fake', 'fake', 'fake')
         self.assertRaises(EC2ResponseError, self.ec2.terminate_instances,
                             "i-00000005")
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
 
     def test_get_all_key_pairs(self):
         """Test that, after creating a user and project and generating
@@ -287,16 +276,12 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
         keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
                           for x in range(random.randint(4, 8)))
-        user = self.manager.create_user('fake', 'fake', 'fake')
-        project = self.manager.create_project('fake', 'fake', 'fake')
         # NOTE(vish): create depends on pool, so call helper directly
-        cloud._gen_key(context.get_admin_context(), user.id, keyname)
+        cloud._gen_key(context.get_admin_context(), 'fake', keyname)
 
         rv = self.ec2.get_all_key_pairs()
         results = [k for k in rv if k.name == keyname]
         self.assertEquals(len(results), 1)
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
 
     def test_create_duplicate_key_pair(self):
         """Test that, after successfully generating a keypair,
@@ -305,8 +290,6 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
         keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
                           for x in range(random.randint(4, 8)))
-        user = self.manager.create_user('fake', 'fake', 'fake')
-        project = self.manager.create_project('fake', 'fake', 'fake')
         # NOTE(vish): create depends on pool, so call helper directly
         self.ec2.create_key_pair('test')
 
@@ -325,27 +308,16 @@ class ApiEc2TestCase(test.TestCase):
         """Test that we can retrieve security groups"""
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
-        project = self.manager.create_project('fake', 'fake', 'fake')
 
         rv = self.ec2.get_all_security_groups()
 
         self.assertEquals(len(rv), 1)
         self.assertEquals(rv[0].name, 'default')
 
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
-
     def test_create_delete_security_group(self):
         """Test that we can create a security group"""
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
-        project = self.manager.create_project('fake', 'fake', 'fake')
-
-        # At the moment, you need both of these to actually be netadmin
-        self.manager.add_role('fake', 'netadmin')
-        project.add_role('fake', 'netadmin')
 
         security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                                       for x in range(random.randint(4, 8)))
@@ -364,9 +336,6 @@ class ApiEc2TestCase(test.TestCase):
 
         self.ec2.delete_security_group(security_group_name)
 
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
-
     def test_authorize_revoke_security_group_cidr(self):
         """
         Test that we can add and remove CIDR based rules
@@ -374,12 +343,6 @@ class ApiEc2TestCase(test.TestCase):
         """
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake')
-        project = self.manager.create_project('fake', 'fake', 'fake')
-
-        # At the moment, you need both of these to actually be netadmin
-        self.manager.add_role('fake', 'netadmin')
-        project.add_role('fake', 'netadmin')
 
         security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                                       for x in range(random.randint(4, 8)))
@@ -426,9 +389,6 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEqual(len(rv), 1)
         self.assertEqual(rv[0].name, 'default')
 
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
-
         return
 
     def test_authorize_revoke_security_group_cidr_v6(self):
@@ -438,12 +398,6 @@ class ApiEc2TestCase(test.TestCase):
         """
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake')
-        project = self.manager.create_project('fake', 'fake', 'fake')
-
-        # At the moment, you need both of these to actually be netadmin
-        self.manager.add_role('fake', 'netadmin')
-        project.add_role('fake', 'netadmin')
 
         security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                                       for x in range(random.randint(4, 8)))
@@ -489,9 +443,6 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEqual(len(rv), 1)
         self.assertEqual(rv[0].name, 'default')
 
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
-
         return
 
     def test_authorize_revoke_security_group_foreign_group(self):
@@ -501,12 +452,6 @@ class ApiEc2TestCase(test.TestCase):
         """
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
-        project = self.manager.create_project('fake', 'fake', 'fake')
-
-        # At the moment, you need both of these to actually be netadmin
-        self.manager.add_role('fake', 'netadmin')
-        project.add_role('fake', 'netadmin')
 
         rand_string = 'sdiuisudfsdcnpaqwertasd'
         security_group_name = "".join(random.choice(rand_string)
@@ -560,8 +505,3 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.ec2.delete_security_group(security_group_name)
-
-        self.manager.delete_project(project)
-        self.manager.delete_user(user)
-
-        return
