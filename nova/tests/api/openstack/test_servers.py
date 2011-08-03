@@ -230,6 +230,7 @@ class ServersTest(test.TestCase):
     def setUp(self):
         self.maxDiff = None
         super(ServersTest, self).setUp()
+        self.set_flags_verbosity(True)
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)

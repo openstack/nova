@@ -100,6 +100,7 @@ class TestCase(unittest.TestCase):
         self.injected = []
         self._services = []
         self._original_flags = FLAGS.FlagValuesDict()
+        self._original_flags_verbosity = FLAGS.verbose
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""
@@ -157,6 +158,11 @@ class TestCase(unittest.TestCase):
         FLAGS.Reset()
         for k, v in self._original_flags.iteritems():
             setattr(FLAGS, k, v)
+        FLAGS.verbose = self._original_flags_verbosity
+
+    def set_flags_verbosity(self, verbose=True):
+        """Set the FLAGS verbosity for a test"""
+        FLAGS.verbose = verbose
 
     def start_service(self, name, host=None, **kwargs):
         host = host and host or uuid.uuid4().hex

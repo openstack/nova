@@ -21,7 +21,6 @@ import webob
 from xml.etree import ElementTree
 
 from nova import context
-from nova import flags
 from nova import test
 from nova.api import openstack
 from nova.api.openstack import extensions
@@ -29,7 +28,6 @@ from nova.api.openstack import flavors
 from nova.api.openstack import wsgi
 from nova.tests.api.openstack import fakes
 
-FLAGS = flags.FLAGS
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 response_body = "Try to say this Mr. Knox, sir..."

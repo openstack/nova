@@ -29,7 +29,6 @@ from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 def zone_get(context, zone_id):
@@ -96,6 +95,7 @@ class ZonesTest(test.TestCase):
     def setUp(self):
         super(ZonesTest, self).setUp()
         self.flags(allow_admin_api=True)
+        self.set_flags_verbosity(True)
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
 
