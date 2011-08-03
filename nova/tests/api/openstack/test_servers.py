@@ -1152,9 +1152,6 @@ class ServersTest(test.TestCase):
         req.environ["nova.context"] = context
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 403)
-        print '*' * 80
-        print res.body
-        print '*' * 80
         self.assertTrue(res.body.find(
                 "User does not have admin privileges") > -1)
 
