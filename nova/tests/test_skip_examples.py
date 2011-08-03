@@ -31,7 +31,7 @@ class ExampleSkipTestCase(test.TestCase):
     def test_skip_if_env_user_exists(self):
         x = 1
 
-    @test.skip_unless(os.getenv("BLAH"),
-           "Skipping -- Environment variable BLAH does not exist")
-    def test_skip_unless_env_blah_exists(self):
+    @test.skip_unless(os.getenv("FOO"),
+           "Skipping -- Environment variable FOO does not exist")
+    def test_skip_unless_env_foo_exists(self):
         x = 1
