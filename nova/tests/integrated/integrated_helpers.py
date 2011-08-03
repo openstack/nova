@@ -23,7 +23,6 @@ import random
 import string
 
 from nova import exception
-from nova import flags
 from nova import service
 from nova import test  # For the flags
 from nova.auth import manager
@@ -31,8 +30,6 @@ import nova.image.glance
 from nova.log import logging
 from nova.tests.integrated.api import client
 
-
-FLAGS = flags.FLAGS
 
 LOG = logging.getLogger('nova.tests.integrated')
 
@@ -151,6 +148,7 @@ class _IntegratedTestBase(test.TestCase):
 
         f = self._get_flags()
         self.flags(**f)
+        self.set_flags_verbosity(True)
 
         def fake_get_image_service(image_href):
             image_id = int(str(image_href).split('/')[-1])
