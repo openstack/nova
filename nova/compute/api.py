@@ -561,6 +561,7 @@ class API(base.Base):
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
 
+    @scheduler_api.reroute_compute("update")
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
@@ -688,7 +689,7 @@ class API(base.Base):
                     raise
                 instances = None
         elif project_id or not context.is_admin:
-            if not context.project:
+            if not context.project_id:
                 instances = self.db.instance_get_all_by_user(
                     context, context.user_id)
             else:
@@ -776,6 +777,7 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
+    @scheduler_api.reroute_compute("backup")
     def backup(self, context, instance_id, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
@@ -792,6 +794,7 @@ class API(base.Base):
                             extra_properties=extra_properties)
         return recv_meta
 
+    @scheduler_api.reroute_compute("snapshot")
     def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
 
@@ -834,10 +837,12 @@ class API(base.Base):
                                    params=params)
         return recv_meta
 
+    @scheduler_api.reroute_compute("reboot")
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, name=None,
             metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
@@ -935,18 +940,15 @@ class API(base.Base):
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
                 " new instance type %(new_instance_type_name)s") % locals())
         if not new_instance_type:
-            raise exception.ApiError(_("Requested flavor %(flavor_id)d "
-                    "does not exist") % locals())
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         current_memory_mb = current_instance_type['memory_mb']
         new_memory_mb = new_instance_type['memory_mb']
         if current_memory_mb > new_memory_mb:
-            raise exception.ApiError(_("Invalid flavor: cannot downsize"
-                    "instances"))
+            raise exception.CannotResizeToSmallerSize()
 
         if (current_memory_mb == new_memory_mb) and flavor_id:
-            raise exception.ApiError(_("Invalid flavor: cannot use"
-                    "the same flavor. "))
+            raise exception.CannotResizeToSameSize()
 
         instance_ref = self._get_instance(context, instance_id, 'resize')
         self._cast_scheduler_message(context,
@@ -1024,6 +1026,7 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("set_admin_password")
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
         host = self._find_host(context, instance_id)

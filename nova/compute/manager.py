@@ -326,7 +326,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._update_state(context, instance_id, power_state.BUILDING)
 
             try:
-                self.driver.spawn(instance, network_info, bd_mapping)
+                self.driver.spawn(context, instance, network_info, bd_mapping)
             except Exception as ex:  # pylint: disable=W0702
                 msg = _("Instance '%(instance_id)s' failed to spawn. Is "
                         "virtualization enabled in the BIOS? Details: "
@@ -430,7 +430,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
         instance_ref.injected_files = kwargs.get('injected_files', [])
-        self.driver.spawn(instance_ref, network_info)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                              instance_ref)
+        bd_mapping = self._setup_block_device_mapping(context, instance_id)
+        self.driver.spawn(context, instance_ref, network_info, bd_mapping)
 
         self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
@@ -498,7 +501,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'instance: %(instance_id)s (state: %(state)s '
                        'expected: %(running)s)') % locals())
 
-        self.driver.snapshot(instance_ref, image_id)
+        self.driver.snapshot(context, instance_ref, image_id)
 
         if image_type == 'snapshot':
             if rotation:
@@ -657,7 +660,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         _update_state = lambda result: self._update_state_callback(
                 self, context, instance_id, result)
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.rescue(instance_ref, _update_state, network_info)
+        self.driver.rescue(context, instance_ref, _update_state, network_info)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -744,7 +747,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 local_gb=instance_type['local_gb'],
                 instance_type_id=instance_type['id']))
 
-        self.driver.revert_resize(instance_ref)
+        self.driver.revert_migration(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
         usage_info = utils.usage_from_instance(instance_ref)
@@ -842,20 +845,26 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
+
+        resize_instance = False
         instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
-        instance_type = self.db.instance_type_get_by_flavor_id(context,
-                migration_ref['new_flavor_id'])
-        self.db.instance_update(context, instance_ref.uuid,
-               dict(instance_type_id=instance_type['id'],
-                    memory_mb=instance_type['memory_mb'],
-                    vcpus=instance_type['vcpus'],
-                    local_gb=instance_type['local_gb']))
+        if migration_ref['old_flavor_id'] != migration_ref['new_flavor_id']:
+            instance_type = self.db.instance_type_get_by_flavor_id(context,
+                    migration_ref['new_flavor_id'])
+            self.db.instance_update(context, instance_ref.uuid,
+                   dict(instance_type_id=instance_type['id'],
+                        memory_mb=instance_type['memory_mb'],
+                        vcpus=instance_type['vcpus'],
+                        local_gb=instance_type['local_gb']))
+            resize_instance = True
 
         instance_ref = self.db.instance_get_by_uuid(context,
                                             instance_ref.uuid)
+
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.finish_resize(instance_ref, disk_info, network_info)
+        self.driver.finish_migration(context, instance_ref, disk_info,
+                                     network_info, resize_instance)
 
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })
@@ -868,7 +877,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         self.network_api.add_fixed_ip_to_instance(context, instance_id,
-                                                           network_id)
+                                                  self.host, network_id)
         self.inject_network_info(context, instance_id)
         self.reset_network(context, instance_id)
 

@@ -26,7 +26,7 @@ import urllib
 import urllib2
 import uuid
 
-from nova import context
+from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
@@ -89,7 +89,7 @@ class VMWareVMOps(object):
         LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
         return lst_vm_names
 
-    def spawn(self, instance, network_info):
+    def spawn(self, context, instance, network_info):
         """
         Creates a VM instance.
 
@@ -111,7 +111,7 @@ class VMWareVMOps(object):
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
 
-        network = db.network_get_by_instance(context.get_admin_context(),
+        network = db.network_get_by_instance(nova_context.get_admin_context(),
                                             instance['id'])
 
         net_name = network['bridge']
@@ -329,7 +329,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Powered on the VM instance %s") % instance.name)
         _power_on_vm()
 
-    def snapshot(self, instance, snapshot_name):
+    def snapshot(self, context, instance, snapshot_name):
         """
         Create snapshot from a running VM instance.
         Steps followed are:
@@ -721,11 +721,11 @@ class VMWareVMOps(object):
         Set the machine id of the VM for guest tools to pick up and change
         the IP.
         """
-        admin_context = context.get_admin_context()
+        admin_context = nova_context.get_admin_context()
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance.id)
-        network = db.network_get_by_instance(context.get_admin_context(),
+        network = db.network_get_by_instance(nova_context.get_admin_context(),
                                             instance['id'])
         mac_address = None
         if instance['mac_addresses']:
@@ -734,13 +734,14 @@ class VMWareVMOps(object):
         net_mask = network["netmask"]
         gateway = network["gateway"]
         broadcast = network["broadcast"]
-        dns = network["dns"]
+        # TODO(vish): add support for dns2
+        dns = network["dns1"]
 
         addresses = db.instance_get_fixed_addresses(admin_context,
                                                     instance['id'])
         ip_addr = addresses[0] if addresses else None
 
-        machine_id_chanfge_spec = \
+        machine_id_change_spec = \
             vm_util.get_machine_id_change_spec(client_factory, mac_address,
                                                ip_addr, net_mask, gateway,
                                                broadcast, dns)
@@ -750,7 +751,7 @@ class VMWareVMOps(object):
                    'ip_addr': ip_addr}))
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
-                           spec=machine_id_chanfge_spec)
+                           spec=machine_id_change_spec)
         self._session._wait_for_task(instance.id, reconfig_task)
         LOG.debug(_("Reconfigured VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %

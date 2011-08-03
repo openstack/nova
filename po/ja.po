@@ -130,33 +130,6 @@ msgstr "例外: compute.api::suspend %s"
 msgid "compute.api::resume %s"
 msgstr "例外: compute.api::resume %s"
 
-#: ../nova/twistd.py:157
-msgid "Wrong number of arguments."
-msgstr "引数の数が異なります。"
-
-#: ../nova/twistd.py:209
-#, python-format
-msgid "pidfile %s does not exist. Daemon not running?\n"
-msgstr "pidfile %s が存在しません。デーモンは実行中ですか？\n"
-
-#: ../nova/twistd.py:221
-msgid "No such process"
-msgstr "そのようなプロセスはありません"
-
-#: ../nova/twistd.py:230 ../nova/service.py:224
-#, python-format
-msgid "Serving %s"
-msgstr "%s サービスの開始"
-
-#: ../nova/twistd.py:262 ../nova/service.py:225
-msgid "Full set of FLAGS:"
-msgstr "FLAGSの一覧:"
-
-#: ../nova/twistd.py:266
-#, python-format
-msgid "Starting %s"
-msgstr "%s を起動中"
-
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:731 ../nova/virt/libvirt_conn.py:741
 #: ../nova/api/ec2/__init__.py:317
@@ -1808,34 +1781,6 @@ msgstr "タスク [%(name)s] %(task)s 状態: %(status)s    %(error_info)s"
 msgid "Got exception: %s"
 msgstr "例外 %s が発生しました。"
 
-#: ../nova/compute/monitor.py:259
-#, python-format
-msgid "updating %s..."
-msgstr "%s の情報の更新…"
-
-#: ../nova/compute/monitor.py:289
-msgid "unexpected error during update"
-msgstr "更新の最中に予期しないエラーが発生しました。"
-
-#: ../nova/compute/monitor.py:356
-#, python-format
-msgid "Cannot get blockstats for \"%(disk)s\" on \"%(iid)s\""
-msgstr "\"%(iid)s\" 上の \"%(disk)s\" 用のブロック統計(blockstats)が取得できません"
-
-#: ../nova/compute/monitor.py:379
-#, python-format
-msgid "Cannot get ifstats for \"%(interface)s\" on \"%(iid)s\""
-msgstr "\"%(iid)s\" 上の %(interface)s\" 用インターフェース統計(ifstats)が取得できません"
-
-#: ../nova/compute/monitor.py:414
-msgid "unexpected exception getting connection"
-msgstr "接続に際し予期しないエラーが発生しました。"
-
-#: ../nova/compute/monitor.py:429
-#, python-format
-msgid "Found instance: %s"
-msgstr "インスタンス %s が見つかりました。"
-
 #: ../nova/volume/san.py:67
 #, python-format
 msgid "Could not find iSCSI export  for volume %s"
@@ -2310,10 +2255,6 @@ msgstr "%(host)s:%(port)s 上で %(arg0)s を開始しています"
 #: ../nova/wsgi.py:147
 msgid "You must implement __call__"
 msgstr "__call__ を実装しなければなりません"
-
-#: ../bin/nova-instancemonitor.py:55
-msgid "Starting instance monitor"
-msgstr "インスタンスモニタを開始しています"
 
 #: ../bin/nova-dhcpbridge.py:58
 msgid "leasing ip"
