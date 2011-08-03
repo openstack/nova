@@ -19,11 +19,8 @@ Tests For Scheduler Host Filters.
 import json
 
 from nova import exception
-from nova import flags
 from nova import test
 from nova.scheduler import host_filter
-
-FLAGS = flags.FLAGS
 
 
 class FakeZoneManager:
@@ -57,9 +54,8 @@ class HostFilterTestCase(test.TestCase):
                 'host_name-label': 'xs-%s' % multiplier}
 
     def setUp(self):
-        self.old_flag = FLAGS.default_host_filter
-        FLAGS.default_host_filter = \
-                            'nova.scheduler.host_filter.AllHostsFilter'
+        default_host_filter = 'nova.scheduler.host_filter.AllHostsFilter'
+        self.flags(default_host_filter=default_host_filter)
         self.instance_type = dict(name='tiny',
                 memory_mb=50,
                 vcpus=10,
@@ -97,9 +93,6 @@ class HostFilterTestCase(test.TestCase):
         host09 = self.zone_manager.service_states['host09']['compute']
         host09['xpu_arch'] = 'fermi'
         host09['xpu_info'] = 'Tesla 2150'
-
-    def tearDown(self):
-        FLAGS.default_host_filter = self.old_flag
 
     def test_choose_filter(self):
         # Test default filter ...
