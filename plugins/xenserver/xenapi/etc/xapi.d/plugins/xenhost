@@ -143,33 +143,6 @@ def host_start(self, arg_dict):
 
 
 @jsonify
-def set_power_state(self, arg_dict):
-    """Reboots or powers off this host. Ideally, we would also like to be
-    able to power *on* a host, but right now this is not technically
-    feasible.
-    """
-    power_state = arg_dict.get("power_state")
-    if power_state is None:
-        raise pluginlib.PluginError(
-                _("Missing 'power_state' argument to set_power_state"))
-    # Host must be disabled first
-#    result = _run_command("xe host-disable")
-#    if result:
-#        raise pluginlib.PluginError(result)
-#    # All running VMs must be shutdown
-#    result = _run_command("xe vm-shutdown --multiple power-state=running")
-#    if result:
-#        raise pluginlib.PluginError(result)
-#    cmds = {"reboot": "xe host-reboot", "on": "xe host-power-on",
-#            "off": "xe host-shutdown"}
-#    result = _run_command(cmds[power_state])
-#    # Should be empty string
-#    if result:
-#        raise pluginlib.PluginError(result)
-    return {"power_state": power_state}
-
-
-@jsonify
 def host_data(self, arg_dict):
     """Runs the commands on the xenstore host to return the current status
     information.

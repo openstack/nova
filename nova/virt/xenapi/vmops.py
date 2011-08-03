@@ -1042,17 +1042,6 @@ class VMOps(object):
             return xenapi_resp.details[-1]
         return resp["status"]
 
-    def set_power_state(self, host, power_state):
-        """Reboots, shuts down or starts up the host."""
-        args = {"power_state": power_state}
-        xenapi_resp = self._call_xenhost("set_power_state", args)
-        try:
-            resp = json.loads(xenapi_resp)
-        except TypeError  as e:
-            # Already logged; return the message
-            return xenapi_resp.details[-1]
-        return resp["power_state"]
-
     def _call_xenhost(self, method, arg_dict):
         """There will be several methods that will need this general
         handling for interacting with the xenhost plugin, so this abstracts

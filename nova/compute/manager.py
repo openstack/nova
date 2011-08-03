@@ -1,4 +1,4 @@
-#: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -938,12 +938,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             enabled=None):
         """Sets the specified host's ability to accept new instances."""
         return self.driver.set_host_enabled(host, enabled)
-
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def set_power_state(self, context, instance_id=None, host=None,
-            power_state=None):
-        """Turns the specified host on/off, or reboots the host."""
-        return self.driver.set_power_state(host, power_state)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def get_diagnostics(self, context, instance_id):
