@@ -1053,11 +1053,18 @@ class ServersTest(test.TestCase):
         self.assertEqual(servers[0]['id'], 100)
 
     def test_get_servers_with_bad_option_v1_1(self):
+        # 1.1 API also ignores unknown options
+        def fake_get_all(compute_self, context, search_opts=None):
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
         req = webob.Request.blank('/v1.1/servers?unknownoption=whee')
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-        self.assertTrue(res.body.find(
-                "unknown options 'unknownoption'") > -1)
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
 
     def test_get_servers_allows_image_v1_1(self):
         def fake_get_all(compute_self, context, search_opts=None):
@@ -1135,17 +1142,6 @@ class ServersTest(test.TestCase):
 
     def test_get_servers_allows_instance_name1_v1_1(self):
         """Test getting servers by instance_name with admin_api
-        disabled
-        """
-        FLAGS.allow_admin_api = False
-        req = webob.Request.blank('/v1.1/servers?instance_name=whee.*')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-        self.assertTrue(res.body.find(
-                "unknown options 'instance_name'") > -1)
-
-    def test_get_servers_allows_instance_name2_v1_1(self):
-        """Test getting servers by instance_name with admin_api
         enabled but non-admin context
         """
         FLAGS.allow_admin_api = True
@@ -1156,10 +1152,13 @@ class ServersTest(test.TestCase):
         req.environ["nova.context"] = context
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 403)
+        print '*' * 80
+        print res.body
+        print '*' * 80
         self.assertTrue(res.body.find(
                 "User does not have admin privileges") > -1)
 
-    def test_get_servers_allows_instance_name3_v1_1(self):
+    def test_get_servers_allows_instance_name2_v1_1(self):
         """Test getting servers by instance_name with admin_api
         enabled and admin context
         """
