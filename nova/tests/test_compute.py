@@ -19,10 +19,6 @@
 Tests For Compute
 """
 
-import mox
-import stubout
-
-from nova.auth import manager
 from nova import compute
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
@@ -68,21 +64,15 @@ class ComputeTestCase(test.TestCase):
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_api = compute.API()
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake')
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.RequestContext('fake', 'fake', False)
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
         self.stubs.Set(nova.image.fake._FakeImageService, 'show', fake_show)
-
-    def tearDown(self):
-        self.manager.delete_user(self.user)
-        self.manager.delete_project(self.project)
-        super(ComputeTestCase, self).tearDown()
 
     def _create_instance(self, params=None):
         """Create a test instance"""
@@ -93,8 +83,8 @@ class ComputeTestCase(test.TestCase):
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
-        inst['user_id'] = self.user.id
-        inst['project_id'] = self.project.id
+        inst['user_id'] = self.user_id
+        inst['project_id'] = self.project_id
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
@@ -119,8 +109,8 @@ class ComputeTestCase(test.TestCase):
     def _create_group(self):
         values = {'name': 'testgroup',
                   'description': 'testgroup',
-                  'user_id': self.user.id,
-                  'project_id': self.project.id}
+                  'user_id': self.user_id,
+                  'project_id': self.project_id}
         return db.security_group_create(self.context, values)
 
     def _get_dummy_instance(self):
@@ -354,8 +344,8 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.create')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project.id)
-        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
@@ -378,8 +368,8 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.delete')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project.id)
-        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
@@ -424,7 +414,7 @@ class ComputeTestCase(test.TestCase):
         def fake(*args, **kwargs):
             pass
 
-        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
         context = self.context.elevated()
         instance_id = self._create_instance()
@@ -461,8 +451,8 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.resize.prep')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project.id)
-        self.assertEquals(payload['user_id'], self.user.id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
@@ -510,8 +500,8 @@ class ComputeTestCase(test.TestCase):
         db.instance_update(self.context, instance_id,
                 {'instance_type_id': inst_type['id']})
 
-        self.assertRaises(exception.ApiError, self.compute_api.resize,
-                context, instance_id, 1)
+        self.assertRaises(exception.CannotResizeToSmallerSize,
+                          self.compute_api.resize, context, instance_id, 1)
 
         self.compute.terminate_instance(context, instance_id)
 
@@ -522,8 +512,8 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.run_instance(self.context, instance_id)
 
-        self.assertRaises(exception.ApiError, self.compute_api.resize,
-                context, instance_id, 1)
+        self.assertRaises(exception.CannotResizeToSameSize,
+                          self.compute_api.resize, context, instance_id, 1)
 
         self.compute.terminate_instance(context, instance_id)
 
@@ -535,8 +525,8 @@ class ComputeTestCase(test.TestCase):
         def fake(*args, **kwargs):
             pass
 
-        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
-        self.stubs.Set(self.compute.driver, 'revert_resize', fake)
+        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
+        self.stubs.Set(self.compute.driver, 'revert_migration', fake)
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
 
         self.compute.run_instance(self.context, instance_id)
@@ -853,7 +843,6 @@ class ComputeTestCase(test.TestCase):
 
     def test_run_kill_vm(self):
         """Detect when a vm is terminated behind the scenes"""
-        self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(compute_manager.ComputeManager,
                 '_report_driver_status', nop_report_driver_status)
 

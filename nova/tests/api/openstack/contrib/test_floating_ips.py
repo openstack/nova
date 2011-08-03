@@ -74,12 +74,8 @@ class FloatingIpTest(test.TestCase):
     def setUp(self):
         super(FloatingIpTest, self).setUp()
         self.controller = FloatingIPController()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(network.api.API, "get_floating_ip",
                        network_api_get_floating_ip)
         self.stubs.Set(network.api.API, "list_floating_ips",
@@ -96,7 +92,6 @@ class FloatingIpTest(test.TestCase):
         self._create_floating_ip()
 
     def tearDown(self):
-        self.stubs.UnsetAll()
         self._delete_floating_ip()
         super(FloatingIpTest, self).tearDown()
 
@@ -110,6 +105,11 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(view['floating_ip']['ip'], self.address)
         self.assertEqual(view['floating_ip']['fixed_ip'], None)
         self.assertEqual(view['floating_ip']['instance_id'], None)
+
+    def test_translate_floating_ip_view_dict(self):
+        floating_ip = {'id': 0, 'address': '10.0.0.10', 'fixed_ip': None}
+        view = _translate_floating_ip_view(floating_ip)
+        self.assertTrue('floating_ip' in view)
 
     def test_floating_ips_list(self):
         req = webob.Request.blank('/v1.1/os-floating-ips')

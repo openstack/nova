@@ -16,7 +16,6 @@
 #    under the License.
 
 import json
-import stubout
 import webob
 import xml.dom.minidom as minidom
 
@@ -56,12 +55,8 @@ def return_instance_type_not_found(context, flavor_id):
 class FlavorsTest(test.TestCase):
     def setUp(self):
         super(FlavorsTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db.api, "instance_type_get_all",
                        return_instance_types)
         self.stubs.Set(nova.db.api, "instance_type_get_by_flavor_id",

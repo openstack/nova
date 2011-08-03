@@ -29,6 +29,7 @@ from glance.common import exception as glance_exc
 from nova import context
 from nova import exception as exc
 from nova import utils
+from nova import wsgi
 import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
@@ -40,14 +41,13 @@ import nova.image.fake
 from nova.image import glance
 from nova.image import service
 from nova.tests import fake_flags
-from nova.wsgi import Router
 
 
 class Context(object):
     pass
 
 
-class FakeRouter(Router):
+class FakeRouter(wsgi.Router):
     def __init__(self):
         pass
 
@@ -73,17 +73,27 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app(inner_app10=None, inner_app11=None):
+def wsgi_app(inner_app10=None, inner_app11=None, fake_auth=True):
     if not inner_app10:
         inner_app10 = openstack.APIRouterV10()
     if not inner_app11:
         inner_app11 = openstack.APIRouterV11()
-    mapper = urlmap.URLMap()
-    api10 = openstack.FaultWrapper(auth.AuthMiddleware(
+
+    if fake_auth:
+        ctxt = context.RequestContext('fake', 'fake')
+        api10 = openstack.FaultWrapper(wsgi.InjectContext(ctxt,
               limits.RateLimitingMiddleware(inner_app10)))
-    api11 = openstack.FaultWrapper(auth.AuthMiddleware(
+        api11 = openstack.FaultWrapper(wsgi.InjectContext(ctxt,
               limits.RateLimitingMiddleware(
                   extensions.ExtensionMiddleware(inner_app11))))
+    else:
+        api10 = openstack.FaultWrapper(auth.AuthMiddleware(
+              limits.RateLimitingMiddleware(inner_app10)))
+        api11 = openstack.FaultWrapper(auth.AuthMiddleware(
+              limits.RateLimitingMiddleware(
+                  extensions.ExtensionMiddleware(inner_app11))))
+        Auth = auth
+    mapper = urlmap.URLMap()
     mapper['/v1.0'] = api10
     mapper['/v1.1'] = api11
     mapper['/'] = openstack.FaultWrapper(versions.Versions())
@@ -105,8 +115,7 @@ def stub_out_key_pair_funcs(stubs, have_key_pair=True):
 
 def stub_out_image_service(stubs):
     def fake_get_image_service(image_href):
-        image_id = int(str(image_href).split('/')[-1])
-        return (nova.image.fake.FakeImageService(), image_id)
+        return (nova.image.fake.FakeImageService(), image_href)
     stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
     stubs.Set(nova.image, 'get_default_image_service',
         lambda: nova.image.fake.FakeImageService())
@@ -360,17 +369,18 @@ class FakeAuthManager(object):
             if admin is not None:
                 user.admin = admin
 
-    def is_admin(self, user):
+    def is_admin(self, user_id):
+        user = self.get_user(user_id)
         return user.admin
 
-    def is_project_member(self, user, project):
+    def is_project_member(self, user_id, project):
         if not isinstance(project, Project):
             try:
                 project = self.get_project(project)
             except exc.NotFound:
                 raise webob.exc.HTTPUnauthorized()
-        return ((user.id in project.member_ids) or
-                (user.id == project.project_manager_id))
+        return ((user_id in project.member_ids) or
+                (user_id == project.project_manager_id))
 
     def create_project(self, name, manager_user, description=None,
                        member_users=None):
@@ -397,13 +407,13 @@ class FakeAuthManager(object):
         else:
             raise exc.NotFound
 
-    def get_projects(self, user=None):
-        if not user:
+    def get_projects(self, user_id=None):
+        if not user_id:
             return FakeAuthManager.projects.values()
         else:
             return [p for p in FakeAuthManager.projects.values()
-                    if (user.id in p.member_ids) or
-                       (user.id == p.project_manager_id)]
+                    if (user_id in p.member_ids) or
+                       (user_id == p.project_manager_id)]
 
 
 class FakeRateLimiter(object):
