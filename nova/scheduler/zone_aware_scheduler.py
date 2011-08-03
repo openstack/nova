@@ -81,7 +81,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
         try:
             json_entry = decryptor(blob)
-            return json.dumps(entry)
+            return json.dumps(json_entry)
         except M2Crypto.EVP.EVPError:
             pass
         return None

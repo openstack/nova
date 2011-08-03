@@ -101,9 +101,6 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
-flags.DEFINE_string('xenapi_image_service',
-                    'glance',
-                    'Where to get VM images: glance or objectstore.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
                    'The interval used for polling of coalescing vhds.'
@@ -112,22 +109,15 @@ flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
                      5,
                      'Max number of times to poll for VHD to coalesce.'
                      '  Used only if connection_type=xenapi.')
-flags.DEFINE_bool('xenapi_inject_image',
-                  True,
-                  'Specifies whether an attempt to inject network/key'
-                  '  data into the disk image should be made.'
-                  '  Used only if connection_type=xenapi.')
 flags.DEFINE_string('xenapi_agent_path',
                     'usr/sbin/xe-update-networking',
                     'Specifies the path in which the xenapi guest agent'
                     '  should be located. If the agent is present,'
                     '  network configuration is not injected into the image'
                     '  Used only if connection_type=xenapi.'
-                    '  and xenapi_inject_image=True')
-
+                    '  and flat_injected=True')
 flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
                     'Base path to the storage repository')
-
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -194,21 +184,24 @@ class XenAPIConnection(driver.ComputeDriver):
     def list_instances_detail(self):
         return self._vmops.list_instances_detail()
 
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance, network_info,
+              block_device_mapping=None):
         """Create VM instance"""
-        self._vmops.spawn(instance, network_info)
+        self._vmops.spawn(context, instance, network_info)
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
         self._vmops.revert_resize(instance)
 
-    def finish_resize(self, instance, disk_info, network_info):
+    def finish_migration(self, context, instance, disk_info, network_info,
+                         resize_instance=False):
         """Completes a resize, turning on the migrated instance"""
-        self._vmops.finish_resize(instance, disk_info, network_info)
+        self._vmops.finish_migration(context, instance, disk_info,
+                                     network_info, resize_instance)
 
-    def snapshot(self, instance, image_id):
+    def snapshot(self, context, instance, image_id):
         """ Create snapshot from a running VM instance """
-        self._vmops.snapshot(instance, image_id)
+        self._vmops.snapshot(context, instance, image_id)
 
     def reboot(self, instance, network_info):
         """Reboot VM instance"""
@@ -249,9 +242,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
-    def rescue(self, instance, callback, network_info):
+    def rescue(self, context, instance, callback, network_info):
         """Rescue the specified instance"""
-        self._vmops.rescue(instance, callback)
+        self._vmops.rescue(context, instance, callback, network_info)
 
     def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""

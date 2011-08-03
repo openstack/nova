@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import hashlib
 import os
 
@@ -149,8 +150,8 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_detail(self, inst):
         response = super(ViewBuilderV11, self)._build_detail(inst)
-        response['server']['created'] = inst['created_at']
-        response['server']['updated'] = inst['updated_at']
+        response['server']['created'] = utils.isotime(inst['created_at'])
+        response['server']['updated'] = utils.isotime(inst['updated_at'])
         if 'status' in response['server']:
             if response['server']['status'] == "ACTIVE":
                 response['server']['progress'] = 100

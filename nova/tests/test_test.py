@@ -33,8 +33,13 @@ class IsolationTestCase(test.TestCase):
         self.start_service('compute')
 
     def test_rpc_consumer_isolation(self):
-        connection = rpc.Connection.instance(new=True)
-        consumer = rpc.TopicAdapterConsumer(connection, topic='compute')
-        consumer.register_callback(
-                lambda x, y: self.fail('I should never be called'))
+        class NeverCalled(object):
+
+            def __getattribute__(*args):
+                assert False, "I should never get called."
+
+        connection = rpc.create_connection(new=True)
+        proxy = NeverCalled()
+        consumer = rpc.create_consumer(connection, 'compute',
+                                       proxy, fanout=False)
         consumer.attach_to_eventlet()

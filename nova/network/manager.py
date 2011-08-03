@@ -68,7 +68,7 @@ LOG = logging.getLogger("nova.network.manager")
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('flat_network_bridge', 'br100',
+flags.DEFINE_string('flat_network_bridge', None,
                     'Bridge for simple network instances')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
@@ -410,8 +410,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         kwargs can contain fixed_ips to circumvent another db lookup
         """
         instance_id = kwargs.pop('instance_id')
-        fixed_ips = kwargs.get('fixed_ips') or \
+        try:
+            fixed_ips = kwargs.get('fixed_ips') or \
                   self.db.fixed_ip_get_by_instance(context, instance_id)
+        except exceptions.FixedIpNotFoundForInstance:
+            fixed_ips = []
         LOG.debug(_("network deallocation for instance |%s|"), instance_id,
                                                                context=context)
         # deallocate fixed ips
@@ -551,15 +554,17 @@ class NetworkManager(manager.SchedulerDependentManager):
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
         #             network_get_by_compute_host
-        address = self.db.fixed_ip_associate_pool(context.elevated(),
-                                                  network['id'],
-                                                  instance_id)
-        vif = self.db.virtual_interface_get_by_instance_and_network(context,
-                                                                instance_id,
-                                                                network['id'])
-        values = {'allocated': True,
-                  'virtual_interface_id': vif['id']}
-        self.db.fixed_ip_update(context, address, values)
+        address = None
+        if network['cidr']:
+            address = self.db.fixed_ip_associate_pool(context.elevated(),
+                                                      network['id'],
+                                                      instance_id)
+            get_vif = self.db.virtual_interface_get_by_instance_and_network
+            vif = get_vif(context, instance_id, network['id'])
+            values = {'allocated': True,
+                      'virtual_interface_id': vif['id']}
+            self.db.fixed_ip_update(context, address, values)
+
         self._setup_network(context, network)
         return address
 
@@ -613,33 +618,40 @@ class NetworkManager(manager.SchedulerDependentManager):
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
-        fixed_net = netaddr.IPNetwork(cidr)
-        fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
-        significant_bits_v6 = 64
-        network_size_v6 = 1 << 64
-        for index in range(num_networks):
-            start = index * network_size
-            start_v6 = index * network_size_v6
+        if cidr_v6:
+            fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
+            significant_bits_v6 = 64
+            network_size_v6 = 1 << 64
+
+        if cidr:
+            fixed_net = netaddr.IPNetwork(cidr)
             significant_bits = 32 - int(math.log(network_size, 2))
-            cidr = '%s/%s' % (fixed_net[start], significant_bits)
-            project_net = netaddr.IPNetwork(cidr)
+
+        for index in range(num_networks):
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
             net['dns1'] = dns1
             net['dns2'] = dns2
-            net['cidr'] = cidr
-            net['multi_host'] = multi_host
-            net['netmask'] = str(project_net.netmask)
-            net['gateway'] = str(project_net[1])
-            net['broadcast'] = str(project_net.broadcast)
-            net['dhcp_start'] = str(project_net[2])
+
+            if cidr:
+                start = index * network_size
+                project_net = netaddr.IPNetwork('%s/%s' % (fixed_net[start],
+                                                           significant_bits))
+                net['cidr'] = str(project_net)
+                net['multi_host'] = multi_host
+                net['netmask'] = str(project_net.netmask)
+                net['gateway'] = str(project_net[1])
+                net['broadcast'] = str(project_net.broadcast)
+                net['dhcp_start'] = str(project_net[2])
+
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, index)
             else:
                 net['label'] = label
 
-            if FLAGS.use_ipv6:
+            if cidr_v6:
+                start_v6 = index * network_size_v6
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
@@ -671,11 +683,11 @@ class NetworkManager(manager.SchedulerDependentManager):
             # None if network with cidr or cidr_v6 already exists
             network = self.db.network_create_safe(context, net)
 
-            if network:
+            if not network:
+                raise ValueError(_('Network already exists!'))
+
+            if network and cidr:
                 self._create_fixed_ips(context, network['id'])
-            else:
-                raise ValueError(_('Network with cidr %s already exists') %
-                                   cidr)
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201
@@ -720,9 +732,9 @@ class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
 
     FlatManager does not do any bridge or vlan creation.  The user is
-    responsible for setting up whatever bridge is specified in
-    flat_network_bridge (br100 by default).  This bridge needs to be created
-    on all compute hosts.
+    responsible for setting up whatever bridges are specified when creating
+    networks through nova-manage. This bridge needs to be created on all
+    compute hosts.
 
     The idea is to create a single network for the host with a command like:
     nova-manage network create 192.168.0.0/24 1 256. Creating multiple
