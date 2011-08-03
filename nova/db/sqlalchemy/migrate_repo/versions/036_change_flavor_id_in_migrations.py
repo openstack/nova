@@ -54,6 +54,7 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     meta.bind = migrate_engine
+    instance_types = Table('instance_types', meta, autoload=True)
     migrations = Table('migrations', meta, autoload=True)
     migrations.create_column(old_flavor_id)
     migrations.create_column(new_flavor_id)
