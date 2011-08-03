@@ -754,12 +754,18 @@ class XenAPIMigrateInstance(test.TestCase):
     def test_finish_migrate(self):
         instance = db.instance_create(self.context, self.values)
         self.called = False
+        self.fake_vm_start_called = False
+
+        def fake_vm_start(*args, **kwargs):
+            self.fake_vm_start_called = True
 
         def fake_vdi_resize(*args, **kwargs):
             self.called = True
 
         self.stubs.Set(stubs.FakeSessionForMigrationTests,
                 "VDI_resize_online", fake_vdi_resize)
+        self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
+
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
@@ -781,6 +787,7 @@ class XenAPIMigrateInstance(test.TestCase):
                               dict(base_copy='hurr', cow='durr'),
                               network_info, resize_instance=True)
         self.assertEqual(self.called, True)
+        self.assertEqual(self.fake_vm_start_called, True)
 
     def test_finish_migrate_no_local_storage(self):
         tiny_type_id = \
