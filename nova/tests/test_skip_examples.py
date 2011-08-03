@@ -22,12 +22,12 @@ from nova import test
 class ExampleSkipTestCase(test.TestCase):
     @test.skip_test("Example usage of @test.skip_test()")
     def test_skip_test(self):
-        raise Exception("skip_test failed to work properly.")
+        self.fail("skip_test failed to work properly.")
 
     @test.skip_if(True, "Example usage of @test.skip_if()")
     def test_skip_if_env_user_exists(self):
-        raise Exception("skip_if failed to work properly.")
+        self.fail("skip_if failed to work properly.")
 
     @test.skip_unless(False, "Example usage of @test.skip_unless()")
     def test_skip_unless_env_foo_exists(self):
-        raise Exception("skip_unless failed to work properly.")
+        self.fail("skip_unless failed to work properly.")
