@@ -140,6 +140,8 @@ class SecurityGroupController(object):
 
         self._validate_security_group_name(group_name)
         self._validate_security_group_description(group_description)
+        group_name = group_name.strip()
+        group_description = group_description.strip()
 
         LOG.audit(_("Create Security Group %s"), group_name, context=context)
         self.compute_api.ensure_default_security_group(context)
