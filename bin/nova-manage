@@ -695,15 +695,18 @@ class NetworkCommands(object):
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
-            network_size = FLAGS.network_size
-            fixnet = netaddr.IPNetwork(fixed_range)
+            #network_size = FLAGS.network_size
+            fixnet = netaddr.IPNetwork(fixed_range_v4)
             each_subnet_size = fixnet.size / int(num_networks)
-            if each_subnet_size > network_size:
+            if each_subnet_size > FLAGS.network_size:
+                network_size = FLAGS.network_size
                 subnet = 32 - int(math.log(network_size, 2))
                 oversize_msg = _('Subnet(s) too large, defaulting to /%s.'
                                  '  To override, specify network_size flag.'
                                 ) % subnet
                 print oversize_msg
+            else:
+                network_size = fixnet.size
         if not multi_host:
             multi_host = FLAGS.multi_host
         else:
