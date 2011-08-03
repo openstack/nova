@@ -109,8 +109,6 @@ class ServerActionsTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db.api, 'instance_update', instance_update)
 
-        self.allow_admin = FLAGS.allow_admin_api
-
         self.webreq = common.webob_factory('/v1.0/servers')
 
     def tearDown(self):
@@ -304,7 +302,7 @@ class ServerActionsTest(test.TestCase):
         """This is basically the same as resize, only we provide the `migrate`
         attribute in the body's dict.
         """
-        req = self.webreq('/1/action', 'POST', dict(migrate=None))
+        req = self.webreq('/1/migrate', 'POST')
 
         self.resize_called = False
 
@@ -319,7 +317,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_create_backup(self):
         """The happy path for creating backups"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -339,7 +337,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_create_backup_admin_api_off(self):
         """The happy path for creating backups"""
-        FLAGS.allow_admin_api = False
+        self.flags(allow_admin_api=False)
 
         body = {
             'createBackup': {
@@ -357,7 +355,7 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(501, response.status_int)
 
     def test_create_backup_with_metadata(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -378,7 +376,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_create_backup_no_name(self):
         """Name is required for backups"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -396,7 +394,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_create_backup_no_rotation(self):
         """Rotation is required for backup requests"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -415,7 +413,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_create_backup_no_backup_type(self):
         """Backup Type (daily or weekly) is required for backup requests"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -432,7 +430,7 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(400, response.status_int)
 
     def test_create_backup_bad_entity(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {'createBackup': 'go'}
         req = webob.Request.blank('/v1.0/images')
@@ -717,7 +715,7 @@ class ServerActionsTestV11(test.TestCase):
 
     def test_create_backup(self):
         """The happy path for creating backups"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {

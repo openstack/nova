@@ -260,13 +260,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
 
-        self.allow_admin = FLAGS.allow_admin_api
         self.webreq = common.webob_factory('/v1.0/servers')
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.allow_admin_api = self.allow_admin
-        super(ServersTest, self).tearDown()
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -762,7 +756,7 @@ class ServersTest(test.TestCase):
         self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_by_id_with_addresses_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -806,7 +800,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses, expected)
 
     def test_get_server_by_id_with_addresses_v1_1_ipv6_disabled(self):
-        FLAGS.use_ipv6 = False
+        self.flags(use_ipv6=False)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -849,7 +843,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses, expected)
 
     def test_get_server_addresses_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -900,7 +894,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_get_server_addresses_single_network_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -1320,7 +1314,8 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/images/2'
+        # proper local hrefs must start with 'http://localhost/v1.1/'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/flavors/3'
         expected_flavor = {
             "id": "3",
@@ -1822,12 +1817,14 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_server_diagnostics(self):
+        self.flags(allow_admin_api=False)
         req = webob.Request.blank("/v1.0/servers/1/diagnostics")
         req.method = "GET"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
     def test_server_actions(self):
+        self.flags(allow_admin_api=False)
         req = webob.Request.blank("/v1.0/servers/1/actions")
         req.method = "GET"
         res = req.get_response(fakes.wsgi_app())

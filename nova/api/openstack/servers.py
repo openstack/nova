@@ -164,7 +164,6 @@ class Controller(object):
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,
-            'migrate': self._action_migrate,
             'createImage': self._action_create_image,
         }
 
@@ -279,14 +278,6 @@ class Controller(object):
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
             raise exc.HTTPUnprocessableEntity()
-        return webob.Response(status_int=202)
-
-    def _action_migrate(self, input_dict, req, id):
-        try:
-            self.compute_api.resize(req.environ['nova.context'], id)
-        except Exception, e:
-            LOG.exception(_("Error in migrate %s"), e)
-            raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
@@ -412,6 +403,15 @@ class Controller(object):
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
             raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
+
+    @scheduler_api.redirect_handler
+    def migrate(self, req, id):
+        try:
+            self.compute_api.resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in migrate %s"), e)
+            raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
