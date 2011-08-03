@@ -95,9 +95,9 @@ class Controller(object):
         try:
             servers = self._servers_from_request(req, is_detail=False)
         except exception.Invalid as err:
-            return faults.Fault(exc.HTTPBadRequest(explanation=str(err)))
+            return exc.HTTPBadRequest(explanation=str(err))
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            return exc.HTTPNotFound()
         return servers
 
     def detail(self, req):
@@ -105,9 +105,9 @@ class Controller(object):
         try:
             servers = self._servers_from_request(req, is_detail=True)
         except exception.Invalid as err:
-            return faults.Fault(exc.HTTPBadRequest(explanation=str(err)))
+            return exc.HTTPBadRequest(explanation=str(err))
         except exception.NotFound as err:
-            return faults.Fault(exc.HTTPNotFound())
+            return exc.HTTPNotFound()
         return servers
 
     def _build_view(self, req, instance, is_detail=False):
