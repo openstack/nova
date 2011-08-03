@@ -214,7 +214,7 @@ class VersionsTest(test.TestCase):
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/",
+                        "type": "application/"
                                 "vnd.openstack.compute-v1.1+xml",
                     },
                     {
