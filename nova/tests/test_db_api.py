@@ -57,7 +57,7 @@ class DbApiTestCase(test.TestCase):
     def test_instance_get_project_vpn(self):
         values = {'instance_type_id': FLAGS.default_instance_type,
                   'image_ref': FLAGS.vpn_image_id,
-                  'project_id': self.project_id
+                  'project_id': self.project_id,
                  }
         instance = db.instance_create(self.context, values)
         result = db.instance_get_project_vpn(self.context.elevated(),
@@ -67,7 +67,7 @@ class DbApiTestCase(test.TestCase):
     def test_instance_get_project_vpn_joins(self):
         values = {'instance_type_id': FLAGS.default_instance_type,
                   'image_ref': FLAGS.vpn_image_id,
-                  'project_id': self.project_id
+                  'project_id': self.project_id,
                  }
         instance = db.instance_create(self.context, values)
         _setup_networking(instance['id'])
