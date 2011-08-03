@@ -82,7 +82,7 @@ class APIRouter(base_wsgi.Router):
         super(APIRouter, self).__init__(mapper)
 
     def _setup_routes(self, mapper):
-        raise NotImplementedError("you must implement _setup_routes")
+        raise NotImplementedError(_("You must implement _setup_routes."))
 
     def _setup_base_routes(self, mapper, version):
         """Routes common to all versions."""
