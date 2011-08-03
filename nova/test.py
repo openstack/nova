@@ -67,6 +67,7 @@ class skip_test(object):
         _skipper.__doc__ = func.__doc__
         return _skipper
 
+
 class skip_if(object):
     """Decorator that skips a test if contition is true."""
     def __init__(self, condition, msg):
@@ -84,7 +85,7 @@ class skip_if(object):
 
 
 class skip_unless(object):
-    """Decorator that skips a test if condition is false."""
+    """Decorator that skips a test if condition is not true."""
     def __init__(self, condition, msg):
         self.condition = condition
         self.message = msg
