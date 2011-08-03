@@ -40,6 +40,7 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def setUp(self):
         super(VMWareAPIVMTestCase, self).setUp()
+        self.context = context.RequestContext('fake', 'fake', False)
         self.flags(vmwareapi_host_ip='test_url',
                    vmwareapi_host_username='test_username',
                    vmwareapi_host_password='test_pass')
@@ -94,7 +95,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         """Create and spawn the VM."""
         self._create_instance_in_the_db()
         self.type_data = db.instance_type_get_by_name(None, 'm1.large')
-        self.conn.spawn(self.instance, self.network_info)
+        self.conn.spawn(self.context, self.instance, self.network_info)
         self._check_vm_record()
 
     def _check_vm_record(self):
@@ -156,14 +157,14 @@ class VMWareAPIVMTestCase(test.TestCase):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.snapshot(self.instance, "Test-Snapshot")
+        self.conn.snapshot(self.context, self.instance, "Test-Snapshot")
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_snapshot_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertRaises(Exception, self.conn.snapshot, self.instance,
-                          "Test-Snapshot")
+        self.assertRaises(Exception, self.conn.snapshot, self.context,
+                          self.instance, "Test-Snapshot")
 
     def test_reboot(self):
         self._create_vm()
