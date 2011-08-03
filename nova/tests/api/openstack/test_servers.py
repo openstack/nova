@@ -26,7 +26,6 @@ import webob
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
@@ -44,10 +43,6 @@ import nova.image.fake
 import nova.rpc
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -268,8 +263,6 @@ class ServersTest(test.TestCase):
         self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
-
-        self.allow_admin = FLAGS.allow_admin_api
 
         self.webreq = common.webob_factory('/v1.0/servers')
 
@@ -767,7 +760,7 @@ class ServersTest(test.TestCase):
         self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_by_id_with_addresses_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -811,7 +804,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses, expected)
 
     def test_get_server_by_id_with_addresses_v1_1_ipv6_disabled(self):
-        FLAGS.use_ipv6 = False
+        self.flags(use_ipv6=False)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -854,7 +847,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses, expected)
 
     def test_get_server_addresses_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -905,7 +898,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_get_server_addresses_single_network_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -2329,7 +2322,7 @@ class ServersTest(test.TestCase):
         """
         req = self.webreq('/1/migrate', 'POST')
 
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
         self.resize_called = False
 
         def resize_mock(*args):
@@ -2344,7 +2337,7 @@ class ServersTest(test.TestCase):
     def test_migrate_server_no_admin_api_fails(self):
         req = self.webreq('/1/migrate', 'POST')
 
-        FLAGS.allow_admin_api = False
+        self.flags(allow_admin_api=False)
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
@@ -2425,7 +2418,7 @@ class ServersTest(test.TestCase):
 
     def test_create_backup(self):
         """The happy path for creating backups"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -2445,7 +2438,7 @@ class ServersTest(test.TestCase):
 
     def test_create_backup_v1_1(self):
         """The happy path for creating backups through v1.1 api"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -2465,7 +2458,7 @@ class ServersTest(test.TestCase):
 
     def test_create_backup_admin_api_off(self):
         """The happy path for creating backups"""
-        FLAGS.allow_admin_api = False
+        self.flags(allow_admin_api=False)
 
         body = {
             'createBackup': {
@@ -2483,7 +2476,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(501, response.status_int)
 
     def test_create_backup_with_metadata(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -2504,7 +2497,7 @@ class ServersTest(test.TestCase):
 
     def test_create_backup_no_name(self):
         """Name is required for backups"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -2522,7 +2515,7 @@ class ServersTest(test.TestCase):
 
     def test_create_backup_no_rotation(self):
         """Rotation is required for backup requests"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -2541,7 +2534,7 @@ class ServersTest(test.TestCase):
 
     def test_create_backup_no_backup_type(self):
         """Backup Type (daily or weekly) is required for backup requests"""
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {
             'createBackup': {
@@ -2558,7 +2551,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(400, response.status_int)
 
     def test_create_backup_bad_entity(self):
-        FLAGS.allow_admin_api = True
+        self.flags(allow_admin_api=True)
 
         body = {'createBackup': 'go'}
         req = webob.Request.blank('/v1.0/images')
