@@ -198,6 +198,10 @@ class InvalidContentType(Invalid):
     message = _("Invalid content type %(content_type)s.")
 
 
+class InvalidCidr(Invalid):
+    message = _("Invalid cidr %(cidr)s.")
+
+
 class InstanceNotRunning(Invalid):
     message = _("Instance %(instance_id)s is not running.")
 

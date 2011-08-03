@@ -1096,6 +1096,11 @@ def security_group_rule_destroy(context, security_group_rule_id):
     return IMPL.security_group_rule_destroy(context, security_group_rule_id)
 
 
+def security_group_rule_get(context, security_group_rule_id):
+    """Gets a security group rule."""
+    return IMPL.security_group_rule_get(context, security_group_rule_id)
+
+
 ###################
 
 
