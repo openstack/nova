@@ -260,6 +260,17 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
 
+        fakes.stub_out_glance(self.stubs)
+        fakes.stub_out_compute_api_snapshot(self.stubs)
+        service_class = 'nova.image.glance.GlanceImageService'
+        self.service = utils.import_object(service_class)
+        self.context = context.RequestContext(1, None)
+        self.service.delete_all()
+        self.sent_to_glance = {}
+        fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
+
+        self.allow_admin = FLAGS.allow_admin_api
+
         self.webreq = common.webob_factory('/v1.0/servers')
 
     def test_get_server_by_id(self):
@@ -1314,7 +1325,8 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/images/2'
+        # proper local hrefs must start with 'http://localhost/v1.1/'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/flavors/3'
         expected_flavor = {
             "id": "3",
@@ -2315,8 +2327,9 @@ class ServersTest(test.TestCase):
         """This is basically the same as resize, only we provide the `migrate`
         attribute in the body's dict.
         """
-        req = self.webreq('/1/action', 'POST', dict(migrate=None))
+        req = self.webreq('/1/migrate', 'POST')
 
+        FLAGS.allow_admin_api = True
         self.resize_called = False
 
         def resize_mock(*args):
@@ -2327,6 +2340,14 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
+
+    def test_migrate_server_no_admin_api_fails(self):
+        req = self.webreq('/1/migrate', 'POST')
+
+        FLAGS.allow_admin_api = False
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
 
     def test_shutdown_status(self):
         new_server = return_server_with_power_state(power_state.SHUTDOWN)
@@ -2345,6 +2366,268 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
+
+    def test_create_image_v1_1(self):
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        location = response.headers['Location']
+        self.assertEqual('http://localhost/v1.1/images/123', location)
+
+    def test_create_image_v1_1_with_metadata(self):
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+                'metadata': {'key': 'asdf'},
+            },
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        location = response.headers['Location']
+        self.assertEqual('http://localhost/v1.1/images/123', location)
+
+    def test_create_image_v1_1_no_name(self):
+        body = {
+            'createImage': {},
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_v1_1_bad_metadata(self):
+        body = {
+            'createImage': {
+                'name': 'geoff',
+                'metadata': 'henry',
+            },
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup(self):
+        """The happy path for creating backups"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_v1_1(self):
+        """The happy path for creating backups through v1.1 api"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_admin_api_off(self):
+        """The happy path for creating backups"""
+        FLAGS.allow_admin_api = False
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(501, response.status_int)
+
+    def test_create_backup_with_metadata(self):
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+                'metadata': {'123': 'asdf'},
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(202, response.status_int)
+        self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_no_name(self):
+        """Name is required for backups"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_rotation(self):
+        """Rotation is required for backup requests"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_backup_type(self):
+        """Backup Type (daily or weekly) is required for backup requests"""
+        FLAGS.allow_admin_api = True
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'rotation': 1,
+            },
+        }
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_bad_entity(self):
+        FLAGS.allow_admin_api = True
+
+        body = {'createBackup': 'go'}
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+
+class TestServerActionXMLDeserializer(test.TestCase):
+
+    def setUp(self):
+        self.deserializer = create_instance_helper.ServerXMLDeserializer()
+
+    def tearDown(self):
+        pass
+
+    def test_create_image(self):
+        serial_request = """
+<createImage xmlns="http://docs.openstack.org/compute/api/v1.1"
+             name="new-server-test"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "createImage": {
+                "name": "new-server-test",
+                "metadata": {},
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_create_image_with_metadata(self):
+        serial_request = """
+<createImage xmlns="http://docs.openstack.org/compute/api/v1.1"
+             name="new-server-test">
+    <metadata>
+        <meta key="key1">value1</meta>
+    </metadata>
+</createImage>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "createImage": {
+                "name": "new-server-test",
+                "metadata": {"key1": "value1"},
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_create_backup_with_metadata(self):
+        serial_request = """
+<createBackup xmlns="http://docs.openstack.org/compute/api/v1.1"
+             name="new-server-test"
+             rotation="12"
+             backup_type="daily">
+    <metadata>
+        <meta key="key1">value1</meta>
+    </metadata>
+</createBackup>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "createBackup": {
+                "name": "new-server-test",
+                "rotation": "12",
+                "backup_type": "daily",
+                "metadata": {"key1": "value1"},
+            },
+        }
+        self.assertEquals(request['body'], expected)
 
 
 class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
@@ -2815,7 +3098,7 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
         self.assertEquals(request['body'], expected)
 
 
-class TextAddressesXMLSerialization(test.TestCase):
+class TestAddressesXMLSerialization(test.TestCase):
 
     serializer = nova.api.openstack.ips.IPXMLSerializer()
 

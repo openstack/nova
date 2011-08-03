@@ -410,8 +410,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         kwargs can contain fixed_ips to circumvent another db lookup
         """
         instance_id = kwargs.pop('instance_id')
-        fixed_ips = kwargs.get('fixed_ips') or \
+        try:
+            fixed_ips = kwargs.get('fixed_ips') or \
                   self.db.fixed_ip_get_by_instance(context, instance_id)
+        except exceptions.FixedIpNotFoundForInstance:
+            fixed_ips = []
         LOG.debug(_("network deallocation for instance |%s|"), instance_id,
                                                                context=context)
         # deallocate fixed ips
@@ -551,15 +554,17 @@ class NetworkManager(manager.SchedulerDependentManager):
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
         #             network_get_by_compute_host
-        address = self.db.fixed_ip_associate_pool(context.elevated(),
-                                                  network['id'],
-                                                  instance_id)
-        vif = self.db.virtual_interface_get_by_instance_and_network(context,
-                                                                instance_id,
-                                                                network['id'])
-        values = {'allocated': True,
-                  'virtual_interface_id': vif['id']}
-        self.db.fixed_ip_update(context, address, values)
+        address = None
+        if network['cidr']:
+            address = self.db.fixed_ip_associate_pool(context.elevated(),
+                                                      network['id'],
+                                                      instance_id)
+            get_vif = self.db.virtual_interface_get_by_instance_and_network
+            vif = get_vif(context, instance_id, network['id'])
+            values = {'allocated': True,
+                      'virtual_interface_id': vif['id']}
+            self.db.fixed_ip_update(context, address, values)
+
         self._setup_network(context, network)
         return address
 
@@ -609,91 +614,56 @@ class NetworkManager(manager.SchedulerDependentManager):
                 network_ref = self.db.fixed_ip_get_network(context, address)
                 self._setup_network(context, network_ref)
 
-    def _validate_cidrs(self, context, cidr, num_networks, network_size):
-        significant_bits = 32 - int(math.log(network_size, 2))
-        req_net = netaddr.IPNetwork(cidr)
-        req_net_ip = str(req_net.ip)
-        req_size = network_size * num_networks
-        if req_size > req_net.size:
-            msg = "network_size * num_networks exceeds cidr size"
-            raise ValueError(_(msg))
-        adjusted_cidr_str = req_net_ip + '/' + str(significant_bits)
-        adjusted_cidr = netaddr.IPNetwork(adjusted_cidr_str)
-        all_req_nets = [adjusted_cidr]
-        try:
-            used_nets = self.db.network_get_all(context)
-        except exception.NoNetworksFound:
-            used_nets = []
-        used_cidrs = [netaddr.IPNetwork(net['cidr']) for net in used_nets]
-        if adjusted_cidr in used_cidrs:
-            raise ValueError(_("cidr already in use"))
-        for adjusted_cidr_supernet in adjusted_cidr.supernet():
-            if adjusted_cidr_supernet in used_cidrs:
-                msg = "requested cidr (%s) conflicts with existing supernet"
-                raise ValueError(_(msg % str(adjusted_cidr)))
-        # split supernet into subnets
-        if num_networks >= 2:
-            next_cidr = adjusted_cidr
-            for used_cidr in used_cidrs:
-                # watch for smaller subnets conflicting
-                if used_cidr.size < next_cidr.size:
-                    for ucsupernet in used_cidr.supernet():
-                        if ucsupernet.size == next_cidr.size:
-                            used_cidrs.append(ucsupernet)
-            for index in range(1, num_networks):
-                while True:
-                    next_cidr = next_cidr.next()
-                    if next_cidr in used_cidrs:
-                        continue
-                    else:
-                        all_req_nets.append(next_cidr)
-                        break
-        all_req_nets = list(set(all_req_nets))
-        # after splitting ensure there were enough to satisfy the num_networks
-        if len(all_req_nets) < num_networks:
-            msg = "Not enough subnets avail to satisfy requested num_networks"
-            raise ValueError(_(msg))
-        return all_req_nets
-
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
-        req_cidrs = self._validate_cidrs(context, cidr, num_networks, network_size)
-
-        if FLAGS.use_ipv6:
+        if cidr_v6:
             fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
             significant_bits_v6 = 64
             network_size_v6 = 1 << 64
 
-        for index in range(len(req_cidrs)):
-            req_cidr = req_cidrs[index]
+        if cidr:
+            fixed_net = netaddr.IPNetwork(cidr)
+            significant_bits = 32 - int(math.log(network_size, 2))
+
+        for index in range(num_networks):
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
             net['dns1'] = dns1
             net['dns2'] = dns2
-            net['cidr'] = str(req_cidr)
-            net['netmask'] = str(req_cidr.netmask)
-            net['gateway'] = str(req_cidr[1])
-            net['broadcast'] = str(req_cidr.broadcast)
-            net['dhcp_start'] = str(req_cidr[2])
+
+            if cidr:
+                start = index * network_size
+                project_net = netaddr.IPNetwork('%s/%s' % (fixed_net[start],
+                                                           significant_bits))
+                net['cidr'] = str(project_net)
+                net['multi_host'] = multi_host
+                net['netmask'] = str(project_net.netmask)
+                net['gateway'] = str(project_net[1])
+                net['broadcast'] = str(project_net.broadcast)
+                net['dhcp_start'] = str(project_net[2])
+
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, index)
             else:
                 net['label'] = label
 
-            if FLAGS.use_ipv6:
+            if cidr_v6:
                 start_v6 = index * network_size_v6
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
+
                 project_net_v6 = netaddr.IPNetwork(cidr_v6)
+
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
                     net['gateway_v6'] = str(gateway_v6)
                 else:
                     net['gateway_v6'] = str(project_net_v6[1])
+
                 net['netmask_v6'] = str(project_net_v6._prefixlen)
 
             if kwargs.get('vpn', False):
@@ -701,8 +671,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                 del net['dns1']
                 del net['dns2']
                 vlan = kwargs['vlan_start'] + index
-                net['vpn_private_address'] = str(req_cidr[2])
-                net['dhcp_start'] = str(req_cidr[3])
+                net['vpn_private_address'] = str(project_net[2])
+                net['dhcp_start'] = str(project_net[3])
                 net['vlan'] = vlan
                 net['bridge'] = 'br%s' % vlan
 
@@ -710,12 +680,14 @@ class NetworkManager(manager.SchedulerDependentManager):
                 #             robust solution would be to make them uniq per ip
                 net['vpn_public_port'] = kwargs['vpn_start'] + index
 
+            # None if network with cidr or cidr_v6 already exists
             network = self.db.network_create_safe(context, net)
-            if network:
+
+            if not network:
+                raise ValueError(_('Network already exists!'))
+
+            if network and cidr:
                 self._create_fixed_ips(context, network['id'])
-            else:
-                msg = "Error creating cidr %s, see log"
-                raise ValueError(_(msg) % str(cidr))
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201
