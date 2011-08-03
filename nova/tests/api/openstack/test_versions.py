@@ -38,24 +38,24 @@ VERSIONS = {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.0/cs-devguide-20110125.pdf"
+                        "servers/api/v1.0/cs-devguide-20110125.pdf",
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
                 "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.0/application.wadl"
+                        "servers/api/v1.0/application.wadl",
             },
         ],
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute-v1.0+xml"
+                "type": "application/vnd.openstack.compute-v1.0+xml",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute-v1.0+json"
-            }
+                "type": "application/vnd.openstack.compute-v1.0+json",
+            },
         ],
     },
     "v1.1": {
@@ -67,24 +67,24 @@ VERSIONS = {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/cs-devguide-20110125.pdf"
+                        "servers/api/v1.1/cs-devguide-20110125.pdf",
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
                 "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/application.wadl"
+                        "servers/api/v1.1/application.wadl",
             },
         ],
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute-v1.1+xml"
+                "type": "application/vnd.openstack.compute-v1.1+xml",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute-v1.1+json"
-            }
+                "type": "application/vnd.openstack.compute-v1.1+json",
+            },
         ],
     },
 }
@@ -150,34 +150,34 @@ class VersionsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.0/"
+                        "href": "http://localhost/v1.0/",
                     },
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/cs-devguide-20110125.pdf"
+                                "servers/api/v1.0/cs-devguide-20110125.pdf",
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
                         "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/application.wadl"
-                    }
+                                "servers/api/v1.0/application.wadl",
+                    },
                 ],
                 "media-types": [
                     {
                         "base": "application/xml",
                         "type": "application/"
-                                "vnd.openstack.compute-v1.0+xml"
+                                "vnd.openstack.compute-v1.0+xml",
                     },
                     {
                         "base": "application/json",
                         "type": "application/"
-                                "vnd.openstack.compute-v1.0+json"
-                    }
-                ]
-            }
+                                "vnd.openstack.compute-v1.0+json",
+                    },
+                ],
+            },
         }
         self.assertEqual(expected, version)
 
@@ -196,34 +196,34 @@ class VersionsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/"
+                        "href": "http://localhost/v1.1/",
                     },
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/cs-devguide-20110125.pdf"
+                                "servers/api/v1.1/cs-devguide-20110125.pdf",
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
                         "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/application.wadl"
-                    }
+                                "servers/api/v1.1/application.wadl",
+                    },
                 ],
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/"
-                                "vnd.openstack.compute-v1.1+xml"
+                        "type": "application/",
+                                "vnd.openstack.compute-v1.1+xml",
                     },
                     {
                         "base": "application/json",
                         "type": "application/"
-                                "vnd.openstack.compute-v1.1+json"
-                    }
-                ]
-            }
+                                "vnd.openstack.compute-v1.1+json",
+                    },
+                ],
+            },
         }
         self.assertEqual(expected, version)
 
@@ -739,30 +739,30 @@ class VersionsSerializerTests(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.0/"
+                        "href": "http://localhost/v1.0/",
                     },
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/cs-devguide-20110125.pdf"
+                                "servers/api/v1.0/cs-devguide-20110125.pdf",
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
                         "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/application.wadl"
+                                "servers/api/v1.0/application.wadl",
                     },
                 ],
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/vnd.openstack.compute-v1.0+xml"
+                        "type": "application/vnd.openstack.compute-v1.0+xml",
                     },
                     {
                         "base": "application/json",
-                        "type": "application/vnd.openstack.compute-v1.0+json"
-                    }
+                        "type": "application/vnd.openstack.compute-v1.0+json",
+                    },
                 ],
             },
         }
@@ -874,29 +874,29 @@ class VersionsSerializerTests(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/"
+                        "href": "http://localhost/v1.1/",
                     },
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
                         "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/cs-devguide-20110125.pdf"
+                                "servers/api/v1.1/cs-devguide-20110125.pdf",
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
                         "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/application.wadl"
+                                "servers/api/v1.1/application.wadl",
                     },
                 ],
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/vnd.openstack.compute-v1.1+xml"
+                        "type": "application/vnd.openstack.compute-v1.1+xml",
                     },
                     {
                         "base": "application/json",
-                        "type": "application/vnd.openstack.compute-v1.1+json"
+                        "type": "application/vnd.openstack.compute-v1.1+json",
                     }
                 ],
             },
