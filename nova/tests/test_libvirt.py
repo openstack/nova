@@ -346,7 +346,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         conn = connection.LibvirtConnection(False)
-        conn.snapshot(instance_ref, recv_meta['id'])
+        conn.snapshot(self.context, instance_ref, recv_meta['id'])
 
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertEquals(snapshot['properties']['image_state'], 'available')
@@ -386,7 +386,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         conn = connection.LibvirtConnection(False)
-        conn.snapshot(instance_ref, recv_meta['id'])
+        conn.snapshot(self.context, instance_ref, recv_meta['id'])
 
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertEquals(snapshot['properties']['image_state'], 'available')
@@ -736,7 +736,7 @@ class LibvirtConnTestCase(test.TestCase):
         network_info = _create_network_info()
 
         try:
-            conn.spawn(instance, network_info)
+            conn.spawn(self.context, instance, network_info)
         except Exception, e:
             count = (0 <= str(e.message).find('Unexpected method call'))
 
