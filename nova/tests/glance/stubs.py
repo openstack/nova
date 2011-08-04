@@ -66,7 +66,10 @@ class FakeGlance(object):
                            'container_format': 'bare'},
             'image_data': StringIO.StringIO('')}}
 
-    def __init__(self, host, port=None, use_ssl=False):
+    def __init__(self, host, port=None, use_ssl=False, auth_tok=None):
+        pass
+
+    def set_auth_token(self, auth_tok):
         pass
 
     def get_image_meta(self, image_id):

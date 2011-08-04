@@ -226,7 +226,7 @@ class XenAPIVMTestCase(test.TestCase):
                                'mac': 'DE:AD:BE:EF:00:00',
                                'rxtx_cap': 3})]
             instance = db.instance_create(self.context, values)
-            self.conn.spawn(instance, network_info)
+            self.conn.spawn(self.context, instance, network_info)
 
         gt1 = eventlet.spawn(_do_build, 1, self.project_id, self.user_id)
         gt2 = eventlet.spawn(_do_build, 2, self.project_id, self.user_id)
@@ -256,14 +256,15 @@ class XenAPIVMTestCase(test.TestCase):
         instance = self._create_instance()
 
         name = "MySnapshot"
-        self.assertRaises(exception.Error, self.conn.snapshot, instance, name)
+        self.assertRaises(exception.Error, self.conn.snapshot,
+                          self.context, instance, name)
 
     def test_instance_snapshot(self):
         stubs.stubout_instance_snapshot(self.stubs)
         instance = self._create_instance()
 
         name = "MySnapshot"
-        template_vm_ref = self.conn.snapshot(instance, name)
+        template_vm_ref = self.conn.snapshot(self.context, instance, name)
 
         def ensure_vm_was_torn_down():
             vm_labels = []
@@ -425,14 +426,13 @@ class XenAPIVMTestCase(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        self.conn.spawn(instance, network_info)
+        self.conn.spawn(self.context, instance, network_info)
         self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
         self.assertTrue(instance.os_type)
         self.assertTrue(instance.architecture)
 
     def test_spawn_not_enough_memory(self):
-        FLAGS.xenapi_image_service = 'glance'
         self.assertRaises(Exception,
                           self._test_spawn,
                           1, 2, 3, "4")  # m1.xlarge
@@ -444,7 +444,6 @@ class XenAPIVMTestCase(test.TestCase):
 
         """
         vdi_recs_start = self._list_vdis()
-        FLAGS.xenapi_image_service = 'glance'
         stubs.stubout_fetch_image_glance_disk(self.stubs)
         self.assertRaises(xenapi_fake.Failure,
                           self._test_spawn, 1, 2, 3)
@@ -459,7 +458,6 @@ class XenAPIVMTestCase(test.TestCase):
 
         """
         vdi_recs_start = self._list_vdis()
-        FLAGS.xenapi_image_service = 'glance'
         stubs.stubout_create_vm(self.stubs)
         self.assertRaises(xenapi_fake.Failure,
                           self._test_spawn, 1, 2, 3)
@@ -467,40 +465,12 @@ class XenAPIVMTestCase(test.TestCase):
         vdi_recs_end = self._list_vdis()
         self._check_vdis(vdi_recs_start, vdi_recs_end)
 
-    def test_spawn_raw_objectstore(self):
-        # TODO(vish): deprecated
-        from nova.auth import manager
-        authman = manager.AuthManager()
-        authman.create_user('fake', 'fake')
-        authman.create_project('fake', 'fake')
-        try:
-            FLAGS.xenapi_image_service = 'objectstore'
-            self._test_spawn(1, None, None)
-        finally:
-            authman.delete_project('fake')
-            authman.delete_user('fake')
-
-    def test_spawn_objectstore(self):
-        # TODO(vish): deprecated
-        from nova.auth import manager
-        authman = manager.AuthManager()
-        authman.create_user('fake', 'fake')
-        authman.create_project('fake', 'fake')
-        try:
-            FLAGS.xenapi_image_service = 'objectstore'
-            self._test_spawn(1, 2, 3)
-        finally:
-            authman.delete_project('fake')
-            authman.delete_user('fake')
-
     @stub_vm_utils_with_vdi_attached_here
     def test_spawn_raw_glance(self):
-        FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_RAW, None, None)
         self.check_vm_params_for_linux()
 
     def test_spawn_vhd_glance_linux(self):
-        FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64")
         self.check_vm_params_for_linux()
@@ -529,7 +499,6 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEqual(len(self.vm['VBDs']), 1)
 
     def test_spawn_vhd_glance_windows(self):
-        FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
                          os_type="windows", architecture="i386")
         self.check_vm_params_for_windows()
@@ -541,14 +510,12 @@ class XenAPIVMTestCase(test.TestCase):
         self.check_vm_params_for_windows()
 
     def test_spawn_glance(self):
-        FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK)
         self.check_vm_params_for_linux_with_external_kernel()
 
     def test_spawn_netinject_file(self):
-        FLAGS.xenapi_image_service = 'glance'
         db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
 
         self._tee_executed = False
@@ -574,7 +541,6 @@ class XenAPIVMTestCase(test.TestCase):
             # Capture the sudo tee .../etc/network/interfaces command
             (r'(sudo\s+)?tee.*interfaces', _tee_handler),
         ])
-        FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK,
@@ -582,7 +548,6 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertTrue(self._tee_executed)
 
     def test_spawn_netinject_xenstore(self):
-        FLAGS.xenapi_image_service = 'glance'
         db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
 
         self._tee_executed = False
@@ -627,7 +592,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertFalse(self._tee_executed)
 
     def test_spawn_vlanmanager(self):
-        self.flags(xenapi_image_service='glance',
+        self.flags(image_service='nova.image.glance.GlanceImageService',
                    network_manager='nova.network.manager.VlanManager',
                    vlan_interface='fake0')
 
@@ -671,7 +636,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.flags(flat_injected=False)
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
-        conn.rescue(instance, None, [])
+        conn.rescue(self.context, instance, None, [])
 
     def test_unrescue(self):
         instance = self._create_instance()
@@ -708,7 +673,7 @@ class XenAPIVMTestCase(test.TestCase):
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
         if spawn:
-            self.conn.spawn(instance, network_info)
+            self.conn.spawn(self.context, instance, network_info)
         return instance
 
 
@@ -818,8 +783,9 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
-                           network_info, resize_instance=True)
+        conn.finish_migration(self.context, instance,
+                              dict(base_copy='hurr', cow='durr'),
+                              network_info, resize_instance=True)
         self.assertEqual(self.called, True)
 
     def test_finish_migrate_no_local_storage(self):
@@ -850,8 +816,9 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
-                           network_info, resize_instance=True)
+        conn.finish_migration(self.context, instance,
+                              dict(base_copy='hurr', cow='durr'),
+                              network_info, resize_instance=True)
 
     def test_finish_migrate_no_resize_vdi(self):
         instance = db.instance_create(self.context, self.values)
@@ -880,8 +847,9 @@ class XenAPIMigrateInstance(test.TestCase):
                            'rxtx_cap': 3})]
 
         # Resize instance would be determined by the compute call
-        conn.finish_migration(instance, dict(base_copy='hurr', cow='durr'),
-                           network_info, resize_instance=False)
+        conn.finish_migration(self.context, instance,
+                              dict(base_copy='hurr', cow='durr'),
+                              network_info, resize_instance=False)
 
 
 class XenAPIImageTypeTestCase(test.TestCase):
@@ -921,7 +889,6 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
 
     def test_instance_disk(self):
         """If a kernel is specified, the image type is DISK (aka machine)."""
-        FLAGS.xenapi_image_service = 'objectstore'
         self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_MACHINE
         self.fake_instance.kernel_id = glance_stubs.FakeGlance.IMAGE_KERNEL
         self.assert_disk_type(vm_utils.ImageType.DISK)
@@ -931,7 +898,6 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         If the kernel isn't specified, and we're not using Glance, then
         DISK_RAW is assumed.
         """
-        FLAGS.xenapi_image_service = 'objectstore'
         self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_RAW
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_RAW)
@@ -941,7 +907,6 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         If we're using Glance, then defer to the image_type field, which in
         this case will be 'raw'.
         """
-        FLAGS.xenapi_image_service = 'glance'
         self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_RAW
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_RAW)
@@ -951,7 +916,6 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         If we're using Glance, then defer to the image_type field, which in
         this case will be 'vhd'.
         """
-        FLAGS.xenapi_image_service = 'glance'
         self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_VHD
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_VHD)
