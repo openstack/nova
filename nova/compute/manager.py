@@ -736,8 +736,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
 
-        instance_type = self.db.instance_type_get_by_flavor_id(context,
-                migration_ref['old_flavor_id'])
+        instance_type = self.db.instance_type_get(context,
+                migration_ref['old_instance_type_id'])
 
         # Just roll back the record. There's no need to resize down since
         # the 'old' VM already has the preferred attributes
@@ -758,7 +758,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def prep_resize(self, context, instance_id, flavor_id):
+    def prep_resize(self, context, instance_id, instance_type_id):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
@@ -777,16 +777,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         old_instance_type = self.db.instance_type_get(context,
                 instance_ref['instance_type_id'])
-        new_instance_type = self.db.instance_type_get_by_flavor_id(context,
-                flavor_id)
+        new_instance_type = self.db.instance_type_get(context,
+                instance_type_id)
 
         migration_ref = self.db.migration_create(context,
                 {'instance_uuid': instance_ref['uuid'],
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
                  'dest_host':   self.driver.get_host_ip_addr(),
-                 'old_flavor_id': old_instance_type['flavorid'],
-                 'new_flavor_id': flavor_id,
+                 'old_instance_type_id': old_instance_type['id'],
+                 'new_instance_type_id': instance_type_id,
                  'status':      'pre-migrating'})
 
         LOG.audit(_('instance %s: migrating'), instance_ref['uuid'],
@@ -849,9 +849,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         resize_instance = False
         instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
-        if migration_ref['old_flavor_id'] != migration_ref['new_flavor_id']:
-            instance_type = self.db.instance_type_get_by_flavor_id(context,
-                    migration_ref['new_flavor_id'])
+        if migration_ref['old_instance_type_id'] != \
+           migration_ref['new_instance_type_id']:
+            instance_type = self.db.instance_type_get(context,
+                    migration_ref['new_instance_type_id'])
             self.db.instance_update(context, instance_ref.uuid,
                    dict(instance_type_id=instance_type['id'],
                         memory_mb=instance_type['memory_mb'],
