@@ -79,6 +79,7 @@ class skip_if(object):
             """Wrapped skipper function."""
             if self.condition:
                 raise nose.SkipTest(self.message)
+            func(*args, **kw)
         _skipper.__name__ = func.__name__
         _skipper.__doc__ = func.__doc__
         return _skipper
@@ -95,6 +96,7 @@ class skip_unless(object):
             """Wrapped skipper function."""
             if not self.condition:
                 raise nose.SkipTest(self.message)
+            func(*args, **kw)
         _skipper.__name__ = func.__name__
         _skipper.__doc__ = func.__doc__
         return _skipper
