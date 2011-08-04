@@ -269,7 +269,7 @@ class CommonNetworkTestCase(test.TestCase):
             self.deallocate_called = address
 
     def fake_create_fixed_ips(self, context, network_id):
-        return None 
+        return None
 
     def test_remove_fixed_ip_from_instance(self):
         manager = self.FakeNetworkManager()
@@ -366,7 +366,7 @@ class CommonNetworkTestCase(test.TestCase):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
-        fakecidr= [{'id': 1, 'cidr': '192.168.0.0/8'}]
+        fakecidr = [{'id': 1, 'cidr': '192.168.0.0/8'}]
         manager.db.network_get_all(ctxt).AndReturn(fakecidr)
         self.mox.ReplayAll()
         args = [None, '192.168.0.0/24', 1, 256]
@@ -388,7 +388,7 @@ class CommonNetworkTestCase(test.TestCase):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
-        fakecidr= [{'id': 1, 'cidr': '192.168.0.0/24'}]
+        fakecidr = [{'id': 1, 'cidr': '192.168.0.0/24'}]
         manager.db.network_get_all(ctxt).AndReturn(fakecidr)
         self.mox.ReplayAll()
         args = [None, 'foo', '192.168.0.0/24', None, 1, 256,
