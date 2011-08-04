@@ -44,6 +44,7 @@ import functools
 
 from eventlet import greenthread
 
+import nova.context
 from nova import exception
 from nova import flags
 import nova.image
@@ -147,6 +148,29 @@ class ComputeManager(manager.SchedulerDependentManager):
     def init_host(self):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
+        context = nova.context.get_admin_context()
+        instances = self.db.instance_get_all_by_host(context, self.host)
+        for instance in instances:
+            inst_name = instance['name']
+            db_state = instance['state']
+            drv_state = self._update_state(context, instance['id'])
+
+            expect_running = db_state == power_state.RUNNING \
+                             and drv_state != db_state
+
+            LOG.debug(_('Current state of %(inst_name)s is %(drv_state)s, '
+                        'state in DB is %(db_state)s.'), locals())
+
+            if (expect_running and FLAGS.resume_guests_state_on_host_boot)\
+               or FLAGS.start_guests_on_host_boot:
+                LOG.info(_('Rebooting instance %(inst_name)s after '
+                            'nova-compute restart.'), locals())
+                self.reboot_instance(context, instance['id'])
+            elif drv_state == power_state.RUNNING:
+                try: # Hyper-V and VMWareAPI drivers will raise and exception
+                    self.driver.ensure_filtering_rules_for_instance(instance)
+                except NotImplementedError:
+                    LOG.warning(_('Hypervisor driver does not support firewall rules'))
 
     def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
@@ -154,6 +178,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if state is None:
             try:
+                LOG.debug(_('Checking state of %s'), instance_ref['name'])
                 info = self.driver.get_info(instance_ref['name'])
             except exception.NotFound:
                 info = None
@@ -164,6 +189,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 state = power_state.FAILED
 
         self.db.instance_set_state(context, instance_id, state)
+        return state
 
     def _update_launched_at(self, context, instance_id, launched_at=None):
         """Update the launched_at parameter of the given instance."""
@@ -736,8 +762,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
 
-        instance_type = self.db.instance_type_get_by_flavor_id(context,
-                migration_ref['old_flavor_id'])
+        instance_type = self.db.instance_type_get(context,
+                migration_ref['old_instance_type_id'])
 
         # Just roll back the record. There's no need to resize down since
         # the 'old' VM already has the preferred attributes
@@ -758,7 +784,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def prep_resize(self, context, instance_id, flavor_id):
+    def prep_resize(self, context, instance_id, instance_type_id):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
@@ -777,16 +803,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         old_instance_type = self.db.instance_type_get(context,
                 instance_ref['instance_type_id'])
-        new_instance_type = self.db.instance_type_get_by_flavor_id(context,
-                flavor_id)
+        new_instance_type = self.db.instance_type_get(context,
+                instance_type_id)
 
         migration_ref = self.db.migration_create(context,
                 {'instance_uuid': instance_ref['uuid'],
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
                  'dest_host':   self.driver.get_host_ip_addr(),
-                 'old_flavor_id': old_instance_type['flavorid'],
-                 'new_flavor_id': flavor_id,
+                 'old_instance_type_id': old_instance_type['id'],
+                 'new_instance_type_id': instance_type_id,
                  'status':      'pre-migrating'})
 
         LOG.audit(_('instance %s: migrating'), instance_ref['uuid'],
@@ -849,9 +875,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         resize_instance = False
         instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
-        if migration_ref['old_flavor_id'] != migration_ref['new_flavor_id']:
-            instance_type = self.db.instance_type_get_by_flavor_id(context,
-                    migration_ref['new_flavor_id'])
+        if migration_ref['old_instance_type_id'] != \
+           migration_ref['new_instance_type_id']:
+            instance_type = self.db.instance_type_get(context,
+                    migration_ref['new_instance_type_id'])
             self.db.instance_update(context, instance_ref.uuid,
                    dict(instance_type_id=instance_type['id'],
                         memory_mb=instance_type['memory_mb'],
