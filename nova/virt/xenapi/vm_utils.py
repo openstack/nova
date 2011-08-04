@@ -644,7 +644,7 @@ class VMHelper(HelperBase):
             # 3. Disk
             is_pv = True
         elif disk_image_type == ImageType.DISK_ISO:
-            # 5. ISO
+            # 4. ISO
             is_pv = False
         else:
             raise exception.Error(_("Unknown image format %(disk_image_type)s")
