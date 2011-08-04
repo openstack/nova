@@ -20,6 +20,8 @@ from nova import test
 
 
 class ExampleSkipTestCase(test.TestCase):
+    test_counter = 0
+
     @test.skip_test("Example usage of @test.skip_test()")
     def test_skip_test_example(self):
         self.fail("skip_test failed to work properly.")
@@ -31,3 +33,15 @@ class ExampleSkipTestCase(test.TestCase):
     @test.skip_unless(False, "Example usage of @test.skip_unless()")
     def test_skip_unless_example(self):
         self.fail("skip_unless failed to work properly.")
+
+    @test.skip_if(False, "This test case should never be skipped.")
+    def test_001_increase_test_counter(self):
+        ExampleSkipTestCase.test_counter += 1
+    
+    @test.skip_unless(True, "This test case should never be skipped.")
+    def test_002_increase_test_counter(self):
+        ExampleSkipTestCase.test_counter += 1
+
+    def test_003_verify_test_counter(self):
+        self.assertEquals(ExampleSkipTestCase.test_counter, 2,
+                          "Tests were not skipped appropriately")
