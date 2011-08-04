@@ -71,9 +71,9 @@ class XenAPIVolumeTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        FLAGS.target_host = '127.0.0.1'
-        FLAGS.xenapi_connection_url = 'test_url'
-        FLAGS.xenapi_connection_password = 'test_pass'
+        self.flags(target_host='127.0.0.1',
+                xenapi_connection_url='test_url',
+                xenapi_connection_password='test_pass')
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
@@ -735,9 +735,9 @@ class XenAPIMigrateInstance(test.TestCase):
     def setUp(self):
         super(XenAPIMigrateInstance, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        FLAGS.target_host = '127.0.0.1'
-        FLAGS.xenapi_connection_url = 'test_url'
-        FLAGS.xenapi_connection_password = 'test_pass'
+        self.flags(target_host='127.0.0.1',
+                xenapi_connection_url='test_url',
+                xenapi_connection_password='test_pass')
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
