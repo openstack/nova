@@ -73,8 +73,11 @@ class ComputeTestCase(test.TestCase):
 
         self.stubs.Set(nova.image.fake._FakeImageService, 'show', fake_show)
 
-    def _create_instance(self, params={}):
+    def _create_instance(self, params=None):
         """Create a test instance"""
+        if not params:
+            params = {}
+
         inst = {}
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
@@ -87,8 +90,11 @@ class ComputeTestCase(test.TestCase):
         inst.update(params)
         return db.instance_create(self.context, inst)['id']
 
-    def _create_instance_type(self, params={}):
+    def _create_instance_type(self, params=None):
         """Create a test instance"""
+        if not params:
+            params = {}
+
         context = self.context.elevated()
         inst = {}
         inst['name'] = 'm1.small'

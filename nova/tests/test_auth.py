@@ -62,7 +62,12 @@ class project_generator(object):
 
 
 class user_and_project_generator(object):
-    def __init__(self, manager, user_state={}, project_state={}):
+    def __init__(self, manager, user_state=None, project_state=None):
+        if not user_state:
+            user_state = {}
+        if not project_state:
+            project_state = {}
+
         self.manager = manager
         if 'name' not in user_state:
             user_state['name'] = 'test1'
