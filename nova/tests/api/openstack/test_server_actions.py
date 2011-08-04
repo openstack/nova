@@ -770,3 +770,147 @@ class TestServerActionXMLDeserializerV11(test.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
+
+    def test_change_pass(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <changePassword
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    adminPass="1234pass"/> """
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "changePassword": {
+                "adminPass": "1234pass",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_change_pass_no_pass(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <changePassword
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/> """
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')
+
+    def test_reboot(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <reboot
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    type="HARD"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "reboot": {
+                "type": "HARD",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_reboot_no_type(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <reboot
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')
+
+    def test_resize(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <resize
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    flavorRef="http://localhost/flavors/3"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "resize": {
+                "flavorRef": "http://localhost/flavors/3"
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_resize_no_flavor_ref(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <resize
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')
+
+    def test_confirm_resize(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <confirmResize
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "confirmResize": None,
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_revert_resize(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <revertResize
+                   xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "revertResize": None,
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_rebuild(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    name="new-server-test"
+                    imageRef="http://localhost/images/1">
+                    <metadata>
+                        <meta key="My Server Name">Apache1</meta>
+                    </metadata>
+                    <personality>
+                        <file path="/etc/banner.txt">Mg==</file>
+                    </personality>
+                </rebuild>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "rebuild": {
+                "name": "new-server-test",
+                "imageRef": "http://localhost/images/1",
+                "metadata": {
+                    "My Server Name": "Apache1",
+                },
+                "personality": [
+                    {"path": "/etc/banner.txt", "contents": "Mg=="},
+                ],
+            },
+        }
+        self.assertDictEqual(request['body'], expected)
+
+    def test_rebuild_minimum(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    imageRef="http://localhost/images/1"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "rebuild": {
+                "imageRef": "http://localhost/images/1",
+            },
+        }
+        self.assertDictEqual(request['body'], expected)
+
+    def test_rebuild_no_imageRef(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    name="new-server-test">
+                    <metadata>
+                        <meta key="My Server Name">Apache1</meta>
+                    </metadata>
+                    <personality>
+                        <file path="/etc/banner.txt">Mg==</file>
+                    </personality>
+                </rebuild>"""
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')

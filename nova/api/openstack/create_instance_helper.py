@@ -360,6 +360,12 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
         action_deserializer = {
             'createImage': self._action_create_image,
             'createBackup': self._action_create_backup,
+            'changePassword': self._action_change_password,
+            'reboot': self._action_reboot,
+            'rebuild': self._action_rebuild,
+            'resize': self._action_resize,
+            'confirmResize': self._action_confirm_resize,
+            'revertResize': self._action_revert_resize,
         }.get(action_name, self.default)
 
         action_data = action_deserializer(action_node)
@@ -372,6 +378,46 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
     def _action_create_backup(self, node):
         attributes = ('name', 'backup_type', 'rotation')
         return self._deserialize_image_action(node, attributes)
+
+    def _action_change_password(self, node):
+        if not node.hasAttribute("adminPass"):
+            raise AttributeError("No adminPass was specified in request")
+        return {"adminPass": node.getAttribute("adminPass")}
+
+    def _action_reboot(self, node):
+        if not node.hasAttribute("type"):
+            raise AttributeError("No reboot type was specified in request")
+        return {"type": node.getAttribute("type")}
+
+    def _action_rebuild(self, node):
+        rebuild = {}
+        if node.hasAttribute("name"):
+            rebuild['name'] = node.getAttribute("name")
+
+        metadata_node = self.find_first_child_named(node, "metadata")
+        if metadata_node is not None:
+            rebuild["metadata"] = self.extract_metadata(metadata_node)
+
+        personality = self._extract_personality(node)
+        if personality is not None:
+            rebuild["personality"] = personality
+
+        if not node.hasAttribute("imageRef"):
+            raise AttributeError("No imageRef was specified in request")
+        rebuild["imageRef"] = node.getAttribute("imageRef")
+
+        return rebuild
+
+    def _action_resize(self, node):
+        if not node.hasAttribute("flavorRef"):
+            raise AttributeError("No flavorRef was specified in request")
+        return {"flavorRef": node.getAttribute("flavorRef")}
+
+    def _action_confirm_resize(self, node):
+        return None
+
+    def _action_revert_resize(self, node):
+        return None
 
     def _deserialize_image_action(self, node, allowed_attributes):
         data = {}
