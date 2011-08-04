@@ -1174,11 +1174,6 @@ def instance_get_all_by_filters(context, filters):
                         return True
         return False
 
-    def _regexp_filter_by_display_name(instance, filter_re):
-        if filter_re.match(instance.display_name):
-            return True
-        return False
-
     def _regexp_filter_by_column(instance, filter_name, filter_re):
         try:
             v = getattr(instance, filter_name)
@@ -1243,8 +1238,7 @@ def instance_get_all_by_filters(context, filters):
     # For filters not in the list, we'll attempt to use the filter_name
     # as a column name in Instance..
     regexp_filter_funcs = {'ip6': _regexp_filter_by_ipv6,
-            'ip': _regexp_filter_by_ip,
-            'name': _regexp_filter_by_display_name}
+            'ip': _regexp_filter_by_ip}
 
     for filter_name in filters.iterkeys():
         filter_func = regexp_filter_funcs.get(filter_name, None)

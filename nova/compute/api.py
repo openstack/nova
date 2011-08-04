@@ -684,25 +684,43 @@ class API(base.Base):
 
         # Fixups for the DB call
         filters = search_opts.copy()
+        recurse_zones = filters.pop('recurse_zones', False)
         if 'image' in filters:
             filters['image_ref'] = filters['image']
             del filters['image']
+        invalid_flavor = False
         if 'flavor' in filters:
-            flavor_id = int(filters['flavor'])
-            try:
-                instance_type = self.db.instance_type_get_by_flavor_id(
-                        context, flavor_id)
-            except exception.FlavorNotFound:
-                pass
-            else:
-                filters['instance_type_id'] = instance_type['id']
+            instance_type = self.db.instance_type_get_by_flavor_id(
+                    context, filters['flavor'])
+            filters['instance_type_id'] = instance_type['id']
             del filters['flavor']
+        # 'name' means Instance.display_name
+        # 'instance_name' means Instance.name
+        if 'name' in filters:
+            filters['display_name'] = filters['name']
+            del filters['name']
+        if 'instance_name' in filters:
+            filters['name'] = filters['instance_name']
+            del filters['instance_name']
 
-        recurse_zones = filters.pop('recurse_zones', False)
         if 'reservation_id' in filters:
             recurse_zones = True
 
-        instances = self.db.instance_get_all_by_filters(context, filters)
+        if 'fixed_ip' in search_opts:
+            # special cased for ec2.  we end up ignoring all other
+            # search options.
+            try:
+                instance = self.db.instance_get_by_fixed_ip(context,
+                        search_opts['fixed_ip'])
+            except exception.FloatingIpNotFound, e:
+                if not recurse_zones:
+                    raise
+            if instance:
+                return [instance]
+            instances = []
+            # fall through
+        else:
+            instances = self.db.instance_get_all_by_filters(context, filters)
 
         if not recurse_zones:
             return instances

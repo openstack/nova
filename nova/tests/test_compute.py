@@ -980,7 +980,7 @@ class ComputeTestCase(test.TestCase):
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
 
-    def test_get_all_by_ip_regex(self):
+    def test_get_all_by_ip_regexp(self):
         """Test searching by Floating and Fixed IP"""
         c = context.get_admin_context()
         instance_id1 = self._create_instance({'server_name': 'woot'})
@@ -991,20 +991,34 @@ class ComputeTestCase(test.TestCase):
                 'server_name': 'not-woot',
                 'id': 30})
 
+        vif_ref1 = db.virtual_interface_create(c,
+                {'instance_id': instance_id1,
+                 'network_id': 1})
+        vif_ref2 = db.virtual_interface_create(c,
+                {'instance_id': instance_id2,
+                 'network_id': 2})
+        vif_ref3 = db.virtual_interface_create(c,
+                {'instance_id': instance_id3,
+                 'network_id': 3})
+
         db.fixed_ip_create(c,
                 {'address': '1.1.1.1',
-                 'instance_id': instance_id1})
+                 'instance_id': instance_id1,
+                 'virtual_interface_id': vif_ref1['id']})
         db.fixed_ip_create(c,
                 {'address': '1.1.2.1',
-                 'instance_id': instance_id2})
+                 'instance_id': instance_id2,
+                 'virtual_interface_id': vif_ref2['id']})
         fix_addr = db.fixed_ip_create(c,
                 {'address': '1.1.3.1',
-                 'instance_id': instance_id3})
+                 'instance_id': instance_id3,
+                 'virtual_interface_id': vif_ref3['id']})
         fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
         flo_ref = db.floating_ip_create(c,
                 {'address': '10.0.0.2',
                 'fixed_ip_id': fix_ref['id']})
 
+        # ends up matching 2nd octet here.. so all 3 match
         instances = self.compute_api.get_all(c,
                 search_opts={'ip': '.*\.1'})
         self.assertEqual(len(instances), 3)
@@ -1029,12 +1043,15 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0].id, instance_id3)
 
+        db.virtual_interface_delete(c, vif_ref1['id'])
+        db.virtual_interface_delete(c, vif_ref2['id'])
+        db.virtual_interface_delete(c, vif_ref3['id'])
+        db.floating_ip_destroy(c, '10.0.0.2')
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
         db.instance_destroy(c, instance_id3)
-        db.floating_ip_destroy(c, '10.0.0.2')
 
-    def test_get_all_by_ipv6_regex(self):
+    def test_get_all_by_ipv6_regexp(self):
         """Test searching by IPv6 address"""
         def fake_ipv6_get_by_instance_ref(context, instance):
             if instance.id == 1:
@@ -1144,9 +1161,9 @@ class ComputeTestCase(test.TestCase):
                 search_opts={'flavor': 5})
         self.assertEqual(len(instances), 0)
 
-        instances = self.compute_api.get_all(c,
-                search_opts={'flavor': 99})
-        self.assertEqual(len(instances), 0)
+        self.assertRaises(exception.FlavorNotFound,
+                self.compute_api.get_all,
+                c, search_opts={'flavor': 99})
 
         instances = self.compute_api.get_all(c,
                 search_opts={'flavor': 3})
