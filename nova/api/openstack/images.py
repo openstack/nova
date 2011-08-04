@@ -116,13 +116,17 @@ class ControllerV10(Controller):
 
         try:
             image_name = image["name"]
-            server_id = image["serverId"]
+            instance_id = image["serverId"]
         except KeyError as missing_key:
             msg = _("Image entity requires %s") % missing_key
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ["nova.context"]
-        image = self._compute_service.snapshot(context, server_id, image_name)
+        props = {'instance_id': instance_id}
+        image = self._compute_service.snapshot(context,
+                                          instance_id,
+                                          image_name,
+                                          extra_properties=props)
 
         return dict(image=self.get_builder(req).build(image, detail=True))
 
