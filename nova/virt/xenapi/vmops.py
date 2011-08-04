@@ -1024,13 +1024,13 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
-    def set_host_powerstate(self, host, state):
+    def host_power_action(self, host, action):
         """Reboots or shuts down the host."""
-        args = {"state": json.dumps(state)}
+        args = {"action": json.dumps(action)}
         methods = {"reboot": "host_reboot", "shutdown": "host_shutdown"}
-        json_resp = self._call_xenhost(methods[state], args)
+        json_resp = self._call_xenhost(methods[action], args)
         resp = json.loads(json_resp)
-        return resp["powerstate"]
+        return resp["power_action"]
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""

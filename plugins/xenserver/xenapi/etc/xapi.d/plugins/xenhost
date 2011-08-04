@@ -103,7 +103,7 @@ def set_host_enabled(self, arg_dict):
     return {"status": status}
 
 
-def _powerstate(state):
+def _power_action(action):
     host_uuid = _get_host_uuid()
     # Host must be disabled first
     result = _run_command("xe host-disable")
@@ -115,23 +115,23 @@ def _powerstate(state):
         raise pluginlib.PluginError(result)
     cmds = {"reboot": "xe host-reboot", "startup": "xe host-power-on",
             "shutdown": "xe host-shutdown"}
-    result = _run_command(cmds[state])
+    result = _run_command(cmds[action])
     # Should be empty string
     if result:
         raise pluginlib.PluginError(result)
-    return {"powerstate": state}
+    return {"power_action": action}
 
 
 @jsonify
 def host_reboot(self, arg_dict):
     """Reboots the host."""
-    return _powerstate("reboot")
+    return _power_action("reboot")
 
 
 @jsonify
 def host_shutdown(self, arg_dict):
     """Reboots the host."""
-    return _powerstate("shutdown")
+    return _power_action("shutdown")
 
 
 @jsonify
@@ -139,7 +139,7 @@ def host_start(self, arg_dict):
     """Starts the host. NOTE: Currently not feasible, since the host
     runs on the same machine as Xen.
     """
-    return _powerstate("startup")
+    return _power_action("startup")
 
 
 @jsonify
