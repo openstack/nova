@@ -129,7 +129,7 @@ class LibvirtOpenVswitchDriver(VIFDriver):
             utils.execute('sudo', 'ovs-vsctl', 'del-port',
                           network['bridge'], dev)
             utils.execute('sudo', 'ip', 'link', 'delete', dev)
-        except exception.ProcessExecutionError, e:
+        except exception.ProcessExecutionError:
             LOG.warning(_("Failed while unplugging vif of instance '%s'"),
                         instance['name'])
-            raise e
+            raise
