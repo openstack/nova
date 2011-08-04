@@ -744,7 +744,10 @@ class VMOps(object):
             LOG.exception(exc)
 
     def _find_rescue_vbd_ref(self, vm_ref, rescue_vm_ref):
-        """Find and return the rescue VM's vbd_ref."""
+        """Find and return the rescue VM's vbd_ref.
+
+        We use the second VBD here because swap is first with the root file
+        system coming in second."""
         vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[1]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
 
