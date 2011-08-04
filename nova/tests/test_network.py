@@ -15,7 +15,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from nova import context
 from nova import db
 from nova import exception
 from nova import flags
