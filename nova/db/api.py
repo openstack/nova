@@ -491,6 +491,10 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
+def instance_get_all_by-filters(context, filters):
+    """Get all instances that match all filters."""
+    return IMPL.instance_get_all_by_filters(context, filters)
+
 def instance_get_active_by_window(context, begin, end=None):
     """Get instances active during a certain time window."""
     return IMPL.instance_get_active_by_window(context, begin, end)
@@ -524,41 +528,6 @@ def instance_get_by_fixed_ip(context, address):
 def instance_get_by_fixed_ipv6(context, address):
     """Get an instance for a fixed ip by IPv6 address."""
     return IMPL.instance_get_by_fixed_ipv6(context, address)
-
-
-def instance_get_all_by_column(context, column, column_data):
-    """Get all instances by exact match against the specified DB column"""
-    return IMPL.instance_get_all_by_column(context, column, column_data)
-
-
-def instance_get_all_by_column_regexp(context, column, column_regexp):
-    """Get all instances by using regular expression matching against
-    a particular DB column
-    """
-    return IMPL.instance_get_all_by_column_regexp(context,
-            column,
-            column_regexp)
-
-
-def instance_get_all_by_name_regexp(context, name_regexp):
-    """Get all instances by using regular expression matching against
-    its name
-    """
-    return IMPL.instance_get_all_by_name_regexp(context, name_regexp)
-
-
-def instance_get_all_by_ip_regexp(context, ip_regexp):
-    """Get all instances by using regular expression matching against
-    Floating and Fixed IP Addresses
-    """
-    return IMPL.instance_get_all_by_ip_regexp(context, ip_regexp)
-
-
-def instance_get_all_by_ipv6_regexp(context, ipv6_regexp):
-    """Get all instances by using regular expression matching against
-    IPv6 Addresses
-    """
-    return IMPL.instance_get_all_by_ipv6_regexp(context, ipv6_regexp)
 
 
 def instance_get_fixed_addresses(context, instance_id):

@@ -677,155 +677,44 @@ class API(base.Base):
         all instances in the system.
         """
 
-        def _get_all_by_reservation_id(reservation_id):
-            """Get instances by reservation ID"""
-            # reservation_id implies recurse_zones
-            search_opts['recurse_zones'] = True
-            return self.db.instance_get_all_by_reservation(context,
-                    reservation_id)
-
-        def _get_all_by_project_id(project_id):
-            """Get instances by project ID"""
-            return self.db.instance_get_all_by_project(context, project_id)
-
-        def _get_all_by_fixed_ip(fixed_ip):
-            """Get instance by fixed IP"""
-            try:
-                instances = self.db.instance_get_by_fixed_ip(context,
-                        fixed_ip)
-            except exception.FixedIpNotFound, e:
-                if search_opts.get('recurse_zones', False):
-                    return []
-                else:
-                    raise
-            if not instances:
-                raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
-            return instances
-
-        def _get_all_by_instance_name(instance_name_regexp):
-            """Get instances by matching the Instance.name property"""
-            return self.db.instance_get_all_by_name_regexp(
-                    context, instance_name_regexp)
-
-        def _get_all_by_ip(ip_regexp):
-            """Get instances by matching IPv4 addresses"""
-            return self.db.instance_get_all_by_ip_regexp(context, ip_regexp)
-
-        def _get_all_by_ipv6(ipv6_regexp):
-            """Get instances by matching IPv6 addresses"""
-            return self.db.instance_get_all_by_ipv6_regexp(context,
-                    ipv6_regexp)
-
-        def _get_all_by_column_regexp(column_regexp, column):
-            """Get instances by regular expression matching
-            Instance.<column>
-            """
-            return self.db.instance_get_all_by_column_regexp(
-                    context, column, column_regexp)
-
-        def _get_all_by_column(column_data, column):
-            """Get instances by exact matching Instance.<column>"""
-            return self.db.instance_get_all_by_column(
-                    context, column, column_data)
-
-        def _get_all_by_flavor(flavor_id):
-            """Get instances by flavor ID"""
-            try:
-                instance_type = self.db.instance_type_get_by_flavor_id(
-                        context, flavor_id)
-            except exception.FlavorNotFound:
-                return []
-            return self.db.instance_get_all_by_column(
-                    context, 'instance_type_id', instance_type['id'])
-
-        # Define the search params that we will allow.  This is a mapping
-        # of the search param to tuple of (function_to_call, (function_args))
-        # A 'None' function means it's an optional parameter that will
-        # influence the search results, but itself is not a search option.
-        # Search options are mutually exclusive
-        known_params = {
-                'recurse_zones': (None, None),
-                # Mutually exclusive options
-                'name': (_get_all_by_column_regexp, ('display_name',)),
-                'reservation_id': (_get_all_by_reservation_id, ()),
-                # 'fixed_ip' needed for EC2 API
-                'fixed_ip': (_get_all_by_fixed_ip, ()),
-                # 'project_id' needed for EC2 API
-                'project_id': (_get_all_by_project_id, ()),
-                'ip': (_get_all_by_ip, ()),
-                'ip6': (_get_all_by_ipv6, ()),
-                'instance_name': (_get_all_by_instance_name, ()),
-                'image': (_get_all_by_column, ('image_ref',)),
-                'state': (_get_all_by_column, ('state',)),
-                'flavor': (_get_all_by_flavor, ())}
-
         if search_opts is None:
             search_opts = {}
 
         LOG.debug(_("Searching by: %s") % str(search_opts))
 
-        # Mutually exclusive serach options are any options that have
-        # a function to call.  Raise an exception if more than 1 is
-        # specified...
-        # NOTE(comstud): Ignore unknown options.  The OS API will
-        # do it's own verification on options..
-        found_opts = [opt for opt in search_opts.iterkeys()
-                if opt in known_params and \
-                        known_params[opt][0] is not None]
-        if len(found_opts) > 1:
-            found_opt_str = ", ".join(found_opts)
-            msg = _("More than 1 mutually exclusive "
-                    "search option specified: %(found_opt_str)s") \
-                    % locals()
-            LOG.error(msg)
-            raise exception.InvalidInput(reason=msg)
-
-        # Found a search option?
-        if found_opts:
-            found_opt = found_opts[0]
-            f, f_args = known_params[found_opt]
-            instances = f(search_opts[found_opt], *f_args)
-        # Nope.  Return all instances if the request is in admin context..
-        elif context.is_admin:
-            instances = self.db.instance_get_all(context)
-        # Nope.  Return all instances for the user/project
-        else:
-            if context.project_id:
-                instances = self.db.instance_get_all_by_project(
-                        context, context.project_id)
+        # Fixups for the DB call
+        filters = search_opts.copy()
+        if 'image' in filters:
+            filters['image_ref'] = filters['image']
+            del filters['image']
+        if 'flavor' in filters:
+            flavor_id = int(filters['flavor'])
+            try:
+                instance_type = self.db.instance_type_get_by_flavor_id(
+                        context, flavor_id)
+            except exception.FlavorNotFound:
+                pass
             else:
-                instances = self.db.instance_get_all_by_user(
-                        context, context.user_id)
+                filters['instance_type_id'] = instance_type['id']
+            del filters['flavor']
 
-        # Convert any responses into a list of instances
-        if instances is None:
-            instances = []
-        elif not isinstance(instances, list):
-            instances = [instances]
+        recurse_zones = filters.pop('recurse_zones', False)
+        if 'reservation_id' in filters:
+            recurse_zones = True
 
-        if not search_opts.get('recurse_zones', False):
+        instances = self.db.instance_get_all_by_filters(context, filters)
+
+        if not recurse_zones:
             return instances
 
-        new_search_opts = {}
-        new_search_opts.update(search_opts)
-        # API does state search by status, instead of the real power
-        # state.  So if we're searching by 'state', we need to
-        # convert this back into 'status'
-        state = new_search_opts.pop('state', None)
-        if state:
-            # Might be a list.. we can only use 1.
-            if isinstance(state, list):
-                state = state[0]
-            new_search_opts['status'] = power_state.status_from_state(
-                    state)
-
-        # Recurse zones.  Need admin context for this.
+        # Recurse zones.  Need admin context for this.  Send along
+        # the un-modified search options we received..
         admin_context = context.elevated()
         children = scheduler_api.call_zone_method(admin_context,
                 "list",
                 errors_to_ignore=[novaclient.exceptions.NotFound],
                 novaclient_collection_name="servers",
-                search_opts=new_search_opts)
+                search_opts=search_opts)
 
         for zone, servers in children:
             # 'servers' can be None if a 404 was returned by a zone

@@ -1147,6 +1147,108 @@ def instance_get_all(context):
                    all()
 
 
+@require_context
+def instance_get_all_by_filters(context, filters):
+    """Return instances the match all filters"""
+
+    def _filter_by_ipv6(instance, filter_re):
+        for interface in instance['virtual_interfaces']:
+            fixed_ipv6 = interface.get('fixed_ipv6')
+            if fixed_ipv6 and filter_re.match(fixed_ipv6):
+                return True
+        return False
+
+    def _filter_by_ip(instance, filter_re):
+        for interface in instance['virtual_interfaces']:
+            for fixed_ip in interface['fixed_ips']:
+                if not fixed_ip or not fixed_ip['address']:
+                    continue
+                if filter_re.match(fixed_ip['address']):
+                    return True
+                for floating_ip in fixed_ip.get('floating_ips', []):
+                    if not floating_ip or not floating_ip['address']:
+                        continue
+                    if filter_re.match(floating_ip['address']):
+                        return True
+        return False
+
+    def _filter_by_display_name(instance, filter_re):
+        if filter_re.match(instance.display_name):
+            return True
+        return False
+
+    def _filter_by_column(instance, filter_name, filter_re):
+        try:
+            v = getattr(instance, filter_name)
+        except AttributeError:
+            return True
+        if v and filter_re.match(str(v)):
+            return True
+        return False
+
+    session = get_session()
+    query_prefix = session.query(models.Instance).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload_all('virtual_interfaces.network')).\
+                   options(joinedload_all(
+                           'virtual_interfaces.fixed_ips.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ips.network')).\
+                   options(joinedload('metadata')).\
+                   options(joinedload('instance_type')).\
+                   filter_by(deleted=can_read_deleted(context))
+    
+    filters = filters.copy()
+
+    if not context.is_admin:
+        # If we're not admin context, add appropriate filter..
+        if context.project_id:
+            filters['project_id'] = context.project_id
+        else:
+            filters['user_id'] = context.user_id
+
+    # Filters that we can do along with the SQL query...
+    query_filter_funcs = {
+            'project_id': lambda query, value: query.filter_by(
+                    project_id=value),
+            'user_id': lambda query, value: query.filter_by(
+                    user_id=value),
+            'reservation_id': lambda query, value: query.filter_by(
+                    reservation_id=value),
+            'state': lambda query, value: query.filter_by(state=value)}
+
+    query_filters = [key for key in filters.iterkeys()
+            if key in query_filter_funcs]
+
+    for filter_name in query_filters:
+        query_prefix = query_filter_funcs[filter_name](query_prefix,
+                filters[filter_name])
+        # Remove this from filters, so it doesn't get tried below
+        del filters[filter_name]
+
+    instances = query_prefix.all()
+
+    if not instances:
+        return []
+
+    # Now filter on everything else for regexp matching..
+    filter_funcs = {'ip6': _filter_by_ipv6,
+            'ip': _filter_by_ip,
+            'name': _filter_by_display_name}
+
+    for filter_name in filters.iterkeys():
+        filter_func = filter_funcs.get(filter_name, None)
+        filter_re = re.compile(filters[filter_name])
+        if filter_func:
+            filter_l = lambda instance: filter_func(instance, filter_re)
+        else:
+            filter_l = lambda instance: _filter_by_column(instance,
+                    filter_name, filter_re)
+        instances = filter(filter_l, instances)
+
+    return instances
+
+
 @require_admin_context
 def instance_get_active_by_window(context, begin, end=None):
     """Return instances that were continuously active over the given window"""
@@ -1257,232 +1359,6 @@ def instance_get_by_fixed_ipv6(context, address):
     result = session.query(models.Instance).\
                      filter_by(id=vif_ref['instance_id'])
     return result
-
-
-@require_context
-def instance_get_all_by_column(context, column, column_data):
-    """Get all instances by exact match against the specified DB column
-    'column_data' can be a list.
-    """
-    session = get_session()
-
-    prefix = session.query(models.Instance).\
-            options(joinedload_all('fixed_ips.floating_ips')).\
-            options(joinedload('virtual_interfaces')).\
-            options(joinedload('security_groups')).\
-            options(joinedload_all('fixed_ips.network')).\
-            options(joinedload('metadata')).\
-            options(joinedload('instance_type')).\
-            filter_by(deleted=can_read_deleted(context))
-
-    if isinstance(column_data, list):
-        column_attr = getattr(models.Instance, column)
-        prefix = prefix.filter(column_attr.in_(column_data))
-    else:
-        # Set up the dictionary for filter_by()
-        query_filter = {}
-        query_filter[column] = column_data
-        prefix = prefix.filter_by(**query_filter)
-
-    if context.is_admin:
-        all_instances = prefix.all()
-    elif context.project:
-        all_instances = prefix.\
-                filter_by(project_id=context.project_id).\
-                all()
-    else:
-        all_instances = prefix.\
-                filter_by(user_id=context.user_id).\
-                all()
-    if not all_instances:
-        return []
-
-    return all_instances
-
-
-@require_context
-def instance_get_all_by_column_regexp(context, column, column_regexp):
-    """Get all instances by using regular expression matching against
-    a particular DB column
-    """
-    session = get_session()
-
-    # MySQL 'regexp' is not portable, so we must do our own matching.
-    # First... grab all Instances.
-    prefix = session.query(models.Instance).\
-            options(joinedload_all('fixed_ips.floating_ips')).\
-            options(joinedload('virtual_interfaces')).\
-            options(joinedload('security_groups')).\
-            options(joinedload_all('fixed_ips.network')).\
-            options(joinedload('metadata')).\
-            options(joinedload('instance_type')).\
-            filter_by(deleted=can_read_deleted(context))
-
-    if context.is_admin:
-        all_instances = prefix.all()
-    elif context.project:
-        all_instances = prefix.\
-                filter_by(project_id=context.project_id).\
-                all()
-    else:
-        all_instances = prefix.\
-                filter_by(user_id=context.user_id).\
-                all()
-    if not all_instances:
-        return []
-    # Now do the regexp matching
-    compiled_regexp = re.compile(column_regexp)
-    instances = []
-    for instance in all_instances:
-        v = getattr(instance, column)
-        if v and compiled_regexp.match(v):
-            instances.append(instance)
-    return instances
-
-
-@require_context
-def instance_get_all_by_name_regexp(context, name_regexp):
-    """Get all instances by using regular expression matching against
-    its name
-    """
-
-    session = get_session()
-
-    # MySQL 'regexp' is not portable, so we must do our own matching.
-    # First... grab all Instances.
-    prefix = session.query(models.Instance).\
-            options(joinedload_all('fixed_ips.floating_ips')).\
-            options(joinedload('virtual_interfaces')).\
-            options(joinedload('security_groups')).\
-            options(joinedload_all('fixed_ips.network')).\
-            options(joinedload('metadata')).\
-            options(joinedload('instance_type')).\
-            filter_by(deleted=can_read_deleted(context))
-
-    if context.is_admin:
-        all_instances = prefix.all()
-    elif context.project:
-        all_instances = prefix.\
-                filter_by(project_id=context.project_id).\
-                all()
-    else:
-        all_instances = prefix.\
-                filter_by(user_id=context.user_id).\
-                all()
-    if not all_instances:
-        return []
-    # Now do the regexp matching
-    compiled_regexp = re.compile(name_regexp)
-    return [instance for instance in all_instances
-        if compiled_regexp.match(instance.name)]
-
-
-@require_context
-def instance_get_all_by_ip_regexp(context, ip_regexp):
-    """Get all instances by using regular expression matching against
-    Floating and Fixed IP Addresses
-    """
-    session = get_session()
-
-    # Query both FixedIp and FloatingIp tables to get matches.
-    # Since someone could theoretically search for something that matches
-    # instances in both tables... we need to use a dictionary keyed
-    # on instance ID to make sure we return only 1.  We can't key off
-    # of 'instance' because it's just a reference and will be different
-    # addresses even though they might point to the same instance ID.
-    instances = {}
-
-    fixed_ips = session.query(models.FixedIp).\
-            options(joinedload_all('instance.fixed_ips.floating_ips')).\
-            options(joinedload('instance.virtual_interfaces')).\
-            options(joinedload('instance.security_groups')).\
-            options(joinedload_all('instance.fixed_ips.network')).\
-            options(joinedload('instance.metadata')).\
-            options(joinedload('instance.instance_type')).\
-            filter_by(deleted=can_read_deleted(context)).\
-            all()
-    floating_ips = session.query(models.FloatingIp).\
-            options(joinedload_all(
-                    'fixed_ip.instance.fixed_ips.floating_ips')).\
-            options(joinedload('fixed_ip.instance.virtual_interfaces')).\
-            options(joinedload('fixed_ip.instance.security_groups')).\
-            options(joinedload_all(
-                    'fixed_ip.instance.fixed_ips.network')).\
-            options(joinedload('fixed_ip.instance.metadata')).\
-            options(joinedload('fixed_ip.instance.instance_type')).\
-            filter_by(deleted=can_read_deleted(context)).\
-            all()
-
-    if fixed_ips is None:
-        fixed_ips = []
-    if floating_ips is None:
-        floating_ips = []
-
-    compiled_regexp = re.compile(ip_regexp)
-    instances = {}
-
-    # Now do the regexp matching
-    for fixed_ip in fixed_ips:
-        if fixed_ip.instance and compiled_regexp.match(fixed_ip.address):
-            instances[fixed_ip.instance.uuid] = fixed_ip.instance
-    for floating_ip in floating_ips:
-        fixed_ip = floating_ip.fixed_ip
-        if fixed_ip and fixed_ip.instance and\
-                compiled_regexp.match(floating_ip.address):
-            instances[fixed_ip.instance.uuid] = fixed_ip.instance
-
-    if context.is_admin:
-        return instances.values()
-    elif context.project:
-        return [instance for instance in instances.values()
-                if instance.project_id == context.project_id]
-    else:
-        return [instance for instance in instances.values()
-                if instance.user_id == context.user_id]
-
-    return instances.values()
-
-
-@require_context
-def instance_get_all_by_ipv6_regexp(context, ipv6_regexp):
-    """Get all instances by using regular expression matching against
-    IPv6 Addresses
-    """
-
-    session = get_session()
-    with session.begin():
-        prefix = session.query(models.Instance).\
-                options(joinedload_all('fixed_ips.floating_ips')).\
-                options(joinedload('virtual_interfaces')).\
-                options(joinedload('security_groups')).\
-                options(joinedload_all('fixed_ips.network')).\
-                options(joinedload('metadata')).\
-                options(joinedload('instance_type')).\
-                filter_by(deleted=can_read_deleted(context))
-
-        if context.is_admin:
-            all_instances = prefix.all()
-        elif context.project:
-            all_instances = prefix.\
-                   filter_by(project_id=context.project_id).\
-                   all()
-        else:
-            all_instances = prefix.\
-                   filter_by(user_id=context.user_id).\
-                   all()
-
-        if not all_instances:
-            return []
-
-        instances = []
-        compiled_regexp = re.compile(ipv6_regexp)
-        for instance in all_instances:
-            ipv6_addrs = _ipv6_get_by_instance_ref(context, instance)
-            for ipv6 in ipv6_addrs:
-                if compiled_regexp.match(ipv6):
-                    instances.append(instance)
-                    break
-        return instances
 
 
 @require_admin_context
