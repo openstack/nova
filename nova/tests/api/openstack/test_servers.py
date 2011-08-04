@@ -2173,9 +2173,10 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         self.assertEqual(request['body'], expected)
 
 
-class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
+class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
 
     def setUp(self):
+        super(TestServerCreateRequestXMLDeserializerV11, self).setUp()
         self.deserializer = create_instance_helper.ServerXMLDeserializer()
 
     def test_minimal_request(self):
@@ -2320,7 +2321,7 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
                 ],
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertDictMatch(request['body'], expected)
 
     def test_spec_request(self):
         image_bookmark_link = "http://servers.api.openstack.org/1234/" + \
