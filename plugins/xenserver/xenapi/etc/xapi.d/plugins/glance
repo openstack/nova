@@ -248,6 +248,19 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
     using chunked-transfer-encoded HTTP.
     """
     conn = httplib.HTTPConnection(glance_host, glance_port)
+
+    # NOTE(dprince): We need to resend any existing Glance meta/property
+    # headers so they are preserved in Glance. We obtain them here with a
+    # HEAD request.
+    conn.request('HEAD', '/v1/images/%s' % image_id)
+    resp = conn.getresponse()
+    if resp.status != httplib.OK:
+        raise Exception("Unexpected response from Glance %i" % resp.status)
+    headers = {}
+    for header, value in resp.getheaders():
+        if header.lower().startswith("x-image-meta-property-"):
+            headers[header.lower()] = value
+
     # NOTE(sirp): httplib under python2.4 won't accept a file-like object
     # to request
     conn.putrequest('PUT', '/v1/images/%s' % image_id)
@@ -260,7 +273,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
     #   2. We're currently uploading a vanilla tarball. In order to be OVF/OVA
     #      compliant, we'll need to embed a minimal OVF manifest as the first
     #      file.
-    headers = {
+    ovf_headers = {
         'content-type': 'application/octet-stream',
         'transfer-encoding': 'chunked',
         'x-image-meta-is-public': 'True',
@@ -271,7 +284,9 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
 
     # If we have an auth_token, set an x-auth-token header
     if auth_token:
-        headers['x-auth-token'] = auth_token
+        ovf_headers['x-auth-token'] = auth_token
+
+    headers.update(ovf_headers)
 
     for header, value in headers.iteritems():
         conn.putheader(header, value)
