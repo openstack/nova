@@ -1095,6 +1095,8 @@ def _prepare_injectables(inst, networks_info):
                 ip_v6 = info['ip6s'][0]
             if len(info['dns']) > 0:
                 dns = info['dns'][0]
+            else:
+                dns = ''
             interface_info = {'name': 'eth%d' % ifc_num,
                               'address': ip_v4 and ip_v4['ip'] or '',
                               'netmask': ip_v4 and ip_v4['netmask'] or '',
