@@ -122,8 +122,7 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                     LOG.exception(_('Uncaught exception'))
                     #logging.error(traceback.extract_stack(exc_traceback))
                     raise Error(str(e))
-                # Don't mask the real exception.
-                raise Exception(e)
+                raise
 
         return wraps(f)(wrapped)
     return inner
