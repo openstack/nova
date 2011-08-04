@@ -145,7 +145,8 @@ class Controller(object):
     def _servers_from_request(self, req, is_detail):
         """Returns a list of servers based on the request.
 
-        Checks for search options and permissions on the options.
+        Checks for search options and strips out options that should
+        not be available to non-admins.
         """
 
         search_opts = {}
