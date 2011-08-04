@@ -456,84 +456,6 @@ def floating_forward_rules(floating_ip, fixed_ip):
              '-s %s -j SNAT --to %s' % (fixed_ip, floating_ip))]
 
 
-def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
-    """Create a vlan and bridge unless they already exist."""
-    interface = ensure_vlan(vlan_num, bridge_interface)
-    ensure_bridge(bridge, interface, net_attrs)
-    return interface
-
-
-@utils.synchronized('ensure_vlan', external=True)
-def ensure_vlan(vlan_num, bridge_interface):
-    """Create a vlan unless it already exists."""
-    interface = 'vlan%s' % vlan_num
-    if not _device_exists(interface):
-        LOG.debug(_('Starting VLAN inteface %s'), interface)
-        _execute('sudo', 'vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD')
-        _execute('sudo', 'vconfig', 'add', bridge_interface, vlan_num)
-        _execute('sudo', 'ip', 'link', 'set', interface, 'up')
-    return interface
-
-
-@utils.synchronized('ensure_bridge', external=True)
-def ensure_bridge(bridge, interface, net_attrs=None):
-    """Create a bridge unless it already exists.
-
-    :param interface: the interface to create the bridge on.
-    :param net_attrs: dictionary with  attributes used to create the bridge.
-
-    If net_attrs is set, it will add the net_attrs['gateway'] to the bridge
-    using net_attrs['broadcast'] and net_attrs['cidr'].  It will also add
-    the ip_v6 address specified in net_attrs['cidr_v6'] if use_ipv6 is set.
-
-    The code will attempt to move any ips that already exist on the interface
-    onto the bridge and reset the default gateway if necessary.
-
-    """
-    if not _device_exists(bridge):
-        LOG.debug(_('Starting Bridge interface for %s'), interface)
-        _execute('sudo', 'brctl', 'addbr', bridge)
-        _execute('sudo', 'brctl', 'setfd', bridge, 0)
-        # _execute('sudo brctl setageing %s 10' % bridge)
-        _execute('sudo', 'brctl', 'stp', bridge, 'off')
-
-    if interface:
-        out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
-                            check_exit_code=False)
-
-        # NOTE(vish): This will break if there is already an ip on the
-        #             interface, so we move any ips to the bridge
-        gateway = None
-        out, err = _execute('sudo', 'route', '-n')
-        for line in out.split('\n'):
-            fields = line.split()
-            if fields and fields[0] == '0.0.0.0' and fields[-1] == interface:
-                gateway = fields[1]
-                _execute('sudo', 'route', 'del', 'default', 'gw', gateway,
-                             'dev', interface, check_exit_code=False)
-        out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
-                                'scope', 'global')
-        for line in out.split('\n'):
-            fields = line.split()
-            if fields and fields[0] == 'inet':
-                params = fields[1:-1]
-                _execute(*_ip_bridge_cmd('del', params, fields[-1]))
-                _execute(*_ip_bridge_cmd('add', params, bridge))
-        if gateway:
-            _execute('sudo', 'route', 'add', 'default', 'gw', gateway)
-
-        if (err and err != "device %s is already a member of a bridge; can't "
-                           "enslave it to bridge %s.\n" % (interface, bridge)):
-            raise exception.Error('Failed to add interface: %s' % err)
-
-    iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                                             '--in-interface %s -j ACCEPT' % \
-                                             bridge)
-    iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                                             '--out-interface %s -j ACCEPT' % \
-                                             bridge)
-
-
 def initialize_gateway_device(dev, network_ref):
         if not network_ref:
             return
@@ -838,12 +760,14 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     def plug(self, network):
         if network.get('vlan', None) is not None:
-            ensure_vlan_bridge(network['vlan'],
+            LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
+                           network['vlan'],
                            network['bridge'],
                            network['bridge_interface'],
                            network)
         else:
-            ensure_bridge(network['bridge'],
+            LinuxBridgeInterfaceDriver.ensure_bridge(
+                          network['bridge'],
                           network['bridge_interface'],
                           network)
 
@@ -851,6 +775,88 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     def unplug(self, network):
         return network['bridge']
+
+    @classmethod
+    def ensure_vlan_bridge(_self, vlan_num, bridge, bridge_interface,
+                                                      net_attrs=None):
+        """Create a vlan and bridge unless they already exist."""
+        interface = LinuxBridgeInterfaceDriver.ensure_vlan(vlan_num,
+                                                            bridge_interface)
+        LinuxBridgeInterfaceDriver.ensure_bridge(bridge, interface, net_attrs)
+        return interface
+
+    @classmethod
+    @utils.synchronized('ensure_vlan', external=True)
+    def ensure_vlan(_self, vlan_num, bridge_interface):
+        """Create a vlan unless it already exists."""
+        interface = 'vlan%s' % vlan_num
+        if not _device_exists(interface):
+            LOG.debug(_('Starting VLAN inteface %s'), interface)
+            _execute('sudo', 'vconfig', 'set_name_type',
+                                    'VLAN_PLUS_VID_NO_PAD')
+            _execute('sudo', 'vconfig', 'add', bridge_interface, vlan_num)
+            _execute('sudo', 'ip', 'link', 'set', interface, 'up')
+        return interface
+
+    @classmethod
+    @utils.synchronized('ensure_bridge', external=True)
+    def ensure_bridge(_self, bridge, interface, net_attrs=None):
+        """Create a bridge unless it already exists.
+
+        :param interface: the interface to create the bridge on.
+        :param net_attrs: dictionary with  attributes used to create bridge.
+
+        If net_attrs is set, it will add the net_attrs['gateway'] to the bridge
+        using net_attrs['broadcast'] and net_attrs['cidr'].  It will also add
+        the ip_v6 address specified in net_attrs['cidr_v6'] if use_ipv6 is set.
+
+        The code will attempt to move any ips that already exist on the
+        interface onto the bridge and reset the default gateway if necessary.
+
+        """
+        if not _device_exists(bridge):
+            LOG.debug(_('Starting Bridge interface for %s'), interface)
+            _execute('sudo', 'brctl', 'addbr', bridge)
+            _execute('sudo', 'brctl', 'setfd', bridge, 0)
+            # _execute('sudo brctl setageing %s 10' % bridge)
+            _execute('sudo', 'brctl', 'stp', bridge, 'off')
+
+        if interface:
+            out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
+                            check_exit_code=False)
+
+            # NOTE(vish): This will break if there is already an ip on the
+            #             interface, so we move any ips to the bridge
+            gateway = None
+            out, err = _execute('sudo', 'route', '-n')
+            for line in out.split('\n'):
+                fields = line.split()
+                if fields and fields[0] == '0.0.0.0' and \
+                                fields[-1] == interface:
+                    gateway = fields[1]
+                    _execute('sudo', 'route', 'del', 'default', 'gw', gateway,
+                             'dev', interface, check_exit_code=False)
+            out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
+                                'scope', 'global')
+            for line in out.split('\n'):
+                fields = line.split()
+                if fields and fields[0] == 'inet':
+                    params = fields[1:-1]
+                    _execute(*_ip_bridge_cmd('del', params, fields[-1]))
+                    _execute(*_ip_bridge_cmd('add', params, bridge))
+            if gateway:
+                _execute('sudo', 'route', 'add', 'default', 'gw', gateway)
+
+            if (err and err != "device %s is already a member of a bridge;"
+                     "can't enslave it to bridge %s.\n" % (interface, bridge)):
+                raise exception.Error('Failed to add interface: %s' % err)
+
+        iptables_manager.ipv4['filter'].add_rule('FORWARD',
+                                             '--in-interface %s -j ACCEPT' % \
+                                             bridge)
+        iptables_manager.ipv4['filter'].add_rule('FORWARD',
+                                             '--out-interface %s -j ACCEPT' % \
+                                             bridge)
 
 
 # plugs interfaces using Open vSwitch
