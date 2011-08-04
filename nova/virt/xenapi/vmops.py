@@ -743,6 +743,14 @@ class VMOps(object):
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
+    def _find_rescue_vbd_ref(self, vm_ref, rescue_vm_ref):
+        """Find and return the rescue VM's vbd_ref."""
+        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[1]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
+
+        return VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref, 1,
+                False)
+
     def _shutdown_rescue(self, rescue_vm_ref):
         """Shutdown a rescue instance."""
         self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm_ref)
@@ -934,12 +942,7 @@ class VMOps(object):
         instance._rescue = True
         self.spawn_rescue(context, instance, network_info)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
-
-        #NOTE(jk0): Find the root partition, not swap.
-        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[1]
-        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
-        rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
-                                             vdi_ref, 1, False)
+        rescue_vbd_ref = self._find_rescue_vbd_ref(vm_ref, rescue_vm_ref)
 
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
