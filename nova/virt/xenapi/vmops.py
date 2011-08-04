@@ -914,7 +914,7 @@ class VMOps(object):
                                          True)
         self._wait_with_callback(instance.id, task, callback)
 
-    def rescue(self, context, instance, callback, network_info):
+    def rescue(self, context, instance, _callback, network_info):
         """Rescue the specified instance.
 
             - shutdown the instance VM.
@@ -943,7 +943,7 @@ class VMOps(object):
 
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, _callback):
         """Unrescue the specified instance.
 
             - unplug the instance VM's disk from the rescue VM.

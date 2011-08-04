@@ -651,16 +651,15 @@ class ComputeManager(manager.SchedulerDependentManager):
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this host."""
         context = context.elevated()
+        self._update_state(context, instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rescuing')
-        _update_state = lambda result: self._update_state_callback(
-                self, context, instance_id, result)
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.rescue(context, instance_ref, _update_state, network_info)
+        self.driver.rescue(context, instance_ref, None, network_info)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -668,16 +667,15 @@ class ComputeManager(manager.SchedulerDependentManager):
     def unrescue_instance(self, context, instance_id):
         """Rescue an instance on this host."""
         context = context.elevated()
+        self._update_state(context, instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: unrescuing'), instance_id, context=context)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
                                    'unrescuing')
-        _update_state = lambda result: self._update_state_callback(
-                self, context, instance_id, result)
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.unrescue(instance_ref, _update_state, network_info)
+        self.driver.unrescue(instance_ref, None, network_info)
         self._update_state(context, instance_id)
 
     @staticmethod
