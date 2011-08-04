@@ -397,7 +397,7 @@ class XenAPIVMTestCase(test.TestCase):
                     instance_type_id="3", os_type="linux",
                     architecture="x86-64", instance_id=1,
                     check_injection=False,
-                    create_record=True):
+                    create_record=True, empty_dns=False):
         stubs.stubout_loopingcall_start(self.stubs)
         if create_record:
             values = {'id': instance_id,
@@ -426,11 +426,21 @@ class XenAPIVMTestCase(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
+        if empty_dns:
+            network_info[0][1]['dns'] = []
+
         self.conn.spawn(self.context, instance, network_info)
         self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
         self.assertTrue(instance.os_type)
         self.assertTrue(instance.architecture)
+
+    def test_spawn_empty_dns(self):
+        """"Test spawning with an empty dns list"""
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64",
+                         empty_dns=True)
+        self.check_vm_params_for_linux()
 
     def test_spawn_not_enough_memory(self):
         self.assertRaises(Exception,
