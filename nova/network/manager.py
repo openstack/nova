@@ -785,14 +785,15 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
         network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
-        self.driver.ensure_bridge(network_ref['bridge'],
-                                  network_ref['bridge_interface'],
-                                  network_ref)
+
+        dev = self.driver.plug(network_ref)
+        self.driver.initialize_gateway_device(dev, network_ref)
+
         if not FLAGS.fake_network:
-            self.driver.update_dhcp(context, network_ref)
+            self.driver.update_dhcp(context, dev, network_ref)
             if(FLAGS.use_ipv6):
-                self.driver.update_ra(context, network_ref)
-                gateway = utils.get_my_linklocal(network_ref['bridge'])
+                self.driver.update_ra(context, dev, network_ref)
+                gateway = utils.get_my_linklocal(dev)
                 self.db.network_update(context, network_ref['id'],
                                        {'gateway_v6': gateway})
 

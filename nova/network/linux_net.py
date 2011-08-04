@@ -805,9 +805,6 @@ def _ip_bridge_cmd(action, params, device):
     cmd.extend(['dev', device])
     return cmd
 
-
-iptables_manager = IptablesManager()
-
 # Similar to compute virt layers, the Linux network node
 # code uses a flexible driver model to support different ways
 # of creating ethernet interfaces and attaching them to the network.
@@ -840,10 +837,16 @@ class LinuxNetInterfaceDriver(object):
 class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     def plug(self, network):
-        ensure_vlan_bridge(network['vlan'],
+        if network.get('vlan', None) is not None:
+            ensure_vlan_bridge(network['vlan'],
                            network['bridge'],
                            network['bridge_interface'],
                            network)
+        else:
+            ensure_bridge(network['bridge'],
+                          network['bridge_interface'],
+                          network)
+
         return network['bridge']
 
     def unplug(self, network):
@@ -875,4 +878,5 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         dev = "gw-" + str(network['id'])
         return dev
 
+iptables_manager = IptablesManager()
 interface_driver = utils.import_object(FLAGS.linuxnet_interface_driver)
