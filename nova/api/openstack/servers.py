@@ -268,9 +268,13 @@ class Controller(object):
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
             reboot_type = input_dict['reboot']['type']
+            if (not reboot_type == 'HARD') and (not reboot_type == 'SOFT'):
+                msg = _("Argument 'type' for reboot is not HARD or SOFT")
+                LOG.exception(msg)
+                raise exc.HTTPBadRequest()
         else:
             LOG.exception(_("Missing argument 'type' for reboot"))
-            raise exc.HTTPUnprocessableEntity()
+            raise exc.HTTPBadRequest()
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
@@ -646,6 +650,9 @@ class ControllerV11(Controller):
         """ Resizes a given instance to the flavor size requested """
         try:
             flavor_ref = input_dict["resize"]["flavorRef"]
+            if not flavor_ref:
+                msg = _("Resize request has invalid 'flavorRef' attribute.")
+                raise exc.HTTPBadRequest(explanation=msg)
         except (KeyError, TypeError):
             msg = _("Resize requests require 'flavorRef' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)

@@ -479,6 +479,21 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(mock_method.instance_id, '1')
         self.assertEqual(mock_method.password, '1234pass')
 
+    def test_server_change_password_xml(self):
+        mock_method = MockSetAdminPassword()
+        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = "application/xml"
+        req.body = """<?xml version="1.0" encoding="UTF-8"?>
+                    <changePassword
+                        xmlns="http://docs.openstack.org/compute/api/v1.1"
+                        adminPass="1234pass"/>"""
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(mock_method.instance_id, '1')
+        self.assertEqual(mock_method.password, '1234pass')
+
     def test_server_change_password_not_a_string(self):
         body = {'changePassword': {'adminPass': 1234}}
         req = webob.Request.blank('/v1.1/servers/1/action')
@@ -508,6 +523,42 @@ class ServerActionsTestV11(test.TestCase):
 
     def test_server_change_password_none(self):
         body = {'changePassword': {'adminPass': None}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_server_reboot_hard(self):
+        body = dict(reboot=dict(type="HARD"))
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_reboot_soft(self):
+        body = dict(reboot=dict(type="SOFT"))
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_reboot_incorrect_type(self):
+        body = dict(reboot=dict(type="NOT_A_TYPE"))
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_server_reboot_missing_type(self):
+        body = dict(reboot=dict())
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
@@ -656,6 +707,62 @@ class ServerActionsTestV11(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
+
+    def test_resize_server_no_flavor(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(resize=dict())
+        req.body = json.dumps(body_dict)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_resize_server_no_flavor_ref(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(resize=dict(flavorRef=None))
+        req.body = json.dumps(body_dict)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_confirm_resize_server(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(confirmResize=None)
+        req.body = json.dumps(body_dict)
+
+        self.confirm_resize_called = False
+
+        def cr_mock(*args):
+            self.confirm_resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'confirm_resize', cr_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
+        self.assertEqual(self.confirm_resize_called, True)
+
+    def test_revert_resize_server(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(revertResize=None)
+        req.body = json.dumps(body_dict)
+
+        self.revert_resize_called = False
+
+        def revert_mock(*args):
+            self.revert_resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'revert_resize', revert_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.revert_resize_called, True)
 
     def test_create_image(self):
         body = {
