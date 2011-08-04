@@ -31,7 +31,6 @@ from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import ips
 from nova.api.openstack import wsgi
 from nova.compute import instance_types
-from nova.compute import power_state
 from nova.scheduler import api as scheduler_api
 import nova.api.openstack
 import nova.api.openstack.views.addresses
@@ -53,7 +52,7 @@ class Controller(object):
         self.compute_api = compute.API()
         self.helper = helper.CreateInstanceHelper(self)
 
-    def _check_servers_options(self, search_options):
+    def _check_servers_options(self, context, search_options):
         if FLAGS.allow_admin_api and context.is_admin:
             # Allow all options
             return
@@ -106,7 +105,7 @@ class Controller(object):
         # child zones..
         if 'status' in search_opts:
             status = search_opts['status']
-            search_opts['state'] = power_state.states_from_status(status)
+            search_opts['state'] = common.power_states_from_status(status)
             if len(search_opts['state']) == 0:
                 reason = _('Invalid server status: %(status)s') % locals()
                 LOG.error(reason)
@@ -122,10 +121,10 @@ class Controller(object):
             # Admin hasn't specified deleted filter
             if 'changes-since' not in search_opts:
                 # No 'changes-since', so we need to find non-deleted servers
-                search_opts['deleted'] = '^False$'
+                search_opts['deleted'] = False
             else:
                 # This is the default, but just in case..
-                search_opts['deleted'] = '^True$'
+                search_opts['deleted'] = True
 
         instance_list = self.compute_api.get_all(
                 context, search_opts=search_opts)

@@ -1149,6 +1149,7 @@ class ServersTest(test.TestCase):
             return [stub_instance(100)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+        self.flags(allow_admin_api=False)
 
         req = webob.Request.blank('/v1.1/servers?image=12345')
         res = req.get_response(fakes.wsgi_app())
@@ -1168,6 +1169,7 @@ class ServersTest(test.TestCase):
             return [stub_instance(100)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+        self.flags(allow_admin_api=False)
 
         req = webob.Request.blank('/v1.1/servers?flavor=12345')
         res = req.get_response(fakes.wsgi_app())
@@ -1187,6 +1189,7 @@ class ServersTest(test.TestCase):
             return [stub_instance(100)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+        self.flags(allow_admin_api=False)
 
         req = webob.Request.blank('/v1.1/servers?status=active')
         res = req.get_response(fakes.wsgi_app())
@@ -1205,6 +1208,7 @@ class ServersTest(test.TestCase):
             return [stub_instance(100)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+        self.flags(allow_admin_api=False)
 
         req = webob.Request.blank('/v1.1/servers?name=whee.*')
         res = req.get_response(fakes.wsgi_app())
@@ -1219,8 +1223,7 @@ class ServersTest(test.TestCase):
         """Test getting servers by instance_name with admin_api
         enabled but non-admin context
         """
-        FLAGS.allow_admin_api = True
-
+        self.flags(allow_admin_api=True)
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=False)
         req = webob.Request.blank('/v1.1/servers?instance_name=whee.*')
@@ -1234,8 +1237,6 @@ class ServersTest(test.TestCase):
         """Test getting servers by instance_name with admin_api
         enabled and admin context
         """
-        FLAGS.allow_admin_api = True
-
         def fake_get_all(compute_self, context, search_opts=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('instance_name' in search_opts)
@@ -1243,6 +1244,7 @@ class ServersTest(test.TestCase):
             return [stub_instance(100)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+        self.flags(allow_admin_api=True)
 
         req = webob.Request.blank('/v1.1/servers?instance_name=whee.*')
         # Request admin context
@@ -1878,6 +1880,7 @@ class ServersTest(test.TestCase):
     def test_get_all_server_details_v1_0(self):
         req = webob.Request.blank('/v1.0/servers/detail')
         res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
@@ -1933,7 +1936,7 @@ class ServersTest(test.TestCase):
             return [stub_instance(i, 'fake', 'fake', None, None, i % 2)
                     for i in xrange(5)]
 
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_project',
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
             return_servers_with_host)
 
         req = webob.Request.blank('/v1.0/servers/detail')

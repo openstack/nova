@@ -48,20 +48,6 @@ _STATE_MAP = {
     BUILDING: 'building',
 }
 
-_STATUS_MAP = {
-    None: 'BUILD',
-    NOSTATE: 'BUILD',
-    RUNNING: 'ACTIVE',
-    BLOCKED: 'ACTIVE',
-    SUSPENDED: 'SUSPENDED',
-    PAUSED: 'PAUSED',
-    SHUTDOWN: 'SHUTDOWN',
-    SHUTOFF: 'SHUTOFF',
-    CRASHED: 'ERROR',
-    FAILED: 'ERROR',
-    BUILDING: 'BUILD',
-}
-
 
 def name(code):
     return _STATE_MAP[code]
@@ -69,20 +55,3 @@ def name(code):
 
 def valid_states():
     return _STATE_MAP.keys()
-
-
-def status_from_state(power_state):
-    """Map the power state to the server status string"""
-    return _STATUS_MAP[power_state]
-
-
-def states_from_status(status):
-    """Map the server status string to a list of power states"""
-    power_states = []
-    for power_state, status_map in _STATUS_MAP.iteritems():
-        # Skip the 'None' state
-        if power_state is None:
-            continue
-        if status.lower() == status_map.lower():
-            power_states.append(power_state)
-    return power_states

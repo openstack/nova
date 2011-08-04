@@ -1153,14 +1153,14 @@ def instance_get_all_by_filters(context, filters):
     will be returned by default, unless there's a filter that says
     otherwise"""
 
-    def _filter_by_ipv6(instance, filter_re):
+    def _regexp_filter_by_ipv6(instance, filter_re):
         for interface in instance['virtual_interfaces']:
             fixed_ipv6 = interface.get('fixed_ipv6')
             if fixed_ipv6 and filter_re.match(fixed_ipv6):
                 return True
         return False
 
-    def _filter_by_ip(instance, filter_re):
+    def _regexp_filter_by_ip(instance, filter_re):
         for interface in instance['virtual_interfaces']:
             for fixed_ip in interface['fixed_ips']:
                 if not fixed_ip or not fixed_ip['address']:
@@ -1174,12 +1174,12 @@ def instance_get_all_by_filters(context, filters):
                         return True
         return False
 
-    def _filter_by_display_name(instance, filter_re):
+    def _regexp_filter_by_display_name(instance, filter_re):
         if filter_re.match(instance.display_name):
             return True
         return False
 
-    def _filter_by_column(instance, filter_name, filter_re):
+    def _regexp_filter_by_column(instance, filter_name, filter_re):
         try:
             v = getattr(instance, filter_name)
         except AttributeError:
@@ -1187,6 +1187,18 @@ def instance_get_all_by_filters(context, filters):
         if v and filter_re.match(str(v)):
             return True
         return False
+
+    def _exact_match_filter(query, column, value):
+        """Do exact match against a column.  value to match can be a list
+        so you can match any value in the list.
+        """
+        if isinstance(value, list):
+            column_attr = getattr(models.Instance, column)
+            return query.filter(column_attr.in_(value))
+        else:
+            filter_dict = {}
+            filter_dict[column] = value
+            return query.filter_by(**filter_dict)
 
     session = get_session()
     query_prefix = session.query(models.Instance).\
@@ -1208,21 +1220,16 @@ def instance_get_all_by_filters(context, filters):
         else:
             filters['user_id'] = context.user_id
 
-    # Filters that we can do along with the SQL query...
-    query_filter_funcs = {
-            'project_id': lambda query, value: query.filter_by(
-                    project_id=value),
-            'user_id': lambda query, value: query.filter_by(
-                    user_id=value),
-            'reservation_id': lambda query, value: query.filter_by(
-                    reservation_id=value),
-            'state': lambda query, value: query.filter_by(state=value)}
+    # Filters for exact matches that we can do along with the SQL query...
+    # For other filters that don't match this, we will do regexp matching
+    exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
+            'state', 'instance_type_id', 'deleted']
 
     query_filters = [key for key in filters.iterkeys()
-            if key in query_filter_funcs]
+            if key in exact_match_filter_names]
 
     for filter_name in query_filters:
-        query_prefix = query_filter_funcs[filter_name](query_prefix,
+        query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters[filter_name])
         # Remove this from filters, so it doesn't get tried below
         del filters[filter_name]
@@ -1233,17 +1240,19 @@ def instance_get_all_by_filters(context, filters):
         return []
 
     # Now filter on everything else for regexp matching..
-    filter_funcs = {'ip6': _filter_by_ipv6,
-            'ip': _filter_by_ip,
-            'name': _filter_by_display_name}
+    # For filters not in the list, we'll attempt to use the filter_name
+    # as a column name in Instance..
+    regexp_filter_funcs = {'ip6': _regexp_filter_by_ipv6,
+            'ip': _regexp_filter_by_ip,
+            'name': _regexp_filter_by_display_name}
 
     for filter_name in filters.iterkeys():
-        filter_func = filter_funcs.get(filter_name, None)
+        filter_func = regexp_filter_funcs.get(filter_name, None)
         filter_re = re.compile(filters[filter_name])
         if filter_func:
             filter_l = lambda instance: filter_func(instance, filter_re)
         else:
-            filter_l = lambda instance: _filter_by_column(instance,
+            filter_l = lambda instance: _regexp_filter_by_column(instance,
                     filter_name, filter_re)
         instances = filter(filter_l, instances)
 

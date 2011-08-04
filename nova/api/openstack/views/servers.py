@@ -20,7 +20,6 @@ import hashlib
 import os
 
 from nova import exception
-from nova.compute import power_state
 import nova.compute
 import nova.context
 from nova.api.openstack import common
@@ -65,7 +64,7 @@ class ViewBuilder(object):
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
-            'status': power_state.status_from_state(inst.get('state'))}
+            'status': common.status_from_power_state(inst.get('state'))}
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()

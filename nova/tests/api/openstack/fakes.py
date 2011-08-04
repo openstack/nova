@@ -68,8 +68,6 @@ def fake_auth_init(self, application):
 
 @webob.dec.wsgify
 def fake_wsgi(self, req):
-    if 'nova.context' not in req.environ:
-        req.environ['nova.context'] = context.RequestContext(1, 1)
     return self.application
 
 
