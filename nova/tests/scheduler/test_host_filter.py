@@ -54,6 +54,7 @@ class HostFilterTestCase(test.TestCase):
                 'host_name-label': 'xs-%s' % multiplier}
 
     def setUp(self):
+        super(HostFilterTestCase, self).setUp()
         default_host_filter = 'nova.scheduler.host_filter.AllHostsFilter'
         self.flags(default_host_filter=default_host_filter)
         self.instance_type = dict(name='tiny',
