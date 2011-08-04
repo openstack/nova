@@ -1149,7 +1149,7 @@ def instance_get_all(context):
 
 @require_context
 def instance_get_all_by_filters(context, filters):
-    """Return instances the match all filters.  Deleted instances
+    """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise"""
 

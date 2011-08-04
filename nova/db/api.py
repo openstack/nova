@@ -491,7 +491,7 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
-def instance_get_all_by-filters(context, filters):
+def instance_get_all_by_filters(context, filters):
     """Get all instances that match all filters."""
     return IMPL.instance_get_all_by_filters(context, filters)
 

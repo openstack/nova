@@ -725,8 +725,8 @@ class API(base.Base):
                 server._info['_is_precooked'] = True
                 instances.append(server._info)
 
-        # Fixed IP returns a FixedIpNotFound when an instance is not
-        # found...
+        # fixed_ip searching should return a FixedIpNotFound exception
+        # when an instance is not found...
         fixed_ip = search_opts.get('fixed_ip', None)
         if fixed_ip and not instances:
             raise exception.FixedIpNotFoundForAddress(address=fixed_ip)
