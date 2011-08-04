@@ -71,7 +71,7 @@ class HostController(object):
             key = raw_key.lower().strip()
             val = raw_val.lower().strip()
             # NOTE: (dabo) Right now only 'status' can be set, but other
-            # actions may follow.
+            # settings may follow.
             if key == "status":
                 if val[:6] in ("enable", "disabl"):
                     return self._set_enabled_status(req, id,
@@ -109,12 +109,28 @@ class HostController(object):
             raise webob.exc.HTTPBadRequest(explanation=result)
         return {"host": host, "status": result}
 
-    def _set_powerstate(self, req, host, state):
+    def _host_power_action(self, req, host, action):
         """Reboots or shuts down the host."""
         context = req.environ['nova.context']
-        result = self.compute_api.set_host_powerstate(context, host=host,
-                state=state)
-        return {"host": host, "power_state": result}
+        result = self.compute_api.host_power_action(context, host=host,
+                action=action)
+        return {"host": host, "power_action": result}
+
+    def startup(self, req, id):
+        """The only valid values for 'action' are 'reboot' or
+        'shutdown'. For completeness' sake there is the
+        'startup' option to start up a host, but this is not
+        technically feasible now, as we run the host on the
+        XenServer box.
+        """
+        msg = _("Host startup on XenServer is not supported.")
+        raise webob.exc.HTTPBadRequest(explanation=msg)
+
+    def shutdown(self, req, id):
+        return self._host_power_action(req, host=id, action="shutdown")
+
+    def reboot(self, req, id):
+        return self._host_power_action(req, host=id, action="reboot")
 
 
 class Hosts(extensions.ExtensionDescriptor):
@@ -135,11 +151,8 @@ class Hosts(extensions.ExtensionDescriptor):
 
     @admin_only.admin_only
     def get_resources(self):
-        resources = []
-        # If we are not in an admin env, don't add the resource. Regular users
-        # shouldn't have access to the host.
-        if FLAGS.allow_admin_api:
-            resources = [extensions.ResourceExtension('os-hosts',
-                    HostController(), collection_actions={'update': 'PUT'},
-                    member_actions={})]
+    resources = [extensions.ResourceExtension('os-hosts',
+                HostController(), collection_actions={'update': 'PUT'},
+                member_actions={"startup": "GET", "shutdown": "GET",
+                        "reboot": "GET"})]
         return resources

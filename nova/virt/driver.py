@@ -282,7 +282,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def set_host_powerstate(self, host, state):
+    def host_power_action(self, host, action):
         """Reboots or shuts down the host."""
         raise NotImplementedError()
 

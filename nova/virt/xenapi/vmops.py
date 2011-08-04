@@ -122,7 +122,7 @@ class VMOps(object):
                                  network_info)
         if resize_instance:
             self.resize_instance(instance, vdi_uuid)
-        self._spawn(instance, vm_ref)
+        self._start(instance, vm_ref=vm_ref)
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
@@ -1024,13 +1024,13 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
-    def set_host_powerstate(self, host, state):
+    def host_power_action(self, host, action):
         """Reboots or shuts down the host."""
-        args = {"state": json.dumps(state)}
+        args = {"action": json.dumps(action)}
         methods = {"reboot": "host_reboot", "shutdown": "host_shutdown"}
-        json_resp = self._call_xenhost(methods[state], args)
+        json_resp = self._call_xenhost(methods[action], args)
         resp = json.loads(json_resp)
-        return resp["powerstate"]
+        return resp["power_action"]
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
@@ -1038,7 +1038,7 @@ class VMOps(object):
         xenapi_resp = self._call_xenhost("set_host_enabled", args)
         try:
             resp = json.loads(xenapi_resp)
-        except TypeError as e:
+        except TypeError  as e:
             # Already logged; return the message
             return xenapi_resp.details[-1]
         return resp["status"]
