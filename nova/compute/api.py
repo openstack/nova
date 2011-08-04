@@ -897,7 +897,7 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,
                                    instance_ref['uuid'],
-                                   migration_ref['source_compute'],
+                                   migration_ref['dest_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -917,7 +917,7 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context,
                                    instance_ref['uuid'],
-                                   migration_ref['dest_compute'],
+                                   migration_ref['source_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -964,7 +964,7 @@ class API(base.Base):
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance_ref['uuid'],
-                              "flavor_id": new_instance_type['id']}})
+                              "instance_type_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):

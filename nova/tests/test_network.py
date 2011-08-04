@@ -17,7 +17,6 @@
 
 from nova import db
 from nova import exception
-from nova import flags
 from nova import log as logging
 from nova import test
 from nova.network import manager as network_manager
@@ -26,7 +25,6 @@ from nova.network import manager as network_manager
 import mox
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.network')
 
 

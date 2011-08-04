@@ -122,7 +122,7 @@ class VMOps(object):
                                  network_info)
         if resize_instance:
             self.resize_instance(instance, vdi_uuid)
-        self._spawn(instance, vm_ref)
+        self._start(instance, vm_ref=vm_ref)
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
@@ -743,6 +743,17 @@ class VMOps(object):
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
+    def _find_rescue_vbd_ref(self, vm_ref, rescue_vm_ref):
+        """Find and return the rescue VM's vbd_ref.
+
+        We use the second VBD here because swap is first with the root file
+        system coming in second."""
+        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[1]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
+
+        return VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref, 1,
+                False)
+
     def _shutdown_rescue(self, rescue_vm_ref):
         """Shutdown a rescue instance."""
         self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm_ref)
@@ -914,7 +925,7 @@ class VMOps(object):
                                          True)
         self._wait_with_callback(instance.id, task, callback)
 
-    def rescue(self, context, instance, callback, network_info):
+    def rescue(self, context, instance, _callback, network_info):
         """Rescue the specified instance.
 
             - shutdown the instance VM.
@@ -934,15 +945,11 @@ class VMOps(object):
         instance._rescue = True
         self.spawn_rescue(context, instance, network_info)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
-
-        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
-        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
-        rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
-                                             vdi_ref, 1, False)
+        rescue_vbd_ref = self._find_rescue_vbd_ref(vm_ref, rescue_vm_ref)
 
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, _callback):
         """Unrescue the specified instance.
 
             - unplug the instance VM's disk from the rescue VM.

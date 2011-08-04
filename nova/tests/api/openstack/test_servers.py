@@ -26,7 +26,6 @@ import webob
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
@@ -44,10 +43,6 @@ import nova.image.fake
 import nova.rpc
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -235,6 +230,7 @@ class ServersTest(test.TestCase):
     def setUp(self):
         self.maxDiff = None
         super(ServersTest, self).setUp()
+        self.flags(verbose=True)
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
@@ -260,17 +256,6 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'resume', fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
-
-        fakes.stub_out_glance(self.stubs)
-        fakes.stub_out_compute_api_snapshot(self.stubs)
-        service_class = 'nova.image.glance.GlanceImageService'
-        self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(1, None)
-        self.service.delete_all()
-        self.sent_to_glance = {}
-        fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
-
-        self.allow_admin = FLAGS.allow_admin_api
 
         self.webreq = common.webob_factory('/v1.0/servers')
 
@@ -768,7 +753,7 @@ class ServersTest(test.TestCase):
         self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_by_id_with_addresses_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -812,7 +797,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses, expected)
 
     def test_get_server_by_id_with_addresses_v1_1_ipv6_disabled(self):
-        FLAGS.use_ipv6 = False
+        self.flags(use_ipv6=False)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -855,7 +840,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses, expected)
 
     def test_get_server_addresses_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -906,7 +891,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_get_server_addresses_single_network_v1_1(self):
-        FLAGS.use_ipv6 = True
+        self.flags(use_ipv6=True)
         interfaces = [
             {
                 'network': {'label': 'network_1'},
@@ -2029,338 +2014,66 @@ class ServersTest(test.TestCase):
 
     def test_server_pause(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/pause')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_unpause(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/unpause')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_suspend(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/suspend')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_resume(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/resume')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_reset_network(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/reset_network')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_inject_network_info(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank(
               '/v1.0/servers/1/inject_network_info')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_diagnostics(self):
+        self.flags(allow_admin_api=False)
         req = webob.Request.blank("/v1.0/servers/1/diagnostics")
         req.method = "GET"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
     def test_server_actions(self):
+        self.flags(allow_admin_api=False)
         req = webob.Request.blank("/v1.0/servers/1/actions")
         req.method = "GET"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
-
-    def test_server_change_password(self):
-        body = {'changePassword': {'adminPass': '1234pass'}}
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 501)
-
-    def test_server_change_password_xml(self):
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/xml'
-        req.body = '<changePassword adminPass="1234pass">'
-#        res = req.get_response(fakes.wsgi_app())
-#        self.assertEqual(res.status_int, 501)
-
-    def test_server_change_password_v1_1(self):
-        mock_method = MockSetAdminPassword()
-        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
-        body = {'changePassword': {'adminPass': '1234pass'}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-        self.assertEqual(mock_method.instance_id, '1')
-        self.assertEqual(mock_method.password, '1234pass')
-
-    def test_server_change_password_bad_request_v1_1(self):
-        body = {'changePassword': {'pass': '12345'}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_server_change_password_empty_string_v1_1(self):
-        body = {'changePassword': {'adminPass': ''}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_server_change_password_none_v1_1(self):
-        body = {'changePassword': {'adminPass': None}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_server_change_password_not_a_string_v1_1(self):
-        body = {'changePassword': {'adminPass': 1234}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_server_reboot(self):
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-
-    def test_server_rebuild_accepted(self):
-        body = {
-            "rebuild": {
-                "imageId": 2,
-            },
-        }
-
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-        self.assertEqual(res.body, "")
-
-    def test_server_rebuild_rejected_when_building(self):
-        body = {
-            "rebuild": {
-                "imageId": 2,
-            },
-        }
-
-        state = power_state.BUILDING
-        new_return_server = return_server_with_power_state(state)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_with_uuid_and_power_state(state))
-
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 409)
-
-    def test_server_rebuild_bad_entity(self):
-        body = {
-            "rebuild": {
-            },
-        }
-
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_server_rebuild_accepted_minimum_v1_1(self):
-        body = {
-            "rebuild": {
-                "imageRef": "http://localhost/images/2",
-            },
-        }
-
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-
-    def test_server_rebuild_rejected_when_building_v1_1(self):
-        body = {
-            "rebuild": {
-                "imageRef": "http://localhost/images/2",
-            },
-        }
-
-        state = power_state.BUILDING
-        new_return_server = return_server_with_power_state(state)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_with_uuid_and_power_state(state))
-
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 409)
-
-    def test_server_rebuild_accepted_with_metadata_v1_1(self):
-        body = {
-            "rebuild": {
-                "imageRef": "http://localhost/images/2",
-                "metadata": {
-                    "new": "metadata",
-                },
-            },
-        }
-
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-
-    def test_server_rebuild_accepted_with_bad_metadata_v1_1(self):
-        body = {
-            "rebuild": {
-                "imageRef": "http://localhost/images/2",
-                "metadata": "stack",
-            },
-        }
-
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_server_rebuild_bad_entity_v1_1(self):
-        body = {
-            "rebuild": {
-                "imageId": 2,
-            },
-        }
-
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_server_rebuild_bad_personality_v1_1(self):
-        body = {
-            "rebuild": {
-                "imageRef": "http://localhost/images/2",
-                "personality": [{
-                    "path": "/path/to/file",
-                    "contents": "INVALID b64",
-                }]
-            },
-        }
-
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 400)
-
-    def test_server_rebuild_personality_v1_1(self):
-        body = {
-            "rebuild": {
-                "imageRef": "http://localhost/images/2",
-                "personality": [{
-                    "path": "/path/to/file",
-                    "contents": base64.b64encode("Test String"),
-                }]
-            },
-        }
-
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
 
     def test_delete_server_instance(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -2639,268 +2352,6 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
-
-    def test_create_image_v1_1(self):
-        body = {
-            'createImage': {
-                'name': 'Snapshot 1',
-            },
-        }
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(202, response.status_int)
-        location = response.headers['Location']
-        self.assertEqual('http://localhost/v1.1/images/123', location)
-
-    def test_create_image_v1_1_with_metadata(self):
-        body = {
-            'createImage': {
-                'name': 'Snapshot 1',
-                'metadata': {'key': 'asdf'},
-            },
-        }
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(202, response.status_int)
-        location = response.headers['Location']
-        self.assertEqual('http://localhost/v1.1/images/123', location)
-
-    def test_create_image_v1_1_no_name(self):
-        body = {
-            'createImage': {},
-        }
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_image_v1_1_bad_metadata(self):
-        body = {
-            'createImage': {
-                'name': 'geoff',
-                'metadata': 'henry',
-            },
-        }
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_backup(self):
-        """The happy path for creating backups"""
-        FLAGS.allow_admin_api = True
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(202, response.status_int)
-        self.assertTrue(response.headers['Location'])
-
-    def test_create_backup_v1_1(self):
-        """The happy path for creating backups through v1.1 api"""
-        FLAGS.allow_admin_api = True
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-
-        req = webob.Request.blank('/v1.1/servers/1/action')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(202, response.status_int)
-        self.assertTrue(response.headers['Location'])
-
-    def test_create_backup_admin_api_off(self):
-        """The happy path for creating backups"""
-        FLAGS.allow_admin_api = False
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(501, response.status_int)
-
-    def test_create_backup_with_metadata(self):
-        FLAGS.allow_admin_api = True
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-                'metadata': {'123': 'asdf'},
-            },
-        }
-
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(202, response.status_int)
-        self.assertTrue(response.headers['Location'])
-
-    def test_create_backup_no_name(self):
-        """Name is required for backups"""
-        FLAGS.allow_admin_api = True
-
-        body = {
-            'createBackup': {
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_backup_no_rotation(self):
-        """Rotation is required for backup requests"""
-        FLAGS.allow_admin_api = True
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-            },
-        }
-
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_backup_no_backup_type(self):
-        """Backup Type (daily or weekly) is required for backup requests"""
-        FLAGS.allow_admin_api = True
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'rotation': 1,
-            },
-        }
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_backup_bad_entity(self):
-        FLAGS.allow_admin_api = True
-
-        body = {'createBackup': 'go'}
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-
-class TestServerActionXMLDeserializer(test.TestCase):
-
-    def setUp(self):
-        self.deserializer = create_instance_helper.ServerXMLDeserializer()
-
-    def tearDown(self):
-        pass
-
-    def test_create_image(self):
-        serial_request = """
-<createImage xmlns="http://docs.openstack.org/compute/api/v1.1"
-             name="new-server-test"/>"""
-        request = self.deserializer.deserialize(serial_request, 'action')
-        expected = {
-            "createImage": {
-                "name": "new-server-test",
-                "metadata": {},
-            },
-        }
-        self.assertEquals(request['body'], expected)
-
-    def test_create_image_with_metadata(self):
-        serial_request = """
-<createImage xmlns="http://docs.openstack.org/compute/api/v1.1"
-             name="new-server-test">
-    <metadata>
-        <meta key="key1">value1</meta>
-    </metadata>
-</createImage>"""
-        request = self.deserializer.deserialize(serial_request, 'action')
-        expected = {
-            "createImage": {
-                "name": "new-server-test",
-                "metadata": {"key1": "value1"},
-            },
-        }
-        self.assertEquals(request['body'], expected)
-
-    def test_create_backup_with_metadata(self):
-        serial_request = """
-<createBackup xmlns="http://docs.openstack.org/compute/api/v1.1"
-             name="new-server-test"
-             rotation="12"
-             backup_type="daily">
-    <metadata>
-        <meta key="key1">value1</meta>
-    </metadata>
-</createBackup>"""
-        request = self.deserializer.deserialize(serial_request, 'action')
-        expected = {
-            "createBackup": {
-                "name": "new-server-test",
-                "rotation": "12",
-                "backup_type": "daily",
-                "metadata": {"key1": "value1"},
-            },
-        }
-        self.assertEquals(request['body'], expected)
 
 
 class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
@@ -3188,9 +2639,10 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         self.assertEqual(request['body'], expected)
 
 
-class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
+class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
 
     def setUp(self):
+        super(TestServerCreateRequestXMLDeserializerV11, self).setUp()
         self.deserializer = create_instance_helper.ServerXMLDeserializer()
 
     def test_minimal_request(self):
@@ -3335,7 +2787,7 @@ class TestServerCreateRequestXMLDeserializerV11(unittest.TestCase):
                 ],
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertDictMatch(request['body'], expected)
 
     def test_spec_request(self):
         image_bookmark_link = "http://servers.api.openstack.org/1234/" + \

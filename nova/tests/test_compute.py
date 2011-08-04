@@ -539,7 +539,9 @@ class ComputeTestCase(test.TestCase):
 
         db.instance_update(self.context, instance_id, {'host': 'foo'})
 
-        self.compute.prep_resize(context, inst_ref['uuid'], 3)
+        new_instance_type_ref = db.instance_type_get_by_flavor_id(context, 3)
+        self.compute.prep_resize(context, inst_ref['uuid'],
+                                 new_instance_type_ref['id'])
 
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
