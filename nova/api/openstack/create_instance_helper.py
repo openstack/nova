@@ -304,6 +304,54 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
 
     metadata_deserializer = common.MetadataXMLDeserializer()
 
+    def create(self, string):
+        """Deserialize an xml-formatted server create request"""
+        dom = minidom.parseString(string)
+        server = self._extract_server(dom)
+        return {'body': {'server': server}}
+
+    def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
+        server = {}
+        server_node = self.find_first_child_named(node, 'server')
+
+        attributes = ["name", "imageId", "flavorId", "adminPass"]
+        for attr in attributes:
+            if server_node.getAttribute(attr):
+                server[attr] = server_node.getAttribute(attr)
+
+        metadata_node = self.find_first_child_named(server_node, "metadata")
+        server["metadata"] = self.metadata_deserializer.extract_metadata(
+                                                            metadata_node)
+
+        server["personality"] = self._extract_personality(server_node)
+
+        return server
+
+    def _extract_personality(self, server_node):
+        """Marshal the personality attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "personality")
+        personality = []
+        if node is not None:
+            for file_node in self.find_children_named(node, "file"):
+                item = {}
+                if file_node.hasAttribute("path"):
+                    item["path"] = file_node.getAttribute("path")
+                item["contents"] = self.extract_text(file_node)
+                personality.append(item)
+        return personality
+
+
+class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    metadata_deserializer = common.MetadataXMLDeserializer()
+
     def action(self, string):
         dom = minidom.parseString(string)
         action_node = dom.childNodes[0]

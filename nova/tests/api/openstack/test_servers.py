@@ -2181,7 +2181,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
 
     def setUp(self):
         super(TestServerCreateRequestXMLDeserializerV11, self).setUp()
-        self.deserializer = create_instance_helper.ServerXMLDeserializer()
+        self.deserializer = create_instance_helper.ServerXMLDeserializerV11()
 
     def test_minimal_request(self):
         serial_request = """

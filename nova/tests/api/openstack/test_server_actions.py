@@ -734,10 +734,10 @@ class ServerActionsTestV11(test.TestCase):
         self.assertTrue(response.headers['Location'])
 
 
-class TestServerActionXMLDeserializer(test.TestCase):
+class TestServerActionXMLDeserializerV11(test.TestCase):
 
     def setUp(self):
-        self.deserializer = create_instance_helper.ServerXMLDeserializer()
+        self.deserializer = create_instance_helper.ServerXMLDeserializerV11()
 
     def tearDown(self):
         pass

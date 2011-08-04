@@ -891,8 +891,13 @@ def create_resource(version='1.0'):
         'application/xml': xml_serializer,
     }
 
+    xml_deserializer = {
+        '1.0': helper.ServerXMLDeserializer(),
+        '1.1': helper.ServerXMLDeserializerV11(),
+    }[version]
+
     body_deserializers = {
-        'application/xml': helper.ServerXMLDeserializer(),
+        'application/xml': xml_deserializer,
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
