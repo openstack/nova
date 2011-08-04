@@ -147,6 +147,6 @@ class CloudPipe(object):
             key_path = os.path.join(key_dir, '%s.pem' % key_name)
             with open(key_path, 'w') as f:
                 f.write(private_key)
-        except exception.Duplicate, os.error, IOError:
+        except (exception.Duplicate, os.error, IOError):
             pass
         return key_name
