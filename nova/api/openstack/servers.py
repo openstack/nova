@@ -59,8 +59,13 @@ class Controller(object):
         # Otherwise, strip out all unknown options
         unknown_options = [opt for opt in search_options
                 if opt not in self.servers_search_options]
+        unk_opt_str = ", ".join(unknown_options)
+        log_msg = _("Stripping out options '%(unk_opt_str)s' from servers "
+                "query") % locals()
+        LOG.debug(log_msg)
         for opt in unknown_options:
             search_options.pop(opt, None)
+
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
