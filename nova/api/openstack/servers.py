@@ -328,7 +328,7 @@ class Controller(object):
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def reset_network(self, req, id, body):
+    def reset_network(self, req, id):
         """
         Reset networking on an instance (admin only).
 
@@ -343,7 +343,7 @@ class Controller(object):
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def inject_network_info(self, req, id, body):
+    def inject_network_info(self, req, id):
         """
         Inject network info for an instance (admin only).
 
@@ -358,7 +358,7 @@ class Controller(object):
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def pause(self, req, id, body):
+    def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
         try:
@@ -370,7 +370,7 @@ class Controller(object):
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def unpause(self, req, id, body):
+    def unpause(self, req, id):
         """ Permit Admins to Unpause the server. """
         ctxt = req.environ['nova.context']
         try:
@@ -382,7 +382,7 @@ class Controller(object):
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def suspend(self, req, id, body):
+    def suspend(self, req, id):
         """permit admins to suspend the server"""
         context = req.environ['nova.context']
         try:
@@ -394,7 +394,7 @@ class Controller(object):
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def resume(self, req, id, body):
+    def resume(self, req, id):
         """permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
         try:

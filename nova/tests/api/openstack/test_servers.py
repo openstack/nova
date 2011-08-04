@@ -1756,74 +1756,50 @@ class ServersTest(test.TestCase):
 
     def test_server_pause(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/pause')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_unpause(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/unpause')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_suspend(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/suspend')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_resume(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/resume')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_reset_network(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/reset_network')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_server_inject_network_info(self):
         self.flags(allow_admin_api=True)
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
         req = webob.Request.blank(
               '/v1.0/servers/1/inject_network_info')
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 

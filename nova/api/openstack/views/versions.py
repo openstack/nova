@@ -42,10 +42,10 @@ class ViewBuilder(object):
                 "links": [
                     {
                         "rel": "self",
-                        "href": self.generate_href(version['id'], req.path)
-                    }
+                        "href": self.generate_href(version['id'], req.path),
+                    },
                 ],
-                "media-types": version['media-types']
+                "media-types": version['media-types'],
             })
 
         return dict(choices=version_objs)

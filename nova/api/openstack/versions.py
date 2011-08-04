@@ -34,23 +34,23 @@ VERSIONS = {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.0/cs-devguide-20110125.pdf"
+                        "servers/api/v1.0/cs-devguide-20110125.pdf",
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
                 "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.0/application.wadl"
+                        "servers/api/v1.0/application.wadl",
             },
         ],
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute-v1.0+xml"
+                "type": "application/vnd.openstack.compute-v1.0+xml",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute-v1.0+json"
+                "type": "application/vnd.openstack.compute-v1.0+json",
             }
         ],
     },
@@ -63,23 +63,23 @@ VERSIONS = {
                 "rel": "describedby",
                 "type": "application/pdf",
                 "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/cs-devguide-20110125.pdf"
+                        "servers/api/v1.1/cs-devguide-20110125.pdf",
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
                 "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/application.wadl"
+                        "servers/api/v1.1/application.wadl",
             },
         ],
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute-v1.1+xml"
+                "type": "application/vnd.openstack.compute-v1.1+xml",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute-v1.1+json"
+                "type": "application/vnd.openstack.compute-v1.1+json",
             }
         ],
     },
