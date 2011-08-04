@@ -750,7 +750,6 @@ class TestServerActionXMLDeserializerV11(test.TestCase):
         expected = {
             "createImage": {
                 "name": "new-server-test",
-                "metadata": {},
             },
         }
         self.assertEquals(request['body'], expected)

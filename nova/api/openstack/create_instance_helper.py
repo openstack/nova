@@ -380,8 +380,10 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
             if value:
                 data[attribute] = value
         metadata_node = self.find_first_child_named(node, 'metadata')
-        metadata = self.metadata_deserializer.extract_metadata(metadata_node)
-        data['metadata'] = metadata
+        if metadata_node is not None:
+            metadata = self.metadata_deserializer.extract_metadata(
+                                                        metadata_node)
+            data['metadata'] = metadata
         return data
 
     def create(self, string):
@@ -395,29 +397,32 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
         server = {}
         server_node = self.find_first_child_named(node, 'server')
 
-        attributes = ["name", "imageId", "flavorId", "imageRef",
-                     "flavorRef", "adminPass"]
+        attributes = ["name", "imageRef", "flavorRef", "adminPass"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
 
         metadata_node = self.find_first_child_named(server_node, "metadata")
-        server["metadata"] = self.metadata_deserializer.extract_metadata(
-            metadata_node)
+        if metadata_node is not None:
+            server["metadata"] = self.extract_metadata(metadata_node)
 
-        server["personality"] = self._extract_personality(server_node)
+        personality = self._extract_personality(server_node)
+        if personality is not None:
+            server["personality"] = personality
 
         return server
 
     def _extract_personality(self, server_node):
         """Marshal the personality attribute of a parsed request"""
         node = self.find_first_child_named(server_node, "personality")
-        personality = []
         if node is not None:
+            personality = []
             for file_node in self.find_children_named(node, "file"):
                 item = {}
                 if file_node.hasAttribute("path"):
                     item["path"] = file_node.getAttribute("path")
                 item["contents"] = self.extract_text(file_node)
                 personality.append(item)
-        return personality
+            return personality
+        else:
+            return None
