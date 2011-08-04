@@ -65,13 +65,6 @@ class HostController(object):
     def index(self, req):
         return {'hosts': _list_hosts(req)}
 
-    def show(self, req, id):
-        """Check the query vars for values to be returned from the host config
-        settings. Return a dict with the query var as the key and the config
-        setting as the value.
-        """
-        return {"PARAMS": req.params.keys()}
-
     @check_host
     def update(self, req, id, body):
         for raw_key, raw_val in body.iteritems():
