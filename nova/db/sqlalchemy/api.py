@@ -1149,7 +1149,9 @@ def instance_get_all(context):
 
 @require_context
 def instance_get_all_by_filters(context, filters):
-    """Return instances the match all filters"""
+    """Return instances the match all filters.  Deleted instances
+    will be returned by default, unless there's a filter that says
+    otherwise"""
 
     def _filter_by_ipv6(instance, filter_re):
         for interface in instance['virtual_interfaces']:
@@ -1195,8 +1197,7 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
-                   options(joinedload('instance_type')).\
-                   filter_by(deleted=can_read_deleted(context))
+                   options(joinedload('instance_type'))
     
     filters = filters.copy()
 

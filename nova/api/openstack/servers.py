@@ -44,54 +44,24 @@ LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
 
 
-def check_admin_search_options(context, search_options, admin_api_options):
-    """Check for any 'admin_api_options' specified in 'search_options'.
-
-    If admin api is not enabled, we should pretend that we know nothing
-    about those options..  Ie, they don't exist in user-facing API. To
-    achieve this, we will strip any admin options that we find from
-    search_options
-
-    If admin api is enabled, we should require admin context for any
-    admin options specified, and return an exception in this case.
-
-    If any exist and admin api is not enabled, strip them from
-    search_options (has the effect of treating them like they don't exist).
-    
-    search_options is a dictionary of "search_option": value
-    admin_api_options is a list
-
-    Returns: None if options are okay.
-    Modifies: admin options could be stripped from search_options
-    Raises: exception.AdminRequired for needing admin context
-    """
-
-    if not FLAGS.allow_admin_api:
-        # Remove any admin_api_options from search_options
-        for option in admin_api_options:
-            search_options.pop(option, None)
-        return
-
-    # allow_admin_api is True and admin context?  Any command is okay.
-    if context.is_admin:
-        return
-
-    spec_admin_opts = [opt for opt in search_options.iterkeys()
-            if opt in admin_api_options]
-    if spec_admin_opts:
-        admin_opt_str = ", ".join(spec_admin_opts)
-        LOG.error(_("Received request for admin-only search options "
-                "'%(admin_opt_str)s' from non-admin context") %
-                locals())
-        raise exception.AdminRequired()
-
-
 class Controller(object):
-    """ The Server API controller for the OpenStack API """
+    """ The Server API base controller class for the OpenStack API """
+
+    servers_search_options = []
 
     def __init__(self):
         self.compute_api = compute.API()
         self.helper = helper.CreateInstanceHelper(self)
+
+    def _check_servers_options(self, search_options):
+        if FLAGS.allow_admin_api and context.is_admin:
+            # Allow all options
+            return
+        # Otherwise, strip out all unknown options
+        unknown_options = [opt for opt in search_options
+                if opt not in self.servers_search_options]
+        for opt in unknown_options:
+            search_options.pop(opt, None)
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
@@ -131,21 +101,38 @@ class Controller(object):
             search_opts = {}
 
         # If search by 'status', we need to convert it to 'state'
-        # If the status is unknown, bail
-        status = search_opts.pop('status', None)
-        if status is not None:
+        # If the status is unknown, bail.
+        # Leave 'state' in search_opts so compute can pass it on to
+        # child zones..
+        if 'status' in search_opts:
+            status = search_opts['status']
             search_opts['state'] = power_state.states_from_status(status)
             if len(search_opts['state']) == 0:
                 reason = _('Invalid server status: %(status)s') % locals()
                 LOG.error(reason)
                 raise exception.InvalidInput(reason=reason)
 
-        # Don't pass these along to compute API, if they exist.
-        search_opts.pop('changes-since', None)
-        search_opts.pop('fresh', None)
+        # By default, compute's get_all() will return deleted instances.
+        # If an admin hasn't specified a 'deleted' search option, we need
+        # to filter out deleted instances by setting the filter ourselves.
+        # ... Unless 'changes-since' is specified, because 'changes-since'
+        # should return recently deleted images according to the API spec.
+
+        if 'deleted' not in search_opts:
+            # Admin hasn't specified deleted filter
+            if 'changes-since' not in search_opts:
+                # No 'changes-since', so we need to find non-deleted servers
+                search_opts['deleted'] = '^False$'
+            else:
+                # This is the default, but just in case..
+                search_opts['deleted'] = '^True$'
 
         instance_list = self.compute_api.get_all(
                 context, search_opts=search_opts)
+
+        # FIXME(comstud): 'changes-since' is not fully implemented.  Where
+        # should this be filtered?
+
         limited_list = self._limit_items(instance_list, req)
         servers = [self._build_view(req, inst, is_detail)['server']
                 for inst in limited_list]
@@ -160,21 +147,12 @@ class Controller(object):
         search_opts = {}
         search_opts.update(req.str_GET)
 
-        admin_api = ['ip', 'ip6', 'instance_name']
-
         context = req.environ['nova.context']
-
-        try:
-            check_admin_search_options(context, search_opts, admin_api)
-        except exception.AdminRequired, e:
-            raise exc.HTTPForbidden(detail=str(e))
+        self._check_servers_options(context, search_opts)
 
         # Convert recurse_zones into a boolean
         search_opts['recurse_zones'] = utils.bool_from_str(
                 search_opts.get('recurse_zones', False))
-        # convert flavor into an int
-        if 'flavor' in search_opts:
-            search_opts['flavor'] = int(search_opts['flavor'])
 
         return self._servers_search(context, req, is_detail,
                 search_opts=search_opts)
@@ -581,6 +559,10 @@ class Controller(object):
 
 
 class ControllerV10(Controller):
+    """v1.0 OpenStack API controller"""
+
+    servers_search_options = ["reservation_id", "fixed_ip",
+            "name", "recurse_zones"]
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -645,6 +627,10 @@ class ControllerV10(Controller):
 
 
 class ControllerV11(Controller):
+    """v1.1 OpenStack API controller"""
+
+    servers_search_options = ["reservation_id", "name", "recurse_zones",
+            "status", "image", "flavor", "changes-since"]
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):
