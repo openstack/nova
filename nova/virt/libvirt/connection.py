@@ -121,8 +121,6 @@ flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
 flags.DEFINE_string('qemu_img', 'qemu-img',
                     'binary to use for qemu-img commands')
-flags.DEFINE_bool('start_guests_on_host_boot', False,
-                  'Whether to restart guests when the host reboots')
 flags.DEFINE_string('libvirt_vif_type', 'bridge',
                     'Type of VIF to create.')
 flags.DEFINE_string('libvirt_vif_driver',
@@ -173,27 +171,8 @@ class LibvirtConnection(driver.ComputeDriver):
         self.vif_driver = utils.import_object(FLAGS.libvirt_vif_driver)
 
     def init_host(self, host):
-        # Adopt existing VM's running here
-        ctxt = nova_context.get_admin_context()
-        for instance in db.instance_get_all_by_host(ctxt, host):
-            try:
-                LOG.debug(_('Checking state of %s'), instance['name'])
-                state = self.get_info(instance['name'])['state']
-            except exception.NotFound:
-                state = power_state.SHUTOFF
-
-            LOG.debug(_('Current state of %(name)s was %(state)s.'),
-                          {'name': instance['name'], 'state': state})
-            db.instance_set_state(ctxt, instance['id'], state)
-
-            # NOTE(justinsb): We no longer delete SHUTOFF instances,
-            # the user may want to power them back on
-
-            if state != power_state.RUNNING:
-                continue
-            self.firewall_driver.setup_basic_filtering(instance)
-            self.firewall_driver.prepare_instance_filter(instance)
-            self.firewall_driver.apply_instance_filter(instance)
+        # NOTE(nsokolov): moved instance restarting to ComputeManager
+        pass
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
@@ -603,11 +582,6 @@ class LibvirtConnection(driver.ComputeDriver):
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
-
-        if FLAGS.start_guests_on_host_boot:
-            LOG.debug(_("instance %s: setting autostart ON") %
-                      instance['name'])
-            domain.setAutostart(1)
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
