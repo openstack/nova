@@ -97,7 +97,7 @@ class ServerActionsTest(test.TestCase):
     def setUp(self):
         self.maxDiff = None
         super(ServerActionsTest, self).setUp()
-        self.set_flags_verbosity(True)
+        self.flags(verbose=True)
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}

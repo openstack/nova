@@ -148,7 +148,7 @@ class _IntegratedTestBase(test.TestCase):
 
         f = self._get_flags()
         self.flags(**f)
-        self.set_flags_verbosity(True)
+        self.flags(verbose=True)
 
         def fake_get_image_service(image_href):
             image_id = int(str(image_href).split('/')[-1])

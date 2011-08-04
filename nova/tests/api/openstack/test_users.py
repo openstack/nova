@@ -35,8 +35,7 @@ def fake_admin_check(self, req):
 class UsersTest(test.TestCase):
     def setUp(self):
         super(UsersTest, self).setUp()
-        self.flags(allow_admin_api=True)
-        self.set_flags_verbosity(True)
+        self.flags(verbose=True, allow_admin_api=True)
         self.stubs.Set(users.Controller, '__init__',
                        fake_init)
         self.stubs.Set(users.Controller, '_check_admin',

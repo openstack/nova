@@ -28,7 +28,7 @@ class AdminAPITest(test.TestCase):
         super(AdminAPITest, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.set_flags_verbosity(True)
+        self.flags(verbose=True)
 
     def test_admin_enabled(self):
         self.flags(allow_admin_api=True)
