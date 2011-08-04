@@ -394,11 +394,10 @@ class XenAPISession(object):
             try:
                 name = self._session.xenapi.task.get_name_label(task)
                 status = self._session.xenapi.task.get_status(task)
+                # Ensure action is never > 255
+                action = dict(action=name[:255], error=None)
                 if id:
-                    action = dict(
-                        instance_id=int(id),
-                        action=name[0:255],  # Ensure action is never > 255
-                        error=None)
+                    action["instance_id"] = int(id)
                 if status == "pending":
                     return
                 elif status == "success":
