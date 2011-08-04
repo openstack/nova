@@ -935,7 +935,8 @@ class VMOps(object):
         self.spawn_rescue(context, instance, network_info)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
 
-        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
+        #NOTE(jk0): Find the root partition, not swap.
+        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[1]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
         rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
                                              vdi_ref, 1, False)
