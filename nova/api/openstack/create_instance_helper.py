@@ -332,7 +332,8 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
             if value:
                 data[attribute] = value
         metadata_node = self.find_first_child_named(node, 'metadata')
-        data['metadata'] = self.extract_metadata(metadata_node)
+        metadata = self.metadata_deserializer.extract_metadata(metadata_node)
+        data['metadata'] = metadata
         return data
 
     def create(self, string):
