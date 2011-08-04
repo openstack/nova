@@ -21,8 +21,10 @@ Tests For Scheduler
 
 import datetime
 import mox
-import novaclient.exceptions
 import stubout
+
+from novaclient import v1_1 as novaclient
+from novaclient import exceptions as novaclient_exceptions
 
 from mox import IgnoreArg
 from nova import context
@@ -1039,10 +1041,10 @@ class FakeServerCollection(object):
 
 class FakeEmptyServerCollection(object):
     def get(self, f):
-        raise novaclient.NotFound(1)
+        raise novaclient_exceptions.NotFound(1)
 
     def find(self, name):
-        raise novaclient.NotFound(2)
+        raise novaclient_exceptions.NotFound(2)
 
 
 class FakeNovaClient(object):
@@ -1088,7 +1090,7 @@ class FakeZonesProxy(object):
         raise Exception('testing')
 
 
-class FakeNovaClientOpenStack(object):
+class FakeNovaClientZones(object):
     def __init__(self, *args, **kwargs):
         self.zones = FakeZonesProxy()
 
@@ -1101,7 +1103,7 @@ class CallZoneMethodTest(test.TestCase):
         super(CallZoneMethodTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(db, 'zone_get_all', zone_get_all)
-        self.stubs.Set(novaclient, 'OpenStack', FakeNovaClientOpenStack)
+        self.stubs.Set(novaclient, 'Client', FakeNovaClientZones)
 
     def tearDown(self):
         self.stubs.UnsetAll()
