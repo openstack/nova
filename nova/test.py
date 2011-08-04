@@ -100,7 +100,6 @@ class TestCase(unittest.TestCase):
         self.injected = []
         self._services = []
         self._original_flags = FLAGS.FlagValuesDict()
-        self._original_flags_verbosity = FLAGS.verbose
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""
