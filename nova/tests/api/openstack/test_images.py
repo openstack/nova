@@ -1025,6 +1025,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
+        image_meta = json.loads(response.body)['image']
+        self.assertEqual(123, image_meta['serverId'])
+        self.assertEqual('Snapshot 1', image_meta['name'])
 
     def test_create_snapshot_no_name(self):
         """Name is required for snapshots"""
