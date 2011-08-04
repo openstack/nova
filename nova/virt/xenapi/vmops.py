@@ -122,7 +122,7 @@ class VMOps(object):
                                  network_info)
         if resize_instance:
             self.resize_instance(instance, vdi_uuid)
-        self._spawn(instance, vm_ref)
+        self._start(instance, vm_ref=vm_ref)
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
