@@ -170,6 +170,10 @@ def reset_network(*args):
     pass
 
 
+def _find_rescue_vbd_ref(*args):
+    pass
+
+
 class XenAPIVMTestCase(test.TestCase):
     """Unit tests for VM operations."""
     def setUp(self):
@@ -189,6 +193,8 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_stream_disk(self.stubs)
         stubs.stubout_is_vdi_pv(self.stubs)
         self.stubs.Set(vmops.VMOps, 'reset_network', reset_network)
+        self.stubs.Set(vmops.VMOps, '_find_rescue_vbd_ref',
+                _find_rescue_vbd_ref)
         stubs.stub_out_vm_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
         fake_utils.stub_out_utils_execute(self.stubs)
