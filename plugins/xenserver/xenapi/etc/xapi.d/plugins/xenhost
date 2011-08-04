@@ -129,8 +129,14 @@ def _get_config_dict():
 
 @jsonify
 def get_config(self, arg_dict):
+    """Return the value stored for the specified key, or None if no match."""
     conf = _get_config_dict()
-    key = arg_dict["key"]
+    params = arg_dict["params"]
+    try:
+        dct = json.loads(params)
+    except Exception, e:
+        dct = params
+    key = dct["key"]
     ret = conf.get(key)
     if ret is None:
         # Can't jsonify None
@@ -140,11 +146,60 @@ def get_config(self, arg_dict):
 
 @jsonify
 def set_config(self, arg_dict):
+    """Write the specified key/value pair, overwriting any existing value."""
     conf = _get_config_dict()
-    key = arg_dict["key"]
-    val = arg_dict["value"]
-    conf.update({key: val})
+    params = arg_dict["params"]
+    try:
+        dct = json.loads(params)
+    except Exception, e:
+        dct = params
+    key = dct["key"]
+    val = dct["value"]
+    if val is None:
+        # Delete the key, if present
+        conf.pop(key, None)
+    else:
+        conf.update({key: val})
     _write_config_dict(conf)
+
+
+def _powerstate(state):
+    host_uuid = _get_host_uuid()
+    # Host must be disabled first
+    result = _run_command("xe host-disable")
+    if result:
+        raise pluginlib.PluginError(result)
+    # All running VMs must be shutdown
+    result = _run_command("xe vm-shutdown --multiple power-state=running")
+    if result:
+        raise pluginlib.PluginError(result)
+    cmds = {"reboot": "xe host-reboot", "startup": "xe host-power-on",
+            "shutdown": "xe host-shutdown"}
+    result = _run_command(cmds[state])
+    # Should be empty string
+    if result:
+        raise pluginlib.PluginError(result)
+    return {"powerstate": state}
+
+
+@jsonify
+def host_reboot(self, arg_dict):
+    """Reboots the host."""
+    return _powerstate("reboot")
+
+
+@jsonify
+def host_shutdown(self, arg_dict):
+    """Reboots the host."""
+    return _powerstate("shutdown")
+
+
+@jsonify
+def host_start(self, arg_dict):
+    """Starts the host. NOTE: Currently not feasible, since the host
+    runs on the same machine as Xen.
+    """
+    return _powerstate("startup")
 
 
 @jsonify
@@ -264,5 +319,8 @@ if __name__ == "__main__":
     XenAPIPlugin.dispatch(
             {"host_data": host_data,
             "set_host_enabled": set_host_enabled,
+            "host_shutdown": host_shutdown,
+            "host_reboot": host_reboot,
+            "host_start": host_start,
             "get_config": get_config,
             "set_config": set_config})

@@ -1024,11 +1024,23 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
+    def set_host_powerstate(self, host, state):
+        """Reboots or shuts down the host."""
+        args = {"state": json.dumps(state)}
+        methods = {"reboot": "host_reboot", "shutdown": "host_shutdown"}
+        json_resp = self._call_xenhost(methods[state], args)
+        resp = json.loads(json_resp)
+        return resp["powerstate"]
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         args = {"enabled": json.dumps(enabled)}
-        json_resp = self._call_xenhost("set_host_enabled", args)
-        resp = json.loads(json_resp)
+        xenapi_resp = self._call_xenhost("set_host_enabled", args)
+        try:
+            resp = json.loads(xenapi_resp)
+        except TypeError as e:
+            # Already logged; return the message
+            return xenapi_resp.details[-1]
         return resp["status"]
 
     def _call_xenhost(self, method, arg_dict):
@@ -1044,7 +1056,7 @@ class VMOps(object):
                     #args={"params": arg_dict})
             ret = self._session.wait_for_task(task, task_id)
         except self.XenAPI.Failure as e:
-            ret = None
+            ret = e
             LOG.error(_("The call to %(method)s returned an error: %(e)s.")
                     % locals())
         return ret

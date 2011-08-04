@@ -928,6 +928,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        result))
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def set_host_powerstate(self, context, instance_id=None, host=None,
+            state=None):
+        """Reboots or shuts down the host."""
+        return self.driver.set_host_powerstate(host, state)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def set_host_enabled(self, context, instance_id=None, host=None,
             enabled=None):
         """Sets the specified host's ability to accept new instances."""

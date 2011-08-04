@@ -332,6 +332,10 @@ class XenAPIConnection(driver.ComputeDriver):
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
 
+    def set_host_powerstate(self, host, state):
+        """Reboots or shuts down the host."""
+        return self._vmops.set_host_powerstate(host, state)
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         return self._vmops.set_host_enabled(host, enabled)
@@ -394,11 +398,10 @@ class XenAPISession(object):
             try:
                 name = self._session.xenapi.task.get_name_label(task)
                 status = self._session.xenapi.task.get_status(task)
+                # Ensure action is never > 255
+                action = dict(action=name[:255], error=None)
                 if id:
-                    action = dict(
-                        instance_id=int(id),
-                        action=name[0:255],  # Ensure action is never > 255
-                        error=None)
+                    action["instance_id"] = int(id)
                 if status == "pending":
                     return
                 elif status == "success":
