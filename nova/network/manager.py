@@ -624,7 +624,6 @@ class NetworkManager(manager.SchedulerDependentManager):
             raise ValueError(_(msg))
         adjusted_cidr_str = req_net_ip + '/' + str(significant_bits)
         adjusted_cidr = netaddr.IPNetwork(adjusted_cidr_str)
-        all_req_nets = [adjusted_cidr]
         try:
             used_nets = self.db.network_get_all(context)
         except exception.NoNetworksFound:
@@ -636,22 +635,36 @@ class NetworkManager(manager.SchedulerDependentManager):
             if adjusted_cidr_supernet in used_cidrs:
                 msg = "requested cidr (%s) conflicts with existing supernet"
                 raise ValueError(_(msg % str(adjusted_cidr)))
-        # split supernet into subnets
-        if num_networks >= 2:
+        # watch for smaller subnets conflicting
+        used_supernets = []
+        for used_cidr in used_cidrs:
+            if not used_cidr:
+                continue
+            if used_cidr.size < network_size:
+                for ucsupernet in used_cidr.supernet():
+                    if ucsupernet.size == network_size:
+                        used_supernets.append(ucsupernet)
+        all_req_nets = []
+        if num_networks == 1:
+            if adjusted_cidr in used_supernets:
+                msg = "requested cidr (%s) conflicts with existing smaller cidr"
+                raise ValueError(_(msg % str(adjusted_cidr)))
+            else:
+                all_req_nets.append(adjusted_cidr)
+        elif num_networks >= 2:
+            # split supernet into subnets
             next_cidr = adjusted_cidr
-            for used_cidr in used_cidrs:
-                # watch for smaller subnets conflicting
-                if used_cidr.size < next_cidr.size:
-                    for ucsupernet in used_cidr.supernet():
-                        if ucsupernet.size == next_cidr.size:
-                            used_cidrs.append(ucsupernet)
-            for index in range(1, num_networks):
+            for index in range(num_networks):
                 while True:
-                    next_cidr = next_cidr.next()
                     if next_cidr in used_cidrs:
+                        next_cidr = next_cidr.next()
+                        continue
+                    elif next_cidr in used_supernets:
+                        next_cidr = next_cidr.next()
                         continue
                     else:
                         all_req_nets.append(next_cidr)
+                        next_cidr = next_cidr.next()
                         break
         all_req_nets = sorted(list(set(all_req_nets)))
         # after splitting ensure there were enough to satisfy the num_networks
