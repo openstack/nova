@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#    Copyright 2011 Linux2Go
+#    Copyright 2011 OpenStack LLC
 #    Author: Soren Hansen
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -82,15 +82,13 @@ class _ImageTestCase(test.TestCase):
         self.image_service.create(self.context, {})
 
         index = self.image_service.index(self.context)
-        self.assertEquals(len(index), image_count+1)
+        self.assertEquals(len(index), image_count + 1)
 
         self.assertTrue(index[0]['id'])
-
 
     def test_create_keeps_id(self):
         self.image_service.create(self.context, {'id': '34'})
         self.image_service.show(self.context, '34')
-
 
     def test_create_rejects_duplicate_ids(self):
         self.image_service.create(self.context, {'id': '34'})
@@ -132,4 +130,3 @@ class FakeImageTestCase(_ImageTestCase):
     def setUp(self):
         super(FakeImageTestCase, self).setUp()
         self.image_service = nova.image.fake.FakeImageService()
-

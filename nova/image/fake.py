@@ -118,7 +118,7 @@ class _FakeImageService(service.BaseImageService):
         """Returns list of images."""
         retval = []
         for img in self.images.values():
-            retval += [dict([(k, v) for k, v in img.iteritems() 
+            retval += [dict([(k, v) for k, v in img.iteritems()
                                                   if k in ['id', 'name']])]
         return retval
 
