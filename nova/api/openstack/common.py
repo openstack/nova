@@ -16,7 +16,7 @@
 #    under the License.
 
 import re
-from urlparse import urlparse
+import urlparse
 from xml.dom import minidom
 
 import webob
@@ -137,8 +137,8 @@ def get_id_from_href(href):
     if re.match(r'\d+$', str(href)):
         return int(href)
     try:
-        return int(urlparse(href).path.split('/')[-1])
-    except:
+        return int(urlparse.urlsplit(href).path.split('/')[-1])
+    except ValueError, e:
         LOG.debug(_("Error extracting id from href: %s") % href)
         raise ValueError(_('could not parse id from href'))
 
@@ -153,22 +153,18 @@ def remove_version_from_href(href):
     Returns: 'http://www.nova.com'
 
     """
-    try:
-        #removes the first instance that matches /v#.#/
-        new_href = re.sub(r'[/][v][0-9]+\.[0-9]+[/]', '/', href, count=1)
+    parsed_url = urlparse.urlsplit(href)
+    new_path = re.sub(r'^/v[0-9]+\.[0-9]+(/|$)', r'\1', parsed_url.path,
+            count=1)
 
-        #if no version was found, try finding /v#.# at the end of the string
-        if new_href == href:
-            new_href = re.sub(r'[/][v][0-9]+\.[0-9]+$', '', href, count=1)
-    except:
-        LOG.debug(_("Error removing version from href: %s") % href)
-        msg = _('could not parse version from href')
+    if new_path == parsed_url.path:
+        msg = _('href %s does not contain version') % href
+        LOG.debug(msg)
         raise ValueError(msg)
 
-    if new_href == href:
-        msg = _('href does not contain version')
-        raise ValueError(msg)
-    return new_href
+    parsed_url = list(parsed_url)
+    parsed_url[2] = new_path
+    return urlparse.urlunsplit(parsed_url)
 
 
 def get_version_from_href(href):

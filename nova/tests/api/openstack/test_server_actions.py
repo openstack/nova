@@ -8,7 +8,6 @@ import webob
 
 from nova import context
 from nova import db
-from nova import flags
 from nova import utils
 from nova.api.openstack import create_instance_helper
 from nova.compute import instance_types
@@ -17,10 +16,6 @@ import nova.db.api
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 def return_server_by_id(context, id):
@@ -102,6 +97,7 @@ class ServerActionsTest(test.TestCase):
     def setUp(self):
         self.maxDiff = None
         super(ServerActionsTest, self).setUp()
+        self.flags(verbose=True)
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}

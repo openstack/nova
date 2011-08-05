@@ -114,11 +114,11 @@ class AjaxConsoleProxy(object):
                 AjaxConsoleProxy.tokens[kwargs['token']] =  \
                     {'args': kwargs, 'last_activity': time.time()}
 
-        conn = rpc.Connection.instance(new=True)
-        consumer = rpc.TopicAdapterConsumer(
-                       connection=conn,
-                       proxy=TopicProxy,
-                       topic=FLAGS.ajax_console_proxy_topic)
+        conn = rpc.create_connection(new=True)
+        consumer = rpc.create_consumer(
+                       conn,
+                       FLAGS.ajax_console_proxy_topic,
+                       TopicProxy)
 
         def delete_expired_tokens():
             now = time.time()

@@ -141,11 +141,9 @@ class TestCase(unittest.TestCase):
     def flags(self, **kw):
         """Override flag variables for a test."""
         for k, v in kw.iteritems():
-            if k in self.flag_overrides:
-                self.reset_flags()
-                raise Exception(
-                        'trying to override already overriden flag: %s' % k)
-            self.flag_overrides[k] = getattr(FLAGS, k)
+            # Store original flag value if it's not been overriden yet
+            if k not in self.flag_overrides:
+                self.flag_overrides[k] = getattr(FLAGS, k)
             setattr(FLAGS, k, v)
 
     def reset_flags(self):
