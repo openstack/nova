@@ -46,6 +46,10 @@ FLAGS = flags.FLAGS
 class Controller(object):
     """ The Server API base controller class for the OpenStack API """
 
+    # These are a list of possible query string paramters to the 
+    # /servers query that a user should be able to do.  Specify this
+    # in your subclasses.  When admin api is off, unknown options will
+    # get filtered out without error.
     servers_search_options = []
 
     def __init__(self):
@@ -565,6 +569,9 @@ class Controller(object):
 class ControllerV10(Controller):
     """v1.0 OpenStack API controller"""
 
+    # These are a list of possible query string paramters to the 
+    # /servers query that a user should be able to do. When admin api
+    # is off, unknown options will get filtered out without error.
     servers_search_options = ["reservation_id", "fixed_ip",
             "name", "recurse_zones"]
 
@@ -633,6 +640,9 @@ class ControllerV10(Controller):
 class ControllerV11(Controller):
     """v1.1 OpenStack API controller"""
 
+    # These are a list of possible query string paramters to the 
+    # /servers query that a user should be able to do. When admin api
+    # is off, unknown options will get filtered out without error.
     servers_search_options = ["reservation_id", "name", "recurse_zones",
             "status", "image", "flavor", "changes-since"]
 
