@@ -289,7 +289,7 @@ def check_snapshots_enabled(f):
         if not FLAGS.allow_instance_snapshots:
             LOG.warn(_('Rejecting snapshot request, snapshots currently'
                        ' disabled'))
-            msg = _("Instance Snapshots are not permitted at this time.")
+            msg = _("Instance snapshots are not permitted at this time.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
         return f(*args, **kwargs)
     return inner

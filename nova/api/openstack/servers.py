@@ -240,6 +240,7 @@ class Controller(object):
         resp.headers['Location'] = image_ref
         return resp
 
+    @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
 
