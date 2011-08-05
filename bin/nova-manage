@@ -601,7 +601,7 @@ class FixedIpCommands(object):
 
     @args('--address', dest="address", metavar='<ip address>',
           help='IP address')
-    def waste(self, address):
+    def unreserve(self, address):
         """Mark fixed ip as free to use
         arguments: address"""
         self._set_reserved(address, False)

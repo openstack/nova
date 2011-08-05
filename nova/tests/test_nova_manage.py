@@ -16,6 +16,7 @@
 #    under the License.
 
 import os
+import sys
 
 TOPDIR = os.path.normpath(os.path.join(
                             os.path.dirname(os.path.abspath(__file__)),
@@ -23,8 +24,10 @@ TOPDIR = os.path.normpath(os.path.join(
                             os.pardir))
 NOVA_MANAGE_PATH = os.path.join(TOPDIR, 'bin', 'nova-manage')
 
+sys.dont_write_bytecode = True
 import imp
-nova_manage = imp.load_source('nova_manage', NOVA_MANAGE_PATH)
+nova_manage = imp.load_source('nova_manage.py', NOVA_MANAGE_PATH)
+sys.dont_write_bytecode = False
 
 import netaddr
 from nova import context
@@ -70,10 +73,10 @@ class FixedIpCommandsTestCase(test.TestCase):
                                              '10.0.0.100')
         self.assertEqual(address['reserved'], True)
 
-    def test_waste(self):
+    def test_unreserve(self):
         db.fixed_ip_update(context.get_admin_context(), '10.0.0.100',
                            {'reserved': True})
-        self.commands.waste('10.0.0.100')
+        self.commands.unreserve('10.0.0.100')
         address = db.fixed_ip_get_by_address(context.get_admin_context(),
                                              '10.0.0.100')
         self.assertEqual(address['reserved'], False)
