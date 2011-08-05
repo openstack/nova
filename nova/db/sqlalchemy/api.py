@@ -1242,7 +1242,7 @@ def instance_get_all_by_filters(context, filters):
 
     for filter_name in filters.iterkeys():
         filter_func = regexp_filter_funcs.get(filter_name, None)
-        filter_re = re.compile(filters[filter_name])
+        filter_re = re.compile(str(filters[filter_name]))
         if filter_func:
             filter_l = lambda instance: filter_func(instance, filter_re)
         else:
