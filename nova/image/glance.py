@@ -116,10 +116,11 @@ class GlanceImageService(service.BaseImageService):
 
     def _extract_query_params(self, params):
         _params = {}
-        accepted_params = ('filters', 'marker', 'limit')
-                           #'sort_key', 'sort_dir')
+        accepted_params = ('filters', 'marker', 'limit',
+                           'sort_key', 'sort_dir')
         for param in accepted_params:
-            _params[param] = params.get(param)
+            if param in params:
+                _params[param] = params.get(param)
 
         return _params
 
@@ -128,7 +129,7 @@ class GlanceImageService(service.BaseImageService):
         self._set_client_context(context)
 
         # ensure filters is a dict
-        kwargs['filters'] = kwargs['filters'] or {}
+        kwargs['filters'] = kwargs.get('filters', {})
         # NOTE(vish): don't filter out private images
         kwargs['filters'].setdefault('is_public', 'none')
 
