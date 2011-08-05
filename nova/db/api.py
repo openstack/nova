@@ -495,6 +495,7 @@ def instance_get_all_by_filters(context, filters):
     """Get all instances that match all filters."""
     return IMPL.instance_get_all_by_filters(context, filters)
 
+
 def instance_get_active_by_window(context, begin, end=None):
     """Get instances active during a certain time window."""
     return IMPL.instance_get_active_by_window(context, begin, end)

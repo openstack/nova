@@ -1205,7 +1205,7 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type'))
-    
+
     filters = filters.copy()
 
     if not context.is_admin:

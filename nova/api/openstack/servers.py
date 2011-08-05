@@ -66,7 +66,6 @@ class Controller(object):
         for opt in unknown_options:
             search_options.pop(opt, None)
 
-
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
         try:
