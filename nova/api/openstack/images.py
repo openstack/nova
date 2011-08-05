@@ -143,7 +143,7 @@ class ControllerV10(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        images = self._image_service.index(context, filters)
+        images = self._image_service.index(context, filters=filters)
         images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
@@ -156,7 +156,7 @@ class ControllerV10(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        images = self._image_service.detail(context, filters)
+        images = self._image_service.detail(context, filters=filters)
         images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
