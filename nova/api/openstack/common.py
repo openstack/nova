@@ -154,7 +154,8 @@ def remove_version_from_href(href):
 
     """
     parsed_url = urlparse.urlsplit(href)
-    new_path = re.sub(r'^/v[0-9]+\.[0-9]+(/|$)', r'\1', parsed_url.path, count=1)
+    new_path = re.sub(r'^/v[0-9]+\.[0-9]+(/|$)', r'\1', parsed_url.path,
+                      count=1)
 
     if new_path == parsed_url.path:
         msg = _('href %s does not contain version') % href

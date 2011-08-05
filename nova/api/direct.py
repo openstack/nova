@@ -48,6 +48,7 @@ import nova.api.openstack.wsgi
 # Global storage for registering modules.
 ROUTES = {}
 
+
 def register_service(path, handle):
     """Register a service handle at a given path.
 
