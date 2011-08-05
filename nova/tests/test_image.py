@@ -22,6 +22,7 @@ from nova import exception
 from nova import test
 import nova.image
 
+
 class _ImageTestCase(test.TestCase):
     def setUp(self):
         super(_ImageTestCase, self).setUp()
@@ -125,6 +126,7 @@ class _ImageTestCase(test.TestCase):
         self.image_service.delete_all()
         index = self.image_service.index(self.context)
         self.assertEquals(len(index), 0)
+
 
 class FakeImageTestCase(_ImageTestCase):
     def setUp(self):
