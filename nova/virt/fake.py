@@ -129,7 +129,8 @@ class FakeConnection(driver.ComputeDriver):
             info_list.append(self._map_to_instance_info(instance))
         return info_list
 
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance, network_info,
+              block_device_mapping=None):
         """
         Create a new instance/VM/domain on the virtualization platform.
 
@@ -153,7 +154,7 @@ class FakeConnection(driver.ComputeDriver):
         fake_instance = FakeInstance(name, state)
         self.instances[name] = fake_instance
 
-    def snapshot(self, instance, name):
+    def snapshot(self, context, instance, name):
         """
         Snapshots the specified instance.
 
@@ -240,7 +241,7 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def rescue(self, instance, callback, network_info):
+    def rescue(self, context, instance, callback, network_info):
         """
         Rescue the specified instance.
         """
@@ -340,8 +341,7 @@ class FakeConnection(driver.ComputeDriver):
         only useful for giving back to this layer as a parameter to
         disk_stats).  These IDs only need to be unique for a given instance.
 
-        Note that this function takes an instance ID, not a
-        compute.service.Instance, so that it can be called by compute.monitor.
+        Note that this function takes an instance ID.
         """
         return ['A_DISK']
 
@@ -353,8 +353,7 @@ class FakeConnection(driver.ComputeDriver):
         interface_stats).  These IDs only need to be unique for a given
         instance.
 
-        Note that this function takes an instance ID, not a
-        compute.service.Instance, so that it can be called by compute.monitor.
+        Note that this function takes an instance ID.
         """
         return ['A_VIF']
 
@@ -374,8 +373,7 @@ class FakeConnection(driver.ComputeDriver):
         having to do the aggregation.  On those platforms, this method is
         unused.
 
-        Note that this function takes an instance ID, not a
-        compute.service.Instance, so that it can be called by compute.monitor.
+        Note that this function takes an instance ID.
         """
         return [0L, 0L, 0L, 0L, None]
 
@@ -395,8 +393,7 @@ class FakeConnection(driver.ComputeDriver):
         having to do the aggregation.  On those platforms, this method is
         unused.
 
-        Note that this function takes an instance ID, not a
-        compute.service.Instance, so that it can be called by compute.monitor.
+        Note that this function takes an instance ID.
         """
         return [0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L]
 

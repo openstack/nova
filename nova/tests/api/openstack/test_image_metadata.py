@@ -16,10 +16,7 @@
 #    under the License.
 
 import json
-import stubout
-import unittest
 import webob
-import xml.dom.minidom as minidom
 
 
 from nova import flags
@@ -85,22 +82,12 @@ class ImageMetaDataTest(test.TestCase):
 
     def setUp(self):
         super(ImageMetaDataTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        self.orig_image_service = FLAGS.image_service
-        FLAGS.image_service = 'nova.image.glance.GlanceImageService'
-        fakes.FakeAuthManager.auth_data = {}
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
+        self.flags(image_service='nova.image.glance.GlanceImageService')
         # NOTE(dprince) max out properties/metadata in image 3 for testing
         img3 = self.IMAGE_FIXTURES[2]
         for num in range(FLAGS.quota_metadata_items):
             img3['properties']['key%i' % num] = "blah"
         fakes.stub_out_glance(self.stubs, self.IMAGE_FIXTURES)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.image_service = self.orig_image_service
-        super(ImageMetaDataTest, self).tearDown()
 
     def test_index(self):
         req = webob.Request.blank('/v1.1/images/1/metadata')
@@ -252,203 +239,3 @@ class ImageMetaDataTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
-
-
-class ImageMetadataXMLDeserializationTest(test.TestCase):
-
-    deserializer = openstack.image_metadata.ImageMetadataXMLDeserializer()
-
-    def test_create(self):
-        request_body = """
-        <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <meta key='123'>asdf</meta>
-            <meta key='567'>jkl;</meta>
-        </metadata>"""
-        output = self.deserializer.deserialize(request_body, 'create')
-        expected = {"body": {"metadata": {"123": "asdf", "567": "jkl;"}}}
-        self.assertEquals(output, expected)
-
-    def test_create_empty(self):
-        request_body = """
-        <metadata xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
-        output = self.deserializer.deserialize(request_body, 'create')
-        expected = {"body": {"metadata": {}}}
-        self.assertEquals(output, expected)
-
-    def test_update_all(self):
-        request_body = """
-        <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <meta key='123'>asdf</meta>
-            <meta key='567'>jkl;</meta>
-        </metadata>"""
-        output = self.deserializer.deserialize(request_body, 'update_all')
-        expected = {"body": {"metadata": {"123": "asdf", "567": "jkl;"}}}
-        self.assertEquals(output, expected)
-
-    def test_update(self):
-        request_body = """
-        <meta xmlns="http://docs.openstack.org/compute/api/v1.1"
-              key='123'>asdf</meta>"""
-        output = self.deserializer.deserialize(request_body, 'update')
-        expected = {"body": {"meta": {"123": "asdf"}}}
-        self.assertEquals(output, expected)
-
-
-class ImageMetadataXMLSerializationTest(test.TestCase):
-
-    def test_index(self):
-        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
-        fixture = {
-            'metadata': {
-                'one': 'two',
-                'three': 'four',
-            },
-        }
-        output = serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="three">
-                    four
-                </meta>
-                <meta key="one">
-                    two
-                </meta>
-            </metadata>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_index_null(self):
-        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
-        fixture = {
-            'metadata': {
-                None: None,
-            },
-        }
-        output = serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="None">
-                    None
-                </meta>
-            </metadata>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_index_unicode(self):
-        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
-        fixture = {
-            'metadata': {
-                u'three': u'Jos\xe9',
-            },
-        }
-        output = serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString(u"""
-            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="three">
-                    Jos\xe9
-                </meta>
-            </metadata>
-        """.encode("UTF-8").replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_show(self):
-        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
-        fixture = {
-            'meta': {
-                'one': 'two',
-            },
-        }
-        output = serializer.serialize(fixture, 'show')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <meta xmlns="http://docs.openstack.org/compute/api/v1.1" key="one">
-                two
-            </meta>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_update_all(self):
-        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
-        fixture = {
-            'metadata': {
-                'key6': 'value6',
-                'key4': 'value4',
-            },
-        }
-        output = serializer.serialize(fixture, 'update_all')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="key6">
-                    value6
-                </meta>
-                <meta key="key4">
-                    value4
-                </meta>
-            </metadata>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_update_item(self):
-        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
-        fixture = {
-            'meta': {
-                'one': 'two',
-            },
-        }
-        output = serializer.serialize(fixture, 'update')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <meta xmlns="http://docs.openstack.org/compute/api/v1.1" key="one">
-                two
-            </meta>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_create(self):
-        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
-        fixture = {
-            'metadata': {
-                'key9': 'value9',
-                'key2': 'value2',
-                'key1': 'value1',
-            },
-        }
-        output = serializer.serialize(fixture, 'create')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="key2">
-                    value2
-                </meta>
-                <meta key="key9">
-                    value9
-                </meta>
-                <meta key="key1">
-                    value1
-                </meta>
-            </metadata>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_delete(self):
-        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
-        output = serializer.serialize(None, 'delete')
-        self.assertEqual(output, '')

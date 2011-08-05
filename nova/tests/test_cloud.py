@@ -34,7 +34,6 @@ from nova import network
 from nova import rpc
 from nova import test
 from nova import utils
-from nova.auth import manager
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import fake
@@ -50,7 +49,7 @@ class CloudTestCase(test.TestCase):
         self.flags(connection_type='fake',
                    stub_network=True)
 
-        self.conn = rpc.Connection.instance()
+        self.conn = rpc.create_connection()
 
         # set up our cloud
         self.cloud = cloud.CloudController()
@@ -62,12 +61,11 @@ class CloudTestCase(test.TestCase):
         self.volume = self.start_service('volume')
         self.image_service = utils.import_object(FLAGS.image_service)
 
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('admin', 'admin', 'admin', True)
-        self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.RequestContext(user=self.user,
-                                              project=self.project)
-        host = self.network.host
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id,
+                                              True)
 
         def fake_show(meh, context, id):
             return {'id': 1, 'container_format': 'ami',
@@ -87,27 +85,23 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(rpc, 'cast', finish_cast)
 
     def tearDown(self):
-        networks = db.project_get_networks(self.context, self.project.id,
+        networks = db.project_get_networks(self.context, self.project_id,
                                            associate=False)
         for network in networks:
             db.network_disassociate(self.context, network['id'])
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
         super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
-        return cloud._gen_key(self.context, self.context.user.id, name)
+        return cloud._gen_key(self.context, self.context.user_id, name)
 
     def test_describe_regions(self):
         """Makes sure describe regions runs without raising an exception"""
         result = self.cloud.describe_regions(self.context)
         self.assertEqual(len(result['regionInfo']), 1)
-        regions = FLAGS.region_list
-        FLAGS.region_list = ["one=test_host1", "two=test_host2"]
+        self.flags(region_list=["one=test_host1", "two=test_host2"])
         result = self.cloud.describe_regions(self.context)
         self.assertEqual(len(result['regionInfo']), 2)
-        FLAGS.region_list = regions
 
     def test_describe_addresses(self):
         """Makes sure describe addresses runs without raising an exception"""
@@ -326,22 +320,15 @@ class CloudTestCase(test.TestCase):
         revoke = self.cloud.revoke_security_group_ingress
         self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
 
-    def test_revoke_security_group_ingress_by_id(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
-        authz = self.cloud.authorize_security_group_ingress
-        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        authz(self.context, group_id=sec['id'], **kwargs)
-        revoke = self.cloud.revoke_security_group_ingress
-        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
-
-    def test_authorize_security_group_ingress_by_id(self):
+    def test_authorize_revoke_security_group_ingress_by_id(self):
         sec = db.security_group_create(self.context,
                                        {'project_id': self.context.project_id,
                                         'name': 'test'})
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        self.assertTrue(authz(self.context, group_id=sec['id'], **kwargs))
+        authz(self.context, group_id=sec['id'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
 
     def test_authorize_security_group_ingress_missing_protocol_params(self):
         sec = db.security_group_create(self.context,
@@ -961,21 +948,6 @@ class CloudTestCase(test.TestCase):
         self._wait_for_running(ec2_instance_id)
         return ec2_instance_id
 
-    def test_rescue_unrescue_instance(self):
-        instance_id = self._run_instance(
-            image_id='ami-1',
-            instance_type=FLAGS.default_instance_type,
-            max_count=1)
-        self.cloud.rescue_instance(context=self.context,
-                                   instance_id=instance_id)
-        # NOTE(vish): This currently does no validation, it simply makes sure
-        #             that the code path doesn't throw an exception.
-        self.cloud.unrescue_instance(context=self.context,
-                                   instance_id=instance_id)
-        # TODO(soren): We need this until we can stop polling in the rpc code
-        #              for unit tests.
-        self.cloud.terminate_instances(self.context, [instance_id])
-
     def test_console_output(self):
         instance_id = self._run_instance(
             image_id='ami-1',
@@ -1004,7 +976,7 @@ class CloudTestCase(test.TestCase):
         key = RSA.load_key_string(private_key, callback=lambda: None)
         bio = BIO.MemoryBuffer()
         public_key = db.key_pair_get(self.context,
-                                    self.context.user.id,
+                                    self.context.user_id,
                                     'test')['public_key']
         key.save_pub_key_bio(bio)
         converted = crypto.ssl_pub_to_ssh_pub(bio.read())
@@ -1028,7 +1000,7 @@ class CloudTestCase(test.TestCase):
                                                'mytestfprint')
         self.assertTrue(result1)
         keydata = db.key_pair_get(self.context,
-                                  self.context.user.id,
+                                  self.context.user_id,
                                   'testimportkey1')
         self.assertEqual('mytestpubkey', keydata['public_key'])
         self.assertEqual('mytestfprint', keydata['fingerprint'])
@@ -1045,7 +1017,7 @@ class CloudTestCase(test.TestCase):
                                                dummypub)
         self.assertTrue(result2)
         keydata = db.key_pair_get(self.context,
-                                  self.context.user.id,
+                                  self.context.user_id,
                                   'testimportkey2')
         self.assertEqual(dummypub, keydata['public_key'])
         self.assertEqual(dummyfprint, keydata['fingerprint'])

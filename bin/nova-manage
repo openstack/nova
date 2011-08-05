@@ -56,6 +56,7 @@
 import gettext
 import glob
 import json
+import math
 import netaddr
 import os
 import sys
@@ -668,8 +669,9 @@ class NetworkCommands(object):
         # check for certain required inputs
         if not label:
             raise exception.NetworkNotCreated(req='--label')
-        if not fixed_range_v4:
-            raise exception.NetworkNotCreated(req='--fixed_range_v4')
+        if not (fixed_range_v4 or fixed_range_v6):
+            req = '--fixed_range_v4 or --fixed_range_v6'
+            raise exception.NetworkNotCreated(req=req)
 
         bridge = bridge or FLAGS.flat_network_bridge
         if not bridge:
@@ -695,21 +697,21 @@ class NetworkCommands(object):
             if FLAGS.network_manager in interface_required:
                 raise exception.NetworkNotCreated(req='--bridge_interface')
 
-        if FLAGS.use_ipv6:
-            fixed_range_v6 = fixed_range_v6 or FLAGS.fixed_range_v6
-            if not fixed_range_v6:
-                raise exception.NetworkNotCreated(req='with use_ipv6, '
-                                                      '--fixed_range_v6')
-            gateway_v6 = gateway_v6 or FLAGS.gateway_v6
-            if not gateway_v6:
-                raise exception.NetworkNotCreated(req='with use_ipv6, '
-                                                      '--gateway_v6')
-
         # sanitize other input using FLAGS if necessary
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
-            network_size = FLAGS.network_size
+            fixnet = netaddr.IPNetwork(fixed_range_v4)
+            each_subnet_size = fixnet.size / int(num_networks)
+            if each_subnet_size > FLAGS.network_size:
+                network_size = FLAGS.network_size
+                subnet = 32 - int(math.log(network_size, 2))
+                oversize_msg = _('Subnet(s) too large, defaulting to /%s.'
+                                 '  To override, specify network_size flag.'
+                                ) % subnet
+                print oversize_msg
+            else:
+                network_size = fixnet.size
         if not multi_host:
             multi_host = FLAGS.multi_host
         else:
@@ -741,8 +743,8 @@ class NetworkCommands(object):
     def list(self):
         """List all created networks"""
         print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
-                                                  _('network'),
-                                                  _('netmask'),
+                                                  _('IPv4'),
+                                                  _('IPv6'),
                                                   _('start address'),
                                                   _('DNS1'),
                                                   _('DNS2'),
@@ -751,7 +753,7 @@ class NetworkCommands(object):
         for network in db.network_get_all(context.get_admin_context()):
             print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
                                         network.cidr,
-                                        network.netmask,
+                                        network.cidr_v6,
                                         network.dhcp_start,
                                         network.dns1,
                                         network.dns2,

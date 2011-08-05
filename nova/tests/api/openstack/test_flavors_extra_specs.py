@@ -17,26 +17,18 @@
 
 import json
 import stubout
-import unittest
 import webob
 import os.path
 
 
-from nova import flags
+from nova import test
 from nova.api import openstack
-from nova.api.openstack import auth
 from nova.api.openstack import extensions
 from nova.tests.api.openstack import fakes
 import nova.wsgi
 
-FLAGS = flags.FLAGS
-
 
 def return_create_flavor_extra_specs(context, flavor_id, extra_specs):
-    return stub_flavor_extra_specs()
-
-
-def return_flavor_extra_specs(context, flavor_id):
     return stub_flavor_extra_specs()
 
 
@@ -62,30 +54,17 @@ def stub_flavor_extra_specs():
     return specs
 
 
-class FlavorsExtraSpecsTest(unittest.TestCase):
+class FlavorsExtraSpecsTest(test.TestCase):
 
     def setUp(self):
         super(FlavorsExtraSpecsTest, self).setUp()
-        FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
-                                                    "extensions")
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        self.mware = auth.AuthMiddleware(
-                      extensions.ExtensionMiddleware(
-                      openstack.APIRouterV11()))
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(FlavorsExtraSpecsTest, self).tearDown()
 
     def test_index(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
                        return_flavor_extra_specs)
-        request = webob.Request.blank('/flavors/1/os-extra_specs')
-        res = request.get_response(self.mware)
+        request = webob.Request.blank('/v1.1/flavors/1/os-extra_specs')
+        res = request.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
         self.assertEqual('application/json', res.headers['Content-Type'])
@@ -94,8 +73,8 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
     def test_index_no_data(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
                        return_empty_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs')
-        res = req.get_response(self.mware)
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs')
+        res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
         self.assertEqual('application/json', res.headers['Content-Type'])
@@ -104,8 +83,8 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
     def test_show(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
                        return_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs/key5')
-        res = req.get_response(self.mware)
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs/key5')
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
         self.assertEqual('application/json', res.headers['Content-Type'])
@@ -114,28 +93,28 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
     def test_show_spec_not_found(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
                        return_empty_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs/key6')
-        res = req.get_response(self.mware)
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs/key6')
+        res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(404, res.status_int)
 
     def test_delete(self):
         self.stubs.Set(nova.db.api, 'instance_type_extra_specs_delete',
                        delete_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs/key5')
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs/key5')
         req.method = 'DELETE'
-        res = req.get_response(self.mware)
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
 
     def test_create(self):
         self.stubs.Set(nova.db.api,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs')
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs')
         req.method = 'POST'
         req.body = '{"extra_specs": {"key1": "value1"}}'
         req.headers["content-type"] = "application/json"
-        res = req.get_response(self.mware)
+        res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
         self.assertEqual('application/json', res.headers['Content-Type'])
@@ -145,21 +124,21 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
         self.stubs.Set(nova.db.api,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs')
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs')
         req.method = 'POST'
         req.headers["content-type"] = "application/json"
-        res = req.get_response(self.mware)
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
 
     def test_update_item(self):
         self.stubs.Set(nova.db.api,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs/key1')
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs/key1')
         req.method = 'PUT'
         req.body = '{"key1": "value1"}'
         req.headers["content-type"] = "application/json"
-        res = req.get_response(self.mware)
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         self.assertEqual('application/json', res.headers['Content-Type'])
         res_dict = json.loads(res.body)
@@ -169,30 +148,30 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
         self.stubs.Set(nova.db.api,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs/key1')
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs/key1')
         req.method = 'PUT'
         req.headers["content-type"] = "application/json"
-        res = req.get_response(self.mware)
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
 
     def test_update_item_too_many_keys(self):
         self.stubs.Set(nova.db.api,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs/key1')
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs/key1')
         req.method = 'PUT'
         req.body = '{"key1": "value1", "key2": "value2"}'
         req.headers["content-type"] = "application/json"
-        res = req.get_response(self.mware)
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
 
     def test_update_item_body_uri_mismatch(self):
         self.stubs.Set(nova.db.api,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
-        req = webob.Request.blank('/flavors/1/os-extra_specs/bad')
+        req = webob.Request.blank('/v1.1/flavors/1/os-extra_specs/bad')
         req.method = 'PUT'
         req.body = '{"key1": "value1"}'
         req.headers["content-type"] = "application/json"
-        res = req.get_response(self.mware)
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)

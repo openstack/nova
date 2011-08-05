@@ -99,9 +99,7 @@ class TestCase(unittest.TestCase):
         self.flag_overrides = {}
         self.injected = []
         self._services = []
-        self._monkey_patch_attach()
         self._original_flags = FLAGS.FlagValuesDict()
-        rpc.ConnectionPool = rpc.Pool(max_size=FLAGS.rpc_conn_pool_size)
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""
@@ -126,9 +124,6 @@ class TestCase(unittest.TestCase):
             # Reset any overriden flags
             self.reset_flags()
 
-            # Reset our monkey-patches
-            rpc.Consumer.attach_to_eventlet = self.original_attach
-
             # Stop any timers
             for x in self.injected:
                 try:
@@ -146,11 +141,9 @@ class TestCase(unittest.TestCase):
     def flags(self, **kw):
         """Override flag variables for a test."""
         for k, v in kw.iteritems():
-            if k in self.flag_overrides:
-                self.reset_flags()
-                raise Exception(
-                        'trying to override already overriden flag: %s' % k)
-            self.flag_overrides[k] = getattr(FLAGS, k)
+            # Store original flag value if it's not been overriden yet
+            if k not in self.flag_overrides:
+                self.flag_overrides[k] = getattr(FLAGS, k)
             setattr(FLAGS, k, v)
 
     def reset_flags(self):
@@ -171,17 +164,6 @@ class TestCase(unittest.TestCase):
         svc.start()
         self._services.append(svc)
         return svc
-
-    def _monkey_patch_attach(self):
-        self.original_attach = rpc.Consumer.attach_to_eventlet
-
-        def _wrapped(inner_self):
-            rv = self.original_attach(inner_self)
-            self.injected.append(rv)
-            return rv
-
-        _wrapped.func_name = self.original_attach.func_name
-        rpc.Consumer.attach_to_eventlet = _wrapped
 
     # Useful assertions
     def assertDictMatch(self, d1, d2, approx_equal=False, tolerance=0.001):

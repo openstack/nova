@@ -66,7 +66,6 @@ import time
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.auth import manager
 from nova.compute import power_state
 from nova.virt import driver
 from nova.virt import images
@@ -139,19 +138,19 @@ class HyperVConnection(driver.ComputeDriver):
 
         return instance_infos
 
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance, network_info,
+              block_device_mapping=None):
         """ Create a new VM and start it."""
         vm = self._lookup(instance.name)
         if vm is not None:
             raise exception.InstanceExists(name=instance.name)
 
-        user = manager.AuthManager().get_user(instance['user_id'])
-        project = manager.AuthManager().get_project(instance['project_id'])
         #Fetch the file, assume it is a VHD file.
         base_vhd_filename = os.path.join(FLAGS.instances_path,
                                          instance.name)
         vhdfile = "%s.vhd" % (base_vhd_filename)
-        images.fetch(instance['image_ref'], vhdfile, user, project)
+        images.fetch(instance['image_ref'], vhdfile,
+                     instance['user_id'], instance['project_id'])
 
         try:
             self._create_vm(instance)

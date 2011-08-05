@@ -712,3 +712,11 @@ class VirtualDiskTypeNotFound(NotFound):
 
 class VirtualDiskTypeNotFoundByName(NotFound):
     message = _("Drive Type %(name)s could not be found.")
+
+
+class CannotResizeToSameSize(NovaException):
+    message = _("When resizing, instances must change size!")
+
+
+class CannotResizeToSmallerSize(NovaException):
+    message = _("Resizing to a smaller size is not supported.")

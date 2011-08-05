@@ -23,7 +23,6 @@ import datetime
 import mox
 import novaclient.exceptions
 import stubout
-import webob
 
 from mox import IgnoreArg
 from nova import context
@@ -34,12 +33,10 @@ from nova import service
 from nova import test
 from nova import rpc
 from nova import utils
-from nova.auth import manager as auth_manager
 from nova.scheduler import api
 from nova.scheduler import manager
 from nova.scheduler import driver
 from nova.compute import power_state
-from nova.db.sqlalchemy import models
 
 
 FLAGS = flags.FLAGS
@@ -250,23 +247,17 @@ class SimpleDriverTestCase(test.TestCase):
                    volume_driver='nova.volume.driver.FakeISCSIDriver',
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()
-        self.manager = auth_manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake')
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.get_admin_context()
-
-    def tearDown(self):
-        self.manager.delete_user(self.user)
-        self.manager.delete_project(self.project)
-        super(SimpleDriverTestCase, self).tearDown()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
 
     def _create_instance(self, **kwargs):
         """Create a test instance"""
         inst = {}
         inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
-        inst['user_id'] = self.user.id
-        inst['project_id'] = self.project.id
+        inst['user_id'] = self.user_id
+        inst['project_id'] = self.project_id
         inst['instance_type_id'] = '1'
         inst['vcpus'] = kwargs.get('vcpus', 1)
         inst['ami_launch_index'] = 0
@@ -485,11 +476,6 @@ class SimpleDriverTestCase(test.TestCase):
         self.assertEqual(host, 'host2')
         volume1.delete_volume(self.context, volume_id1)
         db.volume_destroy(self.context, volume_id2)
-        dic = {'service_id': s_ref['id'],
-               'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
-               'vcpus_used': 16, 'memory_mb_used': 12, 'local_gb_used': 10,
-               'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
-               'cpu_info': ''}
 
     def test_doesnt_report_disabled_hosts_as_up(self):
         """Ensures driver doesn't find hosts before they are enabled"""
@@ -976,13 +962,10 @@ class ZoneRedirectTest(test.TestCase):
         self.stubs.Set(db, 'zone_get_all', zone_get_all)
         self.stubs.Set(db, 'instance_get_by_uuid',
                        fake_instance_get_by_uuid)
-
-        self.enable_zone_routing = FLAGS.enable_zone_routing
-        FLAGS.enable_zone_routing = True
+        self.flags(enable_zone_routing=True)
 
     def tearDown(self):
         self.stubs.UnsetAll()
-        FLAGS.enable_zone_routing = self.enable_zone_routing
         super(ZoneRedirectTest, self).tearDown()
 
     def test_trap_found_locally(self):
@@ -1012,7 +995,7 @@ class ZoneRedirectTest(test.TestCase):
             self.assertEquals(e.results['magic'], 'found me')
 
     def test_routing_flags(self):
-        FLAGS.enable_zone_routing = False
+        self.flags(enable_zone_routing=False)
         decorator = FakeRerouteCompute("foo")
         self.assertRaises(exception.InstanceNotFound, decorator(go_boom),
                           None, None, 1)

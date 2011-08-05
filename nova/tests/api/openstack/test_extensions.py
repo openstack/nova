@@ -17,20 +17,17 @@
 
 import json
 import os.path
-import stubout
-import unittest
 import webob
 from xml.etree import ElementTree
 
 from nova import context
-from nova import flags
+from nova import test
 from nova.api import openstack
 from nova.api.openstack import extensions
 from nova.api.openstack import flavors
 from nova.api.openstack import wsgi
 from nova.tests.api.openstack import fakes
 
-FLAGS = flags.FLAGS
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 response_body = "Try to say this Mr. Knox, sir..."
@@ -80,11 +77,12 @@ class StubExtensionManager(object):
         return request_extensions
 
 
-class ExtensionControllerTest(unittest.TestCase):
+class ExtensionControllerTest(test.TestCase):
 
     def setUp(self):
-        FLAGS.osapi_extensions_path = os.path.join(
-            os.path.dirname(__file__), "extensions")
+        super(ExtensionControllerTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_list_extensions_json(self):
         app = openstack.APIRouterV11()
@@ -110,8 +108,8 @@ class ExtensionControllerTest(unittest.TestCase):
                 'updated': '2011-01-22T13:25:27-06:00',
                 'description': 'The Fox In Socks Extension',
                 'alias': 'FOXNSOX',
-                'links': []
-            }
+                'links': [],
+            },
         )
 
     def test_get_extension_json(self):
@@ -128,8 +126,8 @@ class ExtensionControllerTest(unittest.TestCase):
                 "updated": "2011-01-22T13:25:27-06:00",
                 "description": "The Fox In Socks Extension",
                 "alias": "FOXNSOX",
-                "links": []
-            }
+                "links": [],
+            },
         )
 
     def test_list_extensions_xml(self):
@@ -177,7 +175,12 @@ class ExtensionControllerTest(unittest.TestCase):
             'The Fox In Socks Extension')
 
 
-class ResourceExtensionTest(unittest.TestCase):
+class ResourceExtensionTest(test.TestCase):
+
+    def setUp(self):
+        super(ResourceExtensionTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
@@ -215,13 +218,14 @@ class InvalidExtension(object):
         return "THIRD"
 
 
-class ExtensionManagerTest(unittest.TestCase):
+class ExtensionManagerTest(test.TestCase):
 
     response_body = "Try to say this Mr. Knox, sir..."
 
     def setUp(self):
-        FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
-                                                    "extensions")
+        super(ExtensionManagerTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_get_resources(self):
         app = openstack.APIRouterV11()
@@ -240,11 +244,12 @@ class ExtensionManagerTest(unittest.TestCase):
         self.assertTrue('THIRD' not in ext_mgr.extensions)
 
 
-class ActionExtensionTest(unittest.TestCase):
+class ActionExtensionTest(test.TestCase):
 
     def setUp(self):
-        FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
-                                                    "extensions")
+        super(ActionExtensionTest, self).setUp()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def _send_server_action_request(self, url, body):
         app = openstack.APIRouterV11()
@@ -278,19 +283,12 @@ class ActionExtensionTest(unittest.TestCase):
         self.assertEqual(404, response.status_int)
 
 
-class RequestExtensionTest(unittest.TestCase):
+class RequestExtensionTest(test.TestCase):
 
     def setUp(self):
         super(RequestExtensionTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
-        self.context = context.get_admin_context()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(RequestExtensionTest, self).tearDown()
+        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
+        self.flags(osapi_extensions_path=ext_path)
 
     def test_get_resources_with_stub_mgr(self):
 
@@ -328,7 +326,7 @@ class RequestExtensionTest(unittest.TestCase):
         self.assertEqual("Pig Bands!", response_data['big_bands'])
 
 
-class ExtensionsXMLSerializerTest(unittest.TestCase):
+class ExtensionsXMLSerializerTest(test.TestCase):
 
     def test_serialize_extenstion(self):
         serializer = extensions.ExtensionsXMLSerializer()
@@ -343,15 +341,15 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
                     {
                         'rel': 'describedby',
                         'type': 'application/pdf',
-                        'href': 'http://docs.rack.com/servers/api/ext/cs.pdf'
+                        'href': 'http://docs.rack.com/servers/api/ext/cs.pdf',
                     },
                     {
                         'rel': 'describedby',
                         'type': 'application/vnd.sun.wadl+xml',
-                        'href': 'http://docs.rack.com/servers/api/ext/cs.wadl'
-                    }
-                ]
-            }
+                        'href': 'http://docs.rack.com/servers/api/ext/cs.wadl',
+                    },
+                ],
+            },
         }
 
         xml = serializer.serialize(data, 'show')
@@ -383,14 +381,14 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
                         {
                             "rel": "describedby",
                             "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-pie.pdf"
+                            "href": "http://foo.com/api/ext/cs-pie.pdf",
                         },
                         {
                             "rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-pie.wadl"
-                        }
-                    ]
+                            "href": "http://foo.com/api/ext/cs-pie.wadl",
+                        },
+                    ],
                 },
                 {
                     "name": "Cloud Block Storage",
@@ -402,16 +400,16 @@ class ExtensionsXMLSerializerTest(unittest.TestCase):
                         {
                             "rel": "describedby",
                             "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-cbs.pdf"
+                            "href": "http://foo.com/api/ext/cs-cbs.pdf",
                         },
                         {
                             "rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-cbs.wadl"
-                        }
-                    ]
-                }
-            ]
+                            "href": "http://foo.com/api/ext/cs-cbs.wadl",
+                        },
+                    ],
+                },
+            ],
         }
 
         xml = serializer.serialize(data, 'index')
