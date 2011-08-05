@@ -28,6 +28,7 @@ import netaddr
 import os
 import random
 import re
+import shlex
 import socket
 import struct
 import sys
@@ -139,6 +140,9 @@ def execute(*cmd, **kwargs):
     :attempts           How many times to retry cmd.
     :shell              True | False. Defaults to False. If set to True,
                         Popen command is called shell=True.
+    :run_as_root        True | False. Defaults to False. If set to True,
+                        the command is prefixed by the command specified
+                        in the sudo_helper FLAG.
 
     :raises exception.Error on receiving unknown arguments
     :raises exception.ProcessExecutionError
@@ -150,9 +154,13 @@ def execute(*cmd, **kwargs):
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
     shell = kwargs.pop('shell', False)
+    run_as_root = kwargs.pop('run_as_root', False)
     if len(kwargs):
         raise exception.Error(_('Got unknown keyword args '
                                 'to utils.execute: %r') % kwargs)
+
+    if run_as_root:
+        cmd = shlex.split(FLAGS.sudo_helper) + cmd
     cmd = map(str, cmd)
 
     while attempts > 0:
