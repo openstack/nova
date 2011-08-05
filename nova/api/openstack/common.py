@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import re
 import urlparse
 from xml.dom import minidom
@@ -280,3 +281,16 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
 
     def default(self, *args, **kwargs):
         return ''
+
+
+def check_snapshots_enabled(f):
+    @functools.wraps(f)
+    def inner(*args, **kwargs):
+        if not FLAGS.allow_instance_snapshots:
+            LOG.warn(_('Rejecting snapshot request, snapshots currently'
+                       ' disabled'))
+            msg = _("Instance Snapshots are not permitted at this time.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        return f(*args, **kwargs)
+    return inner
+

@@ -689,14 +689,9 @@ class ControllerV11(Controller):
 
         return webob.Response(status_int=202)
 
+    @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
         """Snapshot a server instance."""
-        if not FLAGS.allow_instance_snapshots:
-            LOG.warn(_('Rejecting snapshot request, snapshots currently'
-                       ' disabled'))
-            msg = _("Instance Snapshots are not permitted at this time.")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
         entity = input_dict.get("createImage", {})
 
         try:
