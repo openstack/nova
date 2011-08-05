@@ -16,13 +16,11 @@
 Tests For Least Cost Scheduler
 """
 
-from nova import flags
 from nova import test
 from nova.scheduler import least_cost
 from nova.tests.scheduler import test_zone_aware_scheduler
 
 MB = 1024 * 1024
-FLAGS = flags.FLAGS
 
 
 class FakeHost(object):
@@ -95,10 +93,9 @@ class LeastCostSchedulerTestCase(test.TestCase):
         self.assertWeights(expected, num, request_spec, hosts)
 
     def test_noop_cost_fn(self):
-        FLAGS.least_cost_scheduler_cost_functions = [
-            'nova.scheduler.least_cost.noop_cost_fn',
-        ]
-        FLAGS.noop_cost_fn_weight = 1
+        self.flags(least_cost_scheduler_cost_functions=[
+                'nova.scheduler.least_cost.noop_cost_fn'],
+                noop_cost_fn_weight=1)
 
         num = 1
         request_spec = {}
@@ -109,10 +106,9 @@ class LeastCostSchedulerTestCase(test.TestCase):
         self.assertWeights(expected, num, request_spec, hosts)
 
     def test_cost_fn_weights(self):
-        FLAGS.least_cost_scheduler_cost_functions = [
-            'nova.scheduler.least_cost.noop_cost_fn',
-        ]
-        FLAGS.noop_cost_fn_weight = 2
+        self.flags(least_cost_scheduler_cost_functions=[
+                'nova.scheduler.least_cost.noop_cost_fn'],
+                noop_cost_fn_weight=2)
 
         num = 1
         request_spec = {}
@@ -123,10 +119,9 @@ class LeastCostSchedulerTestCase(test.TestCase):
         self.assertWeights(expected, num, request_spec, hosts)
 
     def test_compute_fill_first_cost_fn(self):
-        FLAGS.least_cost_scheduler_cost_functions = [
-            'nova.scheduler.least_cost.compute_fill_first_cost_fn',
-        ]
-        FLAGS.compute_fill_first_cost_fn_weight = 1
+        self.flags(least_cost_scheduler_cost_functions=[
+                'nova.scheduler.least_cost.compute_fill_first_cost_fn'],
+                compute_fill_first_cost_fn_weight=1)
 
         num = 1
         instance_type = {'memory_mb': 1024}
