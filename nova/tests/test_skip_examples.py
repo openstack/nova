@@ -37,7 +37,7 @@ class ExampleSkipTestCase(test.TestCase):
     @test.skip_if(False, "This test case should never be skipped.")
     def test_001_increase_test_counter(self):
         ExampleSkipTestCase.test_counter += 1
-    
+
     @test.skip_unless(True, "This test case should never be skipped.")
     def test_002_increase_test_counter(self):
         ExampleSkipTestCase.test_counter += 1
