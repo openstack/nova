@@ -24,6 +24,9 @@ from nova.api.openstack import faults
 from nova.api.openstack import extensions
 
 
+LOG = logging.getLogger('nova.api.openstack.contrib.floating_ips')
+
+
 def _translate_floating_ip_view(floating_ip):
     result = {'id': floating_ip['id'],
               'ip': floating_ip['address']}
@@ -98,11 +101,12 @@ class FloatingIPController(object):
     def delete(self, req, id):
         context = req.environ['nova.context']
         ip = self.network_api.get_floating_ip(context, id)
+
         try:
             if 'fixed_ip' in ip:
                 self.disassociate(req, id, '')
-        except:
-            pass
+        except Exception, e:
+            LOG.exception(_("Error disassociating fixed_ip %s"), e)
 
         self.network_api.release_floating_ip(context, address=ip)
 
