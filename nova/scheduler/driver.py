@@ -21,8 +21,6 @@
 Scheduler base class that all Schedulers should inherit from
 """
 
-import datetime
-
 from nova import db
 from nova import exception
 from nova import flags
@@ -143,8 +141,8 @@ class Scheduler(object):
         """Check whether a service is up based on last heartbeat."""
         last_heartbeat = service['updated_at'] or service['created_at']
         # Timestamps in DB are UTC.
-        elapsed = utils.utcnow() - last_heartbeat
-        return elapsed < datetime.timedelta(seconds=FLAGS.service_down_time)
+        elapsed = utils.total_seconds(utils.utcnow() - last_heartbeat)
+        return abs(elapsed) <= FLAGS.service_down_time
 
     def hosts_up(self, context, topic):
         """Return the list of hosts that have a running service for topic."""

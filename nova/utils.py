@@ -1009,3 +1009,12 @@ def make_dev_path(dev, partition=None, base='/dev'):
     if partition:
         path += str(partition)
     return path
+
+
+def total_seconds(td):
+    """Local total_seconds implementation for compatibility with python 2.6"""
+    if hasattr(td, 'total_seconds'):
+        return td.total_seconds()
+    else:
+        return ((td.days * 86400 + td.seconds) * 10 ** 6 +
+                td.microseconds) / 10.0 ** 6
