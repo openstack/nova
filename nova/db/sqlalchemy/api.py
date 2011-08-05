@@ -1206,6 +1206,8 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type'))
 
+    # Make a copy of the filters dictionary to use going forward, as we'll
+    # be modifying it and we shouldn't affect the caller's use of it.
     filters = filters.copy()
 
     if not context.is_admin:
@@ -1224,10 +1226,10 @@ def instance_get_all_by_filters(context, filters):
             if key in exact_match_filter_names]
 
     for filter_name in query_filters:
+        # Do the matching and remove the filter from the dictionary
+        # so we don't try it again below..
         query_prefix = _exact_match_filter(query_prefix, filter_name,
-                filters[filter_name])
-        # Remove this from filters, so it doesn't get tried below
-        del filters[filter_name]
+                filters.pop(filter_name))
 
     instances = query_prefix.all()
 

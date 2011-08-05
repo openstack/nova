@@ -56,7 +56,7 @@ class Controller(object):
         self.compute_api = compute.API()
         self.helper = helper.CreateInstanceHelper(self)
 
-    def _check_servers_options(self, context, search_options):
+    def _remove_invalid_options(self, context, search_options):
         if FLAGS.allow_admin_api and context.is_admin:
             # Allow all options
             return
@@ -156,7 +156,7 @@ class Controller(object):
         search_opts.update(req.str_GET)
 
         context = req.environ['nova.context']
-        self._check_servers_options(context, search_opts)
+        self._remove_invalid_options(context, search_opts)
 
         # Convert recurse_zones into a boolean
         search_opts['recurse_zones'] = utils.bool_from_str(
