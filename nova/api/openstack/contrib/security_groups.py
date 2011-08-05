@@ -45,33 +45,33 @@ class SecurityGroupController(object):
         super(SecurityGroupController, self).__init__()
 
     def _format_security_group_rule(self, context, rule):
-        r = {}
-        r['id'] = rule.id
-        r['parent_group_id'] = rule.parent_group_id
-        r['ip_protocol'] = rule.protocol
-        r['from_port'] = rule.from_port
-        r['to_port'] = rule.to_port
-        r['group'] = {}
-        r['ip_range'] = {}
+        sg_rule = {}
+        sg_rule['id'] = rule.id
+        sg_rule['parent_group_id'] = rule.parent_group_id
+        sg_rule['ip_protocol'] = rule.protocol
+        sg_rule['from_port'] = rule.from_port
+        sg_rule['to_port'] = rule.to_port
+        sg_rule['group'] = {}
+        sg_rule['ip_range'] = {}
         if rule.group_id:
             source_group = db.security_group_get(context, rule.group_id)
-            r['group'] = {'name': source_group.name,
+            sg_rule['group'] = {'name': source_group.name,
                              'tenant_id': source_group.project_id}
         else:
-            r['ip_range'] = {'cidr': rule.cidr}
-        return r
+            sg_rule['ip_range'] = {'cidr': rule.cidr}
+        return sg_rule
 
     def _format_security_group(self, context, group):
-        g = {}
-        g['id'] = group.id
-        g['description'] = group.description
-        g['name'] = group.name
-        g['tenant_id'] = group.project_id
-        g['rules'] = []
+        security_group = {}
+        security_group['id'] = group.id
+        security_group['description'] = group.description
+        security_group['name'] = group.name
+        security_group['tenant_id'] = group.project_id
+        security_group['rules'] = []
         for rule in group.rules:
-            r = self._format_security_group_rule(context, rule)
-            g['rules'] += [r]
-        return g
+            security_group['rules'] += [self._format_security_group_rule(
+                    context, rule)]
+        return security_group
 
     def show(self, req, id):
         """Return data about the given security group."""
@@ -97,7 +97,7 @@ class SecurityGroupController(object):
         except ValueError:
             msg = _("Security group id is not integer")
             return exc.HTTPBadRequest(explanation=msg)
-        except exception.NotFound as exp:
+        except exception.SecurityGroupNotFound as exp:
             return exc.HTTPNotFound(explanation=unicode(exp))
 
         LOG.audit(_("Delete security group %s"), id, context=context)
@@ -138,8 +138,9 @@ class SecurityGroupController(object):
         group_name = security_group.get('name', None)
         group_description = security_group.get('description', None)
 
-        self._validate_security_group_name(group_name)
-        self._validate_security_group_description(group_description)
+        self._validate_security_group_property(group_name, "name")
+        self._validate_security_group_property(group_description,
+                                               "description")
         group_name = group_name.strip()
         group_description = group_description.strip()
 
@@ -158,40 +159,21 @@ class SecurityGroupController(object):
         return {'security_group': self._format_security_group(context,
                                                                  group_ref)}
 
-    def _validate_security_group_name(self, value):
-        if value is None:
-            msg = _("Security group name is mandatory")
+    def _validate_security_group_property(self, value, typ):
+        """ typ will be either 'name' or 'description',
+            depending on the caller
+        """
+        try:
+            val = value.strip()
+        except AttributeError:
+            msg = _("Security group %s is not a string or unicode") % typ
             raise exc.HTTPBadRequest(explanation=msg)
-
-        if not isinstance(value, basestring):
-            msg = _("Security group name is not a string or unicode")
+        if not val:
+            msg = _("Security group %s cannot be empty.") % typ
             raise exc.HTTPBadRequest(explanation=msg)
-
-        if value.strip() == '':
-            msg = _("Security group name is an empty string")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if len(value.strip()) > 255:
-            msg = _("Security group name should not be greater "
-                    "than 255 characters")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-    def _validate_security_group_description(self, value):
-        if value is None:
-            msg = _("Security group description is mandatory")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if not isinstance(value, basestring):
-            msg = _("Security group description is not a string or unicode")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if value.strip() == '':
-            msg = _("Security group description is an empty string")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if len(value.strip()) > 255:
-            msg = _("Security group description should not be "
-                    "greater than 255 characters")
+        if len(val) > 255:
+            msg = _("Security group %s should not be greater "
+                            "than 255 characters.") % typ
             raise exc.HTTPBadRequest(explanation=msg)
 
 
@@ -220,7 +202,7 @@ class SecurityGroupRulesController(SecurityGroupController):
             msg = _("Security group (%s) not found") % parent_group_id
             return exc.HTTPNotFound(explanation=msg)
 
-        msg = "Authorize security group ingress %s"
+        msg = _("Authorize security group ingress %s")
         LOG.audit(_(msg), security_group['name'], context=context)
 
         try:
@@ -315,7 +297,7 @@ class SecurityGroupRulesController(SecurityGroupController):
             if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
                 raise exception.InvalidIpProtocol(protocol=ip_protocol)
             if ((min(from_port, to_port) < -1) or
-                (max(from_port, to_port) > 65535)):
+                       (max(from_port, to_port) > 65535)):
                 raise exception.InvalidPortRange(from_port=from_port,
                                                  to_port=to_port)
 
@@ -345,17 +327,14 @@ class SecurityGroupRulesController(SecurityGroupController):
 
         group_id = rule.parent_group_id
         self.compute_api.ensure_default_security_group(context)
-
         security_group = db.security_group_get(context, group_id)
-        if not security_group:
-            raise exception.SecurityGroupNotFound(security_group_id=group_id)
 
         msg = _("Revoke security group ingress %s")
         LOG.audit(_(msg), security_group['name'], context=context)
 
         db.security_group_rule_destroy(context, rule['id'])
         self.compute_api.trigger_security_group_rules_refresh(context,
-                                security_group_id=security_group['id'])
+                                    security_group_id=security_group['id'])
 
         return exc.HTTPAccepted()
 

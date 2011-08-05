@@ -73,10 +73,10 @@ class TestSecurityGroups(test.TestCase):
         sg = body_dict['security_group']
         body_parts = []
         body_parts.extend([
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<security_group xmlns="http://docs.openstack.org/ext/securitygroups/'
-    'api/v1.1"',
-    ' name="%s">' % (sg['name'])])
+                  '<?xml version="1.0" encoding="UTF-8"?>',
+                  '<security_group xmlns="http://docs.openstack.org/ext/'
+                  'securitygroups/api/v1.1"',
+                  ' name="%s">' % (sg['name'])])
         if 'description' in sg:
             body_parts.append('<description>%s</description>'
                               % sg['description'])
