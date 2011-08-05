@@ -486,6 +486,9 @@ class Resource(wsgi.Application):
             msg = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
+        #Remove tenant id
+        args.pop("tenant_id")
+
         try:
             action_result = self.dispatch(request, action, args)
         except webob.exc.HTTPException as ex:

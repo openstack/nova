@@ -65,6 +65,15 @@ class FaultWrapper(base_wsgi.Middleware):
             return faults.Fault(exc)
 
 
+class TenantMapper(routes.Mapper):
+
+    def resource(self, member_name, collection_name, **kwargs):
+        routes.Mapper.resource(self, member_name,
+                                     collection_name,
+                                     path_prefix='{tenant_id}/',
+                                     **kwargs)
+
+
 class APIRouter(base_wsgi.Router):
     """
     Routes requests on the OpenStack API to the appropriate controller
@@ -168,6 +177,12 @@ class APIRouterV10(APIRouter):
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
+    def __init__(self, ext_mgr=None):
+        mapper = TenantMapper()
+        self.server_members = {}
+        self._setup_routes(mapper)
+        super(APIRouter, self).__init__(mapper)
+
     def _setup_routes(self, mapper):
         super(APIRouterV11, self)._setup_routes(mapper, '1.1')
         image_metadata_controller = image_metadata.create_resource()
@@ -176,7 +191,7 @@ class APIRouterV11(APIRouter):
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
 
-        mapper.connect("metadata", "/images/{image_id}/metadata",
+        mapper.connect("metadata", "{tenant_id}/images/{image_id}/metadata",
                        controller=image_metadata_controller,
                        action='update_all',
                        conditions={"method": ['PUT']})
