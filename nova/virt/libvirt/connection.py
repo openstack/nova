@@ -1052,7 +1052,8 @@ class LibvirtConnection(driver.ComputeDriver):
             # NOTE(yamahata):
             # for nova.api.ec2.cloud.CloudController.get_metadata()
             xml_info['root_device'] = self.default_root_device
-            db.instance_update(context.get_admin_context(), instance['id'],
+            db.instance_update(
+                nova_context.get_admin_context(), instance['id'],
                 {'root_device_name': '/dev/' + self.default_root_device})
 
         swap = driver.block_device_info_get_swap(block_device_info)
