@@ -647,7 +647,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         all_req_nets = []
         if num_networks == 1:
             if adjusted_cidr in used_supernets:
-                msg = "requested cidr (%s) conflicts with existing smaller cidr"
+                msg = "requested cidr (%s) conflicts with existing smaller" \
+                      " cidr"
                 raise ValueError(_(msg % str(adjusted_cidr)))
             else:
                 all_req_nets.append(adjusted_cidr)
@@ -656,8 +657,9 @@ class NetworkManager(manager.SchedulerDependentManager):
             next_cidr = adjusted_cidr
             for index in range(num_networks):
                 if next_cidr.first > req_net.last:
-                    msg = "Not enough subnets avail to satisfy requested num_net" \
-                          "works - some subnets in requested range already in use"
+                    msg = "Not enough subnets avail to satisfy requested " \
+                          "num_net works - some subnets in requested range" \
+                          " already in use"
                     raise ValueError(_(msg))
                 while True:
                     if next_cidr in used_cidrs:
@@ -671,9 +673,11 @@ class NetworkManager(manager.SchedulerDependentManager):
                         next_cidr = next_cidr.next()
                         break
         all_req_nets = sorted(list(set(all_req_nets)))
-        # after splitting ensure there were enough to satisfy the num_networks
+        # after splitting ensure there were enough to satisfy the
+        # num_networks
         if len(all_req_nets) < num_networks:
-            msg = "Not enough subnets avail to satisfy requested num_networks"
+            msg = "Not enough subnets avail to satisfy requested " \
+                  "num_networks"
             raise ValueError(_(msg))
         return all_req_nets
 

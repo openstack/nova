@@ -367,8 +367,9 @@ class CommonNetworkTestCase(test.TestCase):
         manager.db.network_get_all(ctxt).AndReturn(in_use)
         self.mox.ReplayAll()
         args = [None, '192.168.2.0/24', 3, 64]
-        # ValueError: Not enough subnets avail to satisfy requested num_networks
-        #             - some subnets in requested range already in use
+        # ValueError: Not enough subnets avail to satisfy requested num_
+        #             networks - some subnets in requested range already
+        #             in use
         self.assertRaises(ValueError, manager._validate_cidrs, *args)
 
     def test__validate_cidrs_one_in_use(self):
