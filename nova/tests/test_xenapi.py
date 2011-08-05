@@ -71,9 +71,9 @@ class XenAPIVolumeTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        FLAGS.target_host = '127.0.0.1'
-        FLAGS.xenapi_connection_url = 'test_url'
-        FLAGS.xenapi_connection_password = 'test_pass'
+        self.flags(target_host='127.0.0.1',
+                xenapi_connection_url='test_url',
+                xenapi_connection_password='test_pass')
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
@@ -170,6 +170,10 @@ def reset_network(*args):
     pass
 
 
+def _find_rescue_vbd_ref(*args):
+    pass
+
+
 class XenAPIVMTestCase(test.TestCase):
     """Unit tests for VM operations."""
     def setUp(self):
@@ -189,6 +193,8 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_stream_disk(self.stubs)
         stubs.stubout_is_vdi_pv(self.stubs)
         self.stubs.Set(vmops.VMOps, 'reset_network', reset_network)
+        self.stubs.Set(vmops.VMOps, '_find_rescue_vbd_ref',
+                _find_rescue_vbd_ref)
         stubs.stub_out_vm_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
         fake_utils.stub_out_utils_execute(self.stubs)
@@ -729,9 +735,9 @@ class XenAPIMigrateInstance(test.TestCase):
     def setUp(self):
         super(XenAPIMigrateInstance, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        FLAGS.target_host = '127.0.0.1'
-        FLAGS.xenapi_connection_url = 'test_url'
-        FLAGS.xenapi_connection_password = 'test_pass'
+        self.flags(target_host='127.0.0.1',
+                xenapi_connection_url='test_url',
+                xenapi_connection_password='test_pass')
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
@@ -764,12 +770,18 @@ class XenAPIMigrateInstance(test.TestCase):
     def test_finish_migrate(self):
         instance = db.instance_create(self.context, self.values)
         self.called = False
+        self.fake_vm_start_called = False
+
+        def fake_vm_start(*args, **kwargs):
+            self.fake_vm_start_called = True
 
         def fake_vdi_resize(*args, **kwargs):
             self.called = True
 
         self.stubs.Set(stubs.FakeSessionForMigrationTests,
                 "VDI_resize_online", fake_vdi_resize)
+        self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
+
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
@@ -791,6 +803,7 @@ class XenAPIMigrateInstance(test.TestCase):
                               dict(base_copy='hurr', cow='durr'),
                               network_info, resize_instance=True)
         self.assertEqual(self.called, True)
+        self.assertEqual(self.fake_vm_start_called, True)
 
     def test_finish_migrate_no_local_storage(self):
         tiny_type_id = \

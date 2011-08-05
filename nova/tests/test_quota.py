@@ -114,9 +114,7 @@ class QuotaTestCase(test.TestCase):
         db.quota_destroy_all_by_project(self.context, self.project_id)
 
     def test_unlimited_instances(self):
-        FLAGS.quota_instances = 2
-        FLAGS.quota_ram = -1
-        FLAGS.quota_cores = -1
+        self.flags(quota_instances=2, quota_ram=-1, quota_cores=-1)
         instance_type = self._get_instance_type('m1.small')
         num_instances = quota.allowed_instances(self.context, 100,
                                                 instance_type)
@@ -130,9 +128,7 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(num_instances, 101)
 
     def test_unlimited_ram(self):
-        FLAGS.quota_instances = -1
-        FLAGS.quota_ram = 2 * 2048
-        FLAGS.quota_cores = -1
+        self.flags(quota_instances=-1, quota_ram=2 * 2048, quota_cores=-1)
         instance_type = self._get_instance_type('m1.small')
         num_instances = quota.allowed_instances(self.context, 100,
                                                 instance_type)
@@ -146,9 +142,7 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(num_instances, 101)
 
     def test_unlimited_cores(self):
-        FLAGS.quota_instances = -1
-        FLAGS.quota_ram = -1
-        FLAGS.quota_cores = 2
+        self.flags(quota_instances=-1, quota_ram=-1, quota_cores=2)
         instance_type = self._get_instance_type('m1.small')
         num_instances = quota.allowed_instances(self.context, 100,
                                                 instance_type)
@@ -162,8 +156,7 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(num_instances, 101)
 
     def test_unlimited_volumes(self):
-        FLAGS.quota_volumes = 10
-        FLAGS.quota_gigabytes = -1
+        self.flags(quota_volumes=10, quota_gigabytes=-1)
         volumes = quota.allowed_volumes(self.context, 100, 1)
         self.assertEqual(volumes, 10)
         db.quota_create(self.context, self.project_id, 'volumes', None)
@@ -173,8 +166,7 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(volumes, 101)
 
     def test_unlimited_gigabytes(self):
-        FLAGS.quota_volumes = -1
-        FLAGS.quota_gigabytes = 10
+        self.flags(quota_volumes=-1, quota_gigabytes=10)
         volumes = quota.allowed_volumes(self.context, 100, 1)
         self.assertEqual(volumes, 10)
         db.quota_create(self.context, self.project_id, 'gigabytes', None)
@@ -184,7 +176,7 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(volumes, 101)
 
     def test_unlimited_floating_ips(self):
-        FLAGS.quota_floating_ips = 10
+        self.flags(quota_floating_ips=10)
         floating_ips = quota.allowed_floating_ips(self.context, 100)
         self.assertEqual(floating_ips, 10)
         db.quota_create(self.context, self.project_id, 'floating_ips', None)
@@ -194,7 +186,7 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(floating_ips, 101)
 
     def test_unlimited_metadata_items(self):
-        FLAGS.quota_metadata_items = 10
+        self.flags(quota_metadata_items=10)
         items = quota.allowed_metadata_items(self.context, 100)
         self.assertEqual(items, 10)
         db.quota_create(self.context, self.project_id, 'metadata_items', None)
@@ -286,49 +278,49 @@ class QuotaTestCase(test.TestCase):
                                             metadata=metadata)
 
     def test_default_allowed_injected_files(self):
-        FLAGS.quota_max_injected_files = 55
+        self.flags(quota_max_injected_files=55)
         self.assertEqual(quota.allowed_injected_files(self.context, 100), 55)
 
     def test_overridden_allowed_injected_files(self):
-        FLAGS.quota_max_injected_files = 5
+        self.flags(quota_max_injected_files=5)
         db.quota_create(self.context, self.project_id, 'injected_files', 77)
         self.assertEqual(quota.allowed_injected_files(self.context, 100), 77)
 
     def test_unlimited_default_allowed_injected_files(self):
-        FLAGS.quota_max_injected_files = -1
+        self.flags(quota_max_injected_files=-1)
         self.assertEqual(quota.allowed_injected_files(self.context, 100), 100)
 
     def test_unlimited_db_allowed_injected_files(self):
-        FLAGS.quota_max_injected_files = 5
+        self.flags(quota_max_injected_files=5)
         db.quota_create(self.context, self.project_id, 'injected_files', None)
         self.assertEqual(quota.allowed_injected_files(self.context, 100), 100)
 
     def test_default_allowed_injected_file_content_bytes(self):
-        FLAGS.quota_max_injected_file_content_bytes = 12345
+        self.flags(quota_max_injected_file_content_bytes=12345)
         limit = quota.allowed_injected_file_content_bytes(self.context, 23456)
         self.assertEqual(limit, 12345)
 
     def test_overridden_allowed_injected_file_content_bytes(self):
-        FLAGS.quota_max_injected_file_content_bytes = 12345
+        self.flags(quota_max_injected_file_content_bytes=12345)
         db.quota_create(self.context, self.project_id,
                         'injected_file_content_bytes', 5678)
         limit = quota.allowed_injected_file_content_bytes(self.context, 23456)
         self.assertEqual(limit, 5678)
 
     def test_unlimited_default_allowed_injected_file_content_bytes(self):
-        FLAGS.quota_max_injected_file_content_bytes = -1
+        self.flags(quota_max_injected_file_content_bytes=-1)
         limit = quota.allowed_injected_file_content_bytes(self.context, 23456)
         self.assertEqual(limit, 23456)
 
     def test_unlimited_db_allowed_injected_file_content_bytes(self):
-        FLAGS.quota_max_injected_file_content_bytes = 12345
+        self.flags(quota_max_injected_file_content_bytes=12345)
         db.quota_create(self.context, self.project_id,
                         'injected_file_content_bytes', None)
         limit = quota.allowed_injected_file_content_bytes(self.context, 23456)
         self.assertEqual(limit, 23456)
 
     def _create_with_injected_files(self, files):
-        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+        self.flags(image_service='nova.image.fake.FakeImageService')
         api = compute.API(image_service=self.StubImageService())
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         api.create(self.context, min_count=1, max_count=1,
@@ -336,7 +328,7 @@ class QuotaTestCase(test.TestCase):
                 injected_files=files)
 
     def test_no_injected_files(self):
-        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+        self.flags(image_service='nova.image.fake.FakeImageService')
         api = compute.API(image_service=self.StubImageService())
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         api.create(self.context, instance_type=inst_type, image_href='3')
