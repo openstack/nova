@@ -351,11 +351,25 @@ class CommonNetworkTestCase(test.TestCase):
         nets = manager._validate_cidrs(None, '192.168.2.0/24', 3, 32)
         self.assertEqual(3, len(nets))
         cidrs = [str(net) for net in nets]
-        print cidrs
         exp_cidrs = ['192.168.2.32', '192.168.2.64', '192.168.2.96']
         for exp_cidr in exp_cidrs:
             self.assertTrue(exp_cidr + '/27' in cidrs)
         self.assertFalse('192.168.2.0/27' in cidrs)
+
+    def test__validate_cidrs_split_all_in_use(self):
+        manager = self.FakeNetworkManager()
+        self.mox.StubOutWithMock(manager.db, 'network_get_all')
+        ctxt = mox.IgnoreArg()
+        in_use = [{'id': 1, 'cidr': '192.168.2.9/29'},
+                  {'id': 2, 'cidr': '192.168.2.64/26'},
+                  {'id': 3, 'cidr': '192.168.2.128/26'}
+                 ]
+        manager.db.network_get_all(ctxt).AndReturn(in_use)
+        self.mox.ReplayAll()
+        args = [None, '192.168.2.0/24', 3, 64]
+        # ValueError: Not enough subnets avail to satisfy requested num_networks
+        #             - some subnets in requested range already in use
+        self.assertRaises(ValueError, manager._validate_cidrs, *args)
 
     def test__validate_cidrs_one_in_use(self):
         manager = self.FakeNetworkManager()
@@ -385,7 +399,6 @@ class CommonNetworkTestCase(test.TestCase):
         manager = self.FakeNetworkManager()
         nets = manager._validate_cidrs(None, '192.168.0.0/16', 2, 256)
         returned_cidrs = [str(net) for net in nets]
-        print returned_cidrs
         self.assertTrue('192.168.0.0/24' in returned_cidrs)
         self.assertTrue('192.168.1.0/24' in returned_cidrs)
 

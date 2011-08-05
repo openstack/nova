@@ -655,6 +655,10 @@ class NetworkManager(manager.SchedulerDependentManager):
             # split supernet into subnets
             next_cidr = adjusted_cidr
             for index in range(num_networks):
+                if next_cidr.first > req_net.last:
+                    msg = "Not enough subnets avail to satisfy requested num_net" \
+                          "works - some subnets in requested range already in use"
+                    raise ValueError(_(msg))
                 while True:
                     if next_cidr in used_cidrs:
                         next_cidr = next_cidr.next()
