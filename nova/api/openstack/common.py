@@ -196,7 +196,17 @@ def get_version_from_href(href):
     return version
 
 
-class MetadataXMLDeserializer(wsgi.MetadataXMLDeserializer):
+class MetadataXMLDeserializer(wsgi.XMLDeserializer):
+
+    def extract_metadata(self, metadata_node):
+        """Marshal the metadata attribute of a parsed request"""
+        if metadata_node is None:
+            return {}
+        metadata = {}
+        for meta_node in self.find_children_named(metadata_node, "meta"):
+            key = meta_node.getAttribute("key")
+            metadata[key] = self.extract_text(meta_node)
+        return metadata
 
     def _extract_metadata_container(self, datastring):
         dom = minidom.parseString(datastring)
@@ -247,7 +257,7 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
         container_node = self.meta_list_to_xml(xml_doc, items)
         xml_doc.appendChild(container_node)
         self._add_xmlns(container_node)
-        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
+        return xml_doc.toxml('UTF-8')
 
     def index(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
@@ -264,7 +274,7 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
         item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
         xml_doc.appendChild(item_node)
         self._add_xmlns(item_node)
-        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
+        return xml_doc.toxml('UTF-8')
 
     def show(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])

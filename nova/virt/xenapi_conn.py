@@ -242,13 +242,13 @@ class XenAPIConnection(driver.ComputeDriver):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
-    def rescue(self, context, instance, callback, network_info):
+    def rescue(self, context, instance, _callback, network_info):
         """Rescue the specified instance"""
-        self._vmops.rescue(context, instance, callback, network_info)
+        self._vmops.rescue(context, instance, _callback, network_info)
 
-    def unrescue(self, instance, callback, network_info):
+    def unrescue(self, instance, _callback, network_info):
         """Unrescue the specified instance"""
-        self._vmops.unrescue(instance, callback)
+        self._vmops.unrescue(instance, _callback)
 
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
@@ -394,11 +394,10 @@ class XenAPISession(object):
             try:
                 name = self._session.xenapi.task.get_name_label(task)
                 status = self._session.xenapi.task.get_status(task)
+                # Ensure action is never > 255
+                action = dict(action=name[:255], error=None)
                 if id:
-                    action = dict(
-                        instance_id=int(id),
-                        action=name[0:255],  # Ensure action is never > 255
-                        error=None)
+                    action["instance_id"] = int(id)
                 if status == "pending":
                     return
                 elif status == "success":

@@ -16,11 +16,8 @@
 #    under the License.
 
 from nova import context
-from nova import flags
 from nova import test
 from nova.image import s3
-
-FLAGS = flags.FLAGS
 
 
 ami_manifest_xml = """<?xml version="1.0" ?>
@@ -59,14 +56,9 @@ ami_manifest_xml = """<?xml version="1.0" ?>
 class TestS3ImageService(test.TestCase):
     def setUp(self):
         super(TestS3ImageService, self).setUp()
-        self.orig_image_service = FLAGS.image_service
-        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+        self.flags(image_service='nova.image.fake.FakeImageService')
         self.image_service = s3.S3ImageService()
         self.context = context.RequestContext(None, None)
-
-    def tearDown(self):
-        super(TestS3ImageService, self).tearDown()
-        FLAGS.image_service = self.orig_image_service
 
     def _assertEqualList(self, list0, list1, keys):
         self.assertEqual(len(list0), len(list1))
