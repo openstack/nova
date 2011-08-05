@@ -48,7 +48,6 @@ import nova.api.openstack.wsgi
 # Global storage for registering modules.
 ROUTES = {}
 
-
 def register_service(path, handle):
     """Register a service handle at a given path.
 
@@ -296,8 +295,8 @@ class ServiceWrapper(object):
               'application/json': nova.api.openstack.wsgi.JSONDictSerializer(),
             }[content_type]
             return serializer.serialize(result)
-        except:
-            raise exception.Error("returned non-serializable type: %s"
+        except Exception, e:
+            raise exception.Error(_("Returned non-serializable type: %s")
                                   % result)
 
 

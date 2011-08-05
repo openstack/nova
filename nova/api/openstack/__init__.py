@@ -40,6 +40,7 @@ from nova.api.openstack import servers
 from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
+from nova.api.openstack import versions
 from nova.api.openstack import wsgi
 from nova.api.openstack import zones
 
@@ -96,6 +97,7 @@ class APIRouter(base_wsgi.Router):
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
             server_members['rescue'] = 'POST'
+            server_members['migrate'] = 'POST'
             server_members['unrescue'] = 'POST'
             server_members['reset_network'] = 'POST'
             server_members['inject_network_info'] = 'POST'
@@ -114,6 +116,10 @@ class APIRouter(base_wsgi.Router):
                                     'info': 'GET',
                                     'select': 'POST',
                                     'boot': 'POST'})
+
+        mapper.connect("versions", "/",
+                    controller=versions.create_resource(version),
+                    action='show')
 
         mapper.resource("console", "consoles",
                     controller=consoles.create_resource(),
@@ -164,7 +170,9 @@ class APIRouterV11(APIRouter):
 
     def _setup_routes(self, mapper):
         super(APIRouterV11, self)._setup_routes(mapper, '1.1')
+
         image_metadata_controller = image_metadata.create_resource()
+
         mapper.resource("image_meta", "metadata",
                         controller=image_metadata_controller,
                         parent_resource=dict(member_name='image',
@@ -175,7 +183,14 @@ class APIRouterV11(APIRouter):
                        action='update_all',
                        conditions={"method": ['PUT']})
 
-        mapper.resource("server_meta", "meta",
-                        controller=server_metadata.create_resource(),
+        server_metadata_controller = server_metadata.create_resource()
+
+        mapper.resource("server_meta", "metadata",
+                        controller=server_metadata_controller,
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
+
+        mapper.connect("metadata", "/servers/{server_id}/metadata",
+                       controller=server_metadata_controller,
+                       action='update_all',
+                       conditions={"method": ['PUT']})

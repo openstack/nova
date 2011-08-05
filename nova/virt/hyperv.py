@@ -138,7 +138,8 @@ class HyperVConnection(driver.ComputeDriver):
 
         return instance_infos
 
-    def spawn(self, instance, network_info=None, block_device_info=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """ Create a new VM and start it."""
         vm = self._lookup(instance.name)
         if vm is not None:

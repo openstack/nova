@@ -67,6 +67,7 @@ class ComputeDriver(object):
 
     def init_host(self, host):
         """Adopt existing VM's running here"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def get_info(self, instance_name):
@@ -79,16 +80,20 @@ class ComputeDriver(object):
         :num_cpu:         (int) the number of virtual CPUs for the domain
         :cpu_time:        (int) the CPU time used in nanoseconds
         """
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def list_instances(self):
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def list_instances_detail(self):
         """Return a list of InstanceInfo for all registered VMs"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def spawn(self, instance, network_info=None, block_device_info=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
@@ -106,29 +111,36 @@ class ComputeDriver(object):
         warning in that case.
 
         """
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def reboot(self, instance, network_info):
         """Reboot specified VM"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def snapshot_instance(self, context, instance_id, image_id):
         raise NotImplementedError()
 
     def get_console_pool_info(self, console_type):
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def get_console_output(self, instance):
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def get_ajax_console(self, instance):
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def get_host_ip_addr(self):
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
@@ -143,43 +155,50 @@ class ComputeDriver(object):
     def migrate_disk_and_power_off(self, instance, dest):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def snapshot(self, instance, image_id):
+    def snapshot(self, context, instance, image_id):
         """Create snapshot from a running VM instance."""
         raise NotImplementedError()
 
-    def finish_migration(self, instance, disk_info, network_info,
+    def finish_migration(self, context, instance, disk_info, network_info,
                          resize_instance):
         """Completes a resize, turning on the migrated instance"""
         raise NotImplementedError()
 
     def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def pause(self, instance, callback):
         """Pause VM instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def unpause(self, instance, callback):
         """Unpause paused VM instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def suspend(self, instance, callback):
         """suspend the specified instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def resume(self, instance, callback):
         """resume the specified instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def rescue(self, instance, callback, network_info):
+    def rescue(self, context, instance, callback, network_info):
         """Rescue the specified instance"""
         raise NotImplementedError()
 
     def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def update_available_resource(self, ctxt, host):
@@ -192,6 +211,7 @@ class ComputeDriver(object):
         :param host: hostname that compute manager is currently running
 
         """
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def live_migration(self, ctxt, instance_ref, dest,
@@ -211,20 +231,25 @@ class ComputeDriver(object):
             expected nova.compute.manager.recover_live_migration.
 
         """
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def refresh_security_group_rules(self, security_group_id):
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def refresh_security_group_members(self, security_group_id):
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def refresh_provider_fw_rules(self, security_group_id):
         """See: nova/virt/fake.py for docs."""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def reset_network(self, instance):
         """reset networking for specified instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         pass
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
@@ -250,10 +275,12 @@ class ComputeDriver(object):
         :params instance_ref: nova.db.sqlalchemy.models.Instance object
 
         """
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def unfilter_instance(self, instance, network_info):
         """Stop filtering instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def set_admin_password(self, context, instance_id, new_pass=None):
@@ -264,24 +291,30 @@ class ComputeDriver(object):
         """Create a file on the VM instance. The file path and contents
         should be base64-encoded.
         """
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def agent_update(self, instance, url, md5hash):
         """Update agent on the VM instance."""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def inject_network_info(self, instance, nw_info):
         """inject network info for specified instance"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         pass
 
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def plug_vifs(self, instance, network_info):
         """Plugs in VIFs to networks."""
+        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
