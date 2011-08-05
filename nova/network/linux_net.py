@@ -296,14 +296,14 @@ class IptablesManager(object):
 
         for cmd, tables in s:
             for table in tables:
-                current_table, _ = self.execute('sudo',
-                                                '%s-save' % (cmd,),
+                current_table, _ = self.execute('%s-save' % (cmd,),
                                                 '-t', '%s' % (table,),
+                                                run_as_root=True,
                                                 attempts=5)
                 current_lines = current_table.split('\n')
                 new_filter = self._modify_rules(current_lines,
                                                 tables[table])
-                self.execute('sudo', '%s-restore' % (cmd,),
+                self.execute('%s-restore' % (cmd,), run_as_root=True,
                              process_input='\n'.join(new_filter),
                              attempts=5)
 
@@ -396,21 +396,22 @@ def init_host():
 
 def bind_floating_ip(floating_ip, check_exit_code=True):
     """Bind ip to public interface."""
-    _execute('sudo', 'ip', 'addr', 'add', floating_ip,
+    _execute('ip', 'addr', 'add', floating_ip,
              'dev', FLAGS.public_interface,
-             check_exit_code=check_exit_code)
+             run_as_root=True, check_exit_code=check_exit_code)
 
 
 def unbind_floating_ip(floating_ip):
     """Unbind a public ip from public interface."""
-    _execute('sudo', 'ip', 'addr', 'del', floating_ip,
-             'dev', FLAGS.public_interface)
+    _execute('ip', 'addr', 'del', floating_ip,
+             'dev', FLAGS.public_interface, run_as_root=True)
 
 
 def ensure_metadata_ip():
     """Sets up local metadata ip."""
-    _execute('sudo', 'ip', 'addr', 'add', '169.254.169.254/32',
-             'scope', 'link', 'dev', 'lo', check_exit_code=False)
+    _execute('ip', 'addr', 'add', '169.254.169.254/32',
+             'scope', 'link', 'dev', 'lo',
+             run_as_root=True, check_exit_code=False)
 
 
 def ensure_vlan_forward(public_ip, port, private_ip):
@@ -464,9 +465,11 @@ def ensure_vlan(vlan_num, bridge_interface):
     interface = 'vlan%s' % vlan_num
     if not _device_exists(interface):
         LOG.debug(_('Starting VLAN inteface %s'), interface)
-        _execute('sudo', 'vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD')
-        _execute('sudo', 'vconfig', 'add', bridge_interface, vlan_num)
-        _execute('sudo', 'ip', 'link', 'set', interface, 'up')
+        _execute('vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD',
+                 run_as_root=True)
+        _execute('vconfig', 'add', bridge_interface, vlan_num,
+                 run_as_root=True)
+        _execute('ip', 'link', 'set', interface, 'up', run_as_root=True)
     return interface
 
 
@@ -487,58 +490,63 @@ def ensure_bridge(bridge, interface, net_attrs=None):
     """
     if not _device_exists(bridge):
         LOG.debug(_('Starting Bridge interface for %s'), interface)
-        _execute('sudo', 'brctl', 'addbr', bridge)
-        _execute('sudo', 'brctl', 'setfd', bridge, 0)
+        _execute('brctl', 'addbr', bridge, run_as_root=True)
+        _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
         # _execute('sudo brctl setageing %s 10' % bridge)
-        _execute('sudo', 'brctl', 'stp', bridge, 'off')
-        _execute('sudo', 'ip', 'link', 'set', bridge, 'up')
+        _execute('brctl', 'stp', bridge, 'off', run_as_root=True)
+        _execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
     if net_attrs:
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
         suffix = net_attrs['cidr'].rpartition('/')[2]
-        out, err = _execute('sudo', 'ip', 'addr', 'add',
+        out, err = _execute('ip', 'addr', 'add',
                             '%s/%s' %
                             (net_attrs['dhcp_server'], suffix),
                             'brd',
                             net_attrs['broadcast'],
                             'dev',
                             bridge,
+                            run_as_root=True,
                             check_exit_code=False)
         if err and err != 'RTNETLINK answers: File exists\n':
             raise exception.Error('Failed to add ip: %s' % err)
         if(FLAGS.use_ipv6):
-            _execute('sudo', 'ip', '-f', 'inet6', 'addr',
+            _execute('ip', '-f', 'inet6', 'addr',
                      'change', net_attrs['cidr_v6'],
-                     'dev', bridge)
+                     'dev', bridge, run_as_root=True)
         # NOTE(vish): If the public interface is the same as the
         #             bridge, then the bridge has to be in promiscuous
         #             to forward packets properly.
         if(FLAGS.public_interface == bridge):
-            _execute('sudo', 'ip', 'link', 'set',
-                     'dev', bridge, 'promisc', 'on')
+            _execute('ip', 'link', 'set',
+                     'dev', bridge, 'promisc', 'on', run_as_root=True)
     if interface:
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
         gateway = None
-        out, err = _execute('sudo', 'route', '-n')
+        out, err = _execute('route', '-n', run_as_root=True)
         for line in out.split('\n'):
             fields = line.split()
             if fields and fields[0] == '0.0.0.0' and fields[-1] == interface:
                 gateway = fields[1]
-                _execute('sudo', 'route', 'del', 'default', 'gw', gateway,
-                         'dev', interface, check_exit_code=False)
-        out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
-                            'scope', 'global')
+                _execute('route', 'del', 'default', 'gw', gateway,
+                         'dev', interface,
+                         check_exit_code=False, run_as_root=True)
+        out, err = _execute('ip', 'addr', 'show', 'dev', interface,
+                            'scope', 'global', run_as_root=True)
         for line in out.split('\n'):
             fields = line.split()
             if fields and fields[0] == 'inet':
                 params = fields[1:-1]
-                _execute(*_ip_bridge_cmd('del', params, fields[-1]))
-                _execute(*_ip_bridge_cmd('add', params, bridge))
+                _execute(*_ip_bridge_cmd('del', params, fields[-1]),
+                         run_as_root=True)
+                _execute(*_ip_bridge_cmd('add', params, bridge),
+                         run_as_root=True)
         if gateway:
-            _execute('sudo', 'route', 'add', 'default', 'gw', gateway)
-        out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
-                            check_exit_code=False)
+            _execute('route', 'add', 'default', 'gw', gateway,
+                     run_as_root=True)
+        out, err = _execute('brctl', 'addif', bridge, interface,
+                            check_exit_code=False, run_as_root=True)
 
         if (err and err != "device %s is already a member of a bridge; can't "
                            "enslave it to bridge %s.\n" % (interface, bridge)):
@@ -602,7 +610,7 @@ def update_dhcp(context, network_ref):
                              check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo', 'kill', '-HUP', pid)
+                _execute('kill', '-HUP', pid, run_as_root=True)
                 return
             except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_('Hupping dnsmasq threw %s'), exc)
@@ -646,7 +654,7 @@ interface %s
                              % pid, check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo', 'kill', pid)
+                _execute('kill', pid, run_as_root=True)
             except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_('killing radvd threw %s'), exc)
         else:
@@ -732,7 +740,7 @@ def _stop_dnsmasq(network):
 
     if pid:
         try:
-            _execute('sudo', 'kill', '-TERM', pid)
+            _execute('kill', '-TERM', pid, run_as_root=True)
         except Exception as exc:  # pylint: disable=W0703
             LOG.debug(_('Killing dnsmasq threw %s'), exc)
 
@@ -788,7 +796,7 @@ def _ra_pid_for(bridge):
 
 def _ip_bridge_cmd(action, params, device):
     """Build commands to add/del ips to bridges/devices."""
-    cmd = ['sudo', 'ip', 'addr', action]
+    cmd = ['ip', 'addr', action]
     cmd.extend(params)
     cmd.extend(['dev', device])
     return cmd

@@ -548,8 +548,8 @@ class XenAPIVMTestCase(test.TestCase):
             return '', ''
 
         fake_utils.fake_execute_set_repliers([
-            # Capture the sudo tee .../etc/network/interfaces command
-            (r'(sudo\s+)?tee.*interfaces', _tee_handler),
+            # Capture the tee .../etc/network/interfaces command
+            (r'tee.*interfaces', _tee_handler),
         ])
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
@@ -592,9 +592,9 @@ class XenAPIVMTestCase(test.TestCase):
             return '', ''
 
         fake_utils.fake_execute_set_repliers([
-            (r'(sudo\s+)?mount', _mount_handler),
-            (r'(sudo\s+)?umount', _umount_handler),
-            (r'(sudo\s+)?tee.*interfaces', _tee_handler)])
+            (r'mount', _mount_handler),
+            (r'umount', _umount_handler),
+            (r'tee.*interfaces', _tee_handler)])
         self._test_spawn(1, 2, 3, check_injection=True)
 
         # tee must not run in this case, where an injection-capable

@@ -607,9 +607,10 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if virsh_output.startswith('/dev/'):
             LOG.info(_("cool, it's a device"))
-            out, err = utils.execute('sudo', 'dd',
+            out, err = utils.execute('dd',
                                      "if=%s" % virsh_output,
                                      'iflag=nonblock',
+                                     run_as_root=True,
                                      check_exit_code=False)
             return out
         else:
@@ -632,7 +633,7 @@ class LibvirtConnection(driver.ComputeDriver):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
 
-        utils.execute('sudo', 'chown', os.getuid(), console_log)
+        utils.execute('chown', os.getuid(), console_log, run_as_root=True)
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
@@ -914,7 +915,7 @@ class LibvirtConnection(driver.ComputeDriver):
                         ' data into image %(img_id)s (%(e)s)') % locals())
 
         if FLAGS.libvirt_type == 'uml':
-            utils.execute('sudo', 'chown', 'root', basepath('disk'))
+            utils.execute('chown', 'root', basepath('disk'), run_as_root=True)
 
     root_mount_device = 'vda'  # FIXME for now. it's hard coded.
     local_mount_device = 'vdb'  # FIXME for now. it's hard coded.
