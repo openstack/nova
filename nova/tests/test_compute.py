@@ -983,23 +983,26 @@ class ComputeTestCase(test.TestCase):
     def test_get_all_by_ip_regexp(self):
         """Test searching by Floating and Fixed IP"""
         c = context.get_admin_context()
-        instance_id1 = self._create_instance({'server_name': 'woot'})
+        instance_id1 = self._create_instance({'display_name': 'woot'})
         instance_id2 = self._create_instance({
-                'server_name': 'woo',
+                'display_name': 'woo',
                 'id': 20})
         instance_id3 = self._create_instance({
-                'server_name': 'not-woot',
+                'display_name': 'not-woot',
                 'id': 30})
 
         vif_ref1 = db.virtual_interface_create(c,
-                {'instance_id': instance_id1,
+                {'address': '12:34:56:78:90:12',
+                 'instance_id': instance_id1,
                  'network_id': 1})
         vif_ref2 = db.virtual_interface_create(c,
-                {'instance_id': instance_id2,
-                 'network_id': 2})
+                {'address': '90:12:34:56:78:90',
+                 'instance_id': instance_id2,
+                 'network_id': 1})
         vif_ref3 = db.virtual_interface_create(c,
-                {'instance_id': instance_id3,
-                 'network_id': 3})
+                {'address': '34:56:78:90:12:34',
+                 'instance_id': instance_id3,
+                 'network_id': 1})
 
         db.fixed_ip_create(c,
                 {'address': '1.1.1.1',
@@ -1053,35 +1056,41 @@ class ComputeTestCase(test.TestCase):
 
     def test_get_all_by_ipv6_regexp(self):
         """Test searching by IPv6 address"""
-        def fake_ipv6_get_by_instance_ref(context, instance):
-            if instance.id == 1:
-                return ['ffff:ffff::1']
-            if instance.id == 20:
-                return ['dddd:dddd::1']
-            if instance.id == 30:
-                return ['cccc:cccc::1', 'eeee:eeee::1', 'dddd:dddd::1']
-
-        self.stubs.Set(sqlalchemy_api, '_ipv6_get_by_instance_ref',
-                fake_ipv6_get_by_instance_ref)
 
         c = context.get_admin_context()
-        instance_id1 = self._create_instance({'server_name': 'woot'})
+        instance_id1 = self._create_instance({'display_name': 'woot'})
         instance_id2 = self._create_instance({
-                'server_name': 'woo',
+                'display_name': 'woo',
                 'id': 20})
         instance_id3 = self._create_instance({
-                'server_name': 'not-woot',
+                'display_name': 'not-woot',
                 'id': 30})
 
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip6': 'ff.*'})
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id1)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id1 in instance_ids)
+        vif_ref1 = db.virtual_interface_create(c,
+                {'address': '12:34:56:78:90:12',
+                 'instance_id': instance_id1,
+                 'network_id': 1})
+        vif_ref2 = db.virtual_interface_create(c,
+                {'address': '90:12:34:56:78:90',
+                 'instance_id': instance_id2,
+                 'network_id': 1})
+        vif_ref3 = db.virtual_interface_create(c,
+                {'address': '34:56:78:90:12:34',
+                 'instance_id': instance_id3,
+                 'network_id': 1})
+
+        # This will create IPv6 addresses of:
+        # 1: fd00::1034:56ff:fe78:9012
+        # 20: fd00::9212:34ff:fe56:7890
+        # 30: fd00::3656:78ff:fe90:1234
 
         instances = self.compute_api.get_all(c,
-                search_opts={'ip6': '.*::1'})
+                search_opts={'ip6': '.*1034.*'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id1)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip6': '^fd00.*'})
         self.assertEqual(len(instances), 3)
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id1 in instance_ids)
@@ -1089,12 +1098,93 @@ class ComputeTestCase(test.TestCase):
         self.assertTrue(instance_id3 in instance_ids)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'ip6': '.*dd:.*'})
+                search_opts={'ip6': '^.*12.*34.*'})
         self.assertEqual(len(instances), 2)
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id2 in instance_ids)
         self.assertTrue(instance_id3 in instance_ids)
 
+        db.virtual_interface_delete(c, vif_ref1['id'])
+        db.virtual_interface_delete(c, vif_ref2['id'])
+        db.virtual_interface_delete(c, vif_ref3['id'])
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+
+    def test_get_all_by_multiple_options_at_once(self):
+        """Test searching by multiple options at once"""
+        c = context.get_admin_context()
+        instance_id1 = self._create_instance({'display_name': 'woot'})
+        instance_id2 = self._create_instance({
+                'display_name': 'woo',
+                'id': 20})
+        instance_id3 = self._create_instance({
+                'display_name': 'not-woot',
+                'id': 30})
+
+        vif_ref1 = db.virtual_interface_create(c,
+                {'address': '12:34:56:78:90:12',
+                 'instance_id': instance_id1,
+                 'network_id': 1})
+        vif_ref2 = db.virtual_interface_create(c,
+                {'address': '90:12:34:56:78:90',
+                 'instance_id': instance_id2,
+                 'network_id': 1})
+        vif_ref3 = db.virtual_interface_create(c,
+                {'address': '34:56:78:90:12:34',
+                 'instance_id': instance_id3,
+                 'network_id': 1})
+
+        db.fixed_ip_create(c,
+                {'address': '1.1.1.1',
+                 'instance_id': instance_id1,
+                 'virtual_interface_id': vif_ref1['id']})
+        db.fixed_ip_create(c,
+                {'address': '1.1.2.1',
+                 'instance_id': instance_id2,
+                 'virtual_interface_id': vif_ref2['id']})
+        fix_addr = db.fixed_ip_create(c,
+                {'address': '1.1.3.1',
+                 'instance_id': instance_id3,
+                 'virtual_interface_id': vif_ref3['id']})
+        fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
+        flo_ref = db.floating_ip_create(c,
+                {'address': '10.0.0.2',
+                'fixed_ip_id': fix_ref['id']})
+
+        # ip ends up matching 2nd octet here.. so all 3 match ip
+        # but 'name' only matches one
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '.*\.1', 'name': 'not.*'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id3)
+
+        # ip ends up matching any ip with a '2' in it.. so instance
+        # 2 and 3.. but name should only match #2
+        # but 'name' only matches one
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '.*2', 'name': '^woo.*'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id2)
+
+        # same as above but no match on name (name matches instance_id1
+        # but the ip query doesn't
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '.*2.*', 'name': '^woot.*'})
+        self.assertEqual(len(instances), 0)
+
+        # ip matches all 3... ipv6 matches #2+#3...name matches #3
+        instances = self.compute_api.get_all(c,
+                search_opts={'ip': '.*\.1',
+                             'name': 'not.*',
+                             'ip6': '^.*12.*34.*'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id3)
+
+        db.virtual_interface_delete(c, vif_ref1['id'])
+        db.virtual_interface_delete(c, vif_ref2['id'])
+        db.virtual_interface_delete(c, vif_ref3['id'])
+        db.floating_ip_destroy(c, '10.0.0.2')
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
         db.instance_destroy(c, instance_id3)
