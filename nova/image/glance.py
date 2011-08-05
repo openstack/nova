@@ -129,7 +129,7 @@ class GlanceImageService(service.BaseImageService):
         self._set_client_context(context)
 
         # ensure filters is a dict
-        kwargs['filters'] = kwargs.get('filters', {})
+        kwargs['filters'] = kwargs.get('filters') or {}
         # NOTE(vish): don't filter out private images
         kwargs['filters'].setdefault('is_public', 'none')
 
