@@ -360,8 +360,7 @@ class CommonNetworkTestCase(test.TestCase):
         ctxt = mox.IgnoreArg()
         in_use = [{'id': 1, 'cidr': '192.168.2.9/29'},
                   {'id': 2, 'cidr': '192.168.2.64/26'},
-                  {'id': 3, 'cidr': '192.168.2.128/26'}
-                 ]
+                  {'id': 3, 'cidr': '192.168.2.128/26'}]
         manager.db.network_get_all(ctxt).AndReturn(in_use)
         self.mox.ReplayAll()
         args = [None, '192.168.2.0/24', 3, 64]
