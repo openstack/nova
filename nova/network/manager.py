@@ -134,10 +134,9 @@ class RPCAllocateFixedIP(object):
         for network in networks:
             address = None
             if requested_networks is not None:
-                for id, fixed_ip in requested_networks:
-                    if (network['id'] == id):
-                        address = fixed_ip
-                        break
+                for address in (fixed_ip for (id, fixed_ip) in \
+                              requested_networks if network['id'] == id):
+                    break
 
             # NOTE(vish): if we are not multi_host pass to the network host
             if not network['multi_host']:
@@ -387,8 +386,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 there is a better way to determine which networks
         #                 a non-vlan instance should connect to
         if requested_networks is not None and len(requested_networks) != 0:
-            networks = self.db.network_get_requested_networks(context,
-                                                    requested_networks)
+            network_ids = [id for (id, fixed_ip) in requested_networks]
+            networks = self.db.network_get_networks_by_ids(context,
+                                                           network_ids)
         else:
             try:
                 networks = self.db.network_get_all(context)
@@ -743,7 +743,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         if networks is None or len(networks) == 0:
             return
 
-        result = self.db.network_get_requested_networks(context, networks)
+        network_ids = [id for (id, fixed_ip) in networks]
+        result = self.db.network_get_networks_by_ids(context, network_ids)
         for network_id, fixed_ip in networks:
             # check if the fixed IP address is valid and
             # it actually belongs to the network
@@ -793,10 +794,10 @@ class FlatManager(NetworkManager):
         for network in networks:
             address = None
             if requested_networks is not None:
-                for id, fixed_ip in requested_networks:
-                    if (network['id'] == id):
-                        address = fixed_ip
-                        break
+                for address in (fixed_ip for (id, fixed_ip) in \
+                              requested_networks if network['id'] == id):
+                    break
+
             self.allocate_fixed_ip(context, instance_id,
                                    network, address=address)
 
@@ -913,8 +914,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Determine which networks an instance should connect to."""
         # get networks associated with project
         if requested_networks is not None and len(requested_networks) != 0:
-            networks = self.db.project_get_requested_networks(context,
-                                                    requested_networks)
+            network_ids = [id for (id, fixed_ip) in requested_networks]
+            networks = self.db.project_get_networks_by_ids(context,
+                                                    network_ids)
         else:
             networks = self.db.project_get_networks(context, project_id)
         return networks
@@ -973,7 +975,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         if networks is None or len(networks) == 0:
             return
 
-        result = self.db.project_get_requested_networks(context, networks)
+        network_ids = [id for (id, fixed_ip) in networks]
+        result = self.db.project_get_networks_by_ids(context, network_ids)
 
         for network_id, fixed_ip in networks:
             # check if the fixed IP address is valid and

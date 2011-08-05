@@ -710,9 +710,9 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
-def network_get_requested_networks(context, requested_networks):
-    """Return all defined networks."""
-    return IMPL.network_get_requested_networks(context, requested_networks)
+def network_get_networks_by_ids(context, network_ids):
+    """Return networks by ids."""
+    return IMPL.network_get_networks_by_ids(context, network_ids)
 
 
 # pylint: disable=C0103
@@ -1262,14 +1262,14 @@ def project_get_networks(context, project_id, associate=True):
     return IMPL.project_get_networks(context, project_id, associate)
 
 
-def project_get_requested_networks(context, requested_networks):
-    """Return the network associated with the project.
+def project_get_networks_by_ids(context, network_ids):
+    """Return the networks by ids associated with the project.
 
     If associate is true, it will attempt to associate a new
     network if one is not found, otherwise it returns None.
 
     """
-    return IMPL.project_get_requested_networks(context, requested_networks)
+    return IMPL.project_get_networks_by_ids(context, network_ids)
 
 
 def project_get_networks_v6(context, project_id):

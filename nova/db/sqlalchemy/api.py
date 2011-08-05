@@ -1701,13 +1701,8 @@ def network_get_all(context):
 
 
 @require_admin_context
-def network_get_requested_networks(context, requested_networks):
+def network_get_networks_by_ids(context, network_ids):
     session = get_session()
-
-    network_ids = []
-    for id, fixed_ip in requested_networks:
-        network_ids.append(id)
-
     result = session.query(models.Network).\
                  filter(models.Network.id.in_(network_ids)).\
                  filter_by(deleted=False).all()
@@ -2873,13 +2868,8 @@ def project_get_networks(context, project_id, associate=True):
 
 
 @require_context
-def project_get_requested_networks(context, requested_networks):
+def project_get_networks_by_ids(context, network_ids):
     session = get_session()
-
-    network_ids = []
-    for id, fixed_ip in requested_networks:
-        network_ids.append(id)
-
     result = session.query(models.Network).\
                  filter(models.Network.id.in_(network_ids)).\
                  filter_by(deleted=False).\
