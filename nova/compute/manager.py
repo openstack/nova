@@ -748,7 +748,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'finish_revert_resize',
-                 'args': {'migration_id': migration_ref['id']},
+                 'args': {'instance_id': instance_ref['uuid'],
+                          'migration_id': migration_ref['id']},
                 })
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

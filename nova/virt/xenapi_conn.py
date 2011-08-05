@@ -191,7 +191,7 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
-        self._vmops.revert_resize(instance)
+        self._vmops.revert_migration(instance)
 
     def finish_migration(self, context, instance, disk_info, network_info,
                          resize_instance=False):
