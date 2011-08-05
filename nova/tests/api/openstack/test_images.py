@@ -34,15 +34,11 @@ import webob
 from glance import client as glance_client
 from nova import context
 from nova import exception
-from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
 from nova.api.openstack import images
 from nova.tests.api.openstack import fakes
-
-
-FLAGS = flags.FLAGS
 
 
 class _BaseImageServiceTests(test.TestCase):
@@ -155,7 +151,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         fakes.stub_out_compute_api_snapshot(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(1, None)
+        self.context = context.RequestContext('fake', 'fake')
         self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
@@ -168,7 +164,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         """Ensure instance_id is persisted as an image-property"""
         fixture = {'name': 'test image',
                    'is_public': False,
-                   'properties': {'instance_id': '42', 'user_id': '1'}}
+                   'properties': {'instance_id': '42', 'user_id': 'fake'}}
 
         image_id = self.service.create(self.context, fixture)['id']
         expected = fixture
@@ -178,7 +174,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         expected = {'id': image_id,
                     'name': 'test image',
                     'is_public': False,
-                    'properties': {'instance_id': '42', 'user_id': '1'}}
+                    'properties': {'instance_id': '42', 'user_id': 'fake'}}
         self.assertDictMatch(image_meta, expected)
 
         image_metas = self.service.detail(self.context)
@@ -328,14 +324,10 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def setUp(self):
         """Run before each test."""
         super(ImageControllerWithGlanceServiceTest, self).setUp()
-        self.orig_image_service = FLAGS.image_service
-        FLAGS.image_service = 'nova.image.glance.GlanceImageService'
+        self.flags(image_service='nova.image.glance.GlanceImageService')
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.fixtures = self._make_image_fixtures()
         fakes.stub_out_glance(self.stubs, initial_fixtures=self.fixtures)
@@ -345,14 +337,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def tearDown(self):
         """Run after each test."""
         self.stubs.UnsetAll()
-        FLAGS.image_service = self.orig_image_service
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
     def _applicable_fixture(self, fixture, user_id):
         """Determine if this fixture is applicable for given user id."""
         is_public = fixture["is_public"]
         try:
-            uid = int(fixture["properties"]["user_id"])
+            uid = fixture["properties"]["user_id"]
         except KeyError:
             uid = None
         return uid == user_id or is_public
@@ -401,18 +392,30 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         href = "http://localhost/v1.1/images/124"
         bookmark = "http://localhost/images/124"
+        server_href = "http://localhost/v1.1/servers/42"
+        server_bookmark = "http://localhost/servers/42"
 
         expected_image = {
             "image": {
                 "id": 124,
                 "name": "queued snapshot",
-                "serverRef": "http://localhost/v1.1/servers/42",
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "QUEUED",
+                'server': {
+                    'id': 42,
+                    "links": [{
+                        "rel": "self",
+                        "href": server_href,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": server_bookmark,
+                    }],
+                },
                 "metadata": {
                     "instance_ref": "http://localhost/v1.1/servers/42",
-                    "user_id": "1",
+                    "user_id": "fake",
                 },
                 "links": [{
                     "rel": "self",
@@ -526,7 +529,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         # because the element hasn't changed definition
         expected = minidom.parseString("""
             <itemNotFound code="404"
-                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+                    xmlns="http://docs.openstack.org/compute/api/v1.1">
                 <message>
                     Image not found.
                 </message>
@@ -547,7 +550,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         fixtures = copy.copy(self.fixtures)
 
         for image in fixtures:
-            if not self._applicable_fixture(image, 1):
+            if not self._applicable_fixture(image, "fake"):
                 fixtures.remove(image)
                 continue
 
@@ -556,14 +559,16 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             test_image = {
                 "id": image["id"],
                 "name": image["name"],
-                "links": [{
-                    "rel": "self",
-                    "href": href,
-                },
-                {
-                    "rel": "bookmark",
-                    "href": bookmark,
-                }],
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": href,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": bookmark,
+                    },
+                ],
             }
             self.assertTrue(test_image in response_list)
 
@@ -628,6 +633,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         response_dict = json.loads(response.body)
         response_list = response_dict["images"]
+        server_href = "http://localhost/v1.1/servers/42"
+        server_bookmark = "http://localhost/servers/42"
 
         expected = [{
             'id': 123,
@@ -650,12 +657,22 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'queued snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
-                u'user_id': u'1',
+                u'user_id': u'fake',
             },
-            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
+            'server': {
+                'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
+            },
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/124",
@@ -670,13 +687,23 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'saving snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
-                u'user_id': u'1',
+                u'user_id': u'fake',
             },
-            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
             'progress': 0,
+            'server': {
+                'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
+            },
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/125",
@@ -691,12 +718,22 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'active snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
-                u'user_id': u'1',
+                u'user_id': u'fake',
             },
-            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'server': {
+                'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
+            },
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/126",
@@ -711,12 +748,22 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'killed snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
-                u'user_id': u'1',
+                u'user_id': u'fake',
             },
-            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
+            'server': {
+                'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
+            },
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/127",
@@ -747,154 +794,206 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
     def test_image_filter_with_name(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {'name': 'testname'}
-        image_service.index(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images?name=testname')
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?name=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
 
     def test_image_filter_with_status(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {'status': 'ACTIVE'}
-        image_service.index(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images?status=ACTIVE')
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?status=ACTIVE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
 
     def test_image_filter_with_property(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {'property-test': '3'}
-        image_service.index(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images?property-test=3')
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?property-test=3')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
+
+    def test_image_filter_server(self):
+        image_service = self.mox.CreateMockAnything()
+        context = object()
+        # 'server' should be converted to 'property-instance_ref'
+        filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?server='
+                                      'http://localhost:8774/servers/12')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        self.mox.VerifyAll()
+
+    def test_image_filter_changes_since(self):
+        image_service = self.mox.CreateMockAnything()
+        context = object()
+        filters = {'changes-since': '2011-01-24T17:08Z'}
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?changes-since='
+                                      '2011-01-24T17:08Z')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        self.mox.VerifyAll()
+
+    def test_image_filter_with_type(self):
+        image_service = self.mox.CreateMockAnything()
+        context = object()
+        filters = {'property-image_type': 'BASE'}
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?type=BASE')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        self.mox.VerifyAll()
 
     def test_image_filter_not_supported(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {'status': 'ACTIVE'}
-        image_service.index(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        image_service.detail(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?status=ACTIVE&'
+                                      'UNSUPPORTEDFILTER=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
-        controller.index(request)
-        mocker.VerifyAll()
+        controller.detail(request)
+        self.mox.VerifyAll()
 
     def test_image_no_filters(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {}
         image_service.index(
             context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
+        self.mox.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
 
     def test_image_detail_filter_with_name(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {'name': 'testname'}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail?name=testname')
+        image_service.detail(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?name=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
 
     def test_image_detail_filter_with_status(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {'status': 'ACTIVE'}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail?status=ACTIVE')
+        image_service.detail(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?status=ACTIVE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
 
     def test_image_detail_filter_with_property(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {'property-test': '3'}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail?property-test=3')
+        image_service.detail(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?property-test=3')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
+
+    def test_image_detail_filter_server(self):
+        image_service = self.mox.CreateMockAnything()
+        context = object()
+        # 'server' should be converted to 'property-instance_ref'
+        filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?server='
+                                      'http://localhost:8774/servers/12')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        self.mox.VerifyAll()
+
+    def test_image_detail_filter_changes_since(self):
+        image_service = self.mox.CreateMockAnything()
+        context = object()
+        filters = {'changes-since': '2011-01-24T17:08Z'}
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?changes-since='
+                                      '2011-01-24T17:08Z')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        self.mox.VerifyAll()
+
+    def test_image_detail_filter_with_type(self):
+        image_service = self.mox.CreateMockAnything()
+        context = object()
+        filters = {'property-image_type': 'BASE'}
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?type=BASE')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        self.mox.VerifyAll()
 
     def test_image_detail_filter_not_supported(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {'status': 'ACTIVE'}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        image_service.detail(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail?status=ACTIVE&'
+                                      'UNSUPPORTEDFILTER=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
 
     def test_image_detail_no_filters(self):
-        mocker = mox.Mox()
-        image_service = mocker.CreateMockAnything()
+        image_service = self.mox.CreateMockAnything()
         context = object()
         filters = {}
-        image_service.detail(
-            context, filters=filters).AndReturn([])
-        mocker.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images/detail')
+        image_service.detail(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images/detail')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
-        mocker.VerifyAll()
+        self.mox.VerifyAll()
 
     def test_get_image_found(self):
         req = webob.Request.blank('/v1.0/images/123')
@@ -926,6 +1025,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
+        image_meta = json.loads(response.body)['image']
+        self.assertEqual(123, image_meta['serverId'])
+        self.assertEqual('Snapshot 1', image_meta['name'])
 
     def test_create_snapshot_no_name(self):
         """Name is required for snapshots"""
@@ -937,143 +1039,10 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
 
-    def test_create_backup_no_name(self):
-        """Name is also required for backups"""
-        body = dict(image=dict(serverId='123', image_type='backup',
-                               backup_type='daily', rotation=1))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_backup_with_rotation_and_backup_type(self):
-        """The happy path for creating backups
-
-        Creating a backup is an admin-only operation, as opposed to snapshots
-        which are available to anybody.
-        """
-        # FIXME(sirp): teardown needed?
-        FLAGS.allow_admin_api = True
-
-        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
-        body = dict(image=dict(serverId='123', image_type='backup',
-                               name='Backup 1',
-                               backup_type='daily', rotation=1))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(200, response.status_int)
-
-    def test_create_backup_no_rotation(self):
-        """Rotation is required for backup requests"""
-        # FIXME(sirp): teardown needed?
-        FLAGS.allow_admin_api = True
-
-        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
-        body = dict(image=dict(serverId='123', name='daily',
-                               image_type='backup', backup_type='daily'))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_backup_no_backup_type(self):
-        """Backup Type (daily or weekly) is required for backup requests"""
-        # FIXME(sirp): teardown needed?
-        FLAGS.allow_admin_api = True
-
-        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
-        body = dict(image=dict(serverId='123', name='daily',
-                               image_type='backup', rotation=1))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_image_with_invalid_image_type(self):
-        """Valid image_types are snapshot | daily | weekly"""
-        # FIXME(sirp): teardown needed?
-        FLAGS.allow_admin_api = True
-
-        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
-        body = dict(image=dict(serverId='123', image_type='monthly',
-                               rotation=1))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
     def test_create_image_no_server_id(self):
 
         body = dict(image=dict(name='Snapshot 1'))
         req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_image_v1_1(self):
-
-        body = dict(image=dict(serverRef='123', name='Snapshot 1'))
-        req = webob.Request.blank('/v1.1/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(200, response.status_int)
-
-    def test_create_image_v1_1_actual_server_ref(self):
-
-        serverRef = 'http://localhost/v1.1/servers/1'
-        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
-        req = webob.Request.blank('/v1.1/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(200, response.status_int)
-        result = json.loads(response.body)
-        self.assertEqual(result['image']['serverRef'], serverRef)
-
-    def test_create_image_v1_1_actual_server_ref_port(self):
-
-        serverRef = 'http://localhost:8774/v1.1/servers/1'
-        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
-        req = webob.Request.blank('/v1.1/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(200, response.status_int)
-        result = json.loads(response.body)
-        self.assertEqual(result['image']['serverRef'], serverRef)
-
-    def test_create_image_v1_1_server_ref_bad_hostname(self):
-
-        serverRef = 'http://asdf/v1.1/servers/1'
-        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
-        req = webob.Request.blank('/v1.1/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_image_v1_1_no_server_ref(self):
-
-        body = dict(image=dict(name='Snapshot 1'))
-        req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1101,7 +1070,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         # Snapshot for User 1
         server_ref = 'http://localhost/v1.1/servers/42'
-        snapshot_properties = {'instance_ref': server_ref, 'user_id': '1'}
+        snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
         for status in ('queued', 'saving', 'active', 'killed'):
             add_fixture(id=image_id, name='%s snapshot' % status,
                         is_public=False, status=status,
@@ -1109,7 +1078,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             image_id += 1
 
         # Snapshot for User 2
-        other_snapshot_properties = {'instance_id': '43', 'user_id': '2'}
+        other_snapshot_properties = {'instance_id': '43', 'user_id': 'other'}
         add_fixture(id=image_id, name='someone elses snapshot',
                     is_public=False, status='active',
                     properties=other_snapshot_properties)
@@ -1128,7 +1097,9 @@ class ImageXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_HREF = 'http://localhost/v1.1/servers/123'
+    SERVER_BOOKMARK = 'http://localhost/servers/123'
     IMAGE_HREF = 'http://localhost/v1.1/images/%s'
+    IMAGE_BOOKMARK = 'http://localhost/images/%s'
 
     def test_show(self):
         serializer = images.ImageXMLSerializer()
@@ -1139,16 +1110,32 @@ class ImageXMLSerializationTest(test.TestCase):
                 'name': 'Image1',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
-                'serverRef': self.SERVER_HREF,
                 'status': 'ACTIVE',
+                'progress': 80,
+                'server': {
+                    'id': 1,
+                    'links': [
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
                 'metadata': {
                     'key1': 'value1',
                 },
                 'links': [
                     {
-                        'href': self.IMAGE_HREF % (1,),
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
                         'rel': 'bookmark',
-                        'type': 'application/json',
                     },
                 ],
             },
@@ -1158,25 +1145,30 @@ class ImageXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
-        expected_href = self.IMAGE_HREF % (1, )
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <image id="1"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
                 name="Image1"
-                serverRef="%(expected_server_href)s"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 status="ACTIVE"
-                xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <links>
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/json" />
-            </links>
+                progress="80">
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
             <metadata>
                 <meta key="key1">
                     value1
                 </meta>
             </metadata>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
         """.replace("  ", "") % (locals()))
 
@@ -1191,14 +1183,29 @@ class ImageXMLSerializationTest(test.TestCase):
                 'name': 'Image1',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
-                'serverRef': self.SERVER_HREF,
                 'status': 'ACTIVE',
+                'server': {
+                    'id': 1,
+                    'links': [
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
                 'metadata': {},
                 'links': [
                     {
-                        'href': self.IMAGE_HREF % (1,),
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
                         'rel': 'bookmark',
-                        'type': 'application/json',
                     },
                 ],
             },
@@ -1208,21 +1215,24 @@ class ImageXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
-        expected_href = self.IMAGE_HREF % (1, )
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <image id="1"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
                 name="Image1"
-                serverRef="%(expected_server_href)s"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE"
-                xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <links>
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/json" />
-            </links>
-            <metadata />
+                status="ACTIVE">
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
         """.replace("  ", "") % (locals()))
 
@@ -1237,16 +1247,30 @@ class ImageXMLSerializationTest(test.TestCase):
                 'name': 'Image1',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
-                'serverRef': self.SERVER_HREF,
                 'status': 'ACTIVE',
+                'server': {
+                    'id': 1,
+                    'links': [
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
                 'links': [
                     {
-                        'href': self.IMAGE_HREF % (1,),
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
                         'rel': 'bookmark',
-                        'type': 'application/json',
                     },
                 ],
-
             },
         }
 
@@ -1254,21 +1278,76 @@ class ImageXMLSerializationTest(test.TestCase):
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
-        expected_href = self.IMAGE_HREF % (1, )
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
         <image id="1"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
                 name="Image1"
-                serverRef="%(expected_server_href)s"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE"
-                xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <links>
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/json" />
-            </links>
-            <metadata />
+                status="ACTIVE">
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
+        </image>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_show_no_server(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixture = {
+            'image': {
+                'id': 1,
+                'name': 'Image1',
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                'status': 'ACTIVE',
+                'metadata': {
+                    'key1': 'value1',
+                },
+                'links': [
+                    {
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
+        expected_now = self.TIMESTAMP
+        expected = minidom.parseString("""
+        <image id="1"
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                name="Image1"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                status="ACTIVE">
+            <metadata>
+                <meta key="key1">
+                    value1
+                </meta>
+            </metadata>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
         </image>
         """.replace("  ", "") % (locals()))
 
@@ -1277,70 +1356,51 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_index(self):
         serializer = images.ImageXMLSerializer()
 
-        fixtures = {
+        fixture = {
             'images': [
                 {
                     'id': 1,
                     'name': 'Image1',
-                    'created': self.TIMESTAMP,
-                    'updated': self.TIMESTAMP,
-                    'serverRef': self.SERVER_HREF,
-                    'status': 'ACTIVE',
                     'links': [
                         {
-                            'href': 'http://localhost/v1.1/images/1',
-                            'rel': 'bookmark',
-                            'type': 'application/json',
+                            'href': self.IMAGE_HREF % 1,
+                            'rel': 'self',
                         },
                     ],
                 },
                 {
                     'id': 2,
-                    'name': 'queued image',
-                    'created': self.TIMESTAMP,
-                    'updated': self.TIMESTAMP,
-                    'serverRef': self.SERVER_HREF,
-                    'status': 'QUEUED',
+                    'name': 'Image2',
                     'links': [
                         {
-                            'href': 'http://localhost/v1.1/images/2',
-                            'rel': 'bookmark',
-                            'type': 'application/json',
+                            'href': self.IMAGE_HREF % 2,
+                            'rel': 'self',
                         },
                     ],
                 },
-            ],
+            ]
         }
 
-        output = serializer.serialize(fixtures, 'index')
+        output = serializer.serialize(fixture, 'index')
         actual = minidom.parseString(output.replace("  ", ""))
 
-        expected_serverRef = self.SERVER_HREF
+        expected_server_href = self.SERVER_HREF
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
+        expected_href_two = self.IMAGE_HREF % 2
+        expected_bookmark_two = self.IMAGE_BOOKMARK % 2
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
-        <images xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <image id="1"
-                    name="Image1"
-                    serverRef="%(expected_serverRef)s"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="ACTIVE">
-                <links>
-                    <link href="http://localhost/v1.1/images/1" rel="bookmark"
-                        type="application/json" />
-                </links>
-            </image>
-            <image id="2"
-                    name="queued image"
-                    serverRef="%(expected_serverRef)s"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="QUEUED">
-                <links>
-                    <link href="http://localhost/v1.1/images/2" rel="bookmark"
-                        type="application/json" />
-                </links>
-            </image>
+        <images
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom">
+        <image id="1" name="Image1">
+            <atom:link href="%(expected_href)s" rel="self"/>
+        </image>
+        <image id="2" name="Image2">
+            <atom:link href="%(expected_href_two)s" rel="self"/>
+        </image>
         </images>
         """.replace("  ", "") % (locals()))
 
@@ -1356,10 +1416,10 @@ class ImageXMLSerializationTest(test.TestCase):
         output = serializer.serialize(fixtures, 'index')
         actual = minidom.parseString(output.replace("  ", ""))
 
-        expected_serverRef = self.SERVER_HREF
-        expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
-        <images xmlns="http://docs.openstack.org/compute/api/v1.1" />
+        <images
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom" />
         """.replace("  ", "") % (locals()))
 
         self.assertEqual(expected.toxml(), actual.toxml())
@@ -1367,137 +1427,103 @@ class ImageXMLSerializationTest(test.TestCase):
     def test_detail(self):
         serializer = images.ImageXMLSerializer()
 
-        fixtures = {
+        fixture = {
             'images': [
                 {
                     'id': 1,
                     'name': 'Image1',
                     'created': self.TIMESTAMP,
                     'updated': self.TIMESTAMP,
-                    'serverRef': self.SERVER_HREF,
                     'status': 'ACTIVE',
-                    'metadata': {
-                        'key1': 'value1',
-                        'key2': 'value2',
+                    'server': {
+                        'id': 1,
+                        'links': [
+                            {
+                                'href': self.SERVER_HREF,
+                                'rel': 'self',
+                            },
+                            {
+                                'href': self.SERVER_BOOKMARK,
+                                'rel': 'bookmark',
+                            },
+                        ],
                     },
                     'links': [
                         {
-                            'href': 'http://localhost/v1.1/images/1',
+                            'href': self.IMAGE_HREF % 1,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.IMAGE_BOOKMARK % 1,
                             'rel': 'bookmark',
-                            'type': 'application/json',
                         },
                     ],
                 },
                 {
                     'id': 2,
-                    'name': 'queued image',
+                    'name': 'Image2',
                     'created': self.TIMESTAMP,
                     'updated': self.TIMESTAMP,
-                    'serverRef': self.SERVER_HREF,
-                    'metadata': {},
-                    'status': 'QUEUED',
+                    'status': 'SAVING',
+                    'progress': 80,
+                    'metadata': {
+                        'key1': 'value1',
+                    },
                     'links': [
                         {
-                            'href': 'http://localhost/v1.1/images/2',
+                            'href': self.IMAGE_HREF % 2,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.IMAGE_BOOKMARK % 2,
                             'rel': 'bookmark',
-                            'type': 'application/json',
                         },
                     ],
                 },
-            ],
+            ]
         }
 
-        output = serializer.serialize(fixtures, 'detail')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected_serverRef = self.SERVER_HREF
-        expected_now = self.TIMESTAMP
-        expected = minidom.parseString("""
-        <images xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <image id="1"
-                    name="Image1"
-                    serverRef="%(expected_serverRef)s"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="ACTIVE">
-                <links>
-                    <link href="http://localhost/v1.1/images/1" rel="bookmark"
-                        type="application/json" />
-                </links>
-                <metadata>
-                    <meta key="key2">
-                        value2
-                    </meta>
-                    <meta key="key1">
-                        value1
-                    </meta>
-                </metadata>
-            </image>
-            <image id="2"
-                    name="queued image"
-                    serverRef="%(expected_serverRef)s"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="QUEUED">
-                <links>
-                    <link href="http://localhost/v1.1/images/2" rel="bookmark"
-                        type="application/json" />
-                </links>
-                <metadata />
-            </image>
-        </images>
-        """.replace("  ", "") % (locals()))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_create(self):
-        serializer = images.ImageXMLSerializer()
-
-        fixture = {
-            'image': {
-                'id': 1,
-                'name': 'Image1',
-                'created': self.TIMESTAMP,
-                'updated': self.TIMESTAMP,
-                'serverRef': self.SERVER_HREF,
-                'status': 'ACTIVE',
-                'metadata': {
-                    'key1': 'value1',
-                },
-                'links': [
-                    {
-                        'href': self.IMAGE_HREF % (1,),
-                        'rel': 'bookmark',
-                        'type': 'application/json',
-                    },
-                ],
-            },
-        }
-
-        output = serializer.serialize(fixture, 'create')
+        output = serializer.serialize(fixture, 'detail')
         actual = minidom.parseString(output.replace("  ", ""))
 
         expected_server_href = self.SERVER_HREF
-        expected_href = self.IMAGE_HREF % (1, )
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_href = self.IMAGE_HREF % 1
+        expected_bookmark = self.IMAGE_BOOKMARK % 1
+        expected_href_two = self.IMAGE_HREF % 2
+        expected_bookmark_two = self.IMAGE_BOOKMARK % 2
         expected_now = self.TIMESTAMP
         expected = minidom.parseString("""
+        <images
+                xmlns="http://docs.openstack.org/compute/api/v1.1"
+                xmlns:atom="http://www.w3.org/2005/Atom">
         <image id="1"
                 name="Image1"
-                serverRef="%(expected_server_href)s"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE"
-                xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <links>
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/json" />
-            </links>
+                status="ACTIVE">
+            <server id="1">
+                <atom:link rel="self" href="%(expected_server_href)s"/>
+                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
+            </server>
+            <atom:link href="%(expected_href)s" rel="self"/>
+            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
+        </image>
+        <image id="2"
+                name="Image2"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                status="SAVING"
+                progress="80">
             <metadata>
                 <meta key="key1">
                     value1
                 </meta>
             </metadata>
+            <atom:link href="%(expected_href_two)s" rel="self"/>
+            <atom:link href="%(expected_bookmark_two)s" rel="bookmark"/>
         </image>
+        </images>
         """.replace("  ", "") % (locals()))
 
         self.assertEqual(expected.toxml(), actual.toxml())

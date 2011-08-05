@@ -18,7 +18,7 @@
 from webob import exc
 
 from nova import compute
-from nova.api.openstack import faults
+from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import exception
 from nova import quota
@@ -32,36 +32,37 @@ class Controller(object):
         super(Controller, self).__init__()
 
     def _get_metadata(self, context, server_id):
-        metadata = self.compute_api.get_instance_metadata(context, server_id)
-        meta_dict = {}
-        for key, value in metadata.iteritems():
-            meta_dict[key] = value
-        return dict(metadata=meta_dict)
+        try:
+            meta = self.compute_api.get_instance_metadata(context, server_id)
+        except exception.InstanceNotFound:
+            msg = _('Server does not exist')
+            raise exc.HTTPNotFound(explanation=msg)
 
-    def _check_body(self, body):
-        if body == None or body == "":
-            expl = _('No Request Body')
-            raise exc.HTTPBadRequest(explanation=expl)
+        meta_dict = {}
+        for key, value in meta.iteritems():
+            meta_dict[key] = value
+        return meta_dict
 
     def index(self, req, server_id):
         """ Returns the list of metadata for a given instance """
         context = req.environ['nova.context']
-        try:
-            return self._get_metadata(context, server_id)
-        except exception.InstanceNotFound:
-            msg = _('Server %(server_id)s does not exist') % locals()
-            raise exc.HTTPNotFound(explanation=msg)
+        return {'metadata': self._get_metadata(context, server_id)}
 
     def create(self, req, server_id, body):
-        self._check_body(body)
+        try:
+            metadata = body['metadata']
+        except (KeyError, TypeError):
+            msg = _("Malformed request body")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         context = req.environ['nova.context']
-        metadata = body.get('metadata')
+
         try:
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
                                                                 metadata)
         except exception.InstanceNotFound:
-            msg = _('Server %(server_id)s does not exist') % locals()
+            msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
 
         except quota.QuotaError as error:
@@ -70,50 +71,79 @@ class Controller(object):
         return body
 
     def update(self, req, server_id, id, body):
-        self._check_body(body)
-        context = req.environ['nova.context']
-        if not id in body:
+        try:
+            meta_item = body['meta']
+        except (TypeError, KeyError):
+            expl = _('Malformed request body')
+            raise exc.HTTPBadRequest(explanation=expl)
+
+        try:
+            meta_value = meta_item.pop(id)
+        except (AttributeError, KeyError):
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
-        if len(body) > 1:
+
+        if len(meta_item) > 0:
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
+
+        context = req.environ['nova.context']
+        self._set_instance_metadata(context, server_id, meta_item)
+
+        return {'meta': {id: meta_value}}
+
+    def update_all(self, req, server_id, body):
+        try:
+            metadata = body['metadata']
+        except (TypeError, KeyError):
+            expl = _('Malformed request body')
+            raise exc.HTTPBadRequest(explanation=expl)
+
+        context = req.environ['nova.context']
+        self._set_instance_metadata(context, server_id, metadata)
+
+        return {'metadata': metadata}
+
+    def _set_instance_metadata(self, context, server_id, metadata):
         try:
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
-                                                                body)
+                                                                metadata)
         except exception.InstanceNotFound:
-            msg = _('Server %(server_id)s does not exist') % locals()
+            msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
+
+        except ValueError:
+            msg = _("Malformed request body")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
-        return body
-
     def show(self, req, server_id, id):
         """ Return a single metadata item """
         context = req.environ['nova.context']
-        try:
-            data = self._get_metadata(context, server_id)
-        except exception.InstanceNotFound:
-            msg = _('Server %(server_id)s does not exist') % locals()
-            raise exc.HTTPNotFound(explanation=msg)
+        data = self._get_metadata(context, server_id)
 
         try:
-            return {id: data['metadata'][id]}
+            return {'meta': {id: data[id]}}
         except KeyError:
-            msg = _("metadata item %s was not found" % (id))
+            msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
     def delete(self, req, server_id, id):
         """ Deletes an existing metadata """
         context = req.environ['nova.context']
+
+        metadata = self._get_metadata(context, server_id)
+
         try:
-            self.compute_api.delete_instance_metadata(context, server_id, id)
-        except exception.InstanceNotFound:
-            msg = _('Server %(server_id)s does not exist') % locals()
+            meta_key = metadata[id]
+        except KeyError:
+            msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
+
+        self.compute_api.delete_instance_metadata(context, server_id, meta_key)
 
     def _handle_quota_error(self, error):
         """Reraise quota errors as api-specific http exceptions."""
@@ -123,10 +153,16 @@ class Controller(object):
 
 
 def create_resource():
-    body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11),
+    headers_serializer = common.MetadataHeadersSerializer()
+
+    body_deserializers = {
+        'application/xml': common.MetadataXMLDeserializer(),
     }
 
-    serializer = wsgi.ResponseSerializer(body_serializers)
+    body_serializers = {
+        'application/xml': common.MetadataXMLSerializer(),
+    }
+    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
+    deserializer = wsgi.RequestDeserializer(body_deserializers)
 
-    return wsgi.Resource(Controller(), serializer=serializer)
+    return wsgi.Resource(Controller(), deserializer, serializer)

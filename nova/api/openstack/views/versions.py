@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import os
 
 
@@ -31,15 +32,44 @@ class ViewBuilder(object):
         """
         self.base_url = base_url
 
-    def build(self, version_data):
-        """Generic method used to generate a version entity."""
-        version = {
-            "id": version_data["id"],
-            "status": version_data["status"],
-            "links": self._build_links(version_data),
-        }
+    def build_choices(self, VERSIONS, req):
+        version_objs = []
+        for version in VERSIONS:
+            version = VERSIONS[version]
+            version_objs.append({
+                "id": version['id'],
+                "status": version['status'],
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": self.generate_href(version['id'], req.path),
+                    },
+                ],
+                "media-types": version['media-types'],
+            })
 
-        return version
+        return dict(choices=version_objs)
+
+    def build_versions(self, versions):
+        version_objs = []
+        for version in versions:
+            version = versions[version]
+            version_objs.append({
+                "id": version['id'],
+                "status": version['status'],
+                "updated": version['updated'],
+                "links": self._build_links(version),
+            })
+
+        return dict(versions=version_objs)
+
+    def build_version(self, version):
+        reval = copy.deepcopy(version)
+        reval['links'].insert(0, {
+            "rel": "self",
+            "href": self.base_url.rstrip('/') + '/',
+        })
+        return dict(version=reval)
 
     def _build_links(self, version_data):
         """Generate a container of links that refer to the provided version."""
@@ -54,6 +84,11 @@ class ViewBuilder(object):
 
         return links
 
-    def generate_href(self, version_number):
+    def generate_href(self, version_number, path=None):
         """Create an url that refers to a specific version_number."""
-        return os.path.join(self.base_url, version_number)
+        version_number = version_number.strip('/')
+        if path:
+            path = path.strip('/')
+            return os.path.join(self.base_url, version_number, path)
+        else:
+            return os.path.join(self.base_url, version_number) + '/'

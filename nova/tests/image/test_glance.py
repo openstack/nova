@@ -31,6 +31,9 @@ class StubGlanceClient(object):
         self.add_response = add_response
         self.update_response = update_response
 
+    def set_auth_token(self, auth_tok):
+        pass
+
     def get_image_meta(self, image_id):
         return self.images[image_id]
 

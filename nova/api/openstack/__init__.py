@@ -40,6 +40,7 @@ from nova.api.openstack import servers
 from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
+from nova.api.openstack import versions
 from nova.api.openstack import wsgi
 from nova.api.openstack import zones
 
@@ -96,6 +97,7 @@ class APIRouter(base_wsgi.Router):
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
             server_members['rescue'] = 'POST'
+            server_members['migrate'] = 'POST'
             server_members['unrescue'] = 'POST'
             server_members['reset_network'] = 'POST'
             server_members['inject_network_info'] = 'POST'
@@ -115,6 +117,10 @@ class APIRouter(base_wsgi.Router):
                                     'select': 'POST',
                                     'boot': 'POST'})
 
+        mapper.connect("versions", "/",
+                    controller=versions.create_resource(version),
+                    action='show')
+
         mapper.resource("console", "consoles",
                     controller=consoles.create_resource(),
                     parent_resource=dict(member_name='server',
@@ -124,6 +130,10 @@ class APIRouter(base_wsgi.Router):
                         controller=servers.create_resource(version),
                         collection={'detail': 'GET'},
                         member=self.server_members)
+
+        mapper.resource("ip", "ips", controller=ips.create_resource(version),
+                        parent_resource=dict(member_name='server',
+                                             collection_name='servers'))
 
         mapper.resource("image", "images",
                         controller=images.create_resource(version),
@@ -144,9 +154,6 @@ class APIRouterV10(APIRouter):
 
     def _setup_routes(self, mapper):
         super(APIRouterV10, self)._setup_routes(mapper, '1.0')
-        mapper.resource("image", "images",
-                        controller=images.create_resource('1.0'),
-                        collection={'detail': 'GET'})
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
@@ -157,23 +164,33 @@ class APIRouterV10(APIRouter):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("ip", "ips", controller=ips.create_resource(),
-                        collection=dict(public='GET', private='GET'),
-                        parent_resource=dict(member_name='server',
-                                             collection_name='servers'))
-
 
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
         super(APIRouterV11, self)._setup_routes(mapper, '1.1')
-        mapper.resource("image_meta", "meta",
-                        controller=image_metadata.create_resource(),
+
+        image_metadata_controller = image_metadata.create_resource()
+
+        mapper.resource("image_meta", "metadata",
+                        controller=image_metadata_controller,
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
 
-        mapper.resource("server_meta", "meta",
-                        controller=server_metadata.create_resource(),
+        mapper.connect("metadata", "/images/{image_id}/metadata",
+                       controller=image_metadata_controller,
+                       action='update_all',
+                       conditions={"method": ['PUT']})
+
+        server_metadata_controller = server_metadata.create_resource()
+
+        mapper.resource("server_meta", "metadata",
+                        controller=server_metadata_controller,
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
+
+        mapper.connect("metadata", "/servers/{server_id}/metadata",
+                       controller=server_metadata_controller,
+                       action='update_all',
+                       conditions={"method": ['PUT']})

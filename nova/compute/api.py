@@ -32,6 +32,7 @@ from nova import quota
 from nova import rpc
 from nova import utils
 from nova import volume
+from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute.utils import terminate_volumes
@@ -126,7 +127,7 @@ class API(base.Base):
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
             pid = context.project_id
-            msg = _("Quota exceeeded for %(pid)s, tried to set "
+            msg = _("Quota exceeded for %(pid)s, tried to set "
                     "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
             raise quota.QuotaError(msg, "MetadataLimitExceeded")
@@ -137,7 +138,7 @@ class API(base.Base):
         for k, v in metadata.iteritems():
             if len(k) > 255 or len(v) > 255:
                 pid = context.project_id
-                msg = _("Quota exceeeded for %(pid)s, metadata property "
+                msg = _("Quota exceeded for %(pid)s, metadata property "
                         "key or value too long") % locals()
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
@@ -164,7 +165,7 @@ class API(base.Base):
                                                 instance_type)
         if num_instances < min_count:
             pid = context.project_id
-            LOG.warn(_("Quota exceeeded for %(pid)s,"
+            LOG.warn(_("Quota exceeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
             if num_instances <= 0:
                 message = _("Instance quota exceeded. You cannot run any "
@@ -217,6 +218,9 @@ class API(base.Base):
         if reservation_id is None:
             reservation_id = utils.generate_uid('r')
 
+        root_device_name = ec2utils.properties_root_device_name(
+            image['properties'])
+
         base_options = {
             'reservation_id': reservation_id,
             'image_ref': image_href,
@@ -241,11 +245,61 @@ class API(base.Base):
             'availability_zone': availability_zone,
             'os_type': os_type,
             'architecture': architecture,
-            'vm_mode': vm_mode}
+            'vm_mode': vm_mode,
+            'root_device_name': root_device_name}
 
-        return (num_instances, base_options)
+        return (num_instances, base_options, image)
 
-    def create_db_entry_for_new_instance(self, context, base_options,
+    def _update_image_block_device_mapping(self, elevated_context, instance_id,
+                                           mappings):
+        """tell vm driver to create ephemeral/swap device at boot time by
+        updating BlockDeviceMapping
+        """
+        for bdm in ec2utils.mappings_prepend_dev(mappings):
+            LOG.debug(_("bdm %s"), bdm)
+
+            virtual_name = bdm['virtual']
+            if virtual_name == 'ami' or virtual_name == 'root':
+                continue
+
+            assert (virtual_name == 'swap' or
+                    virtual_name.startswith('ephemeral'))
+            values = {
+                'instance_id': instance_id,
+                'device_name': bdm['device'],
+                'virtual_name': virtual_name, }
+            self.db.block_device_mapping_update_or_create(elevated_context,
+                                                          values)
+
+    def _update_block_device_mapping(self, elevated_context, instance_id,
+                                     block_device_mapping):
+        """tell vm driver to attach volume at boot time by updating
+        BlockDeviceMapping
+        """
+        for bdm in block_device_mapping:
+            LOG.debug(_('bdm %s'), bdm)
+            assert 'device_name' in bdm
+
+            values = {'instance_id': instance_id}
+            for key in ('device_name', 'delete_on_termination', 'virtual_name',
+                        'snapshot_id', 'volume_id', 'volume_size',
+                        'no_device'):
+                values[key] = bdm.get(key)
+
+            # NOTE(yamahata): NoDevice eliminates devices defined in image
+            #                 files by command line option.
+            #                 (--block-device-mapping)
+            if bdm.get('virtual_name') == 'NoDevice':
+                values['no_device'] = True
+                for k in ('delete_on_termination', 'volume_id',
+                          'snapshot_id', 'volume_id', 'volume_size',
+                          'virtual_name'):
+                    values[k] = None
+
+            self.db.block_device_mapping_update_or_create(elevated_context,
+                                                          values)
+
+    def create_db_entry_for_new_instance(self, context, image, base_options,
              security_group, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
@@ -278,23 +332,14 @@ class API(base.Base):
                                                 instance_id,
                                                 security_group_id)
 
-        block_device_mapping = block_device_mapping or []
-        # NOTE(yamahata)
-        # tell vm driver to attach volume at boot time by updating
-        # BlockDeviceMapping
-        for bdm in block_device_mapping:
-            LOG.debug(_('bdm %s'), bdm)
-            assert 'device_name' in bdm
-            values = {
-                'instance_id': instance_id,
-                'device_name': bdm['device_name'],
-                'delete_on_termination': bdm.get('delete_on_termination'),
-                'virtual_name': bdm.get('virtual_name'),
-                'snapshot_id': bdm.get('snapshot_id'),
-                'volume_id': bdm.get('volume_id'),
-                'volume_size': bdm.get('volume_size'),
-                'no_device': bdm.get('no_device')}
-            self.db.block_device_mapping_create(elevated, values)
+        # BlockDeviceMapping table
+        self._update_image_block_device_mapping(elevated, instance_id,
+            image['properties'].get('mappings', []))
+        self._update_block_device_mapping(elevated, instance_id,
+            image['properties'].get('block_device_mapping', []))
+        # override via command line option
+        self._update_block_device_mapping(elevated, instance_id,
+                                          block_device_mapping)
 
         # Set sane defaults if not specified
         updates = {}
@@ -356,7 +401,7 @@ class API(base.Base):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
-        num_instances, base_options = self._check_create_parameters(
+        num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -394,7 +439,7 @@ class API(base.Base):
         Returns a list of instance dicts.
         """
 
-        num_instances, base_options = self._check_create_parameters(
+        num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -404,10 +449,11 @@ class API(base.Base):
                                injected_files, admin_password, zone_blob,
                                reservation_id)
 
+        block_device_mapping = block_device_mapping or []
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
-            instance = self.create_db_entry_for_new_instance(context,
+            instance = self.create_db_entry_for_new_instance(context, image,
                                     base_options, security_group,
                                     block_device_mapping, num=num)
             instances.append(instance)
@@ -421,10 +467,10 @@ class API(base.Base):
 
         return [dict(x.iteritems()) for x in instances]
 
-    def has_finished_migration(self, context, instance_id):
+    def has_finished_migration(self, context, instance_uuid):
         """Returns true if an instance has a finished migration."""
         try:
-            db.migration_get_by_instance_and_status(context, instance_id,
+            db.migration_get_by_instance_and_status(context, instance_uuid,
                     'finished')
             return True
         except exception.NotFound:
@@ -515,6 +561,7 @@ class API(base.Base):
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
 
+    @scheduler_api.reroute_compute("update")
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
@@ -642,7 +689,7 @@ class API(base.Base):
                     raise
                 instances = None
         elif project_id or not context.is_admin:
-            if not context.project:
+            if not context.project_id:
                 instances = self.db.instance_get_all_by_user(
                     context, context.user_id)
             else:
@@ -730,6 +777,7 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
+    @scheduler_api.reroute_compute("backup")
     def backup(self, context, instance_id, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
@@ -746,6 +794,7 @@ class API(base.Base):
                             extra_properties=extra_properties)
         return recv_meta
 
+    @scheduler_api.reroute_compute("snapshot")
     def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
 
@@ -788,10 +837,12 @@ class API(base.Base):
                                    params=params)
         return recv_meta
 
+    @scheduler_api.reroute_compute("reboot")
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, name=None,
             metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
@@ -822,39 +873,50 @@ class API(base.Base):
                                    instance_id,
                                    params=rebuild_params)
 
+    @scheduler_api.reroute_compute("revert_resize")
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
+        instance_ref = self._get_instance(context, instance_id,
+                'revert_resize')
         migration_ref = self.db.migration_get_by_instance_and_status(context,
-                instance_id, 'finished')
+                instance_ref['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
 
         params = {'migration_id': migration_ref['id']}
-        self._cast_compute_message('revert_resize', context, instance_id,
-                migration_ref['dest_compute'], params=params)
+        self._cast_compute_message('revert_resize', context,
+                                   instance_ref['uuid'],
+                                   migration_ref['dest_compute'],
+                                   params=params)
+
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'reverted'})
 
+    @scheduler_api.reroute_compute("confirm_resize")
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize and deletes the 'old' instance."""
         context = context.elevated()
+        instance_ref = self._get_instance(context, instance_id,
+                'confirm_resize')
         migration_ref = self.db.migration_get_by_instance_and_status(context,
-                instance_id, 'finished')
+                instance_ref['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
-        instance_ref = self.db.instance_get(context, instance_id)
         params = {'migration_id': migration_ref['id']}
-        self._cast_compute_message('confirm_resize', context, instance_id,
-                migration_ref['source_compute'], params=params)
+        self._cast_compute_message('confirm_resize', context,
+                                   instance_ref['uuid'],
+                                   migration_ref['source_compute'],
+                                   params=params)
 
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })
 
+    @scheduler_api.reroute_compute("resize")
     def resize(self, context, instance_id, flavor_id=None):
         """Resize (ie, migrate) a running instance.
 
@@ -862,8 +924,8 @@ class API(base.Base):
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
         """
-        instance = self.db.instance_get(context, instance_id)
-        current_instance_type = instance['instance_type']
+        instance_ref = self._get_instance(context, instance_id, 'resize')
+        current_instance_type = instance_ref['instance_type']
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:
@@ -878,31 +940,35 @@ class API(base.Base):
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
                 " new instance type %(new_instance_type_name)s") % locals())
         if not new_instance_type:
-            raise exception.ApiError(_("Requested flavor %(flavor_id)d "
-                    "does not exist") % locals())
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         current_memory_mb = current_instance_type['memory_mb']
         new_memory_mb = new_instance_type['memory_mb']
         if current_memory_mb > new_memory_mb:
-            raise exception.ApiError(_("Invalid flavor: cannot downsize"
-                    "instances"))
+            raise exception.CannotResizeToSmallerSize()
 
         if (current_memory_mb == new_memory_mb) and flavor_id:
-            raise exception.ApiError(_("Invalid flavor: cannot use"
-                    "the same flavor. "))
+            raise exception.CannotResizeToSameSize()
 
+        instance_ref = self._get_instance(context, instance_id, 'resize')
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_id": instance_id,
-                              "flavor_id": new_instance_type['id']}})
+                              "instance_id": instance_ref['uuid'],
+                              "instance_type_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):
         """Add fixed_ip from specified network to given instance."""
         self._cast_compute_message('add_fixed_ip_to_instance', context,
-                                                              instance_id,
-                                                              network_id)
+                                   instance_id,
+                                   params=dict(network_id=network_id))
+
+    @scheduler_api.reroute_compute("remove_fixed_ip")
+    def remove_fixed_ip(self, context, instance_id, address):
+        """Remove fixed_ip from specified network to given instance."""
+        self._cast_compute_message('remove_fixed_ip_from_instance', context,
+                                   instance_id, params=dict(address=address))
 
     #TODO(tr3buchet): how to run this in the correct zone?
     def add_network_to_project(self, context, project_id):
@@ -960,6 +1026,7 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("set_admin_password")
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
         host = self._find_host(context, instance_id)

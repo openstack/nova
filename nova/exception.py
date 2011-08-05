@@ -24,8 +24,9 @@ SHOULD include dedicated exception logging.
 
 """
 
-from nova import log as logging
+from functools import wraps
 
+from nova import log as logging
 
 LOG = logging.getLogger('nova.exception')
 
@@ -77,23 +78,54 @@ def wrap_db_error(f):
         except Exception, e:
             LOG.exception(_('DB exception wrapped.'))
             raise DBError(e)
-    return _wrap
-    _wrap.func_name = f.func_name
-
-
-def wrap_exception(f):
-    def _wrap(*args, **kw):
-        try:
-            return f(*args, **kw)
-        except Exception, e:
-            if not isinstance(e, Error):
-                #exc_type, exc_value, exc_traceback = sys.exc_info()
-                LOG.exception(_('Uncaught exception'))
-                #logging.error(traceback.extract_stack(exc_traceback))
-                raise Error(str(e))
-            raise
     _wrap.func_name = f.func_name
     return _wrap
+
+
+def wrap_exception(notifier=None, publisher_id=None, event_type=None,
+                   level=None):
+    """This decorator wraps a method to catch any exceptions that may
+    get thrown. It logs the exception as well as optionally sending
+    it to the notification system.
+    """
+    # TODO(sandy): Find a way to import nova.notifier.api so we don't have
+    # to pass it in as a parameter. Otherwise we get a cyclic import of
+    # nova.notifier.api -> nova.utils -> nova.exception :(
+    def inner(f):
+        def wrapped(*args, **kw):
+            try:
+                return f(*args, **kw)
+            except Exception, e:
+                if notifier:
+                    payload = dict(args=args, exception=e)
+                    payload.update(kw)
+
+                    # Use a temp vars so we don't shadow
+                    # our outer definitions.
+                    temp_level = level
+                    if not temp_level:
+                        temp_level = notifier.ERROR
+
+                    temp_type = event_type
+                    if not temp_type:
+                        # If f has multiple decorators, they must use
+                        # functools.wraps to ensure the name is
+                        # propagated.
+                        temp_type = f.__name__
+
+                    notifier.notify(publisher_id, temp_type, temp_level,
+                                    payload)
+
+                if (not isinstance(e, Error) and
+                    not isinstance(e, NovaException)):
+                    #exc_type, exc_value, exc_traceback = sys.exc_info()
+                    LOG.exception(_('Uncaught exception'))
+                    #logging.error(traceback.extract_stack(exc_traceback))
+                    raise Error(str(e))
+                raise
+
+        return wraps(f)(wrapped)
+    return inner
 
 
 class NovaException(Exception):
@@ -341,6 +373,10 @@ class StorageRepositoryNotFound(NotFound):
     message = _("Cannot find SR to read/write VDI.")
 
 
+class NetworkNotCreated(NovaException):
+    message = _("%(req)s is required to create a network.")
+
+
 class NetworkNotFound(NotFound):
     message = _("Network %(network_id)s could not be found.")
 
@@ -375,6 +411,15 @@ class FixedIpNotFoundForAddress(FixedIpNotFound):
 
 class FixedIpNotFoundForInstance(FixedIpNotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
+
+
+class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
+    message = _("Network host %(host)s has zero fixed ips "
+                "in network %(network_id)s.")
+
+
+class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):
+    message = _("Instance %(instance_id)s doesn't have fixed ip '%(ip)s'.")
 
 
 class FixedIpNotFoundForVirtualInterface(FixedIpNotFound):
@@ -647,3 +692,11 @@ class PasteConfigNotFound(NotFound):
 
 class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
+
+
+class CannotResizeToSameSize(NovaException):
+    message = _("When resizing, instances must change size!")
+
+
+class CannotResizeToSmallerSize(NovaException):
+    message = _("Resizing to a smaller size is not supported.")

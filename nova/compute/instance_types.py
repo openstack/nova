@@ -112,7 +112,7 @@ def get_instance_type(id):
         return get_default_instance_type()
     try:
         ctxt = context.get_admin_context()
-        return db.instance_type_get_by_id(ctxt, id)
+        return db.instance_type_get(ctxt, id)
     except exception.DBError:
         raise exception.ApiError(_("Unknown instance type: %s") % id)
 
@@ -132,11 +132,8 @@ def get_instance_type_by_name(name):
 #               flavors.
 def get_instance_type_by_flavor_id(flavor_id):
     """Retrieve instance type by flavor_id."""
-    if flavor_id is None:
-        return get_default_instance_type()
+    ctxt = context.get_admin_context()
     try:
-        ctxt = context.get_admin_context()
         return db.instance_type_get_by_flavor_id(ctxt, flavor_id)
-    except exception.DBError, e:
-        LOG.exception(_('DB error: %s') % e)
-        raise exception.ApiError(_("Unknown flavor: %s") % flavor_id)
+    except ValueError:
+        raise exception.FlavorNotFound(flavor_id=flavor_id)

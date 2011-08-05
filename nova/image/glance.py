@@ -83,12 +83,21 @@ class GlanceImageService(service.BaseImageService):
 
     client = property(_get_client, _set_client)
 
+    def _set_client_context(self, context):
+        """Sets the client's auth token."""
+        self.client.set_auth_token(context.auth_token)
+
     def index(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of images available."""
         # NOTE(sirp): We need to use `get_images_detailed` and not
         # `get_images` here because we need `is_public` and `properties`
         # included so we can filter by user
+        self._set_client_context(context)
         filtered = []
+        filters = filters or {}
+        if 'is_public' not in filters:
+            # NOTE(vish): don't filter out private images
+            filters['is_public'] = 'none'
         image_metas = self.client.get_images_detailed(filters=filters,
                                                       marker=marker,
                                                       limit=limit)
@@ -100,7 +109,12 @@ class GlanceImageService(service.BaseImageService):
 
     def detail(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of detailed image information."""
+        self._set_client_context(context)
         filtered = []
+        filters = filters or {}
+        if 'is_public' not in filters:
+            # NOTE(vish): don't filter out private images
+            filters['is_public'] = 'none'
         image_metas = self.client.get_images_detailed(filters=filters,
                                                       marker=marker,
                                                       limit=limit)
@@ -112,6 +126,7 @@ class GlanceImageService(service.BaseImageService):
 
     def show(self, context, image_id):
         """Returns a dict with image data for the given opaque image id."""
+        self._set_client_context(context)
         try:
             image_meta = self.client.get_image_meta(image_id)
         except glance_exception.NotFound:
@@ -135,6 +150,7 @@ class GlanceImageService(service.BaseImageService):
 
     def get(self, context, image_id, data):
         """Calls out to Glance for metadata and data and writes data."""
+        self._set_client_context(context)
         try:
             image_meta, image_chunks = self.client.get_image(image_id)
         except glance_exception.NotFound:
@@ -152,6 +168,7 @@ class GlanceImageService(service.BaseImageService):
         :raises: AlreadyExists if the image already exist.
 
         """
+        self._set_client_context(context)
         # Translate Base -> Service
         LOG.debug(_('Creating image in Glance. Metadata passed in %s'),
                   image_meta)
@@ -174,6 +191,7 @@ class GlanceImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
+        self._set_client_context(context)
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         try:
@@ -190,6 +208,7 @@ class GlanceImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
+        self._set_client_context(context)
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         try:

@@ -26,11 +26,12 @@ import urllib
 import urllib2
 import uuid
 
-from nova import context
+from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import utils
 from nova.compute import power_state
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -38,6 +39,10 @@ from nova.virt.vmwareapi import vmware_images
 from nova.virt.vmwareapi import network_utils
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('vmware_vif_driver',
+                    'nova.virt.vmwareapi.vif.VMWareVlanBridgeDriver',
+                    'The VMWare VIF driver to configure the VIFs.')
+
 LOG = logging.getLogger("nova.virt.vmwareapi.vmops")
 
 VMWARE_POWER_STATES = {
@@ -52,6 +57,7 @@ class VMWareVMOps(object):
     def __init__(self, session):
         """Initializer."""
         self._session = session
+        self._vif_driver = utils.import_object(FLAGS.vmware_vif_driver)
 
     def _wait_with_callback(self, instance_id, task, callback):
         """Waits for the task to finish and does a callback after."""
@@ -83,7 +89,7 @@ class VMWareVMOps(object):
         LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
         return lst_vm_names
 
-    def spawn(self, instance):
+    def spawn(self, context, instance, network_info):
         """
         Creates a VM instance.
 
@@ -105,7 +111,7 @@ class VMWareVMOps(object):
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
 
-        network = db.network_get_by_instance(context.get_admin_context(),
+        network = db.network_get_by_instance(nova_context.get_admin_context(),
                                             instance['id'])
 
         net_name = network['bridge']
@@ -116,8 +122,10 @@ class VMWareVMOps(object):
                                                         net_name)
             if network_ref is None:
                 raise exception.NetworkNotFoundForBridge(bridge=net_name)
+            return network_ref
 
-        _check_if_network_bridge_exists()
+        self.plug_vifs(instance, network_info)
+        network_obj = _check_if_network_bridge_exists()
 
         def _get_datastore_ref():
             """Get the datastore list and choose the first local storage."""
@@ -175,8 +183,10 @@ class VMWareVMOps(object):
         vm_folder_mor, res_pool_mor = _get_vmfolder_and_res_pool_mors()
 
         # Get the create vm config spec
-        config_spec = vm_util.get_vm_create_spec(client_factory, instance,
-                                data_store_name, net_name, os_type)
+        config_spec = vm_util.get_vm_create_spec(
+                            client_factory, instance,
+                            data_store_name, net_name, os_type,
+                            network_obj)
 
         def _execute_create_vm():
             """Create VM on ESX host."""
@@ -319,7 +329,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Powered on the VM instance %s") % instance.name)
         _power_on_vm()
 
-    def snapshot(self, instance, snapshot_name):
+    def snapshot(self, context, instance, snapshot_name):
         """
         Create snapshot from a running VM instance.
         Steps followed are:
@@ -472,11 +482,14 @@ class VMWareVMOps(object):
 
         _clean_temp_data()
 
-    def reboot(self, instance):
+    def reboot(self, instance, network_info):
         """Reboot a VM instance."""
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance.id)
+
+        self.plug_vifs(instance, network_info)
+
         lst_properties = ["summary.guest.toolsStatus", "runtime.powerState",
                           "summary.guest.toolsRunningStatus"]
         props = self._session._call_method(vim_util, "get_object_properties",
@@ -514,7 +527,7 @@ class VMWareVMOps(object):
             self._session._wait_for_task(instance.id, reset_task)
             LOG.debug(_("Did hard reboot of VM %s") % instance.name)
 
-    def destroy(self, instance):
+    def destroy(self, instance, network_info):
         """
         Destroy a VM instance. Steps followed are:
         1. Power off the VM, if it is in poweredOn state.
@@ -559,6 +572,8 @@ class VMWareVMOps(object):
             except Exception, excep:
                 LOG.warn(_("In vmwareapi:vmops:destroy, got this exception"
                            " while un-registering the VM: %s") % str(excep))
+
+            self._unplug_vifs(instance, network_info)
 
             # Delete the folder holding the VM related content on
             # the datastore.
@@ -706,11 +721,11 @@ class VMWareVMOps(object):
         Set the machine id of the VM for guest tools to pick up and change
         the IP.
         """
-        admin_context = context.get_admin_context()
+        admin_context = nova_context.get_admin_context()
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance.id)
-        network = db.network_get_by_instance(context.get_admin_context(),
+        network = db.network_get_by_instance(nova_context.get_admin_context(),
                                             instance['id'])
         mac_address = None
         if instance['mac_addresses']:
@@ -718,20 +733,25 @@ class VMWareVMOps(object):
 
         net_mask = network["netmask"]
         gateway = network["gateway"]
+        broadcast = network["broadcast"]
+        # TODO(vish): add support for dns2
+        dns = network["dns1"]
+
         addresses = db.instance_get_fixed_addresses(admin_context,
                                                     instance['id'])
         ip_addr = addresses[0] if addresses else None
 
-        machine_id_chanfge_spec = \
+        machine_id_change_spec = \
             vm_util.get_machine_id_change_spec(client_factory, mac_address,
-                                        ip_addr, net_mask, gateway)
+                                               ip_addr, net_mask, gateway,
+                                               broadcast, dns)
         LOG.debug(_("Reconfiguring VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %
                   ({'name': instance.name,
                    'ip_addr': ip_addr}))
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
-                           spec=machine_id_chanfge_spec)
+                           spec=machine_id_change_spec)
         self._session._wait_for_task(instance.id, reconfig_task)
         LOG.debug(_("Reconfigured VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %
@@ -784,3 +804,13 @@ class VMWareVMOps(object):
             if vm.propSet[0].val == vm_name:
                 return vm.obj
         return None
+
+    def plug_vifs(self, instance, network_info):
+        """Plug VIFs into networks."""
+        for (network, mapping) in network_info:
+            self._vif_driver.plug(instance, network, mapping)
+
+    def _unplug_vifs(self, instance, network_info):
+        """Unplug VIFs from networks."""
+        for (network, mapping) in network_info:
+            self._vif_driver.unplug(instance, network, mapping)

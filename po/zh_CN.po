@@ -8,25 +8,20 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-04-07 05:01+0000\n"
-"Last-Translator: ben <Unknown>\n"
+"PO-Revision-Date: 2011-06-14 14:44+0000\n"
+"Last-Translator: chong <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-04-08 05:28+0000\n"
-"X-Generator: Launchpad (build 12735)\n"
-
-#: ../nova/twistd.py:266
-#, python-format
-msgid "Starting %s"
-msgstr "启动 %s 中"
+"X-Launchpad-Export-Date: 2011-07-23 05:12+0000\n"
+"X-Generator: Launchpad (build 13405)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
 #: ../nova/scheduler/simple.py:122
 msgid "No hosts found"
-msgstr "未找到主机"
+msgstr "没有找到主机"
 
 #: ../nova/exception.py:33
 msgid "Unexpected error while running command."
@@ -41,6 +36,11 @@ msgid ""
 "Stdout: %(stdout)r\n"
 "Stderr: %(stderr)r"
 msgstr ""
+"%(description)s\n"
+"命令: %(cmd)s\n"
+"退出代码: %(exit_code)s\n"
+"标准输出: %(stdout)r\n"
+"标准出错: %(stderr)r"
 
 #: ../nova/exception.py:107
 msgid "DB exception wrapped"
@@ -129,28 +129,6 @@ msgstr ""
 #, python-format
 msgid "compute.api::resume %s"
 msgstr ""
-
-#: ../nova/twistd.py:157
-msgid "Wrong number of arguments."
-msgstr "错误参数个数。"
-
-#: ../nova/twistd.py:209
-#, python-format
-msgid "pidfile %s does not exist. Daemon not running?\n"
-msgstr "pidfile %s　不存在，守护进程是否运行？\n"
-
-#: ../nova/twistd.py:221
-msgid "No such process"
-msgstr "没有该进程"
-
-#: ../nova/twistd.py:230 ../nova/service.py:224
-#, python-format
-msgid "Serving %s"
-msgstr "正在为 %s 服务"
-
-#: ../nova/twistd.py:262 ../nova/service.py:225
-msgid "Full set of FLAGS:"
-msgstr "FLAGS全集："
 
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:731 ../nova/virt/libvirt_conn.py:741
@@ -309,17 +287,17 @@ msgstr ""
 #: ../nova/compute/manager.py:233 ../nova/tests/test_cloud.py:286
 #, python-format
 msgid "Terminating instance %s"
-msgstr ""
+msgstr "正在结束实例 %s"
 
 #: ../nova/compute/manager.py:255
 #, python-format
 msgid "Deallocating address %s"
-msgstr ""
+msgstr "取消分配地址 %s"
 
 #: ../nova/compute/manager.py:268
 #, python-format
 msgid "trying to destroy already destroyed instance: %s"
-msgstr ""
+msgstr "尝试销毁已经销毁的实例: %s"
 
 #: ../nova/compute/manager.py:282
 #, python-format
@@ -331,12 +309,12 @@ msgstr "重启虚拟机 %s"
 msgid ""
 "trying to reboot a non-running instance: %(instance_id)s (state: %(state)s "
 "expected: %(running)s)"
-msgstr ""
+msgstr "尝试重启没有在运行中实例: %(instance_id)s (状态: %(state)s 预料: %(running)s)"
 
 #: ../nova/compute/manager.py:311
 #, python-format
 msgid "instance %s: snapshotting"
-msgstr ""
+msgstr "实例 %s: 快照中"
 
 #: ../nova/compute/manager.py:316
 #, python-format
@@ -351,6 +329,8 @@ msgid ""
 "trying to reset the password on a non-running instance: %(instance_id)s "
 "(state: %(instance_state)s expected: %(expected_state)s)"
 msgstr ""
+"尝试对没有在运行的实例重置密码: %(instance_id)s (状态: %(instance_state)s 预料: "
+"%(expected_state)s)"
 
 #: ../nova/compute/manager.py:335
 #, python-format
@@ -1778,34 +1758,6 @@ msgstr ""
 msgid "Got exception: %s"
 msgstr ""
 
-#: ../nova/compute/monitor.py:259
-#, python-format
-msgid "updating %s..."
-msgstr ""
-
-#: ../nova/compute/monitor.py:289
-msgid "unexpected error during update"
-msgstr ""
-
-#: ../nova/compute/monitor.py:356
-#, python-format
-msgid "Cannot get blockstats for \"%(disk)s\" on \"%(iid)s\""
-msgstr ""
-
-#: ../nova/compute/monitor.py:379
-#, python-format
-msgid "Cannot get ifstats for \"%(interface)s\" on \"%(iid)s\""
-msgstr ""
-
-#: ../nova/compute/monitor.py:414
-msgid "unexpected exception getting connection"
-msgstr ""
-
-#: ../nova/compute/monitor.py:429
-#, python-format
-msgid "Found instance: %s"
-msgstr ""
-
 #: ../nova/volume/san.py:67
 #, python-format
 msgid "Could not find iSCSI export  for volume %s"
@@ -2261,10 +2213,6 @@ msgstr ""
 
 #: ../nova/wsgi.py:147
 msgid "You must implement __call__"
-msgstr ""
-
-#: ../bin/nova-instancemonitor.py:55
-msgid "Starting instance monitor"
 msgstr ""
 
 #: ../bin/nova-dhcpbridge.py:58

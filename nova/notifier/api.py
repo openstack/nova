@@ -17,7 +17,9 @@ import uuid
 
 from nova import flags
 from nova import utils
+from nova import log as logging
 
+LOG = logging.getLogger('nova.exception')
 
 FLAGS = flags.FLAGS
 
@@ -35,6 +37,12 @@ log_levels = (DEBUG, WARN, INFO, ERROR, CRITICAL)
 
 class BadPriorityException(Exception):
     pass
+
+
+def publisher_id(service, host=None):
+    if not host:
+        host = FLAGS.host
+    return "%s.%s" % (service, host)
 
 
 def notify(publisher_id, event_type, priority, payload):
@@ -72,6 +80,10 @@ def notify(publisher_id, event_type, priority, payload):
     if priority not in log_levels:
         raise BadPriorityException(
                  _('%s not in valid priorities' % priority))
+
+    # Ensure everything is JSON serializable.
+    payload = utils.to_primitive(payload, convert_instances=True)
+
     driver = utils.import_object(FLAGS.notification_driver)
     msg = dict(message_id=str(uuid.uuid4()),
                    publisher_id=publisher_id,
@@ -79,4 +91,8 @@ def notify(publisher_id, event_type, priority, payload):
                    priority=priority,
                    payload=payload,
                    timestamp=str(utils.utcnow()))
-    driver.notify(msg)
+    try:
+        driver.notify(msg)
+    except Exception, e:
+        LOG.exception(_("Problem '%(e)s' attempting to "
+                        "send to notification system." % locals()))
