@@ -349,7 +349,7 @@ class LibvirtConnection(driver.ComputeDriver):
         """Returns the xml for the disk mounted at device"""
         try:
             doc = libxml2.parseDoc(xml)
-        except:
+        except Exception:
             return None
         ctx = doc.xpathNewContext()
         try:
@@ -1077,7 +1077,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         try:
             doc = libxml2.parseDoc(xml)
-        except:
+        except Exception:
             return []
 
         ctx = doc.xpathNewContext()
@@ -1118,7 +1118,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         try:
             doc = libxml2.parseDoc(xml)
-        except:
+        except Exception:
             return []
 
         ctx = doc.xpathNewContext()

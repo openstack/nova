@@ -147,7 +147,7 @@ class Authenticate(wsgi.Middleware):
         try:
             signature = req.params['Signature']
             access = req.params['AWSAccessKeyId']
-        except:
+        except KeyError, e:
             raise webob.exc.HTTPBadRequest()
 
         # Make a copy of args for authentication and signature verification.
@@ -211,7 +211,7 @@ class Requestify(wsgi.Middleware):
             for non_arg in non_args:
                 # Remove, but raise KeyError if omitted
                 args.pop(non_arg)
-        except:
+        except KeyError, e:
             raise webob.exc.HTTPBadRequest()
 
         LOG.debug(_('action: %s'), action)

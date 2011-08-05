@@ -964,13 +964,10 @@ class ZoneRedirectTest(test.TestCase):
         self.stubs.Set(db, 'zone_get_all', zone_get_all)
         self.stubs.Set(db, 'instance_get_by_uuid',
                        fake_instance_get_by_uuid)
-
-        self.enable_zone_routing = FLAGS.enable_zone_routing
-        FLAGS.enable_zone_routing = True
+        self.flags(enable_zone_routing=True)
 
     def tearDown(self):
         self.stubs.UnsetAll()
-        FLAGS.enable_zone_routing = self.enable_zone_routing
         super(ZoneRedirectTest, self).tearDown()
 
     def test_trap_found_locally(self):
@@ -1000,7 +997,7 @@ class ZoneRedirectTest(test.TestCase):
             self.assertEquals(e.results['magic'], 'found me')
 
     def test_routing_flags(self):
-        FLAGS.enable_zone_routing = False
+        self.flags(enable_zone_routing=False)
         decorator = FakeRerouteCompute("foo")
         self.assertRaises(exception.InstanceNotFound, decorator(go_boom),
                           None, None, 1)

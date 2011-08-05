@@ -167,11 +167,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                             'nova-compute restart.'), locals())
                 self.reboot_instance(context, instance['id'])
             elif drv_state == power_state.RUNNING:
-                try:  # Hyper-V and VMWareAPI drivers will raise and exception
+                # Hyper-V and VMWareAPI drivers will raise and exception
+                try:
                     self.driver.ensure_filtering_rules_for_instance(instance)
                 except NotImplementedError:
-                    LOG.warning(
-                       _('Hypervisor driver does not support firewall rules'))
+                    LOG.warning(_('Hypervisor driver does not '
+                            'support firewall rules'))
 
     def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
@@ -747,7 +748,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'finish_revert_resize',
-                 'args': {'migration_id': migration_ref['id']},
+                 'args': {'instance_id': instance_ref['uuid'],
+                          'migration_id': migration_ref['id']},
                 })
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

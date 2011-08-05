@@ -191,7 +191,7 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
-        self._vmops.revert_resize(instance)
+        self._vmops.revert_migration(instance)
 
     def finish_migration(self, context, instance, disk_info, network_info,
                          resize_instance=False):
@@ -242,13 +242,13 @@ class XenAPIConnection(driver.ComputeDriver):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
-    def rescue(self, context, instance, callback, network_info):
+    def rescue(self, context, instance, _callback, network_info):
         """Rescue the specified instance"""
-        self._vmops.rescue(context, instance, callback, network_info)
+        self._vmops.rescue(context, instance, _callback, network_info)
 
-    def unrescue(self, instance, callback, network_info):
+    def unrescue(self, instance, _callback, network_info):
         """Unrescue the specified instance"""
-        self._vmops.unrescue(instance, callback)
+        self._vmops.unrescue(instance, _callback)
 
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
@@ -440,7 +440,7 @@ class XenAPISession(object):
                 params = None
                 try:
                     params = eval(exc.details[3])
-                except:
+                except Exception:
                     raise exc
                 raise self.XenAPI.Failure(params)
             else:
