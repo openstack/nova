@@ -620,8 +620,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         req_net_ip = str(req_net.ip)
         req_size = network_size * num_networks
         if req_size > req_net.size:
-            msg = "network_size * num_networks exceeds cidr size"
-            raise ValueError(_(msg))
+            msg = _("network_size * num_networks exceeds cidr size")
+            raise ValueError(msg)
         adjusted_cidr_str = req_net_ip + '/' + str(significant_bits)
         adjusted_cidr = netaddr.IPNetwork(adjusted_cidr_str)
         try:
@@ -633,8 +633,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             raise ValueError(_("cidr already in use"))
         for adjusted_cidr_supernet in adjusted_cidr.supernet():
             if adjusted_cidr_supernet in used_cidrs:
-                msg = "requested cidr (%s) conflicts with existing supernet"
-                raise ValueError(_(msg % str(adjusted_cidr)))
+                msg = _("requested cidr (%s) conflicts with existing supernet")
+                raise ValueError(msg % str(adjusted_cidr))
         # watch for smaller subnets conflicting
         used_supernets = []
         for used_cidr in used_cidrs:
@@ -647,9 +647,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         all_req_nets = []
         if num_networks == 1:
             if adjusted_cidr in used_supernets:
-                msg = "requested cidr (%s) conflicts with existing smaller" \
-                      " cidr"
-                raise ValueError(_(msg % str(adjusted_cidr)))
+                msg = _("requested cidr (%s) conflicts with existing smaller" \
+                      " cidr")
+                raise ValueError(msg % str(adjusted_cidr))
             else:
                 all_req_nets.append(adjusted_cidr)
         elif num_networks >= 2:
@@ -657,17 +657,14 @@ class NetworkManager(manager.SchedulerDependentManager):
             next_cidr = adjusted_cidr
             for index in range(num_networks):
                 if next_cidr.first > req_net.last:
-                    msg = "Not enough subnets avail to satisfy requested " \
+                    msg = ("Not enough subnets avail to satisfy requested " \
                           "num_net works - some subnets in requested range" \
-                          " already in use"
-                    raise ValueError(_(msg))
+                          " already in use")
+                    raise ValueError(msg)
                 while True:
-                    if next_cidr in used_cidrs:
+                    used_values = used_cidrs + used_supernets
+                    if next_cidr in used_values:
                         next_cidr = next_cidr.next()
-                        continue
-                    elif next_cidr in used_supernets:
-                        next_cidr = next_cidr.next()
-                        continue
                     else:
                         all_req_nets.append(next_cidr)
                         next_cidr = next_cidr.next()

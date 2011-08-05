@@ -280,14 +280,14 @@ class CommonNetworkTestCase(test.TestCase):
                           manager.remove_fixed_ip_from_instance,
                           None, 99, 'bad input')
 
-    def test__validate_cidrs(self):
+    def test_validate_cidrs(self):
         manager = self.FakeNetworkManager()
         nets = manager._validate_cidrs(None, '192.168.0.0/24', 1, 256)
         self.assertEqual(1, len(nets))
         cidrs = [str(net) for net in nets]
         self.assertTrue('192.168.0.0/24' in cidrs)
 
-    def test__validate_cidrs_split_exact_in_half(self):
+    def test_validate_cidrs_split_exact_in_half(self):
         manager = self.FakeNetworkManager()
         nets = manager._validate_cidrs(None, '192.168.0.0/24', 2, 128)
         self.assertEqual(2, len(nets))
@@ -295,7 +295,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertTrue('192.168.0.0/25' in cidrs)
         self.assertTrue('192.168.0.128/25' in cidrs)
 
-    def test__validate_cidrs_split_cidr_in_use_middle_of_range(self):
+    def test_validate_cidrs_split_cidr_in_use_middle_of_range(self):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
@@ -305,13 +305,13 @@ class CommonNetworkTestCase(test.TestCase):
         nets = manager._validate_cidrs(None, '192.168.0.0/16', 4, 256)
         self.assertEqual(4, len(nets))
         cidrs = [str(net) for net in nets]
-        exp_cidrs = ['192.168.0.0', '192.168.1.0', '192.168.3.0',
-                     '192.168.4.0']
+        exp_cidrs = ['192.168.0.0/24', '192.168.1.0/24', '192.168.3.0/24',
+                     '192.168.4.0/24']
         for exp_cidr in exp_cidrs:
-            self.assertTrue(exp_cidr + '/24' in cidrs)
+            self.assertTrue(exp_cidr in cidrs)
         self.assertFalse('192.168.2.0/24' in cidrs)
 
-    def test__validate_cidrs_smaller_subnet_in_use(self):
+    def test_validate_cidrs_smaller_subnet_in_use(self):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
@@ -323,7 +323,7 @@ class CommonNetworkTestCase(test.TestCase):
         args = [None, '192.168.2.0/24', 1, 256]
         self.assertRaises(ValueError, manager._validate_cidrs, *args)
 
-    def test__validate_cidrs_split_smaller_cidr_in_use(self):
+    def test_validate_cidrs_split_smaller_cidr_in_use(self):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
@@ -333,13 +333,13 @@ class CommonNetworkTestCase(test.TestCase):
         nets = manager._validate_cidrs(None, '192.168.0.0/16', 4, 256)
         self.assertEqual(4, len(nets))
         cidrs = [str(net) for net in nets]
-        exp_cidrs = ['192.168.0.0', '192.168.1.0', '192.168.3.0',
-                     '192.168.4.0']
+        exp_cidrs = ['192.168.0.0/24', '192.168.1.0/24', '192.168.3.0/24',
+                     '192.168.4.0/24']
         for exp_cidr in exp_cidrs:
-            self.assertTrue(exp_cidr + '/24' in cidrs)
+            self.assertTrue(exp_cidr in cidrs)
         self.assertFalse('192.168.2.0/24' in cidrs)
 
-    def test__validate_cidrs_split_smaller_cidr_in_use2(self):
+    def test_validate_cidrs_split_smaller_cidr_in_use2(self):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
@@ -349,12 +349,12 @@ class CommonNetworkTestCase(test.TestCase):
         nets = manager._validate_cidrs(None, '192.168.2.0/24', 3, 32)
         self.assertEqual(3, len(nets))
         cidrs = [str(net) for net in nets]
-        exp_cidrs = ['192.168.2.32', '192.168.2.64', '192.168.2.96']
+        exp_cidrs = ['192.168.2.32/27', '192.168.2.64/27', '192.168.2.96/27']
         for exp_cidr in exp_cidrs:
-            self.assertTrue(exp_cidr + '/27' in cidrs)
+            self.assertTrue(exp_cidr in cidrs)
         self.assertFalse('192.168.2.0/27' in cidrs)
 
-    def test__validate_cidrs_split_all_in_use(self):
+    def test_validate_cidrs_split_all_in_use(self):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
@@ -369,13 +369,13 @@ class CommonNetworkTestCase(test.TestCase):
         #             in use
         self.assertRaises(ValueError, manager._validate_cidrs, *args)
 
-    def test__validate_cidrs_one_in_use(self):
+    def test_validate_cidrs_one_in_use(self):
         manager = self.FakeNetworkManager()
         args = [None, '192.168.0.0/24', 2, 256]
         # ValueError: network_size * num_networks exceeds cidr size
         self.assertRaises(ValueError, manager._validate_cidrs, *args)
 
-    def test__validate_cidrs_already_used(self):
+    def test_validate_cidrs_already_used(self):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
@@ -386,21 +386,21 @@ class CommonNetworkTestCase(test.TestCase):
         args = [None, '192.168.0.0/24', 1, 256]
         self.assertRaises(ValueError, manager._validate_cidrs, *args)
 
-    def test__validate_cidrs_too_many(self):
+    def test_validate_cidrs_too_many(self):
         manager = self.FakeNetworkManager()
         args = [None, '192.168.0.0/24', 200, 256]
         # ValueError: Not enough subnets avail to satisfy requested
         #             num_networks
         self.assertRaises(ValueError, manager._validate_cidrs, *args)
 
-    def test__validate_cidrs_split_partial(self):
+    def test_validate_cidrs_split_partial(self):
         manager = self.FakeNetworkManager()
         nets = manager._validate_cidrs(None, '192.168.0.0/16', 2, 256)
         returned_cidrs = [str(net) for net in nets]
         self.assertTrue('192.168.0.0/24' in returned_cidrs)
         self.assertTrue('192.168.1.0/24' in returned_cidrs)
 
-    def test__validate_cidrs_conflict_existing_supernet(self):
+    def test_validate_cidrs_conflict_existing_supernet(self):
         manager = self.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
