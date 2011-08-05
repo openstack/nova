@@ -137,6 +137,8 @@ def execute(*cmd, **kwargs):
     :delay_on_retry     True | False. Defaults to True. If set to True, wait a
                         short amount of time before retrying.
     :attempts           How many times to retry cmd.
+    :shell              True | False. Defaults to False. If set to True,
+                        Popen command is called shell=True.
 
     :raises exception.Error on receiving unknown arguments
     :raises exception.ProcessExecutionError
@@ -147,6 +149,7 @@ def execute(*cmd, **kwargs):
     check_exit_code = kwargs.pop('check_exit_code', 0)
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
+    shell = kwargs.pop('shell', False)
     if len(kwargs):
         raise exception.Error(_('Got unknown keyword args '
                                 'to utils.execute: %r') % kwargs)
@@ -164,6 +167,7 @@ def execute(*cmd, **kwargs):
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
+                                   shell=shell,
                                    env=env)
             result = None
             if process_input is not None:

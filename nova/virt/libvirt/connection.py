@@ -43,7 +43,6 @@ import os
 import random
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
@@ -684,7 +683,7 @@ class LibvirtConnection(driver.ComputeDriver):
         cmd = '%s/tools/ajaxterm/ajaxterm.py --command "%s" -t %s -p %s' \
               % (utils.novadir(), ajaxterm_cmd, token, port)
 
-        subprocess.Popen(cmd, shell=True)
+        utils.execute(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
     def get_host_ip_addr(self):
