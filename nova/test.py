@@ -60,11 +60,10 @@ class skip_test(object):
         self.message = msg
 
     def __call__(self, func):
+        @functools.wraps(func)
         def _skipper(*args, **kw):
             """Wrapped skipper function."""
             raise nose.SkipTest(self.message)
-        _skipper.__name__ = func.__name__
-        _skipper.__doc__ = func.__doc__
         return _skipper
 
 
@@ -75,13 +74,12 @@ class skip_if(object):
         self.message = msg
 
     def __call__(self, func):
+        @functools.wraps(func)
         def _skipper(*args, **kw):
             """Wrapped skipper function."""
             if self.condition:
                 raise nose.SkipTest(self.message)
             func(*args, **kw)
-        _skipper.__name__ = func.__name__
-        _skipper.__doc__ = func.__doc__
         return _skipper
 
 
@@ -92,13 +90,12 @@ class skip_unless(object):
         self.message = msg
 
     def __call__(self, func):
+        @functools.wraps(func)
         def _skipper(*args, **kw):
             """Wrapped skipper function."""
             if not self.condition:
                 raise nose.SkipTest(self.message)
             func(*args, **kw)
-        _skipper.__name__ = func.__name__
-        _skipper.__doc__ = func.__doc__
         return _skipper
 
 
