@@ -203,7 +203,7 @@ class SecurityGroupRulesController(SecurityGroupController):
             return exc.HTTPNotFound(explanation=msg)
 
         msg = _("Authorize security group ingress %s")
-        LOG.audit(_(msg), security_group['name'], context=context)
+        LOG.audit(msg, security_group['name'], context=context)
 
         try:
             values = self._rule_args_to_dict(context,
@@ -330,7 +330,7 @@ class SecurityGroupRulesController(SecurityGroupController):
         security_group = db.security_group_get(context, group_id)
 
         msg = _("Revoke security group ingress %s")
-        LOG.audit(_(msg), security_group['name'], context=context)
+        LOG.audit(msg, security_group['name'], context=context)
 
         db.security_group_rule_destroy(context, rule['id'])
         self.compute_api.trigger_security_group_rules_refresh(context,
