@@ -986,7 +986,7 @@ class TestServerActionXMLDeserializerV11(test.TestCase):
                 ],
             },
         }
-        self.assertDictEqual(request['body'], expected)
+        self.assertDictMatch(request['body'], expected)
 
     def test_rebuild_minimum(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
@@ -999,7 +999,7 @@ class TestServerActionXMLDeserializerV11(test.TestCase):
                 "imageRef": "http://localhost/images/1",
             },
         }
-        self.assertDictEqual(request['body'], expected)
+        self.assertDictMatch(request['body'], expected)
 
     def test_rebuild_no_imageRef(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
