@@ -33,7 +33,6 @@ from nova import manager
 from nova import wsgi
 from nova.compute import manager as compute_manager
 
-FLAGS = flags.FLAGS
 flags.DEFINE_string("fake_manager", "nova.tests.test_service.FakeManager",
                     "Manager for testing")
 

@@ -38,7 +38,6 @@ from nova.virt.libvirt import firewall
 
 libvirt = None
 FLAGS = flags.FLAGS
-flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
 def _concurrency(wait, done, target):
@@ -93,6 +92,7 @@ def _setup_networking(instance_id, ip='1.2.3.4'):
 class CacheConcurrencyTestCase(test.TestCase):
     def setUp(self):
         super(CacheConcurrencyTestCase, self).setUp()
+        self.flags(instances_path='nova.compute.manager')
 
         def fake_exists(fname):
             basedir = os.path.join(FLAGS.instances_path, '_base')
@@ -158,7 +158,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.network = utils.import_object(FLAGS.network_manager)
         self.context = context.get_admin_context()
-        FLAGS.instances_path = ''
+        self.flags(instances_path='')
         self.call_libvirt_dependant_setup = False
         self.test_ip = '10.11.12.13'
 
@@ -322,7 +322,7 @@ class LibvirtConnTestCase(test.TestCase):
         if not self.lazy_load_library_exists():
             return
 
-        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+        self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
         image_service = utils.import_object(FLAGS.image_service)
@@ -357,7 +357,7 @@ class LibvirtConnTestCase(test.TestCase):
         if not self.lazy_load_library_exists():
             return
 
-        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+        self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
         image_service = utils.import_object(FLAGS.image_service)
@@ -521,7 +521,7 @@ class LibvirtConnTestCase(test.TestCase):
                                'disk.local')]
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
-            FLAGS.libvirt_type = libvirt_type
+            self.flags(libvirt_type=libvirt_type)
             conn = connection.LibvirtConnection(True)
 
             uri = conn.get_uri()
@@ -546,9 +546,9 @@ class LibvirtConnTestCase(test.TestCase):
         # checking against that later on. This way we make sure the
         # implementation doesn't fiddle around with the FLAGS.
         testuri = 'something completely different'
-        FLAGS.libvirt_uri = testuri
+        self.flags(libvirt_uri=testuri)
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
-            FLAGS.libvirt_type = libvirt_type
+            self.flags(libvirt_type=libvirt_type)
             conn = connection.LibvirtConnection(True)
             uri = conn.get_uri()
             self.assertEquals(uri, testuri)
@@ -556,8 +556,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_update_available_resource_works_correctly(self):
         """Confirm compute_node table is updated successfully."""
-        org_path = FLAGS.instances_path = ''
-        FLAGS.instances_path = '.'
+        self.flags(instances_path='.')
 
         # Prepare mocks
         def getVersion():
@@ -604,12 +603,10 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertTrue(compute_node['hypervisor_version'] > 0)
 
         db.service_destroy(self.context, service_ref['id'])
-        FLAGS.instances_path = org_path
 
     def test_update_resource_info_no_compute_record_found(self):
         """Raise exception if no recorde found on services table."""
-        org_path = FLAGS.instances_path = ''
-        FLAGS.instances_path = '.'
+        self.flags(instances_path='.')
         self.create_fake_libvirt_mock()
 
         self.mox.ReplayAll()
@@ -617,8 +614,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertRaises(exception.ComputeServiceUnavailable,
                           conn.update_available_resource,
                           self.context, 'dummy')
-
-        FLAGS.instances_path = org_path
 
     def test_ensure_filtering_rules_for_instance_timeout(self):
         """ensure_filtering_fules_for_instance() finishes with timeout."""
