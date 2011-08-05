@@ -392,9 +392,7 @@ class LibvirtConnection(driver.ComputeDriver):
             nova.image.get_image_service(image_href)
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
-        metadata = {'disk_format': base['disk_format'],
-                    'container_format': base['container_format'],
-                    'is_public': False,
+        metadata = {'is_public': False,
                     'status': 'active',
                     'name': snapshot['name'],
                     'properties': {
@@ -408,6 +406,12 @@ class LibvirtConnection(driver.ComputeDriver):
         if 'architecture' in base['properties']:
             arch = base['properties']['architecture']
             metadata['properties']['architecture'] = arch
+
+        if 'disk_format' in base:
+            metadata['disk_format'] = base['disk_format']
+
+        if 'container_format' in base:
+            metadata['container_format'] = base['container_format']
 
         # Make the snapshot
         snapshot_name = uuid.uuid4().hex
