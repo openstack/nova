@@ -267,14 +267,16 @@ class Controller(object):
 
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
-            reboot_type = input_dict['reboot']['type']
-            if (not reboot_type == 'HARD') and (not reboot_type == 'SOFT'):
+            valid_reboot_types = ['HARD', 'SOFT']
+            reboot_type = input_dict['reboot']['type'].upper()
+            if not valid_reboot_types.count(reboot_type):
                 msg = _("Argument 'type' for reboot is not HARD or SOFT")
                 LOG.exception(msg)
-                raise exc.HTTPBadRequest()
+                raise exc.HTTPBadRequest(explanation=msg)
         else:
-            LOG.exception(_("Missing argument 'type' for reboot"))
-            raise exc.HTTPBadRequest()
+            msg = _("Missing argument 'type' for reboot")
+            LOG.exception(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
