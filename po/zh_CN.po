@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-06-14 14:44+0000\n"
-"Last-Translator: chong <Unknown>\n"
+"PO-Revision-Date: 2011-08-04 05:50+0000\n"
+"Last-Translator: zhangjunfeng <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-08-03 04:44+0000\n"
-"X-Generator: Launchpad (build 13573)\n"
+"X-Launchpad-Export-Date: 2011-08-05 04:47+0000\n"
+"X-Generator: Launchpad (build 13604)\n"
 
 #, python-format
 #~ msgid "Starting %s"
@@ -2670,12 +2670,12 @@ msgstr "用户 %s 不存在"
 #: ../nova/auth/ldapdriver.py:472
 #, python-format
 msgid "Group can't be created because group %s already exists"
-msgstr ""
+msgstr "组不能被创建，因为组 %s 已经存在"
 
 #: ../nova/auth/ldapdriver.py:478
 #, python-format
 msgid "Group can't be created because user %s doesn't exist"
-msgstr ""
+msgstr "组不能被创建，因为用户 %s 不存在"
 
 #: ../nova/auth/ldapdriver.py:495
 #, python-format
@@ -2690,50 +2690,50 @@ msgstr ""
 #: ../nova/auth/ldapdriver.py:510 ../nova/auth/ldapdriver.py:521
 #, python-format
 msgid "The group at dn %s doesn't exist"
-msgstr ""
+msgstr "识别名为 %s 的组不存在"
 
 #: ../nova/auth/ldapdriver.py:513
 #, python-format
 msgid "User %(uid)s is already a member of the group %(group_dn)s"
-msgstr ""
+msgstr "用户 %(uid)s 已经是 组 %(group_dn)s 中的成员"
 
 #: ../nova/auth/ldapdriver.py:524
 #, python-format
 msgid ""
 "User %s can't be removed from the group because the user doesn't exist"
-msgstr ""
+msgstr "用户 %s 不能从组中删除，因为这个用户不存在"
 
 #: ../nova/auth/ldapdriver.py:528
 #, python-format
 msgid "User %s is not a member of the group"
-msgstr ""
+msgstr "用户 %s 不是这个组的成员"
 
 #: ../nova/auth/ldapdriver.py:542
 #, python-format
 msgid ""
 "Attempted to remove the last member of a group. Deleting the group at %s "
 "instead."
-msgstr ""
+msgstr "尝试删除组中最后一个成员，用删除组 %s 来代替。"
 
 #: ../nova/auth/ldapdriver.py:549
 #, python-format
 msgid "User %s can't be removed from all because the user doesn't exist"
-msgstr ""
+msgstr "用户 %s 不能从系统中删除，因为这个用户不存在"
 
 #: ../nova/auth/ldapdriver.py:564
 #, python-format
 msgid "Group at dn %s doesn't exist"
-msgstr ""
+msgstr "可识别名为 %s 的组不存在"
 
 #: ../nova/virt/xenapi/network_utils.py:40
 #, python-format
 msgid "Found non-unique network for bridge %s"
-msgstr ""
+msgstr "发现网桥 %s 的网络不唯一"
 
 #: ../nova/virt/xenapi/network_utils.py:43
 #, python-format
 msgid "Found no network for bridge %s"
-msgstr ""
+msgstr "发现网桥 %s 没有网络"
 
 #: ../nova/api/ec2/admin.py:97
 #, python-format
@@ -2748,22 +2748,22 @@ msgstr "删除用户: %s"
 #: ../nova/api/ec2/admin.py:127
 #, python-format
 msgid "Adding role %(role)s to user %(user)s for project %(project)s"
-msgstr ""
+msgstr "添加角色 %(role)s 给项目 %(project)s 中的用户 %(user)s"
 
 #: ../nova/api/ec2/admin.py:131
 #, python-format
 msgid "Adding sitewide role %(role)s to user %(user)s"
-msgstr ""
+msgstr "给用户 %(user)s 添加站点角色 %(role)s"
 
 #: ../nova/api/ec2/admin.py:137
 #, python-format
 msgid "Removing role %(role)s from user %(user)s for project %(project)s"
-msgstr ""
+msgstr "删除项目 %(project)s中用户 %(user)s的角色 %(role)s"
 
 #: ../nova/api/ec2/admin.py:141
 #, python-format
 msgid "Removing sitewide role %(role)s from user %(user)s"
-msgstr ""
+msgstr "删除用户 %(user)s 的站点角色 %(role)s"
 
 #: ../nova/api/ec2/admin.py:146 ../nova/api/ec2/admin.py:223
 msgid "operation must be add or remove"
@@ -2772,22 +2772,22 @@ msgstr "操作必须为添加或删除"
 #: ../nova/api/ec2/admin.py:159
 #, python-format
 msgid "Getting x509 for user: %(name)s on project: %(project)s"
-msgstr ""
+msgstr "获得用户: %(name)s 在项目 :%(project)s中的x509"
 
 #: ../nova/api/ec2/admin.py:177
 #, python-format
 msgid "Create project %(name)s managed by %(manager_user)s"
-msgstr ""
+msgstr "创建被%(manager_user)s 管理的项目 %(name)s"
 
 #: ../nova/api/ec2/admin.py:190
 #, python-format
 msgid "Modify project: %(name)s managed by %(manager_user)s"
-msgstr ""
+msgstr "更改被 %(manager_user)s 管理的项目: %(name)s"
 
 #: ../nova/api/ec2/admin.py:200
 #, python-format
 msgid "Delete project: %s"
-msgstr "删除工程 %s"
+msgstr ""
 
 #: ../nova/api/ec2/admin.py:214
 #, python-format
