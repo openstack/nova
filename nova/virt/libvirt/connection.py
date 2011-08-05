@@ -880,7 +880,7 @@ class LibvirtConnection(driver.ComputeDriver):
                    'netmask': netmask,
                    'gateway': mapping['gateway'],
                    'broadcast': mapping['broadcast'],
-                   'dns': mapping['dns'],
+                   'dns': ' '.join(mapping['dns']),
                    'address_v6': address_v6,
                    'gateway6': gateway_v6,
                    'netmask_v6': netmask_v6}
