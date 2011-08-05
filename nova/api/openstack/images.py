@@ -108,6 +108,12 @@ class ControllerV10(Controller):
 
     def create(self, req, body):
         """Snapshot a server instance and save the image."""
+        if not FLAGS.allow_instance_snapshots:
+            LOG.warn(_('Rejecting snapshot request, snapshots currently'
+                       ' disabled'))
+            msg = _("Instance Snapshots are not permitted at this time.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         try:
             image = body["image"]
         except (KeyError, TypeError):

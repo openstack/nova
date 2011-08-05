@@ -50,6 +50,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
+flags.DEFINE_bool('allow_instance_snapshots',
+    True,
+    'When True, this API service will permit instance snapshot operations.')
 
 
 class FaultWrapper(base_wsgi.Middleware):
