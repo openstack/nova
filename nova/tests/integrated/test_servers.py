@@ -18,17 +18,12 @@
 import time
 import unittest
 
-from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
 
 
 LOG = logging.getLogger('nova.tests.integrated')
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 class ServersTest(integrated_helpers._IntegratedTestBase):
@@ -304,6 +299,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Cleanup
         self._delete_server(server_id)
+
 
 if __name__ == "__main__":
     unittest.main()

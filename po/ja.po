@@ -8,20 +8,20 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-03-29 07:27+0000\n"
-"Last-Translator: Koji Iida <Unknown>\n"
+"PO-Revision-Date: 2011-05-10 10:26+0000\n"
+"Last-Translator: Akira YOSHIYAMA <Unknown>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-03-30 05:22+0000\n"
-"X-Generator: Launchpad (build 12559)\n"
+"X-Launchpad-Export-Date: 2011-07-23 05:12+0000\n"
+"X-Generator: Launchpad (build 13405)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
 #: ../nova/scheduler/simple.py:122
 msgid "No hosts found"
-msgstr "適切なホストが見つかりません。"
+msgstr "ホストが見つかりません"
 
 #: ../nova/exception.py:33
 msgid "Unexpected error while running command."
@@ -36,10 +36,15 @@ msgid ""
 "Stdout: %(stdout)r\n"
 "Stderr: %(stderr)r"
 msgstr ""
+"%(description)s\n"
+"コマンド: %(cmd)s\n"
+"終了コード: %(exit_code)s\n"
+"標準出力: %(stdout)r\n"
+"標準エラー出力: %(stderr)r"
 
 #: ../nova/exception.py:107
 msgid "DB exception wrapped"
-msgstr ""
+msgstr "DB 例外がラップ(wrapped)されました"
 
 #. exc_type, exc_value, exc_traceback = sys.exc_info()
 #: ../nova/exception.py:120
@@ -49,32 +54,32 @@ msgstr "キャッチされなかった例外"
 #: ../nova/volume/api.py:45
 #, python-format
 msgid "Quota exceeeded for %(pid)s, tried to create %(size)sG volume"
-msgstr "サイズ %(size)sG のボリュームの作成を行おうとしましたが、%(pid)sのクオータを超えています。"
+msgstr "サイズ %(size)s GB のボリューム作成を行おうとしましたが、%(pid)s のサイズ制限を超えています。"
 
 #: ../nova/volume/api.py:47
 #, python-format
 msgid "Volume quota exceeded. You cannot create a volume of size %sG"
-msgstr "ボリュームのクオータを超えています。%sの大きさのボリュームは作成できません。"
+msgstr "ボリュームのサイズ制限を超えています。サイズ %s GB のボリュームは作成できません。"
 
 #: ../nova/volume/api.py:71 ../nova/volume/api.py:96
 msgid "Volume status must be available"
-msgstr "ボリュームのステータス(status)が available でなければなりません。"
+msgstr "ボリュームのステータス(status)は available でなければなりません。"
 
 #: ../nova/volume/api.py:98
 msgid "Volume is already attached"
-msgstr "ボリュームは既にアタッチされています(attached)。"
+msgstr "ボリュームは既に接続(attached)されています。"
 
 #: ../nova/volume/api.py:104
 msgid "Volume is already detached"
-msgstr "ボリュームは既にデタッチされています(detached)。"
+msgstr "ボリュームは既に切断(detached)されています。"
 
 #: ../nova/api/openstack/servers.py:72
 msgid "Failed to read private ip"
-msgstr ""
+msgstr "プライベート IP アドレスのリードに失敗しました"
 
 #: ../nova/api/openstack/servers.py:79
 msgid "Failed to read public ip(s)"
-msgstr ""
+msgstr "パブリック IP アドレスのリードに失敗しました"
 
 #: ../nova/api/openstack/servers.py:152
 #, python-format
@@ -83,7 +88,7 @@ msgstr "イメージ %(_image_id)s に対するプロパティ %(param)s が見�
 
 #: ../nova/api/openstack/servers.py:168
 msgid "No keypairs defined"
-msgstr "キーペアが定義されていません。"
+msgstr "キーペアが定義されていません"
 
 #: ../nova/api/openstack/servers.py:238
 #, python-format
@@ -103,7 +108,7 @@ msgstr "例外: Compute.api::get_lock %s"
 #: ../nova/api/openstack/servers.py:281
 #, python-format
 msgid "Compute.api::reset_network %s"
-msgstr ""
+msgstr "例外: Compute.api::reset_network %s"
 
 #: ../nova/api/openstack/servers.py:292
 #, python-format
@@ -125,33 +130,6 @@ msgstr "例外: compute.api::suspend %s"
 msgid "compute.api::resume %s"
 msgstr "例外: compute.api::resume %s"
 
-#: ../nova/twistd.py:157
-msgid "Wrong number of arguments."
-msgstr "引数の数が異なります。"
-
-#: ../nova/twistd.py:209
-#, python-format
-msgid "pidfile %s does not exist. Daemon not running?\n"
-msgstr "pidfile %s が存在しません。デーモンは実行中ですか？\n"
-
-#: ../nova/twistd.py:221
-msgid "No such process"
-msgstr "そのようなプロセスはありません"
-
-#: ../nova/twistd.py:230 ../nova/service.py:224
-#, python-format
-msgid "Serving %s"
-msgstr "%s サービスの開始"
-
-#: ../nova/twistd.py:262 ../nova/service.py:225
-msgid "Full set of FLAGS:"
-msgstr "FLAGSの一覧:"
-
-#: ../nova/twistd.py:266
-#, python-format
-msgid "Starting %s"
-msgstr "%s を開始します。"
-
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:731 ../nova/virt/libvirt_conn.py:741
 #: ../nova/api/ec2/__init__.py:317
@@ -163,33 +141,33 @@ msgstr "インスタンス %s が見つかりません。"
 #: ../nova/virt/xenapi/volumeops.py:51
 #, python-format
 msgid "Attach_volume: %(instance_name)s, %(device_path)s, %(mountpoint)s"
-msgstr ""
+msgstr "ボリューム接続: %(instance_name)s, %(device_path)s, %(mountpoint)s"
 
 #: ../nova/virt/xenapi/volumeops.py:69
 #, python-format
 msgid "Unable to create VDI on SR %(sr_ref)s for instance %(instance_name)s"
-msgstr ""
+msgstr "インスタンス %(instance_name)s 用のSR %(sr_ref)s における VDI を作成できません"
 
 #: ../nova/virt/xenapi/volumeops.py:80
 #, python-format
 msgid "Unable to use SR %(sr_ref)s for instance %(instance_name)s"
-msgstr ""
+msgstr "インスタンス %(instance_name)s 用のSR %(sr_ref)s が使用できません"
 
 #: ../nova/virt/xenapi/volumeops.py:91
 #, python-format
 msgid "Unable to attach volume to instance %s"
-msgstr "インスタンス %s にボリュームをアタッチできません。"
+msgstr "インスタンス %s にボリュームを接続(attach)できません。"
 
 #: ../nova/virt/xenapi/volumeops.py:93
 #, python-format
 msgid "Mountpoint %(mountpoint)s attached to instance %(instance_name)s"
-msgstr "インスタンス %(instance_name)s にマウントポイント %(mountpoint)s をアタッチしました。"
+msgstr "インスタンス %(instance_name)s にマウントポイント %(mountpoint)s を接続(attach)しました"
 
 #. Detach VBD from VM
 #: ../nova/virt/xenapi/volumeops.py:104
 #, python-format
 msgid "Detach_volume: %(instance_name)s, %(mountpoint)s"
-msgstr ""
+msgstr "ボリューム切断: %(instance_name)s, %(mountpoint)s"
 
 #: ../nova/virt/xenapi/volumeops.py:112
 #, python-format
@@ -199,17 +177,17 @@ msgstr "ボリューム %s の存在が確認できません。"
 #: ../nova/virt/xenapi/volumeops.py:120
 #, python-format
 msgid "Unable to detach volume %s"
-msgstr "ボリューム %s のデタッチができません。"
+msgstr "ボリューム %s を切断(detach)できません"
 
 #: ../nova/virt/xenapi/volumeops.py:127
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
-msgstr "インスタンス %(instance_name)s からマウントポイント %(mountpoint)s をデタッチしました。"
+msgstr "インスタンス %(instance_name)s からマウントポイント %(mountpoint)s を切断(detach)しました"
 
 #: ../nova/compute/instance_types.py:41
 #, python-format
 msgid "Unknown instance type: %s"
-msgstr "%s は未知のインスタンスタイプです。"
+msgstr "未知のインスタンスタイプ: %s"
 
 #: ../nova/crypto.py:46
 msgid "Filename of root CA"
@@ -258,7 +236,7 @@ msgstr "Flags のパス: %s"
 #: ../nova/scheduler/manager.py:69
 #, python-format
 msgid "Casting to %(topic)s %(host)s for %(method)s"
-msgstr ""
+msgstr "%(method)s 用に %(topic)s %(host)s を割り当て中"
 
 #: ../nova/compute/manager.py:78
 #, python-format
@@ -269,7 +247,7 @@ msgstr "check_instance_lock: decorating: |%s|"
 #, python-format
 msgid ""
 "check_instance_lock: arguments: |%(self)s| |%(context)s| |%(instance_id)s|"
-msgstr ""
+msgstr "check_instance_lock: 引数: |%(self)s| |%(context)s| |%(instance_id)s|"
 
 #: ../nova/compute/manager.py:84
 #, python-format
@@ -298,23 +276,23 @@ msgstr "インスタンスは既に生成されています。"
 #: ../nova/compute/manager.py:180
 #, python-format
 msgid "instance %s: starting..."
-msgstr "インスタンス %s を開始します。"
+msgstr "インスタンス %s: 起動中…"
 
 #. pylint: disable=W0702
 #: ../nova/compute/manager.py:219
 #, python-format
 msgid "instance %s: Failed to spawn"
-msgstr "インスタンス %s の起動に失敗しました。"
+msgstr "インスタンス %s: 起動に失敗しました"
 
 #: ../nova/compute/manager.py:233 ../nova/tests/test_cloud.py:286
 #, python-format
 msgid "Terminating instance %s"
-msgstr "Terminating instance: インスタンス %s を終了します。"
+msgstr "インスタンス %s を停止中"
 
 #: ../nova/compute/manager.py:255
 #, python-format
 msgid "Deallocating address %s"
-msgstr "アドレス %s の割当を解除(deallocate)します。"
+msgstr "アドレス %s の割当を解除中(deallocating)"
 
 #: ../nova/compute/manager.py:268
 #, python-format
@@ -338,7 +316,7 @@ msgstr ""
 #: ../nova/compute/manager.py:311
 #, python-format
 msgid "instance %s: snapshotting"
-msgstr "snapshotting: インスタンス %s のスナップショットを取得します。"
+msgstr "snapshotting: インスタンス %s のスナップショットを取得中"
 
 #: ../nova/compute/manager.py:316
 #, python-format
@@ -361,7 +339,7 @@ msgstr ""
 #: ../nova/compute/manager.py:335
 #, python-format
 msgid "instance %s: setting admin password"
-msgstr "インスタンス %s:  admin password をセットします"
+msgstr "インスタンス %s:  管理者用パスワードをセット中"
 
 #: ../nova/compute/manager.py:353
 #, python-format
@@ -375,7 +353,7 @@ msgstr ""
 #: ../nova/compute/manager.py:362
 #, python-format
 msgid "instance %(nm)s: injecting file to %(plain_path)s"
-msgstr "インスタンス %(nm)s: ファイルを %(plain_path)s にインジェクトします"
+msgstr "インスタンス %(nm)s: ファイルを %(plain_path)s に埋め込み中"
 
 #: ../nova/compute/manager.py:372
 #, python-format
@@ -447,7 +425,7 @@ msgstr "インスタンス %s: ajax consoleを接続します"
 msgid ""
 "instance %(instance_id)s: attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr ""
-"インスタンス %(instance_id)s: ボリューム %(volume_id)s を %(mountpoint)s にアタッチします"
+"インスタンス %(instance_id)s: ボリューム %(volume_id)s を %(mountpoint)s に接続中(attaching)"
 
 #. pylint: disable=W0702
 #. NOTE(vish): The inline callback eats the exception info so we
@@ -549,7 +527,7 @@ msgstr "ボリューム %s の削除に成功しました。"
 #: ../nova/virt/xenapi/fake.py:74
 #, python-format
 msgid "%(text)s: _db_content => %(content)s"
-msgstr ""
+msgstr "%(text)s: _db_content => %(content)s"
 
 #: ../nova/virt/xenapi/fake.py:304 ../nova/virt/xenapi/fake.py:404
 #: ../nova/virt/xenapi/fake.py:422 ../nova/virt/xenapi/fake.py:478
@@ -616,12 +594,12 @@ msgstr "Pid %d は無効です。dnsmasqを再実行します。"
 #: ../nova/network/linux_net.py:358
 #, python-format
 msgid "killing radvd threw %s"
-msgstr ""
+msgstr "radvd  停止が %s 例外を発行しました"
 
 #: ../nova/network/linux_net.py:360
 #, python-format
 msgid "Pid %d is stale, relaunching radvd"
-msgstr ""
+msgstr "Pid %d がストールしているので radvd を再実行しています…"
 
 #. pylint: disable=W0703
 #: ../nova/network/linux_net.py:449
@@ -677,7 +655,7 @@ msgstr "リンクローカルアドレスが見つかりません: %s"
 #: ../nova/utils.py:265
 #, python-format
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
-msgstr ""
+msgstr "%(interface)s のローカルIPアドレスのリンクが取得できません:%(ex)s"
 
 #: ../nova/utils.py:363
 #, python-format
@@ -692,7 +670,7 @@ msgstr "バックエンドは %s です。"
 #: ../nova/fakerabbit.py:49
 #, python-format
 msgid "(%(nm)s) publish (key: %(routing_key)s) %(message)s"
-msgstr ""
+msgstr "(%(nm)s) 公開 (キー: %(routing_key)s) %(message)s"
 
 #: ../nova/fakerabbit.py:54
 #, python-format
@@ -712,12 +690,12 @@ msgstr "exchange %s の宣言"
 #: ../nova/fakerabbit.py:96
 #, python-format
 msgid "Binding %(queue)s to %(exchange)s with key %(routing_key)s"
-msgstr ""
+msgstr "キー %(routing_key)s 付きで %(exchange)s に %(queue)s をバインドしています"
 
 #: ../nova/fakerabbit.py:121
 #, python-format
 msgid "Getting from %(queue)s: %(message)s"
-msgstr ""
+msgstr "%(queue)s から取得しています: %(message)s"
 
 #: ../nova/virt/xenapi/vm_utils.py:135 ../nova/virt/hyperv.py:171
 #, python-format
@@ -727,17 +705,17 @@ msgstr "VM %s を作成します。"
 #: ../nova/virt/xenapi/vm_utils.py:138
 #, python-format
 msgid "Created VM %(instance_name)s as %(vm_ref)s."
-msgstr ""
+msgstr "%(vm_ref)s として VM %(instance_name)s を作成しています"
 
 #: ../nova/virt/xenapi/vm_utils.py:168
 #, python-format
 msgid "Creating VBD for VM %(vm_ref)s, VDI %(vdi_ref)s ... "
-msgstr ""
+msgstr "VM %(vm_ref)s, VDI %(vdi_ref)s 用 VBD を作成しています… "
 
 #: ../nova/virt/xenapi/vm_utils.py:171
 #, python-format
 msgid "Created VBD %(vbd_ref)s for VM %(vm_ref)s, VDI %(vdi_ref)s."
-msgstr ""
+msgstr "VM %(vm_ref)s, VDI %(vdi_ref)s 用仮想ブロックデバイス(VBD) %(vbd_ref)s を作成しました。"
 
 #: ../nova/virt/xenapi/vm_utils.py:187
 #, python-format
@@ -757,12 +735,12 @@ msgstr "VBD %s の削除に失敗しました。"
 #: ../nova/virt/xenapi/vm_utils.py:224
 #, python-format
 msgid "Creating VIF for VM %(vm_ref)s, network %(network_ref)s."
-msgstr ""
+msgstr "VM %(vm_ref)s, network %(network_ref)s 用仮想インターフェース(VIF)を作成しています。"
 
 #: ../nova/virt/xenapi/vm_utils.py:227
 #, python-format
 msgid "Created VIF %(vif_ref)s for VM %(vm_ref)s, network %(network_ref)s."
-msgstr ""
+msgstr "VM %(vm_ref)s, network %(network_ref)s 用 VIF %(vif_ref)s を作成しました。"
 
 #: ../nova/virt/xenapi/vm_utils.py:246
 #, python-format
@@ -770,50 +748,52 @@ msgid ""
 "Created VDI %(vdi_ref)s (%(name_label)s, %(virtual_size)s, %(read_only)s) on "
 "%(sr_ref)s."
 msgstr ""
+"%(sr_ref)s 上に VDI %(vdi_ref)s (%(name_label)s, %(virtual_size)s, "
+"%(read_only)s) を作成しました。"
 
 #. TODO(sirp): Add quiesce and VSS locking support when Windows support
 #. is added
 #: ../nova/virt/xenapi/vm_utils.py:258
 #, python-format
 msgid "Snapshotting VM %(vm_ref)s with label '%(label)s'..."
-msgstr ""
+msgstr "ラベル '%(label)s' 付き VM %(vm_ref)s のスナップショットを作成しています…"
 
 #: ../nova/virt/xenapi/vm_utils.py:272
 #, python-format
 msgid "Created snapshot %(template_vm_ref)s from VM %(vm_ref)s."
-msgstr ""
+msgstr "VM %(vm_ref)s からスナップショット %(template_vm_ref)s を作成しました。"
 
 #: ../nova/virt/xenapi/vm_utils.py:286
 #, python-format
 msgid "Asking xapi to upload %(vdi_uuids)s as ID %(image_id)s"
-msgstr ""
+msgstr "ID %(image_id)s として %(vdi_uuids)s のアップロードの為に xapi を問い合わせしています"
 
 #: ../nova/virt/xenapi/vm_utils.py:327
 #, python-format
 msgid "Size for image %(image)s:%(virtual_size)d"
-msgstr ""
+msgstr "イメージ %(image)s のサイズ:%(virtual_size)d"
 
 #: ../nova/virt/xenapi/vm_utils.py:332
 #, python-format
 msgid "Glance image %s"
-msgstr ""
+msgstr "Glance イメージ %s"
 
 #. we need to invoke a plugin for copying VDI's
 #. content into proper path
 #: ../nova/virt/xenapi/vm_utils.py:342
 #, python-format
 msgid "Copying VDI %s to /boot/guest on dom0"
-msgstr ""
+msgstr "ドメイン0 上の /boot/guest に VDI %s をコピー中"
 
 #: ../nova/virt/xenapi/vm_utils.py:352
 #, python-format
 msgid "Kernel/Ramdisk VDI %s destroyed"
-msgstr ""
+msgstr "カーネル/RAMディスク VDI %s が削除されました"
 
 #: ../nova/virt/xenapi/vm_utils.py:361
 #, python-format
 msgid "Asking xapi to fetch %(url)s as %(access)s"
-msgstr ""
+msgstr "%(access)s として %(url)s 取得の為に xapi を問い合わせしています"
 
 #: ../nova/virt/xenapi/vm_utils.py:386 ../nova/virt/xenapi/vm_utils.py:402
 #, python-format
@@ -823,12 +803,12 @@ msgstr "PV kernelのvdi %s を取得します。"
 #: ../nova/virt/xenapi/vm_utils.py:397
 #, python-format
 msgid "PV Kernel in VDI:%s"
-msgstr ""
+msgstr "VDI 中の PV カーネル:%s"
 
 #: ../nova/virt/xenapi/vm_utils.py:405
 #, python-format
 msgid "Running pygrub against %s"
-msgstr ""
+msgstr "%s に対して pygrub を実行しています"
 
 #: ../nova/virt/xenapi/vm_utils.py:411
 #, python-format
@@ -838,6 +818,8 @@ msgstr "Xen Kernel %s が見つかりました。"
 #: ../nova/virt/xenapi/vm_utils.py:413
 msgid "No Xen kernel found.  Booting HVM."
 msgstr ""
+"No Xen kernel found.  Booting HVM.\r\n"
+"Xen 用カーネルが見つかりません。完全仮想化モード(HVM)で起動しています。"
 
 #: ../nova/virt/xenapi/vm_utils.py:425 ../nova/virt/hyperv.py:431
 #, python-format
@@ -862,7 +844,7 @@ msgstr "(VM_UTILS) xenapi の power_state -> |%s|"
 #: ../nova/virt/xenapi/vm_utils.py:525
 #, python-format
 msgid "VHD %(vdi_uuid)s has parent %(parent_ref)s"
-msgstr ""
+msgstr "VHD %(vdi_uuid)s の親は %(parent_ref)s です"
 
 #: ../nova/virt/xenapi/vm_utils.py:542
 #, python-format
@@ -873,14 +855,14 @@ msgstr "SR %s を再スキャンします。"
 #, python-format
 msgid ""
 "VHD coalesce attempts exceeded (%(counter)d > %(max_attempts)d), giving up..."
-msgstr ""
+msgstr "VHD 作成が制限を越えました(%(counter)d > %(max_attempts)d)ので、中止しています…"
 
 #: ../nova/virt/xenapi/vm_utils.py:574
 #, python-format
 msgid ""
 "Parent %(parent_uuid)s doesn't match original parent "
 "%(original_parent_uuid)s, waiting for coalesce..."
-msgstr ""
+msgstr "親 %(parent_uuid)s が元々の親 %(original_parent_uuid)s と一致しません。作成を待機しています…"
 
 #: ../nova/virt/xenapi/vm_utils.py:590
 #, python-format
@@ -890,96 +872,96 @@ msgstr "VM %s にVDIが存在しません。"
 #: ../nova/virt/xenapi/vm_utils.py:594
 #, python-format
 msgid "Unexpected number of VDIs (%(num_vdis)s) found for VM %(vm_ref)s"
-msgstr ""
+msgstr "VM %(vm_ref)s 用に予期しない数の VDI (%(num_vdis)s) が見つかりました"
 
 #: ../nova/virt/xenapi/vm_utils.py:653
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:188
 #, python-format
 msgid "Creating VBD for VDI %s ... "
-msgstr ""
+msgstr "VDI %s 用に VBD を作成しています… "
 
 #: ../nova/virt/xenapi/vm_utils.py:655
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:190
 #, python-format
 msgid "Creating VBD for VDI %s done."
-msgstr ""
+msgstr "VDI %s 用 VBD の作成が完了しました。"
 
 #: ../nova/virt/xenapi/vm_utils.py:657
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:192
 #, python-format
 msgid "Plugging VBD %s ... "
-msgstr ""
+msgstr "VBD %s を接続しています… "
 
 #: ../nova/virt/xenapi/vm_utils.py:659
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:194
 #, python-format
 msgid "Plugging VBD %s done."
-msgstr ""
+msgstr "仮想ブロックデバイス(VBD) %s の接続が完了しました。"
 
 #: ../nova/virt/xenapi/vm_utils.py:661
 #, python-format
 msgid "VBD %(vbd)s plugged as %(orig_dev)s"
-msgstr ""
+msgstr "%(orig_dev)s として仮想ブロックデバイス(VBD) %(vbd)s を接続しました"
 
 #: ../nova/virt/xenapi/vm_utils.py:664
 #, python-format
 msgid "VBD %(vbd)s plugged into wrong dev, remapping to %(dev)s"
-msgstr ""
+msgstr "仮想ブロックデバイス(VBD) %(vbd)s は不正なデバイスに接続されましたので、%(dev)s に再マッピングしています"
 
 #: ../nova/virt/xenapi/vm_utils.py:668
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:197
 #, python-format
 msgid "Destroying VBD for VDI %s ... "
-msgstr ""
+msgstr "VDI %s 用の仮想ブロックデバイス(VBD)を削除しています… "
 
 #: ../nova/virt/xenapi/vm_utils.py:671
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:200
 #, python-format
 msgid "Destroying VBD for VDI %s done."
-msgstr ""
+msgstr "VDI %s 用の仮想ブロックデバイス(VBD)の削除が完了しました。"
 
 #: ../nova/virt/xenapi/vm_utils.py:683
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:211
 msgid "VBD.unplug successful first time."
-msgstr ""
+msgstr "VBD.unplug は１回目で成功しました。"
 
 #: ../nova/virt/xenapi/vm_utils.py:688
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:216
 msgid "VBD.unplug rejected: retrying..."
-msgstr ""
+msgstr "VBD.unplug が拒否されました: 再試行しています…"
 
 #: ../nova/virt/xenapi/vm_utils.py:692
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:220
 msgid "VBD.unplug successful eventually."
-msgstr ""
+msgstr "VBD.unplug は最終的に成功しました。"
 
 #: ../nova/virt/xenapi/vm_utils.py:695
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:223
 #, python-format
 msgid "Ignoring XenAPI.Failure in VBD.unplug: %s"
-msgstr ""
+msgstr "VBD.unplug 中の XenAPI.Failure を無視しています: %s"
 
 #: ../nova/virt/xenapi/vm_utils.py:704
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:66
 #, python-format
 msgid "Ignoring XenAPI.Failure %s"
-msgstr ""
+msgstr "XenAPI.Failure %s を無視しています"
 
 #: ../nova/virt/xenapi/vm_utils.py:735
 #, python-format
 msgid ""
 "Writing partition table %(primary_first)d %(primary_last)d to %(dest)s..."
-msgstr ""
+msgstr "%(dest)s にパーティションテーブル %(primary_first)d %(primary_last)d を書き込んでいます…"
 
 #: ../nova/virt/xenapi/vm_utils.py:747
 #, python-format
 msgid "Writing partition table %s done."
-msgstr ""
+msgstr "パーティションテーブル %s の書き込みが完了しました。"
 
 #: ../nova/tests/test_rpc.py:89
 #, python-format
 msgid "Nested received %(queue)s, %(value)s"
-msgstr ""
+msgstr "Nested received %(queue)s, %(value)s"
 
 #: ../nova/tests/test_rpc.py:95
 #, python-format
@@ -1003,7 +985,7 @@ msgstr "id %s のserviceが存在しません。"
 #: ../nova/db/sqlalchemy/api.py:251
 #, python-format
 msgid "No service for %(host)s, %(binary)s"
-msgstr ""
+msgstr "%(host)s, %(binary)s 用のサービスがありません"
 
 #: ../nova/db/sqlalchemy/api.py:592
 msgid "No fixed ips defined"
@@ -1110,6 +1092,8 @@ msgid ""
 "No console pool of type %(console_type)s for compute host %(compute_host)s "
 "on proxy host %(host)s"
 msgstr ""
+"コンピュータホスト %(compute_host)s 用 %(console_type)s 型コンソールプールがプロキシホスト %(host)s "
+"上にありません"
 
 #: ../nova/db/sqlalchemy/api.py:2035
 #, python-format
@@ -1119,27 +1103,27 @@ msgstr "プール %(pool_id)s に %(instance_id)s のコンソールがありま
 #: ../nova/db/sqlalchemy/api.py:2057
 #, python-format
 msgid "on instance %s"
-msgstr ""
+msgstr "インスタンス %s 上"
 
 #: ../nova/db/sqlalchemy/api.py:2058
 #, python-format
 msgid "No console with id %(console_id)s %(idesc)s"
-msgstr ""
+msgstr "ID %(console_id)s %(idesc)s を持つコンソールがありません"
 
 #: ../nova/db/sqlalchemy/api.py:2078 ../nova/db/sqlalchemy/api.py:2097
 #, python-format
 msgid "No zone with id %(zone_id)s"
-msgstr ""
+msgstr "ID %(zone_id)s を持つゾーンがありません"
 
 #: ../nova/virt/libvirt_conn.py:160
 #, python-format
 msgid "Checking state of %s"
-msgstr ""
+msgstr "%s の状態を確認しています"
 
 #: ../nova/virt/libvirt_conn.py:165
 #, python-format
 msgid "Current state of %(name)s was %(state)s."
-msgstr ""
+msgstr "%(name)s の現在の状態は %(state)s です"
 
 #: ../nova/virt/libvirt_conn.py:183
 #, python-format
@@ -1153,12 +1137,12 @@ msgstr "libvirtへの接続が切れています。"
 #: ../nova/virt/libvirt_conn.py:258
 #, python-format
 msgid "instance %(instance_name)s: deleting instance files %(target)s"
-msgstr ""
+msgstr "インスタンス %(instance_name)s: インスタンスファイル群 %(target)s を削除しています"
 
 #: ../nova/virt/libvirt_conn.py:283
 #, python-format
 msgid "Invalid device path %s"
-msgstr ""
+msgstr "%s は不正なデバイスパスです"
 
 #: ../nova/virt/libvirt_conn.py:313
 #, python-format
@@ -1216,16 +1200,16 @@ msgstr "デバイスです。"
 #: ../nova/virt/libvirt_conn.py:448
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
-msgstr ""
+msgstr "データ: %(data)r, ファイルパス: %(fpath)r"
 
 #: ../nova/virt/libvirt_conn.py:456
 #, python-format
 msgid "Contents of file %(fpath)s: %(contents)r"
-msgstr ""
+msgstr "ファイル %(fpath)s の内容: %(contents)r"
 
 #: ../nova/virt/libvirt_conn.py:489
 msgid "Unable to find an open port"
-msgstr ""
+msgstr "開いたポートが見つかりません"
 
 #: ../nova/virt/libvirt_conn.py:563
 #, python-format
@@ -1235,12 +1219,12 @@ msgstr "インスタンス %s のイメージを生成します。"
 #: ../nova/virt/libvirt_conn.py:646
 #, python-format
 msgid "instance %(inst_name)s: injecting key into image %(img_id)s"
-msgstr ""
+msgstr "インスタンス %(inst_name)s: イメージ %(img_id)s に鍵情報を埋め込んでいます"
 
 #: ../nova/virt/libvirt_conn.py:649
 #, python-format
 msgid "instance %(inst_name)s: injecting net into image %(img_id)s"
-msgstr ""
+msgstr "インスタンス %(inst_name)s: イメージ %(img_id)s にネットワーク情報を埋め込んでいます"
 
 #. This could be a windows image, or a vmdk format disk
 #: ../nova/virt/libvirt_conn.py:657
@@ -1248,7 +1232,7 @@ msgstr ""
 msgid ""
 "instance %(inst_name)s: ignoring error injecting data into image %(img_id)s "
 "(%(e)s)"
-msgstr ""
+msgstr "インスタンス %(inst_name)s: イメージ %(img_id)s へのデータ埋め込みのエラーを無視しています (%(e)s)"
 
 #. TODO(termie): cache?
 #: ../nova/virt/libvirt_conn.py:665
@@ -1263,12 +1247,12 @@ msgstr "インスタンス %s: toXML メソッドを完了。"
 
 #: ../nova/virt/libvirt_conn.py:751
 msgid "diagnostics are not supported for libvirt"
-msgstr ""
+msgstr "libvirt では診断(diagnostics)がサポートされていません"
 
 #: ../nova/virt/libvirt_conn.py:1225
 #, python-format
 msgid "Attempted to unfilter instance %s which is not filtered"
-msgstr ""
+msgstr "フィルタされていないインスタンス %s のフィルタ解除を試行しました"
 
 #: ../nova/api/ec2/metadatarequesthandler.py:76
 #, python-format
@@ -1296,7 +1280,7 @@ msgstr "ターゲット %s をアロケートしました。"
 #: ../nova/virt/images.py:70
 #, python-format
 msgid "Finished retreving %(url)s -- placed in %(path)s"
-msgstr ""
+msgstr "%(url)s の取得を完了しました -- %(path)s に配置されました"
 
 #: ../nova/scheduler/driver.py:66
 msgid "Must implement a fallback schedule"
@@ -1304,21 +1288,21 @@ msgstr "予備の(fallback)スケジューラを実装する必要がありま�
 
 #: ../nova/console/manager.py:70
 msgid "Adding console"
-msgstr ""
+msgstr "コンソールを追加しています"
 
 #: ../nova/console/manager.py:90
 #, python-format
 msgid "Tried to remove non-existant console %(console_id)s."
-msgstr ""
+msgstr "存在しないコンソール %(console_id)s を削除しようとしました"
 
 #: ../nova/api/direct.py:149
 msgid "not available"
-msgstr ""
+msgstr "利用できません"
 
 #: ../nova/api/ec2/cloud.py:62
 #, python-format
 msgid "The key_pair %s already exists"
-msgstr ""
+msgstr "キーペア %s は既に存在します"
 
 #. TODO(vish): Do this with M2Crypto instead
 #: ../nova/api/ec2/cloud.py:118
@@ -1352,7 +1336,7 @@ msgstr "Revoke security group ingress: セキュリティグループ許可 %s �
 
 #: ../nova/api/ec2/cloud.py:430 ../nova/api/ec2/cloud.py:459
 msgid "Not enough parameters to build a valid rule."
-msgstr ""
+msgstr "有効なルールを作成する為の十分なパラメータがありません"
 
 #: ../nova/api/ec2/cloud.py:443
 msgid "No rule for the specified parameters."
@@ -1391,7 +1375,7 @@ msgstr "Create volume: %s GBのボリュームを作成します。"
 #: ../nova/api/ec2/cloud.py:612
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr ""
+msgstr "ボリューム %(volume_id)s をインスタンス %(instance_id)s のデバイス %(device)s に接続"
 
 #: ../nova/api/ec2/cloud.py:629
 #, python-format
@@ -1410,7 +1394,7 @@ msgstr "Release address: アドレス %s を開放します。"
 #: ../nova/api/ec2/cloud.py:771
 #, python-format
 msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr ""
+msgstr "インスタンス %(instance_id)s にアドレス %(public_ip)s を割り当て"
 
 #: ../nova/api/ec2/cloud.py:780
 #, python-format
@@ -1434,7 +1418,7 @@ msgstr "De-registering image: イメージ %s を登録解除します。"
 #: ../nova/api/ec2/cloud.py:875
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr ""
+msgstr "イメージ %(image_location)s が ID %(image_id)s で登録されました"
 
 #: ../nova/api/ec2/cloud.py:882 ../nova/api/ec2/cloud.py:900
 #, python-format
@@ -1466,12 +1450,12 @@ msgstr "イメージ %s の公開設定を更新します。"
 #: ../bin/nova-api.py:52
 #, python-format
 msgid "Using paste.deploy config at: %s"
-msgstr ""
+msgstr "%s にある paste.deploy 設定を使用しています"
 
 #: ../bin/nova-api.py:57
 #, python-format
 msgid "No paste configuration for app: %s"
-msgstr ""
+msgstr "アプリケーション用 paste 設定がありません: %s"
 
 #: ../bin/nova-api.py:59
 #, python-format
@@ -1479,60 +1463,63 @@ msgid ""
 "App Config: %(api)s\n"
 "%(config)r"
 msgstr ""
+"アプリケーション設定 %(api)s\n"
+"%(config)r"
 
 #: ../bin/nova-api.py:64
 #, python-format
 msgid "Running %s API"
-msgstr ""
+msgstr "%s API を実行しています"
 
 #: ../bin/nova-api.py:69
 #, python-format
 msgid "No known API applications configured in %s."
-msgstr ""
+msgstr "%s 中に既知の API アプリケーション設定がありません。"
 
 #: ../bin/nova-api.py:83
 #, python-format
 msgid "Starting nova-api node (version %s)"
-msgstr ""
+msgstr "nova-api ノードを起動しています (バージョン %s)"
 
 #: ../bin/nova-api.py:89
 #, python-format
 msgid "No paste configuration found for: %s"
-msgstr ""
+msgstr "%s 用の paste 設定が見つかりません"
 
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:84
 #, python-format
 msgid "Argument %(key)s value %(value)s is too short."
-msgstr ""
+msgstr "引数 %(key)s の値 %(value)s が短すぎます。"
 
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:89
 #, python-format
 msgid "Argument %(key)s value %(value)s contains invalid characters."
-msgstr ""
+msgstr "引数 %(key)s の値 %(value)s が不正な文字を含んでいます。"
 
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:94
 #, python-format
 msgid "Argument %(key)s value %(value)s starts with a hyphen."
-msgstr ""
+msgstr "引数 %(key)s の値 %(value)s がハイフン(-)から始まっています。"
 
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:102
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:130
 #, python-format
 msgid "Argument %s is required."
-msgstr ""
+msgstr "引数 %s が必要です。"
 
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:117
 #, python-format
 msgid ""
 "Argument %(key)s may not take value %(value)s. Valid values are ['true', "
 "'false']."
-msgstr ""
+msgstr "引数 %(key)s は値 %(value)s が許可されていません。有効な値は ['true', 'false'] です。"
 
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:163
 #, python-format
 msgid ""
 "Created VDI %(vdi_ref)s (%(label)s, %(size)s, %(read_only)s) on %(sr_ref)s."
 msgstr ""
+"%(sr_ref)s 上に VDI %(vdi_ref)s (%(label)s, %(size)s, %(read_only)s) を作成しました。"
 
 #: ../nova/virt/xenapi/vmops.py:67
 #, python-format
@@ -1542,7 +1529,7 @@ msgstr "ユニークではないname %s を作成しようとしました。"
 #: ../nova/virt/xenapi/vmops.py:73
 #, python-format
 msgid "instance %(name)s: not enough free memory"
-msgstr ""
+msgstr "インスタンス %(name)s: 十分な空きメモリがありません"
 
 #: ../nova/virt/xenapi/vmops.py:148
 #, python-format
@@ -1552,17 +1539,17 @@ msgstr "VM %s を開始します…"
 #: ../nova/virt/xenapi/vmops.py:151
 #, python-format
 msgid "Spawning VM %(instance_name)s created %(vm_ref)s."
-msgstr ""
+msgstr "%(vm_ref)s から作成された VM %(instance_name)s の実行が繰りかえされています。"
 
 #: ../nova/virt/xenapi/vmops.py:162
 #, python-format
 msgid "Invalid value for onset_files: '%s'"
-msgstr ""
+msgstr "onset_files 用の不正な値: '%s'"
 
 #: ../nova/virt/xenapi/vmops.py:167
 #, python-format
 msgid "Injecting file path: '%s'"
-msgstr ""
+msgstr "ファイルパス '%s' を埋め込んでいます"
 
 #: ../nova/virt/xenapi/vmops.py:180
 #, python-format
@@ -1584,7 +1571,7 @@ msgstr "VM %s に対するスナップショットを開始します。"
 #: ../nova/virt/xenapi/vmops.py:269
 #, python-format
 msgid "Unable to Snapshot %(vm_ref)s: %(exc)s"
-msgstr ""
+msgstr "%(vm_ref)s のスナップショットが作成出来ません: %(exc)s"
 
 #: ../nova/virt/xenapi/vmops.py:280
 #, python-format
@@ -1594,15 +1581,15 @@ msgstr "VM %s のスナップショットとアップロードが完了しまし
 #: ../nova/virt/xenapi/vmops.py:356
 #, python-format
 msgid "VM %(vm)s already halted, skipping shutdown..."
-msgstr ""
+msgstr "VM %(vm)s は既に停止していますので、シャットダウンを省略します…"
 
 #: ../nova/virt/xenapi/vmops.py:389
 msgid "Removing kernel/ramdisk files"
-msgstr ""
+msgstr "カーネル/RAMディスクファイルを削除しています"
 
 #: ../nova/virt/xenapi/vmops.py:399
 msgid "kernel/ramdisk files removed"
-msgstr ""
+msgstr "カーネル/RAMディスクファイルが削除されました"
 
 #: ../nova/virt/xenapi/vmops.py:561
 #, python-format
@@ -1610,6 +1597,7 @@ msgid ""
 "TIMEOUT: The call to %(method)s timed out. VM id=%(instance_id)s; "
 "args=%(strargs)s"
 msgstr ""
+"タイムアウト: %(method)s の呼び出しがタイムアウトしました。VM id=%(instance_id)s; 引数=%(strargs)s"
 
 #: ../nova/virt/xenapi/vmops.py:564
 #, python-format
@@ -1617,6 +1605,7 @@ msgid ""
 "NOT IMPLEMENTED: The call to %(method)s is not supported by the agent. VM "
 "id=%(instance_id)s; args=%(strargs)s"
 msgstr ""
+"未実装: %(method)s の呼び出しはエージェントに実装されていません。VM id=%(instance_id)s; 引数=%(strargs)s"
 
 #: ../nova/virt/xenapi/vmops.py:569
 #, python-format
@@ -1624,11 +1613,12 @@ msgid ""
 "The call to %(method)s returned an error: %(e)s. VM id=%(instance_id)s; "
 "args=%(strargs)s"
 msgstr ""
+"%(method)s 呼び出しがエラーを返しました: %(e)s. VM id=%(instance_id)s; 引数=%(strargs)s"
 
 #: ../nova/virt/xenapi/vmops.py:760
 #, python-format
 msgid "OpenSSL error: %s"
-msgstr ""
+msgstr "OpenSSL エラー: %s"
 
 #: ../nova/tests/test_compute.py:148
 #, python-format
@@ -1659,7 +1649,7 @@ msgstr "%s 用のVPNを起動します。"
 
 #: ../nova/db/sqlalchemy/migration.py:35
 msgid "python-migrate is not installed. Exiting."
-msgstr ""
+msgstr "python-migrate がインストールされていません。終了します。"
 
 #: ../nova/image/s3.py:99
 #, python-format
@@ -1676,6 +1666,7 @@ msgid ""
 "Access key %(access_key)s has had %(failures)d failed authentications and "
 "will be locked out for %(lock_mins)d minutes."
 msgstr ""
+"アクセスキー %(access_key)s は %(failures)d 回認証に失敗しましたので、%(lock_mins)d 分間ロックします。"
 
 #: ../nova/api/ec2/__init__.py:169 ../nova/objectstore/handler.py:140
 #, python-format
@@ -1685,7 +1676,7 @@ msgstr "%s の認証に失敗しました。"
 #: ../nova/api/ec2/__init__.py:182
 #, python-format
 msgid "Authenticated Request For %(uname)s:%(pname)s)"
-msgstr ""
+msgstr "%(uname)s 用の認証リクエスト:%(pname)s)"
 
 #: ../nova/api/ec2/__init__.py:207
 #, python-format
@@ -1695,23 +1686,23 @@ msgstr "アクション(action): %s"
 #: ../nova/api/ec2/__init__.py:209
 #, python-format
 msgid "arg: %(key)s\t\tval: %(value)s"
-msgstr ""
+msgstr "引数: %(key)s\t\t値: %(value)s"
 
 #: ../nova/api/ec2/__init__.py:281
 #, python-format
 msgid ""
 "Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr ""
+msgstr "コントローラ=%(controller)s とアクション=%(action)s 用の許可されていないリクエスト"
 
 #: ../nova/api/ec2/__init__.py:314
 #, python-format
 msgid "InstanceNotFound raised: %s"
-msgstr ""
+msgstr "InstanceNotFound が発行されました: %s"
 
 #: ../nova/api/ec2/__init__.py:320
 #, python-format
 msgid "VolumeNotFound raised: %s"
-msgstr ""
+msgstr "VolumeNotFound が発行されました: %s"
 
 #: ../nova/api/ec2/__init__.py:326
 #, python-format
@@ -1778,56 +1769,28 @@ msgstr ""
 #: ../nova/virt/xenapi_conn.py:311
 #, python-format
 msgid "Task [%(name)s] %(task)s status: success    %(result)s"
-msgstr ""
+msgstr "タスク [%(name)s] %(task)s 状態: 成功    %(result)s"
 
 #: ../nova/virt/xenapi_conn.py:317
 #, python-format
 msgid "Task [%(name)s] %(task)s status: %(status)s    %(error_info)s"
-msgstr ""
+msgstr "タスク [%(name)s] %(task)s 状態: %(status)s    %(error_info)s"
 
 #: ../nova/virt/xenapi_conn.py:331 ../nova/virt/xenapi_conn.py:344
 #, python-format
 msgid "Got exception: %s"
 msgstr "例外 %s が発生しました。"
 
-#: ../nova/compute/monitor.py:259
-#, python-format
-msgid "updating %s..."
-msgstr "%s の情報の更新…"
-
-#: ../nova/compute/monitor.py:289
-msgid "unexpected error during update"
-msgstr "更新の最中に予期しないエラーが発生しました。"
-
-#: ../nova/compute/monitor.py:356
-#, python-format
-msgid "Cannot get blockstats for \"%(disk)s\" on \"%(iid)s\""
-msgstr ""
-
-#: ../nova/compute/monitor.py:379
-#, python-format
-msgid "Cannot get ifstats for \"%(interface)s\" on \"%(iid)s\""
-msgstr ""
-
-#: ../nova/compute/monitor.py:414
-msgid "unexpected exception getting connection"
-msgstr "接続に際し予期しないエラーが発生しました。"
-
-#: ../nova/compute/monitor.py:429
-#, python-format
-msgid "Found instance: %s"
-msgstr "インスタンス %s が見つかりました。"
-
 #: ../nova/volume/san.py:67
 #, python-format
 msgid "Could not find iSCSI export  for volume %s"
-msgstr ""
+msgstr "ボリューム %s 用の iSCSI エクスポートが見つかりません"
 
 #: ../nova/api/ec2/apirequest.py:100
 #, python-format
 msgid ""
 "Unsupported API request: controller = %(controller)s, action = %(action)s"
-msgstr ""
+msgstr "未サポートの API リクエスト: コントローラ = %(controller)s, アクション = %(action)s"
 
 #: ../nova/api/openstack/__init__.py:55
 #, python-format
@@ -1840,33 +1803,33 @@ msgstr "管理用オペレーション（admin operation)をAPIに登録しま�
 
 #: ../nova/console/xvp.py:99
 msgid "Rebuilding xvp conf"
-msgstr ""
+msgstr "xvp 設定を再構築しています"
 
 #: ../nova/console/xvp.py:116
 #, python-format
 msgid "Re-wrote %s"
-msgstr ""
+msgstr "%s を再度書き込みました"
 
 #: ../nova/console/xvp.py:121
 msgid "Stopping xvp"
-msgstr ""
+msgstr "xvp を停止しています"
 
 #: ../nova/console/xvp.py:134
 msgid "Starting xvp"
-msgstr ""
+msgstr "xvp を開始しています"
 
 #: ../nova/console/xvp.py:141
 #, python-format
 msgid "Error starting xvp: %s"
-msgstr ""
+msgstr "xvp の開始中にエラー: %s"
 
 #: ../nova/console/xvp.py:144
 msgid "Restarting xvp"
-msgstr ""
+msgstr "xvp を再起動しています"
 
 #: ../nova/console/xvp.py:146
 msgid "xvp not running..."
-msgstr ""
+msgstr "xvp が実行されていません…"
 
 #: ../bin/nova-manage.py:272
 msgid ""
@@ -1874,6 +1837,8 @@ msgid ""
 "Please create a database using nova-manage sync db before running this "
 "command."
 msgstr ""
+"上記のエラーはデータベースが作成されていない為に表示されたのかも知れません。\n"
+"このコマンドを実行する前に、nova-manage db sync を使用してデータベースを作成して下さい。"
 
 #: ../bin/nova-manage.py:426
 msgid ""
@@ -1883,40 +1848,47 @@ msgid ""
 "    nova-manage network create 10.0.0.0/8 10 64\n"
 "\n"
 msgstr ""
+"これ以上利用可能なネットワークがありません。これが新規のインストールであれば、\n"
+"下記のようなコマンドを実行する必要があります:\n"
+"\n"
+"    nova-manage network create 10.0.0.0/8 10 64\n"
+"\n"
 
 #: ../bin/nova-manage.py:431
 msgid ""
 "The above error may show that the certificate db has not been created.\n"
 "Please create a database by running a nova-api server on this host."
 msgstr ""
+"上記のエラーは認証 DB が作成されていない為に表示されるのかも知れません。\n"
+"このホスト上で nova-api を実行してデータベースを作成して下さい。"
 
 #: ../bin/nova-manage.py:447 ../bin/nova-manage.py:536
 msgid "network"
-msgstr ""
+msgstr "ネットワーク"
 
 #: ../bin/nova-manage.py:448
 msgid "IP address"
-msgstr ""
+msgstr "IPアドレス"
 
 #: ../bin/nova-manage.py:449
 msgid "MAC address"
-msgstr ""
+msgstr "MAC アドレス"
 
 #: ../bin/nova-manage.py:450
 msgid "hostname"
-msgstr ""
+msgstr "ホスト名"
 
 #: ../bin/nova-manage.py:451
 msgid "host"
-msgstr ""
+msgstr "ホスト"
 
 #: ../bin/nova-manage.py:537
 msgid "netmask"
-msgstr ""
+msgstr "ネットマスク"
 
 #: ../bin/nova-manage.py:538
 msgid "start address"
-msgstr ""
+msgstr "開始アドレス"
 
 #: ../nova/virt/disk.py:69
 #, python-format
@@ -1931,7 +1903,7 @@ msgstr "ファイルシステム %s のマウントに失敗しました。"
 #: ../nova/virt/disk.py:124
 #, python-format
 msgid "nbd device %s did not show up"
-msgstr ""
+msgstr "nbd デバイス %s が出現しません"
 
 #: ../nova/virt/disk.py:128
 #, python-format
@@ -1940,12 +1912,12 @@ msgstr "イメージをループバック %s にアタッチできません。"
 
 #: ../nova/virt/disk.py:151
 msgid "No free nbd devices"
-msgstr ""
+msgstr "空きの nbd デバイスがありません"
 
 #: ../doc/ext/nova_todo.py:46
 #, python-format
 msgid "%(filename)s, line %(line_info)d"
-msgstr ""
+msgstr "%(filename)s, %(line_info)d 行目"
 
 #. FIXME(chiradeep): implement this
 #: ../nova/virt/hyperv.py:118
@@ -1990,7 +1962,7 @@ msgstr "vm %s のvcpus を設定します。"
 #: ../nova/virt/hyperv.py:202
 #, python-format
 msgid "Creating disk for %(vm_name)s by attaching disk file %(vhdfile)s"
-msgstr ""
+msgstr "ディスクファイル %(vhdfile)s 接続により、%(vm_name)s 用ディスクを作成しています"
 
 #: ../nova/virt/hyperv.py:227
 #, python-format
@@ -2029,7 +2001,7 @@ msgstr "ポート %s の作成に失敗しました。"
 #: ../nova/virt/hyperv.py:276
 #, python-format
 msgid "Created switch port %(vm_name)s on switch %(ext_path)s"
-msgstr ""
+msgstr "スイッチ %(ext_path)s 上のスイッチポート %(vm_name)s が作成されました"
 
 #: ../nova/virt/hyperv.py:286
 #, python-format
@@ -2049,7 +2021,7 @@ msgstr "WMIジョブに失敗しました: %s"
 #: ../nova/virt/hyperv.py:325
 #, python-format
 msgid "WMI job succeeded: %(desc)s, Elapsed=%(elap)s "
-msgstr ""
+msgstr "WMI ジョブ成功: %(desc)s, 経過時間=%(elap)s "
 
 #: ../nova/virt/hyperv.py:361
 #, python-format
@@ -2064,7 +2036,7 @@ msgstr "vm %s の削除に失敗しました。"
 #: ../nova/virt/hyperv.py:393
 #, python-format
 msgid "Del: disk %(vhdfile)s vm %(instance_name)s"
-msgstr ""
+msgstr "削除: ディスク %(vhdfile)s VM %(instance_name)s"
 
 #: ../nova/virt/hyperv.py:415
 #, python-format
@@ -2072,16 +2044,20 @@ msgid ""
 "Got Info for vm %(instance_id)s: state=%(state)s, mem=%(memusage)s, "
 "num_cpu=%(numprocs)s, cpu_time=%(uptime)s"
 msgstr ""
+"VM %(instance_id)s 用情報取得: 状態=%(state)s, メモリ=%(memusage)s, CPU数=%(numprocs)s, "
+"CPU時間=%(uptime)s"
 
 #: ../nova/virt/hyperv.py:451
 #, python-format
 msgid "Successfully changed vm state of %(vm_name)s to %(req_state)s"
-msgstr ""
+msgstr "VM の状態が %(vm_name)s から %(req_state)s に無事変更されました"
 
 #: ../nova/virt/hyperv.py:454
 #, python-format
 msgid "Failed to change vm state of %(vm_name)s to %(req_state)s"
 msgstr ""
+"Failed to change vm state of \r\n"
+"%(vm_name)s から %(req_state)s へのVM の状態変更に失敗しました"
 
 #: ../nova/compute/api.py:71
 #, python-format
@@ -2096,7 +2072,7 @@ msgstr "インスタンス %d にホストが登録されていません。"
 #: ../nova/compute/api.py:97
 #, python-format
 msgid "Quota exceeeded for %(pid)s, tried to run %(min_count)s instances"
-msgstr ""
+msgstr "%(pid)s 用の制限(Quota)超過、%(min_count)s 個のインスタンスを実行しようとしました"
 
 #: ../nova/compute/api.py:99
 #, python-format
@@ -2117,11 +2093,14 @@ msgstr "%s 個のインスタンスの起動を始めます…"
 #, python-format
 msgid "Casting to scheduler for %(pid)s/%(uid)s's instance %(instance_id)s"
 msgstr ""
+"Casting to scheduler for \r\n"
+"\r\n"
+"%(pid)s/%(uid)s のインスタンス %(instance_id)s 用のスケジューラを割り当て"
 
 #: ../nova/compute/api.py:292
 #, python-format
 msgid "Going to try to terminate %s"
-msgstr ""
+msgstr "%s を停止しようとしています"
 
 #: ../nova/compute/api.py:296
 #, python-format
@@ -2148,6 +2127,8 @@ msgid ""
 "AMQP server on %(fl_host)s:%(fl_port)d is unreachable. Trying again in "
 "%(fl_intv)d seconds."
 msgstr ""
+"%(fl_host)s 上の AMQP サーバ:%(fl_port)d が到達不能(unreachable)です。%(fl_intv)d "
+"秒後に再試行します。"
 
 #: ../nova/rpc.py:103
 #, python-format
@@ -2207,7 +2188,7 @@ msgstr "MSG_IDは %s です。"
 
 #: ../nova/rpc.py:354
 msgid "Making asynchronous cast..."
-msgstr ""
+msgstr "非同期の割り当てを作成しています…"
 
 #: ../nova/rpc.py:364
 #, python-format
@@ -2241,11 +2222,11 @@ msgstr "偽のAOE: %s"
 
 #: ../nova/volume/driver.py:233
 msgid "Skipping ensure_export. No iscsi_target "
-msgstr ""
+msgstr "ensure_export を省略しています。iscsi_target がありません。 "
 
 #: ../nova/volume/driver.py:279 ../nova/volume/driver.py:288
 msgid "Skipping remove_export. No iscsi_target "
-msgstr ""
+msgstr "remove_export を省略しています。iscsi_target がありません "
 
 #: ../nova/volume/driver.py:347
 #, python-format
@@ -2255,41 +2236,37 @@ msgstr "偽のISCSI: %s"
 #: ../nova/volume/driver.py:359
 #, python-format
 msgid "rbd has no pool %s"
-msgstr ""
+msgstr "rbd にプール %s がありません。"
 
 #: ../nova/volume/driver.py:414
 #, python-format
 msgid "Sheepdog is not working: %s"
-msgstr ""
+msgstr "Sheepdog が動作していません: %s"
 
 #: ../nova/volume/driver.py:416
 msgid "Sheepdog is not working"
-msgstr ""
+msgstr "Sheepdog が機能していません"
 
 #: ../nova/wsgi.py:68
 #, python-format
 msgid "Starting %(arg0)s on %(host)s:%(port)s"
-msgstr ""
+msgstr "%(host)s:%(port)s 上で %(arg0)s を開始しています"
 
 #: ../nova/wsgi.py:147
 msgid "You must implement __call__"
-msgstr ""
-
-#: ../bin/nova-instancemonitor.py:55
-msgid "Starting instance monitor"
-msgstr ""
+msgstr "__call__ を実装しなければなりません"
 
 #: ../bin/nova-dhcpbridge.py:58
 msgid "leasing ip"
-msgstr ""
+msgstr "IP アドレスをリースしました"
 
 #: ../bin/nova-dhcpbridge.py:73
 msgid "Adopted old lease or got a change of mac/hostname"
-msgstr ""
+msgstr "以前のリースを採用したか、MAC/ホスト名の変更を取得しました"
 
 #: ../bin/nova-dhcpbridge.py:80
 msgid "releasing ip"
-msgstr ""
+msgstr "IP アドレスを開放しています"
 
 #: ../bin/nova-dhcpbridge.py:123
 #, python-format
@@ -2297,6 +2274,8 @@ msgid ""
 "Called %(action)s for mac %(mac)s with ip %(ip)s and hostname %(hostname)s "
 "on interface %(interface)s"
 msgstr ""
+"インターフェース %(interface)s 上に IP アドレス %(ip)s、ホスト名 %(hostname)s を持った MAC アドレス "
+"%(mac)s 用の %(action)s を呼び出しました"
 
 #: ../nova/virt/fake.py:239
 #, python-format
@@ -2325,7 +2304,7 @@ msgstr "IP %s がリースされましたが関連付けられていません。
 #: ../nova/network/manager.py:220
 #, python-format
 msgid "IP %(address)s leased to bad mac %(inst_addr)s vs %(mac)s"
-msgstr ""
+msgstr "IP アドレス %(address)s が不正な MAC アドレス %(inst_addr)s 対 %(mac)s に割り当てられました"
 
 #: ../nova/network/manager.py:228
 #, python-format
@@ -2335,7 +2314,7 @@ msgstr "既に割当解除しているIP %s がリースされました。"
 #: ../nova/network/manager.py:233
 #, python-format
 msgid "Releasing IP %s"
-msgstr ""
+msgstr "IP アドレス %s を開放しています"
 
 #: ../nova/network/manager.py:237
 #, python-format
@@ -2345,7 +2324,7 @@ msgstr "割り当てていないIP %s が開放されました。"
 #: ../nova/network/manager.py:241
 #, python-format
 msgid "IP %(address)s released from bad mac %(inst_addr)s vs %(mac)s"
-msgstr ""
+msgstr "不正な MAC アドレス %(inst_addr)s 対 %(mac)s から IP アドレス %(address)s が開放されました"
 
 #: ../nova/network/manager.py:244
 #, python-format
@@ -2356,7 +2335,7 @@ msgstr "リースしていないIP %s が開放されました。"
 msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
 "than 4094"
-msgstr ""
+msgstr "ネットワークの数とVLANの開始番号の和は 4094 より大きくできません。"
 
 #: ../nova/virt/xenapi/volume_utils.py:57
 #, python-format
@@ -2366,7 +2345,7 @@ msgstr "%s を introduce します…"
 #: ../nova/virt/xenapi/volume_utils.py:74
 #, python-format
 msgid "Introduced %(label)s as %(sr_ref)s."
-msgstr ""
+msgstr "%(sr_ref)s として %(label)s を導入しました"
 
 #: ../nova/virt/xenapi/volume_utils.py:78
 msgid "Unable to create Storage Repository"
@@ -2385,12 +2364,12 @@ msgstr "SR %s をforgetします。 "
 #: ../nova/virt/xenapi/volume_utils.py:101
 #, python-format
 msgid "Ignoring exception %(exc)s when getting PBDs for %(sr_ref)s"
-msgstr ""
+msgstr "%(sr_ref)s 用の物理ブロックデバイス(PBD)取得時に例外 %(exc)s を無視しています"
 
 #: ../nova/virt/xenapi/volume_utils.py:107
 #, python-format
 msgid "Ignoring exception %(exc)s when unplugging PBD %(pbd)s"
-msgstr ""
+msgstr "物理ブロックデバイス(PBD) %(pbd)s の取り外し時に例外 %(exc)s を無視しています"
 
 #: ../nova/virt/xenapi/volume_utils.py:111
 #, python-format
@@ -2400,7 +2379,7 @@ msgstr "SR %s のforgetが完了。"
 #: ../nova/virt/xenapi/volume_utils.py:113
 #, python-format
 msgid "Ignoring exception %(exc)s when forgetting SR %(sr_ref)s"
-msgstr ""
+msgstr "SR %(sr_ref)s の登録削除時に例外 %(exc)s を無視しています"
 
 #: ../nova/virt/xenapi/volume_utils.py:123
 #, python-format
@@ -2420,7 +2399,7 @@ msgstr "SR %s のVDIをintroduceできません。"
 #: ../nova/virt/xenapi/volume_utils.py:175
 #, python-format
 msgid "Unable to obtain target information %(device_path)s, %(mountpoint)s"
-msgstr ""
+msgstr "ターゲット情報 %(device_path)s, %(mountpoint)s を取得できません"
 
 #: ../nova/virt/xenapi/volume_utils.py:197
 #, python-format
@@ -2430,17 +2409,17 @@ msgstr "マウントポイントを変換できません。 %s"
 #: ../nova/objectstore/image.py:262
 #, python-format
 msgid "Failed to decrypt private key: %s"
-msgstr ""
+msgstr "プライベートキーの復号に失敗しました: %s"
 
 #: ../nova/objectstore/image.py:269
 #, python-format
 msgid "Failed to decrypt initialization vector: %s"
-msgstr ""
+msgstr "初期化ベクタの復号に失敗しました: %s"
 
 #: ../nova/objectstore/image.py:277
 #, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr ""
+msgstr "イメージファイル %(image_file)s の復号に失敗しました: %(err)s"
 
 #: ../nova/objectstore/handler.py:106
 #, python-format
@@ -2483,32 +2462,32 @@ msgstr "Unauthorized attempt to delete bucket: バケット %s に対する削�
 #: ../nova/objectstore/handler.py:273
 #, python-format
 msgid "Getting object: %(bname)s / %(nm)s"
-msgstr ""
+msgstr "オブジェクトを取得しています: %(bname)s / %(nm)s"
 
 #: ../nova/objectstore/handler.py:276
 #, python-format
 msgid "Unauthorized attempt to get object %(nm)s from bucket %(bname)s"
-msgstr ""
+msgstr "バケット %(bname)s からのオブジェクト %(nm)s 取得は許可されていません"
 
 #: ../nova/objectstore/handler.py:296
 #, python-format
 msgid "Putting object: %(bname)s / %(nm)s"
-msgstr ""
+msgstr "オブジェクトをアップロードしています: %(bname)s / %(nm)s"
 
 #: ../nova/objectstore/handler.py:299
 #, python-format
 msgid "Unauthorized attempt to upload object %(nm)s to bucket %(bname)s"
-msgstr ""
+msgstr "バケット %(bname)s へのオブジェクト %(nm)s のアップロードは許可されていません"
 
 #: ../nova/objectstore/handler.py:318
 #, python-format
 msgid "Deleting object: %(bname)s / %(nm)s"
-msgstr ""
+msgstr "オブジェクトを削除しています: %(bname)s / %(nm)s"
 
 #: ../nova/objectstore/handler.py:322
 #, python-format
 msgid "Unauthorized attempt to delete object %(nm)s from bucket %(bname)s"
-msgstr ""
+msgstr "バケット %(bname)s 上のオブジェクト %(nm)s の削除は許可されていません"
 
 #: ../nova/objectstore/handler.py:396
 #, python-format
@@ -2535,7 +2514,7 @@ msgstr "Not authorized to update attributes: イメージ %s のアトリビュ�
 #: ../nova/objectstore/handler.py:431
 #, python-format
 msgid "Toggling publicity flag of image %(image_id)s %(newstatus)r"
-msgstr ""
+msgstr "イメージ %(image_id)s %(newstatus)r の公開フラグを切り替えています"
 
 #. other attributes imply update
 #: ../nova/objectstore/handler.py:436
@@ -2576,7 +2555,7 @@ msgstr "ユーザ名 (%s) をプロジェクト名として使用します。"
 #: ../nova/auth/manager.py:277
 #, python-format
 msgid "failed authorization: no project named %(pjid)s (user=%(uname)s)"
-msgstr ""
+msgstr "許可されません: %(pjid)s という名称のプロジェクトはありません (ユーザ=%(uname)s)"
 
 #: ../nova/auth/manager.py:279
 #, python-format
@@ -2588,12 +2567,12 @@ msgstr "プロジェクト %s は見つかりませんでした。"
 msgid ""
 "Failed authorization: user %(uname)s not admin and not member of project "
 "%(pjname)s"
-msgstr ""
+msgstr "許可されません: ユーザ %(uname)s は管理者でもプロジェクト %(pjname)s のメンバでもありません。"
 
 #: ../nova/auth/manager.py:289
 #, python-format
 msgid "User %(uid)s is not a member of project %(pjid)s"
-msgstr ""
+msgstr "ユーザ %(uid)s はプロジェクト %(pjid)s のメンバではありません。"
 
 #: ../nova/auth/manager.py:298 ../nova/auth/manager.py:309
 #, python-format
@@ -2621,27 +2600,27 @@ msgstr "ロール %s はグローバルでのみ使用可能です。"
 #: ../nova/auth/manager.py:420
 #, python-format
 msgid "Adding role %(role)s to user %(uid)s in project %(pid)s"
-msgstr ""
+msgstr "プロジェクト %(pid)s のユーザ %(uid)s にロール %(role)s を付与します。"
 
 #: ../nova/auth/manager.py:423
 #, python-format
 msgid "Adding sitewide role %(role)s to user %(uid)s"
-msgstr ""
+msgstr "サイト共通のロール %(role)s をユーザ %(uid)s に付与します。"
 
 #: ../nova/auth/manager.py:448
 #, python-format
 msgid "Removing role %(role)s from user %(uid)s on project %(pid)s"
-msgstr ""
+msgstr "プロジェクト %(pid)s のユーザ  %(uid)s  からロール %(role)s を削除します。"
 
 #: ../nova/auth/manager.py:451
 #, python-format
 msgid "Removing sitewide role %(role)s from user %(uid)s"
-msgstr ""
+msgstr "ユーザ %(uid)s からサイト共通のロール %(role)s を削除します。"
 
 #: ../nova/auth/manager.py:515
 #, python-format
 msgid "Created project %(name)s with manager %(manager_user)s"
-msgstr ""
+msgstr "プロジェクト %(name)s を管理者 %(manager_user)s で作成しました。"
 
 #: ../nova/auth/manager.py:533
 #, python-format
@@ -2651,12 +2630,12 @@ msgstr "modifying project: プロジェクト %s を更新します。"
 #: ../nova/auth/manager.py:545
 #, python-format
 msgid "Adding user %(uid)s to project %(pid)s"
-msgstr ""
+msgstr "ユーザ %(uid)s をプロジェクト %(pid)s に追加します。"
 
 #: ../nova/auth/manager.py:566
 #, python-format
 msgid "Remove user %(uid)s from project %(pid)s"
-msgstr ""
+msgstr "ユーザ %(uid)s をプロジェクト %(pid)s から削除します。"
 
 #: ../nova/auth/manager.py:592
 #, python-format
@@ -2666,7 +2645,7 @@ msgstr "Deleting project: プロジェクト %s を削除します。"
 #: ../nova/auth/manager.py:650
 #, python-format
 msgid "Created user %(rvname)s (admin: %(rvadmin)r)"
-msgstr ""
+msgstr "ユーザ %(rvname)s を作成しました。(管理者: %(rvadmin)r)"
 
 #: ../nova/auth/manager.py:659
 #, python-format
@@ -2686,7 +2665,7 @@ msgstr "Secret Key change: ユーザ %s のシークレットキーを更新し�
 #: ../nova/auth/manager.py:673
 #, python-format
 msgid "Admin status set to %(admin)r for user %(uid)s"
-msgstr ""
+msgstr "ユーザ %(uid)s に対して管理者状態が %(admin)r に設定されました。"
 
 #: ../nova/auth/manager.py:722
 #, python-format
@@ -2696,7 +2675,7 @@ msgstr "プロジェクト %s に関するvpnデータがありません。"
 #: ../nova/service.py:161
 #, python-format
 msgid "Starting %(topic)s node (version %(vcs_string)s)"
-msgstr ""
+msgstr "%(topic)s ノードを開始しています (バージョン %(vcs_string)s)"
 
 #: ../nova/service.py:174
 msgid "Service killed that has no database entry"
@@ -2717,7 +2696,7 @@ msgstr "モデルサーバが消滅しました。"
 #: ../nova/auth/ldapdriver.py:174
 #, python-format
 msgid "LDAP user %s already exists"
-msgstr ""
+msgstr "LDAPユーザ %s はすでに存在します。"
 
 #: ../nova/auth/ldapdriver.py:205
 #, python-format
@@ -2727,48 +2706,48 @@ msgstr "LDAPオブジェクト %s が存在しません。"
 #: ../nova/auth/ldapdriver.py:348
 #, python-format
 msgid "User %s doesn't exist"
-msgstr ""
+msgstr "ユーザ %s は存在しません"
 
 #: ../nova/auth/ldapdriver.py:472
 #, python-format
 msgid "Group can't be created because group %s already exists"
-msgstr ""
+msgstr "グループ %s は既に存在するため、作成できません。"
 
 #: ../nova/auth/ldapdriver.py:478
 #, python-format
 msgid "Group can't be created because user %s doesn't exist"
-msgstr ""
+msgstr "ユーザ %s は存在しないため、グループの作成はできません。"
 
 #: ../nova/auth/ldapdriver.py:495
 #, python-format
 msgid "User %s can't be searched in group because the user doesn't exist"
-msgstr ""
+msgstr "ユーザ %s は存在しないため、グループ内で検索できません。"
 
 #: ../nova/auth/ldapdriver.py:507
 #, python-format
 msgid "User %s can't be added to the group because the user doesn't exist"
-msgstr ""
+msgstr "ユーザ %s は存在しないため、当該グループに追加できません。"
 
 #: ../nova/auth/ldapdriver.py:510 ../nova/auth/ldapdriver.py:521
 #, python-format
 msgid "The group at dn %s doesn't exist"
-msgstr ""
+msgstr "識別名(DN) %s のグループは存在しません。"
 
 #: ../nova/auth/ldapdriver.py:513
 #, python-format
 msgid "User %(uid)s is already a member of the group %(group_dn)s"
-msgstr ""
+msgstr "ユーザ %(uid)s はすでにグループ %(group_dn)s のメンバです。"
 
 #: ../nova/auth/ldapdriver.py:524
 #, python-format
 msgid ""
 "User %s can't be removed from the group because the user doesn't exist"
-msgstr ""
+msgstr "ユーザ %s は存在しないため、当該グループから削除できません。"
 
 #: ../nova/auth/ldapdriver.py:528
 #, python-format
 msgid "User %s is not a member of the group"
-msgstr ""
+msgstr "ユーザ %s は当該グループのメンバではありません。"
 
 #: ../nova/auth/ldapdriver.py:542
 #, python-format
@@ -2780,7 +2759,7 @@ msgstr "グループの最後のメンバーを削除しようとしました。
 #: ../nova/auth/ldapdriver.py:549
 #, python-format
 msgid "User %s can't be removed from all because the user doesn't exist"
-msgstr ""
+msgstr "ユーザ %s は存在しないため、全ロールからの削除はできません。"
 
 #: ../nova/auth/ldapdriver.py:564
 #, python-format
@@ -2810,22 +2789,22 @@ msgstr "Deleting user: ユーザ %s を削除します。"
 #: ../nova/api/ec2/admin.py:127
 #, python-format
 msgid "Adding role %(role)s to user %(user)s for project %(project)s"
-msgstr ""
+msgstr "プロジェクト %(project)s のユーザ %(user)s にロール %(role)s を付与します。"
 
 #: ../nova/api/ec2/admin.py:131
 #, python-format
 msgid "Adding sitewide role %(role)s to user %(user)s"
-msgstr ""
+msgstr "ユーザ %(user)s にサイト共通なロール %(role)s を追加中"
 
 #: ../nova/api/ec2/admin.py:137
 #, python-format
 msgid "Removing role %(role)s from user %(user)s for project %(project)s"
-msgstr ""
+msgstr "プロジェクト %(project)s のユーザ %(user)s からロール %(role)s を削除します。"
 
 #: ../nova/api/ec2/admin.py:141
 #, python-format
 msgid "Removing sitewide role %(role)s from user %(user)s"
-msgstr ""
+msgstr "ユーザ %(user)s からサイト共通なロール %(role)s を削除中"
 
 #: ../nova/api/ec2/admin.py:146 ../nova/api/ec2/admin.py:223
 msgid "operation must be add or remove"
@@ -2834,17 +2813,17 @@ msgstr "operation は add または remove の何れかである必要があり�
 #: ../nova/api/ec2/admin.py:159
 #, python-format
 msgid "Getting x509 for user: %(name)s on project: %(project)s"
-msgstr ""
+msgstr "プロジェクト %(project)s のユーザ %(name)s の x509 証明書を取得します。"
 
 #: ../nova/api/ec2/admin.py:177
 #, python-format
 msgid "Create project %(name)s managed by %(manager_user)s"
-msgstr ""
+msgstr "管理者 %(manager_user)s　によって管理されるプロジェクト %(name)s を作成します。"
 
 #: ../nova/api/ec2/admin.py:190
 #, python-format
 msgid "Modify project: %(name)s managed by %(manager_user)s"
-msgstr ""
+msgstr "管理者 %(manager_user)s によって管理されるプロジェクト %(name)s を変更します。"
 
 #: ../nova/api/ec2/admin.py:200
 #, python-format
@@ -2854,12 +2833,12 @@ msgstr "Delete project: プロジェクト %s を削除しました。"
 #: ../nova/api/ec2/admin.py:214
 #, python-format
 msgid "Adding user %(user)s to project %(project)s"
-msgstr ""
+msgstr "ユーザ %(user)s をプロジェクト %(project)s に追加します。"
 
 #: ../nova/api/ec2/admin.py:218
 #, python-format
 msgid "Removing user %(user)s from project %(project)s"
-msgstr ""
+msgstr "ユーザ %(user)s をプロジェクト %(project)s から削除します。"
 
 #, python-format
 #~ msgid ""

@@ -14,26 +14,29 @@
 #    under the License.
 
 import base64
+import os
 import traceback
 
 from webob import exc
+from xml.dom import minidom
+import webob
 
 from nova import compute
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import create_instance_helper as helper
-from nova.api.openstack import faults
+from nova.api.openstack import ips
+from nova.api.openstack import wsgi
+from nova.compute import instance_types
+from nova.scheduler import api as scheduler_api
+import nova.api.openstack
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
-from nova.api.openstack import wsgi
-import nova.api.openstack
-from nova.scheduler import api as scheduler_api
 
 
 LOG = logging.getLogger('nova.api.openstack.servers')
@@ -101,17 +104,14 @@ class Controller(object):
                 req.environ['nova.context'], id)
             return self._build_view(req, instance, is_detail=True)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def create(self, req, body):
         """ Creates a new server for a given user """
         extra_values = None
         result = None
-        try:
-            extra_values, instances = self.helper.create_instance(
-                    req, body, self.compute_api.create)
-        except faults.Fault, f:
-            return f
+        extra_values, instances = self.helper.create_instance(
+                req, body, self.compute_api.create)
 
         # We can only return 1 instance via the API, if we happen to
         # build more than one...  instances is a list, so we'll just
@@ -131,7 +131,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
 
         if not body:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
 
         ctxt = req.environ['nova.context']
         update_dict = {}
@@ -146,7 +146,7 @@ class Controller(object):
         try:
             self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         return exc.HTTPNoContent()
 
@@ -155,22 +155,93 @@ class Controller(object):
 
     @scheduler_api.redirect_handler
     def action(self, req, id, body):
-        """Multi-purpose method used to reboot, rebuild, or
-        resize a server"""
+        """Multi-purpose method used to take actions on a server"""
 
-        actions = {
+        self.actions = {
             'changePassword': self._action_change_password,
             'reboot': self._action_reboot,
             'resize': self._action_resize,
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,
-            'migrate': self._action_migrate}
+            'createImage': self._action_create_image,
+        }
 
-        for key in actions.keys():
+        if FLAGS.allow_admin_api:
+            admin_actions = {
+                'createBackup': self._action_create_backup,
+            }
+            self.actions.update(admin_actions)
+
+        for key in self.actions.keys():
             if key in body:
-                return actions[key](body, req, id)
-        return faults.Fault(exc.HTTPNotImplemented())
+                return self.actions[key](body, req, id)
+
+        raise exc.HTTPNotImplemented()
+
+    def _action_create_backup(self, input_dict, req, instance_id):
+        """Backup a server instance.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
+
+        """
+        entity = input_dict["createBackup"]
+
+        try:
+            image_name = entity["name"]
+            backup_type = entity["backup_type"]
+            rotation = entity["rotation"]
+
+        except KeyError as missing_key:
+            msg = _("createBackup entity requires %s attribute") % missing_key
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        except TypeError:
+            msg = _("Malformed createBackup entity")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            rotation = int(rotation)
+        except ValueError:
+            msg = _("createBackup attribute 'rotation' must be an integer")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url,
+                                  'servers',
+                                  str(instance_id))
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ["nova.context"]
+        image = self.compute_api.backup(context,
+                                        instance_id,
+                                        image_name,
+                                        backup_type,
+                                        rotation,
+                                        extra_properties=props)
+
+        # build location of newly-created image entity
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
+
+    def _action_create_image(self, input_dict, req, id):
+        return exc.HTTPNotImplemented()
 
     def _action_change_password(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
@@ -180,7 +251,7 @@ class Controller(object):
             self.compute_api.confirm_resize(req.environ['nova.context'], id)
         except Exception, e:
             LOG.exception(_("Error in confirm-resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
+            raise exc.HTTPBadRequest()
         return exc.HTTPNoContent()
 
     def _action_revert_resize(self, input_dict, req, id):
@@ -188,34 +259,32 @@ class Controller(object):
             self.compute_api.revert_resize(req.environ['nova.context'], id)
         except Exception, e:
             LOG.exception(_("Error in revert-resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+            raise exc.HTTPBadRequest()
+        return webob.Response(status_int=202)
 
     def _action_resize(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
 
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
-            reboot_type = input_dict['reboot']['type']
+            valid_reboot_types = ['HARD', 'SOFT']
+            reboot_type = input_dict['reboot']['type'].upper()
+            if not valid_reboot_types.count(reboot_type):
+                msg = _("Argument 'type' for reboot is not HARD or SOFT")
+                LOG.exception(msg)
+                raise exc.HTTPBadRequest(explanation=msg)
         else:
-            LOG.exception(_("Missing argument 'type' for reboot"))
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            msg = _("Missing argument 'type' for reboot")
+            LOG.exception(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
             self.compute_api.reboot(req.environ['nova.context'], id)
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
-
-    def _action_migrate(self, input_dict, req, id):
-        try:
-            self.compute_api.resize(req.environ['nova.context'], id)
-        except Exception, e:
-            LOG.exception(_("Error in migrate %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def lock(self, req, id):
@@ -227,11 +296,11 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.lock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::lock %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def unlock(self, req, id):
@@ -243,11 +312,11 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.unlock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unlock %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_lock(self, req, id):
@@ -258,14 +327,14 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.get_lock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::get_lock %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def reset_network(self, req, id, body):
+    def reset_network(self, req, id):
         """
         Reset networking on an instance (admin only).
 
@@ -273,14 +342,14 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.reset_network(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def inject_network_info(self, req, id, body):
+    def inject_network_info(self, req, id):
         """
         Inject network info for an instance (admin only).
 
@@ -288,59 +357,68 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.inject_network_info(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::inject_network_info %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def pause(self, req, id, body):
+    def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
         try:
             self.compute_api.pause(ctxt, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def unpause(self, req, id, body):
+    def unpause(self, req, id):
         """ Permit Admins to Unpause the server. """
         ctxt = req.environ['nova.context']
         try:
             self.compute_api.unpause(ctxt, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def suspend(self, req, id, body):
+    def suspend(self, req, id):
         """permit admins to suspend the server"""
         context = req.environ['nova.context']
         try:
             self.compute_api.suspend(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def resume(self, req, id, body):
+    def resume(self, req, id):
         """permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
         try:
             self.compute_api.resume(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
+
+    @scheduler_api.redirect_handler
+    def migrate(self, req, id):
+        try:
+            self.compute_api.resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in migrate %s"), e)
+            raise exc.HTTPBadRequest()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def rescue(self, req, id):
@@ -348,11 +426,11 @@ class Controller(object):
         context = req.environ["nova.context"]
         try:
             self.compute_api.rescue(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::rescue %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def unrescue(self, req, id):
@@ -360,11 +438,11 @@ class Controller(object):
         context = req.environ["nova.context"]
         try:
             self.compute_api.unrescue(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::unrescue %s"), readable)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPAccepted()
+            raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_ajax_console(self, req, id):
@@ -373,8 +451,8 @@ class Controller(object):
             self.compute_api.get_ajax_console(req.environ['nova.context'],
                 int(id))
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+            raise exc.HTTPNotFound()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def get_vnc_console(self, req, id):
@@ -383,8 +461,8 @@ class Controller(object):
             self.compute_api.get_vnc_console(req.environ['nova.context'],
                                              int(id))
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+            raise exc.HTTPNotFound()
+        return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
     def diagnostics(self, req, id):
@@ -406,6 +484,24 @@ class Controller(object):
                 error=item.error))
         return dict(actions=actions)
 
+    def resize(self, req, instance_id, flavor_id):
+        """Begin the resize process with given instance/flavor."""
+        context = req.environ["nova.context"]
+
+        try:
+            self.compute_api.resize(context, instance_id, flavor_id)
+        except exception.FlavorNotFound:
+            msg = _("Unable to locate requested flavor.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.CannotResizeToSameSize:
+            msg = _("Resize requires a change in size.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.CannotResizeToSmallerSize:
+            msg = _("Resizing to a smaller size is not supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return webob.Response(status_int=202)
+
 
 class ControllerV10(Controller):
 
@@ -415,8 +511,8 @@ class ControllerV10(Controller):
         try:
             self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+            raise exc.HTTPNotFound()
+        return webob.Response(status_int=202)
 
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
@@ -440,39 +536,31 @@ class ControllerV10(Controller):
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
-            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
-                flavor_id = input_dict['resize']['flavorId']
-                self.compute_api.resize(req.environ['nova.context'], id,
-                        flavor_id)
-            else:
-                LOG.exception(_("Missing 'flavorId' argument for resize"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
-        except Exception, e:
-            LOG.exception(_("Error in resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+            flavor_id = input_dict["resize"]["flavorId"]
+        except (KeyError, TypeError):
+            msg = _("Resize requests require 'flavorId' attribute.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return self.resize(req, id, flavor_id)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
-        instance_id = int(instance_id)
 
         try:
             image_id = info["rebuild"]["imageId"]
         except (KeyError, TypeError):
             msg = _("Could not parse imageId from request.")
             LOG.debug(msg)
-            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.compute_api.rebuild(context, instance_id, image_id)
         except exception.BuildInProgress:
-            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
-            return faults.Fault(exc.HTTPConflict(explanation=msg))
+            raise exc.HTTPConflict(explanation=msg)
 
-        response = exc.HTTPAccepted()
-        response.empty_body = True
-        return response
+        return webob.Response(status_int=202)
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
@@ -487,14 +575,23 @@ class ControllerV11(Controller):
         try:
             self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def _image_ref_from_req_data(self, data):
-        return data['server']['imageRef']
+        try:
+            return data['server']['imageRef']
+        except (TypeError, KeyError):
+            msg = _("Missing imageRef attribute")
+            raise exc.HTTPBadRequest(explanation=msg)
 
     def _flavor_id_from_req_data(self, data):
-        href = data['server']['flavorRef']
-        return common.get_id_from_href(href)
+        try:
+            flavor_ref = data['server']['flavorRef']
+        except (TypeError, KeyError):
+            msg = _("Missing flavorRef attribute")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return common.get_id_from_href(flavor_ref)
 
     def _build_view(self, req, instance, is_detail=False):
         base_url = req.application_url
@@ -519,7 +616,7 @@ class ControllerV11(Controller):
             msg = _("Invalid adminPass")
             return exc.HTTPBadRequest(explanation=msg)
         self.compute_api.set_admin_password(context, id, password)
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
@@ -531,7 +628,7 @@ class ControllerV11(Controller):
         except AttributeError as ex:
             msg = _("Unable to parse metadata key/value pairs.")
             LOG.debug(msg)
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
     def _decode_personalities(self, personalities):
         """Decode the Base64-encoded personalities."""
@@ -542,41 +639,37 @@ class ControllerV11(Controller):
             except (KeyError, TypeError):
                 msg = _("Unable to parse personality path/contents.")
                 LOG.info(msg)
-                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+                raise exc.HTTPBadRequest(explanation=msg)
 
             try:
                 personality["contents"] = base64.b64decode(contents)
             except TypeError:
                 msg = _("Personality content could not be Base64 decoded.")
                 LOG.info(msg)
-                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+                raise exc.HTTPBadRequest(explanation=msg)
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
-            if 'resize' in input_dict and 'flavorRef' in input_dict['resize']:
-                flavor_ref = input_dict['resize']['flavorRef']
-                flavor_id = common.get_id_from_href(flavor_ref)
-                self.compute_api.resize(req.environ['nova.context'], id,
-                        flavor_id)
-            else:
-                LOG.exception(_("Missing 'flavorRef' argument for resize"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
-        except Exception, e:
-            LOG.exception(_("Error in resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
+            flavor_ref = input_dict["resize"]["flavorRef"]
+            if not flavor_ref:
+                msg = _("Resize request has invalid 'flavorRef' attribute.")
+                raise exc.HTTPBadRequest(explanation=msg)
+        except (KeyError, TypeError):
+            msg = _("Resize requests require 'flavorRef' attribute.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return self.resize(req, id, flavor_ref)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
-        instance_id = int(instance_id)
 
         try:
             image_href = info["rebuild"]["imageRef"]
         except (KeyError, TypeError):
             msg = _("Could not parse imageRef from request.")
             LOG.debug(msg)
-            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
+            raise exc.HTTPBadRequest(explanation=msg)
 
         personalities = info["rebuild"].get("personality", [])
         metadata = info["rebuild"].get("metadata")
@@ -590,13 +683,53 @@ class ControllerV11(Controller):
             self.compute_api.rebuild(context, instance_id, image_href, name,
                                      metadata, personalities)
         except exception.BuildInProgress:
-            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
-            return faults.Fault(exc.HTTPConflict(explanation=msg))
+            raise exc.HTTPConflict(explanation=msg)
 
-        response = exc.HTTPAccepted()
-        response.empty_body = True
-        return response
+        return webob.Response(status_int=202)
+
+    def _action_create_image(self, input_dict, req, instance_id):
+        """Snapshot a server instance."""
+        entity = input_dict.get("createImage", {})
+
+        try:
+            image_name = entity["name"]
+
+        except KeyError:
+            msg = _("createImage entity requires name attribute")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        except TypeError:
+            msg = _("Malformed createImage entity")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url,
+                                  'servers',
+                                  str(instance_id))
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ['nova.context']
+        image = self.compute_api.snapshot(context,
+                                          instance_id,
+                                          image_name,
+                                          extra_properties=props)
+
+        # build location of newly-created image entity
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
@@ -610,6 +743,123 @@ class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
     def delete(self, response, data):
         response.status_int = 204
+
+
+class ServerXMLSerializer(wsgi.XMLDictSerializer):
+
+    xmlns = wsgi.XMLNS_V11
+
+    def __init__(self):
+        self.metadata_serializer = common.MetadataXMLSerializer()
+        self.addresses_serializer = ips.IPXMLSerializer()
+
+    def _create_basic_entity_node(self, xml_doc, id, links, name):
+        basic_node = xml_doc.createElement(name)
+        basic_node.setAttribute('id', str(id))
+        link_nodes = self._create_link_nodes(xml_doc, links)
+        for link_node in link_nodes:
+            basic_node.appendChild(link_node)
+        return basic_node
+
+    def _create_metadata_node(self, xml_doc, metadata):
+        return self.metadata_serializer.meta_list_to_xml(xml_doc, metadata)
+
+    def _create_addresses_node(self, xml_doc, addresses):
+        return self.addresses_serializer.networks_to_xml(xml_doc, addresses)
+
+    def _add_server_attributes(self, node, server):
+        node.setAttribute('id', str(server['id']))
+        node.setAttribute('uuid', str(server['uuid']))
+        node.setAttribute('hostId', str(server['hostId']))
+        node.setAttribute('name', server['name'])
+        node.setAttribute('created', str(server['created']))
+        node.setAttribute('updated', str(server['updated']))
+        node.setAttribute('status', server['status'])
+        if 'progress' in server:
+            node.setAttribute('progress', str(server['progress']))
+
+    def _server_to_xml(self, xml_doc, server):
+        server_node = xml_doc.createElement('server')
+        server_node.setAttribute('id', str(server['id']))
+        server_node.setAttribute('name', server['name'])
+        link_nodes = self._create_link_nodes(xml_doc,
+                                             server['links'])
+        for link_node in link_nodes:
+            server_node.appendChild(link_node)
+        return server_node
+
+    def _server_to_xml_detailed(self, xml_doc, server):
+        server_node = xml_doc.createElement('server')
+        self._add_server_attributes(server_node, server)
+
+        link_nodes = self._create_link_nodes(xml_doc,
+                                             server['links'])
+        for link_node in link_nodes:
+            server_node.appendChild(link_node)
+
+        if 'image' in server:
+            image_node = self._create_basic_entity_node(xml_doc,
+                                                    server['image']['id'],
+                                                    server['image']['links'],
+                                                    'image')
+            server_node.appendChild(image_node)
+
+        if 'flavor' in server:
+            flavor_node = self._create_basic_entity_node(xml_doc,
+                                                    server['flavor']['id'],
+                                                    server['flavor']['links'],
+                                                    'flavor')
+            server_node.appendChild(flavor_node)
+
+        metadata = server.get('metadata', {}).items()
+        if len(metadata) > 0:
+            metadata_node = self._create_metadata_node(xml_doc, metadata)
+            server_node.appendChild(metadata_node)
+
+        addresses_node = self._create_addresses_node(xml_doc,
+                                                     server['addresses'])
+        server_node.appendChild(addresses_node)
+
+        return server_node
+
+    def _server_list_to_xml(self, xml_doc, servers, detailed):
+        container_node = xml_doc.createElement('servers')
+        if detailed:
+            server_to_xml = self._server_to_xml_detailed
+        else:
+            server_to_xml = self._server_to_xml
+
+        for server in servers:
+            item_node = server_to_xml(xml_doc, server)
+            container_node.appendChild(item_node)
+        return container_node
+
+    def index(self, servers_dict):
+        xml_doc = minidom.Document()
+        node = self._server_list_to_xml(xml_doc,
+                                       servers_dict['servers'],
+                                       detailed=False)
+        return self.to_xml_string(node, True)
+
+    def detail(self, servers_dict):
+        xml_doc = minidom.Document()
+        node = self._server_list_to_xml(xml_doc,
+                                       servers_dict['servers'],
+                                       detailed=True)
+        return self.to_xml_string(node, True)
+
+    def show(self, server_dict):
+        xml_doc = minidom.Document()
+        node = self._server_to_xml_detailed(xml_doc,
+                                       server_dict['server'])
+        return self.to_xml_string(node, True)
+
+    def create(self, server_dict):
+        xml_doc = minidom.Document()
+        node = self._server_to_xml_detailed(xml_doc,
+                                       server_dict['server'])
+        node.setAttribute('adminPass', server_dict['server']['adminPass'])
+        return self.to_xml_string(node, True)
 
 
 def create_resource(version='1.0'):
@@ -641,13 +891,22 @@ def create_resource(version='1.0'):
 
     headers_serializer = HeadersSerializer()
 
+    xml_serializer = {
+        '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
+        '1.1': ServerXMLSerializer(),
+    }[version]
+
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                  xmlns=xmlns),
+        'application/xml': xml_serializer,
     }
 
+    xml_deserializer = {
+        '1.0': helper.ServerXMLDeserializer(),
+        '1.1': helper.ServerXMLDeserializerV11(),
+    }[version]
+
     body_deserializers = {
-        'application/xml': helper.ServerXMLDeserializer(),
+        'application/xml': xml_deserializer,
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)

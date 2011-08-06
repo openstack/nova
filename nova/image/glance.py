@@ -83,35 +83,79 @@ class GlanceImageService(service.BaseImageService):
 
     client = property(_get_client, _set_client)
 
-    def index(self, context, filters=None, marker=None, limit=None):
+    def _set_client_context(self, context):
+        """Sets the client's auth token."""
+        self.client.set_auth_token(context.auth_token)
+
+    def index(self, context, **kwargs):
         """Calls out to Glance for a list of images available."""
-        # NOTE(sirp): We need to use `get_images_detailed` and not
-        # `get_images` here because we need `is_public` and `properties`
-        # included so we can filter by user
-        filtered = []
-        image_metas = self.client.get_images_detailed(filters=filters,
-                                                      marker=marker,
-                                                      limit=limit)
+        params = self._extract_query_params(kwargs)
+        image_metas = self._get_images(context, **params)
+
+        images = []
         for image_meta in image_metas:
+            # NOTE(sirp): We need to use `get_images_detailed` and not
+            # `get_images` here because we need `is_public` and `properties`
+            # included so we can filter by user
             if self._is_image_available(context, image_meta):
                 meta_subset = utils.subset_dict(image_meta, ('id', 'name'))
-                filtered.append(meta_subset)
-        return filtered
+                images.append(meta_subset)
+        return images
 
-    def detail(self, context, filters=None, marker=None, limit=None):
+    def detail(self, context, **kwargs):
         """Calls out to Glance for a list of detailed image information."""
-        filtered = []
-        image_metas = self.client.get_images_detailed(filters=filters,
-                                                      marker=marker,
-                                                      limit=limit)
+        params = self._extract_query_params(kwargs)
+        image_metas = self._get_images(context, **params)
+
+        images = []
         for image_meta in image_metas:
             if self._is_image_available(context, image_meta):
                 base_image_meta = self._translate_to_base(image_meta)
-                filtered.append(base_image_meta)
-        return filtered
+                images.append(base_image_meta)
+        return images
+
+    def _extract_query_params(self, params):
+        _params = {}
+        accepted_params = ('filters', 'marker', 'limit',
+                           'sort_key', 'sort_dir')
+        for param in accepted_params:
+            if param in params:
+                _params[param] = params.get(param)
+
+        return _params
+
+    def _get_images(self, context, **kwargs):
+        """Get image entitites from images service"""
+        self._set_client_context(context)
+
+        # ensure filters is a dict
+        kwargs['filters'] = kwargs.get('filters') or {}
+        # NOTE(vish): don't filter out private images
+        kwargs['filters'].setdefault('is_public', 'none')
+
+        return self._fetch_images(self.client.get_images_detailed, **kwargs)
+
+    def _fetch_images(self, fetch_func, **kwargs):
+        """Paginate through results from glance server"""
+        images = fetch_func(**kwargs)
+
+        for image in images:
+            yield image
+        else:
+            # break out of recursive loop to end pagination
+            return
+
+        try:
+            # attempt to advance the marker in order to fetch next page
+            kwargs['marker'] = images[-1]['id']
+        except KeyError:
+            raise exception.ImagePaginationFailed()
+
+        self._fetch_images(fetch_func, **kwargs)
 
     def show(self, context, image_id):
         """Returns a dict with image data for the given opaque image id."""
+        self._set_client_context(context)
         try:
             image_meta = self.client.get_image_meta(image_id)
         except glance_exception.NotFound:
@@ -135,6 +179,7 @@ class GlanceImageService(service.BaseImageService):
 
     def get(self, context, image_id, data):
         """Calls out to Glance for metadata and data and writes data."""
+        self._set_client_context(context)
         try:
             image_meta, image_chunks = self.client.get_image(image_id)
         except glance_exception.NotFound:
@@ -152,6 +197,7 @@ class GlanceImageService(service.BaseImageService):
         :raises: AlreadyExists if the image already exist.
 
         """
+        self._set_client_context(context)
         # Translate Base -> Service
         LOG.debug(_('Creating image in Glance. Metadata passed in %s'),
                   image_meta)
@@ -174,6 +220,7 @@ class GlanceImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
+        self._set_client_context(context)
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         try:
@@ -190,6 +237,7 @@ class GlanceImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
+        self._set_client_context(context)
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         try:

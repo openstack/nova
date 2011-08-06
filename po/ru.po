@@ -8,20 +8,20 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-03-30 07:06+0000\n"
-"Last-Translator: Andrey Olykainen <Unknown>\n"
+"PO-Revision-Date: 2011-07-09 07:20+0000\n"
+"Last-Translator: ilya kislicyn <Unknown>\n"
 "Language-Team: Russian <ru@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-03-31 05:58+0000\n"
-"X-Generator: Launchpad (build 12559)\n"
+"X-Launchpad-Export-Date: 2011-07-23 05:12+0000\n"
+"X-Generator: Launchpad (build 13405)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
 #: ../nova/scheduler/simple.py:122
 msgid "No hosts found"
-msgstr ""
+msgstr "Узлы не найдены"
 
 #: ../nova/exception.py:33
 msgid "Unexpected error while running command."
@@ -54,7 +54,7 @@ msgstr ""
 #: ../nova/volume/api.py:47
 #, python-format
 msgid "Volume quota exceeded. You cannot create a volume of size %sG"
-msgstr ""
+msgstr "Квота тома превышена. Вы не можете создать том размером %sG"
 
 #: ../nova/volume/api.py:71 ../nova/volume/api.py:96
 msgid "Volume status must be available"
@@ -62,19 +62,19 @@ msgstr ""
 
 #: ../nova/volume/api.py:98
 msgid "Volume is already attached"
-msgstr ""
+msgstr "Том уже смотирован"
 
 #: ../nova/volume/api.py:104
 msgid "Volume is already detached"
-msgstr ""
+msgstr "Том уже отмонтирован"
 
 #: ../nova/api/openstack/servers.py:72
 msgid "Failed to read private ip"
-msgstr ""
+msgstr "Ошибка чтения приватного IP адреса"
 
 #: ../nova/api/openstack/servers.py:79
 msgid "Failed to read public ip(s)"
-msgstr ""
+msgstr "Ошибка чтения публичных IP адресов"
 
 #: ../nova/api/openstack/servers.py:152
 #, python-format
@@ -83,7 +83,7 @@ msgstr ""
 
 #: ../nova/api/openstack/servers.py:168
 msgid "No keypairs defined"
-msgstr ""
+msgstr "Не определены ключевые пары"
 
 #: ../nova/api/openstack/servers.py:238
 #, python-format
@@ -124,33 +124,6 @@ msgstr ""
 #, python-format
 msgid "compute.api::resume %s"
 msgstr ""
-
-#: ../nova/twistd.py:157
-msgid "Wrong number of arguments."
-msgstr "Неверное число аргументов."
-
-#: ../nova/twistd.py:209
-#, python-format
-msgid "pidfile %s does not exist. Daemon not running?\n"
-msgstr "pidfile %s не обнаружен. Демон не запущен?\n"
-
-#: ../nova/twistd.py:221
-msgid "No such process"
-msgstr ""
-
-#: ../nova/twistd.py:230 ../nova/service.py:224
-#, python-format
-msgid "Serving %s"
-msgstr ""
-
-#: ../nova/twistd.py:262 ../nova/service.py:225
-msgid "Full set of FLAGS:"
-msgstr ""
-
-#: ../nova/twistd.py:266
-#, python-format
-msgid "Starting %s"
-msgstr "Запускается %s"
 
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:731 ../nova/virt/libvirt_conn.py:741
@@ -1779,34 +1752,6 @@ msgstr ""
 msgid "Got exception: %s"
 msgstr ""
 
-#: ../nova/compute/monitor.py:259
-#, python-format
-msgid "updating %s..."
-msgstr "обновление %s..."
-
-#: ../nova/compute/monitor.py:289
-msgid "unexpected error during update"
-msgstr "неожиданная ошибка во время обновления"
-
-#: ../nova/compute/monitor.py:356
-#, python-format
-msgid "Cannot get blockstats for \"%(disk)s\" on \"%(iid)s\""
-msgstr ""
-
-#: ../nova/compute/monitor.py:379
-#, python-format
-msgid "Cannot get ifstats for \"%(interface)s\" on \"%(iid)s\""
-msgstr ""
-
-#: ../nova/compute/monitor.py:414
-msgid "unexpected exception getting connection"
-msgstr ""
-
-#: ../nova/compute/monitor.py:429
-#, python-format
-msgid "Found instance: %s"
-msgstr ""
-
 #: ../nova/volume/san.py:67
 #, python-format
 msgid "Could not find iSCSI export  for volume %s"
@@ -2262,10 +2207,6 @@ msgstr ""
 
 #: ../nova/wsgi.py:147
 msgid "You must implement __call__"
-msgstr ""
-
-#: ../bin/nova-instancemonitor.py:55
-msgid "Starting instance monitor"
 msgstr ""
 
 #: ../bin/nova-dhcpbridge.py:58

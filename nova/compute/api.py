@@ -127,7 +127,7 @@ class API(base.Base):
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
             pid = context.project_id
-            msg = _("Quota exceeeded for %(pid)s, tried to set "
+            msg = _("Quota exceeded for %(pid)s, tried to set "
                     "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
             raise quota.QuotaError(msg, "MetadataLimitExceeded")
@@ -138,7 +138,7 @@ class API(base.Base):
         for k, v in metadata.iteritems():
             if len(k) > 255 or len(v) > 255:
                 pid = context.project_id
-                msg = _("Quota exceeeded for %(pid)s, metadata property "
+                msg = _("Quota exceeded for %(pid)s, metadata property "
                         "key or value too long") % locals()
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
@@ -165,7 +165,7 @@ class API(base.Base):
                                                 instance_type)
         if num_instances < min_count:
             pid = context.project_id
-            LOG.warn(_("Quota exceeeded for %(pid)s,"
+            LOG.warn(_("Quota exceeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
             if num_instances <= 0:
                 message = _("Instance quota exceeded. You cannot run any "
@@ -467,10 +467,10 @@ class API(base.Base):
 
         return [dict(x.iteritems()) for x in instances]
 
-    def has_finished_migration(self, context, instance_id):
+    def has_finished_migration(self, context, instance_uuid):
         """Returns true if an instance has a finished migration."""
         try:
-            db.migration_get_by_instance_and_status(context, instance_id,
+            db.migration_get_by_instance_and_status(context, instance_uuid,
                     'finished')
             return True
         except exception.NotFound:
@@ -561,6 +561,7 @@ class API(base.Base):
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
 
+    @scheduler_api.reroute_compute("update")
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
@@ -688,7 +689,7 @@ class API(base.Base):
                     raise
                 instances = None
         elif project_id or not context.is_admin:
-            if not context.project:
+            if not context.project_id:
                 instances = self.db.instance_get_all_by_user(
                     context, context.user_id)
             else:
@@ -776,6 +777,7 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
+    @scheduler_api.reroute_compute("backup")
     def backup(self, context, instance_id, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
@@ -792,6 +794,7 @@ class API(base.Base):
                             extra_properties=extra_properties)
         return recv_meta
 
+    @scheduler_api.reroute_compute("snapshot")
     def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
 
@@ -834,10 +837,12 @@ class API(base.Base):
                                    params=params)
         return recv_meta
 
+    @scheduler_api.reroute_compute("reboot")
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, name=None,
             metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
@@ -868,39 +873,50 @@ class API(base.Base):
                                    instance_id,
                                    params=rebuild_params)
 
+    @scheduler_api.reroute_compute("revert_resize")
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
+        instance_ref = self._get_instance(context, instance_id,
+                'revert_resize')
         migration_ref = self.db.migration_get_by_instance_and_status(context,
-                instance_id, 'finished')
+                instance_ref['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
 
         params = {'migration_id': migration_ref['id']}
-        self._cast_compute_message('revert_resize', context, instance_id,
-                migration_ref['dest_compute'], params=params)
+        self._cast_compute_message('revert_resize', context,
+                                   instance_ref['uuid'],
+                                   migration_ref['dest_compute'],
+                                   params=params)
+
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'reverted'})
 
+    @scheduler_api.reroute_compute("confirm_resize")
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize and deletes the 'old' instance."""
         context = context.elevated()
+        instance_ref = self._get_instance(context, instance_id,
+                'confirm_resize')
         migration_ref = self.db.migration_get_by_instance_and_status(context,
-                instance_id, 'finished')
+                instance_ref['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
-        instance_ref = self.db.instance_get(context, instance_id)
         params = {'migration_id': migration_ref['id']}
-        self._cast_compute_message('confirm_resize', context, instance_id,
-                migration_ref['source_compute'], params=params)
+        self._cast_compute_message('confirm_resize', context,
+                                   instance_ref['uuid'],
+                                   migration_ref['source_compute'],
+                                   params=params)
 
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })
 
+    @scheduler_api.reroute_compute("resize")
     def resize(self, context, instance_id, flavor_id=None):
         """Resize (ie, migrate) a running instance.
 
@@ -908,8 +924,8 @@ class API(base.Base):
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
         """
-        instance = self.db.instance_get(context, instance_id)
-        current_instance_type = instance['instance_type']
+        instance_ref = self._get_instance(context, instance_id, 'resize')
+        current_instance_type = instance_ref['instance_type']
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:
@@ -924,24 +940,22 @@ class API(base.Base):
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
                 " new instance type %(new_instance_type_name)s") % locals())
         if not new_instance_type:
-            raise exception.ApiError(_("Requested flavor %(flavor_id)d "
-                    "does not exist") % locals())
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         current_memory_mb = current_instance_type['memory_mb']
         new_memory_mb = new_instance_type['memory_mb']
         if current_memory_mb > new_memory_mb:
-            raise exception.ApiError(_("Invalid flavor: cannot downsize"
-                    "instances"))
+            raise exception.CannotResizeToSmallerSize()
 
         if (current_memory_mb == new_memory_mb) and flavor_id:
-            raise exception.ApiError(_("Invalid flavor: cannot use"
-                    "the same flavor. "))
+            raise exception.CannotResizeToSameSize()
 
+        instance_ref = self._get_instance(context, instance_id, 'resize')
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_id": instance_id,
-                              "flavor_id": new_instance_type['id']}})
+                              "instance_id": instance_ref['uuid'],
+                              "instance_type_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):
@@ -1012,6 +1026,7 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("set_admin_password")
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
         host = self._find_host(context, instance_id)
