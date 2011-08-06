@@ -592,6 +592,31 @@ class FixedIpCommands(object):
                     fixed_ip['address'],
                     mac_address, hostname, host)
 
+    @args('--address', dest="address", metavar='<ip address>',
+          help='IP address')
+    def reserve(self, address):
+        """Mark fixed ip as reserved
+        arguments: address"""
+        self._set_reserved(address, True)
+
+    @args('--address', dest="address", metavar='<ip address>',
+          help='IP address')
+    def unreserve(self, address):
+        """Mark fixed ip as free to use
+        arguments: address"""
+        self._set_reserved(address, False)
+
+    def _set_reserved(self, address, reserved):
+        ctxt = context.get_admin_context()
+
+        try:
+            fixed_ip = db.fixed_ip_get_by_address(ctxt, address)
+            db.fixed_ip_update(ctxt, fixed_ip['address'],
+                                {'reserved': reserved})
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
+
 
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
