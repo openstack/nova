@@ -342,12 +342,6 @@ class ApiEc2TestCase(test.TestCase):
          spaces, dashes, and underscores. """
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
-        project = self.manager.create_project('fake', 'fake', 'fake')
-
-        # At the moment, you need both of these to actually be netadmin
-        self.manager.add_role('fake', 'netadmin')
-        project.add_role('fake', 'netadmin')
 
         # Test block group_name of non alphanumeric characters, spaces,
         # dashes, and underscores.
@@ -361,12 +355,6 @@ class ApiEc2TestCase(test.TestCase):
          API Spec states that the length should not exceed 255 chars """
         self.expect_http()
         self.mox.ReplayAll()
-        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
-        project = self.manager.create_project('fake', 'fake', 'fake')
-
-        # At the moment, you need both of these to actually be netadmin
-        self.manager.add_role('fake', 'netadmin')
-        project.add_role('fake', 'netadmin')
 
         # Test block group_name > 255 chars
         security_group_name = "".join(random.choice("poiuytrewqasdfghjklmnbvc")
