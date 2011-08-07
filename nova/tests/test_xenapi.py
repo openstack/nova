@@ -772,7 +772,6 @@ class XenAPIMigrateInstance(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(instance, '127.0.0.1')
 
-
     def test_revert_migrate(self):
         instance = db.instance_create(self.context, self.values)
         self.called = False
