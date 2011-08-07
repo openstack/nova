@@ -115,7 +115,8 @@ class SecurityGroupTests(base.UserSmokeTestCase):
         if not instance_id:
             return False
         if instance_id != self.data['instance'].id:
-            raise Exception("Wrong instance id")
+            raise Exception("Wrong instance id. Expected: %s, Got: %s" %
+                               (self.data['instance'].id, instance_id))
         return True
 
     def test_001_can_create_security_group(self):

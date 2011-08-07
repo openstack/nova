@@ -360,6 +360,7 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
+                                          image,
                                           instance_id=None, num_instances=1):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
@@ -373,6 +374,7 @@ class API(base.Base):
 
         filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
+            'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
             'filter': filter_class,
@@ -415,6 +417,7 @@ class API(base.Base):
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
                                       admin_password,
+                                      image,
                                       num_instances=num_instances)
 
         return base_options['reservation_id']
@@ -463,6 +466,7 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
+                                          image,
                                           instance_id=instance_id)
 
         return [dict(x.iteritems()) for x in instances]
