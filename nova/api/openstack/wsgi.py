@@ -487,7 +487,7 @@ class Resource(wsgi.Application):
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         if 'tenant_id' in args:
-            request.environ['nova.context']['tenant_id'] = args.pop("tenant_id")
+            args.pop("tenant_id")
 
         try:
             action_result = self.dispatch(request, action, args)
