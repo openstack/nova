@@ -1049,6 +1049,16 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
 
+    def test_create_image_snapshots_disabled(self):
+        self.flags(allow_instance_snapshots=False)
+        body = dict(image=dict(serverId='123', name='Snapshot 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     @classmethod
     def _make_image_fixtures(cls):
         image_id = 123

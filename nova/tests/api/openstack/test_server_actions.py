@@ -458,6 +458,7 @@ class ServerActionsTestV11(test.TestCase):
         self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
+        self.flags(allow_instance_snapshots=True)
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -774,6 +775,23 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(202, response.status_int)
         location = response.headers['Location']
         self.assertEqual('http://localhost/v1.1/images/123', location)
+
+    def test_create_image_snapshots_disabled(self):
+        """Don't permit a snapshot if the allow_instance_snapshots flag is
+        False
+        """
+        self.flags(allow_instance_snapshots=False)
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
     def test_create_image_with_metadata(self):
         body = {
