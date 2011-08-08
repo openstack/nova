@@ -94,12 +94,11 @@ class HostTestCase(test.TestCase):
         self.assertEqual(result_c2["status"], "disabled")
 
     def test_host_startup(self):
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.startup,
-            self.req, "host_c1")
+        result = self.controller.startup(self.req, "host_c1")
+        self.assertEqual(result["power_action"], "startup")
 
     def test_host_shutdown(self):
         result = self.controller.shutdown(self.req, "host_c1")
-        print "RES", result
         self.assertEqual(result["power_action"], "shutdown")
 
     def test_host_reboot(self):

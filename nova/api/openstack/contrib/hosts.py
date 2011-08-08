@@ -133,7 +133,7 @@ class Hosts(extensions.ExtensionDescriptor):
 
     @admin_only.admin_only
     def get_resources(self):
-    resources = [extensions.ResourceExtension('os-hosts',
+        resources = [extensions.ResourceExtension('os-hosts',
                 HostController(), collection_actions={'update': 'PUT'},
                 member_actions={"startup": "GET", "shutdown": "GET",
                         "reboot": "GET"})]
