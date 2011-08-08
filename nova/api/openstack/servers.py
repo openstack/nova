@@ -240,6 +240,7 @@ class Controller(object):
         resp.headers['Location'] = image_ref
         return resp
 
+    @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
 
@@ -689,6 +690,7 @@ class ControllerV11(Controller):
 
         return webob.Response(status_int=202)
 
+    @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
         """Snapshot a server instance."""
         entity = input_dict.get("createImage", {})

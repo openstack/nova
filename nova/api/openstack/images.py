@@ -106,6 +106,7 @@ class Controller(object):
 class ControllerV10(Controller):
     """Version 1.0 specific controller logic."""
 
+    @common.check_snapshots_enabled
     def create(self, req, body):
         """Snapshot a server instance and save the image."""
         try:
