@@ -1032,7 +1032,7 @@ class VMOps(object):
         return 'http://fakeajaxconsole/fake_url'
 
     def host_power_action(self, host, action):
-        """Reboots, shuts down or powers up the host."""
+        """Reboots or shuts down the host."""
         args = {"action": json.dumps(action)}
         methods = {"reboot": "host_reboot", "shutdown": "host_shutdown"}
         json_resp = self._call_xenhost(methods[action], args)
