@@ -391,7 +391,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected_image, actual_image)
 
     def test_get_image_v1_1(self):
-        request = webob.Request.blank('/v1.1/images/124')
+        request = webob.Request.blank('/v1.1/123/images/124')
         response = request.get_response(fakes.wsgi_app())
 
         actual_image = json.loads(response.body)
@@ -510,7 +510,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_image_404_v1_1_json(self):
-        request = webob.Request.blank('/v1.1/images/NonExistantImage')
+        request = webob.Request.blank('/v1.1/123/images/NonExistantImage')
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
@@ -526,7 +526,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected, actual)
 
     def test_get_image_404_v1_1_xml(self):
-        request = webob.Request.blank('/v1.1/images/NonExistantImage')
+        request = webob.Request.blank('/v1.1/123/images/NonExistantImage')
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
@@ -547,7 +547,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_image_index_v1_1(self):
-        request = webob.Request.blank('/v1.1/images')
+        request = webob.Request.blank('/v1.1/123/images')
         response = request.get_response(fakes.wsgi_app())
 
         response_dict = json.loads(response.body)
@@ -634,7 +634,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
     def test_get_image_details_v1_1(self):
-        request = webob.Request.blank('/v1.1/images/detail')
+        request = webob.Request.blank('/v1.1/123/images/detail')
         response = request.get_response(fakes.wsgi_app())
 
         response_dict = json.loads(response.body)
