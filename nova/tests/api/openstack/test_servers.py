@@ -336,7 +336,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         expected_server = {
@@ -428,7 +428,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
         actual = minidom.parseString(res.body.replace('  ', ''))
@@ -498,7 +498,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces, power_state=1)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         expected_server = {
@@ -589,7 +589,7 @@ class ServersTest(test.TestCase):
             flavor_id=flavor_id)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         expected_server = {
@@ -789,7 +789,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         res = req.get_response(fakes.wsgi_app())
 
         res_dict = json.loads(res.body)
@@ -833,7 +833,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         res = req.get_response(fakes.wsgi_app())
 
         res_dict = json.loads(res.body)
@@ -883,7 +883,7 @@ class ServersTest(test.TestCase):
                        'virtual_interface_get_by_instance',
                        _return_vifs)
 
-        req = webob.Request.blank('/v1.1/servers/1/ips')
+        req = webob.Request.blank('/v1.1/123/servers/1/ips')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -933,7 +933,7 @@ class ServersTest(test.TestCase):
                        'virtual_interface_get_by_instance',
                        _return_vifs)
 
-        req = webob.Request.blank('/v1.1/servers/1/ips/network_2')
+        req = webob.Request.blank('/v1.1/123/servers/1/ips/network_2')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -953,7 +953,7 @@ class ServersTest(test.TestCase):
                        'virtual_interface_get_by_instance',
                        _return_vifs)
 
-        req = webob.Request.blank('/v1.1/servers/1/ips/network_0')
+        req = webob.Request.blank('/v1.1/123/servers/1/ips/network_0')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -963,7 +963,7 @@ class ServersTest(test.TestCase):
                        'virtual_interface_get_by_instance',
                        _return_vifs)
 
-        req = webob.Request.blank('/v1.1/servers/600/ips')
+        req = webob.Request.blank('/v1.1/123/servers/600/ips')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -1032,7 +1032,7 @@ class ServersTest(test.TestCase):
                 i += 1
 
     def test_get_server_list_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -1096,19 +1096,19 @@ class ServersTest(test.TestCase):
         self.assertTrue(res.body.find('offset param') > -1)
 
     def test_get_servers_with_marker(self):
-        req = webob.Request.blank('/v1.1/servers?marker=2')
+        req = webob.Request.blank('/v1.1/123/servers?marker=2')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['name'] for s in servers], ["server3", "server4"])
 
     def test_get_servers_with_limit_and_marker(self):
-        req = webob.Request.blank('/v1.1/servers?limit=2&marker=1')
+        req = webob.Request.blank('/v1.1/123/servers?limit=2&marker=1')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['name'] for s in servers], ['server2', 'server3'])
 
     def test_get_servers_with_bad_marker(self):
-        req = webob.Request.blank('/v1.1/servers?limit=2&marker=asdf')
+        req = webob.Request.blank('/v1.1/123/servers?limit=2&marker=asdf')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
         self.assertTrue(res.body.find('marker param') > -1)
@@ -1364,7 +1364,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1389,7 +1389,7 @@ class ServersTest(test.TestCase):
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1405,7 +1405,7 @@ class ServersTest(test.TestCase):
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1421,7 +1421,7 @@ class ServersTest(test.TestCase):
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1459,7 +1459,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1506,7 +1506,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
@@ -1527,7 +1527,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
@@ -1601,13 +1601,13 @@ class ServersTest(test.TestCase):
         self.assertEqual(mock_method.password, 'bacon')
 
     def test_update_server_no_body_v1_1(self):
-        req = webob.Request.blank('/v1.0/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         req.method = 'PUT'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
     def test_update_server_name_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         req.method = 'PUT'
         req.content_type = 'application/json'
         req.body = json.dumps({'server': {'name': 'new-name'}})
@@ -1627,7 +1627,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         req.method = 'PUT'
         req.content_type = "application/json"
         req.body = self.body
@@ -1658,7 +1658,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 501)
 
     def test_server_backup_schedule_deprecated_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers/1/backup_schedule')
+        req = webob.Request.blank('/v1.1/123/servers/1/backup_schedule')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -1710,7 +1710,7 @@ class ServersTest(test.TestCase):
                 },
             ],
         }
-        req = webob.Request.blank('/v1.1/servers/detail')
+        req = webob.Request.blank('/v1.1/123/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -1836,7 +1836,7 @@ class ServersTest(test.TestCase):
         mock_method = MockSetAdminPassword()
         self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
         body = {'changePassword': {'adminPass': '1234pass'}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -1847,7 +1847,7 @@ class ServersTest(test.TestCase):
 
     def test_server_change_password_bad_request_v1_1(self):
         body = {'changePassword': {'pass': '12345'}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -1856,7 +1856,7 @@ class ServersTest(test.TestCase):
 
     def test_server_change_password_empty_string_v1_1(self):
         body = {'changePassword': {'adminPass': ''}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -1865,7 +1865,7 @@ class ServersTest(test.TestCase):
 
     def test_server_change_password_none_v1_1(self):
         body = {'changePassword': {'adminPass': None}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -1874,7 +1874,7 @@ class ServersTest(test.TestCase):
 
     def test_server_change_password_not_a_string_v1_1(self):
         body = {'changePassword': {'adminPass': 1234}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -1949,7 +1949,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -1970,7 +1970,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        return_server_with_uuid_and_power_state(state))
 
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -1988,7 +1988,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -2004,7 +2004,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -2019,7 +2019,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -2038,7 +2038,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -2057,7 +2057,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -2117,7 +2117,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 422)
 
     def test_delete_server_instance_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         req.method = 'DELETE'
 
         self.server_delete_called = False
@@ -2147,7 +2147,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(self.resize_called, True)
 
     def test_resize_server_v11(self):
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.content_type = 'application/json'
         req.method = 'POST'
         body_dict = {
@@ -2193,7 +2193,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_resize_invalid_flavorid_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.content_type = 'application/json'
         req.method = 'POST'
         resize_body = {
@@ -2208,7 +2208,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_resize_nonint_flavorid_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.content_type = 'application/json'
         req.method = 'POST'
         resize_body = {
@@ -2349,7 +2349,7 @@ class ServersTest(test.TestCase):
                 'name': 'Snapshot 1',
             },
         }
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -2365,7 +2365,7 @@ class ServersTest(test.TestCase):
                 'metadata': {'key': 'asdf'},
             },
         }
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -2378,7 +2378,7 @@ class ServersTest(test.TestCase):
         body = {
             'createImage': {},
         }
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -2392,7 +2392,7 @@ class ServersTest(test.TestCase):
                 'metadata': 'henry',
             },
         }
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -2431,7 +2431,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/1/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
