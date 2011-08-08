@@ -215,7 +215,8 @@ def host_data(self, arg_dict):
     # and convert the data types as needed.
     ret_dict = cleanup(parsed_data)
     # Add any config settings
-    ret_dict.update(_get_config_dict)
+    config = _get_config_dict()
+    ret_dict.update(config)
     return ret_dict
 
 
