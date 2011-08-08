@@ -1125,7 +1125,7 @@ class InstanceTypeCommands(object):
     def delete(self, name, purge):
         """Marks instance types / flavors as deleted"""
         try:
-            if purge == True:
+            if purge:
                 instance_types.purge(name)
                 verb = "purged"
             else:
