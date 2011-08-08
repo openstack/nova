@@ -18,6 +18,7 @@
 from webob import exc
 
 from nova import exception
+from nova import log as logging
 from nova import network
 from nova import rpc
 from nova.api.openstack import faults
