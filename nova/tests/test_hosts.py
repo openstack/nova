@@ -48,6 +48,10 @@ def stub_set_host_enabled(context, host, enabled):
     return status
 
 
+def stub_host_power_action(context, host, action):
+    return action
+
+
 class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
 
@@ -62,6 +66,8 @@ class HostTestCase(test.TestCase):
         self.stubs.Set(scheduler_api, 'get_host_list', stub_get_host_list)
         self.stubs.Set(self.controller.compute_api, 'set_host_enabled',
                 stub_set_host_enabled)
+        self.stubs.Set(self.controller.compute_api, 'host_power_action',
+                stub_host_power_action)
 
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
@@ -86,6 +92,18 @@ class HostTestCase(test.TestCase):
         self.assertEqual(result_c1["status"], "enabled")
         result_c2 = self.controller.update(self.req, "host_c2", body=en_body)
         self.assertEqual(result_c2["status"], "disabled")
+
+    def test_host_startup(self):
+        result = self.controller.startup(self.req, "host_c1")
+        self.assertEqual(result["power_action"], "startup")
+
+    def test_host_shutdown(self):
+        result = self.controller.shutdown(self.req, "host_c1")
+        self.assertEqual(result["power_action"], "shutdown")
+
+    def test_host_reboot(self):
+        result = self.controller.reboot(self.req, "host_c1")
+        self.assertEqual(result["power_action"], "reboot")
 
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}

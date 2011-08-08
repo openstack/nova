@@ -997,7 +997,12 @@ class API(base.Base):
     def set_host_enabled(self, context, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         return self._call_compute_message("set_host_enabled", context,
-                instance_id=None, host=host, params={"enabled": enabled})
+                host=host, params={"enabled": enabled})
+
+    def host_power_action(self, context, host, action):
+        """Reboots, shuts down or powers up the host."""
+        return self._call_compute_message("host_power_action", context,
+                host=host, params={"action": action})
 
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
