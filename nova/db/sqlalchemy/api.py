@@ -3208,10 +3208,12 @@ def instance_metadata_update(context, instance_id, metadata, delete):
     # Set all metadata that isn't passed in if delete kwarg is True
     if delete:
         original_metadata = instance_metadata_get(context, instance_id)
-        for meta in original_metadata.iteritems():
-            if meta.key not in metadata:
-                meta.update({"deleted": True})
-                meta.save(session=session)
+        for meta_key, meta_value in original_metadata.iteritems():
+            if meta_key not in metadata:
+                meta_ref = instance_metadata_get_item(context, instance_id,
+                                                      meta_key, session)
+                meta_ref.update({'deleted': True})
+                meta_ref.save(session=session)
 
     meta_ref = None
 
@@ -3221,11 +3223,9 @@ def instance_metadata_update(context, instance_id, metadata, delete):
         # update the value whether it exists or not
         item = {"value": meta_value}
 
-        # if the metadata item exists, make sure it is not delete
         try:
             meta_ref = instance_metadata_get_item(context, instance_id,
                                                   meta_key, session)
-            item.update({"deleted": False})
 
         # if the item doesn't exist, we also need to set key and instance_id
         except exception.InstanceMetadataNotFound, e:

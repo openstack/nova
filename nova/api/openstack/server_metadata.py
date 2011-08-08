@@ -23,6 +23,10 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova import quota
 
+from nova import log as logging
+
+LOG = logging.getLogger("nova.api.openstack.server_metadata")
+
 
 class Controller(object):
     """ The server metadata API controller for the Openstack API """
@@ -69,19 +73,19 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=expl)
 
         try:
-            meta_value = meta_item.pop(id)
+            meta_value = meta_item[id]
         except (AttributeError, KeyError):
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
 
-        if len(meta_item) > 0:
+        if len(meta_item) > 1:
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
 
         context = req.environ['nova.context']
         self._update_instance_metadata(context, server_id, meta_item, False)
 
-        return {'meta': {id: meta_value}}
+        return {'meta': meta_item}
 
     def update_all(self, req, server_id, body):
         try:
@@ -107,8 +111,8 @@ class Controller(object):
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
 
-        except (ValueError, AttributeError):
-            msg = _("Malformed request body")
+        except (ValueError, AttributeError), ex:
+            msg = _("Malformed request body: %s") % (str(ex),)
             raise exc.HTTPBadRequest(explanation=msg)
 
         except quota.QuotaError as error:
@@ -132,12 +136,12 @@ class Controller(object):
         metadata = self._get_metadata(context, server_id)
 
         try:
-            meta_key = metadata[id]
+            meta_value = metadata[id]
         except KeyError:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
-        self.compute_api.delete_instance_metadata(context, server_id, meta_key)
+        self.compute_api.delete_instance_metadata(context, server_id, id)
 
     def _handle_quota_error(self, error):
         """Reraise quota errors as api-specific http exceptions."""
