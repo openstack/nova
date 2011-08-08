@@ -342,7 +342,7 @@ class VMHelper(HelperBase):
         return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
     @classmethod
-    def upload_image(cls, session, instance, vdi_uuids, image_id):
+    def upload_image(cls, context, session, instance, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
@@ -360,29 +360,30 @@ class VMHelper(HelperBase):
                   'glance_host': glance_host,
                   'glance_port': glance_port,
                   'sr_path': cls.get_sr_path(session),
-                  'os_type': os_type}
+                  'os_type': os_type,
+                  'auth_token': getattr(context, 'auth_token', None)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def fetch_image(cls, session, instance_id, image, user_id, project_id,
-                    image_type):
+    def fetch_image(cls, context, session, instance_id, image, user_id,
+                    project_id, image_type):
         """Fetch image from glance based on image type.
 
         Returns: A single filename if image_type is KERNEL or RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
         if image_type == ImageType.DISK_VHD:
-            return cls._fetch_image_glance_vhd(
+            return cls._fetch_image_glance_vhd(context,
                 session, instance_id, image, image_type)
         else:
-            return cls._fetch_image_glance_disk(
+            return cls._fetch_image_glance_disk(context,
                 session, instance_id, image, image_type)
 
     @classmethod
-    def _fetch_image_glance_vhd(cls, session, instance_id, image,
+    def _fetch_image_glance_vhd(cls, context, session, instance_id, image,
                                 image_type):
         """Tell glance to download an image and put the VHDs into the SR
 
@@ -404,7 +405,8 @@ class VMHelper(HelperBase):
                   'glance_host': glance_host,
                   'glance_port': glance_port,
                   'uuid_stack': uuid_stack,
-                  'sr_path': cls.get_sr_path(session)}
+                  'sr_path': cls.get_sr_path(session),
+                  'auth_token': getattr(context, 'auth_token', None)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
@@ -430,7 +432,7 @@ class VMHelper(HelperBase):
         return vdis
 
     @classmethod
-    def _fetch_image_glance_disk(cls, session, instance_id, image,
+    def _fetch_image_glance_disk(cls, context, session, instance_id, image,
                                  image_type):
         """Fetch the image from Glance
 
@@ -450,6 +452,7 @@ class VMHelper(HelperBase):
         sr_ref = safe_find_sr(session)
 
         glance_client, image_id = nova.image.get_glance_client(image)
+        glance_client.set_auth_token(getattr(context, 'auth_token', None))
         meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
@@ -1092,6 +1095,8 @@ def _prepare_injectables(inst, networks_info):
                 ip_v6 = info['ip6s'][0]
             if len(info['dns']) > 0:
                 dns = info['dns'][0]
+            else:
+                dns = ''
             interface_info = {'name': 'eth%d' % ifc_num,
                               'address': ip_v4 and ip_v4['ip'] or '',
                               'netmask': ip_v4 and ip_v4['netmask'] or '',

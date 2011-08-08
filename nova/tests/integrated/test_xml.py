@@ -15,17 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.api.openstack import common
 
 
 LOG = logging.getLogger('nova.tests.integrated')
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 class XmlTests(integrated_helpers._IntegratedTestBase):

@@ -22,13 +22,10 @@ import webob.dec
 from nova import test
 
 from nova import context
-from nova import flags
 from nova.api.openstack.limits import RateLimitingMiddleware
 from nova.api.openstack.common import limited
 from nova.tests.api.openstack import fakes
 from webob import Request
-
-FLAGS = flags.FLAGS
 
 
 @webob.dec.wsgify

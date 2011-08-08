@@ -141,15 +141,12 @@ class CloudPipe(object):
         try:
             result = cloud._gen_key(context, context.user_id, key_name)
             private_key = result['private_key']
-            try:
-                key_dir = os.path.join(FLAGS.keys_path, context.user_id)
-                if not os.path.exists(key_dir):
-                    os.makedirs(key_dir)
-                key_path = os.path.join(key_dir, '%s.pem' % key_name)
-                with open(key_path, 'w') as f:
-                    f.write(private_key)
-            except:
-                pass
-        except exception.Duplicate:
+            key_dir = os.path.join(FLAGS.keys_path, context.user_id)
+            if not os.path.exists(key_dir):
+                os.makedirs(key_dir)
+            key_path = os.path.join(key_dir, '%s.pem' % key_name)
+            with open(key_path, 'w') as f:
+                f.write(private_key)
+        except (exception.Duplicate, os.error, IOError):
             pass
         return key_name

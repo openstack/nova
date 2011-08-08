@@ -18,11 +18,8 @@
 
 import webob
 
-from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
-
-FLAGS = flags.FLAGS
 
 
 class AdminAPITest(test.TestCase):
@@ -31,7 +28,7 @@ class AdminAPITest(test.TestCase):
         super(AdminAPITest, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.allow_admin = FLAGS.allow_admin_api
+        self.flags(verbose=True)
 
     def test_admin_enabled(self):
         self.flags(allow_admin_api=True)

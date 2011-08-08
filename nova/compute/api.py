@@ -360,6 +360,7 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
+                                          image,
                                           instance_id=None, num_instances=1):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
@@ -373,6 +374,7 @@ class API(base.Base):
 
         filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
+            'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
             'filter': filter_class,
@@ -415,6 +417,7 @@ class API(base.Base):
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
                                       admin_password,
+                                      image,
                                       num_instances=num_instances)
 
         return base_options['reservation_id']
@@ -463,6 +466,7 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
+                                          image,
                                           instance_id=instance_id)
 
         return [dict(x.iteritems()) for x in instances]
@@ -888,7 +892,7 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,
                                    instance_ref['uuid'],
-                                   migration_ref['source_compute'],
+                                   migration_ref['dest_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -908,7 +912,7 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context,
                                    instance_ref['uuid'],
-                                   migration_ref['dest_compute'],
+                                   migration_ref['source_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -955,7 +959,7 @@ class API(base.Base):
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance_ref['uuid'],
-                              "flavor_id": new_instance_type['id']}})
+                              "instance_type_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):

@@ -34,15 +34,11 @@ import webob
 from glance import client as glance_client
 from nova import context
 from nova import exception
-from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
 from nova.api.openstack import images
 from nova.tests.api.openstack import fakes
-
-
-FLAGS = flags.FLAGS
 
 
 class _BaseImageServiceTests(test.TestCase):
@@ -328,8 +324,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def setUp(self):
         """Run before each test."""
         super(ImageControllerWithGlanceServiceTest, self).setUp()
-        self.orig_image_service = FLAGS.image_service
-        FLAGS.image_service = 'nova.image.glance.GlanceImageService'
+        self.flags(image_service='nova.image.glance.GlanceImageService')
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -342,7 +337,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def tearDown(self):
         """Run after each test."""
         self.stubs.UnsetAll()
-        FLAGS.image_service = self.orig_image_service
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
     def _applicable_fixture(self, fixture, user_id):
@@ -1031,6 +1025,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
+        image_meta = json.loads(response.body)['image']
+        self.assertEqual(123, image_meta['serverId'])
+        self.assertEqual('Snapshot 1', image_meta['name'])
 
     def test_create_snapshot_no_name(self):
         """Name is required for snapshots"""
@@ -1045,6 +1042,16 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def test_create_image_no_server_id(self):
 
         body = dict(image=dict(name='Snapshot 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_snapshots_disabled(self):
+        self.flags(allow_instance_snapshots=False)
+        body = dict(image=dict(serverId='123', name='Snapshot 1'))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)

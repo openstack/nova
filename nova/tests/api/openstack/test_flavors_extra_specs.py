@@ -21,14 +21,11 @@ import webob
 import os.path
 
 
-from nova import flags
 from nova import test
 from nova.api import openstack
 from nova.api.openstack import extensions
 from nova.tests.api.openstack import fakes
 import nova.wsgi
-
-FLAGS = flags.FLAGS
 
 
 def return_create_flavor_extra_specs(context, flavor_id, extra_specs):

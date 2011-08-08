@@ -17,16 +17,12 @@
 
 import unittest
 
-from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
 
 
 LOG = logging.getLogger('nova.tests.integrated')
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 class LoginTest(integrated_helpers._IntegratedTestBase):
