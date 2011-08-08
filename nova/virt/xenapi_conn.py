@@ -332,6 +332,10 @@ class XenAPIConnection(driver.ComputeDriver):
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
 
+    def host_power_action(self, host, action):
+        """Reboots or shuts down the host."""
+        return self._vmops.host_power_action(host, action)
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         return self._vmops.set_host_enabled(host, enabled)
