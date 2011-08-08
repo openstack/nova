@@ -25,6 +25,7 @@ SHOULD include dedicated exception logging.
 """
 
 from functools import wraps
+import sys
 
 from nova import log as logging
 
