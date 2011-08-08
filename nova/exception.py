@@ -150,6 +150,10 @@ class NovaException(Exception):
         return self._error_string
 
 
+class ImagePaginationFailed(NovaException):
+    message = _("Failed to paginate through images from image service")
+
+
 class VirtualInterfaceCreateException(NovaException):
     message = _("Virtual Interface creation failed")
 
@@ -718,3 +722,11 @@ class PasteConfigNotFound(NotFound):
 
 class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
+
+
+class CannotResizeToSameSize(NovaException):
+    message = _("When resizing, instances must change size!")
+
+
+class CannotResizeToSmallerSize(NovaException):
+    message = _("Resizing to a smaller size is not supported.")

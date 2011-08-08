@@ -54,7 +54,7 @@ from xml.etree import ElementTree
 from eventlet import greenthread
 from eventlet import tpool
 
-from nova import context
+from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
@@ -121,8 +121,6 @@ flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
 flags.DEFINE_string('qemu_img', 'qemu-img',
                     'binary to use for qemu-img commands')
-flags.DEFINE_bool('start_guests_on_host_boot', False,
-                  'Whether to restart guests when the host reboots')
 flags.DEFINE_string('libvirt_vif_type', 'bridge',
                     'Type of VIF to create.')
 flags.DEFINE_string('libvirt_vif_driver',
@@ -173,27 +171,8 @@ class LibvirtConnection(driver.ComputeDriver):
         self.vif_driver = utils.import_object(FLAGS.libvirt_vif_driver)
 
     def init_host(self, host):
-        # Adopt existing VM's running here
-        ctxt = context.get_admin_context()
-        for instance in db.instance_get_all_by_host(ctxt, host):
-            try:
-                LOG.debug(_('Checking state of %s'), instance['name'])
-                state = self.get_info(instance['name'])['state']
-            except exception.NotFound:
-                state = power_state.SHUTOFF
-
-            LOG.debug(_('Current state of %(name)s was %(state)s.'),
-                          {'name': instance['name'], 'state': state})
-            db.instance_set_state(ctxt, instance['id'], state)
-
-            # NOTE(justinsb): We no longer delete SHUTOFF instances,
-            # the user may want to power them back on
-
-            if state != power_state.RUNNING:
-                continue
-            self.firewall_driver.setup_basic_filtering(instance)
-            self.firewall_driver.prepare_instance_filter(instance)
-            self.firewall_driver.apply_instance_filter(instance)
+        # NOTE(nsokolov): moved instance restarting to ComputeManager
+        pass
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
@@ -370,7 +349,7 @@ class LibvirtConnection(driver.ComputeDriver):
         """Returns the xml for the disk mounted at device"""
         try:
             doc = libxml2.parseDoc(xml)
-        except:
+        except Exception:
             return None
         ctx = doc.xpathNewContext()
         try:
@@ -396,7 +375,7 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception()
-    def snapshot(self, instance, image_href):
+    def snapshot(self, context, instance, image_href):
         """Create snapshot from a running VM instance.
 
         This command only works with qemu 0.14+, the qemu_img flag is
@@ -405,18 +384,15 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
         virt_dom = self._lookup_by_name(instance['name'])
-        elevated = context.get_admin_context()
 
         (image_service, image_id) = nova.image.get_image_service(
             instance['image_ref'])
-        base = image_service.show(elevated, image_id)
+        base = image_service.show(context, image_id)
         (snapshot_image_service, snapshot_image_id) = \
             nova.image.get_image_service(image_href)
-        snapshot = snapshot_image_service.show(elevated, snapshot_image_id)
+        snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
-        metadata = {'disk_format': base['disk_format'],
-                    'container_format': base['container_format'],
-                    'is_public': False,
+        metadata = {'is_public': False,
                     'status': 'active',
                     'name': snapshot['name'],
                     'properties': {
@@ -430,6 +406,12 @@ class LibvirtConnection(driver.ComputeDriver):
         if 'architecture' in base['properties']:
             arch = base['properties']['architecture']
             metadata['properties']['architecture'] = arch
+
+        if 'disk_format' in base:
+            metadata['disk_format'] = base['disk_format']
+
+        if 'container_format' in base:
+            metadata['container_format'] = base['container_format']
 
         # Make the snapshot
         snapshot_name = uuid.uuid4().hex
@@ -463,7 +445,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # Upload that image to the image service
         with open(out_path) as image_file:
-            image_service.update(elevated,
+            image_service.update(context,
                                  image_href,
                                  metadata,
                                  image_file)
@@ -538,7 +520,7 @@ class LibvirtConnection(driver.ComputeDriver):
         dom.create()
 
     @exception.wrap_exception()
-    def rescue(self, instance, callback, network_info):
+    def rescue(self, context, instance, callback, network_info):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
@@ -553,7 +535,7 @@ class LibvirtConnection(driver.ComputeDriver):
         rescue_images = {'image_id': FLAGS.rescue_image_id,
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
-        self._create_image(instance, xml, '.rescue', rescue_images)
+        self._create_image(context, instance, xml, '.rescue', rescue_images)
         self._create_new_domain(xml)
 
         def _wait_for_rescue():
@@ -592,22 +574,18 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance, network_info,
+              block_device_mapping=None):
         xml = self.to_xml(instance, False, network_info=network_info,
                           block_device_mapping=block_device_mapping)
         block_device_mapping = block_device_mapping or []
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_image(instance, xml, network_info=network_info,
+        self._create_image(context, instance, xml, network_info=network_info,
                            block_device_mapping=block_device_mapping)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
-
-        if FLAGS.start_guests_on_host_boot:
-            LOG.debug(_("instance %s: setting autostart ON") %
-                      instance['name'])
-            domain.setAutostart(1)
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
@@ -769,9 +747,10 @@ class LibvirtConnection(driver.ComputeDriver):
             else:
                 utils.execute('cp', base, target)
 
-    def _fetch_image(self, target, image_id, user_id, project_id, size=None):
+    def _fetch_image(self, context, target, image_id, user_id, project_id,
+                     size=None):
         """Grab image and optionally attempt to resize it"""
-        images.fetch(image_id, target, user_id, project_id)
+        images.fetch(context, image_id, target, user_id, project_id)
         if size:
             disk.extend(target, size)
 
@@ -780,8 +759,9 @@ class LibvirtConnection(driver.ComputeDriver):
         utils.execute('truncate', target, '-s', "%dG" % local_gb)
         # TODO(vish): should we format disk by default?
 
-    def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
-                        network_info=None, block_device_mapping=None):
+    def _create_image(self, context, inst, libvirt_xml, suffix='',
+                      disk_images=None, network_info=None,
+                      block_device_mapping=None):
         block_device_mapping = block_device_mapping or []
 
         if not suffix:
@@ -817,6 +797,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if disk_images['kernel_id']:
             fname = '%08x' % int(disk_images['kernel_id'])
             self._cache_image(fn=self._fetch_image,
+                              context=context,
                               target=basepath('kernel'),
                               fname=fname,
                               image_id=disk_images['kernel_id'],
@@ -825,6 +806,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if disk_images['ramdisk_id']:
                 fname = '%08x' % int(disk_images['ramdisk_id'])
                 self._cache_image(fn=self._fetch_image,
+                                  context=context,
                                   target=basepath('ramdisk'),
                                   fname=fname,
                                   image_id=disk_images['ramdisk_id'],
@@ -843,6 +825,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if not self._volume_in_mapping(self.root_mount_device,
                                        block_device_mapping):
             self._cache_image(fn=self._fetch_image,
+                              context=context,
                               target=basepath('disk'),
                               fname=root_fname,
                               cow=FLAGS.use_cow_images,
@@ -879,7 +862,7 @@ class LibvirtConnection(driver.ComputeDriver):
         ifc_template = open(FLAGS.injected_network_template).read()
         ifc_num = -1
         have_injected_networks = False
-        admin_context = context.get_admin_context()
+        admin_context = nova_context.get_admin_context()
         for (network_ref, mapping) in network_info:
             ifc_num += 1
 
@@ -901,7 +884,7 @@ class LibvirtConnection(driver.ComputeDriver):
                    'netmask': netmask,
                    'gateway': mapping['gateway'],
                    'broadcast': mapping['broadcast'],
-                   'dns': mapping['dns'],
+                   'dns': ' '.join(mapping['dns']),
                    'address_v6': address_v6,
                    'gateway6': gateway_v6,
                    'netmask_v6': netmask_v6}
@@ -1087,8 +1070,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def get_disks(self, instance_name):
         """
-        Note that this function takes an instance name, not an Instance, so
-        that it can be called by monitor.
+        Note that this function takes an instance name.
 
         Returns a list of all block devices for this domain.
         """
@@ -1099,7 +1081,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         try:
             doc = libxml2.parseDoc(xml)
-        except:
+        except Exception:
             return []
 
         ctx = doc.xpathNewContext()
@@ -1129,8 +1111,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def get_interfaces(self, instance_name):
         """
-        Note that this function takes an instance name, not an Instance, so
-        that it can be called by monitor.
+        Note that this function takes an instance name.
 
         Returns a list of all network interfaces for this instance.
         """
@@ -1141,7 +1122,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         try:
             doc = libxml2.parseDoc(xml)
-        except:
+        except Exception:
             return []
 
         ctx = doc.xpathNewContext()
@@ -1345,16 +1326,14 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def block_stats(self, instance_name, disk):
         """
-        Note that this function takes an instance name, not an Instance, so
-        that it can be called by monitor.
+        Note that this function takes an instance name.
         """
         domain = self._lookup_by_name(instance_name)
         return domain.blockStats(disk)
 
     def interface_stats(self, instance_name, interface):
         """
-        Note that this function takes an instance name, not an Instance, so
-        that it can be called by monitor.
+        Note that this function takes an instance name.
         """
         domain = self._lookup_by_name(instance_name)
         return domain.interfaceStats(interface)

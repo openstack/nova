@@ -496,8 +496,8 @@ class ComputeTestCase(test.TestCase):
         db.instance_update(self.context, instance_id,
                 {'instance_type_id': inst_type['id']})
 
-        self.assertRaises(exception.ApiError, self.compute_api.resize,
-                context, instance_id, 1)
+        self.assertRaises(exception.CannotResizeToSmallerSize,
+                          self.compute_api.resize, context, instance_id, 1)
 
         self.compute.terminate_instance(context, instance_id)
 
@@ -508,8 +508,8 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.run_instance(self.context, instance_id)
 
-        self.assertRaises(exception.ApiError, self.compute_api.resize,
-                context, instance_id, 1)
+        self.assertRaises(exception.CannotResizeToSameSize,
+                          self.compute_api.resize, context, instance_id, 1)
 
         self.compute.terminate_instance(context, instance_id)
 
@@ -535,7 +535,9 @@ class ComputeTestCase(test.TestCase):
 
         db.instance_update(self.context, instance_id, {'host': 'foo'})
 
-        self.compute.prep_resize(context, inst_ref['uuid'], 3)
+        new_instance_type_ref = db.instance_type_get_by_flavor_id(context, 3)
+        self.compute.prep_resize(context, inst_ref['uuid'],
+                                 new_instance_type_ref['id'])
 
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')

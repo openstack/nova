@@ -58,12 +58,13 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Create the requested resource in this Zone."""
         host = build_plan_item['hostname']
         base_options = request_spec['instance_properties']
+        image = request_spec['image']
 
         # TODO(sandy): I guess someone needs to add block_device_mapping
         # support at some point? Also, OS API has no concept of security
         # groups.
         instance = compute_api.API().create_db_entry_for_new_instance(context,
-            base_options, None, [])
+            image, base_options, None, [])
 
         instance_id = instance['id']
         kwargs['instance_id'] = instance_id

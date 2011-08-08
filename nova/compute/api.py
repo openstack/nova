@@ -370,7 +370,7 @@ class API(base.Base):
     def _ask_scheduler_to_create_instance(self, context, base_options,
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
-                                          admin_password,
+                                          admin_password, image,
                                           instance_id=None, num_instances=1,
                                           requested_networks=None):
         """Send the run_instance request to the schedulers for processing."""
@@ -385,6 +385,7 @@ class API(base.Base):
 
         filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
+            'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
             'filter': filter_class,
@@ -428,7 +429,7 @@ class API(base.Base):
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
-                                      admin_password,
+                                      admin_password, image,
                                       num_instances=num_instances,
                                       requested_networks=requested_networks)
 
@@ -478,7 +479,7 @@ class API(base.Base):
             self._ask_scheduler_to_create_instance(context, base_options,
                                         instance_type, zone_blob,
                                         availability_zone, injected_files,
-                                        admin_password,
+                                        admin_password, image,
                                         instance_id=instance_id,
                                         requested_networks=requested_networks)
 
@@ -905,7 +906,7 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,
                                    instance_ref['uuid'],
-                                   migration_ref['source_compute'],
+                                   migration_ref['dest_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -925,7 +926,7 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context,
                                    instance_ref['uuid'],
-                                   migration_ref['dest_compute'],
+                                   migration_ref['source_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -957,25 +958,22 @@ class API(base.Base):
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
                 " new instance type %(new_instance_type_name)s") % locals())
         if not new_instance_type:
-            raise exception.ApiError(_("Requested flavor %(flavor_id)d "
-                    "does not exist") % locals())
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         current_memory_mb = current_instance_type['memory_mb']
         new_memory_mb = new_instance_type['memory_mb']
         if current_memory_mb > new_memory_mb:
-            raise exception.ApiError(_("Invalid flavor: cannot downsize"
-                    "instances"))
+            raise exception.CannotResizeToSmallerSize()
 
         if (current_memory_mb == new_memory_mb) and flavor_id:
-            raise exception.ApiError(_("Invalid flavor: cannot use"
-                    "the same flavor. "))
+            raise exception.CannotResizeToSameSize()
 
         instance_ref = self._get_instance(context, instance_id, 'resize')
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance_ref['uuid'],
-                              "flavor_id": new_instance_type['id']}})
+                              "instance_type_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):

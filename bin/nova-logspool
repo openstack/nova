@@ -81,7 +81,6 @@ class LogReader(object):
                 if level == 'ERROR':
                     self.handle_logged_error(line)
                 elif level == '[-]' and self.last_error:
-                    # twisted stack trace line
                     clean_line = " ".join(line.split(" ")[6:])
                     self.last_error.trace = self.last_error.trace + clean_line
                 else:

@@ -52,7 +52,7 @@ class Createserverext(extensions.ExtensionDescriptor):
         }
 
         body_deserializers = {
-            'application/xml': helper.ServerXMLDeserializer(),
+            'application/xml': helper.ServerXMLDeserializerV11(),
         }
 
         serializer = wsgi.ResponseSerializer(body_serializers,

@@ -1480,9 +1480,14 @@ def instance_action_create(context, values):
 def instance_get_actions(context, instance_id):
     """Return the actions associated to the given instance id"""
     session = get_session()
+
+    if utils.is_uuid_like(instance_id):
+        instance = instance_get_by_uuid(context, instance_id, session)
+        instance_id = instance.id
+
     return session.query(models.InstanceActions).\
         filter_by(instance_id=instance_id).\
-        all()
+       all()
 
 
 ###################
@@ -1762,7 +1767,8 @@ def network_get_by_bridge(context, bridge):
 def network_get_by_cidr(context, cidr):
     session = get_session()
     result = session.query(models.Network).\
-                filter_by(cidr=cidr).first()
+                filter(or_(models.Network.cidr == cidr,
+                           models.Network.cidr_v6 == cidr)).first()
 
     if not result:
         raise exception.NetworkNotFoundForCidr(cidr=cidr)
@@ -3154,13 +3160,18 @@ def instance_type_get_by_name(context, name):
 @require_context
 def instance_type_get_by_flavor_id(context, id):
     """Returns a dict describing specific flavor_id"""
+    try:
+        flavor_id = int(id)
+    except ValueError:
+        raise exception.FlavorNotFound(flavor_id=id)
+
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
                                     options(joinedload('extra_specs')).\
-                                    filter_by(flavorid=int(id)).\
+                                    filter_by(flavorid=flavor_id).\
                                     first()
     if not inst_type:
-        raise exception.FlavorNotFound(flavor_id=id)
+        raise exception.FlavorNotFound(flavor_id=flavor_id)
     else:
         return _dict_with_extra_specs(inst_type)
 
@@ -3285,8 +3296,9 @@ def instance_metadata_delete_all(context, instance_id):
 
 @require_context
 @require_instance_exists
-def instance_metadata_get_item(context, instance_id, key):
-    session = get_session()
+def instance_metadata_get_item(context, instance_id, key, session=None):
+    if not session:
+        session = get_session()
 
     meta_result = session.query(models.InstanceMetadata).\
                     filter_by(instance_id=instance_id).\
@@ -3312,7 +3324,7 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
         try:
             meta_ref = instance_metadata_get_item(context, instance_id, key,
                                                         session)
-        except:
+        except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
         meta_ref.update({"key": key, "value": value,
                             "instance_id": instance_id,
@@ -3407,8 +3419,10 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 
 
 @require_context
-def instance_type_extra_specs_get_item(context, instance_type_id, key):
-    session = get_session()
+def instance_type_extra_specs_get_item(context, instance_type_id, key,
+        session=None):
+    if not session:
+        session = get_session()
 
     spec_result = session.query(models.InstanceTypeExtraSpecs).\
                     filter_by(instance_type_id=instance_type_id).\
@@ -3434,7 +3448,7 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
                                                           instance_type_id,
                                                           key,
                                                           session)
-        except:
+        except exception.InstanceTypeExtraSpecsNotFound, e:
             spec_ref = models.InstanceTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,
                          "instance_type_id": instance_type_id,

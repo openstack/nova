@@ -21,7 +21,6 @@ Generating source/api/nova..cloudpipe.pipelib.rst
 Generating source/api/nova..compute.disk.rst
 Generating source/api/nova..compute.instance_types.rst
 Generating source/api/nova..compute.manager.rst
-Generating source/api/nova..compute.monitor.rst
 Generating source/api/nova..compute.power_state.rst
 Generating source/api/nova..context.rst
 Generating source/api/nova..crypto.rst
@@ -79,11 +78,9 @@ Generating source/api/nova..tests.rpc_unittest.rst
 Generating source/api/nova..tests.runtime_flags.rst
 Generating source/api/nova..tests.scheduler_unittest.rst
 Generating source/api/nova..tests.service_unittest.rst
-Generating source/api/nova..tests.twistd_unittest.rst
 Generating source/api/nova..tests.validator_unittest.rst
 Generating source/api/nova..tests.virt_unittest.rst
 Generating source/api/nova..tests.volume_unittest.rst
-Generating source/api/nova..twistd.rst
 Generating source/api/nova..utils.rst
 Generating source/api/nova..validate.rst
 Generating source/api/nova..virt.connection.rst

@@ -28,8 +28,8 @@ from nova import utils
 
 def stubout_instance_snapshot(stubs):
     @classmethod
-    def fake_fetch_image(cls, session, instance_id, image, user, project,
-                         type):
+    def fake_fetch_image(cls, context, session, instance_id, image, user,
+                         project, type):
         from nova.virt.xenapi.fake import create_vdi
         name_label = "instance-%s" % instance_id
         #TODO: create fake SR record
@@ -227,7 +227,7 @@ def stub_out_vm_methods(stubs):
     def fake_release_bootlock(self, vm):
         pass
 
-    def fake_spawn_rescue(self, inst):
+    def fake_spawn_rescue(self, context, inst, network_info):
         inst._rescue = False
 
     stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
