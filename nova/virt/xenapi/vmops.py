@@ -1045,7 +1045,7 @@ class VMOps(object):
         xenapi_resp = self._call_xenhost("set_host_enabled", args)
         try:
             resp = json.loads(xenapi_resp)
-        except TypeError  as e:
+        except TypeError as e:
             # Already logged; return the message
             return xenapi_resp.details[-1]
         return resp["status"]

@@ -1563,7 +1563,7 @@ class LibvirtConnection(driver.ComputeDriver):
         pass
 
     def host_power_action(self, host, action):
-        """Reboots or shuts down the host."""
+        """Reboots, shuts down or powers up the host."""
         pass
 
     def set_host_enabled(self, host, enabled):

@@ -3307,7 +3307,7 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 
 @require_context
 def instance_type_extra_specs_get_item(context, instance_type_id, key,
-        session=None):
+                                       session=None):
     if not session:
         session = get_session()
 

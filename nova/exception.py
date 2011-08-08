@@ -25,6 +25,7 @@ SHOULD include dedicated exception logging.
 """
 
 from functools import wraps
+import sys
 
 from nova import log as logging
 
@@ -96,6 +97,10 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
             try:
                 return f(*args, **kw)
             except Exception, e:
+                # Save exception since it can be clobbered during processing
+                # below before we can re-raise
+                exc_info = sys.exc_info()
+
                 if notifier:
                     payload = dict(args=args, exception=e)
                     payload.update(kw)
@@ -122,7 +127,9 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                     LOG.exception(_('Uncaught exception'))
                     #logging.error(traceback.extract_stack(exc_traceback))
                     raise Error(str(e))
-                raise
+
+                # re-raise original exception since it may have been clobbered
+                raise exc_info[0], exc_info[1], exc_info[2]
 
         return wraps(f)(wrapped)
     return inner

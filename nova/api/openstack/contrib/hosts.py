@@ -110,21 +110,16 @@ class HostController(object):
         return {"host": host, "status": result}
 
     def _host_power_action(self, req, host, action):
-        """Reboots or shuts down the host."""
+        """Reboots, shuts down or powers up the host."""
         context = req.environ['nova.context']
-        result = self.compute_api.host_power_action(context, host=host,
-                action=action)
-        return {"host": host, "power_action": result}
+        try:
+            result = self.compute_api.host_power_action(context, host=host,
+                    action=action)
+        except NotImplementedError as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.msg)
 
     def startup(self, req, id):
-        """The only valid values for 'action' are 'reboot' or
-        'shutdown'. For completeness' sake there is the
-        'startup' option to start up a host, but this is not
-        technically feasible now, as we run the host on the
-        XenServer box.
-        """
-        msg = _("Host startup on XenServer is not supported.")
-        raise webob.exc.HTTPBadRequest(explanation=msg)
+        return self._host_power_action(req, host=id, action="startup")
 
     def shutdown(self, req, id):
         return self._host_power_action(req, host=id, action="shutdown")
@@ -151,7 +146,7 @@ class Hosts(extensions.ExtensionDescriptor):
 
     @admin_only.admin_only
     def get_resources(self):
-    resources = [extensions.ResourceExtension('os-hosts',
+        resources = [extensions.ResourceExtension('os-hosts',
                 HostController(), collection_actions={'update': 'PUT'},
                 member_actions={"startup": "GET", "shutdown": "GET",
                         "reboot": "GET"})]
