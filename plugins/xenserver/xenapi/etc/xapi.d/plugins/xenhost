@@ -39,6 +39,7 @@ import pluginlib_nova as pluginlib
 pluginlib.configure_logging("xenhost")
 
 host_data_pattern = re.compile(r"\s*(\S+) \([^\)]+\) *: ?(.*)")
+config_file_path = "/usr/etc/xenhost.conf"
 
 
 def jsonify(fnc):
@@ -103,6 +104,65 @@ def set_host_enabled(self, arg_dict):
     return {"status": status}
 
 
+def _write_config_dict(dct):
+    conf_file = file(config_file_path, "w")
+    json.dump(dct, conf_file)
+    conf_file.close()
+
+
+def _get_config_dict():
+    """Returns a dict containing the key/values in the config file.
+    If the file doesn't exist, it is created, and an empty dict
+    is returned.
+    """
+    try:
+        conf_file = file(config_file_path)
+        config_dct = json.load(conf_file)
+        conf_file.close()
+    except IOError:
+        # File doesn't exist
+        config_dct = {}
+        # Create the file
+        _write_config_dict(config_dct)
+    return config_dct
+
+
+@jsonify
+def get_config(self, arg_dict):
+    """Return the value stored for the specified key, or None if no match."""
+    conf = _get_config_dict()
+    params = arg_dict["params"]
+    try:
+        dct = json.loads(params)
+    except Exception, e:
+        dct = params
+    key = dct["key"]
+    ret = conf.get(key)
+    if ret is None:
+        # Can't jsonify None
+        return "None"
+    return ret
+
+
+@jsonify
+def set_config(self, arg_dict):
+    """Write the specified key/value pair, overwriting any existing value."""
+    conf = _get_config_dict()
+    params = arg_dict["params"]
+    try:
+        dct = json.loads(params)
+    except Exception, e:
+        dct = params
+    key = dct["key"]
+    val = dct["value"]
+    if val is None:
+        # Delete the key, if present
+        conf.pop(key, None)
+    else:
+        conf.update({key: val})
+    _write_config_dict(conf)
+
+
 def _power_action(action):
     host_uuid = _get_host_uuid()
     # Host must be disabled first
@@ -154,6 +214,9 @@ def host_data(self, arg_dict):
     # We have the raw dict of values. Extract those that we need,
     # and convert the data types as needed.
     ret_dict = cleanup(parsed_data)
+    # Add any config settings
+    config = _get_config_dict()
+    ret_dict.update(config)
     return ret_dict
 
 
@@ -259,4 +322,6 @@ if __name__ == "__main__":
             "set_host_enabled": set_host_enabled,
             "host_shutdown": host_shutdown,
             "host_reboot": host_reboot,
-            "host_start": host_start})
+            "host_start": host_start,
+            "get_config": get_config,
+            "set_config": set_config})
