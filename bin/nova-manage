@@ -1120,10 +1120,12 @@ class InstanceTypeCommands(object):
 
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
-    def delete(self, name, purge=None):
+    @args('--purge', action="store_true", dest='purge', default=False,
+            help='purge record from database')
+    def delete(self, name, purge):
         """Marks instance types / flavors as deleted"""
         try:
-            if purge == "--purge":
+            if purge == True:
                 instance_types.purge(name)
                 verb = "purged"
             else:
