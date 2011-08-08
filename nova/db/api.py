@@ -1381,9 +1381,9 @@ def instance_metadata_delete(context, instance_id, key):
     IMPL.instance_metadata_delete(context, instance_id, key)
 
 
-def instance_metadata_update_or_create(context, instance_id, metadata):
-    """Create or update instance metadata."""
-    IMPL.instance_metadata_update_or_create(context, instance_id, metadata)
+def instance_metadata_update(context, instance_id, metadata, delete):
+    """Update metadata if it exists, otherwise create it."""
+    IMPL.instance_metadata_update(context, instance_id, metadata)
 
 
 ####################

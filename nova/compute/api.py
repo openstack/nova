@@ -1175,11 +1175,20 @@ class API(base.Base):
         """Delete the given metadata item from an instance."""
         self.db.instance_metadata_delete(context, instance_id, key)
 
-    def update_or_create_instance_metadata(self, context, instance_id,
-                                            metadata):
-        """Updates or creates instance metadata."""
-        combined_metadata = self.get_instance_metadata(context, instance_id)
-        combined_metadata.update(metadata)
-        self._check_metadata_properties_quota(context, combined_metadata)
-        self.db.instance_metadata_update_or_create(context, instance_id,
-                                                    metadata)
+    def update_instance_metadata(self, context, instance_id,
+                                 metadata, delete=False):
+        """Updates or creates instance metadata.
+
+        If delete is True, metadata items that are not specified in the
+        `metadata` argument will be deleted.
+
+        """
+        if not delete:
+            _metadata = self.get_instance_metadata(context, instance_id)
+            _metadata.update(metadata)
+        else:
+            _metadata = metadata
+
+        self._check_metadata_properties_quota(context, _metadata)
+
+        self.db.instance_metadata_update(context, instance_id, _metadata, True)

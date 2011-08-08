@@ -57,16 +57,7 @@ class Controller(object):
 
         context = req.environ['nova.context']
 
-        try:
-            self.compute_api.update_or_create_instance_metadata(context,
-                                                                server_id,
-                                                                metadata)
-        except exception.InstanceNotFound:
-            msg = _('Server does not exist')
-            raise exc.HTTPNotFound(explanation=msg)
-
-        except quota.QuotaError as error:
-            self._handle_quota_error(error)
+        self._update_instance_metadata(context, server_id, metadata, False)
 
         return body
 
@@ -88,7 +79,7 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=expl)
 
         context = req.environ['nova.context']
-        self._set_instance_metadata(context, server_id, meta_item)
+        self._update_instance_metadata(context, server_id, meta_item, False)
 
         return {'meta': {id: meta_value}}
 
@@ -100,20 +91,23 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=expl)
 
         context = req.environ['nova.context']
-        self._set_instance_metadata(context, server_id, metadata)
+        self._update_instance_metadata(context, server_id, metadata, True)
 
         return {'metadata': metadata}
 
-    def _set_instance_metadata(self, context, server_id, metadata):
+    def _update_instance_metadata(self, context, server_id, metadata,
+                                  delete=False):
         try:
-            self.compute_api.update_or_create_instance_metadata(context,
-                                                                server_id,
-                                                                metadata)
+            self.compute_api.update_instance_metadata(context,
+                                                      server_id,
+                                                      metadata,
+                                                      delete)
+
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
 
-        except ValueError:
+        except (ValueError, AttributeError):
             msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
 
