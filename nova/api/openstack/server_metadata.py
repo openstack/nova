@@ -23,10 +23,6 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova import quota
 
-from nova import log as logging
-
-LOG = logging.getLogger("nova.api.openstack.server_metadata")
-
 
 class Controller(object):
     """ The server metadata API controller for the Openstack API """
@@ -112,7 +108,7 @@ class Controller(object):
             raise exc.HTTPNotFound(explanation=msg)
 
         except (ValueError, AttributeError), ex:
-            msg = _("Malformed request body: %s") % (str(ex),)
+            msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
 
         except quota.QuotaError as error:
