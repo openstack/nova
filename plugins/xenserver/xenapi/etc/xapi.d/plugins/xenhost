@@ -136,7 +136,7 @@ def host_shutdown(self, arg_dict):
 
 @jsonify
 def host_start(self, arg_dict):
-    """Starts the host. NOTE: Currently not feasible, since the host
+    """Starts the host. Currently not feasible, since the host
     runs on the same machine as Xen.
     """
     return _power_action("startup")
