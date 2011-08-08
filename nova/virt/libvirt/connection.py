@@ -1562,8 +1562,8 @@ class LibvirtConnection(driver.ComputeDriver):
         """See xenapi_conn.py implementation."""
         pass
 
-    def set_host_powerstate(self, host, state):
-        """Reboots or shuts down the host."""
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
         pass
 
     def set_host_enabled(self, host, enabled):

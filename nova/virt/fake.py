@@ -512,8 +512,8 @@ class FakeConnection(driver.ComputeDriver):
         """Return fake Host Status of ram, disk, network."""
         return self.host_status
 
-    def set_host_powerstate(self, host, state):
-        """Reboots or shuts down the host."""
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
         pass
 
     def set_host_enabled(self, host, enabled):

@@ -103,7 +103,7 @@ def set_host_enabled(self, arg_dict):
     return {"status": status}
 
 
-def _powerstate(state):
+def _power_action(action):
     host_uuid = _get_host_uuid()
     # Host must be disabled first
     result = _run_command("xe host-disable")
@@ -115,23 +115,23 @@ def _powerstate(state):
         raise pluginlib.PluginError(result)
     cmds = {"reboot": "xe host-reboot", "startup": "xe host-power-on",
             "shutdown": "xe host-shutdown"}
-    result = _run_command(cmds[state])
+    result = _run_command(cmds[action])
     # Should be empty string
     if result:
         raise pluginlib.PluginError(result)
-    return {"powerstate": state}
+    return {"power_action": action}
 
 
 @jsonify
 def host_reboot(self, arg_dict):
     """Reboots the host."""
-    return _powerstate("reboot")
+    return _power_action("reboot")
 
 
 @jsonify
 def host_shutdown(self, arg_dict):
     """Reboots the host."""
-    return _powerstate("shutdown")
+    return _power_action("shutdown")
 
 
 @jsonify
@@ -139,34 +139,7 @@ def host_start(self, arg_dict):
     """Starts the host. NOTE: Currently not feasible, since the host
     runs on the same machine as Xen.
     """
-    return _powerstate("startup")
-
-
-@jsonify
-def set_power_state(self, arg_dict):
-    """Reboots or powers off this host. Ideally, we would also like to be
-    able to power *on* a host, but right now this is not technically
-    feasible.
-    """
-    power_state = arg_dict.get("power_state")
-    if power_state is None:
-        raise pluginlib.PluginError(
-                _("Missing 'power_state' argument to set_power_state"))
-    # Host must be disabled first
-#    result = _run_command("xe host-disable")
-#    if result:
-#        raise pluginlib.PluginError(result)
-#    # All running VMs must be shutdown
-#    result = _run_command("xe vm-shutdown --multiple power-state=running")
-#    if result:
-#        raise pluginlib.PluginError(result)
-#    cmds = {"reboot": "xe host-reboot", "on": "xe host-power-on",
-#            "off": "xe host-shutdown"}
-#    result = _run_command(cmds[power_state])
-#    # Should be empty string
-#    if result:
-#        raise pluginlib.PluginError(result)
-    return {"power_state": power_state}
+    return _power_action("startup")
 
 
 @jsonify

@@ -958,10 +958,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        result))
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def set_host_powerstate(self, context, instance_id=None, host=None,
-            state=None):
-        """Reboots or shuts down the host."""
-        return self.driver.set_host_powerstate(host, state)
+    def host_power_action(self, context, instance_id=None, host=None,
+            action=None):
+        """Reboots, shuts down or powers up the host."""
+        return self.driver.host_power_action(host, action)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def set_host_enabled(self, context, instance_id=None, host=None,

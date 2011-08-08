@@ -191,8 +191,8 @@ class VMWareESXConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         return
 
-    def set_host_powerstate(self, host, state):
-        """Reboots or shuts down the host."""
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
         pass
 
     def set_host_enabled(self, host, enabled):

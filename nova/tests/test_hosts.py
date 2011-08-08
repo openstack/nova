@@ -48,8 +48,8 @@ def stub_set_host_enabled(context, host, enabled):
     return status
 
 
-def stub_set_host_powerstate(context, host, state):
-    return state
+def stub_host_power_action(context, host, action):
+    return action
 
 
 class FakeRequest(object):
@@ -66,8 +66,8 @@ class HostTestCase(test.TestCase):
         self.stubs.Set(scheduler_api, 'get_host_list', stub_get_host_list)
         self.stubs.Set(self.controller.compute_api, 'set_host_enabled',
                 stub_set_host_enabled)
-        self.stubs.Set(self.controller.compute_api, 'set_host_powerstate',
-                stub_set_host_powerstate)
+        self.stubs.Set(self.controller.compute_api, 'host_power_action',
+                stub_host_power_action)
 
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
@@ -93,19 +93,18 @@ class HostTestCase(test.TestCase):
         result_c2 = self.controller.update(self.req, "host_c2", body=en_body)
         self.assertEqual(result_c2["status"], "disabled")
 
-    def test_host_power_state(self):
-        en_body = {"power_state": "reboot"}
-        result_c1 = self.controller.update(self.req, "host_c1", body=en_body)
-        self.assertEqual(result_c1["power_state"], "reboot")
-        # Test invalid power_state
-        en_body = {"power_state": "invalid"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", body=en_body)
+    def test_host_startup(self):
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.startup,
+            self.req, "host_c1")
 
-    def test_bad_power_state_value(self):
-        bad_body = {"power_state": "bad"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", body=bad_body)
+    def test_host_shutdown(self):
+        result = self.controller.shutdown(self.req, "host_c1")
+        print "RES", result
+        self.assertEqual(result["power_action"], "shutdown")
+
+    def test_host_reboot(self):
+        result = self.controller.reboot(self.req, "host_c1")
+        self.assertEqual(result["power_action"], "reboot")
 
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}
