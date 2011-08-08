@@ -304,38 +304,6 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
 
     metadata_deserializer = common.MetadataXMLDeserializer()
 
-    def action(self, string):
-        dom = minidom.parseString(string)
-        action_node = dom.childNodes[0]
-        action_name = action_node.tagName
-
-        action_deserializer = {
-            'createImage': self._action_create_image,
-            'createBackup': self._action_create_backup,
-        }.get(action_name, self.default)
-
-        action_data = action_deserializer(action_node)
-
-        return {'body': {action_name: action_data}}
-
-    def _action_create_image(self, node):
-        return self._deserialize_image_action(node, ('name',))
-
-    def _action_create_backup(self, node):
-        attributes = ('name', 'backup_type', 'rotation')
-        return self._deserialize_image_action(node, attributes)
-
-    def _deserialize_image_action(self, node, allowed_attributes):
-        data = {}
-        for attribute in allowed_attributes:
-            value = node.getAttribute(attribute)
-            if value:
-                data[attribute] = value
-        metadata_node = self.find_first_child_named(node, 'metadata')
-        metadata = self.metadata_deserializer.extract_metadata(metadata_node)
-        data['metadata'] = metadata
-        return data
-
     def create(self, string):
         """Deserialize an xml-formatted server create request"""
         dom = minidom.parseString(string)
@@ -347,15 +315,14 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         server = {}
         server_node = self.find_first_child_named(node, 'server')
 
-        attributes = ["name", "imageId", "flavorId", "imageRef",
-                     "flavorRef", "adminPass"]
+        attributes = ["name", "imageId", "flavorId", "adminPass"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
 
         metadata_node = self.find_first_child_named(server_node, "metadata")
         server["metadata"] = self.metadata_deserializer.extract_metadata(
-            metadata_node)
+                                                            metadata_node)
 
         server["personality"] = self._extract_personality(server_node)
 
@@ -373,3 +340,135 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
                 item["contents"] = self.extract_text(file_node)
                 personality.append(item)
         return personality
+
+
+class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    metadata_deserializer = common.MetadataXMLDeserializer()
+
+    def action(self, string):
+        dom = minidom.parseString(string)
+        action_node = dom.childNodes[0]
+        action_name = action_node.tagName
+
+        action_deserializer = {
+            'createImage': self._action_create_image,
+            'createBackup': self._action_create_backup,
+            'changePassword': self._action_change_password,
+            'reboot': self._action_reboot,
+            'rebuild': self._action_rebuild,
+            'resize': self._action_resize,
+            'confirmResize': self._action_confirm_resize,
+            'revertResize': self._action_revert_resize,
+        }.get(action_name, self.default)
+
+        action_data = action_deserializer(action_node)
+
+        return {'body': {action_name: action_data}}
+
+    def _action_create_image(self, node):
+        return self._deserialize_image_action(node, ('name',))
+
+    def _action_create_backup(self, node):
+        attributes = ('name', 'backup_type', 'rotation')
+        return self._deserialize_image_action(node, attributes)
+
+    def _action_change_password(self, node):
+        if not node.hasAttribute("adminPass"):
+            raise AttributeError("No adminPass was specified in request")
+        return {"adminPass": node.getAttribute("adminPass")}
+
+    def _action_reboot(self, node):
+        if not node.hasAttribute("type"):
+            raise AttributeError("No reboot type was specified in request")
+        return {"type": node.getAttribute("type")}
+
+    def _action_rebuild(self, node):
+        rebuild = {}
+        if node.hasAttribute("name"):
+            rebuild['name'] = node.getAttribute("name")
+
+        metadata_node = self.find_first_child_named(node, "metadata")
+        if metadata_node is not None:
+            rebuild["metadata"] = self.extract_metadata(metadata_node)
+
+        personality = self._extract_personality(node)
+        if personality is not None:
+            rebuild["personality"] = personality
+
+        if not node.hasAttribute("imageRef"):
+            raise AttributeError("No imageRef was specified in request")
+        rebuild["imageRef"] = node.getAttribute("imageRef")
+
+        return rebuild
+
+    def _action_resize(self, node):
+        if not node.hasAttribute("flavorRef"):
+            raise AttributeError("No flavorRef was specified in request")
+        return {"flavorRef": node.getAttribute("flavorRef")}
+
+    def _action_confirm_resize(self, node):
+        return None
+
+    def _action_revert_resize(self, node):
+        return None
+
+    def _deserialize_image_action(self, node, allowed_attributes):
+        data = {}
+        for attribute in allowed_attributes:
+            value = node.getAttribute(attribute)
+            if value:
+                data[attribute] = value
+        metadata_node = self.find_first_child_named(node, 'metadata')
+        if metadata_node is not None:
+            metadata = self.metadata_deserializer.extract_metadata(
+                                                        metadata_node)
+            data['metadata'] = metadata
+        return data
+
+    def create(self, string):
+        """Deserialize an xml-formatted server create request"""
+        dom = minidom.parseString(string)
+        server = self._extract_server(dom)
+        return {'body': {'server': server}}
+
+    def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
+        server = {}
+        server_node = self.find_first_child_named(node, 'server')
+
+        attributes = ["name", "imageRef", "flavorRef", "adminPass"]
+        for attr in attributes:
+            if server_node.getAttribute(attr):
+                server[attr] = server_node.getAttribute(attr)
+
+        metadata_node = self.find_first_child_named(server_node, "metadata")
+        if metadata_node is not None:
+            server["metadata"] = self.extract_metadata(metadata_node)
+
+        personality = self._extract_personality(server_node)
+        if personality is not None:
+            server["personality"] = personality
+
+        return server
+
+    def _extract_personality(self, server_node):
+        """Marshal the personality attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "personality")
+        if node is not None:
+            personality = []
+            for file_node in self.find_children_named(node, "file"):
+                item = {}
+                if file_node.hasAttribute("path"):
+                    item["path"] = file_node.getAttribute("path")
+                item["contents"] = self.extract_text(file_node)
+                personality.append(item)
+            return personality
+        else:
+            return None

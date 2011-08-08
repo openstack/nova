@@ -2177,7 +2177,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
 
     def setUp(self):
         super(TestServerCreateRequestXMLDeserializerV11, self).setUp()
-        self.deserializer = create_instance_helper.ServerXMLDeserializer()
+        self.deserializer = create_instance_helper.ServerXMLDeserializerV11()
 
     def test_minimal_request(self):
         serial_request = """
@@ -2191,8 +2191,6 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "2",
-                "metadata": {},
-                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
@@ -2211,8 +2209,6 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "imageRef": "1",
                 "flavorRef": "2",
                 "adminPass": "1234",
-                "metadata": {},
-                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
@@ -2229,8 +2225,6 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "http://localhost:8774/v1.1/images/2",
                 "flavorRef": "3",
-                "metadata": {},
-                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
@@ -2247,8 +2241,6 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "http://localhost:8774/v1.1/flavors/3",
-                "metadata": {},
-                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
@@ -2292,7 +2284,6 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "imageRef": "1",
                 "flavorRef": "2",
                 "metadata": {"one": "two", "open": "snack"},
-                "personality": [],
             },
         }
         self.assertEquals(request['body'], expected)
@@ -2314,7 +2305,6 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "2",
-                "metadata": {},
                 "personality": [
                     {"path": "/etc/banner.txt", "contents": "MQ=="},
                     {"path": "/etc/hosts", "contents": "Mg=="},

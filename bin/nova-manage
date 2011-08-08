@@ -1016,8 +1016,8 @@ class VsaCommands(object):
             print (_("No projects defined"))
             raise
 
-        self.context = context.RequestContext(user=project.project_manager,
-                                              project=project)
+        self.context = context.RequestContext(user_id=project.project_manager_id,
+                                              project_id=project.id)
 
     def _list(self, vsas):
         format_str = "%-5s %-15s %-25s %-10s %-6s %-9s %-10s %-10s %10s"
