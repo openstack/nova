@@ -506,7 +506,3 @@ class HyperVConnection(driver.ComputeDriver):
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         pass
-
-    def set_power_state(self, host, power_state):
-        """Reboots, shuts down or starts up the host."""
-        pass

@@ -199,10 +199,6 @@ class VMWareESXConnection(driver.ComputeDriver):
         """Sets the specified host's ability to accept new instances."""
         pass
 
-    def set_power_state(self, host, power_state):
-        """Reboots, shuts down or starts up the host."""
-        pass
-
     def plug_vifs(self, instance, network_info):
         """Plugs in VIFs to networks."""
         self._vmops.plug_vifs(instance, network_info)
