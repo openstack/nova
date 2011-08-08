@@ -79,20 +79,6 @@ class HostController(object):
                 else:
                     explanation = _("Invalid status: '%s'") % raw_val
                     raise webob.exc.HTTPBadRequest(explanation=explanation)
-            elif key == "power_state":
-                if val == "startup":
-                    # The only valid values for 'state' are 'reboot' or
-                    # 'shutdown'. For completeness' sake there is the
-                    # 'startup' option to start up a host, but this is not
-                    # technically feasible now, as we run the host on the
-                    # XenServer box.
-                    msg = _("Host startup on XenServer is not supported.")
-                    raise webob.exc.HTTPBadRequest(explanation=msg)
-                elif val in ("reboot", "shutdown"):
-                    return self._set_powerstate(req, id, val)
-                else:
-                    explanation = _("Invalid powerstate: '%s'") % raw_val
-                    raise webob.exc.HTTPBadRequest(explanation=explanation)
             else:
                 explanation = _("Invalid update setting: '%s'") % raw_key
                 raise webob.exc.HTTPBadRequest(explanation=explanation)
@@ -117,6 +103,7 @@ class HostController(object):
                     action=action)
         except NotImplementedError as e:
             raise webob.exc.HTTPBadRequest(explanation=e.msg)
+        return {"host": host, "power_action": result}
 
     def startup(self, req, id):
         return self._host_power_action(req, host=id, action="startup")

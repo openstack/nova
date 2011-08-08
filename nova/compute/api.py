@@ -1004,11 +1004,6 @@ class API(base.Base):
         return self._call_compute_message("host_power_action", context,
                 host=host, params={"action": action})
 
-    def host_power_action(self, context, host, action):
-        """Reboots or shuts down the host."""
-        return self._call_compute_message("host_power_action", context,
-                instance_id=None, host=host, params={"action": action})
-
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
