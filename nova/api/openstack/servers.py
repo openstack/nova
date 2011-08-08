@@ -240,6 +240,7 @@ class Controller(object):
         resp.headers['Location'] = image_ref
         return resp
 
+    @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
 
@@ -267,10 +268,16 @@ class Controller(object):
 
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
-            reboot_type = input_dict['reboot']['type']
+            valid_reboot_types = ['HARD', 'SOFT']
+            reboot_type = input_dict['reboot']['type'].upper()
+            if not valid_reboot_types.count(reboot_type):
+                msg = _("Argument 'type' for reboot is not HARD or SOFT")
+                LOG.exception(msg)
+                raise exc.HTTPBadRequest(explanation=msg)
         else:
-            LOG.exception(_("Missing argument 'type' for reboot"))
-            raise exc.HTTPUnprocessableEntity()
+            msg = _("Missing argument 'type' for reboot")
+            LOG.exception(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
@@ -646,6 +653,9 @@ class ControllerV11(Controller):
         """ Resizes a given instance to the flavor size requested """
         try:
             flavor_ref = input_dict["resize"]["flavorRef"]
+            if not flavor_ref:
+                msg = _("Resize request has invalid 'flavorRef' attribute.")
+                raise exc.HTTPBadRequest(explanation=msg)
         except (KeyError, TypeError):
             msg = _("Resize requests require 'flavorRef' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -680,6 +690,7 @@ class ControllerV11(Controller):
 
         return webob.Response(status_int=202)
 
+    @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
         """Snapshot a server instance."""
         entity = input_dict.get("createImage", {})
@@ -891,8 +902,13 @@ def create_resource(version='1.0'):
         'application/xml': xml_serializer,
     }
 
+    xml_deserializer = {
+        '1.0': helper.ServerXMLDeserializer(),
+        '1.1': helper.ServerXMLDeserializerV11(),
+    }[version]
+
     body_deserializers = {
-        'application/xml': helper.ServerXMLDeserializer(),
+        'application/xml': xml_deserializer,
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
