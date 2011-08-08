@@ -77,7 +77,7 @@ class ViewBuilder(object):
                 "status": image_obj.get("status"),
             })
 
-            if image["status"] == "ACTIVE":
+            if image["status"].upper() == "ACTIVE":
                 image["progress"] = 100
             else:
                 image["progress"] = 0
