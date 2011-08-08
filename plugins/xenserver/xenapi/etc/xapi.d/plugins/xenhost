@@ -104,7 +104,6 @@ def set_host_enabled(self, arg_dict):
     return {"status": status}
 
 
-<<<<<<< TREE
 def _write_config_dict(dct):
     conf_file = file(config_file_path, "w")
     json.dump(dct, conf_file)
