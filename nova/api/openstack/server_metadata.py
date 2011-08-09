@@ -60,7 +60,7 @@ class Controller(object):
         new_metadata = self._update_instance_metadata(context,
                                                       server_id,
                                                       metadata,
-                                                      False)
+                                                      delete=False)
 
         return {'metadata': new_metadata}
 
@@ -82,7 +82,10 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=expl)
 
         context = req.environ['nova.context']
-        self._update_instance_metadata(context, server_id, meta_item, False)
+        self._update_instance_metadata(context,
+                                       server_id,
+                                       meta_item,
+                                       delete=False)
 
         return {'meta': meta_item}
 
@@ -97,7 +100,7 @@ class Controller(object):
         new_metadata = self._update_instance_metadata(context,
                                                       server_id,
                                                       metadata,
-                                                      True)
+                                                      delete=True)
 
         return {'metadata': new_metadata}
 

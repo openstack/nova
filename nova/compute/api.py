@@ -1183,14 +1183,12 @@ class API(base.Base):
         `metadata` argument will be deleted.
 
         """
-        if not delete:
+        if delete:
+            _metadata = metadata
+        else:
             _metadata = self.get_instance_metadata(context, instance_id)
             _metadata.update(metadata)
-        else:
-            _metadata = metadata
 
         self._check_metadata_properties_quota(context, _metadata)
-
         self.db.instance_metadata_update(context, instance_id, _metadata, True)
-
         return _metadata
