@@ -72,8 +72,9 @@ class Foxinsocks(object):
             res.body = json.dumps(data)
             return res
 
-        req_ext1 = extensions.RequestExtension('GET', '/v1.1/flavors/:(id)',
-                                                _goose_handler)
+        req_ext1 = extensions.RequestExtension('GET', 
+                                     '/v1.1/:(tenant_id)/flavors/:(id)',
+                                     _goose_handler)
         request_exts.append(req_ext1)
 
         def _bands_handler(req, res):
@@ -84,8 +85,9 @@ class Foxinsocks(object):
             res.body = json.dumps(data)
             return res
 
-        req_ext2 = extensions.RequestExtension('GET', '/v1.1/flavors/:(id)',
-                                                _bands_handler)
+        req_ext2 = extensions.RequestExtension('GET',
+                                     '/v1.1/:(tenant_id)/flavors/:(id)',
+                                     _bands_handler)
         request_exts.append(req_ext2)
         return request_exts
 
