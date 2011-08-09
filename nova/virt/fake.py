@@ -129,8 +129,8 @@ class FakeConnection(driver.ComputeDriver):
             info_list.append(self._map_to_instance_info(instance))
         return info_list
 
-    def spawn(self, context, instance, network_info,
-              block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """
         Create a new instance/VM/domain on the virtualization platform.
 

@@ -43,6 +43,7 @@ class MetadataTestCase(test.TestCase):
                          'reservation_id': 'r-xxxxxxxx',
                          'user_data': '',
                          'image_ref': 7,
+                         'root_device_name': '/dev/sda1',
                          'hostname': 'test'})
 
         def instance_get(*args, **kwargs):

@@ -30,6 +30,7 @@ import tempfile
 import time
 import shutil
 
+from nova import block_device
 from nova import compute
 from nova import context
 
@@ -78,6 +79,10 @@ def _gen_key(context, user_id, key_name):
 
 # TODO(yamahata): hypervisor dependent default device name
 _DEFAULT_ROOT_DEVICE_NAME = '/dev/sda1'
+_DEFAULT_MAPPINGS = {'ami': 'sda1',
+                     'ephemeral0': 'sda2',
+                     'root': _DEFAULT_ROOT_DEVICE_NAME,
+                     'swap': 'sda3'}
 
 
 def _parse_block_device_mapping(bdm):
@@ -105,7 +110,7 @@ def _parse_block_device_mapping(bdm):
 
 
 def _properties_get_mappings(properties):
-    return ec2utils.mappings_prepend_dev(properties.get('mappings', []))
+    return block_device.mappings_prepend_dev(properties.get('mappings', []))
 
 
 def _format_block_device_mapping(bdm):
@@ -144,8 +149,7 @@ def _format_mappings(properties, result):
     """Format multiple BlockDeviceMappingItemType"""
     mappings = [{'virtualName': m['virtual'], 'deviceName': m['device']}
                 for m in _properties_get_mappings(properties)
-                if (m['virtual'] == 'swap' or
-                    m['virtual'].startswith('ephemeral'))]
+                if block_device.is_swap_or_ephemeral(m['virtual'])]
 
     block_device_mapping = [_format_block_device_mapping(bdm) for bdm in
                             properties.get('block_device_mapping', [])]
@@ -233,6 +237,30 @@ class CloudController(object):
             state = 'available'
         return image['properties'].get('image_state', state)
 
+    def _format_instance_mapping(self, ctxt, instance_ref):
+        root_device_name = instance_ref['root_device_name']
+        if root_device_name is None:
+            return _DEFAULT_MAPPINGS
+
+        mappings = {}
+        mappings['ami'] = block_device.strip_dev(root_device_name)
+        mappings['root'] = root_device_name
+
+        # 'ephemeralN' and 'swap'
+        for bdm in db.block_device_mapping_get_all_by_instance(
+            ctxt, instance_ref['id']):
+            if (bdm['volume_id'] or bdm['snapshot_id'] or bdm['no_device']):
+                continue
+
+            virtual_name = bdm['virtual_name']
+            if not virtual_name:
+                continue
+
+            if block_device.is_swap_or_ephemeral(virtual_name):
+                mappings[virtual_name] = bdm['device_name']
+
+        return mappings
+
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
@@ -259,18 +287,14 @@ class CloudController(object):
         security_groups = db.security_group_get_by_instance(ctxt,
                                                             instance_ref['id'])
         security_groups = [x['name'] for x in security_groups]
+        mappings = self._format_instance_mapping(ctxt, instance_ref)
         data = {
-            'user-data': base64.b64decode(instance_ref['user_data']),
+            'user-data': self._format_user_data(instance_ref),
             'meta-data': {
                 'ami-id': image_ec2_id,
                 'ami-launch-index': instance_ref['launch_index'],
                 'ami-manifest-path': 'FIXME',
-                'block-device-mapping': {
-                    # TODO(vish): replace with real data
-                    'ami': 'sda1',
-                    'ephemeral0': 'sda2',
-                    'root': _DEFAULT_ROOT_DEVICE_NAME,
-                    'swap': 'sda3'},
+                'block-device-mapping': mappings,
                 'hostname': hostname,
                 'instance-action': 'none',
                 'instance-id': ec2_id,
@@ -948,12 +972,101 @@ class CloudController(object):
                 'status': volume['attach_status'],
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
-    def _convert_to_set(self, lst, label):
+    @staticmethod
+    def _convert_to_set(lst, label):
         if lst is None or lst == []:
             return None
         if not isinstance(lst, list):
             lst = [lst]
         return [{label: x} for x in lst]
+
+    def _format_kernel_id(self, instance_ref, result, key):
+        kernel_id = instance_ref['kernel_id']
+        if kernel_id is None:
+            return
+        result[key] = self.image_ec2_id(instance_ref['kernel_id'], 'aki')
+
+    def _format_ramdisk_id(self, instance_ref, result, key):
+        ramdisk_id = instance_ref['ramdisk_id']
+        if ramdisk_id is None:
+            return
+        result[key] = self.image_ec2_id(instance_ref['ramdisk_id'], 'ari')
+
+    @staticmethod
+    def _format_user_data(instance_ref):
+        return base64.b64decode(instance_ref['user_data'])
+
+    def describe_instance_attribute(self, context, instance_id, attribute,
+                                    **kwargs):
+        def _unsupported_attribute(instance, result):
+            raise exception.ApiError(_('attribute not supported: %s') %
+                                     attribute)
+
+        def _format_attr_block_device_mapping(instance, result):
+            tmp = {}
+            self._format_instance_root_device_name(instance, tmp)
+            self._format_instance_bdm(context, instance_id,
+                                      tmp['rootDeviceName'], result)
+
+        def _format_attr_disable_api_termination(instance, result):
+            _unsupported_attribute(instance, result)
+
+        def _format_attr_group_set(instance, result):
+            CloudController._format_group_set(instance, result)
+
+        def _format_attr_instance_initiated_shutdown_behavior(instance,
+                                                               result):
+            state_description = instance['state_description']
+            state_to_value = {'stopping': 'stop',
+                              'stopped': 'stop',
+                              'terminating': 'terminate'}
+            value = state_to_value.get(state_description)
+            if value:
+                result['instanceInitiatedShutdownBehavior'] = value
+
+        def _format_attr_instance_type(instance, result):
+            self._format_instance_type(instance, result)
+
+        def _format_attr_kernel(instance, result):
+            self._format_kernel_id(instance, result, 'kernel')
+
+        def _format_attr_ramdisk(instance, result):
+            self._format_ramdisk_id(instance, result, 'ramdisk')
+
+        def _format_attr_root_device_name(instance, result):
+            self._format_instance_root_device_name(instance, result)
+
+        def _format_attr_source_dest_check(instance, result):
+            _unsupported_attribute(instance, result)
+
+        def _format_attr_user_data(instance, result):
+            result['userData'] = self._format_user_data(instance)
+
+        attribute_formatter = {
+            'blockDeviceMapping': _format_attr_block_device_mapping,
+            'disableApiTermination': _format_attr_disable_api_termination,
+            'groupSet': _format_attr_group_set,
+            'instanceInitiatedShutdownBehavior':
+            _format_attr_instance_initiated_shutdown_behavior,
+            'instanceType': _format_attr_instance_type,
+            'kernel': _format_attr_kernel,
+            'ramdisk': _format_attr_ramdisk,
+            'rootDeviceName': _format_attr_root_device_name,
+            'sourceDestCheck': _format_attr_source_dest_check,
+            'userData': _format_attr_user_data,
+            }
+
+        fn = attribute_formatter.get(attribute)
+        if fn is None:
+            raise exception.ApiError(
+                _('attribute not supported: %s') % attribute)
+
+        ec2_instance_id = instance_id
+        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+        instance = self.compute_api.get(context, instance_id)
+        result = {'instance_id': ec2_instance_id}
+        fn(instance, result)
+        return result
 
     def describe_instances(self, context, **kwargs):
         return self._format_describe_instances(context, **kwargs)
@@ -1001,6 +1114,27 @@ class CloudController(object):
             result['blockDeviceMapping'] = mapping
         result['rootDeviceType'] = root_device_type
 
+    @staticmethod
+    def _format_instance_root_device_name(instance, result):
+        result['rootDeviceName'] = (instance.get('root_device_name') or
+                                    _DEFAULT_ROOT_DEVICE_NAME)
+
+    @staticmethod
+    def _format_instance_type(instance, result):
+        if instance['instance_type']:
+            result['instanceType'] = instance['instance_type'].get('name')
+        else:
+            result['instanceType'] = None
+
+    @staticmethod
+    def _format_group_set(instance, result):
+        security_group_names = []
+        if instance.get('security_groups'):
+            for security_group in instance['security_groups']:
+                security_group_names.append(security_group['name'])
+        result['groupSet'] = CloudController._convert_to_set(
+            security_group_names, 'groupId')
+
     def _format_instances(self, context, instance_id=None, **kwargs):
         # TODO(termie): this method is poorly named as its name does not imply
         #               that it will be making a variety of database calls
@@ -1026,6 +1160,8 @@ class CloudController(object):
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
             i['imageId'] = self.image_ec2_id(instance['image_ref'])
+            self._format_kernel_id(instance, i, 'kernelId')
+            self._format_ramdisk_id(instance, i, 'ramdiskId')
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
@@ -1054,16 +1190,12 @@ class CloudController(object):
                     instance['project_id'],
                     instance['host'])
             i['productCodesSet'] = self._convert_to_set([], 'product_codes')
-            if instance['instance_type']:
-                i['instanceType'] = instance['instance_type'].get('name')
-            else:
-                i['instanceType'] = None
+            self._format_instance_type(instance, i)
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
             i['displayDescription'] = instance['display_description']
-            i['rootDeviceName'] = (instance.get('root_device_name') or
-                                   _DEFAULT_ROOT_DEVICE_NAME)
+            self._format_instance_root_device_name(instance, i)
             self._format_instance_bdm(context, instance_id,
                                       i['rootDeviceName'], i)
             host = instance['host']
@@ -1073,12 +1205,7 @@ class CloudController(object):
                 r = {}
                 r['reservationId'] = instance['reservation_id']
                 r['ownerId'] = instance['project_id']
-                security_group_names = []
-                if instance.get('security_groups'):
-                    for security_group in instance['security_groups']:
-                        security_group_names.append(security_group['name'])
-                r['groupSet'] = self._convert_to_set(security_group_names,
-                                                     'groupId')
+                self._format_group_set(instance, r)
                 r['instancesSet'] = []
                 reservations[instance['reservation_id']] = r
             reservations[instance['reservation_id']]['instancesSet'].append(i)
@@ -1314,7 +1441,7 @@ class CloudController(object):
         i['architecture'] = image['properties'].get('architecture')
 
         properties = image['properties']
-        root_device_name = ec2utils.properties_root_device_name(properties)
+        root_device_name = block_device.properties_root_device_name(properties)
         root_device_type = 'instance-store'
         for bdm in properties.get('block_device_mapping', []):
             if (bdm.get('device_name') == root_device_name and
@@ -1387,7 +1514,7 @@ class CloudController(object):
 
         def _root_device_name_attribute(image, result):
             result['rootDeviceName'] = \
-                    ec2utils.properties_root_device_name(image['properties'])
+                block_device.properties_root_device_name(image['properties'])
             if result['rootDeviceName'] is None:
                 result['rootDeviceName'] = _DEFAULT_ROOT_DEVICE_NAME
 
@@ -1520,8 +1647,7 @@ class CloudController(object):
             if virtual_name in ('ami', 'root'):
                 continue
 
-            assert (virtual_name == 'swap' or
-                    virtual_name.startswith('ephemeral'))
+            assert block_device.is_swap_or_ephemeral(virtual_name)
             device_name = m['device']
             if device_name in [b['device_name'] for b in mapping
                                if not b.get('no_device', False)]:

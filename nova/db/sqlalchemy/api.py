@@ -20,6 +20,7 @@ Implementation of SQLAlchemy backend.
 """
 import warnings
 
+from nova import block_device
 from nova import db
 from nova import exception
 from nova import flags
@@ -1686,7 +1687,9 @@ def network_get_by_cidr(context, cidr):
     session = get_session()
     result = session.query(models.Network).\
                 filter(or_(models.Network.cidr == cidr,
-                           models.Network.cidr_v6 == cidr)).first()
+                           models.Network.cidr_v6 == cidr)).\
+                filter_by(deleted=False).\
+                first()
 
     if not result:
         raise exception.NetworkNotFoundForCidr(cidr=cidr)
@@ -2269,6 +2272,20 @@ def block_device_mapping_update_or_create(context, values):
             bdm_ref.save(session=session)
         else:
             result.update(values)
+
+        # NOTE(yamahata): same virtual device name can be specified multiple
+        #                 times. So delete the existing ones.
+        virtual_name = values['virtual_name']
+        if (virtual_name is not None and
+            block_device.is_swap_or_ephemeral(virtual_name)):
+            session.query(models.BlockDeviceMapping).\
+            filter_by(instance_id=values['instance_id']).\
+            filter_by(virtual_name=virtual_name).\
+            filter(models.BlockDeviceMapping.device_name !=
+                   values['device_name']).\
+            update({'deleted': True,
+                    'deleted_at': utils.utcnow(),
+                    'updated_at': literal_column('updated_at')})
 
 
 @require_context
