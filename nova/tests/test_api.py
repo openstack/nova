@@ -339,6 +339,33 @@ class ApiEc2TestCase(test.TestCase):
 
         self.ec2.delete_security_group(security_group_name)
 
+    def test_group_name_valid_chars_security_group(self):
+        """ Test that we sanely handle invalid security group names.
+         API Spec states we should only accept alphanumeric characters,
+         spaces, dashes, and underscores. """
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        # Test block group_name of non alphanumeric characters, spaces,
+        # dashes, and underscores.
+        security_group_name = "aa #^% -=99"
+
+        self.assertRaises(EC2ResponseError, self.ec2.create_security_group,
+                          security_group_name, 'test group')
+
+    def test_group_name_valid_length_security_group(self):
+        """Test that we sanely handle invalid security group names.
+         API Spec states that the length should not exceed 255 chars """
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        # Test block group_name > 255 chars
+        security_group_name = "".join(random.choice("poiuytrewqasdfghjklmnbvc")
+                                      for x in range(random.randint(256, 266)))
+
+        self.assertRaises(EC2ResponseError, self.ec2.create_security_group,
+                          security_group_name, 'test group')
+
     def test_authorize_revoke_security_group_cidr(self):
         """
         Test that we can add and remove CIDR based rules
