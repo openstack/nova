@@ -138,7 +138,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_get_flavor_by_id_v1_1(self):
-        req = webob.Request.blank('/v1.1/flavors/12')
+        req = webob.Request.blank('/v1.1/123/flavors/12')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -164,7 +164,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_v1_1(self):
-        req = webob.Request.blank('/v1.1/flavors')
+        req = webob.Request.blank('/v1.1/123/flavors')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -204,7 +204,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_detail_v1_1(self):
-        req = webob.Request.blank('/v1.1/flavors/detail')
+        req = webob.Request.blank('/v1.1/123/flavors/detail')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -252,7 +252,7 @@ class FlavorsTest(test.TestCase):
             return {}
         self.stubs.Set(nova.db.api, "instance_type_get_all", _return_empty)
 
-        req = webob.Request.blank('/v1.1/flavors')
+        req = webob.Request.blank('/v1.1/123/flavors')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavors = json.loads(res.body)["flavors"]
