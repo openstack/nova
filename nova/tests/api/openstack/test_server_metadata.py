@@ -29,11 +29,11 @@ import nova.wsgi
 FLAGS = flags.FLAGS
 
 
-def return_create_instance_metadata_max(context, server_id, metadata):
+def return_create_instance_metadata_max(context, server_id, metadata, delete):
     return stub_max_server_metadata()
 
 
-def return_create_instance_metadata(context, server_id, metadata):
+def return_create_instance_metadata(context, server_id, metadata, delete):
     return stub_server_metadata()
 
 
@@ -202,21 +202,30 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(404, res.status_int)
 
     def test_create(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_get',
+                       return_server_metadata)
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata')
         req.method = 'POST'
         req.content_type = "application/json"
-        expected = {"metadata": {"key1": "value1"}}
-        req.body = json.dumps(expected)
+        input = {"metadata": {"key9": "value9"}}
+        req.body = json.dumps(input)
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
-        self.assertEqual(expected, res_dict)
+        input['metadata'].update({
+            "key1": "value1",
+            "key2": "value2",
+            "key3":"value3",
+        })
+        self.assertEqual(input, res_dict)
 
     def test_create_xml(self):
-        self.stubs.Set(nova.db.api, "instance_metadata_update_or_create",
+        self.stubs.Set(nova.db.api, 'instance_metadata_get',
+                       return_server_metadata)
+        self.stubs.Set(nova.db.api, "instance_metadata_update",
                        return_create_instance_metadata)
         req = webob.Request.blank("/v1.1/servers/1/metadata")
         req.method = "POST"
@@ -225,22 +234,29 @@ class ServerMetaDataTest(test.TestCase):
 
         request_metadata = minidom.parseString("""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="key3">value3</meta>
-                <meta key="key2">value2</meta>
-                <meta key="key1">value1</meta>
+                <meta key="key5">value5</meta>
             </metadata>
         """.replace("  ", "").replace("\n", ""))
 
         req.body = str(request_metadata.toxml())
         response = req.get_response(fakes.wsgi_app())
 
+        expected_metadata = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="key3">value3</meta>
+                <meta key="key2">value2</meta>
+                <meta key="key1">value1</meta>
+                <meta key="key5">value5</meta>
+            </metadata>
+        """.replace("  ", "").replace("\n", ""))
+
         self.assertEqual(200, response.status_int)
         actual_metadata = minidom.parseString(response.body)
 
-        self.assertEqual(request_metadata.toxml(), actual_metadata.toxml())
+        self.assertEqual(expected_metadata.toxml(), actual_metadata.toxml())
 
     def test_create_empty_body(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata')
         req.method = 'POST'
@@ -258,7 +274,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(404, res.status_int)
 
     def test_update_all(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata')
         req.method = 'PUT'
@@ -276,7 +292,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(expected, res_dict)
 
     def test_update_all_empty_container(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata')
         req.method = 'PUT'
@@ -289,7 +305,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(expected, res_dict)
 
     def test_update_all_malformed_container(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata')
         req.method = 'PUT'
@@ -300,7 +316,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_all_malformed_data(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata')
         req.method = 'PUT'
@@ -320,7 +336,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(404, res.status_int)
 
     def test_update_item(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata/key1')
         req.method = 'PUT'
@@ -334,7 +350,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(expected, res_dict)
 
     def test_update_item_xml(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata/key9')
         req.method = 'PUT'
@@ -361,7 +377,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(404, res.status_int)
 
     def test_update_item_empty_body(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata/key1')
         req.method = 'PUT'
@@ -370,7 +386,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_item_too_many_keys(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata/key1')
         req.method = 'PUT'
@@ -380,7 +396,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_item_body_uri_mismatch(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata/bad')
         req.method = 'PUT'
@@ -390,7 +406,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_too_many_metadata_items_on_create(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         data = {"metadata": {}}
         for num in range(FLAGS.quota_metadata_items + 1):
@@ -404,7 +420,7 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_to_many_metadata_items_on_update_item(self):
-        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+        self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata_max)
         req = webob.Request.blank('/v1.1/servers/1/metadata/key1')
         req.method = 'PUT'

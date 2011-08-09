@@ -1346,9 +1346,10 @@ def instance_update(context, instance_id, values):
     session = get_session()
     metadata = values.get('metadata')
     if metadata is not None:
-        instance_metadata_delete_all(context, instance_id)
-        instance_metadata_update_or_create(context, instance_id,
-                                           values.pop('metadata'))
+        instance_metadata_update(context,
+                                 instance_id,
+                                 values.pop('metadata'),
+                                 delete=True)
     with session.begin():
         if utils.is_uuid_like(instance_id):
             instance_ref = instance_get_by_uuid(context, instance_id,
@@ -3218,21 +3219,37 @@ def instance_metadata_get_item(context, instance_id, key, session=None):
 
 @require_context
 @require_instance_exists
-def instance_metadata_update_or_create(context, instance_id, metadata):
+def instance_metadata_update(context, instance_id, metadata, delete):
     session = get_session()
 
-    original_metadata = instance_metadata_get(context, instance_id)
+    # Set existing metadata to deleted if delete argument is True
+    if delete:
+        original_metadata = instance_metadata_get(context, instance_id)
+        for meta_key, meta_value in original_metadata.iteritems():
+            if meta_key not in metadata:
+                meta_ref = instance_metadata_get_item(context, instance_id,
+                                                      meta_key, session)
+                meta_ref.update({'deleted': True})
+                meta_ref.save(session=session)
 
     meta_ref = None
-    for key, value in metadata.iteritems():
+
+    # Now update all existing items with new values, or create new meta objects
+    for meta_key, meta_value in metadata.iteritems():
+
+        # update the value whether it exists or not
+        item = {"value": meta_value}
+
         try:
-            meta_ref = instance_metadata_get_item(context, instance_id, key,
-                                                        session)
+            meta_ref = instance_metadata_get_item(context, instance_id,
+                                                  meta_key, session)
+
+        # if the item doesn't exist, we also need to set key and instance_id
         except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
-        meta_ref.update({"key": key, "value": value,
-                            "instance_id": instance_id,
-                            "deleted": False})
+            item.update({"key": meta_key, "instance_id": instance_id})
+
+        meta_ref.update(item)
         meta_ref.save(session=session)
 
     return metadata
