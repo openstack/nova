@@ -21,12 +21,8 @@ import random
 
 from nova import context
 from nova import db
-from nova import flags
 from nova import test
 from nova.virt import hyperv
-
-FLAGS = flags.FLAGS
-FLAGS.connection_type = 'hyperv'
 
 
 class HyperVTestCase(test.TestCase):
@@ -36,6 +32,7 @@ class HyperVTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
+        self.flags(connection_type='hyperv')
 
     def test_create_destroy(self):
         """Create a VM and destroy it"""

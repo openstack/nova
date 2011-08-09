@@ -18,7 +18,6 @@
 import unittest
 import time
 
-from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
@@ -26,10 +25,6 @@ from nova.volume import driver
 
 
 LOG = logging.getLogger('nova.tests.integrated')
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 class VolumesTest(integrated_helpers._IntegratedTestBase):

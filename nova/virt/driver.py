@@ -32,6 +32,33 @@ class InstanceInfo(object):
         self.state = state
 
 
+def block_device_info_get_root(block_device_info):
+    block_device_info = block_device_info or {}
+    return block_device_info.get('root_device_name')
+
+
+def block_device_info_get_swap(block_device_info):
+    block_device_info = block_device_info or {}
+    return block_device_info.get('swap') or {'device_name': None,
+                                             'swap_size': 0}
+
+
+def swap_is_usable(swap):
+    return swap and swap['device_name'] and swap['swap_size'] > 0
+
+
+def block_device_info_get_ephemerals(block_device_info):
+    block_device_info = block_device_info or {}
+    ephemerals = block_device_info.get('ephemerals') or []
+    return ephemerals
+
+
+def block_device_info_get_mapping(block_device_info):
+    block_device_info = block_device_info or {}
+    block_device_mapping = block_device_info.get('block_device_mapping') or []
+    return block_device_mapping
+
+
 class ComputeDriver(object):
     """Base class for compute drivers.
 
@@ -65,8 +92,8 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def spawn(self, context, instance, network_info,
-              block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
@@ -280,6 +307,10 @@ class ComputeDriver(object):
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
         # TODO(Vek): Need to pass context in for access to auth_token
+        raise NotImplementedError()
+
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
         raise NotImplementedError()
 
     def set_host_enabled(self, host, enabled):

@@ -34,15 +34,11 @@ import webob
 from glance import client as glance_client
 from nova import context
 from nova import exception
-from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
 from nova.api.openstack import images
 from nova.tests.api.openstack import fakes
-
-
-FLAGS = flags.FLAGS
 
 
 class _BaseImageServiceTests(test.TestCase):
@@ -328,8 +324,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def setUp(self):
         """Run before each test."""
         super(ImageControllerWithGlanceServiceTest, self).setUp()
-        self.orig_image_service = FLAGS.image_service
-        FLAGS.image_service = 'nova.image.glance.GlanceImageService'
+        self.flags(image_service='nova.image.glance.GlanceImageService')
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -342,7 +337,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def tearDown(self):
         """Run after each test."""
         self.stubs.UnsetAll()
-        FLAGS.image_service = self.orig_image_service
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
     def _applicable_fixture(self, fixture, user_id):
@@ -385,6 +379,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "ACTIVE",
+                "progress": 100,
             },
         }
 
@@ -408,6 +403,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "QUEUED",
+                "progress": 0,
                 'server': {
                     'id': 42,
                     "links": [{
@@ -450,6 +446,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
                     status="ACTIVE"
+                    progress="100"
                     xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
@@ -469,6 +466,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
                     status="ACTIVE"
+                    progress="100"
                     xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
@@ -593,6 +591,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
         },
         {
             'id': 124,
@@ -600,6 +599,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
+            'progress': 0,
         },
         {
             'id': 125,
@@ -614,7 +614,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'active snapshot',
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
-            'status': 'ACTIVE'
+            'status': 'ACTIVE',
+            'progress': 100,
         },
         {
             'id': 127,
@@ -622,6 +623,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
+            'progress': 0,
         },
         {
             'id': 129,
@@ -629,6 +631,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
         }]
 
         self.assertDictListMatch(expected, response_list)
@@ -649,6 +652,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/123",
@@ -668,6 +672,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
+            'progress': 0,
             'server': {
                 'id': 42,
                 "links": [{
@@ -729,6 +734,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
             'server': {
                 'id': 42,
                 "links": [{
@@ -759,6 +765,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
+            'progress': 0,
             'server': {
                 'id': 42,
                 "links": [{
@@ -786,6 +793,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
+            'progress': 100,
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/images/129",
@@ -1007,7 +1015,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_meta = json.loads(res.body)['image']
         expected = {'id': 123, 'name': 'public image',
                     'updated': self.NOW_API_FORMAT,
-                    'created': self.NOW_API_FORMAT, 'status': 'ACTIVE'}
+                    'created': self.NOW_API_FORMAT, 'status': 'ACTIVE',
+                    'progress': 100}
         self.assertDictMatch(image_meta, expected)
 
     def test_get_image_non_existent(self):
@@ -1031,6 +1040,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
+        image_meta = json.loads(response.body)['image']
+        self.assertEqual(123, image_meta['serverId'])
+        self.assertEqual('Snapshot 1', image_meta['name'])
 
     def test_create_snapshot_no_name(self):
         """Name is required for snapshots"""
@@ -1045,6 +1057,16 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def test_create_image_no_server_id(self):
 
         body = dict(image=dict(name='Snapshot 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_snapshots_disabled(self):
+        self.flags(allow_instance_snapshots=False)
+        body = dict(image=dict(serverId='123', name='Snapshot 1'))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)

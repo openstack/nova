@@ -166,7 +166,7 @@ class Controller(object):
         return self.helper._get_server_admin_password_old_style(server)
 
 
-class ControllerV11(object):
+class ControllerV11(Controller):
     """Controller for 1.1 Zone resources."""
 
     def _get_server_admin_password(self, server):
