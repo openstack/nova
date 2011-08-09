@@ -63,11 +63,11 @@ def fake_execute(*cmd_parts, **kwargs):
     """
     global _fake_execute_repliers
 
-    process_input = kwargs.pop('process_input', None)
-    check_exit_code = kwargs.pop('check_exit_code', 0)
-    delay_on_retry = kwargs.pop('delay_on_retry', True)
-    attempts = kwargs.pop('attempts', 1)
-    run_as_root = kwargs.pop('run_as_root', False)
+    process_input = kwargs.get('process_input', None)
+    check_exit_code = kwargs.get('check_exit_code', 0)
+    delay_on_retry = kwargs.get('delay_on_retry', True)
+    attempts = kwargs.get('attempts', 1)
+    run_as_root = kwargs.get('run_as_root', False)
     cmd_str = ' '.join(str(part) for part in cmd_parts)
 
     LOG.debug(_("Faking execution of cmd (subprocess): %s"), cmd_str)
