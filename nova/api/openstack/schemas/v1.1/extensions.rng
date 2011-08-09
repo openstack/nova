@@ -1,0 +1,6 @@
+<element name="extensions" xmlns="http://relaxng.org/ns/structure/1.0"
+         ns="http://docs.openstack.org/compute/api/v1.1">
+  <zeroOrMore>
+    <externalRef href="extension.rng"/>
+  </zeroOrMore>
+</element>

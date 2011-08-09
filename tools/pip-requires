@@ -9,6 +9,7 @@ boto==1.9b
 carrot==0.10.5
 eventlet
 lockfile==0.8
+lxml==2.3
 python-novaclient==2.6.0
 python-daemon==1.5.5
 python-gflags==1.3
