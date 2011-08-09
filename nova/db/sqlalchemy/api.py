@@ -3346,8 +3346,8 @@ def instance_metadata_update(context, instance_id, metadata, delete):
         item = {"value": meta_value}
 
         try:
-            meta_ref = instance_metadata_get_item(
-                context, instance_id, key, session)
+            meta_ref = instance_metadata_get_item(context, instance_id,
+                                                  meta_key, session)
         except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
             item.update({"key": meta_key, "instance_id": instance_id})
