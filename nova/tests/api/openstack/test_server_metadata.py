@@ -218,7 +218,7 @@ class ServerMetaDataTest(test.TestCase):
         input['metadata'].update({
             "key1": "value1",
             "key2": "value2",
-            "key3":"value3",
+            "key3": "value3",
         })
         self.assertEqual(input, res_dict)
 
