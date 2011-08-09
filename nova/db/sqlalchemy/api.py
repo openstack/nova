@@ -20,6 +20,7 @@ Implementation of SQLAlchemy backend.
 """
 import warnings
 
+from nova import block_device
 from nova import db
 from nova import exception
 from nova import flags
@@ -62,7 +63,7 @@ def is_user_context(context):
 def authorize_project_context(context, project_id):
     """Ensures a request has permission to access the given project."""
     if is_user_context(context):
-        if not context.project:
+        if not context.project_id:
             raise exception.NotAuthorized()
         elif context.project_id != project_id:
             raise exception.NotAuthorized()
@@ -71,7 +72,7 @@ def authorize_project_context(context, project_id):
 def authorize_user_context(context, user_id):
     """Ensures a request has permission to access the given user."""
     if is_user_context(context):
-        if not context.user:
+        if not context.user_id:
             raise exception.NotAuthorized()
         elif context.user_id != user_id:
             raise exception.NotAuthorized()
@@ -1312,7 +1313,7 @@ def instance_get_fixed_addresses_v6(context, instance_id):
         # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
         prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
         # return list containing ipv6 address for each tuple
-        return [ipv6.to_global_ipv6(*t) for t in prefix_mac_tuples]
+        return [ipv6.to_global(*t) for t in prefix_mac_tuples]
 
 
 @require_context
@@ -1426,9 +1427,14 @@ def instance_action_create(context, values):
 def instance_get_actions(context, instance_id):
     """Return the actions associated to the given instance id"""
     session = get_session()
+
+    if utils.is_uuid_like(instance_id):
+        instance = instance_get_by_uuid(context, instance_id, session)
+        instance_id = instance.id
+
     return session.query(models.InstanceActions).\
         filter_by(instance_id=instance_id).\
-        all()
+       all()
 
 
 ###################
@@ -1680,7 +1686,10 @@ def network_get_by_bridge(context, bridge):
 def network_get_by_cidr(context, cidr):
     session = get_session()
     result = session.query(models.Network).\
-                filter_by(cidr=cidr).first()
+                filter(or_(models.Network.cidr == cidr,
+                           models.Network.cidr_v6 == cidr)).\
+                filter_by(deleted=False).\
+                first()
 
     if not result:
         raise exception.NetworkNotFoundForCidr(cidr=cidr)
@@ -2263,6 +2272,20 @@ def block_device_mapping_update_or_create(context, values):
             bdm_ref.save(session=session)
         else:
             result.update(values)
+
+        # NOTE(yamahata): same virtual device name can be specified multiple
+        #                 times. So delete the existing ones.
+        virtual_name = values['virtual_name']
+        if (virtual_name is not None and
+            block_device.is_swap_or_ephemeral(virtual_name)):
+            session.query(models.BlockDeviceMapping).\
+            filter_by(instance_id=values['instance_id']).\
+            filter_by(virtual_name=virtual_name).\
+            filter(models.BlockDeviceMapping.device_name !=
+                   values['device_name']).\
+            update({'deleted': True,
+                    'deleted_at': utils.utcnow(),
+                    'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -3041,13 +3064,18 @@ def instance_type_get_by_name(context, name):
 @require_context
 def instance_type_get_by_flavor_id(context, id):
     """Returns a dict describing specific flavor_id"""
+    try:
+        flavor_id = int(id)
+    except ValueError:
+        raise exception.FlavorNotFound(flavor_id=id)
+
     session = get_session()
     inst_type = session.query(models.InstanceTypes).\
                                     options(joinedload('extra_specs')).\
-                                    filter_by(flavorid=int(id)).\
+                                    filter_by(flavorid=flavor_id).\
                                     first()
     if not inst_type:
-        raise exception.FlavorNotFound(flavor_id=id)
+        raise exception.FlavorNotFound(flavor_id=flavor_id)
     else:
         return _dict_with_extra_specs(inst_type)
 
@@ -3172,8 +3200,9 @@ def instance_metadata_delete_all(context, instance_id):
 
 @require_context
 @require_instance_exists
-def instance_metadata_get_item(context, instance_id, key):
-    session = get_session()
+def instance_metadata_get_item(context, instance_id, key, session=None):
+    if not session:
+        session = get_session()
 
     meta_result = session.query(models.InstanceMetadata).\
                     filter_by(instance_id=instance_id).\
@@ -3199,7 +3228,7 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
         try:
             meta_ref = instance_metadata_get_item(context, instance_id, key,
                                                         session)
-        except:
+        except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
         meta_ref.update({"key": key, "value": value,
                             "instance_id": instance_id,
@@ -3247,8 +3276,8 @@ def agent_build_destroy(context, agent_build_id):
     with session.begin():
         session.query(models.AgentBuild).\
                 filter_by(id=agent_build_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -3294,10 +3323,12 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 
 
 @require_context
-def instance_type_extra_specs_get_item(context, instance_type_id, key):
-    session = get_session()
+def instance_type_extra_specs_get_item(context, instance_type_id, key,
+                                       session=None):
+    if not session:
+        session = get_session()
 
-    sppec_result = session.query(models.InstanceTypeExtraSpecs).\
+    spec_result = session.query(models.InstanceTypeExtraSpecs).\
                     filter_by(instance_type_id=instance_type_id).\
                     filter_by(key=key).\
                     filter_by(deleted=False).\
@@ -3321,7 +3352,7 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
                                                           instance_type_id,
                                                           key,
                                                           session)
-        except:
+        except exception.InstanceTypeExtraSpecsNotFound, e:
             spec_ref = models.InstanceTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,
                          "instance_type_id": instance_type_id,

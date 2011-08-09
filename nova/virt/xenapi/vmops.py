@@ -30,7 +30,7 @@ import sys
 import time
 import uuid
 
-from nova import context
+from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
@@ -38,7 +38,6 @@ from nova import ipv6
 from nova import log as logging
 from nova import utils
 
-from nova.auth.manager import AuthManager
 from nova.compute import power_state
 from nova.virt import driver
 from nova.virt.xenapi.network_utils import NetworkHelper
@@ -110,18 +109,20 @@ class VMOps(object):
                 instance_infos.append(instance_info)
         return instance_infos
 
-    def revert_resize(self, instance):
+    def revert_migration(self, instance):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._start(instance, vm_ref)
 
-    def finish_resize(self, instance, disk_info, network_info):
+    def finish_migration(self, context, instance, disk_info, network_info,
+                      resize_instance):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
-        vm_ref = self._create_vm(instance,
+        vm_ref = self._create_vm(context, instance,
                                  [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
                                  network_info)
-        self.resize_instance(instance, vdi_uuid)
-        self._spawn(instance, vm_ref)
+        if resize_instance:
+            self.resize_instance(instance, vdi_uuid)
+        self._start(instance, vm_ref=vm_ref)
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
@@ -133,20 +134,19 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def _create_disks(self, instance):
-        user = AuthManager().get_user(instance.user_id)
-        project = AuthManager().get_project(instance.project_id)
+    def _create_disks(self, context, instance):
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        vdis = VMHelper.fetch_image(self._session,
-                instance.id, instance.image_ref, user, project,
+        vdis = VMHelper.fetch_image(context, self._session,
+                instance.id, instance.image_ref,
+                instance.user_id, instance.project_id,
                 disk_image_type)
         return vdis
 
-    def spawn(self, instance, network_info):
+    def spawn(self, context, instance, network_info):
         vdis = None
         try:
-            vdis = self._create_disks(instance)
-            vm_ref = self._create_vm(instance, vdis, network_info)
+            vdis = self._create_disks(context, instance)
+            vm_ref = self._create_vm(context, instance, vdis, network_info)
             self._spawn(instance, vm_ref)
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
             LOG.exception(_("instance %s: Failed to spawn"),
@@ -156,11 +156,11 @@ class VMOps(object):
             self._handle_spawn_error(vdis, spawn_error)
             raise spawn_error
 
-    def spawn_rescue(self, instance):
+    def spawn_rescue(self, context, instance, network_info):
         """Spawn a rescue instance."""
-        self.spawn(instance)
+        self.spawn(context, instance, network_info)
 
-    def _create_vm(self, instance, vdis, network_info):
+    def _create_vm(self, context, instance, vdis, network_info):
         """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -171,26 +171,23 @@ class VMOps(object):
         if not VMHelper.ensure_free_mem(self._session, instance):
             LOG.exception(_('instance %(instance_name)s: not enough free '
                           'memory') % locals())
-            db.instance_set_state(context.get_admin_context(),
+            db.instance_set_state(nova_context.get_admin_context(),
                                   instance['id'],
                                   power_state.SHUTDOWN)
             return
-
-        user = AuthManager().get_user(instance.user_id)
-        project = AuthManager().get_project(instance.project_id)
 
         disk_image_type = VMHelper.determine_disk_image_type(instance)
         kernel = None
         ramdisk = None
         try:
             if instance.kernel_id:
-                kernel = VMHelper.fetch_image(self._session, instance.id,
-                        instance.kernel_id, user, project,
-                        ImageType.KERNEL)[0]
+                kernel = VMHelper.fetch_image(context, self._session,
+                        instance.id, instance.kernel_id, instance.user_id,
+                        instance.project_id, ImageType.KERNEL)[0]
             if instance.ramdisk_id:
-                ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                        instance.ramdisk_id, user, project,
-                        ImageType.RAMDISK)[0]
+                ramdisk = VMHelper.fetch_image(context, self._session,
+                        instance.id, instance.kernel_id, instance.user_id,
+                        instance.project_id, ImageType.RAMDISK)[0]
             # Create the VM ref and attach the first disk
             first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                     vdis[0]['vdi_uuid'])
@@ -209,7 +206,7 @@ class VMOps(object):
 
             if instance.vm_mode != vm_mode:
                 # Update database with normalized (or determined) value
-                db.instance_update(context.get_admin_context(),
+                db.instance_update(nova_context.get_admin_context(),
                                    instance['id'], {'vm_mode': vm_mode})
             vm_ref = VMHelper.create_vm(self._session, instance,
                     kernel and kernel.get('file', None) or None,
@@ -271,7 +268,7 @@ class VMOps(object):
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
-        ctx = context.get_admin_context()
+        ctx = nova_context.get_admin_context()
         agent_build = db.agent_build_get_by_triple(ctx, 'xen',
                               instance.os_type, instance.architecture)
         if agent_build:
@@ -415,7 +412,7 @@ class VMOps(object):
 
         # if instance_or_vm is an int/long it must be instance id
         elif isinstance(instance_or_vm, (int, long)):
-            ctx = context.get_admin_context()
+            ctx = nova_context.get_admin_context()
             instance_obj = db.instance_get(ctx, instance_or_vm)
             instance_name = instance_obj.name
         else:
@@ -440,9 +437,10 @@ class VMOps(object):
             vm,
             "start")
 
-    def snapshot(self, instance, image_id):
+    def snapshot(self, context, instance, image_id):
         """Create snapshot from a running VM instance.
 
+        :param context: request context
         :param instance: instance to be snapshotted
         :param image_id: id of image to upload to
 
@@ -467,7 +465,7 @@ class VMOps(object):
         try:
             template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
             # call plugin to ship snapshot off to glance
-            VMHelper.upload_image(
+            VMHelper.upload_image(context,
                     self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
@@ -568,18 +566,22 @@ class VMOps(object):
         return new_cow_uuid
 
     def resize_instance(self, instance, vdi_uuid):
-        """Resize a running instance by changing it's RAM and disk size."""
+        """Resize a running instance by changing its RAM and disk size."""
         #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
 
-        new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
-        instance_name = instance.name
-        instance_local_gb = instance.local_gb
-        LOG.debug(_("Resizing VDI %(vdi_uuid)s for instance %(instance_name)s."
-                " Expanding to %(instance_local_gb)d GB") % locals())
-        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        self._session.call_xenapi('VDI.resize_online', vdi_ref, new_disk_size)
-        LOG.debug(_("Resize instance %s complete") % (instance.name))
+        new_disk_size = instance.local_gb * 1024 * 1024 * 1024
+        if new_disk_size > 0:
+            instance_name = instance.name
+            instance_local_gb = instance.local_gb
+            LOG.debug(_("Resizing VDI %(vdi_uuid)s for instance"
+                        "%(instance_name)s. Expanding to %(instance_local_gb)d"
+                        " GB") % locals())
+            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+            # for an instance with no local storage
+            self._session.call_xenapi('VDI.resize_online', vdi_ref,
+                    str(new_disk_size))
+            LOG.debug(_("Resize instance %s complete") % (instance.name))
 
     def reboot(self, instance):
         """Reboot VM instance."""
@@ -684,7 +686,7 @@ class VMOps(object):
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])
-        db.instance_update(context.get_admin_context(),
+        db.instance_update(nova_context.get_admin_context(),
                                   instance['id'],
                                   dict(admin_pass=new_pass))
         return resp_dict['message']
@@ -740,6 +742,17 @@ class VMOps(object):
             self._session.wait_for_task(task, instance.id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
+
+    def _find_rescue_vbd_ref(self, vm_ref, rescue_vm_ref):
+        """Find and return the rescue VM's vbd_ref.
+
+        We use the second VBD here because swap is first with the root file
+        system coming in second."""
+        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[1]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
+
+        return VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref, 1,
+                False)
 
     def _shutdown_rescue(self, rescue_vm_ref):
         """Shutdown a rescue instance."""
@@ -912,7 +925,7 @@ class VMOps(object):
                                          True)
         self._wait_with_callback(instance.id, task, callback)
 
-    def rescue(self, instance, callback):
+    def rescue(self, context, instance, _callback, network_info):
         """Rescue the specified instance.
 
             - shutdown the instance VM.
@@ -930,17 +943,13 @@ class VMOps(object):
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
         instance._rescue = True
-        self.spawn_rescue(instance)
+        self.spawn_rescue(context, instance, network_info)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
-
-        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
-        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
-        rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
-                                             vdi_ref, 1, False)
+        rescue_vbd_ref = self._find_rescue_vbd_ref(vm_ref, rescue_vm_ref)
 
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, _callback):
         """Unrescue the specified instance.
 
             - unplug the instance VM's disk from the rescue VM.
@@ -1022,11 +1031,23 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
+    def host_power_action(self, host, action):
+        """Reboots or shuts down the host."""
+        args = {"action": json.dumps(action)}
+        methods = {"reboot": "host_reboot", "shutdown": "host_shutdown"}
+        json_resp = self._call_xenhost(methods[action], args)
+        resp = json.loads(json_resp)
+        return resp["power_action"]
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         args = {"enabled": json.dumps(enabled)}
-        json_resp = self._call_xenhost("set_host_enabled", args)
-        resp = json.loads(json_resp)
+        xenapi_resp = self._call_xenhost("set_host_enabled", args)
+        try:
+            resp = json.loads(xenapi_resp)
+        except TypeError as e:
+            # Already logged; return the message
+            return xenapi_resp.details[-1]
         return resp["status"]
 
     def _call_xenhost(self, method, arg_dict):
@@ -1042,7 +1063,7 @@ class VMOps(object):
                     #args={"params": arg_dict})
             ret = self._session.wait_for_task(task, task_id)
         except self.XenAPI.Failure as e:
-            ret = None
+            ret = e
             LOG.error(_("The call to %(method)s returned an error: %(e)s.")
                     % locals())
         return ret

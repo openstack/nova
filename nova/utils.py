@@ -19,7 +19,6 @@
 
 """Utilities and helper functions."""
 
-import base64
 import datetime
 import functools
 import inspect
@@ -30,7 +29,6 @@ import os
 import random
 import re
 import socket
-import string
 import struct
 import sys
 import time
@@ -50,7 +48,8 @@ from nova import version
 
 
 LOG = logging.getLogger("nova.utils")
-TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+PERFECT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 FLAGS = flags.FLAGS
 
 
@@ -127,6 +126,22 @@ def fetchfile(url, target):
 
 
 def execute(*cmd, **kwargs):
+    """
+    Helper method to execute command with optional retry.
+
+    :cmd                Passed to subprocess.Popen.
+    :process_input      Send to opened process.
+    :addl_env           Added to the processes env.
+    :check_exit_code    Defaults to 0. Raise exception.ProcessExecutionError
+                        unless program exits with this code.
+    :delay_on_retry     True | False. Defaults to True. If set to True, wait a
+                        short amount of time before retrying.
+    :attempts           How many times to retry cmd.
+
+    :raises exception.Error on receiving unknown arguments
+    :raises exception.ProcessExecutionError
+    """
+
     process_input = kwargs.pop('process_input', None)
     addl_env = kwargs.pop('addl_env', None)
     check_exit_code = kwargs.pop('check_exit_code', 0)
@@ -224,7 +239,7 @@ def abspath(s):
 
 def novadir():
     import nova
-    return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
+    return os.path.abspath(nova.__file__).split('nova/__init__.py')[0]
 
 
 def default_flagfile(filename='nova.conf', args=None):
@@ -361,16 +376,26 @@ def clear_time_override():
     utcnow.override_time = None
 
 
-def isotime(at=None):
-    """Returns iso formatted utcnow."""
+def strtime(at=None, fmt=PERFECT_TIME_FORMAT):
+    """Returns formatted utcnow."""
     if not at:
         at = utcnow()
-    return at.strftime(TIME_FORMAT)
+    return at.strftime(fmt)
+
+
+def parse_strtime(timestr, fmt=PERFECT_TIME_FORMAT):
+    """Turn a formatted time back into a datetime."""
+    return datetime.datetime.strptime(timestr, fmt)
+
+
+def isotime(at=None):
+    """Returns iso formatted utcnow."""
+    return strtime(at, ISO_TIME_FORMAT)
 
 
 def parse_isotime(timestr):
     """Turn an iso formatted time back into a datetime."""
-    return datetime.datetime.strptime(timestr, TIME_FORMAT)
+    return parse_strtime(timestr, ISO_TIME_FORMAT)
 
 
 def parse_mailmap(mailmap='.mailmap'):
@@ -504,25 +529,61 @@ def utf8(value):
     return value
 
 
-def to_primitive(value):
-    if type(value) is type([]) or type(value) is type((None,)):
-        o = []
-        for v in value:
-            o.append(to_primitive(v))
-        return o
-    elif type(value) is type({}):
-        o = {}
-        for k, v in value.iteritems():
-            o[k] = to_primitive(v)
-        return o
-    elif isinstance(value, datetime.datetime):
-        return str(value)
-    elif hasattr(value, 'iteritems'):
-        return to_primitive(dict(value.iteritems()))
-    elif hasattr(value, '__iter__'):
-        return to_primitive(list(value))
-    else:
-        return value
+def to_primitive(value, convert_instances=False, level=0):
+    """Convert a complex object into primitives.
+
+    Handy for JSON serialization. We can optionally handle instances,
+    but since this is a recursive function, we could have cyclical
+    data structures.
+
+    To handle cyclical data structures we could track the actual objects
+    visited in a set, but not all objects are hashable. Instead we just
+    track the depth of the object inspections and don't go too deep.
+
+    Therefore, convert_instances=True is lossy ... be aware.
+
+    """
+    if inspect.isclass(value):
+        return unicode(value)
+
+    if level > 3:
+        return []
+
+    # The try block may not be necessary after the class check above,
+    # but just in case ...
+    try:
+        if type(value) is type([]) or type(value) is type((None,)):
+            o = []
+            for v in value:
+                o.append(to_primitive(v, convert_instances=convert_instances,
+                                      level=level))
+            return o
+        elif type(value) is type({}):
+            o = {}
+            for k, v in value.iteritems():
+                o[k] = to_primitive(v, convert_instances=convert_instances,
+                                    level=level)
+            return o
+        elif isinstance(value, datetime.datetime):
+            return str(value)
+        elif hasattr(value, 'iteritems'):
+            return to_primitive(dict(value.iteritems()),
+                                convert_instances=convert_instances,
+                                level=level)
+        elif hasattr(value, '__iter__'):
+            return to_primitive(list(value), level)
+        elif convert_instances and hasattr(value, '__dict__'):
+            # Likely an instance of something. Watch for cycles.
+            # Ignore class member vars.
+            return to_primitive(value.__dict__,
+                                convert_instances=convert_instances,
+                                level=level + 1)
+        else:
+            return value
+    except TypeError, e:
+        # Class objects are tricky since they may define something like
+        # __iter__ defined but it isn't callable as list().
+        return unicode(value)
 
 
 def dumps(value):
@@ -745,7 +806,7 @@ def parse_server_string(server_str):
         (address, port) = server_str.split(':')
         return (address, port)
 
-    except:
+    except Exception:
         LOG.debug(_('Invalid server_string: %s' % server_str))
         return ('', '')
 

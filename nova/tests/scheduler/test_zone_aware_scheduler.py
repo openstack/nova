@@ -16,10 +16,14 @@
 Tests For Zone Aware Scheduler.
 """
 
+import json
+
 import nova.db
 
 from nova import exception
+from nova import rpc
 from nova import test
+from nova.compute import api as compute_api
 from nova.scheduler import driver
 from nova.scheduler import zone_aware_scheduler
 from nova.scheduler import zone_manager
@@ -112,7 +116,7 @@ def fake_provision_resource_from_blob(context, item, instance_id,
 
 
 def fake_decrypt_blob_returns_local_info(blob):
-    return {'foo': True}  # values aren't important.
+    return {'hostname': 'foooooo'}  # values aren't important.
 
 
 def fake_decrypt_blob_returns_child_info(blob):
@@ -281,14 +285,29 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         global was_called
         sched = FakeZoneAwareScheduler()
         was_called = False
+
+        def fake_create_db_entry_for_new_instance(self, context,
+                image, base_options, security_group,
+                block_device_mapping, num=1):
+            global was_called
+            was_called = True
+            # return fake instances
+            return {'id': 1, 'uuid': 'f874093c-7b17-49c0-89c3-22a5348497f9'}
+
+        def fake_rpc_cast(*args, **kwargs):
+            pass
+
         self.stubs.Set(sched, '_decrypt_blob',
                        fake_decrypt_blob_returns_local_info)
-        self.stubs.Set(sched, '_provision_resource_locally',
-                       fake_provision_resource_locally)
+        self.stubs.Set(compute_api.API,
+                'create_db_entry_for_new_instance',
+                fake_create_db_entry_for_new_instance)
+        self.stubs.Set(rpc, 'cast', fake_rpc_cast)
 
-        request_spec = {'blob': "Non-None blob data"}
+        build_plan_item = {'blob': "Non-None blob data"}
+        request_spec = {'image': {}, 'instance_properties': {}}
 
-        sched._provision_resource_from_blob(None, request_spec, 1,
+        sched._provision_resource_from_blob(None, build_plan_item, 1,
                                             request_spec, {})
         self.assertTrue(was_called)
 
@@ -327,3 +346,19 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         sched._provision_resource_from_blob(None, request_spec, 1,
                                             request_spec, {})
         self.assertTrue(was_called)
+
+    def test_decrypt_blob(self):
+        """Test that the decrypt method works."""
+
+        fixture = FakeZoneAwareScheduler()
+        test_data = {"foo": "bar"}
+
+        class StubDecryptor(object):
+            def decryptor(self, key):
+                return lambda blob: blob
+
+        self.stubs.Set(zone_aware_scheduler, 'crypto',
+                       StubDecryptor())
+
+        self.assertEqual(fixture._decrypt_blob(test_data),
+                         json.dumps(test_data))

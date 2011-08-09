@@ -17,6 +17,8 @@
 #    under the License.
 import mox
 
+import functools
+
 from base64 import b64decode
 from M2Crypto import BIO
 from M2Crypto import RSA
@@ -34,7 +36,6 @@ from nova import network
 from nova import rpc
 from nova import test
 from nova import utils
-from nova.auth import manager
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import fake
@@ -50,7 +51,7 @@ class CloudTestCase(test.TestCase):
         self.flags(connection_type='fake',
                    stub_network=True)
 
-        self.conn = rpc.Connection.instance()
+        self.conn = rpc.create_connection()
 
         # set up our cloud
         self.cloud = cloud.CloudController()
@@ -62,12 +63,11 @@ class CloudTestCase(test.TestCase):
         self.volume = self.start_service('volume')
         self.image_service = utils.import_object(FLAGS.image_service)
 
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('admin', 'admin', 'admin', True)
-        self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.RequestContext(user=self.user,
-                                              project=self.project)
-        host = self.network.host
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id,
+                                              True)
 
         def fake_show(meh, context, id):
             return {'id': 1, 'container_format': 'ami',
@@ -87,27 +87,23 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(rpc, 'cast', finish_cast)
 
     def tearDown(self):
-        networks = db.project_get_networks(self.context, self.project.id,
+        networks = db.project_get_networks(self.context, self.project_id,
                                            associate=False)
         for network in networks:
             db.network_disassociate(self.context, network['id'])
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
         super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
-        return cloud._gen_key(self.context, self.context.user.id, name)
+        return cloud._gen_key(self.context, self.context.user_id, name)
 
     def test_describe_regions(self):
         """Makes sure describe regions runs without raising an exception"""
         result = self.cloud.describe_regions(self.context)
         self.assertEqual(len(result['regionInfo']), 1)
-        regions = FLAGS.region_list
-        FLAGS.region_list = ["one=test_host1", "two=test_host2"]
+        self.flags(region_list=["one=test_host1", "two=test_host2"])
         result = self.cloud.describe_regions(self.context)
         self.assertEqual(len(result['regionInfo']), 2)
-        FLAGS.region_list = regions
 
     def test_describe_addresses(self):
         """Makes sure describe addresses runs without raising an exception"""
@@ -326,22 +322,15 @@ class CloudTestCase(test.TestCase):
         revoke = self.cloud.revoke_security_group_ingress
         self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
 
-    def test_revoke_security_group_ingress_by_id(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context, kwargs)
-        authz = self.cloud.authorize_security_group_ingress
-        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        authz(self.context, group_id=sec['id'], **kwargs)
-        revoke = self.cloud.revoke_security_group_ingress
-        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
-
-    def test_authorize_security_group_ingress_by_id(self):
+    def test_authorize_revoke_security_group_ingress_by_id(self):
         sec = db.security_group_create(self.context,
                                        {'project_id': self.context.project_id,
                                         'name': 'test'})
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
-        self.assertTrue(authz(self.context, group_id=sec['id'], **kwargs))
+        authz(self.context, group_id=sec['id'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
 
     def test_authorize_security_group_ingress_missing_protocol_params(self):
         sec = db.security_group_create(self.context,
@@ -905,13 +894,16 @@ class CloudTestCase(test.TestCase):
     def test_modify_image_attribute(self):
         modify_image_attribute = self.cloud.modify_image_attribute
 
+        fake_metadata = {'id': 1, 'container_format': 'ami',
+                         'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                                        'type': 'machine'}, 'is_public': False}
+
         def fake_show(meh, context, id):
-            return {'id': 1, 'container_format': 'ami',
-                    'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}, 'is_public': False}
+            return fake_metadata
 
         def fake_update(meh, context, image_id, metadata, data=None):
-            return metadata
+            fake_metadata.update(metadata)
+            return fake_metadata
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
         self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
@@ -961,21 +953,6 @@ class CloudTestCase(test.TestCase):
         self._wait_for_running(ec2_instance_id)
         return ec2_instance_id
 
-    def test_rescue_unrescue_instance(self):
-        instance_id = self._run_instance(
-            image_id='ami-1',
-            instance_type=FLAGS.default_instance_type,
-            max_count=1)
-        self.cloud.rescue_instance(context=self.context,
-                                   instance_id=instance_id)
-        # NOTE(vish): This currently does no validation, it simply makes sure
-        #             that the code path doesn't throw an exception.
-        self.cloud.unrescue_instance(context=self.context,
-                                   instance_id=instance_id)
-        # TODO(soren): We need this until we can stop polling in the rpc code
-        #              for unit tests.
-        self.cloud.terminate_instances(self.context, [instance_id])
-
     def test_console_output(self):
         instance_id = self._run_instance(
             image_id='ami-1',
@@ -1004,7 +981,7 @@ class CloudTestCase(test.TestCase):
         key = RSA.load_key_string(private_key, callback=lambda: None)
         bio = BIO.MemoryBuffer()
         public_key = db.key_pair_get(self.context,
-                                    self.context.user.id,
+                                    self.context.user_id,
                                     'test')['public_key']
         key.save_pub_key_bio(bio)
         converted = crypto.ssl_pub_to_ssh_pub(bio.read())
@@ -1028,7 +1005,7 @@ class CloudTestCase(test.TestCase):
                                                'mytestfprint')
         self.assertTrue(result1)
         keydata = db.key_pair_get(self.context,
-                                  self.context.user.id,
+                                  self.context.user_id,
                                   'testimportkey1')
         self.assertEqual('mytestpubkey', keydata['public_key'])
         self.assertEqual('mytestfprint', keydata['fingerprint'])
@@ -1045,7 +1022,7 @@ class CloudTestCase(test.TestCase):
                                                dummypub)
         self.assertTrue(result2)
         keydata = db.key_pair_get(self.context,
-                                  self.context.user.id,
+                                  self.context.user_id,
                                   'testimportkey2')
         self.assertEqual(dummypub, keydata['public_key'])
         self.assertEqual(dummyfprint, keydata['fingerprint'])
@@ -1492,3 +1469,147 @@ class CloudTestCase(test.TestCase):
         # TODO(yamahata): clean up snapshot created by CreateImage.
 
         self._restart_compute_service()
+
+    @staticmethod
+    def _fake_bdm_get(ctxt, id):
+            return [{'volume_id': 87654321,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': None,
+                     'delete_on_termination': True,
+                     'device_name': '/dev/sdh'},
+                    {'volume_id': None,
+                     'snapshot_id': 98765432,
+                     'no_device': None,
+                     'virtual_name': None,
+                     'delete_on_termination': True,
+                     'device_name': '/dev/sdi'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': True,
+                     'virtual_name': None,
+                     'delete_on_termination': None,
+                     'device_name': None},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'ephemeral0',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sdb'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'swap',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sdc'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'ephemeral1',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sdd'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'ephemeral2',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sd3'},
+                    ]
+
+    def test_get_instance_mapping(self):
+        """Make sure that _get_instance_mapping works"""
+        ctxt = None
+        instance_ref0 = {'id': 0,
+                         'root_device_name': None}
+        instance_ref1 = {'id': 0,
+                         'root_device_name': '/dev/sda1'}
+
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       self._fake_bdm_get)
+
+        expected = {'ami': 'sda1',
+                    'root': '/dev/sda1',
+                    'ephemeral0': '/dev/sdb',
+                    'swap': '/dev/sdc',
+                    'ephemeral1': '/dev/sdd',
+                    'ephemeral2': '/dev/sd3'}
+
+        self.assertEqual(self.cloud._format_instance_mapping(ctxt,
+                                                             instance_ref0),
+                         cloud._DEFAULT_MAPPINGS)
+        self.assertEqual(self.cloud._format_instance_mapping(ctxt,
+                                                             instance_ref1),
+                         expected)
+
+    def test_describe_instance_attribute(self):
+        """Make sure that describe_instance_attribute works"""
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       self._fake_bdm_get)
+
+        def fake_get(ctxt, instance_id):
+            return {
+                'id': 0,
+                'root_device_name': '/dev/sdh',
+                'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
+                'state_description': 'stopping',
+                'instance_type': {'name': 'fake_type'},
+                'kernel_id': 1,
+                'ramdisk_id': 2,
+                'user_data': 'fake-user data',
+                }
+        self.stubs.Set(self.cloud.compute_api, 'get', fake_get)
+
+        def fake_volume_get(ctxt, volume_id, session=None):
+            if volume_id == 87654321:
+                return {'id': volume_id,
+                        'attach_time': '13:56:24',
+                        'status': 'in-use'}
+            raise exception.VolumeNotFound(volume_id=volume_id)
+        self.stubs.Set(db.api, 'volume_get', fake_volume_get)
+
+        get_attribute = functools.partial(
+            self.cloud.describe_instance_attribute,
+            self.context, 'i-12345678')
+
+        bdm = get_attribute('blockDeviceMapping')
+        bdm['blockDeviceMapping'].sort()
+
+        expected_bdm = {'instance_id': 'i-12345678',
+                        'rootDeviceType': 'ebs',
+                        'blockDeviceMapping': [
+                            {'deviceName': '/dev/sdh',
+                             'ebs': {'status': 'in-use',
+                                     'deleteOnTermination': True,
+                                     'volumeId': 87654321,
+                                     'attachTime': '13:56:24'}}]}
+        expected_bdm['blockDeviceMapping'].sort()
+        self.assertEqual(bdm, expected_bdm)
+        # NOTE(yamahata): this isn't supported
+        # get_attribute('disableApiTermination')
+        groupSet = get_attribute('groupSet')
+        groupSet['groupSet'].sort()
+        expected_groupSet = {'instance_id': 'i-12345678',
+                             'groupSet': [{'groupId': 'fake0'},
+                                          {'groupId': 'fake1'}]}
+        expected_groupSet['groupSet'].sort()
+        self.assertEqual(groupSet, expected_groupSet)
+        self.assertEqual(get_attribute('instanceInitiatedShutdownBehavior'),
+                         {'instance_id': 'i-12345678',
+                          'instanceInitiatedShutdownBehavior': 'stop'})
+        self.assertEqual(get_attribute('instanceType'),
+                         {'instance_id': 'i-12345678',
+                          'instanceType': 'fake_type'})
+        self.assertEqual(get_attribute('kernel'),
+                         {'instance_id': 'i-12345678',
+                          'kernel': 'aki-00000001'})
+        self.assertEqual(get_attribute('ramdisk'),
+                         {'instance_id': 'i-12345678',
+                          'ramdisk': 'ari-00000002'})
+        self.assertEqual(get_attribute('rootDeviceName'),
+                         {'instance_id': 'i-12345678',
+                          'rootDeviceName': '/dev/sdh'})
+        # NOTE(yamahata): this isn't supported
+        # get_attribute('sourceDestCheck')
+        self.assertEqual(get_attribute('userData'),
+                         {'instance_id': 'i-12345678',
+                          'userData': '}\xa9\x1e\xba\xc7\xabu\xabZ'})

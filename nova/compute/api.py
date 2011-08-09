@@ -22,6 +22,7 @@ import eventlet
 import re
 import time
 
+from nova import block_device
 from nova import db
 from nova import exception
 from nova import flags
@@ -32,7 +33,6 @@ from nova import quota
 from nova import rpc
 from nova import utils
 from nova import volume
-from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute.utils import terminate_volumes
@@ -218,7 +218,7 @@ class API(base.Base):
         if reservation_id is None:
             reservation_id = utils.generate_uid('r')
 
-        root_device_name = ec2utils.properties_root_device_name(
+        root_device_name = block_device.properties_root_device_name(
             image['properties'])
 
         base_options = {
@@ -250,34 +250,64 @@ class API(base.Base):
 
         return (num_instances, base_options, image)
 
-    def _update_image_block_device_mapping(self, elevated_context, instance_id,
+    @staticmethod
+    def _ephemeral_size(instance_type, ephemeral_name):
+        num = block_device.ephemeral_num(ephemeral_name)
+
+        # TODO(yamahata): ephemeralN where N > 0
+        # Only ephemeral0 is allowed for now because InstanceTypes
+        # table only allows single local disk, local_gb.
+        # In order to enhance it, we need to add a new columns to
+        # instance_types table.
+        if num > 0:
+            return 0
+
+        return instance_type.get('local_gb')
+
+    def _update_image_block_device_mapping(self, elevated_context,
+                                           instance_type, instance_id,
                                            mappings):
         """tell vm driver to create ephemeral/swap device at boot time by
         updating BlockDeviceMapping
         """
-        for bdm in ec2utils.mappings_prepend_dev(mappings):
+        instance_type = (instance_type or
+                         instance_types.get_default_instance_type())
+
+        for bdm in block_device.mappings_prepend_dev(mappings):
             LOG.debug(_("bdm %s"), bdm)
 
             virtual_name = bdm['virtual']
             if virtual_name == 'ami' or virtual_name == 'root':
                 continue
 
-            assert (virtual_name == 'swap' or
-                    virtual_name.startswith('ephemeral'))
+            if not block_device.is_swap_or_ephemeral(virtual_name):
+                continue
+
+            size = 0
+            if virtual_name == 'swap':
+                size = instance_type.get('swap', 0)
+            elif block_device.is_ephemeral(virtual_name):
+                size = self._ephemeral_size(instance_type, virtual_name)
+
+            if size == 0:
+                continue
+
             values = {
                 'instance_id': instance_id,
                 'device_name': bdm['device'],
-                'virtual_name': virtual_name, }
+                'virtual_name': virtual_name,
+                'volume_size': size}
             self.db.block_device_mapping_update_or_create(elevated_context,
                                                           values)
 
-    def _update_block_device_mapping(self, elevated_context, instance_id,
+    def _update_block_device_mapping(self, elevated_context,
+                                     instance_type, instance_id,
                                      block_device_mapping):
         """tell vm driver to attach volume at boot time by updating
         BlockDeviceMapping
         """
+        LOG.debug(_("block_device_mapping %s"), block_device_mapping)
         for bdm in block_device_mapping:
-            LOG.debug(_('bdm %s'), bdm)
             assert 'device_name' in bdm
 
             values = {'instance_id': instance_id}
@@ -286,10 +316,18 @@ class API(base.Base):
                         'no_device'):
                 values[key] = bdm.get(key)
 
+            virtual_name = bdm.get('virtual_name')
+            if (virtual_name is not None and
+                block_device.is_ephemeral(virtual_name)):
+                size = self._ephemeral_size(instance_type, virtual_name)
+                if size == 0:
+                    continue
+                values['volume_size'] = size
+
             # NOTE(yamahata): NoDevice eliminates devices defined in image
             #                 files by command line option.
             #                 (--block-device-mapping)
-            if bdm.get('virtual_name') == 'NoDevice':
+            if virtual_name == 'NoDevice':
                 values['no_device'] = True
                 for k in ('delete_on_termination', 'volume_id',
                           'snapshot_id', 'volume_id', 'volume_size',
@@ -299,8 +337,8 @@ class API(base.Base):
             self.db.block_device_mapping_update_or_create(elevated_context,
                                                           values)
 
-    def create_db_entry_for_new_instance(self, context, image, base_options,
-             security_group, block_device_mapping, num=1):
+    def create_db_entry_for_new_instance(self, context, instance_type, image,
+            base_options, security_group, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         etc).
@@ -333,12 +371,12 @@ class API(base.Base):
                                                 security_group_id)
 
         # BlockDeviceMapping table
-        self._update_image_block_device_mapping(elevated, instance_id,
-            image['properties'].get('mappings', []))
-        self._update_block_device_mapping(elevated, instance_id,
+        self._update_image_block_device_mapping(elevated, instance_type,
+            instance_id, image['properties'].get('mappings', []))
+        self._update_block_device_mapping(elevated, instance_type, instance_id,
             image['properties'].get('block_device_mapping', []))
         # override via command line option
-        self._update_block_device_mapping(elevated, instance_id,
+        self._update_block_device_mapping(elevated, instance_type, instance_id,
                                           block_device_mapping)
 
         # Set sane defaults if not specified
@@ -356,6 +394,7 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
+                                          image,
                                           instance_id=None, num_instances=1):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
@@ -369,6 +408,7 @@ class API(base.Base):
 
         filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
+            'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
             'filter': filter_class,
@@ -411,6 +451,7 @@ class API(base.Base):
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
                                       admin_password,
+                                      image,
                                       num_instances=num_instances)
 
         return base_options['reservation_id']
@@ -449,7 +490,8 @@ class API(base.Base):
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
-            instance = self.create_db_entry_for_new_instance(context, image,
+            instance = self.create_db_entry_for_new_instance(context,
+                                    instance_type, image,
                                     base_options, security_group,
                                     block_device_mapping, num=num)
             instances.append(instance)
@@ -459,6 +501,7 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
+                                          image,
                                           instance_id=instance_id)
 
         return [dict(x.iteritems()) for x in instances]
@@ -687,7 +730,7 @@ class API(base.Base):
                     raise
                 instances = None
         elif project_id or not context.is_admin:
-            if not context.project:
+            if not context.project_id:
                 instances = self.db.instance_get_all_by_user(
                     context, context.user_id)
             else:
@@ -886,7 +929,7 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,
                                    instance_ref['uuid'],
-                                   migration_ref['source_compute'],
+                                   migration_ref['dest_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -906,7 +949,7 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context,
                                    instance_ref['uuid'],
-                                   migration_ref['dest_compute'],
+                                   migration_ref['source_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
@@ -938,25 +981,22 @@ class API(base.Base):
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
                 " new instance type %(new_instance_type_name)s") % locals())
         if not new_instance_type:
-            raise exception.ApiError(_("Requested flavor %(flavor_id)d "
-                    "does not exist") % locals())
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         current_memory_mb = current_instance_type['memory_mb']
         new_memory_mb = new_instance_type['memory_mb']
         if current_memory_mb > new_memory_mb:
-            raise exception.ApiError(_("Invalid flavor: cannot downsize"
-                    "instances"))
+            raise exception.CannotResizeToSmallerSize()
 
         if (current_memory_mb == new_memory_mb) and flavor_id:
-            raise exception.ApiError(_("Invalid flavor: cannot use"
-                    "the same flavor. "))
+            raise exception.CannotResizeToSameSize()
 
         instance_ref = self._get_instance(context, instance_id, 'resize')
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance_ref['uuid'],
-                              "flavor_id": new_instance_type['id']}})
+                              "instance_type_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):
@@ -994,7 +1034,12 @@ class API(base.Base):
     def set_host_enabled(self, context, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         return self._call_compute_message("set_host_enabled", context,
-                instance_id=None, host=host, params={"enabled": enabled})
+                host=host, params={"enabled": enabled})
+
+    def host_power_action(self, context, host, action):
+        """Reboots, shuts down or powers up the host."""
+        return self._call_compute_message("host_power_action", context,
+                host=host, params={"action": action})
 
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
