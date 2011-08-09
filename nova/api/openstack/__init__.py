@@ -68,9 +68,16 @@ class FaultWrapper(base_wsgi.Middleware):
 class TenantMapper(routes.Mapper):
 
     def resource(self, member_name, collection_name, **kwargs):
+        if not ('parent_resource' in kwargs):
+            kwargs['path_prefix'] = '{tenant_id}/'
+        else:
+            parent_resource = kwargs['parent_resource']
+            p_collection = parent_resource['collection_name']
+            p_member = parent_resource['member_name']
+            kwargs['path_prefix'] = '{tenant_id}/%s/:%s_id' % (p_collection,
+                                                               p_member)
         routes.Mapper.resource(self, member_name,
                                      collection_name,
-                                     path_prefix='{tenant_id}/',
                                      **kwargs)
 
 
