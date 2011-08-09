@@ -1159,7 +1159,7 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
@@ -2513,13 +2513,13 @@ class TestServerInstanceCreation(test.TestCase):
     def test_create_instance_with_no_personality(self):
         request, response, injected_files = \
                 self._create_instance_with_personality_json(personality=None)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(injected_files, [])
 
     def test_create_instance_with_no_personality_xml(self):
         request, response, injected_files = \
                 self._create_instance_with_personality_xml(personality=None)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(injected_files, [])
 
     def test_create_instance_with_personality(self):
@@ -2529,7 +2529,7 @@ class TestServerInstanceCreation(test.TestCase):
         personality = [(path, b64contents)]
         request, response, injected_files = \
             self._create_instance_with_personality_json(personality)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(injected_files, [(path, contents)])
 
     def test_create_instance_with_personality_xml(self):
@@ -2539,7 +2539,7 @@ class TestServerInstanceCreation(test.TestCase):
         personality = [(path, b64contents)]
         request, response, injected_files = \
             self._create_instance_with_personality_xml(personality)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(injected_files, [(path, contents)])
 
     def test_create_instance_with_personality_no_path(self):
@@ -2602,7 +2602,7 @@ class TestServerInstanceCreation(test.TestCase):
         request = self._get_create_request_json(body_dict)
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
 
     def test_create_instance_with_three_personalities(self):
         files = [
@@ -2615,7 +2615,7 @@ class TestServerInstanceCreation(test.TestCase):
             personality.append((path, base64.b64encode(content)))
         request, response, injected_files = \
             self._create_instance_with_personality_json(personality)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(injected_files, files)
 
     def test_create_instance_personality_empty_content(self):
@@ -2624,13 +2624,13 @@ class TestServerInstanceCreation(test.TestCase):
         personality = [(path, contents)]
         request, response, injected_files = \
             self._create_instance_with_personality_json(personality)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(injected_files, [(path, contents)])
 
     def test_create_instance_admin_pass_json(self):
         request, response, dummy = \
             self._create_instance_with_personality_json(None)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         response = json.loads(response.body)
         self.assertTrue('adminPass' in response['server'])
         self.assertEqual(16, len(response['server']['adminPass']))
@@ -2638,7 +2638,7 @@ class TestServerInstanceCreation(test.TestCase):
     def test_create_instance_admin_pass_xml(self):
         request, response, dummy = \
             self._create_instance_with_personality_xml(None)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         dom = minidom.parseString(response.body)
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
