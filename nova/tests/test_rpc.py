@@ -20,13 +20,11 @@ Unit Tests for remote procedure calls using queue
 """
 
 from nova import context
-from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova import test
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.rpc')
 
 

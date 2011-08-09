@@ -109,13 +109,17 @@ class SecurityGroupTests(base.UserSmokeTestCase):
 
     def __public_instance_is_accessible(self):
         id_url = "latest/meta-data/instance-id"
-        options = "-s --max-time 1"
+        options = "-f -s --max-time 1"
         command = "curl %s %s/%s" % (options, self.data['public_ip'], id_url)
-        instance_id = commands.getoutput(command).strip()
+        status, output = commands.getstatusoutput(command)
+        instance_id = output.strip()
+        if status > 0:
+            return False
         if not instance_id:
             return False
         if instance_id != self.data['instance'].id:
-            raise Exception("Wrong instance id")
+            raise Exception("Wrong instance id. Expected: %s, Got: %s" %
+                               (self.data['instance'].id, instance_id))
         return True
 
     def test_001_can_create_security_group(self):

@@ -25,6 +25,7 @@ from nova.network import linux_net
 from nova.virt.libvirt import netutils
 from nova import utils
 from nova.virt.vif import VIFDriver
+from nova import exception
 
 LOG = logging.getLogger('nova.virt.libvirt.vif')
 
@@ -128,7 +129,7 @@ class LibvirtOpenVswitchDriver(VIFDriver):
             utils.execute('sudo', 'ovs-vsctl', 'del-port',
                           network['bridge'], dev)
             utils.execute('sudo', 'ip', 'link', 'delete', dev)
-        except:
+        except exception.ProcessExecutionError:
             LOG.warning(_("Failed while unplugging vif of instance '%s'"),
                         instance['name'])
             raise

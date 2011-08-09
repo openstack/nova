@@ -126,6 +126,22 @@ def fetchfile(url, target):
 
 
 def execute(*cmd, **kwargs):
+    """
+    Helper method to execute command with optional retry.
+
+    :cmd                Passed to subprocess.Popen.
+    :process_input      Send to opened process.
+    :addl_env           Added to the processes env.
+    :check_exit_code    Defaults to 0. Raise exception.ProcessExecutionError
+                        unless program exits with this code.
+    :delay_on_retry     True | False. Defaults to True. If set to True, wait a
+                        short amount of time before retrying.
+    :attempts           How many times to retry cmd.
+
+    :raises exception.Error on receiving unknown arguments
+    :raises exception.ProcessExecutionError
+    """
+
     process_input = kwargs.pop('process_input', None)
     addl_env = kwargs.pop('addl_env', None)
     check_exit_code = kwargs.pop('check_exit_code', 0)
@@ -223,7 +239,7 @@ def abspath(s):
 
 def novadir():
     import nova
-    return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
+    return os.path.abspath(nova.__file__).split('nova/__init__.py')[0]
 
 
 def default_flagfile(filename='nova.conf', args=None):
@@ -790,7 +806,7 @@ def parse_server_string(server_str):
         (address, port) = server_str.split(':')
         return (address, port)
 
-    except:
+    except Exception:
         LOG.debug(_('Invalid server_string: %s' % server_str))
         return ('', '')
 

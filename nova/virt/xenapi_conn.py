@@ -184,23 +184,24 @@ class XenAPIConnection(driver.ComputeDriver):
     def list_instances_detail(self):
         return self._vmops.list_instances_detail()
 
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """Create VM instance"""
-        self._vmops.spawn(instance, network_info)
+        self._vmops.spawn(context, instance, network_info)
 
     def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
         self._vmops.revert_migration(instance)
 
-    def finish_migration(self, instance, disk_info, network_info,
+    def finish_migration(self, context, instance, disk_info, network_info,
                          resize_instance=False):
         """Completes a resize, turning on the migrated instance"""
-        self._vmops.finish_migration(instance, disk_info, network_info,
-                                  resize_instance)
+        self._vmops.finish_migration(context, instance, disk_info,
+                                     network_info, resize_instance)
 
-    def snapshot(self, instance, image_id):
+    def snapshot(self, context, instance, image_id):
         """ Create snapshot from a running VM instance """
-        self._vmops.snapshot(instance, image_id)
+        self._vmops.snapshot(context, instance, image_id)
 
     def reboot(self, instance, network_info):
         """Reboot VM instance"""
@@ -241,13 +242,13 @@ class XenAPIConnection(driver.ComputeDriver):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
-    def rescue(self, instance, callback, network_info):
+    def rescue(self, context, instance, _callback, network_info):
         """Rescue the specified instance"""
-        self._vmops.rescue(instance, callback)
+        self._vmops.rescue(context, instance, _callback, network_info)
 
-    def unrescue(self, instance, callback, network_info):
+    def unrescue(self, instance, _callback, network_info):
         """Unrescue the specified instance"""
-        self._vmops.unrescue(instance, callback)
+        self._vmops.unrescue(instance, _callback)
 
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
@@ -331,6 +332,19 @@ class XenAPIConnection(driver.ComputeDriver):
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
 
+    def host_power_action(self, host, action):
+        """The only valid values for 'action' on XenServer are 'reboot' or
+        'shutdown', even though the API also accepts 'startup'. As this is
+        not technically possible on XenServer, since the host is the same
+        physical machine as the hypervisor, if this is requested, we need to
+        raise an exception.
+        """
+        if action in ("reboot", "shutdown"):
+            return self._vmops.host_power_action(host, action)
+        else:
+            msg = _("Host startup on XenServer is not supported.")
+            raise NotImplementedError(msg)
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         return self._vmops.set_host_enabled(host, enabled)
@@ -393,11 +407,10 @@ class XenAPISession(object):
             try:
                 name = self._session.xenapi.task.get_name_label(task)
                 status = self._session.xenapi.task.get_status(task)
+                # Ensure action is never > 255
+                action = dict(action=name[:255], error=None)
                 if id:
-                    action = dict(
-                        instance_id=int(id),
-                        action=name[0:255],  # Ensure action is never > 255
-                        error=None)
+                    action["instance_id"] = int(id)
                 if status == "pending":
                     return
                 elif status == "success":
@@ -440,7 +453,7 @@ class XenAPISession(object):
                 params = None
                 try:
                     params = eval(exc.details[3])
-                except:
+                except Exception:
                     raise exc
                 raise self.XenAPI.Failure(params)
             else:

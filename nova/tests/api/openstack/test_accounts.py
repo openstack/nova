@@ -18,15 +18,10 @@ import json
 
 import webob
 
-from nova import flags
 from nova import test
 from nova.api.openstack import accounts
 from nova.auth.manager import User
 from nova.tests.api.openstack import fakes
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 def fake_init(self):
@@ -40,7 +35,7 @@ def fake_admin_check(self, req):
 class AccountsTest(test.TestCase):
     def setUp(self):
         super(AccountsTest, self).setUp()
-        self.flags(allow_admin_api=True)
+        self.flags(verbose=True, allow_admin_api=True)
         self.stubs.Set(accounts.Controller, '__init__',
                        fake_init)
         self.stubs.Set(accounts.Controller, '_check_admin',

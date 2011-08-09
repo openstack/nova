@@ -129,7 +129,8 @@ class FakeConnection(driver.ComputeDriver):
             info_list.append(self._map_to_instance_info(instance))
         return info_list
 
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """
         Create a new instance/VM/domain on the virtualization platform.
 
@@ -153,7 +154,7 @@ class FakeConnection(driver.ComputeDriver):
         fake_instance = FakeInstance(name, state)
         self.instances[name] = fake_instance
 
-    def snapshot(self, instance, name):
+    def snapshot(self, context, instance, name):
         """
         Snapshots the specified instance.
 
@@ -240,7 +241,7 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def rescue(self, instance, callback, network_info):
+    def rescue(self, context, instance, callback, network_info):
         """
         Rescue the specified instance.
         """
@@ -510,6 +511,10 @@ class FakeConnection(driver.ComputeDriver):
     def get_host_stats(self, refresh=False):
         """Return fake Host Status of ram, disk, network."""
         return self.host_status
+
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
+        pass
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""

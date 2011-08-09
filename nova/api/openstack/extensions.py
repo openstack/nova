@@ -23,7 +23,7 @@ import sys
 import routes
 import webob.dec
 import webob.exc
-from xml.etree import ElementTree
+from lxml import etree
 
 from nova import exception
 from nova import flags
@@ -32,6 +32,7 @@ from nova import wsgi as base_wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 
 
 LOG = logging.getLogger('extensions')
@@ -474,36 +475,38 @@ class ResourceExtension(object):
 
 class ExtensionsXMLSerializer(wsgi.XMLDictSerializer):
 
+    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+
     def show(self, ext_dict):
-        ext = self._create_ext_elem(ext_dict['extension'])
+        ext = etree.Element('extension', nsmap=self.NSMAP)
+        self._populate_ext(ext, ext_dict['extension'])
         return self._to_xml(ext)
 
     def index(self, exts_dict):
-        exts = ElementTree.Element('extensions')
+        exts = etree.Element('extensions', nsmap=self.NSMAP)
         for ext_dict in exts_dict['extensions']:
-            exts.append(self._create_ext_elem(ext_dict))
+            ext = etree.SubElement(exts, 'extension')
+            self._populate_ext(ext, ext_dict)
         return self._to_xml(exts)
 
-    def _create_ext_elem(self, ext_dict):
-        """Create an extension xml element from a dict."""
-        ext_elem = ElementTree.Element('extension')
+    def _populate_ext(self, ext_elem, ext_dict):
+        """Populate an extension xml element from a dict."""
+
         ext_elem.set('name', ext_dict['name'])
         ext_elem.set('namespace', ext_dict['namespace'])
         ext_elem.set('alias', ext_dict['alias'])
         ext_elem.set('updated', ext_dict['updated'])
-        desc = ElementTree.Element('description')
+        desc = etree.Element('description')
         desc.text = ext_dict['description']
         ext_elem.append(desc)
         for link in ext_dict.get('links', []):
-            elem = ElementTree.Element('atom:link')
+            elem = etree.SubElement(ext_elem, '{%s}link' % xmlutil.XMLNS_ATOM)
             elem.set('rel', link['rel'])
             elem.set('href', link['href'])
             elem.set('type', link['type'])
-            ext_elem.append(elem)
         return ext_elem
 
     def _to_xml(self, root):
-        """Convert the xml tree object to an xml string."""
-        root.set('xmlns', wsgi.XMLNS_V11)
-        root.set('xmlns:atom', wsgi.XMLNS_ATOM)
-        return ElementTree.tostring(root, encoding='UTF-8')
+        """Convert the xml object to an xml string."""
+
+        return etree.tostring(root, encoding='UTF-8')

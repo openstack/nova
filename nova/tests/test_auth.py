@@ -88,9 +88,9 @@ class user_and_project_generator(object):
 
 class _AuthManagerBaseTestCase(test.TestCase):
     def setUp(self):
-        FLAGS.auth_driver = self.auth_driver
         super(_AuthManagerBaseTestCase, self).setUp()
-        self.flags(connection_type='fake')
+        self.flags(auth_driver=self.auth_driver,
+                connection_type='fake')
         self.manager = manager.AuthManager(new=True)
         self.manager.mc.cache = {}
 
