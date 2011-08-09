@@ -317,7 +317,7 @@ DEFINE_string('osapi_extensions_path', '/var/lib/nova/extensions',
 DEFINE_string('osapi_host', '$my_ip', 'ip of api server')
 DEFINE_string('osapi_scheme', 'http', 'prefix for openstack')
 DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
-DEFINE_string('osapi_path', '/v1.0/', 'suffix for openstack')
+DEFINE_string('osapi_path', '/v1.1/', 'suffix for openstack')
 DEFINE_integer('osapi_max_limit', 1000,
                'max number of items returned in a collection response')
 
@@ -387,3 +387,8 @@ DEFINE_list('zone_capabilities',
                  'Key/Multi-value list representng capabilities of this zone')
 DEFINE_string('build_plan_encryption_key', None,
         '128bit (hex) encryption key for scheduler build plans.')
+
+DEFINE_bool('start_guests_on_host_boot', False,
+            'Whether to restart guests when the host reboots')
+DEFINE_bool('resume_guests_state_on_host_boot', False,
+            'Whether to start guests, that was running before the host reboot')

@@ -147,7 +147,7 @@ class Authenticate(wsgi.Middleware):
         try:
             signature = req.params['Signature']
             access = req.params['AWSAccessKeyId']
-        except:
+        except KeyError, e:
             raise webob.exc.HTTPBadRequest()
 
         # Make a copy of args for authentication and signature verification.
@@ -211,7 +211,7 @@ class Requestify(wsgi.Middleware):
             for non_arg in non_args:
                 # Remove, but raise KeyError if omitted
                 args.pop(non_arg)
-        except:
+        except KeyError, e:
             raise webob.exc.HTTPBadRequest()
 
         LOG.debug(_('action: %s'), action)
@@ -352,6 +352,10 @@ class Executor(wsgi.Application):
                                    unicode(ex))
         except exception.KeyPairExists as ex:
             LOG.debug(_('KeyPairExists raised: %s'), unicode(ex),
+                     context=context)
+            return self._error(req, context, type(ex).__name__, unicode(ex))
+        except exception.InvalidParameterValue as ex:
+            LOG.debug(_('InvalidParameterValue raised: %s'), unicode(ex),
                      context=context)
             return self._error(req, context, type(ex).__name__, unicode(ex))
         except Exception as ex:
