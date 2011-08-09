@@ -767,6 +767,52 @@ class XenAPIMigrateInstance(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(instance, '127.0.0.1')
 
+    def test_revert_migrate(self):
+        instance = db.instance_create(self.context, self.values)
+        self.called = False
+        self.fake_vm_start_called = False
+        self.fake_revert_migration_called = False
+
+        def fake_vm_start(*args, **kwargs):
+            self.fake_vm_start_called = True
+
+        def fake_vdi_resize(*args, **kwargs):
+            self.called = True
+
+        def fake_revert_migration(*args, **kwargs):
+            self.fake_revert_migration_called = True
+
+        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+                "VDI_resize_online", fake_vdi_resize)
+        self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
+        self.stubs.Set(vmops.VMOps, 'revert_migration', fake_revert_migration)
+
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        stubs.stubout_loopingcall_start(self.stubs)
+        conn = xenapi_conn.get_connection(False)
+        network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+                          {'broadcast': '192.168.0.255',
+                           'dns': ['192.168.0.1'],
+                           'gateway': '192.168.0.1',
+                           'gateway6': 'dead:beef::1',
+                           'ip6s': [{'enabled': '1',
+                                     'ip': 'dead:beef::dcad:beff:feef:0',
+                                           'netmask': '64'}],
+                           'ips': [{'enabled': '1',
+                                    'ip': '192.168.0.100',
+                                    'netmask': '255.255.255.0'}],
+                           'label': 'fake',
+                           'mac': 'DE:AD:BE:EF:00:00',
+                           'rxtx_cap': 3})]
+        conn.finish_migration(self.context, instance,
+                              dict(base_copy='hurr', cow='durr'),
+                              network_info, resize_instance=True)
+        self.assertEqual(self.called, True)
+        self.assertEqual(self.fake_vm_start_called, True)
+
+        conn.revert_migration(instance)
+        self.assertEqual(self.fake_revert_migration_called, True)
+
     def test_finish_migrate(self):
         instance = db.instance_create(self.context, self.values)
         self.called = False

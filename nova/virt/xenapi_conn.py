@@ -191,7 +191,7 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
-        self._vmops.revert_resize(instance)
+        self._vmops.revert_migration(instance)
 
     def finish_migration(self, context, instance, disk_info, network_info,
                          resize_instance=False):
@@ -332,6 +332,19 @@ class XenAPIConnection(driver.ComputeDriver):
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
 
+    def host_power_action(self, host, action):
+        """The only valid values for 'action' on XenServer are 'reboot' or
+        'shutdown', even though the API also accepts 'startup'. As this is
+        not technically possible on XenServer, since the host is the same
+        physical machine as the hypervisor, if this is requested, we need to
+        raise an exception.
+        """
+        if action in ("reboot", "shutdown"):
+            return self._vmops.host_power_action(host, action)
+        else:
+            msg = _("Host startup on XenServer is not supported.")
+            raise NotImplementedError(msg)
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         return self._vmops.set_host_enabled(host, enabled)
@@ -440,7 +453,7 @@ class XenAPISession(object):
                 params = None
                 try:
                     params = eval(exc.details[3])
-                except:
+                except Exception:
                     raise exc
                 raise self.XenAPI.Failure(params)
             else:

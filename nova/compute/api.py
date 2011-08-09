@@ -360,6 +360,7 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
+                                          image,
                                           instance_id=None, num_instances=1):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
@@ -373,6 +374,7 @@ class API(base.Base):
 
         filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
+            'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
             'filter': filter_class,
@@ -415,6 +417,7 @@ class API(base.Base):
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
                                       admin_password,
+                                      image,
                                       num_instances=num_instances)
 
         return base_options['reservation_id']
@@ -463,6 +466,7 @@ class API(base.Base):
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           admin_password,
+                                          image,
                                           instance_id=instance_id)
 
         return [dict(x.iteritems()) for x in instances]
@@ -993,7 +997,12 @@ class API(base.Base):
     def set_host_enabled(self, context, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         return self._call_compute_message("set_host_enabled", context,
-                instance_id=None, host=host, params={"enabled": enabled})
+                host=host, params={"enabled": enabled})
+
+    def host_power_action(self, context, host, action):
+        """Reboots, shuts down or powers up the host."""
+        return self._call_compute_message("host_power_action", context,
+                host=host, params={"action": action})
 
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
