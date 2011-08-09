@@ -155,7 +155,7 @@ def execute(*cmd, **kwargs):
                                 'to utils.execute: %r') % kwargs)
 
     if run_as_root:
-        cmd = shlex.split(FLAGS.sudo_helper) + cmd
+        cmd = shlex.split(FLAGS.sudo_helper) + list(cmd)
     cmd = map(str, cmd)
 
     while attempts > 0:
