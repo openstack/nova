@@ -57,9 +57,12 @@ class Controller(object):
 
         context = req.environ['nova.context']
 
-        self._update_instance_metadata(context, server_id, metadata, False)
+        new_metadata = self._update_instance_metadata(context,
+                                                      server_id,
+                                                      metadata,
+                                                      False)
 
-        return body
+        return {'metadata': new_metadata}
 
     def update(self, req, server_id, id, body):
         try:
@@ -91,23 +94,26 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=expl)
 
         context = req.environ['nova.context']
-        self._update_instance_metadata(context, server_id, metadata, True)
+        new_metadata = self._update_instance_metadata(context,
+                                                      server_id,
+                                                      metadata,
+                                                      True)
 
-        return {'metadata': metadata}
+        return {'metadata': new_metadata}
 
     def _update_instance_metadata(self, context, server_id, metadata,
                                   delete=False):
         try:
-            self.compute_api.update_instance_metadata(context,
-                                                      server_id,
-                                                      metadata,
-                                                      delete)
+            return self.compute_api.update_instance_metadata(context,
+                                                             server_id,
+                                                             metadata,
+                                                             delete)
 
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
 
-        except (ValueError, AttributeError), ex:
+        except (ValueError, AttributeError):
             msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
 

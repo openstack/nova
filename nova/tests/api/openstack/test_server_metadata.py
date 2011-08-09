@@ -202,20 +202,29 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(404, res.status_int)
 
     def test_create(self):
+        self.stubs.Set(nova.db.api, 'instance_metadata_get',
+                       return_server_metadata)
         self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = webob.Request.blank('/v1.1/servers/1/metadata')
         req.method = 'POST'
         req.content_type = "application/json"
-        expected = {"metadata": {"key1": "value1"}}
-        req.body = json.dumps(expected)
+        input = {"metadata": {"key9": "value9"}}
+        req.body = json.dumps(input)
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
-        self.assertEqual(expected, res_dict)
+        input['metadata'].update({
+            "key1": "value1",
+            "key2": "value2",
+            "key3":"value3",
+        })
+        self.assertEqual(input, res_dict)
 
     def test_create_xml(self):
+        self.stubs.Set(nova.db.api, 'instance_metadata_get',
+                       return_server_metadata)
         self.stubs.Set(nova.db.api, "instance_metadata_update",
                        return_create_instance_metadata)
         req = webob.Request.blank("/v1.1/servers/1/metadata")
@@ -225,19 +234,26 @@ class ServerMetaDataTest(test.TestCase):
 
         request_metadata = minidom.parseString("""
             <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <meta key="key3">value3</meta>
-                <meta key="key2">value2</meta>
-                <meta key="key1">value1</meta>
+                <meta key="key5">value5</meta>
             </metadata>
         """.replace("  ", "").replace("\n", ""))
 
         req.body = str(request_metadata.toxml())
         response = req.get_response(fakes.wsgi_app())
 
+        expected_metadata = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="key3">value3</meta>
+                <meta key="key2">value2</meta>
+                <meta key="key1">value1</meta>
+                <meta key="key5">value5</meta>
+            </metadata>
+        """.replace("  ", "").replace("\n", ""))
+
         self.assertEqual(200, response.status_int)
         actual_metadata = minidom.parseString(response.body)
 
-        self.assertEqual(request_metadata.toxml(), actual_metadata.toxml())
+        self.assertEqual(expected_metadata.toxml(), actual_metadata.toxml())
 
     def test_create_empty_body(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_update',

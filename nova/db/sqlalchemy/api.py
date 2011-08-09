@@ -3205,7 +3205,7 @@ def instance_metadata_get_item(context, instance_id, key, session=None):
 def instance_metadata_update(context, instance_id, metadata, delete):
     session = get_session()
 
-    # Set all metadata that isn't passed in if delete kwarg is True
+    # Set existing metadata to deleted if delete argument is True
     if delete:
         original_metadata = instance_metadata_get(context, instance_id)
         for meta_key, meta_value in original_metadata.iteritems():

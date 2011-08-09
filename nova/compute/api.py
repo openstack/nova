@@ -1192,3 +1192,5 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, _metadata)
 
         self.db.instance_metadata_update(context, instance_id, _metadata, True)
+
+        return _metadata
