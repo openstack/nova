@@ -184,8 +184,8 @@ class XenAPIConnection(driver.ComputeDriver):
     def list_instances_detail(self):
         return self._vmops.list_instances_detail()
 
-    def spawn(self, context, instance, network_info,
-              block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """Create VM instance"""
         self._vmops.spawn(context, instance, network_info)
 
@@ -331,6 +331,19 @@ class XenAPIConnection(driver.ComputeDriver):
         """Return the current state of the host. If 'refresh' is
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
+
+    def host_power_action(self, host, action):
+        """The only valid values for 'action' on XenServer are 'reboot' or
+        'shutdown', even though the API also accepts 'startup'. As this is
+        not technically possible on XenServer, since the host is the same
+        physical machine as the hypervisor, if this is requested, we need to
+        raise an exception.
+        """
+        if action in ("reboot", "shutdown"):
+            return self._vmops.host_power_action(host, action)
+        else:
+            msg = _("Host startup on XenServer is not supported.")
+            raise NotImplementedError(msg)
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""

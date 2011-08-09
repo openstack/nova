@@ -44,7 +44,7 @@ FLAGS = flags.FLAGS
 
 
 class Controller(object):
-    """ The Server API controller for the OpenStack API """
+    """ The Server API base controller class for the OpenStack API """
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -53,17 +53,21 @@ class Controller(object):
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
         try:
-            servers = self._items(req, is_detail=False)
+            servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
             return exc.HTTPBadRequest(explanation=str(err))
+        except exception.NotFound:
+            return exc.HTTPNotFound()
         return servers
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
         try:
-            servers = self._items(req, is_detail=True)
+            servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
             return exc.HTTPBadRequest(explanation=str(err))
+        except exception.NotFound as err:
+            return exc.HTTPNotFound()
         return servers
 
     def _build_view(self, req, instance, is_detail=False):
@@ -75,22 +79,55 @@ class Controller(object):
     def _action_rebuild(self, info, request, instance_id):
         raise NotImplementedError()
 
-    def _items(self, req, is_detail):
-        """Returns a list of servers for a given user.
-
-        builder - the response model builder
+    def _get_servers(self, req, is_detail):
+        """Returns a list of servers, taking into account any search
+        options specified.
         """
-        query_str = req.str_GET
-        reservation_id = query_str.get('reservation_id')
-        project_id = query_str.get('project_id')
-        fixed_ip = query_str.get('fixed_ip')
-        recurse_zones = utils.bool_from_str(query_str.get('recurse_zones'))
+
+        search_opts = {}
+        search_opts.update(req.str_GET)
+
+        context = req.environ['nova.context']
+        remove_invalid_options(context, search_opts,
+                self._get_server_search_options())
+
+        # Convert recurse_zones into a boolean
+        search_opts['recurse_zones'] = utils.bool_from_str(
+                search_opts.get('recurse_zones', False))
+
+        # If search by 'status', we need to convert it to 'state'
+        # If the status is unknown, bail.
+        # Leave 'state' in search_opts so compute can pass it on to
+        # child zones..
+        if 'status' in search_opts:
+            status = search_opts['status']
+            search_opts['state'] = common.power_states_from_status(status)
+            if len(search_opts['state']) == 0:
+                reason = _('Invalid server status: %(status)s') % locals()
+                LOG.error(reason)
+                raise exception.InvalidInput(reason=reason)
+
+        # By default, compute's get_all() will return deleted instances.
+        # If an admin hasn't specified a 'deleted' search option, we need
+        # to filter out deleted instances by setting the filter ourselves.
+        # ... Unless 'changes-since' is specified, because 'changes-since'
+        # should return recently deleted images according to the API spec.
+
+        if 'deleted' not in search_opts:
+            # Admin hasn't specified deleted filter
+            if 'changes-since' not in search_opts:
+                # No 'changes-since', so we need to find non-deleted servers
+                search_opts['deleted'] = False
+            else:
+                # This is the default, but just in case..
+                search_opts['deleted'] = True
+
         instance_list = self.compute_api.get_all(
-                req.environ['nova.context'],
-                reservation_id=reservation_id,
-                project_id=project_id,
-                fixed_ip=fixed_ip,
-                recurse_zones=recurse_zones)
+                context, search_opts=search_opts)
+
+        # FIXME(comstud): 'changes-since' is not fully implemented.  Where
+        # should this be filtered?
+
         limited_list = self._limit_items(instance_list, req)
         servers = [self._build_view(req, inst, is_detail)['server']
                 for inst in limited_list]
@@ -218,13 +255,14 @@ class Controller(object):
         props = {'instance_ref': server_ref}
 
         metadata = entity.get('metadata', {})
+        context = req.environ["nova.context"]
+        common.check_img_metadata_quota_limit(context, metadata)
         try:
             props.update(metadata)
         except ValueError:
             msg = _("Invalid metadata")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        context = req.environ["nova.context"]
         image = self.compute_api.backup(context,
                                         instance_id,
                                         image_name,
@@ -505,6 +543,7 @@ class Controller(object):
 
 
 class ControllerV10(Controller):
+    """v1.0 OpenStack API controller"""
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -567,8 +606,13 @@ class ControllerV10(Controller):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_old_style(server)
 
+    def _get_server_search_options(self):
+        """Return server search options allowed by non-admin"""
+        return 'reservation_id', 'fixed_ip', 'name', 'recurse_zones'
+
 
 class ControllerV11(Controller):
+    """v1.1 OpenStack API controller"""
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -713,13 +757,14 @@ class ControllerV11(Controller):
         props = {'instance_ref': server_ref}
 
         metadata = entity.get('metadata', {})
+        context = req.environ['nova.context']
+        common.check_img_metadata_quota_limit(context, metadata)
         try:
             props.update(metadata)
         except ValueError:
             msg = _("Invalid metadata")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        context = req.environ['nova.context']
         image = self.compute_api.snapshot(context,
                                           instance_id,
                                           image_name,
@@ -740,8 +785,16 @@ class ControllerV11(Controller):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_new_style(server)
 
+    def _get_server_search_options(self):
+        """Return server search options allowed by non-admin"""
+        return ('reservation_id', 'name', 'recurse_zones',
+                'status', 'image', 'flavor', 'changes-since')
+
 
 class HeadersSerializer(wsgi.ResponseHeadersSerializer):
+
+    def create(self, response, data):
+        response.status_int = 202
 
     def delete(self, response, data):
         response.status_int = 204
@@ -915,3 +968,18 @@ def create_resource(version='1.0'):
     deserializer = wsgi.RequestDeserializer(body_deserializers)
 
     return wsgi.Resource(controller, deserializer, serializer)
+
+
+def remove_invalid_options(context, search_options, allowed_search_options):
+    """Remove search options that are not valid for non-admin API/context"""
+    if FLAGS.allow_admin_api and context.is_admin:
+        # Allow all options
+        return
+    # Otherwise, strip out all unknown options
+    unknown_options = [opt for opt in search_options
+            if opt not in allowed_search_options]
+    unk_opt_str = ", ".join(unknown_options)
+    log_msg = _("Removing options '%(unk_opt_str)s' from query") % locals()
+    LOG.debug(log_msg)
+    for opt in unknown_options:
+        search_options.pop(opt, None)

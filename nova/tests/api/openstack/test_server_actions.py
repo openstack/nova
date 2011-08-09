@@ -9,6 +9,7 @@ import webob
 from nova import context
 from nova import db
 from nova import utils
+from nova import flags
 from nova.api.openstack import create_instance_helper
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -16,6 +17,9 @@ import nova.db.api
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
+
+
+FLAGS = flags.FLAGS
 
 
 def return_server_by_id(context, id):
@@ -369,6 +373,26 @@ class ServerActionsTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(202, response.status_int)
         self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_with_too_much_metadata(self):
+        self.flags(allow_admin_api=True)
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+                'metadata': {'123': 'asdf'},
+            },
+        }
+        for num in range(FLAGS.quota_metadata_items + 1):
+            body['createBackup']['metadata']['foo%i' % num] = "bar"
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
     def test_create_backup_no_name(self):
         """Name is required for backups"""
@@ -809,6 +833,22 @@ class ServerActionsTestV11(test.TestCase):
         location = response.headers['Location']
         self.assertEqual('http://localhost/v1.1/images/123', location)
 
+    def test_create_image_with_too_much_metadata(self):
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+                'metadata': {},
+            },
+        }
+        for num in range(FLAGS.quota_metadata_items + 1):
+            body['createImage']['metadata']['foo%i' % num] = "bar"
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     def test_create_image_no_name(self):
         body = {
             'createImage': {},
@@ -943,9 +983,7 @@ class TestServerActionXMLDeserializerV11(test.TestCase):
                     flavorRef="http://localhost/flavors/3"/>"""
         request = self.deserializer.deserialize(serial_request, 'action')
         expected = {
-            "resize": {
-                "flavorRef": "http://localhost/flavors/3"
-            },
+            "resize": {"flavorRef": "http://localhost/flavors/3"},
         }
         self.assertEquals(request['body'], expected)
 

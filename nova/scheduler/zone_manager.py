@@ -18,9 +18,10 @@ ZoneManager oversees all communications with child Zones.
 """
 
 import datetime
-import novaclient
 import thread
 import traceback
+
+from novaclient import v1_1 as novaclient
 
 from eventlet import greenpool
 
@@ -89,8 +90,8 @@ class ZoneState(object):
 
 def _call_novaclient(zone):
     """Call novaclient. Broken out for testing purposes."""
-    client = novaclient.OpenStack(zone.username, zone.password, None,
-                                  zone.api_url)
+    client = novaclient.Client(zone.username, zone.password, None,
+                               zone.api_url)
     return client.zones.info()._info
 
 

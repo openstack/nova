@@ -388,15 +388,6 @@ def fixed_ip_get_by_virtual_interface(context, vif_id):
     return IMPL.fixed_ip_get_by_virtual_interface(context, vif_id)
 
 
-def fixed_ip_get_instance(context, address):
-    """Get an instance for a fixed ip by address."""
-    return IMPL.fixed_ip_get_instance(context, address)
-
-
-def fixed_ip_get_instance_v6(context, address):
-    return IMPL.fixed_ip_get_instance_v6(context, address)
-
-
 def fixed_ip_get_network(context, address):
     """Get a network for a fixed ip by address."""
     return IMPL.fixed_ip_get_network(context, address)
@@ -501,6 +492,11 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
+def instance_get_all_by_filters(context, filters):
+    """Get all instances that match all filters."""
+    return IMPL.instance_get_all_by_filters(context, filters)
+
+
 def instance_get_active_by_window(context, begin, end=None):
     """Get instances active during a certain time window."""
     return IMPL.instance_get_active_by_window(context, begin, end)
@@ -534,8 +530,18 @@ def instance_get_all_by_vsa(context, vsa_id):
 
 
 def instance_get_all_by_reservation(context, reservation_id):
-    """Get all instance belonging to a reservation."""
+    """Get all instances belonging to a reservation."""
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
+
+
+def instance_get_by_fixed_ip(context, address):
+    """Get an instance for a fixed ip by address."""
+    return IMPL.instance_get_by_fixed_ip(context, address)
+
+
+def instance_get_by_fixed_ipv6(context, address):
+    """Get an instance for a fixed ip by IPv6 address."""
+    return IMPL.instance_get_by_fixed_ipv6(context, address)
 
 
 def instance_get_fixed_addresses(context, instance_id):
@@ -1404,9 +1410,9 @@ def instance_metadata_delete(context, instance_id, key):
     IMPL.instance_metadata_delete(context, instance_id, key)
 
 
-def instance_metadata_update_or_create(context, instance_id, metadata):
-    """Create or update instance metadata."""
-    IMPL.instance_metadata_update_or_create(context, instance_id, metadata)
+def instance_metadata_update(context, instance_id, metadata, delete):
+    """Update metadata if it exists, otherwise create it."""
+    IMPL.instance_metadata_update(context, instance_id, metadata, delete)
 
 
 ####################
