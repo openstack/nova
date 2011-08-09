@@ -57,18 +57,12 @@ class Controller(object):
 
         context = req.environ['nova.context']
 
-        try:
-            self.compute_api.update_or_create_instance_metadata(context,
-                                                                server_id,
-                                                                metadata)
-        except exception.InstanceNotFound:
-            msg = _('Server does not exist')
-            raise exc.HTTPNotFound(explanation=msg)
+        new_metadata = self._update_instance_metadata(context,
+                                                      server_id,
+                                                      metadata,
+                                                      delete=False)
 
-        except quota.QuotaError as error:
-            self._handle_quota_error(error)
-
-        return body
+        return {'metadata': new_metadata}
 
     def update(self, req, server_id, id, body):
         try:
@@ -78,19 +72,22 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=expl)
 
         try:
-            meta_value = meta_item.pop(id)
+            meta_value = meta_item[id]
         except (AttributeError, KeyError):
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
 
-        if len(meta_item) > 0:
+        if len(meta_item) > 1:
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
 
         context = req.environ['nova.context']
-        self._set_instance_metadata(context, server_id, meta_item)
+        self._update_instance_metadata(context,
+                                       server_id,
+                                       meta_item,
+                                       delete=False)
 
-        return {'meta': {id: meta_value}}
+        return {'meta': meta_item}
 
     def update_all(self, req, server_id, body):
         try:
@@ -100,20 +97,26 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=expl)
 
         context = req.environ['nova.context']
-        self._set_instance_metadata(context, server_id, metadata)
+        new_metadata = self._update_instance_metadata(context,
+                                                      server_id,
+                                                      metadata,
+                                                      delete=True)
 
-        return {'metadata': metadata}
+        return {'metadata': new_metadata}
 
-    def _set_instance_metadata(self, context, server_id, metadata):
+    def _update_instance_metadata(self, context, server_id, metadata,
+                                  delete=False):
         try:
-            self.compute_api.update_or_create_instance_metadata(context,
-                                                                server_id,
-                                                                metadata)
+            return self.compute_api.update_instance_metadata(context,
+                                                             server_id,
+                                                             metadata,
+                                                             delete)
+
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
 
-        except ValueError:
+        except (ValueError, AttributeError):
             msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
 
@@ -138,12 +141,12 @@ class Controller(object):
         metadata = self._get_metadata(context, server_id)
 
         try:
-            meta_key = metadata[id]
+            meta_value = metadata[id]
         except KeyError:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
-        self.compute_api.delete_instance_metadata(context, server_id, meta_key)
+        self.compute_api.delete_instance_metadata(context, server_id, id)
 
     def _handle_quota_error(self, error):
         """Reraise quota errors as api-specific http exceptions."""

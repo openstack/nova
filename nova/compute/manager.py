@@ -45,6 +45,7 @@ import functools
 from eventlet import greenthread
 
 import nova.context
+from nova import block_device
 from nova import exception
 from nova import flags
 import nova.image
@@ -260,6 +261,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         volume_api = volume.API()
         block_device_mapping = []
+        swap = None
+        ephemerals = []
         for bdm in self.db.block_device_mapping_get_all_by_instance(
             context, instance_id):
             LOG.debug(_("setting up bdm %s"), bdm)
@@ -267,11 +270,18 @@ class ComputeManager(manager.SchedulerDependentManager):
             if bdm['no_device']:
                 continue
             if bdm['virtual_name']:
-                # TODO(yamahata):
-                # block devices for swap and ephemeralN will be
-                # created by virt driver locally in compute node.
-                assert (bdm['virtual_name'] == 'swap' or
-                        bdm['virtual_name'].startswith('ephemeral'))
+                virtual_name = bdm['virtual_name']
+                device_name = bdm['device_name']
+                assert block_device.is_swap_or_ephemeral(virtual_name)
+                if virtual_name == 'swap':
+                    swap = {'device_name': device_name,
+                            'swap_size': bdm['volume_size']}
+                elif block_device.is_ephemeral(virtual_name):
+                    eph = {'num': block_device.ephemeral_num(virtual_name),
+                           'virtual_name': virtual_name,
+                           'device_name': device_name,
+                           'size': bdm['volume_size']}
+                    ephemerals.append(eph)
                 continue
 
             if ((bdm['snapshot_id'] is not None) and
@@ -307,7 +317,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              'mount_device':
                                              bdm['device_name']})
 
-        return block_device_mapping
+        return (swap, ephemerals, block_device_mapping)
 
     def _run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
@@ -350,13 +360,21 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # all vif creation and network injection, maybe this is correct
                 network_info = []
 
-            bd_mapping = self._setup_block_device_mapping(context, instance_id)
+            (swap, ephemerals,
+             block_device_mapping) = self._setup_block_device_mapping(
+                context, instance_id)
+            block_device_info = {
+                'root_device_name': instance['root_device_name'],
+                'swap': swap,
+                'ephemerals': ephemerals,
+                'block_device_mapping': block_device_mapping}
 
             # TODO(vish) check to make sure the availability zone matches
             self._update_state(context, instance_id, power_state.BUILDING)
 
             try:
-                self.driver.spawn(context, instance, network_info, bd_mapping)
+                self.driver.spawn(context, instance,
+                                  network_info, block_device_info)
             except Exception as ex:  # pylint: disable=W0702
                 msg = _("Instance '%(instance_id)s' failed to spawn. Is "
                         "virtualization enabled in the BIOS? Details: "
@@ -960,8 +978,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        result))
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def set_host_enabled(self, context, instance_id=None, host=None,
-            enabled=None):
+    def host_power_action(self, context, host=None, action=None):
+        """Reboots, shuts down or powers up the host."""
+        return self.driver.host_power_action(host, action)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def set_host_enabled(self, context, host=None, enabled=None):
         """Sets the specified host's ability to accept new instances."""
         return self.driver.set_host_enabled(host, enabled)
 

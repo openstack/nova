@@ -18,10 +18,14 @@
 from webob import exc
 
 from nova import exception
+from nova import log as logging
 from nova import network
 from nova import rpc
 from nova.api.openstack import faults
 from nova.api.openstack import extensions
+
+
+LOG = logging.getLogger('nova.api.openstack.contrib.floating_ips')
 
 
 def _translate_floating_ip_view(floating_ip):
@@ -97,8 +101,14 @@ class FloatingIPController(object):
 
     def delete(self, req, id):
         context = req.environ['nova.context']
-
         ip = self.network_api.get_floating_ip(context, id)
+        
+        if 'fixed_ip' in ip:
+            try:
+                self.disassociate(req, id, '')
+            except Exception as e:
+                LOG.exception(_("Error disassociating fixed_ip %s"), e)
+
         self.network_api.release_floating_ip(context, address=ip)
 
         return {'released': {

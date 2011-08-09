@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  -*- rnc -*-
+  RELAX NG Compact Syntax Grammar for the
+  Atom Format Specification Version 11
+-->
+<grammar xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:s="http://www.ascc.net/xml/schematron" xmlns="http://relaxng.org/ns/structure/1.0" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+  <start>
+    <choice>
+      <ref name="atomLink"/>
+    </choice>
+  </start>
+  <!-- Common attributes -->
+  <define name="atomCommonAttributes">
+    <optional>
+      <attribute name="xml:base">
+        <ref name="atomUri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="xml:lang">
+        <ref name="atomLanguageTag"/>
+      </attribute>
+    </optional>
+    <zeroOrMore>
+      <ref name="undefinedAttribute"/>
+    </zeroOrMore>
+  </define>
+  <!-- atom:link -->
+  <define name="atomLink">
+    <element name="atom:link">
+      <ref name="atomCommonAttributes"/>
+      <attribute name="href">
+        <ref name="atomUri"/>
+      </attribute>
+      <optional>
+        <attribute name="rel">
+          <choice>
+            <ref name="atomNCName"/>
+            <ref name="atomUri"/>
+          </choice>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="type">
+          <ref name="atomMediaType"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="hreflang">
+          <ref name="atomLanguageTag"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="title"/>
+      </optional>
+      <optional>
+        <attribute name="length"/>
+      </optional>
+      <ref name="undefinedContent"/>
+    </element>
+  </define>
+  <!-- Low-level simple types -->
+  <define name="atomNCName">
+    <data type="string">
+      <param name="minLength">1</param>
+      <param name="pattern">[^:]*</param>
+    </data>
+  </define>
+  <!-- Whatever a media type is, it contains at least one slash -->
+  <define name="atomMediaType">
+    <data type="string">
+      <param name="pattern">.+/.+</param>
+    </data>
+  </define>
+  <!-- As defined in RFC 3066 -->
+  <define name="atomLanguageTag">
+    <data type="string">
+      <param name="pattern">[A-Za-z]{1,8}(-[A-Za-z0-9]{1,8})*</param>
+    </data>
+  </define>
+  <!--
+    Unconstrained; it's not entirely clear how IRI fit into
+    xsd:anyURI so let's not try to constrain it here
+  -->
+  <define name="atomUri">
+    <text/>
+  </define>
+  <!-- Other Extensibility -->
+  <define name="undefinedAttribute">
+    <attribute>
+      <anyName>
+        <except>
+          <name>xml:base</name>
+          <name>xml:lang</name>
+          <nsName ns=""/>
+        </except>
+      </anyName>
+    </attribute>
+  </define>
+  <define name="undefinedContent">
+    <zeroOrMore>
+      <choice>
+        <text/>
+        <ref name="anyForeignElement"/>
+      </choice>
+    </zeroOrMore>
+  </define>
+  <define name="anyElement">
+    <element>
+      <anyName/>
+      <zeroOrMore>
+        <choice>
+          <attribute>
+            <anyName/>
+          </attribute>
+          <text/>
+          <ref name="anyElement"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="anyForeignElement">
+    <element>
+      <anyName>
+        <except>
+          <nsName ns="http://www.w3.org/2005/Atom"/>
+        </except>
+      </anyName>
+      <zeroOrMore>
+        <choice>
+          <attribute>
+            <anyName/>
+          </attribute>
+          <text/>
+          <ref name="anyElement"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+</grammar>

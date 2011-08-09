@@ -18,7 +18,6 @@ Tests For ZoneManager
 
 import datetime
 import mox
-import novaclient
 
 from nova import context
 from nova import db
