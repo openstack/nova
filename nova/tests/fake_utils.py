@@ -63,9 +63,11 @@ def fake_execute(*cmd_parts, **kwargs):
     """
     global _fake_execute_repliers
 
-    process_input = kwargs.get('process_input', None)
-    addl_env = kwargs.get('addl_env', None)
-    check_exit_code = kwargs.get('check_exit_code', 0)
+    process_input = kwargs.pop('process_input', None)
+    check_exit_code = kwargs.pop('check_exit_code', 0)
+    delay_on_retry = kwargs.pop('delay_on_retry', True)
+    attempts = kwargs.pop('attempts', 1)
+    run_as_root = kwargs.pop('run_as_root', False)
     cmd_str = ' '.join(str(part) for part in cmd_parts)
 
     LOG.debug(_("Faking execution of cmd (subprocess): %s"), cmd_str)
@@ -87,7 +89,9 @@ def fake_execute(*cmd_parts, **kwargs):
             # Alternative is a function, so call it
             reply = reply_handler(cmd_parts,
                                   process_input=process_input,
-                                  addl_env=addl_env,
+                                  delay_on_retry=delay_on_retry,
+                                  attempts=attempts,
+                                  run_as_root=run_as_root,
                                   check_exit_code=check_exit_code)
         except exception.ProcessExecutionError as e:
             LOG.debug(_('Faked command raised an exception %s' % str(e)))

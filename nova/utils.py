@@ -132,7 +132,6 @@ def execute(*cmd, **kwargs):
 
     :cmd                Passed to subprocess.Popen.
     :process_input      Send to opened process.
-    :addl_env           Added to the processes env.
     :check_exit_code    Defaults to 0. Raise exception.ProcessExecutionError
                         unless program exits with this code.
     :delay_on_retry     True | False. Defaults to True. If set to True, wait a
@@ -147,7 +146,6 @@ def execute(*cmd, **kwargs):
     """
 
     process_input = kwargs.pop('process_input', None)
-    addl_env = kwargs.pop('addl_env', None)
     check_exit_code = kwargs.pop('check_exit_code', 0)
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
@@ -164,16 +162,12 @@ def execute(*cmd, **kwargs):
         attempts -= 1
         try:
             LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
-            env = os.environ.copy()
-            if addl_env:
-                env.update(addl_env)
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
             obj = subprocess.Popen(cmd,
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
-                                   close_fds=True,
-                                   env=env)
+                                   close_fds=True)
             result = None
             if process_input is not None:
                 result = obj.communicate(process_input)
