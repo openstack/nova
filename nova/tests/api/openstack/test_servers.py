@@ -296,10 +296,10 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_v1_1(self):
-        image_bookmark = "http://localhost/images/10"
-        flavor_ref = "http://localhost/v1.1/flavors/1"
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
 
         public_ip = '192.168.0.3'
         private_ip = '172.19.0.1'
@@ -373,11 +373,11 @@ class ServersTest(test.TestCase):
                     {
                         "rel": "self",
                         #FIXME(wwolf) Do we want the links to be id or uuid?
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/fake/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/fake/servers/1",
                     },
                 ],
             }
@@ -386,12 +386,12 @@ class ServersTest(test.TestCase):
         self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_by_id_v1_1_xml(self):
-        image_bookmark = "http://localhost/images/10"
-        flavor_ref = "http://localhost/v1.1/flavors/1"
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
-        server_href = "http://localhost/v1.1/servers/1"
-        server_bookmark = "http://localhost/servers/1"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
+        server_href = "http://localhost/v1.1/fake/servers/1"
+        server_bookmark = "http://localhost/fake/servers/1"
 
         public_ip = '192.168.0.3'
         private_ip = '172.19.0.1'
@@ -458,10 +458,10 @@ class ServersTest(test.TestCase):
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_server_with_active_status_by_id_v1_1(self):
-        image_bookmark = "http://localhost/images/10"
-        flavor_ref = "http://localhost/v1.1/flavors/1"
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
         private_ip = "192.168.0.3"
         public_ip = "1.2.3.4"
 
@@ -534,11 +534,11 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/fake/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/fake/servers/1",
                     },
                 ],
             }
@@ -548,10 +548,10 @@ class ServersTest(test.TestCase):
 
     def test_get_server_with_id_image_ref_by_id_v1_1(self):
         image_ref = "10"
-        image_bookmark = "http://localhost/images/10"
-        flavor_ref = "http://localhost/v1.1/flavors/1"
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
         private_ip = "192.168.0.3"
         public_ip = "1.2.3.4"
 
@@ -625,11 +625,11 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/fake/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/fake/servers/1",
                     },
                 ],
             }
@@ -1030,11 +1030,11 @@ class ServersTest(test.TestCase):
             expected_links = [
                 {
                     "rel": "self",
-                    "href": "http://localhost/v1.1/servers/%s" % s['id'],
+                    "href": "http://localhost/v1.1/fake/servers/%s" % s['id'],
                 },
                 {
                     "rel": "bookmark",
-                    "href": "http://localhost/servers/%s" % s['id'],
+                    "href": "http://localhost/fake/servers/%s" % s['id'],
                 },
             ]
 
@@ -1318,7 +1318,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/flavors/3',
+                    "href": 'http://localhost/fake/flavors/3',
                 },
             ],
         }
@@ -1327,7 +1327,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/images/2',
+                    "href": 'http://localhost/fake/images/2',
                 },
             ],
         }
@@ -1423,7 +1423,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/flavors/3',
+                    "href": 'http://localhost/fake/flavors/3',
                 },
             ],
         }
@@ -1432,7 +1432,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/images/2',
+                    "href": 'http://localhost/fake/images/2',
                 },
             ],
         }
@@ -1682,7 +1682,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/flavors/1',
+                    "href": 'http://localhost/fake/flavors/1',
                 },
             ],
         }
@@ -1691,7 +1691,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/images/10',
+                    "href": 'http://localhost/fake/images/10',
                 },
             ],
         }

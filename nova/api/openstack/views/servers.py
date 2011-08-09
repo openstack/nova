@@ -142,11 +142,12 @@ class ViewBuilderV10(ViewBuilder):
 class ViewBuilderV11(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
     def __init__(self, addresses_builder, flavor_builder, image_builder,
-                 base_url):
+                 base_url, project_id=""):
         ViewBuilder.__init__(self, addresses_builder)
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
         self.base_url = base_url
+        self.project_id = project_id
 
     def _build_detail(self, inst):
         response = super(ViewBuilderV11, self)._build_detail(inst)
@@ -216,9 +217,10 @@ class ViewBuilderV11(ViewBuilder):
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""
-        return os.path.join(self.base_url, "servers", str(server_id))
+        return os.path.join(self.base_url, self.project_id,
+                            "servers", str(server_id))
 
     def generate_bookmark(self, server_id):
         """Create an url that refers to a specific flavor id."""
         return os.path.join(common.remove_version_from_href(self.base_url),
-            "servers", str(server_id))
+            self.project_id, "servers", str(server_id))

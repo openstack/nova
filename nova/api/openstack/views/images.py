@@ -23,9 +23,10 @@ from nova.api.openstack import common
 class ViewBuilder(object):
     """Base class for generating responses to OpenStack API image requests."""
 
-    def __init__(self, base_url):
+    def __init__(self, base_url, project_id=""):
         """Initialize new `ViewBuilder`."""
-        self._url = base_url
+        self.base_url = base_url
+        self.project_id = project_id
 
     def _format_dates(self, image):
         """Update all date fields to ensure standardized formatting."""
@@ -54,7 +55,7 @@ class ViewBuilder(object):
 
     def generate_href(self, image_id):
         """Return an href string pointing to this object."""
-        return os.path.join(self._url, "images", str(image_id))
+        return os.path.join(self.base_url, "images", str(image_id))
 
     def build(self, image_obj, detail=False):
         """Return a standardized image structure for display by the API."""
@@ -117,6 +118,11 @@ class ViewBuilderV11(ViewBuilder):
         except KeyError:
             return
 
+    def generate_href(self, image_id):
+        """Return an href string pointing to this object."""
+        return os.path.join(self.base_url, self.project_id,
+                            "images", str(image_id))
+
     def build(self, image_obj, detail=False):
         """Return a standardized image structure for display by the API."""
         image = ViewBuilder.build(self, image_obj, detail)
@@ -142,5 +148,5 @@ class ViewBuilderV11(ViewBuilder):
 
     def generate_bookmark(self, image_id):
         """Create an url that refers to a specific flavor id."""
-        return os.path.join(common.remove_version_from_href(self._url),
-            "images", str(image_id))
+        return os.path.join(common.remove_version_from_href(self.base_url),
+            self.project_id, "images", str(image_id))
