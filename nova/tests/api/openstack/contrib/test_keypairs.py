@@ -36,8 +36,8 @@ def db_key_pair_create(self, keypair):
     pass
 
 
-def db_key_pair_destroy(context, user_id, key_name):
-    if not (user_id and key_name):
+def db_key_pair_destroy(context, user_id, name):
+    if not (user_id and name):
         raise Exception()
 
 
@@ -65,7 +65,7 @@ class KeypairsTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_keypair_create(self):
-        body = {'keypair': {'key_name': 'create_test'}}
+        body = {'keypair': {'name': 'create_test'}}
         req = webob.Request.blank('/v1.1/os-keypairs')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -77,7 +77,7 @@ class KeypairsTest(test.TestCase):
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
 
     def test_keypair_import(self):
-        body = {'keypair': {'key_name': 'create_test',
+        body = {'keypair': {'name': 'create_test',
                             'public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBYIznAx9D7118Q1VKGpXy2HDiKyUTM8XcUuhQpo0srqb9rboUp4a9NmCwpWpeElDLuva707GOUnfaBAvHBwsRXyxHJjRaI6YQj2oLJwqvaSaWUbyT1vtryRqy6J3TecN0WINY71f4uymiMZP0wby4bKBcYnac8KiCIlvkEl0ETjkOGUq8OyWRmn7ljj5SESEUdBP0JnuTFKddWTU/wD6wydeJaUhBTqOlHn0kX1GyqoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJLCJtJ8LoGcj7YaN4uPg1rBle+izwE/tLonRrds+cev8p6krSSrxWOwBbHkXa6OciiJDvkRzJXzf'}}
         req = webob.Request.blank('/v1.1/os-keypairs')
         req.method = 'POST'

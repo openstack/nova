@@ -46,29 +46,29 @@ class KeypairController(object):
         """
         Create or import keypair.
 
-        Sending key_name will generate a key and return private_key
+        Sending name will generate a key and return private_key
         and fingerprint.
 
         You can send a public_key to add an existing ssh key
 
         params: keypair object with:
-            key_name (required) - string
+            name (required) - string
             public_key (optional) - string
         """
 
         context = req.environ['nova.context']
         params = body['keypair']
-        key_name = params['key_name']
+        name = params['name']
 
-        # NOTE(ja): generation is slow, so shortcut invalid key_name exception
+        # NOTE(ja): generation is slow, so shortcut invalid name exception
         try:
-            db.key_pair_get(context, context.user_id, key_name)
-            raise exception.KeyPairExists(key_name=key_name)
+            db.key_pair_get(context, context.user_id, name)
+            raise exception.KeyPairExists(key_name=name)
         except exception.NotFound:
             pass
 
         keypair = {'user_id': context.user_id,
-                   'name': key_name}
+                   'name': name}
 
         # import if public_key is sent
         if 'public_key' in params:
@@ -107,7 +107,7 @@ class KeypairController(object):
         for key_pair in key_pairs:
             rval.append({'keypair': {
                 'name': key_pair['name'],
-                'key_name': key_pair['name'],
+                'public_key': key_pair['public_key'],
                 'fingerprint': key_pair['fingerprint'],
             }})
 
