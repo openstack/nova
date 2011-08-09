@@ -10,6 +10,7 @@ graft bzrplugins
 graft contrib
 graft po
 graft plugins
+graft nova/api/openstack/schemas
 include nova/api/openstack/notes.txt
 include nova/auth/*.schema
 include nova/auth/novarc.template
