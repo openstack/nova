@@ -23,19 +23,20 @@ from nova import db
 from nova import crypto
 from nova import exception
 from nova.api.openstack import extensions
-
+import os
+import shutil
+import tempfile
 
 class KeypairController(object):
     """ Keypair API controller for the Openstack API """
 
-    # TODO(ja): the keypair crud logic should be in nova.compute.API?
+    # TODO(ja): both this file and nova.api.ec2.cloud.py have similar logic.
+    # move the common keypair logic to nova.compute.API?
 
     def _gen_key(self):
         """
         Generate a key
         """
-        # TODO(ja): crypto.generate_key_pair is currently a slow method
-        #           and should probably be moved to a process pool?
         private_key, public_key, fingerprint = crypto.generate_key_pair()
         return {'private_key': private_key,
                 'public_key': public_key,
@@ -52,7 +53,6 @@ class KeypairController(object):
 
         params: keypair object with:
             key_name (required) - string
-            fingerprint (optional) - string
             public_key (optional) - string
         """
 
@@ -72,8 +72,14 @@ class KeypairController(object):
 
         # import if public_key is sent
         if 'public_key' in params:
+            tmpdir = tempfile.mkdtemp()
+            fn = os.path.join(tmpdir, 'import.pub')
+            with open(fn, 'w') as pub:
+                pub.write(params['public_key'])
+            fingerprint = crypto.generate_fingerprint(fn)
+            shutil.rmtree(tmpdir)
             keypair['public_key'] = params['public_key']
-            keypair['fingerprint'] = params.get('fingerprint', None)
+            keypair['fingerprint'] = fingerprint
         else:
             generated_key = self._gen_key()
             keypair['private_key'] = generated_key['private_key']
@@ -83,12 +89,12 @@ class KeypairController(object):
         db.key_pair_create(context, keypair)
         return {'keypair': keypair}
 
-    def delete(self, req, name):
+    def delete(self, req, id):
         """
         Delete a keypair with a given name
         """
         context = req.environ['nova.context']
-        db.key_pair_destroy(context, context.user_id, name)
+        db.key_pair_destroy(context, context.user_id, id)
         return exc.HTTPAccepted()
 
     def index(self, req):
@@ -99,11 +105,11 @@ class KeypairController(object):
         key_pairs = db.key_pair_get_all_by_user(context, context.user_id)
         rval = []
         for key_pair in key_pairs:
-            rval.append({
+            rval.append({'keypair': {
                 'name': key_pair['name'],
                 'key_name': key_pair['name'],
                 'fingerprint': key_pair['fingerprint'],
-            })
+            }})
 
         return {'keypairs': rval}
 
