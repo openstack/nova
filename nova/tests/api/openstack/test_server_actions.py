@@ -943,9 +943,7 @@ class TestServerActionXMLDeserializerV11(test.TestCase):
                     flavorRef="http://localhost/flavors/3"/>"""
         request = self.deserializer.deserialize(serial_request, 'action')
         expected = {
-            "resize": {
-                "flavorRef": "http://localhost/flavors/3"
-            },
+            "resize": {"flavorRef": "http://localhost/flavors/3"},
         }
         self.assertEquals(request['body'], expected)
 
