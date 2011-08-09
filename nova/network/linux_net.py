@@ -492,7 +492,6 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         LOG.debug(_('Starting Bridge interface for %s'), interface)
         _execute('brctl', 'addbr', bridge, run_as_root=True)
         _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
-        # _execute('sudo brctl setageing %s 10' % bridge)
         _execute('brctl', 'stp', bridge, 'off', run_as_root=True)
         _execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
     if net_attrs:
