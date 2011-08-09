@@ -681,10 +681,10 @@ class LibvirtConnection(driver.ComputeDriver):
         ajaxterm_cmd = 'sudo socat - %s' \
                        % get_pty_for_instance(instance['name'])
 
-        cmd = '%s/tools/ajaxterm/ajaxterm.py --command "%s" -t %s -p %s' \
-              % (utils.novadir(), ajaxterm_cmd, token, port)
+        cmd = ['%s/tools/ajaxterm/ajaxterm.py' % utils.novadir(),
+               '--command', ajaxterm_cmd, '-t', token, '-p', port]
 
-        utils.execute(cmd, shell=True)
+        utils.execute(cmd)
         return {'token': token, 'host': host, 'port': port}
 
     def get_host_ip_addr(self):

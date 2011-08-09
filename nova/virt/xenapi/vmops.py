@@ -1320,12 +1320,6 @@ class VMOps(object):
     ########################################################################
 
 
-def _runproc(cmd):
-    pipe = subprocess.PIPE
-    return subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
-            stderr=pipe, close_fds=True)
-
-
 class SimpleDH(object):
     """
     This class wraps all the functionality needed to implement
@@ -1382,22 +1376,18 @@ class SimpleDH(object):
         mpi = M2Crypto.m2.bn_to_mpi(bn)
         return mpi
 
-    def _run_ssl(self, text, extra_args=None):
-        if not extra_args:
-            extra_args = ''
-        cmd = 'enc -aes-128-cbc -A -a -pass pass:%s -nosalt %s' % (
-                self._shared, extra_args)
-        proc = _runproc('openssl %s' % cmd)
-        proc.stdin.write(text)
-        proc.stdin.close()
-        proc.wait()
-        err = proc.stderr.read()
+    def _run_ssl(self, text, decrypt=False):
+        cmd = ['openssl', 'aes-128-cbc', '-A', '-a', '-pass',
+              'pass:%s' % self._shared, '-nosalt']
+        if decrypt:
+            cmd.append('-d')
+        out, err = utils.execute(*cmd, process_input=text)
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read()
+        return out
 
     def encrypt(self, text):
         return self._run_ssl(text).strip('\n')
 
     def decrypt(self, text):
-        return self._run_ssl(text, '-d')
+        return self._run_ssl(text, decrypt=True)

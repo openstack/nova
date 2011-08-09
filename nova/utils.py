@@ -138,8 +138,6 @@ def execute(*cmd, **kwargs):
     :delay_on_retry     True | False. Defaults to True. If set to True, wait a
                         short amount of time before retrying.
     :attempts           How many times to retry cmd.
-    :shell              True | False. Defaults to False. If set to True,
-                        Popen command is called shell=True.
     :run_as_root        True | False. Defaults to False. If set to True,
                         the command is prefixed by the command specified
                         in the sudo_helper FLAG.
@@ -153,7 +151,6 @@ def execute(*cmd, **kwargs):
     check_exit_code = kwargs.pop('check_exit_code', 0)
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
-    shell = kwargs.pop('shell', False)
     run_as_root = kwargs.pop('run_as_root', False)
     if len(kwargs):
         raise exception.Error(_('Got unknown keyword args '
@@ -175,7 +172,6 @@ def execute(*cmd, **kwargs):
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
-                                   shell=shell,
                                    env=env)
             result = None
             if process_input is not None:
