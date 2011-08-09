@@ -25,6 +25,7 @@ import webob
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import quota
 from nova.api.openstack import wsgi
 
 
@@ -191,6 +192,16 @@ def get_version_from_href(href):
     except IndexError:
         version = '1.0'
     return version
+
+
+def check_img_metadata_quota_limit(context, metadata):
+    if metadata is None:
+        return
+    num_metadata = len(metadata)
+    quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+    if quota_metadata < num_metadata:
+        expl = _("Image metadata limit exceeded")
+        raise webob.exc.HTTPBadRequest(explanation=expl)
 
 
 class MetadataXMLDeserializer(wsgi.XMLDeserializer):
