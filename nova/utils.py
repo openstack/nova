@@ -139,7 +139,7 @@ def execute(*cmd, **kwargs):
     :attempts           How many times to retry cmd.
     :run_as_root        True | False. Defaults to False. If set to True,
                         the command is prefixed by the command specified
-                        in the sudo_helper FLAG.
+                        in the root_helper FLAG.
 
     :raises exception.Error on receiving unknown arguments
     :raises exception.ProcessExecutionError
@@ -155,7 +155,7 @@ def execute(*cmd, **kwargs):
                                 'to utils.execute: %r') % kwargs)
 
     if run_as_root:
-        cmd = shlex.split(FLAGS.sudo_helper) + list(cmd)
+        cmd = shlex.split(FLAGS.root_helper) + list(cmd)
     cmd = map(str, cmd)
 
     while attempts > 0:
