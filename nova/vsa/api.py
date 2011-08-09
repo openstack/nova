@@ -40,6 +40,11 @@ from nova.vsa import drive_types
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('vsa_ec2_access_key', None,
+                    'EC2 access key used by VSA for accessing nova')
+flags.DEFINE_string('vsa_ec2_user_id', None,
+                    'User ID used by VSA for accessing nova')
+
 flags.DEFINE_boolean('vsa_multi_vol_creation', True,
                   'Ask scheduler to create multiple volumes in one call')
 
@@ -382,12 +387,11 @@ class API(base.Base):
         e_vsa_detail.text = vsa['display_description']
         e_vsa_detail = SubElement(e_vsa, "vc_count")
         e_vsa_detail.text = str(vsa['vc_count'])
+
         e_vsa_detail = SubElement(e_vsa, "auth_user")
-        if context.user is not None:
-            e_vsa_detail.text = str(context.user.name)
+        e_vsa_detail.text = FLAGS.vsa_ec2_user_id
         e_vsa_detail = SubElement(e_vsa, "auth_access_key")
-        if context.user is not None:
-            e_vsa_detail.text = str(context.user.access)
+        e_vsa_detail.text = FLAGS.vsa_ec2_access_key
 
         e_volumes = SubElement(e_vsa, "volumes")
         for volume in volumes:

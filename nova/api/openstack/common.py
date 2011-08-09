@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import re
 import urlparse
 from xml.dom import minidom
@@ -154,7 +155,8 @@ def remove_version_from_href(href):
 
     """
     parsed_url = urlparse.urlsplit(href)
-    new_path = re.sub(r'^/v[0-9]+\.[0-9]+(/|$)', r'\1', parsed_url.path, count=1)
+    new_path = re.sub(r'^/v[0-9]+\.[0-9]+(/|$)', r'\1', parsed_url.path,
+            count=1)
 
     if new_path == parsed_url.path:
         msg = _('href %s does not contain version') % href
@@ -279,3 +281,15 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
 
     def default(self, *args, **kwargs):
         return ''
+
+
+def check_snapshots_enabled(f):
+    @functools.wraps(f)
+    def inner(*args, **kwargs):
+        if not FLAGS.allow_instance_snapshots:
+            LOG.warn(_('Rejecting snapshot request, snapshots currently'
+                       ' disabled'))
+            msg = _("Instance snapshots are not permitted at this time.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        return f(*args, **kwargs)
+    return inner

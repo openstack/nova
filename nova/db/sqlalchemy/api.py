@@ -1455,9 +1455,14 @@ def instance_action_create(context, values):
 def instance_get_actions(context, instance_id):
     """Return the actions associated to the given instance id"""
     session = get_session()
+
+    if utils.is_uuid_like(instance_id):
+        instance = instance_get_by_uuid(context, instance_id, session)
+        instance_id = instance.id
+
     return session.query(models.InstanceActions).\
         filter_by(instance_id=instance_id).\
-        all()
+       all()
 
 
 ###################
@@ -3360,7 +3365,8 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 
 
 @require_context
-def instance_type_extra_specs_get_item(context, instance_type_id, key, session=None):
+def instance_type_extra_specs_get_item(context, instance_type_id, key,
+        session=None):
     if not session:
         session = get_session()
 

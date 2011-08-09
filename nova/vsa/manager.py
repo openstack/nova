@@ -55,6 +55,10 @@ class VsaManager(manager.SchedulerDependentManager):
         self.volume_api = volume.API()
         self.vsa_api = vsa.API()
 
+        if FLAGS.vsa_ec2_user_id is None or \
+           FLAGS.vsa_ec2_access_key is None:
+            raise exception.VSANovaAccessParamNotFound()
+
         super(VsaManager, self).__init__(*args, **kwargs)
 
     def init_host(self):

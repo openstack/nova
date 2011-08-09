@@ -598,6 +598,31 @@ class FixedIpCommands(object):
                     fixed_ip['address'],
                     mac_address, hostname, host)
 
+    @args('--address', dest="address", metavar='<ip address>',
+          help='IP address')
+    def reserve(self, address):
+        """Mark fixed ip as reserved
+        arguments: address"""
+        self._set_reserved(address, True)
+
+    @args('--address', dest="address", metavar='<ip address>',
+          help='IP address')
+    def unreserve(self, address):
+        """Mark fixed ip as free to use
+        arguments: address"""
+        self._set_reserved(address, False)
+
+    def _set_reserved(self, address, reserved):
+        ctxt = context.get_admin_context()
+
+        try:
+            fixed_ip = db.fixed_ip_get_by_address(ctxt, address)
+            db.fixed_ip_update(ctxt, fixed_ip['address'],
+                                {'reserved': reserved})
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
+
 
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
@@ -1007,17 +1032,7 @@ class VsaCommands(object):
         self.controller = cloud.CloudController()
         self.manager = manager.AuthManager()
 
-        # VP-TMP Solution for APIs. Project should be provided per API call
-        #self.context = context.get_admin_context()
-
-        try:
-            project = self.manager.get_projects().pop()
-        except IndexError:
-            print (_("No projects defined"))
-            raise
-
-        self.context = context.RequestContext(user_id=project.project_manager_id,
-                                              project_id=project.id)
+        self.context = context.get_admin_context()
 
     def _list(self, vsas):
         format_str = "%-5s %-15s %-25s %-10s %-6s %-9s %-10s %-10s %10s"
@@ -1058,10 +1073,38 @@ class VsaCommands(object):
     @args('--shared', dest='shared', action="store_true", default=False,
         help='Use shared drives')
     @args('--az', dest='az', metavar="<zone:host>", help='Availability zone')
+    @args('--user', dest="user_id", metavar='<User name>',
+            help='User name')
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
     def create(self, storage='[]', name=None, description=None, vc_count=1,
                      instance_type_name=None, image_name=None, shared=None,
-                     az=None):
+                     az=None, user_id=None, project_id=None):
         """Create a VSA."""
+
+        if project_id is None:
+            try:
+                project_id = os.getenv("EC2_ACCESS_KEY").split(':')[1]
+            except Exception as exc:
+                print _("Failed to retrieve project id: %(exc)s") % locals()
+                raise
+
+        if user_id is None:
+            try:
+                project = self.manager.get_project(project_id)
+                user_id = project.project_manager_id
+            except Exception as exc:
+                print _("Failed to retrieve user info: %(exc)s") % locals()
+                raise
+
+        is_admin = self.manager.is_admin(user_id)
+        ctxt = context.RequestContext(user_id, project_id, is_admin)
+        if not is_admin and \
+           not self.manager.is_project_member(user_id, project_id):
+            msg = _("%(user_id)s must be an admin or a "
+                    "member of %(project_id)s")
+            LOG.warn(msg % locals())
+            raise ValueError(msg % locals())
 
         # Sanity check for storage string
         storage_list = []
@@ -1101,7 +1144,7 @@ class VsaCommands(object):
             'placement': {'AvailabilityZone': az}
             }
 
-        result = self.controller.create_vsa(self.context, **values)
+        result = self.controller.create_vsa(ctxt, **values)
         self._list(result['vsaSet'])
 
     @args('--id', dest='vsa_id', metavar="<vsa_id>", help='VSA ID')
@@ -1508,11 +1551,12 @@ class ImageCommands(object):
                               is_public, architecture)
 
     def _lookup(self, old_image_id):
+        elevated = context.get_admin_context()
         try:
             internal_id = ec2utils.ec2_id_to_id(old_image_id)
-            image = self.image_service.show(context, internal_id)
+            image = self.image_service.show(elevated, internal_id)
         except (exception.InvalidEc2Id, exception.ImageNotFound):
-            image = self.image_service.show_by_name(context, old_image_id)
+            image = self.image_service.show_by_name(elevated, old_image_id)
         return image['id']
 
     def _old_to_new(self, old):
