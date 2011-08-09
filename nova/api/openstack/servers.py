@@ -743,6 +743,9 @@ class ControllerV11(Controller):
 
 class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
+    def create(self, response, data):
+        response.status_int = 202
+
     def delete(self, response, data):
         response.status_int = 204
 
