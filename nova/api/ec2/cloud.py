@@ -1149,7 +1149,7 @@ class CloudController(object):
         return {'driveTypeSet': [dict(drive) for drive in drives]}
 
     @staticmethod
-    def _convert_to_set(self, lst, label):
+    def _convert_to_set(lst, label):
         if lst is None or lst == []:
             return None
         if not isinstance(lst, list):
