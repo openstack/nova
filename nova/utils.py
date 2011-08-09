@@ -172,6 +172,7 @@ def execute(*cmd, **kwargs):
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
+                                   close_fds=True,
                                    env=env)
             result = None
             if process_input is not None:
