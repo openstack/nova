@@ -29,6 +29,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import wsgi as base_wsgi
+import nova.api.openstack
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
@@ -259,7 +260,7 @@ class ExtensionMiddleware(base_wsgi.Middleware):
             ext_mgr = ExtensionManager(FLAGS.osapi_extensions_path)
         self.ext_mgr = ext_mgr
 
-        mapper = routes.Mapper()
+        mapper = nova.api.openstack.TenantMapper()
 
         serializer = wsgi.ResponseSerializer(
             {'application/xml': ExtensionsXMLSerializer()})
@@ -267,12 +268,16 @@ class ExtensionMiddleware(base_wsgi.Middleware):
         for resource in ext_mgr.get_resources():
             LOG.debug(_('Extended resource: %s'),
                         resource.collection)
-            mapper.resource(resource.collection, resource.collection,
+            kargs = dict(
                 controller=wsgi.Resource(
                     resource.controller, serializer=serializer),
                 collection=resource.collection_actions,
-                member=resource.member_actions,
-                parent_resource=resource.parent)
+                member=resource.member_actions)
+
+            if resource.parent:
+                kargs['parent_resource'] = resource.parent
+
+            mapper.resource(resource.collection, resource.collection, **kargs)
 
         # extended actions
         action_resources = self._action_ext_resources(application, ext_mgr,
