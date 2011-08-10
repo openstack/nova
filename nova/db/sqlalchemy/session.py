@@ -38,7 +38,7 @@ LOG = nova.log.getLogger("nova.db.sqlalchemy")
 try:
     import MySQLdb
 except ImportError:
-    LOG.debug(_("Unable to load MySQLdb module."))
+    MySQLdb = None
 
 
 _ENGINE = None
@@ -72,8 +72,8 @@ def get_engine():
     if "sqlite" in connection_dict.drivername:
         engine_args["poolclass"] = sqlalchemy.pool.NullPool
 
-    if "mysql" in connection_dict.drivername:
-        LOG.info(_("Using MySQL/eventlet DB connection pool."))
+    if MySQLdb and "mysql" in connection_dict.drivername:
+        LOG.info(_("Using MySQLdb/eventlet DB connection pool."))
         pool_args = {
             "db": connection_dict.database,
             "user": connection_dict.username,
