@@ -203,7 +203,7 @@ class APIRouterV11(APIRouter):
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
 
-        mapper.connect("metadata", "{tenant_id}/images/{image_id}/metadata",
+        mapper.connect("metadata", "/{tenant_id}/images/{image_id}/metadata",
                        controller=image_metadata_controller,
                        action='update_all',
                        conditions={"method": ['PUT']})
@@ -215,7 +215,7 @@ class APIRouterV11(APIRouter):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.connect("metadata", "/servers/{server_id}/metadata",
+        mapper.connect("metadata", "/{tenant_id}/servers/{server_id}/metadata",
                        controller=server_metadata_controller,
                        action='update_all',
                        conditions={"method": ['PUT']})
