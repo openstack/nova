@@ -486,8 +486,8 @@ class Resource(wsgi.Application):
             msg = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
-        if 'tenant_id' in args:
-            args.pop("tenant_id")
+        if "project_id" in args:
+            project_id = args.pop("project_id")
 
         try:
             action_result = self.dispatch(request, action, args)

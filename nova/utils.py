@@ -291,7 +291,7 @@ EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
 
 def usage_from_instance(instance_ref, **kw):
     usage_info = dict(
-          tenant_id=instance_ref['project_id'],
+          project_id=instance_ref['project_id'],
           user_id=instance_ref['user_id'],
           instance_id=instance_ref['id'],
           instance_type=instance_ref['instance_type']['name'],

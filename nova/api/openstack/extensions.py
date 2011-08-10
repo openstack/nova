@@ -221,12 +221,12 @@ class ExtensionMiddleware(base_wsgi.Middleware):
         for action in ext_mgr.get_actions():
             if not action.collection in action_resources.keys():
                 resource = ActionExtensionResource(application)
-                mapper.connect("/:(tenant_id)/%s/:(id)/action.:(format)" %
+                mapper.connect("/:(project_id)/%s/:(id)/action.:(format)" %
                                 action.collection,
                                 action='action',
                                 controller=resource,
                                 conditions=dict(method=['POST']))
-                mapper.connect("/:(tenant_id)/%s/:(id)/action" %
+                mapper.connect("/:(project_id)/%s/:(id)/action" %
                                 action.collection,
                                 action='action',
                                 controller=resource,
