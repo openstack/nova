@@ -70,7 +70,7 @@ def get_engine():
     if "sqlite" in connection_dict.drivername:
         engine_args["poolclass"] = sqlalchemy.pool.NullPool
 
-    if MySQLdb and "mysql" in connection_dict.drivername:
+    elif MySQLdb and "mysql" in connection_dict.drivername:
         LOG.info(_("Using MySQLdb/eventlet DB connection pool."))
         pool_args = {
             "db": connection_dict.database,
@@ -80,7 +80,6 @@ def get_engine():
             "min_size": FLAGS.sql_min_pool_size,
             "max_size": FLAGS.sql_max_pool_size,
             "max_idle": FLAGS.sql_idle_timeout,
-            "max_age": FLAGS.sql_idle_timeout,
         }
         creator = eventlet.db_pool.ConnectionPool(MySQLdb, **pool_args)
         engine_args["pool_size"] = FLAGS.sql_max_pool_size
