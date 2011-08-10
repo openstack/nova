@@ -17,15 +17,17 @@
 
 """ Keypair management extension"""
 
-from webob import exc
-
-from nova import db
-from nova import crypto
-from nova import exception
-from nova.api.openstack import extensions
 import os
 import shutil
 import tempfile
+
+from webob import exc
+
+from nova import crypto
+from nova import db
+from nova import exception
+from nova.api.openstack import extensions
+
 
 class KeypairController(object):
     """ Keypair API controller for the Openstack API """
