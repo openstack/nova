@@ -19,37 +19,81 @@
 Session Handling for SQLAlchemy backend
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy import pool
-from sqlalchemy.orm import sessionmaker
+import eventlet.patcher
+eventlet.patcher.monkey_patch()
 
-from nova import exception
-from nova import flags
+import eventlet.db_pool
+import sqlalchemy.orm
+import sqlalchemy.pool
 
-FLAGS = flags.FLAGS
+import nova.exception
+import nova.flags
+import nova.log
+
+
+FLAGS = nova.flags.FLAGS
+LOG = nova.log.getLogger("nova.db.sqlalchemy")
+
+
+try:
+    import MySQLdb
+except ImportError:
+    LOG.debug(_("Unable to load MySQLdb module."))
+
 
 _ENGINE = None
 _MAKER = None
 
 
 def get_session(autocommit=True, expire_on_commit=False):
-    """Helper method to grab session"""
-    global _ENGINE
-    global _MAKER
-    if not _MAKER:
-        if not _ENGINE:
-            kwargs = {'pool_recycle': FLAGS.sql_idle_timeout,
-                      'echo': False}
+    """Return a SQLAlchemy session."""
+    global _ENGINE, _MAKER
 
-            if FLAGS.sql_connection.startswith('sqlite'):
-                kwargs['poolclass'] = pool.NullPool
+    if _MAKER is None or _ENGINE is None:
+        _ENGINE = get_engine()
+        _MAKER = get_maker(_ENGINE, autocommit, expire_on_commit)
 
-            _ENGINE = create_engine(FLAGS.sql_connection,
-                                    **kwargs)
-        _MAKER = (sessionmaker(bind=_ENGINE,
-                                autocommit=autocommit,
-                                expire_on_commit=expire_on_commit))
     session = _MAKER()
-    session.query = exception.wrap_db_error(session.query)
-    session.flush = exception.wrap_db_error(session.flush)
+    session.query = nova.exception.wrap_db_error(session.query)
+    session.flush = nova.exception.wrap_db_error(session.flush)
     return session
+
+
+def get_engine():
+    """Return a SQLAlchemy engine."""
+    connection_dict = sqlalchemy.engine.url.make_url(FLAGS.sql_connection)
+    engine_args = {
+        "pool_recycle": FLAGS.sql_idle_timeout,
+        "echo": False,
+    }
+
+    LOG.info(_("SQL connection: %s") % FLAGS.sql_connection)
+
+    if "sqlite" in connection_dict.drivername:
+        engine_args["poolclass"] = sqlalchemy.pool.NullPool
+
+    if "mysql" in connection_dict.drivername:
+        LOG.info(_("Using MySQL/eventlet DB connection pool."))
+        pool_args = {
+            "db": connection_dict.database,
+            "user": connection_dict.username,
+            "passwd": connection_dict.password,
+            "host": connection_dict.host,
+            "min_size": FLAGS.sql_min_pool_size,
+            "max_size": FLAGS.sql_max_pool_size,
+            "max_idle": FLAGS.sql_idle_timeout,
+            "max_age": FLAGS.sql_idle_timeout,
+        }
+        creator = eventlet.db_pool.ConnectionPool(MySQLdb, **pool_args)
+        engine_args["pool_size"] = FLAGS.sql_max_pool_size
+        engine_args["pool_timeout"] = FLAGS.sql_pool_timeout
+        engine_args["creator"] = creator.create
+
+    return sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
+
+
+def get_maker(engine, autocommit=True, expire_on_commit=False):
+    """Return a SQLAlchemy sessionmaker using the given engine."""
+    return sqlalchemy.orm.sessionmaker(bind=engine,
+                                       autocommit=autocommit,
+                                       expire_on_commit=expire_on_commit)
