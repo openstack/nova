@@ -102,7 +102,7 @@ class FloatingIPController(object):
     def delete(self, req, id):
         context = req.environ['nova.context']
         ip = self.network_api.get_floating_ip(context, id)
-        
+
         if 'fixed_ip' in ip:
             try:
                 self.disassociate(req, id, '')

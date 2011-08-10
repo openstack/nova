@@ -122,8 +122,10 @@ class API(base.Base):
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
-    def _check_metadata_properties_quota(self, context, metadata={}):
+    def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
+        if not metadata:
+            metadata = {}
         num_metadata = len(metadata)
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
@@ -149,7 +151,7 @@ class API(base.Base):
                min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None, metadata={},
+               availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None):
         """Verify all the input parameters regardless of the provisioning
@@ -161,6 +163,8 @@ class API(base.Base):
             min_count = 1
         if not max_count:
             max_count = min_count
+        if not metadata:
+            metadata = {}
 
         num_instances = quota.allowed_instances(context, max_count,
                                                 instance_type)
@@ -436,12 +440,16 @@ class API(base.Base):
                min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None, metadata={},
+               availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
+
+        if not metadata:
+            metadata = {}
+
         num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
@@ -466,7 +474,7 @@ class API(base.Base):
                min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None, metadata={},
+               availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None):
         """
@@ -480,6 +488,9 @@ class API(base.Base):
 
         Returns a list of instance dicts.
         """
+
+        if not metadata:
+            metadata = {}
 
         num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
