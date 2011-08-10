@@ -198,7 +198,7 @@ class ZoneManager(object):
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
         logging.debug(_("Received %(service_name)s service update from "
-                            "%(host)s: %(capabilities)s") % locals())
+                "%(host)s.") % locals())
         service_caps = self.service_states.get(host, {})
         capabilities["timestamp"] = utils.utcnow()  # Reported time
         service_caps[service_name] = capabilities
