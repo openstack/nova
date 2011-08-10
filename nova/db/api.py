@@ -512,21 +512,9 @@ def instance_get_all_by_project(context, project_id):
     return IMPL.instance_get_all_by_project(context, project_id)
 
 
-def instance_get_all_by_project_and_vsa(context, project_id, vsa_id):
-    """Get all instance spawned by a given VSA belonging to a project."""
-    return IMPL.instance_get_all_by_project_and_vsa(context,
-                                                    project_id,
-                                                    vsa_id)
-
-
 def instance_get_all_by_host(context, host):
     """Get all instance belonging to a host."""
     return IMPL.instance_get_all_by_host(context, host)
-
-
-def instance_get_all_by_vsa(context, vsa_id):
-    """Get all instance belonging to a VSA."""
-    return IMPL.instance_get_all_by_vsa(context, vsa_id)
 
 
 def instance_get_all_by_reservation(context, reservation_id):

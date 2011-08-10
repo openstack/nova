@@ -243,9 +243,6 @@ class Instance(BASE, NovaBase):
     #    assert(state in ['nostate', 'running', 'blocked', 'paused',
     #                     'shutdown', 'shutoff', 'crashed'])
 
-    vsa_id = Column(Integer, ForeignKey('virtual_storage_arrays.id'),
-                    nullable=True)
-
 
 class VirtualStorageArray(BASE, NovaBase):
     """

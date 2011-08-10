@@ -27,15 +27,10 @@ meta = MetaData()
 # actual definitions of tables .
 #
 
-instances = Table('instances', meta,
-       Column('id', Integer(),  primary_key=True, nullable=False),
-       )
-
 volumes = Table('volumes', meta,
        Column('id', Integer(),  primary_key=True, nullable=False),
        )
 
-vsa_id = Column('vsa_id', Integer(), nullable=True)
 to_vsa_id = Column('to_vsa_id', Integer(), nullable=True)
 from_vsa_id = Column('from_vsa_id', Integer(), nullable=True)
 drive_type_id = Column('drive_type_id', Integer(), nullable=True)
@@ -123,7 +118,6 @@ def upgrade(migrate_engine):
             logging.exception('Exception while creating table')
             raise
 
-    instances.create_column(vsa_id)
     volumes.create_column(to_vsa_id)
     volumes.create_column(from_vsa_id)
     volumes.create_column(drive_type_id)
@@ -132,7 +126,6 @@ def upgrade(migrate_engine):
 def downgrade(migrate_engine):
     meta.bind = migrate_engine
 
-    instances.drop_column(vsa_id)
     volumes.drop_column(to_vsa_id)
     volumes.drop_column(from_vsa_id)
     volumes.drop_column(drive_type_id)

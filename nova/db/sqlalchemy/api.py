@@ -1322,35 +1322,6 @@ def instance_get_all_by_project(context, project_id):
 
 
 @require_context
-def instance_get_all_by_project_and_vsa(context, project_id, vsa_id):
-    authorize_project_context(context, project_id)
-
-    session = get_session()
-    return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ips.network')).\
-                   options(joinedload('instance_type')).\
-                   filter_by(project_id=project_id).\
-                   filter_by(vsa_id=vsa_id).\
-                   filter_by(deleted=can_read_deleted(context)).\
-                   all()
-
-
-@require_admin_context
-def instance_get_all_by_vsa(context, vsa_id):
-    session = get_session()
-    return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ips.network')).\
-                   options(joinedload('instance_type')).\
-                   filter_by(vsa_id=vsa_id).\
-                   filter_by(deleted=can_read_deleted(context)).\
-                   all()
-
-
-@require_context
 def instance_get_all_by_reservation(context, reservation_id):
     session = get_session()
     query = session.query(models.Instance).\
@@ -3748,6 +3719,7 @@ def vsa_get_vc_ips_list(context, vsa_id):
     """
     result = []
     session = get_session()
+    """ VP-TODO: CHANGE THIS!!! Need to perform a search based on meta-data """
     vc_instances = session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
