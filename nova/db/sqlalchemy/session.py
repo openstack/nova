@@ -41,6 +41,12 @@ except ImportError:
     MySQLdb = None
 
 
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
+
+
 _ENGINE = None
 _MAKER = None
 
@@ -62,28 +68,35 @@ def get_session(autocommit=True, expire_on_commit=False):
 def get_engine():
     """Return a SQLAlchemy engine."""
     connection_dict = sqlalchemy.engine.url.make_url(FLAGS.sql_connection)
+
     engine_args = {
         "pool_recycle": FLAGS.sql_idle_timeout,
+        "pool_size": FLAGS.sql_max_pool_size,
+        "pool_timeout": FLAGS.sql_pool_timeout,
         "echo": False,
     }
 
+    pool_args = {
+        "db": connection_dict.database,
+        "user": connection_dict.username,
+        "passwd": connection_dict.password,
+        "host": connection_dict.host,
+        "min_size": FLAGS.sql_min_pool_size,
+        "max_size": FLAGS.sql_max_pool_size,
+        "max_idle": FLAGS.sql_idle_timeout,
+    }
+
     if "sqlite" in connection_dict.drivername:
+        del engine_args["pool_size"]
+        del engine_args["pool_timeout"]
         engine_args["poolclass"] = sqlalchemy.pool.NullPool
 
     elif MySQLdb and "mysql" in connection_dict.drivername:
-        LOG.info(_("Using MySQLdb/eventlet DB connection pool."))
-        pool_args = {
-            "db": connection_dict.database,
-            "user": connection_dict.username,
-            "passwd": connection_dict.password,
-            "host": connection_dict.host,
-            "min_size": FLAGS.sql_min_pool_size,
-            "max_size": FLAGS.sql_max_pool_size,
-            "max_idle": FLAGS.sql_idle_timeout,
-        }
         creator = eventlet.db_pool.ConnectionPool(MySQLdb, **pool_args)
-        engine_args["pool_size"] = FLAGS.sql_max_pool_size
-        engine_args["pool_timeout"] = FLAGS.sql_pool_timeout
+        engine_args["creator"] = creator.create
+
+    elif psycopg2 and "postgresql" in connection_dict.drivername:
+        creator = eventlet.db_pool.ConnectionPool(psycopg2, **pool_args)
         engine_args["creator"] = creator.create
 
     return sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
