@@ -27,6 +27,7 @@ from nova import flags
 from nova import log as logging
 from nova import quota
 from nova.api.openstack import wsgi
+from nova.compute import power_state as compute_power_state
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
@@ -35,6 +36,38 @@ FLAGS = flags.FLAGS
 
 XML_NS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
+
+
+_STATUS_MAP = {
+    None: 'BUILD',
+    compute_power_state.NOSTATE: 'BUILD',
+    compute_power_state.RUNNING: 'ACTIVE',
+    compute_power_state.BLOCKED: 'ACTIVE',
+    compute_power_state.SUSPENDED: 'SUSPENDED',
+    compute_power_state.PAUSED: 'PAUSED',
+    compute_power_state.SHUTDOWN: 'SHUTDOWN',
+    compute_power_state.SHUTOFF: 'SHUTOFF',
+    compute_power_state.CRASHED: 'ERROR',
+    compute_power_state.FAILED: 'ERROR',
+    compute_power_state.BUILDING: 'BUILD',
+}
+
+
+def status_from_power_state(power_state):
+    """Map the power state to the server status string"""
+    return _STATUS_MAP[power_state]
+
+
+def power_states_from_status(status):
+    """Map the server status string to a list of power states"""
+    power_states = []
+    for power_state, status_map in _STATUS_MAP.iteritems():
+        # Skip the 'None' state
+        if power_state is None:
+            continue
+        if status.lower() == status_map.lower():
+            power_states.append(power_state)
+    return power_states
 
 
 def get_pagination_params(request):

@@ -20,7 +20,6 @@ import hashlib
 import os
 
 from nova import exception
-from nova.compute import power_state
 import nova.compute
 import nova.context
 from nova.api.openstack import common
@@ -61,24 +60,11 @@ class ViewBuilder(object):
 
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
-        power_mapping = {
-            None: 'BUILD',
-            power_state.NOSTATE: 'BUILD',
-            power_state.RUNNING: 'ACTIVE',
-            power_state.BLOCKED: 'ACTIVE',
-            power_state.SUSPENDED: 'SUSPENDED',
-            power_state.PAUSED: 'PAUSED',
-            power_state.SHUTDOWN: 'SHUTDOWN',
-            power_state.SHUTOFF: 'SHUTOFF',
-            power_state.CRASHED: 'ERROR',
-            power_state.FAILED: 'ERROR',
-            power_state.BUILDING: 'BUILD',
-        }
 
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
-            'status': power_mapping[inst.get('state')]}
+            'status': common.status_from_power_state(inst.get('state'))}
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()

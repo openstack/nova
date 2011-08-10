@@ -213,8 +213,9 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
+        search_opts = {'project_id': project_id}
         for instance in self.compute_api.get_all(context,
-                                                 project_id=project_id):
+                search_opts=search_opts):
             if instance['fixed_ips']:
                 line = '%s slots=%d' % (instance['fixed_ips'][0]['address'],
                                         instance['vcpus'])
@@ -264,8 +265,13 @@ class CloudController(object):
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
-        instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
-        if instance_ref is None:
+        search_opts = {'fixed_ip': address}
+        try:
+            instance_ref = self.compute_api.get_all(ctxt,
+                    search_opts=search_opts)
+        except exception.NotFound:
+            instance_ref = None
+        if not instance_ref:
             return None
 
         # This ensures that all attributes of the instance
@@ -1086,11 +1092,16 @@ class CloudController(object):
         return result
 
     def describe_instances(self, context, **kwargs):
-        return self._format_describe_instances(context, **kwargs)
+        # Optional DescribeInstances argument
+        instance_id = kwargs.get('instance_id', None)
+        return self._format_describe_instances(context,
+                instance_id=instance_id)
 
     def describe_instances_v6(self, context, **kwargs):
-        kwargs['use_v6'] = True
-        return self._format_describe_instances(context, **kwargs)
+        # Optional DescribeInstancesV6 argument
+        instance_id = kwargs.get('instance_id', None)
+        return self._format_describe_instances(context,
+                instance_id=instance_id, use_v6=True)
 
     def _format_describe_instances(self, context, **kwargs):
         return {'reservationSet': self._format_instances(context, **kwargs)}
@@ -1152,7 +1163,8 @@ class CloudController(object):
         result['groupSet'] = CloudController._convert_to_set(
             security_group_names, 'groupId')
 
-    def _format_instances(self, context, instance_id=None, **kwargs):
+    def _format_instances(self, context, instance_id=None, use_v6=False,
+            **search_opts):
         # TODO(termie): this method is poorly named as its name does not imply
         #               that it will be making a variety of database calls
         #               rather than simply formatting a bunch of instances that
@@ -1163,11 +1175,17 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
-                instance = self.compute_api.get(context,
-                                                instance_id=internal_id)
+                try:
+                    instance = self.compute_api.get(context, internal_id)
+                except exception.NotFound:
+                    continue
                 instances.append(instance)
         else:
-            instances = self.compute_api.get_all(context, **kwargs)
+            try:
+                instances = self.compute_api.get_all(context,
+                        search_opts=search_opts)
+            except exception.NotFound:
+                instances = []
         for instance in instances:
             if not context.is_admin:
                 if instance['image_ref'] == str(FLAGS.vpn_image_id):
@@ -1189,7 +1207,7 @@ class CloudController(object):
                 fixed_addr = fixed['address']
                 if fixed['floating_ips']:
                     floating_addr = fixed['floating_ips'][0]['address']
-                if fixed['network'] and 'use_v6' in kwargs:
+                if fixed['network'] and use_v6:
                     i['dnsNameV6'] = ipv6.to_global(
                         fixed['network']['cidr_v6'],
                         fixed['virtual_interface']['address'],
@@ -1326,7 +1344,7 @@ class CloudController(object):
                                   'AvailabilityZone'),
             block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context,
-                                          instances[0]['reservation_id'])
+                reservation_id=instances[0]['reservation_id'])
 
     def _do_instance(self, action, context, ec2_id):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)

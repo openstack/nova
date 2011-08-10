@@ -71,14 +71,18 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app(inner_app10=None, inner_app11=None, fake_auth=True):
+def wsgi_app(inner_app10=None, inner_app11=None, fake_auth=True,
+        fake_auth_context=None):
     if not inner_app10:
         inner_app10 = openstack.APIRouterV10()
     if not inner_app11:
         inner_app11 = openstack.APIRouterV11()
 
     if fake_auth:
-        ctxt = context.RequestContext('fake', 'fake')
+        if fake_auth_context is not None:
+            ctxt = fake_auth_context
+        else:
+            ctxt = context.RequestContext('fake', 'fake')
         api10 = openstack.FaultWrapper(wsgi.InjectContext(ctxt,
               limits.RateLimitingMiddleware(inner_app10)))
         api11 = openstack.FaultWrapper(wsgi.InjectContext(ctxt,
