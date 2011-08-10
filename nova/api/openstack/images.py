@@ -169,7 +169,8 @@ class ControllerV11(Controller):
     def get_builder(self, request):
         """Property to get the ViewBuilder class we need to use."""
         base_url = request.application_url
-        return images_view.ViewBuilderV11(base_url)
+        project_id = request.environ['nova.context'].project_id
+        return images_view.ViewBuilderV11(base_url, project_id)
 
     def index(self, req):
         """Return an index listing of images available to the request.
