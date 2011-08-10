@@ -112,7 +112,7 @@ class FloatingIpTest(test.TestCase):
         self.assertTrue('floating_ip' in view)
 
     def test_floating_ips_list(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -127,7 +127,7 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_floating_ip_show(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips/1')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -137,7 +137,7 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict['floating_ip']['instance_id'], None)
 
     def test_floating_ip_allocate(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips')
         req.method = 'POST'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
@@ -150,7 +150,7 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(ip, expected)
 
     def test_floating_ip_release(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips/1')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -162,7 +162,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_floating_ip_associate(self):
         body = dict(associate_address=dict(fixed_ip='1.2.3.4'))
-        req = webob.Request.blank('/v1.1/os-floating-ips/1/associate')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips/1/associate')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -177,7 +177,7 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(actual, expected)
 
     def test_floating_ip_disassociate(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips/1/disassociate')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips/1/disassociate')
         req.method = 'POST'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())

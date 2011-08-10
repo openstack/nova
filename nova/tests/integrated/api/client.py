@@ -122,18 +122,14 @@ class TestOpenStackClient(object):
         self.auth_result = auth_headers
         return self.auth_result
 
-    def api_request(self, relative_uri, check_response_status=None,
-                    use_project_id=True, **kwargs):
+    def api_request(self, relative_uri, check_response_status=None, **kwargs):
         auth_result = self._authenticate()
 
         # NOTE(justinsb): httplib 'helpfully' converts headers to lower case
         base_uri = auth_result['x-server-management-url']
 
-        if use_project_id:
-            # /fake is the project_id
-            full_uri = base_uri + '/fake' + relative_uri
-        else:
-            full_uri = base_uri + relative_uri
+        # /fake is the project_id
+        full_uri = base_uri + '/123' + relative_uri
 
         headers = kwargs.setdefault('headers', {})
         headers['X-Auth-Token'] = auth_result['x-auth-token']
@@ -240,36 +236,31 @@ class TestOpenStackClient(object):
         return self.api_delete('/flavors/%s' % flavor_id)
 
     def get_volume(self, volume_id):
-        return self.api_get('/os-volumes/%s' % volume_id,
-                            use_project_id=False)['volume']
+        return self.api_get('/os-volumes/%s' % volume_id)['volume']
 
     def get_volumes(self, detail=True):
         rel_url = '/os-volumes/detail' if detail else '/os-volumes'
-        return self.api_get(rel_url, use_project_id=False)['volumes']
+        return self.api_get(rel_url)['volumes']
 
     def post_volume(self, volume):
-        return self.api_post('/os-volumes', volume,
-                             use_project_id=False)['volume']
+        return self.api_post('/os-volumes', volume)['volume']
 
     def delete_volume(self, volume_id):
-        return self.api_delete('/os-volumes/%s' % volume_id,
-                               use_project_id=False)
+        return self.api_delete('/os-volumes/%s' % volume_id)
 
     def get_server_volume(self, server_id, attachment_id):
         return self.api_get('/servers/%s/os-volume_attachments/%s' %
-                            (server_id, attachment_id), use_project_id=False
-                           )['volumeAttachment']
+                            (server_id, attachment_id))['volumeAttachment']
 
     def get_server_volumes(self, server_id):
         return self.api_get('/servers/%s/os-volume_attachments' %
-                            (server_id), use_project_id=False
-                           )['volumeAttachments']
+                            (server_id))['volumeAttachments']
 
     def post_server_volume(self, server_id, volume_attachment):
         return self.api_post('/servers/%s/os-volume_attachments' %
-                             (server_id), volume_attachment,
-                             use_project_id=False)['volumeAttachment']
+                             (server_id), volume_attachment
+                            )['volumeAttachment']
 
     def delete_server_volume(self, server_id, attachment_id):
         return self.api_delete('/servers/%s/os-volume_attachments/%s' %
-                            (server_id, attachment_id), use_project_id=False)
+                            (server_id, attachment_id))
