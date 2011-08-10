@@ -303,7 +303,7 @@ class SimpleDriverTestCase(test.TestCase):
         db.compute_node_create(self.context, dic)
         return db.service_get(self.context, s_ref['id'])
 
-    def test_doesnt_report_disabled_hosts_as_up(self):
+    def test_doesnt_report_disabled_hosts_as_up_no_queue(self):
         """Ensures driver doesn't find hosts before they are enabled"""
         # NOTE(vish): constructing service without create method
         #             because we are going to use it without queue
@@ -326,7 +326,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_reports_enabled_hosts_as_up(self):
+    def test_reports_enabled_hosts_as_up_no_queue(self):
         """Ensures driver can find the hosts that are up"""
         # NOTE(vish): constructing service without create method
         #             because we are going to use it without queue
@@ -345,7 +345,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_least_busy_host_gets_instance(self):
+    def test_least_busy_host_gets_instance_no_queue(self):
         """Ensures the host with less cores gets the next one"""
         compute1 = service.Service('host1',
                                    'nova-compute',
@@ -368,7 +368,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_specific_host_gets_instance(self):
+    def test_specific_host_gets_instance_no_queue(self):
         """Ensures if you set availability_zone it launches on that zone"""
         compute1 = service.Service('host1',
                                    'nova-compute',
@@ -391,7 +391,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_wont_sechedule_if_specified_host_is_down(self):
+    def test_wont_sechedule_if_specified_host_is_down_no_queue(self):
         compute1 = service.Service('host1',
                                    'nova-compute',
                                    'compute',
@@ -410,7 +410,7 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id2)
         compute1.kill()
 
-    def test_will_schedule_on_disabled_host_if_specified(self):
+    def test_will_schedule_on_disabled_host_if_specified_no_queue(self):
         compute1 = service.Service('host1',
                                    'nova-compute',
                                    'compute',
@@ -425,7 +425,7 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id2)
         compute1.kill()
 
-    def test_too_many_cores(self):
+    def test_too_many_cores_no_queue(self):
         """Ensures we don't go over max cores"""
         compute1 = service.Service('host1',
                                    'nova-compute',
@@ -458,7 +458,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_least_busy_host_gets_volume(self):
+    def test_least_busy_host_gets_volume_no_queue(self):
         """Ensures the host with less gigabytes gets the next one"""
         volume1 = service.Service('host1',
                                    'nova-volume',
@@ -479,7 +479,7 @@ class SimpleDriverTestCase(test.TestCase):
         volume1.delete_volume(self.context, volume_id1)
         db.volume_destroy(self.context, volume_id2)
 
-    def test_doesnt_report_disabled_hosts_as_up(self):
+    def test_doesnt_report_disabled_hosts_as_up2(self):
         """Ensures driver doesn't find hosts before they are enabled"""
         compute1 = self.start_service('compute', host='host1')
         compute2 = self.start_service('compute', host='host2')
@@ -992,7 +992,7 @@ class ZoneRedirectTest(test.TestCase):
         decorator = FakeRerouteCompute("foo", id_to_return=FAKE_UUID_NOT_FOUND)
         try:
             result = decorator(go_boom)(None, None, 1)
-            self.assertFail(_("Should have rerouted."))
+            self.fail(_("Should have rerouted."))
         except api.RedirectResult, e:
             self.assertEquals(e.results['magic'], 'found me')
 
@@ -1080,10 +1080,10 @@ class DynamicNovaClientTest(test.TestCase):
 
 
 class FakeZonesProxy(object):
-    def do_something(*args, **kwargs):
+    def do_something(self, *args, **kwargs):
         return 42
 
-    def raises_exception(*args, **kwargs):
+    def raises_exception(self, *args, **kwargs):
         raise Exception('testing')
 
 

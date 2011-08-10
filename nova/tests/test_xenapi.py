@@ -654,6 +654,24 @@ class XenAPIVMTestCase(test.TestCase):
         # Ensure that it will not unrescue a non-rescued instance.
         self.assertRaises(Exception, conn.unrescue, instance, None)
 
+    def test_revert_migration(self):
+        instance = self._create_instance()
+
+        class VMOpsMock():
+
+            def __init__(self):
+                self.revert_migration_called = False
+
+            def revert_migration(self, instance):
+                self.revert_migration_called = True
+
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+
+        conn = xenapi_conn.get_connection(False)
+        conn._vmops = VMOpsMock()
+        conn.revert_migration(instance)
+        self.assertTrue(conn._vmops.revert_migration_called)
+
     def _create_instance(self, instance_id=1, spawn=True):
         """Creates and spawns a test instance."""
         stubs.stubout_loopingcall_start(self.stubs)

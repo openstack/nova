@@ -1194,8 +1194,11 @@ class NWFilterTestCase(test.TestCase):
                                    'project_id': 'fake',
                                    'instance_type_id': 1})
 
-    def _create_instance_type(self, params={}):
+    def _create_instance_type(self, params=None):
         """Create a test instance"""
+        if not params:
+            params = {}
+
         context = self.context.elevated()
         inst = {}
         inst['name'] = 'm1.small'
