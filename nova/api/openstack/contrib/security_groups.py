@@ -110,12 +110,8 @@ class SecurityGroupController(object):
         context = req.environ['nova.context']
 
         self.compute_api.ensure_default_security_group(context)
-        if context.is_admin:
-            groups = db.security_group_get_all(context)
-        else:
-            groups = db.security_group_get_by_project(context,
-                                                      context.project_id)
-
+        groups = db.security_group_get_by_project(context,
+                                                  context.project_id)
         limited_list = common.limited(groups, req)
         result = [self._format_security_group(context, group)
                      for group in limited_list]
