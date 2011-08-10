@@ -1120,7 +1120,7 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = webob.Request.blank('/v1.1/servers?unknownoption=whee')
+        req = webob.Request.blank('/v1.1/123/servers?unknownoption=whee')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         servers = json.loads(res.body)['servers']
@@ -1137,7 +1137,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?image=12345')
+        req = webob.Request.blank('/v1.1/123/servers?image=12345')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1157,7 +1157,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?flavor=12345')
+        req = webob.Request.blank('/v1.1/123/servers?flavor=12345')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1177,7 +1177,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?status=active')
+        req = webob.Request.blank('/v1.1/123/servers?status=active')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1191,7 +1191,7 @@ class ServersTest(test.TestCase):
 
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?status=running')
+        req = webob.Request.blank('/v1.1/123/servers?status=running')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1208,7 +1208,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?name=whee.*')
+        req = webob.Request.blank('/v1.1/123/servers?name=whee.*')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1239,7 +1239,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = webob.Request.blank('/v1.1/servers?%s' % query_str)
+        req = webob.Request.blank('/v1.1/123/servers?%s' % query_str)
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=True)
@@ -1273,7 +1273,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = webob.Request.blank('/v1.1/servers?%s' % query_str)
+        req = webob.Request.blank('/v1.1/123/servers?%s' % query_str)
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=False)
@@ -1306,7 +1306,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = webob.Request.blank('/v1.1/servers?%s' % query_str)
+        req = webob.Request.blank('/v1.1/123/servers?%s' % query_str)
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=True)
@@ -1332,7 +1332,7 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = webob.Request.blank('/v1.1/servers?ip=10\..*')
+        req = webob.Request.blank('/v1.1/123/servers?ip=10\..*')
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=True)
@@ -1358,7 +1358,7 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = webob.Request.blank('/v1.1/servers?ip6=ffff.*')
+        req = webob.Request.blank('/v1.1/123/servers?ip6=ffff.*')
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=True)
@@ -3022,18 +3022,19 @@ class ServersViewBuilderV11Test(test.TestCase):
 
         return instance
 
-    def _get_view_builder(self):
+    def _get_view_builder(self, project_id=""):
         base_url = "http://localhost/v1.1"
         views = nova.api.openstack.views
         address_builder = views.addresses.ViewBuilderV11()
-        flavor_builder = views.flavors.ViewBuilderV11(base_url)
-        image_builder = views.images.ViewBuilderV11(base_url)
+        flavor_builder = views.flavors.ViewBuilderV11(base_url, project_id)
+        image_builder = views.images.ViewBuilderV11(base_url, project_id)
 
         view_builder = nova.api.openstack.views.servers.ViewBuilderV11(
             address_builder,
             flavor_builder,
             image_builder,
             base_url,
+            project_id,
             )
         return view_builder
 
@@ -3057,6 +3058,29 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         output = self.view_builder.build(self.instance, False)
+        self.assertDictMatch(output, expected_server)
+
+    def test_build_server_with_project_id(self):
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": self.instance['uuid'],
+                "name": "test_server",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/servers/1",
+                    },
+                ],
+            }
+        }
+
+        view_builder = self._get_view_builder(project_id='fake')
+        output = view_builder.build(self.instance, False)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail(self):
