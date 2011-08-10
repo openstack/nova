@@ -166,10 +166,10 @@ class ControllerV10(Controller):
 class ControllerV11(Controller):
     """Version 1.1 specific controller logic."""
 
-    def get_builder(self, request):
+    def get_builder(self, req):
         """Property to get the ViewBuilder class we need to use."""
-        base_url = request.application_url
-        project_id = request.environ['nova.context'].project_id
+        base_url = req.application_url
+        project_id = getattr(req.environ['nova.context'], 'project_id', '')
         return images_view.ViewBuilderV11(base_url, project_id)
 
     def index(self, req):

@@ -72,7 +72,8 @@ class ControllerV11(Controller):
 
     def _get_view_builder(self, req):
         base_url = req.application_url
-        return views.flavors.ViewBuilderV11(base_url)
+        project_id = getattr(req.environ['nova.context'], 'project_id', '')
+        return views.flavors.ViewBuilderV11(base_url, project_id)
 
 
 class FlavorXMLSerializer(wsgi.XMLDictSerializer):

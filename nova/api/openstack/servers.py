@@ -639,7 +639,7 @@ class ControllerV11(Controller):
         return common.get_id_from_href(flavor_ref)
 
     def _build_view(self, req, instance, is_detail=False):
-        project_id = req.environ['nova.context'].project_id
+        project_id = getattr(req.environ['nova.context'], 'project_id', '')
         base_url = req.application_url
         flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
             base_url, project_id)
