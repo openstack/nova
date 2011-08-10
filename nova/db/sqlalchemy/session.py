@@ -67,8 +67,6 @@ def get_engine():
         "echo": False,
     }
 
-    LOG.info(_("SQL connection: %s") % FLAGS.sql_connection)
-
     if "sqlite" in connection_dict.drivername:
         engine_args["poolclass"] = sqlalchemy.pool.NullPool
 
