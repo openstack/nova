@@ -72,7 +72,7 @@ class Foxinsocks(object):
             res.body = json.dumps(data)
             return res
 
-        req_ext1 = extensions.RequestExtension('GET', 
+        req_ext1 = extensions.RequestExtension('GET',
                                      '/v1.1/:(tenant_id)/flavors/:(id)',
                                      _goose_handler)
         request_exts.append(req_ext1)

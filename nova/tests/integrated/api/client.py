@@ -122,7 +122,7 @@ class TestOpenStackClient(object):
         self.auth_result = auth_headers
         return self.auth_result
 
-    def api_request(self, relative_uri, check_response_status=None, 
+    def api_request(self, relative_uri, check_response_status=None,
                     use_project_id=True, **kwargs):
         auth_result = self._authenticate()
 

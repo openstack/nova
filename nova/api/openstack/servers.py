@@ -647,7 +647,7 @@ class ControllerV11(Controller):
             base_url, project_id)
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
         builder = nova.api.openstack.views.servers.ViewBuilderV11(
-            addresses_builder, flavor_builder, image_builder, 
+            addresses_builder, flavor_builder, image_builder,
             base_url, project_id)
 
         return builder.build(instance, is_detail=is_detail)
