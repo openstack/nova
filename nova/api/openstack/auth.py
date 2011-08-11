@@ -62,13 +62,16 @@ class AuthMiddleware(wsgi.Middleware):
         if len(path_parts) > 1 and path_parts[1] == 'v1.1':
             project_id = path_parts[2]
         elif len(path_parts) > 1 and path_parts[1] == 'v1.0':
-            # FIXME(usrleon): It needed only for compatibility
-            # while osapi clients don't use this header
-            projects = self.auth.get_projects(user_id)
-            if projects:
-                project_id = projects[0].id
-            else:
-                return faults.Fault(webob.exc.HTTPUnauthorized())
+            try:
+                project_id = req.headers["X-Auth-Project-Id"]
+            except KeyError:
+                # FIXME(usrleon): It needed only for compatibility
+                # while osapi clients don't use this header
+                projects = self.auth.get_projects(user_id)
+                if projects:
+                    project_id = projects[0].id
+                else:
+                    return faults.Fault(webob.exc.HTTPUnauthorized())
 
         is_admin = self.auth.is_admin(user_id)
         req.environ['nova.context'] = context.RequestContext(user_id,

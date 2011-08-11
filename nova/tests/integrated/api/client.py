@@ -128,8 +128,8 @@ class TestOpenStackClient(object):
         # NOTE(justinsb): httplib 'helpfully' converts headers to lower case
         base_uri = auth_result['x-server-management-url']
 
-        # /fake is the project_id
-        full_uri = base_uri + '/fake' + relative_uri
+        # /openstack is the project_id
+        full_uri = base_uri + '/openstack' + relative_uri
 
         headers = kwargs.setdefault('headers', {})
         headers['X-Auth-Token'] = auth_result['x-auth-token']
