@@ -1323,6 +1323,69 @@ class ComputeTestCase(test.TestCase):
         db.instance_destroy(c, instance_id2)
         db.instance_destroy(c, instance_id3)
 
+    def test_get_all_by_metadata(self):
+        """Test searching instances by metadata"""
+
+        c = context.get_admin_context()
+        instance_id0 = self._create_instance()
+        instance_id1 = self._create_instance({
+                'metadata': {'key1': 'value1'}})
+        instance_id2 = self._create_instance({
+                'metadata': {'key2': 'value2'}})
+        instance_id3 = self._create_instance({
+                'metadata': {'key3': 'value3'}})
+        instance_id4 = self._create_instance({
+                'metadata': {'key3': 'value3',
+                             'key4': 'value4'}})
+
+        # get all instances
+        instances = self.compute_api.get_all(c,
+                search_opts={'metadata': {}})
+        self.assertEqual(len(instances), 5)
+
+        # wrong key/value combination
+        instances = self.compute_api.get_all(c,
+                search_opts={'metadata': {'key1': 'value3'}})
+        self.assertEqual(len(instances), 0)
+
+        # non-existing keys
+        instances = self.compute_api.get_all(c,
+                search_opts={'metadata': {'key5': 'value1'}})
+        self.assertEqual(len(instances), 0)
+
+        # find existing instance
+        instances = self.compute_api.get_all(c,
+                search_opts={'metadata': {'key2': 'value2'}})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id2)
+
+        instances = self.compute_api.get_all(c,
+                search_opts={'metadata': {'key3': 'value3'}})
+        self.assertEqual(len(instances), 2)
+        instance_ids = [instance.id for instance in instances]
+        self.assertTrue(instance_id3 in instance_ids)
+        self.assertTrue(instance_id4 in instance_ids)
+
+        # multiple criterias as a dict
+        instances = self.compute_api.get_all(c,
+                search_opts={'metadata': {'key3': 'value3',
+                                          'key4': 'value4'}})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id4)
+
+        # multiple criterias as a list
+        instances = self.compute_api.get_all(c,
+                search_opts={'metadata': [{'key4': 'value4'},
+                                          {'key3': 'value3'}]})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, instance_id4)
+
+        db.instance_destroy(c, instance_id0)
+        db.instance_destroy(c, instance_id1)
+        db.instance_destroy(c, instance_id2)
+        db.instance_destroy(c, instance_id3)
+        db.instance_destroy(c, instance_id4)
+
     @staticmethod
     def _parse_db_block_device_mapping(bdm_ref):
         attr_list = ('delete_on_termination', 'device_name', 'no_device',
