@@ -28,6 +28,7 @@ def fake_keypair(name):
             'fingerprint': 'FAKE_FINGERPRINT',
             'name': name}
 
+
 def db_key_pair_get_all_by_user(self, user_id):
     return [fake_keypair('FAKE')]
 
@@ -78,7 +79,20 @@ class KeypairsTest(test.TestCase):
 
     def test_keypair_import(self):
         body = {'keypair': {'name': 'create_test',
-                            'public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBYIznAx9D7118Q1VKGpXy2HDiKyUTM8XcUuhQpo0srqb9rboUp4a9NmCwpWpeElDLuva707GOUnfaBAvHBwsRXyxHJjRaI6YQj2oLJwqvaSaWUbyT1vtryRqy6J3TecN0WINY71f4uymiMZP0wby4bKBcYnac8KiCIlvkEl0ETjkOGUq8OyWRmn7ljj5SESEUdBP0JnuTFKddWTU/wD6wydeJaUhBTqOlHn0kX1GyqoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJLCJtJ8LoGcj7YaN4uPg1rBle+izwE/tLonRrds+cev8p6krSSrxWOwBbHkXa6OciiJDvkRzJXzf'}}
+                            'public_key': 'ssh-rsa '
+                                          'AAAAB3NzaC1yc2EAAAADAQABAAABAQDBY'
+                                          'IznAx9D7118Q1VKGpXy2HDiKyUTM8XcUu'
+                                          'hQpo0srqb9rboUp4a9NmCwpWpeElDLuva'
+                                          '707GOUnfaBAvHBwsRXyxHJjRaI6YQj2oL'
+                                          'JwqvaSaWUbyT1vtryRqy6J3TecN0WINY7'
+                                          '1f4uymiMZP0wby4bKBcYnac8KiCIlvkEl'
+                                          '0ETjkOGUq8OyWRmn7ljj5SESEUdBP0Jnu'
+                                          'TFKddWTU/wD6wydeJaUhBTqOlHn0kX1Gy'
+                                          'qoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJ'
+                                          'LCJtJ8LoGcj7YaN4uPg1rBle+izwE/tLo'
+                                          'nRrds+cev8p6krSSrxWOwBbHkXa6OciiJ'
+                                          'DvkRzJXzf'}}
+
         req = webob.Request.blank('/v1.1/os-keypairs')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -96,4 +110,3 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
-

@@ -717,3 +717,7 @@ class CannotResizeToSameSize(NovaException):
 
 class CannotResizeToSmallerSize(NovaException):
     message = _("Resizing to a smaller size is not supported.")
+
+
+class ImageTooLarge(NovaException):
+    message = _("Image is larger than instance type allows")
