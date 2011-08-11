@@ -65,19 +65,15 @@ def get_engine():
 
     engine_args = {
         "pool_recycle": FLAGS.sql_idle_timeout,
-        "pool_size": FLAGS.sql_max_pool_size,
-        "pool_timeout": FLAGS.sql_pool_timeout,
         "echo": False,
     }
 
     if "sqlite" in connection_dict.drivername:
-        del engine_args["pool_size"]
-        del engine_args["pool_timeout"]
         engine_args["poolclass"] = sqlalchemy.pool.NullPool
 
     elif MySQLdb and "mysql" in connection_dict.drivername:
         LOG.info(_("Using mysql/eventlet db_pool."))
-        pool_args.update({
+        pool_args = {
             "db": connection_dict.database,
             "passwd": connection_dict.password,
             "host": connection_dict.host,
@@ -85,8 +81,10 @@ def get_engine():
             "min_size": FLAGS.sql_min_pool_size,
             "max_size": FLAGS.sql_max_pool_size,
             "max_idle": FLAGS.sql_idle_timeout,
-        })
+        }
         creator = eventlet.db_pool.ConnectionPool(MySQLdb, **pool_args)
+        engine_args["pool_size"] = FLAGS.sql_max_pool_size
+        engine_args["pool_timeout"] = FLAGS.sql_pool_timeout
         engine_args["creator"] = creator.create
 
     return sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
