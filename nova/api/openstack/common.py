@@ -169,10 +169,13 @@ def get_id_from_href(href):
     Returns: 123
 
     """
-    if re.match(r'\d+$', str(href)):
-        return int(href)
     try:
-        return int(urlparse.urlsplit(href).path.split('/')[-1])
+        href = str(href)
+
+        if re.match(r'\d+$', href):
+            return int(href)
+        else:
+            return int(urlparse.urlsplit(href).path.split('/')[-1])
     except ValueError, e:
         LOG.debug(_("Error extracting id from href: %s") % href)
         raise ValueError(_('could not parse id from href'))

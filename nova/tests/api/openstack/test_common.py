@@ -249,6 +249,10 @@ class MiscFunctionsTest(test.TestCase):
                           common.get_id_from_href,
                           fixture)
 
+    def test_get_id_from_href_int(self):
+        fixture = 1
+        self.assertEqual(fixture, common.get_id_from_href(fixture))
+
     def test_get_version_from_href(self):
         fixture = 'http://www.testsite.com/v1.1/images'
         expected = '1.1'
