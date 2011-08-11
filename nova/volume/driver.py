@@ -66,14 +66,14 @@ class VolumeDriver(object):
         self._execute = execute
         self._sync_exec = sync_exec
 
-    def _try_execute(self, *command):
+    def _try_execute(self, *command, **kwargs):
         # NOTE(vish): Volume commands can partially fail due to timing, but
         #             running them a second time on failure will usually
         #             recover nicely.
         tries = 0
         while True:
             try:
-                self._execute(*command)
+                self._execute(*command, **kwargs)
                 return True
             except exception.ProcessExecutionError:
                 tries = tries + 1
@@ -85,24 +85,26 @@ class VolumeDriver(object):
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        out, err = self._execute('sudo', 'vgs', '--noheadings', '-o', 'name')
+        out, err = self._execute('vgs', '--noheadings', '-o', 'name',
+                                run_as_root=True)
         volume_groups = out.split()
         if not FLAGS.volume_group in volume_groups:
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
     def _create_volume(self, volume_name, sizestr):
-        self._try_execute('sudo', 'lvcreate', '-L', sizestr, '-n',
-                          volume_name, FLAGS.volume_group)
+        self._try_execute('lvcreate', '-L', sizestr, '-n',
+                          volume_name, FLAGS.volume_group, run_as_root=True)
 
     def _copy_volume(self, srcstr, deststr, size_in_g):
-        self._execute('sudo', 'dd', 'if=%s' % srcstr, 'of=%s' % deststr,
-                      'count=%d' % (size_in_g * 1024), 'bs=1M')
+        self._execute('dd', 'if=%s' % srcstr, 'of=%s' % deststr,
+                      'count=%d' % (size_in_g * 1024), 'bs=1M',
+                      run_as_root=True)
 
     def _volume_not_present(self, volume_name):
         path_name = '%s/%s' % (FLAGS.volume_group, volume_name)
         try:
-            self._try_execute('sudo', 'lvdisplay', path_name)
+            self._try_execute('lvdisplay', path_name, run_as_root=True)
         except Exception as e:
             # If the volume isn't present
             return True
@@ -113,9 +115,10 @@ class VolumeDriver(object):
         # zero out old volumes to prevent data leaking between users
         # TODO(ja): reclaiming space should be done lazy and low priority
         self._copy_volume('/dev/zero', self.local_path(volume), size_in_g)
-        self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
+        self._try_execute('lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
-                           self._escape_snapshot(volume['name'])))
+                           self._escape_snapshot(volume['name'])),
+                          run_as_root=True)
 
     def _sizestr(self, size_in_g):
         if int(size_in_g) == 0:
@@ -148,10 +151,11 @@ class VolumeDriver(object):
 
         # TODO(yamahata): lvm can't delete origin volume only without
         # deleting derived snapshots. Can we do something fancy?
-        out, err = self._execute('sudo', 'lvdisplay', '--noheading',
+        out, err = self._execute('lvdisplay', '--noheading',
                                  '-C', '-o', 'Attr',
                                  '%s/%s' % (FLAGS.volume_group,
-                                            volume['name']))
+                                            volume['name']),
+                                 run_as_root=True)
         # fake_execute returns None resulting unit test error
         if out:
             out = out.strip()
@@ -163,10 +167,10 @@ class VolumeDriver(object):
     def create_snapshot(self, snapshot):
         """Creates a snapshot."""
         orig_lv_name = "%s/%s" % (FLAGS.volume_group, snapshot['volume_name'])
-        self._try_execute('sudo', 'lvcreate', '-L',
+        self._try_execute('lvcreate', '-L',
                           self._sizestr(snapshot['volume_size']),
                           '--name', self._escape_snapshot(snapshot['name']),
-                          '--snapshot', orig_lv_name)
+                          '--snapshot', orig_lv_name, run_as_root=True)
 
     def delete_snapshot(self, snapshot):
         """Deletes a snapshot."""
@@ -239,13 +243,14 @@ class AOEDriver(VolumeDriver):
          blade_id) = self.db.volume_allocate_shelf_and_blade(context,
                                                              volume['id'])
         self._try_execute(
-                'sudo', 'vblade-persist', 'setup',
+                 'vblade-persist', 'setup',
                  shelf_id,
                  blade_id,
                  FLAGS.aoe_eth_dev,
                  "/dev/%s/%s" %
                  (FLAGS.volume_group,
-                  volume['name']))
+                  volume['name']),
+                 run_as_root=True)
         # NOTE(vish): The standard _try_execute does not work here
         #             because these methods throw errors if other
         #             volumes on this host are in the process of
@@ -254,28 +259,29 @@ class AOEDriver(VolumeDriver):
         #             just wait a bit for the current volume to
         #             be ready and ignore any errors.
         time.sleep(2)
-        self._execute('sudo', 'vblade-persist', 'auto', 'all',
-                      check_exit_code=False)
-        self._execute('sudo', 'vblade-persist', 'start', 'all',
-                      check_exit_code=False)
+        self._execute('vblade-persist', 'auto', 'all',
+                      check_exit_code=False, run_as_root=True)
+        self._execute('vblade-persist', 'start', 'all',
+                      check_exit_code=False, run_as_root=True)
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         volume['id'])
-        self._try_execute('sudo', 'vblade-persist', 'stop',
-                          shelf_id, blade_id)
-        self._try_execute('sudo', 'vblade-persist', 'destroy',
-                          shelf_id, blade_id)
+        self._try_execute('vblade-persist', 'stop',
+                          shelf_id, blade_id, run_as_root=True)
+        self._try_execute('vblade-persist', 'destroy',
+                          shelf_id, blade_id, run_as_root=True)
 
     def discover_volume(self, context, _volume):
         """Discover volume on a remote host."""
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         _volume['id'])
-        self._execute('sudo', 'aoe-discover')
-        out, err = self._execute('sudo', 'aoe-stat', check_exit_code=False)
+        self._execute('aoe-discover', run_as_root=True)
+        out, err = self._execute('aoe-stat', check_exit_code=False,
+                                 run_as_root=True)
         device_path = 'e%(shelf_id)d.%(blade_id)d' % locals()
         if out.find(device_path) >= 0:
             return "/dev/etherd/%s" % device_path
@@ -291,8 +297,8 @@ class AOEDriver(VolumeDriver):
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         volume_id)
-        cmd = ('sudo', 'vblade-persist', 'ls', '--no-header')
-        out, _err = self._execute(*cmd)
+        cmd = ('vblade-persist', 'ls', '--no-header')
+        out, _err = self._execute(*cmd, run_as_root=True)
         exported = False
         for line in out.split('\n'):
             param = line.split(' ')
@@ -354,16 +360,18 @@ class ISCSIDriver(VolumeDriver):
 
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        self._sync_exec('sudo', 'ietadm', '--op', 'new',
+        self._sync_exec('ietadm', '--op', 'new',
                         "--tid=%s" % iscsi_target,
                         '--params',
                         "Name=%s" % iscsi_name,
+                        run_as_root=True,
                         check_exit_code=False)
-        self._sync_exec('sudo', 'ietadm', '--op', 'new',
+        self._sync_exec('ietadm', '--op', 'new',
                         "--tid=%s" % iscsi_target,
                         '--lun=0',
                         '--params',
                         "Path=%s,Type=fileio" % volume_path,
+                        run_as_root=True,
                         check_exit_code=False)
 
     def _ensure_iscsi_targets(self, context, host):
@@ -384,13 +392,13 @@ class ISCSIDriver(VolumeDriver):
                                                       volume['host'])
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        self._execute('sudo', 'ietadm', '--op', 'new',
+        self._execute('ietadm', '--op', 'new',
                       '--tid=%s' % iscsi_target,
-                      '--params', 'Name=%s' % iscsi_name)
-        self._execute('sudo', 'ietadm', '--op', 'new',
+                      '--params', 'Name=%s' % iscsi_name, run_as_root=True)
+        self._execute('ietadm', '--op', 'new',
                       '--tid=%s' % iscsi_target,
                       '--lun=0', '--params',
-                      'Path=%s,Type=fileio' % volume_path)
+                      'Path=%s,Type=fileio' % volume_path, run_as_root=True)
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
@@ -405,18 +413,18 @@ class ISCSIDriver(VolumeDriver):
         try:
             # ietadm show will exit with an error
             # this export has already been removed
-            self._execute('sudo', 'ietadm', '--op', 'show',
-                          '--tid=%s' % iscsi_target)
+            self._execute('ietadm', '--op', 'show',
+                          '--tid=%s' % iscsi_target, run_as_root=True)
         except Exception as e:
             LOG.info(_("Skipping remove_export. No iscsi_target " +
                        "is presently exported for volume: %d"), volume['id'])
             return
 
-        self._execute('sudo', 'ietadm', '--op', 'delete',
+        self._execute('ietadm', '--op', 'delete',
                       '--tid=%s' % iscsi_target,
-                      '--lun=0')
-        self._execute('sudo', 'ietadm', '--op', 'delete',
-                      '--tid=%s' % iscsi_target)
+                      '--lun=0', run_as_root=True)
+        self._execute('ietadm', '--op', 'delete',
+                      '--tid=%s' % iscsi_target, run_as_root=True)
 
     def _do_iscsi_discovery(self, volume):
         #TODO(justinsb): Deprecate discovery and use stored info
@@ -425,8 +433,9 @@ class ISCSIDriver(VolumeDriver):
 
         volume_name = volume['name']
 
-        (out, _err) = self._execute('sudo', 'iscsiadm', '-m', 'discovery',
-                                    '-t', 'sendtargets', '-p', volume['host'])
+        (out, _err) = self._execute('iscsiadm', '-m', 'discovery',
+                                    '-t', 'sendtargets', '-p', volume['host'],
+                                    run_as_root=True)
         for target in out.splitlines():
             if FLAGS.iscsi_ip_prefix in target and volume_name in target:
                 return target
@@ -489,10 +498,10 @@ class ISCSIDriver(VolumeDriver):
         return properties
 
     def _run_iscsiadm(self, iscsi_properties, iscsi_command):
-        (out, err) = self._execute('sudo', 'iscsiadm', '-m', 'node', '-T',
+        (out, err) = self._execute('iscsiadm', '-m', 'node', '-T',
                                    iscsi_properties['target_iqn'],
                                    '-p', iscsi_properties['target_portal'],
-                                   iscsi_command)
+                                   iscsi_command, run_as_root=True)
         LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
                   (iscsi_command, out, err))
         return (out, err)
@@ -566,8 +575,8 @@ class ISCSIDriver(VolumeDriver):
 
         tid = self.db.volume_get_iscsi_target_num(context, volume_id)
         try:
-            self._execute('sudo', 'ietadm', '--op', 'show',
-                          '--tid=%(tid)d' % locals())
+            self._execute('ietadm', '--op', 'show',
+                          '--tid=%(tid)d' % locals(), run_as_root=True)
         except exception.ProcessExecutionError, e:
             # Instances remount read-only in this case.
             # /etc/init.d/iscsitarget restart and rebooting nova-volume

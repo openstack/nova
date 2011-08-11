@@ -95,9 +95,12 @@ def build_recursive_traversal_spec(client_factory):
 
 
 def build_property_spec(client_factory, type="VirtualMachine",
-                        properties_to_collect=["name"],
+                        properties_to_collect=None,
                         all_properties=False):
     """Builds the Property Spec."""
+    if not properties_to_collect:
+        properties_to_collect = ["name"]
+
     property_spec = client_factory.create('ns0:PropertySpec')
     property_spec.all = all_properties
     property_spec.pathSet = properties_to_collect
@@ -155,8 +158,11 @@ def get_dynamic_property(vim, mobj, type, property_name):
     return property_value
 
 
-def get_objects(vim, type, properties_to_collect=["name"], all=False):
+def get_objects(vim, type, properties_to_collect=None, all=False):
     """Gets the list of objects of the type specified."""
+    if not properties_to_collect:
+        properties_to_collect = ["name"]
+
     client_factory = vim.client.factory
     object_spec = build_object_spec(client_factory,
                         vim.get_service_content().rootFolder,

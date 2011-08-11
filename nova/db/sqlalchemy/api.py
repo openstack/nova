@@ -3396,8 +3396,6 @@ def instance_metadata_update(context, instance_id, metadata, delete):
         try:
             meta_ref = instance_metadata_get_item(context, instance_id,
                                                   meta_key, session)
-
-        # if the item doesn't exist, we also need to set key and instance_id
         except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
             item.update({"key": meta_key, "instance_id": instance_id})
@@ -3495,6 +3493,7 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 @require_context
 def instance_type_extra_specs_get_item(context, instance_type_id, key,
                                        session=None):
+
     if not session:
         session = get_session()
 
@@ -3518,10 +3517,8 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
     spec_ref = None
     for key, value in specs.iteritems():
         try:
-            spec_ref = instance_type_extra_specs_get_item(context,
-                                                          instance_type_id,
-                                                          key,
-                                                          session)
+            spec_ref = instance_type_extra_specs_get_item(
+                context, instance_type_id, key, session)
         except exception.InstanceTypeExtraSpecsNotFound, e:
             spec_ref = models.InstanceTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,

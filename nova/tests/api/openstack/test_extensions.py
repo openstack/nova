@@ -97,8 +97,8 @@ class ExtensionControllerTest(test.TestCase):
         names = [x['name'] for x in data['extensions']]
         names.sort()
         self.assertEqual(names, ["DriveTypes", "FlavorExtraSpecs",
-            "Floating_ips", "Fox In Socks", "Hosts", "Multinic", "VSAs",
-            "Volumes"])
+            "Floating_ips", "Fox In Socks", "Hosts", "Keypairs", "Multinic",
+            "VSAs", "Volumes"])
 
         # Make sure that at least Fox in Sox is correct.
         (fox_ext,) = [
@@ -145,7 +145,7 @@ class ExtensionControllerTest(test.TestCase):
 
         # Make sure we have all the extensions.
         exts = root.findall('{0}extension'.format(NS))
-        self.assertEqual(len(exts), 8)
+        self.assertEqual(len(exts), 9)
 
         # Make sure that at least Fox in Sox is correct.
         (fox_ext,) = [x for x in exts if x.get('alias') == 'FOXNSOX']

@@ -461,7 +461,11 @@ class ResourceExtension(object):
     """Add top level resources to the OpenStack API in nova."""
 
     def __init__(self, collection, controller, parent=None,
-                 collection_actions={}, member_actions={}):
+                 collection_actions=None, member_actions=None):
+        if not collection_actions:
+            collection_actions = {}
+        if not member_actions:
+            member_actions = {}
         self.collection = collection
         self.controller = controller
         self.parent = parent
