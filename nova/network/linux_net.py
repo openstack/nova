@@ -616,8 +616,8 @@ def update_dhcp(context, network_ref):
         else:
             LOG.debug(_('Pid %d is stale, relaunching dnsmasq'), pid)
 
-    cmd = ['FLAGFILE="%s"' % FLAGS.dhcpbridge_flagfile,
-           'DNSMASQ_INTERFACE="%s"' % network_ref['bridge'],
+    cmd = ['FLAGFILE=%s' % FLAGS.dhcpbridge_flagfile,
+           'DNSMASQ_INTERFACE=%s' % network_ref['bridge'],
            'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
