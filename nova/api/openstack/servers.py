@@ -214,7 +214,7 @@ class Controller(object):
             if key in self.actions:
                 return self.actions[key](body, req, id)
             else:
-                msg = _("There is no such server action: %s") % (key,))
+                msg = _("There is no such server action: %s") % (key,)
                 raise exc.HTTPBadRequest(explanation=msg)
 
         msg = _("Invalid request body")
