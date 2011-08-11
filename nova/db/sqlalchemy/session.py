@@ -41,12 +41,6 @@ except ImportError:
     MySQLdb = None
 
 
-try:
-    import psycopg2
-except ImportError:
-    psycopg2 = None
-
-
 _ENGINE = None
 _MAKER = None
 
@@ -76,14 +70,6 @@ def get_engine():
         "echo": False,
     }
 
-    pool_args = {
-        "host": connection_dict.host,
-        "user": connection_dict.username,
-        "min_size": FLAGS.sql_min_pool_size,
-        "max_size": FLAGS.sql_max_pool_size,
-        "max_idle": FLAGS.sql_idle_timeout,
-    }
-
     if "sqlite" in connection_dict.drivername:
         del engine_args["pool_size"]
         del engine_args["pool_timeout"]
@@ -94,21 +80,14 @@ def get_engine():
         pool_args.update({
             "db": connection_dict.database,
             "passwd": connection_dict.password,
+            "host": connection_dict.host,
+            "user": connection_dict.username,
+            "min_size": FLAGS.sql_min_pool_size,
+            "max_size": FLAGS.sql_max_pool_size,
+            "max_idle": FLAGS.sql_idle_timeout,
         })
         creator = eventlet.db_pool.ConnectionPool(MySQLdb, **pool_args)
         engine_args["creator"] = creator.create
-
-    elif psycopg2 and "postgresql" in connection_dict.drivername:
-        LOG.info(_("Using postgresql/eventlet db_pool."))
-        pool_args.update({
-            "database": connection_dict.database,
-            "password": connection_dict.password,
-        })
-        creator = eventlet.db_pool.ConnectionPool(psycopg2, **pool_args)
-        engine_args["creator"] = creator.create
-
-    LOG.debug(_("SQLAlchemy Engine Arguments: %(engine_args)s") % locals())
-    LOG.debug(_("Eventlet Pool Arguments: %(pool_args)s") % locals())
 
     return sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
