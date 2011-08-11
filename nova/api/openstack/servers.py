@@ -185,7 +185,7 @@ class Controller(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        return exc.HTTPNoContent()
+        return webob.Response()		# 200 response
 
     def _parse_update(self, context, id, inst_dict, update_dict):
         pass
