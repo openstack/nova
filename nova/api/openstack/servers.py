@@ -161,32 +161,6 @@ class Controller(object):
         server['server']['adminPass'] = extra_values['password']
         return server
 
-    @scheduler_api.redirect_handler
-    def update(self, req, id, body):
-        """ Updates the server name or password """
-        if len(req.body) == 0:
-            raise exc.HTTPUnprocessableEntity()
-
-        if not body:
-            raise exc.HTTPUnprocessableEntity()
-
-        ctxt = req.environ['nova.context']
-        update_dict = {}
-
-        if 'name' in body['server']:
-            name = body['server']['name']
-            self.helper._validate_server_name(name)
-            update_dict['display_name'] = name.strip()
-
-        self._parse_update(ctxt, id, body, update_dict)
-
-        try:
-            self.compute_api.update(ctxt, id, **update_dict)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
-
-        return webob.Response()		# 200 response
-
     def _parse_update(self, context, id, inst_dict, update_dict):
         pass
 
@@ -546,6 +520,29 @@ class ControllerV10(Controller):
     """v1.0 OpenStack API controller"""
 
     @scheduler_api.redirect_handler
+    def update(self, req, id, body):
+        """ Updates the server name or password """
+        if len(req.body) == 0 or not body:
+            raise exc.HTTPUnprocessableEntity()
+
+        ctxt = req.environ['nova.context']
+        update_dict = {}
+
+        if 'name' in body['server']:
+            name = body['server']['name']
+            self.helper._validate_server_name(name)
+            update_dict['display_name'] = name.strip()
+
+        self._parse_update(ctxt, id, body, update_dict)
+
+        try:
+            self.compute_api.update(ctxt, id, **update_dict)
+        except exception.NotFound:
+            raise exc.HTTPNotFound()
+
+        return exc.HTTPNoContent()
+
+    @scheduler_api.redirect_handler
     def delete(self, req, id):
         """ Destroys a server """
         try:
@@ -613,6 +610,29 @@ class ControllerV10(Controller):
 
 class ControllerV11(Controller):
     """v1.1 OpenStack API controller"""
+
+    @scheduler_api.redirect_handler
+    def update(self, req, id, body):
+        """ Updates the server name or password """
+        if len(req.body) == 0 or not body:
+            raise exc.HTTPUnprocessableEntity()
+
+        ctxt = req.environ['nova.context']
+        update_dict = {}
+
+        if 'name' in body['server']:
+            name = body['server']['name']
+            self.helper._validate_server_name(name)
+            update_dict['display_name'] = name.strip()
+
+        self._parse_update(ctxt, id, body, update_dict)
+
+        try:
+            self.compute_api.update(ctxt, id, **update_dict)
+        except exception.NotFound:
+            raise exc.HTTPNotFound()
+
+        # v1.1 API returns 200, which differs from v1.0
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):

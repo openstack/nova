@@ -1869,7 +1869,7 @@ class ServersTest(test.TestCase):
         req.content_type = 'application/json'
         req.body = json.dumps({'server': {'name': 'new-name'}})
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 204)
+        self.assertEqual(res.status_int, 200)
         self.assertEqual(res.body, '')
 
     def test_update_server_adminPass_ignored_v1_1(self):
@@ -1889,7 +1889,7 @@ class ServersTest(test.TestCase):
         req.content_type = "application/json"
         req.body = self.body
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 204)
+        self.assertEqual(res.status_int, 200)
         self.assertEqual(res.body, '')
 
     def test_create_backup_schedules(self):
