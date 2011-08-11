@@ -73,7 +73,7 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
     try:
         if not partition is None:
             # create partition
-            out, err = utils.execute('sudo', 'kpartx', '-a', device)
+            out, err = utils.execute('kpartx', '-a', device, run_as_root=True)
             if err:
                 raise exception.Error(_('Failed to load partition: %s') % err)
             mapped_device = '/dev/mapper/%sp%s' % (device.split('/')[-1],
@@ -90,14 +90,14 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                                       mapped_device)
 
             # Configure ext2fs so that it doesn't auto-check every N boots
-            out, err = utils.execute('sudo', 'tune2fs',
-                                     '-c', 0, '-i', 0, mapped_device)
+            out, err = utils.execute('tune2fs', '-c', 0, '-i', 0,
+                                     mapped_device, run_as_root=True)
 
             tmpdir = tempfile.mkdtemp()
             try:
                 # mount loopback to dir
-                out, err = utils.execute(
-                        'sudo', 'mount', mapped_device, tmpdir)
+                out, err = utils.execute('mount', mapped_device, tmpdir,
+                                         run_as_root=True)
                 if err:
                     raise exception.Error(_('Failed to mount filesystem: %s')
                                           % err)
@@ -106,14 +106,14 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                     inject_data_into_fs(tmpdir, key, net, utils.execute)
                 finally:
                     # unmount device
-                    utils.execute('sudo', 'umount', mapped_device)
+                    utils.execute('umount', mapped_device, run_as_root=True)
             finally:
                 # remove temporary directory
                 utils.execute('rmdir', tmpdir)
         finally:
             if not partition is None:
                 # remove partitions
-                utils.execute('sudo', 'kpartx', '-d', device)
+                utils.execute('kpartx', '-d', device, run_as_root=True)
     finally:
         _unlink_device(device, nbd)
 
@@ -128,7 +128,7 @@ def setup_container(image, container_dir=None, nbd=False):
     """
     try:
         device = _link_device(image, nbd)
-        utils.execute('sudo', 'mount', device, container_dir)
+        utils.execute('mount', device, container_dir, run_as_root=True)
     except Exception, exn:
         LOG.exception(_('Failed to mount filesystem: %s'), exn)
         _unlink_device(device, nbd)
@@ -144,9 +144,9 @@ def destroy_container(target, instance, nbd=False):
     """
     try:
         container_dir = '%s/rootfs' % target
-        utils.execute('sudo', 'umount', container_dir)
+        utils.execute('umount', container_dir, run_as_root=True)
     finally:
-        out, err = utils.execute('sudo', 'losetup', '-a')
+        out, err = utils.execute('losetup', '-a', run_as_root=True)
         for loop in out.splitlines():
             if instance['name'] in loop:
                 device = loop.split(loop, ':')
@@ -157,7 +157,7 @@ def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
     if nbd:
         device = _allocate_device()
-        utils.execute('sudo', 'qemu-nbd', '-c', device, image)
+        utils.execute('qemu-nbd', '-c', device, image, run_as_root=True)
         # NOTE(vish): this forks into another process, so give it a chance
         #             to set up before continuuing
         for i in xrange(FLAGS.timeout_nbd):
@@ -166,7 +166,8 @@ def _link_device(image, nbd):
             time.sleep(1)
         raise exception.Error(_('nbd device %s did not show up') % device)
     else:
-        out, err = utils.execute('sudo', 'losetup', '--find', '--show', image)
+        out, err = utils.execute('losetup', '--find', '--show', image,
+                                 run_as_root=True)
         if err:
             raise exception.Error(_('Could not attach image to loopback: %s')
                                   % err)
@@ -176,10 +177,10 @@ def _link_device(image, nbd):
 def _unlink_device(device, nbd):
     """Unlink image from device using loopback or nbd"""
     if nbd:
-        utils.execute('sudo', 'qemu-nbd', '-d', device)
+        utils.execute('qemu-nbd', '-d', device, run_as_root=True)
         _free_device(device)
     else:
-        utils.execute('sudo', 'losetup', '--detach', device)
+        utils.execute('losetup', '--detach', device, run_as_root=True)
 
 
 _DEVICES = ['/dev/nbd%s' % i for i in xrange(FLAGS.max_nbd_devices)]
@@ -220,12 +221,12 @@ def _inject_key_into_fs(key, fs, execute=None):
     fs is the path to the base of the filesystem into which to inject the key.
     """
     sshdir = os.path.join(fs, 'root', '.ssh')
-    utils.execute('sudo', 'mkdir', '-p', sshdir)  # existing dir doesn't matter
-    utils.execute('sudo', 'chown', 'root', sshdir)
-    utils.execute('sudo', 'chmod', '700', sshdir)
+    utils.execute('mkdir', '-p', sshdir, run_as_root=True)
+    utils.execute('chown', 'root', sshdir, run_as_root=True)
+    utils.execute('chmod', '700', sshdir, run_as_root=True)
     keyfile = os.path.join(sshdir, 'authorized_keys')
-    utils.execute('sudo', 'tee', '-a', keyfile,
-            process_input='\n' + key.strip() + '\n')
+    utils.execute('tee', '-a', keyfile,
+                  process_input='\n' + key.strip() + '\n', run_as_root=True)
 
 
 def _inject_net_into_fs(net, fs, execute=None):
@@ -234,8 +235,8 @@ def _inject_net_into_fs(net, fs, execute=None):
     net is the contents of /etc/network/interfaces.
     """
     netdir = os.path.join(os.path.join(fs, 'etc'), 'network')
-    utils.execute('sudo', 'mkdir', '-p', netdir)  # existing dir doesn't matter
-    utils.execute('sudo', 'chown', 'root:root', netdir)
-    utils.execute('sudo', 'chmod', 755, netdir)
+    utils.execute('mkdir', '-p', netdir, run_as_root=True)
+    utils.execute('chown', 'root:root', netdir, run_as_root=True)
+    utils.execute('chmod', 755, netdir, run_as_root=True)
     netfile = os.path.join(netdir, 'interfaces')
-    utils.execute('sudo', 'tee', netfile, process_input=net)
+    utils.execute('tee', netfile, process_input=net, run_as_root=True)
