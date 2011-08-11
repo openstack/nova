@@ -967,7 +967,7 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
         offset = MBR_SIZE_BYTES
         _write_partition(virtual_size, dev)
 
-    utils.execute('sudo', 'chown', os.getuid(), '/dev/%s' % dev)
+    utils.execute('chown', os.getuid(), '/dev/%s' % dev, run_as_root=True)
 
     with open('/dev/%s' % dev, 'wb') as f:
         f.seek(offset)
@@ -986,10 +986,11 @@ def _write_partition(virtual_size, dev):
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
-    execute('sudo', 'parted', '--script', dest, 'mklabel', 'msdos')
-    execute('sudo', 'parted', '--script', dest, 'mkpart', 'primary',
+    execute('parted', '--script', dest, 'mklabel', 'msdos', run_as_root=True)
+    execute('parted', '--script', dest, 'mkpart', 'primary',
             '%ds' % primary_first,
-            '%ds' % primary_last)
+            '%ds' % primary_last,
+            run_as_root=True)
 
     LOG.debug(_('Writing partition table %s done.'), dest)
 
@@ -1002,9 +1003,9 @@ def get_name_label_for_image(image):
 def _mount_filesystem(dev_path, dir):
     """mounts the device specified by dev_path in dir"""
     try:
-        out, err = utils.execute('sudo', 'mount',
+        out, err = utils.execute('mount',
                                  '-t', 'ext2,ext3',
-                                 dev_path, dir)
+                                 dev_path, dir, run_as_root=True)
     except exception.ProcessExecutionError as e:
         err = str(e)
     return err
@@ -1056,7 +1057,7 @@ def _mounted_processing(device, key, net):
                     disk.inject_data_into_fs(tmpdir, key, net,
                         utils.execute)
             finally:
-                utils.execute('sudo', 'umount', dev_path)
+                utils.execute('umount', dev_path, run_as_root=True)
         else:
             LOG.info(_('Failed to mount filesystem (expected for '
                 'non-linux instances): %s') % err)
