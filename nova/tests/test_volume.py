@@ -414,8 +414,9 @@ class ISCSITestCase(DriverTestCase):
         self.mox.StubOutWithMock(self.volume.driver, '_execute')
         for i in volume_id_list:
             tid = db.volume_get_iscsi_target_num(self.context, i)
-            self.volume.driver._execute("sudo", "ietadm", "--op", "show",
-                                        "--tid=%(tid)d" % locals())
+            self.volume.driver._execute("ietadm", "--op", "show",
+                                        "--tid=%(tid)d" % locals(),
+                                        run_as_root=True)
 
         self.stream.truncate(0)
         self.mox.ReplayAll()
@@ -433,8 +434,9 @@ class ISCSITestCase(DriverTestCase):
         # the first vblade process isn't running
         tid = db.volume_get_iscsi_target_num(self.context, volume_id_list[0])
         self.mox.StubOutWithMock(self.volume.driver, '_execute')
-        self.volume.driver._execute("sudo", "ietadm", "--op", "show",
-                                    "--tid=%(tid)d" % locals()).AndRaise(
+        self.volume.driver._execute("ietadm", "--op", "show",
+                                    "--tid=%(tid)d" % locals(),
+                                    run_as_root=True).AndRaise(
                                             exception.ProcessExecutionError())
 
         self.mox.ReplayAll()

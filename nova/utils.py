@@ -28,6 +28,7 @@ import netaddr
 import os
 import random
 import re
+import shlex
 import socket
 import struct
 import sys
@@ -131,40 +132,42 @@ def execute(*cmd, **kwargs):
 
     :cmd                Passed to subprocess.Popen.
     :process_input      Send to opened process.
-    :addl_env           Added to the processes env.
     :check_exit_code    Defaults to 0. Raise exception.ProcessExecutionError
                         unless program exits with this code.
     :delay_on_retry     True | False. Defaults to True. If set to True, wait a
                         short amount of time before retrying.
     :attempts           How many times to retry cmd.
+    :run_as_root        True | False. Defaults to False. If set to True,
+                        the command is prefixed by the command specified
+                        in the root_helper FLAG.
 
     :raises exception.Error on receiving unknown arguments
     :raises exception.ProcessExecutionError
     """
 
     process_input = kwargs.pop('process_input', None)
-    addl_env = kwargs.pop('addl_env', None)
     check_exit_code = kwargs.pop('check_exit_code', 0)
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
+    run_as_root = kwargs.pop('run_as_root', False)
     if len(kwargs):
         raise exception.Error(_('Got unknown keyword args '
                                 'to utils.execute: %r') % kwargs)
+
+    if run_as_root:
+        cmd = shlex.split(FLAGS.root_helper) + list(cmd)
     cmd = map(str, cmd)
 
     while attempts > 0:
         attempts -= 1
         try:
             LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
-            env = os.environ.copy()
-            if addl_env:
-                env.update(addl_env)
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
             obj = subprocess.Popen(cmd,
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
-                                   env=env)
+                                   close_fds=True)
             result = None
             if process_input is not None:
                 result = obj.communicate(process_input)
