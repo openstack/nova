@@ -280,7 +280,7 @@ class ActionExtensionTest(test.TestCase):
     def test_invalid_action_body(self):
         body = dict(blah=dict(name="test"))  # Doesn't exist
         response = self._send_server_action_request("/servers/1/action", body)
-        self.assertEqual(501, response.status_int)
+        self.assertEqual(400, response.status_int)
 
     def test_invalid_action(self):
         body = dict(blah=dict(name="test"))

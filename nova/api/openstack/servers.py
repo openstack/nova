@@ -210,11 +210,15 @@ class Controller(object):
             }
             self.actions.update(admin_actions)
 
-        for key in self.actions.keys():
-            if key in body:
+        for key in body.keys():
+            if key in self.actions:
                 return self.actions[key](body, req, id)
+            else:
+                msg = _('There is no such server action: %s' % key)
+                raise exc.HTTPBadRequest(explanation=msg)
 
-        raise exc.HTTPNotImplemented()
+        msg = _('Invalid request body')
+        raise exc.HTTPBadRequest(explanation=msg)
 
     def _action_create_backup(self, input_dict, req, instance_id):
         """Backup a server instance.
