@@ -77,10 +77,8 @@ def get_engine():
     }
 
     pool_args = {
-        "db": connection_dict.database,
-        "user": connection_dict.username,
-        "passwd": connection_dict.password,
         "host": connection_dict.host,
+        "user": connection_dict.username,
         "min_size": FLAGS.sql_min_pool_size,
         "max_size": FLAGS.sql_max_pool_size,
         "max_idle": FLAGS.sql_idle_timeout,
@@ -92,10 +90,20 @@ def get_engine():
         engine_args["poolclass"] = sqlalchemy.pool.NullPool
 
     elif MySQLdb and "mysql" in connection_dict.drivername:
+        LOG.info(_("Using mysql/eventlet db_pool."))
+        pool_args.update({
+            "db": connection_dict.database,
+            "passwd": connection_dict.password,
+        })
         creator = eventlet.db_pool.ConnectionPool(MySQLdb, **pool_args)
         engine_args["creator"] = creator.create
 
     elif psycopg2 and "postgresql" in connection_dict.drivername:
+        LOG.info(_("Using postgresql/eventlet db_pool."))
+        pool_args.update({
+            "database": connection_dict.database,
+            "password": connection_dict.password,
+        })
         creator = eventlet.db_pool.ConnectionPool(psycopg2, **pool_args)
         engine_args["creator"] = creator.create
 
