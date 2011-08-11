@@ -68,7 +68,7 @@ class FaultWrapper(base_wsgi.Middleware):
             return faults.Fault(exc)
 
 
-class TenantMapper(routes.Mapper):
+class ProjectMapper(routes.Mapper):
 
     def resource(self, member_name, collection_name, **kwargs):
         if not ('parent_resource' in kwargs):
@@ -191,7 +191,7 @@ class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
     def __init__(self, ext_mgr=None):
-        mapper = TenantMapper()
+        mapper = ProjectMapper()
         self.server_members = {}
         self._setup_routes(mapper)
         super(APIRouter, self).__init__(mapper)

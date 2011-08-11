@@ -260,7 +260,7 @@ class ExtensionMiddleware(base_wsgi.Middleware):
             ext_mgr = ExtensionManager(FLAGS.osapi_extensions_path)
         self.ext_mgr = ext_mgr
 
-        mapper = nova.api.openstack.TenantMapper()
+        mapper = nova.api.openstack.ProjectMapper()
 
         serializer = wsgi.ResponseSerializer(
             {'application/xml': ExtensionsXMLSerializer()})

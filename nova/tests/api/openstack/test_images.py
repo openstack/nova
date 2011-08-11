@@ -391,10 +391,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected_image, actual_image)
 
     def test_get_image_v1_1(self):
-        request = webob.Request.blank('/v1.1/123/images/124')
+        request = webob.Request.blank('/v1.1/fake/images/124')
         response = request.get_response(fakes.wsgi_app())
-
-        print response.body
 
         actual_image = json.loads(response.body)
 
@@ -515,7 +513,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_image_404_v1_1_json(self):
-        request = webob.Request.blank('/v1.1/123/images/NonExistantImage')
+        request = webob.Request.blank('/v1.1/fake/images/NonExistantImage')
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
@@ -531,7 +529,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected, actual)
 
     def test_get_image_404_v1_1_xml(self):
-        request = webob.Request.blank('/v1.1/123/images/NonExistantImage')
+        request = webob.Request.blank('/v1.1/fake/images/NonExistantImage')
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
@@ -552,7 +550,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_image_index_v1_1(self):
-        request = webob.Request.blank('/v1.1/123/images')
+        request = webob.Request.blank('/v1.1/fake/images')
         response = request.get_response(fakes.wsgi_app())
 
         response_dict = json.loads(response.body)
@@ -644,7 +642,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
     def test_get_image_details_v1_1(self):
-        request = webob.Request.blank('/v1.1/123/images/detail')
+        request = webob.Request.blank('/v1.1/fake/images/detail')
         response = request.get_response(fakes.wsgi_app())
 
         response_dict = json.loads(response.body)
@@ -922,7 +920,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         filters = {'name': 'testname'}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/123/images/detail?name=testname')
+        request = webob.Request.blank('/v1.1/fake/images/detail?name=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -934,7 +932,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         filters = {'status': 'ACTIVE'}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/123/images/detail?status=ACTIVE')
+        request = webob.Request.blank('/v1.1/fake/images/detail?status=ACTIVE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -947,7 +945,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
         request = webob.Request.blank(
-            '/v1.1/123/images/detail?property-test=3')
+            '/v1.1/fake/images/detail?property-test=3')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -960,7 +958,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/123/images/detail?server='
+        request = webob.Request.blank('/v1.1/fake/images/detail?server='
                                       'http://localhost:8774/servers/12')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
@@ -973,7 +971,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         filters = {'changes-since': '2011-01-24T17:08Z'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/123/images/detail?changes-since='
+        request = webob.Request.blank('/v1.1/fake/images/detail?changes-since='
                                       '2011-01-24T17:08Z')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
@@ -986,7 +984,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         filters = {'property-image_type': 'BASE'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/123/images/detail?type=BASE')
+        request = webob.Request.blank('/v1.1/fake/images/detail?type=BASE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
@@ -998,7 +996,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         filters = {'status': 'ACTIVE'}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/123/images/detail?status=ACTIVE&'
+        request = webob.Request.blank('/v1.1/fake/images/detail?status=ACTIVE&'
                                       'UNSUPPORTEDFILTER=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
@@ -1011,7 +1009,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         filters = {}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/123/images/detail')
+        request = webob.Request.blank('/v1.1/fake/images/detail')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)

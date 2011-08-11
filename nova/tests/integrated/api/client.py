@@ -129,7 +129,7 @@ class TestOpenStackClient(object):
         base_uri = auth_result['x-server-management-url']
 
         # /fake is the project_id
-        full_uri = base_uri + '/123' + relative_uri
+        full_uri = base_uri + '/fake' + relative_uri
 
         headers = kwargs.setdefault('headers', {})
         headers['X-Auth-Token'] = auth_result['x-auth-token']

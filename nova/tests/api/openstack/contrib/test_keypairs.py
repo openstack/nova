@@ -57,7 +57,7 @@ class KeypairsTest(test.TestCase):
         self.context = context.get_admin_context()
 
     def test_keypair_list(self):
-        req = webob.Request.blank('/v1.1/os-keypairs')
+        req = webob.Request.blank('/v1.1/123/os-keypairs')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -66,7 +66,7 @@ class KeypairsTest(test.TestCase):
 
     def test_keypair_create(self):
         body = {'keypair': {'name': 'create_test'}}
-        req = webob.Request.blank('/v1.1/os-keypairs')
+        req = webob.Request.blank('/v1.1/123/os-keypairs')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -79,7 +79,7 @@ class KeypairsTest(test.TestCase):
     def test_keypair_import(self):
         body = {'keypair': {'name': 'create_test',
                             'public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBYIznAx9D7118Q1VKGpXy2HDiKyUTM8XcUuhQpo0srqb9rboUp4a9NmCwpWpeElDLuva707GOUnfaBAvHBwsRXyxHJjRaI6YQj2oLJwqvaSaWUbyT1vtryRqy6J3TecN0WINY71f4uymiMZP0wby4bKBcYnac8KiCIlvkEl0ETjkOGUq8OyWRmn7ljj5SESEUdBP0JnuTFKddWTU/wD6wydeJaUhBTqOlHn0kX1GyqoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJLCJtJ8LoGcj7YaN4uPg1rBle+izwE/tLonRrds+cev8p6krSSrxWOwBbHkXa6OciiJDvkRzJXzf'}}
-        req = webob.Request.blank('/v1.1/os-keypairs')
+        req = webob.Request.blank('/v1.1/123/os-keypairs')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -91,7 +91,7 @@ class KeypairsTest(test.TestCase):
         self.assertFalse('private_key' in res_dict['keypair'])
 
     def test_keypair_delete(self):
-        req = webob.Request.blank('/v1.1/os-keypairs/FAKE')
+        req = webob.Request.blank('/v1.1/123/os-keypairs/FAKE')
         req.method = 'DELETE'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())

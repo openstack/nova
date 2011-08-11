@@ -83,6 +83,7 @@ def wsgi_app(inner_app10=None, inner_app11=None, fake_auth=True,
             ctxt = fake_auth_context
         else:
             ctxt = context.RequestContext('fake', 'fake')
+
         api10 = openstack.FaultWrapper(wsgi.InjectContext(ctxt,
               limits.RateLimitingMiddleware(inner_app10)))
         api11 = openstack.FaultWrapper(wsgi.InjectContext(ctxt,

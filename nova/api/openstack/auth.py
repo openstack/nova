@@ -55,9 +55,13 @@ class AuthMiddleware(wsgi.Middleware):
             LOG.warn(msg % locals())
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        try:
-            project_id = req.headers["X-Auth-Project-Id"]
-        except KeyError:
+        project_id = ""
+        path_parts = req.path.split('/')
+        # TODO(wwolf): this v1.1 check will be temporary as 
+        # keystone should be taking this over at some point
+        if len(path_parts) > 1 and path_parts[1] == 'v1.1':
+            project_id = path_parts[2]
+        elif len(path_parts) > 1 and path_parts[1] == 'v1.0':
             # FIXME(usrleon): It needed only for compatibility
             # while osapi clients don't use this header
             projects = self.auth.get_projects(user_id)

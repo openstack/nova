@@ -486,8 +486,9 @@ class Resource(wsgi.Application):
             msg = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
-        if "project_id" in args:
-            project_id = args.pop("project_id")
+        project_id = args.pop("project_id", None)
+        if 'nova.context' in request.environ and project_id:
+            request.environ['nova.context'].project_id = project_id
 
         try:
             action_result = self.dispatch(request, action, args)
