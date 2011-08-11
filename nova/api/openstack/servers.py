@@ -161,8 +161,32 @@ class Controller(object):
         server['server']['adminPass'] = extra_values['password']
         return server
 
-    def _parse_update(self, context, id, inst_dict, update_dict):
-        pass
+    @scheduler_api.redirect_handler
+    def update(self, req, id, body):
+        """ Updates the server name or password """
+        if len(req.body) == 0:
+            raise exc.HTTPUnprocessableEntity()
+
+        if not body:
+            raise exc.HTTPUnprocessableEntity()
+
+        ctxt = req.environ['nova.context']
+        update_dict = {}
+
+        if 'name' in body['server']:
+            name = body['server']['name']
+            self.helper._validate_server_name(name)
+            update_dict['display_name'] = name.strip()
+
+        try:
+            self.compute_api.update(ctxt, id, **update_dict)
+        except exception.NotFound:
+            raise exc.HTTPNotFound()
+
+        return self._update(ctxt, req, id, body)
+
+    def _update(self, context, req, id, inst_dict):
+        return exc.HTTPNotImplemented()
 
     @scheduler_api.redirect_handler
     def action(self, req, id, body):
@@ -520,29 +544,6 @@ class ControllerV10(Controller):
     """v1.0 OpenStack API controller"""
 
     @scheduler_api.redirect_handler
-    def update(self, req, id, body):
-        """ Updates the server name or password """
-        if len(req.body) == 0 or not body:
-            raise exc.HTTPUnprocessableEntity()
-
-        ctxt = req.environ['nova.context']
-        update_dict = {}
-
-        if 'name' in body['server']:
-            name = body['server']['name']
-            self.helper._validate_server_name(name)
-            update_dict['display_name'] = name.strip()
-
-        self._parse_update(ctxt, id, body, update_dict)
-
-        try:
-            self.compute_api.update(ctxt, id, **update_dict)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
-
-        return exc.HTTPNoContent()
-
-    @scheduler_api.redirect_handler
     def delete(self, req, id):
         """ Destroys a server """
         try:
@@ -565,10 +566,11 @@ class ControllerV10(Controller):
     def _limit_items(self, items, req):
         return common.limited(items, req)
 
-    def _parse_update(self, context, server_id, inst_dict, update_dict):
+    def _update(self, context, req, id, inst_dict):
         if 'adminPass' in inst_dict['server']:
-            self.compute_api.set_admin_password(context, server_id,
+            self.compute_api.set_admin_password(context, id,
                     inst_dict['server']['adminPass'])
+        return exc.HTTPNoContent()
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
@@ -610,29 +612,6 @@ class ControllerV10(Controller):
 
 class ControllerV11(Controller):
     """v1.1 OpenStack API controller"""
-
-    @scheduler_api.redirect_handler
-    def update(self, req, id, body):
-        """ Updates the server name or password """
-        if len(req.body) == 0 or not body:
-            raise exc.HTTPUnprocessableEntity()
-
-        ctxt = req.environ['nova.context']
-        update_dict = {}
-
-        if 'name' in body['server']:
-            name = body['server']['name']
-            self.helper._validate_server_name(name)
-            update_dict['display_name'] = name.strip()
-
-        self._parse_update(ctxt, id, body, update_dict)
-
-        try:
-            self.compute_api.update(ctxt, id, **update_dict)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
-
-        # v1.1 API returns 200, which differs from v1.0
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -712,6 +691,10 @@ class ControllerV11(Controller):
                 msg = _("Personality content could not be Base64 decoded.")
                 LOG.info(msg)
                 raise exc.HTTPBadRequest(explanation=msg)
+
+    def _update(self, context, req, id, inst_dict):
+        instance = self.compute_api.routing_get(context, id)
+        return self._build_view(req, instance, is_detail=True)
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """

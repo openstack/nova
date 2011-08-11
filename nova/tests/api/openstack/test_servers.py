@@ -1870,7 +1870,8 @@ class ServersTest(test.TestCase):
         req.body = json.dumps({'server': {'name': 'new-name'}})
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.body, '')
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
 
     def test_update_server_adminPass_ignored_v1_1(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
@@ -1890,7 +1891,8 @@ class ServersTest(test.TestCase):
         req.body = self.body
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.body, '')
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
 
     def test_create_backup_schedules(self):
         req = webob.Request.blank('/v1.0/servers/1/backup_schedule')
