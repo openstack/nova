@@ -57,7 +57,7 @@ class AuthMiddleware(wsgi.Middleware):
 
         project_id = ""
         path_parts = req.path.split('/')
-        # TODO(wwolf): this v1.1 check will be temporary as 
+        # TODO(wwolf): this v1.1 check will be temporary as
         # keystone should be taking this over at some point
         if len(path_parts) > 1 and path_parts[1] == 'v1.1':
             project_id = path_parts[2]

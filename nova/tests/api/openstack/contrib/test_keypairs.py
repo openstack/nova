@@ -31,7 +31,6 @@ def fake_keypair(name):
 def db_key_pair_get_all_by_user(self, user_id):
     return [fake_keypair('FAKE')]
 
-
 def db_key_pair_create(self, keypair):
     pass
 
@@ -96,4 +95,3 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
-
