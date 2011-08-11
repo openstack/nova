@@ -374,7 +374,7 @@ class HyperVConnection(driver.ComputeDriver):
             raise exception.InstanceNotFound(instance_id=instance.id)
         self._set_vm_state(instance.name, 'Reboot')
 
-    def destroy(self, instance, network_info):
+    def destroy(self, instance, network_info, cleanup=True):
         """Destroy the VM. Also destroy the associated VHD disk files"""
         LOG.debug(_("Got request to destroy vm %s"), instance.name)
         vm = self._lookup(instance.name)

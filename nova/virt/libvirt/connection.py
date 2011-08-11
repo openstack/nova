@@ -43,7 +43,6 @@ import os
 import random
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
@@ -612,9 +611,10 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if virsh_output.startswith('/dev/'):
             LOG.info(_("cool, it's a device"))
-            out, err = utils.execute('sudo', 'dd',
+            out, err = utils.execute('dd',
                                      "if=%s" % virsh_output,
                                      'iflag=nonblock',
+                                     run_as_root=True,
                                      check_exit_code=False)
             return out
         else:
@@ -637,7 +637,7 @@ class LibvirtConnection(driver.ComputeDriver):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
 
-        utils.execute('sudo', 'chown', os.getuid(), console_log)
+        utils.execute('chown', os.getuid(), console_log, run_as_root=True)
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
@@ -685,10 +685,10 @@ class LibvirtConnection(driver.ComputeDriver):
         ajaxterm_cmd = 'sudo socat - %s' \
                        % get_pty_for_instance(instance['name'])
 
-        cmd = '%s/tools/ajaxterm/ajaxterm.py --command "%s" -t %s -p %s' \
-              % (utils.novadir(), ajaxterm_cmd, token, port)
+        cmd = ['%s/tools/ajaxterm/ajaxterm.py' % utils.novadir(),
+               '--command', ajaxterm_cmd, '-t', token, '-p', port]
 
-        subprocess.Popen(cmd, shell=True)
+        utils.execute(cmd)
         return {'token': token, 'host': host, 'port': port}
 
     def get_host_ip_addr(self):
@@ -947,7 +947,7 @@ class LibvirtConnection(driver.ComputeDriver):
                         ' data into image %(img_id)s (%(e)s)') % locals())
 
         if FLAGS.libvirt_type == 'uml':
-            utils.execute('sudo', 'chown', 'root', basepath('disk'))
+            utils.execute('chown', 'root', basepath('disk'), run_as_root=True)
 
     if FLAGS.libvirt_type == 'uml':
         _disk_prefix = 'ubd'

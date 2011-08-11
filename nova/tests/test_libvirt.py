@@ -921,18 +921,18 @@ class IptablesFirewallTestCase(test.TestCase):
 #        self.fw.add_instance(instance_ref)
         def fake_iptables_execute(*cmd, **kwargs):
             process_input = kwargs.get('process_input', None)
-            if cmd == ('sudo', 'ip6tables-save', '-t', 'filter'):
+            if cmd == ('ip6tables-save', '-t', 'filter'):
                 return '\n'.join(self.in6_filter_rules), None
-            if cmd == ('sudo', 'iptables-save', '-t', 'filter'):
+            if cmd == ('iptables-save', '-t', 'filter'):
                 return '\n'.join(self.in_filter_rules), None
-            if cmd == ('sudo', 'iptables-save', '-t', 'nat'):
+            if cmd == ('iptables-save', '-t', 'nat'):
                 return '\n'.join(self.in_nat_rules), None
-            if cmd == ('sudo', 'iptables-restore'):
+            if cmd == ('iptables-restore',):
                 lines = process_input.split('\n')
                 if '*filter' in lines:
                     self.out_rules = lines
                 return '', ''
-            if cmd == ('sudo', 'ip6tables-restore'):
+            if cmd == ('ip6tables-restore',):
                 lines = process_input.split('\n')
                 if '*filter' in lines:
                     self.out6_rules = lines
@@ -1194,8 +1194,11 @@ class NWFilterTestCase(test.TestCase):
                                    'project_id': 'fake',
                                    'instance_type_id': 1})
 
-    def _create_instance_type(self, params={}):
+    def _create_instance_type(self, params=None):
         """Create a test instance"""
+        if not params:
+            params = {}
+
         context = self.context.elevated()
         inst = {}
         inst['name'] = 'm1.small'

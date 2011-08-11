@@ -398,3 +398,6 @@ DEFINE_bool('start_guests_on_host_boot', False,
             'Whether to restart guests when the host reboots')
 DEFINE_bool('resume_guests_state_on_host_boot', False,
             'Whether to start guests, that was running before the host reboot')
+
+DEFINE_string('root_helper', 'sudo',
+              'Command prefix to use for running commands as root')

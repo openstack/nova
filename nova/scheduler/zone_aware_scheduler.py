@@ -266,8 +266,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         """
 
         if topic != "compute":
-            raise NotImplemented(_("Zone Aware Scheduler only understands "
-                                   "Compute nodes (for now)"))
+            raise NotImplementedError(_("Zone Aware Scheduler only understands"
+                                        " Compute nodes (for now)"))
 
         num_instances = request_spec.get('num_instances', 1)
         instance_type = request_spec['instance_type']

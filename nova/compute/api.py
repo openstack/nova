@@ -19,6 +19,7 @@
 """Handles all requests relating to instances (guest vms)."""
 
 import eventlet
+import novaclient
 import re
 import time
 
@@ -121,8 +122,10 @@ class API(base.Base):
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
-    def _check_metadata_properties_quota(self, context, metadata={}):
+    def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
+        if not metadata:
+            metadata = {}
         num_metadata = len(metadata)
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
@@ -148,7 +151,7 @@ class API(base.Base):
                min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None, metadata={},
+               availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None):
         """Verify all the input parameters regardless of the provisioning
@@ -160,6 +163,8 @@ class API(base.Base):
             min_count = 1
         if not max_count:
             max_count = min_count
+        if not metadata:
+            metadata = {}
 
         num_instances = quota.allowed_instances(context, max_count,
                                                 instance_type)
@@ -435,12 +440,16 @@ class API(base.Base):
                min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None, metadata={},
+               availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
+
+        if not metadata:
+            metadata = {}
+
         num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
@@ -465,7 +474,7 @@ class API(base.Base):
                min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None, metadata={},
+               availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None):
         """
@@ -479,6 +488,9 @@ class API(base.Base):
 
         Returns a list of instance dicts.
         """
+
+        if not metadata:
+            metadata = {}
 
         num_instances, base_options, image = self._check_create_parameters(
                                context, instance_type,
@@ -712,59 +724,84 @@ class API(base.Base):
         """
         return self.get(context, instance_id)
 
-    def get_all(self, context, project_id=None, reservation_id=None,
-                fixed_ip=None, recurse_zones=False):
+    def get_all(self, context, search_opts=None):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retreive
         all instances in the system.
         """
 
-        if reservation_id is not None:
-            recurse_zones = True
-            instances = self.db.instance_get_all_by_reservation(
-                                    context, reservation_id)
-        elif fixed_ip is not None:
-            try:
-                instances = self.db.fixed_ip_get_instance(context, fixed_ip)
-            except exception.FloatingIpNotFound, e:
-                if not recurse_zones:
-                    raise
-                instances = None
-        elif project_id or not context.is_admin:
-            if not context.project_id:
-                instances = self.db.instance_get_all_by_user(
-                    context, context.user_id)
-            else:
-                if project_id is None:
-                    project_id = context.project_id
-                instances = self.db.instance_get_all_by_project(
-                    context, project_id)
-        else:
-            instances = self.db.instance_get_all(context)
+        if search_opts is None:
+            search_opts = {}
 
-        if instances is None:
-            instances = []
-        elif not isinstance(instances, list):
-            instances = [instances]
+        LOG.debug(_("Searching by: %s") % str(search_opts))
+
+        # Fixups for the DB call
+        filters = {}
+
+        def _remap_flavor_filter(flavor_id):
+            instance_type = self.db.instance_type_get_by_flavor_id(
+                    context, flavor_id)
+            filters['instance_type_id'] = instance_type['id']
+
+        def _remap_fixed_ip_filter(fixed_ip):
+            # Turn fixed_ip into a regexp match. Since '.' matches
+            # any character, we need to use regexp escaping for it.
+            filters['ip'] = '^%s$' % fixed_ip.replace('.', '\\.')
+
+        # search_option to filter_name mapping.
+        filter_mapping = {
+                'image': 'image_ref',
+                'name': 'display_name',
+                'instance_name': 'name',
+                'recurse_zones': None,
+                'flavor': _remap_flavor_filter,
+                'fixed_ip': _remap_fixed_ip_filter}
+
+        # copy from search_opts, doing various remappings as necessary
+        for opt, value in search_opts.iteritems():
+            # Do remappings.
+            # Values not in the filter_mapping table are copied as-is.
+            # If remapping is None, option is not copied
+            # If the remapping is a string, it is the filter_name to use
+            try:
+                remap_object = filter_mapping[opt]
+            except KeyError:
+                filters[opt] = value
+            else:
+                if remap_object:
+                    if isinstance(remap_object, basestring):
+                        filters[remap_object] = value
+                    else:
+                        remap_object(value)
+
+        recurse_zones = search_opts.get('recurse_zones', False)
+        if 'reservation_id' in filters:
+            recurse_zones = True
+
+        instances = self.db.instance_get_all_by_filters(context, filters)
 
         if not recurse_zones:
             return instances
 
+        # Recurse zones.  Need admin context for this.  Send along
+        # the un-modified search options we received..
         admin_context = context.elevated()
         children = scheduler_api.call_zone_method(admin_context,
                 "list",
+                errors_to_ignore=[novaclient.exceptions.NotFound],
                 novaclient_collection_name="servers",
-                reservation_id=reservation_id,
-                project_id=project_id,
-                fixed_ip=fixed_ip,
-                recurse_zones=True)
+                search_opts=search_opts)
 
         for zone, servers in children:
+            # 'servers' can be None if a 404 was returned by a zone
+            if servers is None:
+                continue
             for server in servers:
                 # Results are ready to send to user. No need to scrub.
                 server._info['_is_precooked'] = True
                 instances.append(server._info)
+
         return instances
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
