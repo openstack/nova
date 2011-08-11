@@ -14,7 +14,7 @@
 #    under the License.
 
 """
-The Zone Aware Scheduler is a base class Scheduler for creating instances
+The AbsractScheduler is a base class Scheduler for creating instances
 across zones. There are two expansion points to this class for:
 1. Assigning Weights to hosts for requested instances
 2. Filtering Hosts based on required instance capabilities
@@ -40,7 +40,7 @@ from nova.scheduler import api
 from nova.scheduler import driver
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.scheduler.zone_aware_scheduler')
+LOG = logging.getLogger('nova.scheduler.abstract_scheduler')
 
 
 class InvalidBlob(exception.NovaException):
@@ -48,8 +48,10 @@ class InvalidBlob(exception.NovaException):
                 "to instance create request.")
 
 
-class ZoneAwareScheduler(driver.Scheduler):
-    """Base class for creating Zone Aware Schedulers."""
+class AbstractScheduler(driver.Scheduler):
+    """Base class for creating Schedulers that can work across any nova
+    deployment, from simple designs to multiply-nested zones.
+    """
 
     def _call_zone_method(self, context, method, specs, zones):
         """Call novaclient zone method. Broken out for testing."""
@@ -266,7 +268,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         """
 
         if topic != "compute":
-            raise NotImplementedError(_("Zone Aware Scheduler only understands"
+            raise NotImplementedError(_("Scheduler only understands"
                                         " Compute nodes (for now)"))
 
         num_instances = request_spec.get('num_instances', 1)
@@ -328,13 +330,31 @@ class ZoneAwareScheduler(driver.Scheduler):
         requested_mem = instance_type['memory_mb'] * 1024 * 1024
         return capabilities['host_memory_free'] >= requested_mem
 
+    def hold_filter_hosts(self, topic, request_spec, hosts=None):
+        """Filter the full host list (from the ZoneManager)"""
+        # NOTE(dabo): The logic used by the current _schedule() method
+        # is incorrect. Since this task is just to refactor the classes,
+        # I'm not fixing the logic now - that will be the next task.
+        # So for now this method is just renamed; afterwards this will
+        # become the filter_hosts() method, and the one below will
+        # be removed.
+        filter_name = request_spec.get('filter', None)
+        # Make sure that the requested filter is legitimate.
+        selected_filter = host_filter.choose_host_filter(filter_name)
+
+        # TODO(sandy): We're only using InstanceType-based specs
+        # currently. Later we'll need to snoop for more detailed
+        # host filter requests.
+        instance_type = request_spec['instance_type']
+        name, query = selected_filter.instance_type_to_filter(instance_type)
+        return selected_filter.filter_hosts(self.zone_manager, query)
+
     def filter_hosts(self, topic, request_spec, host_list=None):
         """Return a list of hosts which are acceptable for scheduling.
         Return value should be a list of (hostname, capability_dict)s.
         Derived classes may override this, but may find the
         '<topic>_filter' function more appropriate.
         """
-
         def _default_filter(self, hostname, capabilities, request_spec):
             """Default filter function if there's no <topic>_filter"""
             # NOTE(sirp): The default logic is the equivalent to
