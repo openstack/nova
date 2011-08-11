@@ -210,7 +210,7 @@ class Controller(object):
             }
             self.actions.update(admin_actions)
 
-        for key in body.keys():
+        for key in body:
             if key in self.actions:
                 return self.actions[key](body, req, id)
             else:
