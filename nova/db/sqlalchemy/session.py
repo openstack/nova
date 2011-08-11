@@ -107,6 +107,9 @@ def get_engine():
         creator = eventlet.db_pool.ConnectionPool(psycopg2, **pool_args)
         engine_args["creator"] = creator.create
 
+    LOG.debug(_("SQLAlchemy Engine Arguments: %(engine_args)s") % locals())
+    LOG.debug(_("Eventlet Pool Arguments: %(pool_args)s") % locals())
+
     return sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
 
