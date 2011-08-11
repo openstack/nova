@@ -843,11 +843,12 @@ class ZadaraBEDriver(ISCSIDriver):
             qosstr = drive_type['type'] + ("_%s" % drive_type['size_gb'])
 
         try:
-            self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
                             'create_qospart',
                             '--qos', qosstr,
                             '--pname', volume['name'],
                             '--psize', sizestr,
+                            run_as_root=True,
                             check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE create_volume for %s failed"), volume['name'])
@@ -861,9 +862,10 @@ class ZadaraBEDriver(ISCSIDriver):
             return super(ZadaraBEDriver, self).delete_volume(volume)
 
         try:
-            self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
                             'delete_partition',
                             '--pname', volume['name'],
+                            run_as_root=True,
                             check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE delete_volume for %s failed"), volume['name'])
@@ -925,10 +927,11 @@ class ZadaraBEDriver(ISCSIDriver):
             return
 
         try:
-            self._sync_exec('sudo', '/var/lib/zadara/bin/zadara_sncfg',
+            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
                         'remove_export',
                         '--pname', volume['name'],
                         '--tid', iscsi_target,
+                        run_as_root=True,
                         check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE remove_export for %s failed"), volume['name'])
@@ -954,11 +957,12 @@ class ZadaraBEDriver(ISCSIDriver):
         Common logic that asks zadara_sncfg to setup iSCSI target/lun for
         this volume
         """
-        (out, err) = self._sync_exec('sudo',
+        (out, err) = self._sync_exec(
                                 '/var/lib/zadara/bin/zadara_sncfg',
                                 'create_export',
                                 '--pname', volume['name'],
                                 '--tid', iscsi_target,
+                                run_as_root=True,
                                 check_exit_code=0)
 
         result_xml = ElementTree.fromstring(out)
@@ -980,9 +984,10 @@ class ZadaraBEDriver(ISCSIDriver):
     def _get_qosgroup_summary(self):
         """gets the list of qosgroups from Zadara BE"""
         try:
-            (out, err) = self._sync_exec('sudo',
+            (out, err) = self._sync_exec(
                                         '/var/lib/zadara/bin/zadara_sncfg',
                                         'get_qosgroups_xml',
+                                        run_as_root=True,
                                         check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("Failed to retrieve QoS info"))
