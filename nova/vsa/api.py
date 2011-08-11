@@ -355,7 +355,8 @@ class API(base.Base):
         self.delete_vsa_volumes(context, vsa_id, "BE", force_delete=True)
 
         # Delete all VC instances
-        instances = self.db.instance_get_all_by_vsa(context, vsa_id)
+        instances = self.compute_api.get_all(context,
+                search_opts={'metadata': dict(vsa_id=str(vsa_id))})
         for instance in instances:
             name = instance['name']
             LOG.debug(_("VSA ID %(vsa_id)s: Delete instance %(name)s"),

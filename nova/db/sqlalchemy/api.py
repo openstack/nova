@@ -1175,6 +1175,19 @@ def instance_get_all_by_filters(context, filters):
                         return True
         return False
 
+    def _regexp_filter_by_metadata(instance, meta):
+        inst_metadata = [{node['key']: node['value']} \
+                         for node in instance['metadata']]
+        if isinstance(meta, list):
+            for node in meta:
+                if node not in inst_metadata:
+                    return False
+        elif isinstance(meta, dict):
+            for k, v in meta.iteritems():
+                if {k: v} not in inst_metadata:
+                    return False
+        return True
+
     def _regexp_filter_by_column(instance, filter_name, filter_re):
         try:
             v = getattr(instance, filter_name)
@@ -1232,7 +1245,9 @@ def instance_get_all_by_filters(context, filters):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    instances = query_prefix.all()
+    instances = query_prefix.\
+                    filter_by(deleted=can_read_deleted(context)).\
+                    all()
 
     if not instances:
         return []
@@ -1248,6 +1263,9 @@ def instance_get_all_by_filters(context, filters):
         filter_re = re.compile(str(filters[filter_name]))
         if filter_func:
             filter_l = lambda instance: filter_func(instance, filter_re)
+        elif filter_name == 'metadata':
+            filter_l = lambda instance: _regexp_filter_by_metadata(instance,
+                    filters[filter_name])
         else:
             filter_l = lambda instance: _regexp_filter_by_column(instance,
                     filter_name, filter_re)
@@ -3718,16 +3736,9 @@ def vsa_get_vc_ips_list(context, vsa_id):
     Retrieves IPs of instances associated with Virtual Storage Array.
     """
     result = []
-    session = get_session()
-    """ VP-TODO: CHANGE THIS!!! Need to perform a search based on meta-data """
-    vc_instances = session.query(models.Instance).\
-                   options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ips.network')).\
-                   options(joinedload('instance_type')).\
-                   filter_by(vsa_id=vsa_id).\
-                   filter_by(deleted=False).\
-                   all()
+
+    vc_instances = instance_get_all_by_filters(context,
+            search_opts={'metadata': dict(vsa_id=str(vsa_id))})
     for vc_instance in vc_instances:
         if vc_instance['fixed_ips']:
             for fixed in vc_instance['fixed_ips']:

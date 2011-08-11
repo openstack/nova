@@ -173,7 +173,6 @@ class VsaManager(manager.SchedulerDependentManager):
                 display_description='VC for VSA ' + vsa['display_name'],
                 availability_zone=vsa['availability_zone'],
                 user_data=storage_data,
-                vsa_id=vsa_id,
                 metadata=dict(vsa_id=str(vsa_id)))
 
         self.vsa_api.update_vsa_status(context, vsa_id, VsaState.CREATED)
