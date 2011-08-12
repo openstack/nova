@@ -186,7 +186,7 @@ class VMOps(object):
                         instance.project_id, ImageType.KERNEL)[0]
             if instance.ramdisk_id:
                 ramdisk = VMHelper.fetch_image(context, self._session,
-                        instance.id, instance.kernel_id, instance.user_id,
+                        instance.id, instance.ramdisk_id, instance.user_id,
                         instance.project_id, ImageType.RAMDISK)[0]
             # Create the VM ref and attach the first disk
             first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
