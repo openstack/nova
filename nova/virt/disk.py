@@ -223,9 +223,6 @@ def inject_data_into_fs(fs, key, net, metadata, execute):
     if metadata:
         _inject_metadata_into_fs(metadata, fs, execute=execute)
 
-def _inject_file_into_fs(injected_files, fs, execute=None):
-    for path, data in injected_files:
-
 
 def _inject_metadata_into_fs(metadata, fs, execute=None):
     metadata_path = os.path.join(fs, "meta.js")
@@ -233,6 +230,7 @@ def _inject_metadata_into_fs(metadata, fs, execute=None):
 
     utils.execute('sudo', 'tee', '-a', metadata_path, 
                   process_input=json.dumps(metadata))
+
 
 def _inject_key_into_fs(key, fs, execute=None):
     """Add the given public ssh key to root's authorized_keys.
