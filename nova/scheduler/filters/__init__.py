@@ -1,6 +1,5 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright (c) 2010 Openstack, LLC.
+# Copyright (c) 2011 Openstack, LLC.
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -14,14 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-:mod:`nova.scheduler` -- Scheduler Nodes
-=====================================================
-
-.. automodule:: nova.scheduler
-   :platform: Unix
-   :synopsis: Module that picks a compute node to run a VM instance.
-.. moduleauthor:: Sandy Walsh <sandy.walsh@rackspace.com>
-.. moduleauthor:: Ed Leafe <ed@leafe.com>
-.. moduleauthor:: Chris Behrens <cbehrens@codestud.com>
-"""
+from all_hosts_filter import AllHostsFilter
+from instance_type_filter import InstanceTypeFilter
+from json_filter import JsonFilter

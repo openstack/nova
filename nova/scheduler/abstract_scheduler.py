@@ -269,18 +269,13 @@ class AbstractScheduler(driver.Scheduler):
 
         # Get all available hosts.
         all_hosts = self.zone_manager.service_states.iteritems()
-        print "-"*88
-        ss = self.zone_manager.service_states
-        print ss
-        print "KEYS", ss.keys()
-        print "-"*88
-
-        unfiltered_hosts = [(host, services[host])
+        unfiltered_hosts = [(host, services[topic])
                 for host, services in all_hosts
-                if topic in services[host]]
+                if topic in services]
 
         # Filter local hosts based on requirements ...
-        filtered_hosts = self.filter_hosts(topic, request_spec, host_list)
+        filtered_hosts = self.filter_hosts(topic, request_spec,
+                unfiltered_hosts)
         if not filtered_hosts:
             LOG.warn(_("No hosts available"))
             return []
@@ -307,22 +302,19 @@ class AbstractScheduler(driver.Scheduler):
         weighted_hosts.sort(key=operator.itemgetter('weight'))
         return weighted_hosts
 
-    def basic_ram_filter(self, hostname, capabilities, request_spec):
-        """Return whether or not we can schedule to this compute node.
-        Derived classes should override this and return True if the host
-        is acceptable for scheduling.
-        """
-        instance_type = request_spec['instance_type']
-        requested_mem = instance_type['memory_mb'] * 1024 * 1024
-        return capabilities['host_memory_free'] >= requested_mem
-
-    def filter_hosts(self, topic, request_spec, host_list=None):
+    def filter_hosts(self, topic, request_spec, host_list):
         """Filter the full host list returned from the ZoneManager. By default,
         this method only applies the basic_ram_filter(), meaning all hosts
         with at least enough RAM for the requested instance are returned. 
         
         Override in subclasses to provide greater selectivity.
         """
+        def basic_ram_filter(hostname, capabilities, request_spec):
+            """Only return hosts with sufficient available RAM."""
+            instance_type = request_spec['instance_type']
+            requested_mem = instance_type['memory_mb'] * 1024 * 1024
+            return capabilities['host_memory_free'] >= requested_mem
+
         return [(host, services) for host, services in host_list
                 if basic_ram_filter(host, services, request_spec)]
 

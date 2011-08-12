@@ -20,7 +20,7 @@ import json
 
 from nova import exception
 from nova import test
-from nova.scheduler import host_filter
+from nova.scheduler import filters
 
 
 class FakeZoneManager:
@@ -55,7 +55,7 @@ class HostFilterTestCase(test.TestCase):
 
     def setUp(self):
         super(HostFilterTestCase, self).setUp()
-        default_host_filter = 'nova.scheduler.host_filter.AllHostsFilter'
+        default_host_filter = 'nova.scheduler.filteris.AllHostsFilter'
         self.flags(default_host_filter=default_host_filter)
         self.instance_type = dict(name='tiny',
                 memory_mb=50,
