@@ -1653,6 +1653,22 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_create_instance_v1_1_invalid_flavor_id_int(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = -1
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_create_instance_v1_1_bad_flavor_href(self):
         self._setup_for_create_instance()
 
