@@ -44,8 +44,6 @@ flags.DEFINE_integer('lockout_minutes', 15,
                      'Number of minutes to lockout if triggered.')
 flags.DEFINE_integer('lockout_window', 15,
                      'Number of minutes for lockout window.')
-flags.DEFINE_integer('lockout_window', 15,
-                     'Number of minutes for lockout window.')
 flags.DEFINE_string('keystone_ec2_url',
                     'http://localhost:5000/v2.0/ec2tokens',
                     'URL to get token from ec2 request.')
