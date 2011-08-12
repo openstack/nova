@@ -294,7 +294,7 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def destroy(self, instance, network_info):
+    def destroy(self, instance, network_info, cleanup=True):
         key = instance.name
         if key in self.instances:
             del self.instances[key]

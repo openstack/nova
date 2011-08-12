@@ -136,7 +136,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                             "m1.small")
         self.assertEquals(instance_type['extra_specs'], {})
 
-    def test_instance_type_get_with_extra_specs(self):
+    def test_instance_type_get_by_flavor_id_with_extra_specs(self):
         instance_type = db.api.instance_type_get_by_flavor_id(
                             context.get_admin_context(),
                             105)

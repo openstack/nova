@@ -20,7 +20,6 @@
 import fcntl
 import os
 import signal
-import subprocess
 
 from Cheetah import Template
 

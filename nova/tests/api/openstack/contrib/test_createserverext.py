@@ -180,13 +180,13 @@ class CreateserverextTest(test.TestCase):
     def test_create_instance_with_no_networks(self):
         request, response, networks = \
                 self._create_instance_with_networks_json(networks=None)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_no_networks_xml(self):
         request, response, networks = \
                 self._create_instance_with_networks_xml(networks=None)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_one_network(self):
@@ -195,7 +195,7 @@ class CreateserverextTest(test.TestCase):
         networks = [(id, fixed_ip)]
         request, response, networks = \
             self._create_instance_with_networks_json(networks)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, [(id, fixed_ip)])
 
     def test_create_instance_with_one_network_xml(self):
@@ -204,21 +204,21 @@ class CreateserverextTest(test.TestCase):
         networks = [(id, fixed_ip)]
         request, response, networks = \
             self._create_instance_with_networks_xml(networks)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, [(id, fixed_ip)])
 
     def test_create_instance_with_two_networks(self):
         networks = [(1, '10.0.1.12'), (2, '10.0.2.12')]
         request, response, networks = \
             self._create_instance_with_networks_json(networks)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, [(1, '10.0.1.12'), (2, '10.0.2.12')])
 
     def test_create_instance_with_two_networks_xml(self):
         networks = [(1, '10.0.1.12'), (2, '10.0.2.12')]
         request, response, networks = \
             self._create_instance_with_networks_xml(networks)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, [(1, '10.0.1.12'), (2, '10.0.2.12')])
 
     def test_create_instance_with_duplicate_networks(self):
@@ -297,7 +297,7 @@ class CreateserverextTest(test.TestCase):
         request = self._get_create_request_json(body_dict)
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(compute_api.networks, [(1, None)])
 
     def test_create_instance_with_network_no_fixed_ip_xml(self):
@@ -307,5 +307,5 @@ class CreateserverextTest(test.TestCase):
         request.body = request.body.replace(' fixed_ip="10.0.1.12"', '')
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
-        self.assertEquals(response.status_int, 200)
+        self.assertEquals(response.status_int, 202)
         self.assertEquals(compute_api.networks, [(1, None)])

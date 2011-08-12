@@ -14,8 +14,6 @@
 #    under the License.
 
 import base64
-import re
-import webob
 
 from webob import exc
 from xml.dom import minidom

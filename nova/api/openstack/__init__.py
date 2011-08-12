@@ -85,7 +85,10 @@ class APIRouter(base_wsgi.Router):
         self._setup_routes(mapper)
         super(APIRouter, self).__init__(mapper)
 
-    def _setup_routes(self, mapper, version):
+    def _setup_routes(self, mapper):
+        raise NotImplementedError(_("You must implement _setup_routes."))
+
+    def _setup_base_routes(self, mapper, version):
         """Routes common to all versions."""
 
         server_members = self.server_members
@@ -156,7 +159,7 @@ class APIRouterV10(APIRouter):
     """Define routes specific to OpenStack API V1.0."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV10, self)._setup_routes(mapper, '1.0')
+        self._setup_base_routes(mapper, '1.0')
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
@@ -172,7 +175,7 @@ class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV11, self)._setup_routes(mapper, '1.1')
+        self._setup_base_routes(mapper, '1.1')
 
         image_metadata_controller = image_metadata.create_resource()
 
