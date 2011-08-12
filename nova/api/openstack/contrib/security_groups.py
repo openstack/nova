@@ -25,10 +25,11 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import rpc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-
+from nova.compute import power_state
 
 from xml.dom import minidom
 
@@ -73,33 +74,28 @@ class SecurityGroupController(object):
                     context, rule)]
         return security_group
 
-    def show(self, req, id):
-        """Return data about the given security group."""
-        context = req.environ['nova.context']
+    def _get_security_group(self, context, id):
         try:
             id = int(id)
             security_group = db.security_group_get(context, id)
         except ValueError:
-            msg = _("Security group id is not integer")
-            return exc.HTTPBadRequest(explanation=msg)
+            msg = _("Security group id should be integer")
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.NotFound as exp:
-            return exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=unicode(exp))
+        return security_group
 
+    def show(self, req, id):
+        """Return data about the given security group."""
+        context = req.environ['nova.context']
+        security_group = self._get_security_group(context, id)
         return {'security_group': self._format_security_group(context,
                                                               security_group)}
 
     def delete(self, req, id):
         """Delete a security group."""
         context = req.environ['nova.context']
-        try:
-            id = int(id)
-            security_group = db.security_group_get(context, id)
-        except ValueError:
-            msg = _("Security group id is not integer")
-            return exc.HTTPBadRequest(explanation=msg)
-        except exception.SecurityGroupNotFound as exp:
-            return exc.HTTPNotFound(explanation=unicode(exp))
-
+        security_group = self._get_security_group(context, id)
         LOG.audit(_("Delete security group %s"), id, context=context)
         db.security_group_destroy(context, security_group.id)
 
@@ -172,6 +168,135 @@ class SecurityGroupController(object):
                             "than 255 characters.") % typ
             raise exc.HTTPBadRequest(explanation=msg)
 
+    def associate(self, req, id, body):
+        context = req.environ['nova.context']
+
+        if not body:
+            raise exc.HTTPUnprocessableEntity()
+
+        if not 'security_group_associate' in body:
+            raise exc.HTTPUnprocessableEntity()
+
+        security_group = self._get_security_group(context, id)
+
+        servers = body['security_group_associate'].get('servers')
+
+        if not servers:
+            msg = _("No servers found")
+            return exc.HTTPBadRequest(explanation=msg)
+
+        hosts = set()
+        for server in servers:
+            if server['id']:
+                try:
+                    # check if the server exists
+                    inst = db.instance_get(context, server['id'])
+                    #check if the security group is assigned to the server
+                    if self._is_security_group_associated_to_server(
+                                                  security_group, inst['id']):
+                        msg = _("Security group %s is already associated with"
+                                " the instance %s") % (security_group['id'],
+                                                  server['id'])
+                        raise exc.HTTPBadRequest(explanation=msg)
+
+                    #check if the instance is in running state
+                    if inst['state'] != power_state.RUNNING:
+                        msg = _("Server %s is not in the running state")\
+                                            % server['id']
+                        raise exc.HTTPBadRequest(explanation=msg)
+
+                    hosts.add(inst['host'])
+                except exception.InstanceNotFound as exp:
+                    return exc.HTTPNotFound(explanation=unicode(exp))
+
+         # Associate security group with the server in the db
+        for server in servers:
+            if server['id']:
+                db.instance_add_security_group(context.elevated(),
+                                                    server['id'],
+                                                    security_group['id'])
+
+        for host in hosts:
+            rpc.cast(context,
+                     db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "refresh_security_group_rules",
+                      "args": {"security_group_id": security_group['id']}})
+
+        return exc.HTTPAccepted()
+
+    def _is_security_group_associated_to_server(self, security_group,
+                                                instance_id):
+        if not security_group:
+            return False
+
+        instances = security_group.get('instances')
+        if not instances:
+            return False
+
+        inst_id = None
+        for inst_id in (instance['id'] for instance in instances \
+                        if instance_id == instance['id']):
+            return True
+
+        return False
+
+    def disassociate(self, req, id, body):
+        context = req.environ['nova.context']
+
+        if not body:
+            raise exc.HTTPUnprocessableEntity()
+
+        if not 'security_group_disassociate' in body:
+            raise exc.HTTPUnprocessableEntity()
+
+        security_group = self._get_security_group(context, id)
+
+        servers = body['security_group_disassociate'].get('servers')
+
+        if not servers:
+            msg = _("No servers found")
+            return exc.HTTPBadRequest(explanation=msg)
+
+        hosts = set()
+        for server in servers:
+            if server['id']:
+                try:
+                    # check if the instance exists
+                    inst = db.instance_get(context, server['id'])
+                    # Check if the security group is not associated
+                    # with the instance
+                    if not self._is_security_group_associated_to_server(
+                                                security_group, inst['id']):
+                        msg = _("Security group %s is not associated with the"
+                                "instance %s") % (security_group['id'],
+                                                  server['id'])
+                        raise exc.HTTPBadRequest(explanation=msg)
+
+                    #check if the instance is in running state
+                    if inst['state'] != power_state.RUNNING:
+                        msg = _("Server %s is not in the running state")\
+                                            % server['id']
+                        raise exp.HTTPBadRequest(explanation=msg)
+
+                    hosts.add(inst['host'])
+                except exception.InstanceNotFound as exp:
+                    return exc.HTTPNotFound(explanation=unicode(exp))
+
+        # Disassociate security group from the server
+        for server in servers:
+            if server['id']:
+                db.instance_remove_security_group(context.elevated(),
+                                                    server['id'],
+                                                    security_group['id'])
+
+        for host in hosts:
+            rpc.cast(context,
+                     db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "refresh_security_group_rules",
+                      "args": {"security_group_id": security_group['id']}})
+
+        return exc.HTTPAccepted()
+
 
 class SecurityGroupRulesController(SecurityGroupController):
 
@@ -226,9 +351,9 @@ class SecurityGroupRulesController(SecurityGroupController):
         security_group_rule = db.security_group_rule_create(context, values)
 
         self.compute_api.trigger_security_group_rules_refresh(context,
-                                      security_group_id=security_group['id'])
+                                    security_group_id=security_group['id'])
 
-        return {'security_group_rule': self._format_security_group_rule(
+        return {"security_group_rule": self._format_security_group_rule(
                                                         context,
                                                         security_group_rule)}
 
@@ -368,6 +493,10 @@ class Security_groups(extensions.ExtensionDescriptor):
 
         res = extensions.ResourceExtension('os-security-groups',
                                 controller=SecurityGroupController(),
+                                member_actions={
+                                   'associate': 'POST',
+                                   'disassociate': 'POST'
+                                },
                                 deserializer=deserializer,
                                 serializer=serializer)
 
@@ -404,6 +533,40 @@ class SecurityGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
             if desc_node:
                 security_group['description'] = self.extract_text(desc_node)
         return {'body': {'security_group': security_group}}
+
+    def _get_servers(self, node):
+        servers_dict = {'servers': []}
+        if node is not None:
+            servers_node = self.find_first_child_named(node,
+                                           'servers')
+            if servers_node is not None:
+                for server_node in self.find_children_named(servers_node,
+                                                          "server"):
+                    servers_dict['servers'].append(
+                                {"id": self.extract_text(server_node)})
+        return servers_dict
+
+    def associate(self, string):
+        """Deserialize an xml-formatted security group associate request"""
+        dom = minidom.parseString(string)
+        node = self.find_first_child_named(dom,
+                                           'security_group_associate')
+        result = {'body': {}}
+        if node:
+            result['body']['security_group_associate'] = \
+                                                self._get_servers(node)
+        return result
+
+    def disassociate(self, string):
+        """Deserialize an xml-formatted security group disassociate request"""
+        dom = minidom.parseString(string)
+        node = self.find_first_child_named(dom,
+                                           'security_group_disassociate')
+        result = {'body': {}}
+        if node:
+            result['body']['security_group_disassociate'] = \
+                                                self._get_servers(node)
+        return result
 
 
 class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):

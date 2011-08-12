@@ -570,6 +570,12 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                             security_group_id)
 
 
+def instance_remove_security_group(context, instance_id, security_group_id):
+    """Disassociate the given security group from the given instance."""
+    return IMPL.instance_remove_security_group(context, instance_id,
+                                            security_group_id)
+
+
 def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
     """Get instances.vcpus by host and project."""
     return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
