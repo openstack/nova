@@ -652,14 +652,14 @@ class NetworkManager(manager.SchedulerDependentManager):
             else:
                 net['label'] = label
 
-            if cidr:
+            if cidr and subnet_v4:
                 net['cidr'] = str(subnet_v4)
                 net['netmask'] = str(subnet_v4.netmask)
                 net['gateway'] = str(subnet_v4[1])
                 net['broadcast'] = str(subnet_v4.broadcast)
                 net['dhcp_start'] = str(subnet_v4[2])
 
-            if cidr_v6:
+            if cidr_v6 and subnet_v6:
                 net['cidr_v6'] = str(subnet_v6)
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
