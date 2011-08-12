@@ -41,6 +41,7 @@ class SimpleScheduler(chance.ChanceScheduler):
 
     def _schedule_instance(self, context, instance_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest running instances."""
+
         instance_ref = db.instance_get(context, instance_id)
         if (instance_ref['availability_zone']
             and ':' in instance_ref['availability_zone']

@@ -106,6 +106,13 @@
             </disk>
         #end for
     #end if
+    #if $getVar('config_drive', False)
+        <disk type='file'>
+            <driver type='raw' />
+            <source file='${basepath}/disk.config' />
+            <target dev='${disk_prefix}z' bus='${disk_bus}' />
+        </disk>
+    #end if
 #end if
 
 #for $nic in $nics

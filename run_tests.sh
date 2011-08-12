@@ -67,7 +67,7 @@ function run_tests {
     ERRSIZE=`wc -l run_tests.log | awk '{print \$1}'`
     if [ "$ERRSIZE" -lt "40" ];
     then
-      cat run_tests.log
+      echo cat run_tests.log
     fi
   fi
   return $RESULT

@@ -582,6 +582,7 @@ class LibvirtConnection(driver.ComputeDriver):
         self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_image(context, instance, xml, network_info=network_info,
                            block_device_info=block_device_info)
+
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
@@ -754,10 +755,15 @@ class LibvirtConnection(driver.ComputeDriver):
         if size:
             disk.extend(target, size)
 
-    def _create_local(self, target, local_gb):
+    def _create_local(self, target, local_size, prefix='G', fs_format=None):
         """Create a blank image of specified size"""
-        utils.execute('truncate', target, '-s', "%dG" % local_gb)
-        # TODO(vish): should we format disk by default?
+
+        if not fs_format:
+            fs_format = FLAGS.default_local_format
+
+        utils.execute('truncate', target, '-s', "%d%c" % (local_size, prefix))
+        if fs_format:
+            utils.execute('mkfs', '-t', fs_format, target)
 
     def _create_swap(self, target, swap_gb):
         """Create a swap file of specified size"""
@@ -844,14 +850,14 @@ class LibvirtConnection(driver.ComputeDriver):
                               target=basepath('disk.local'),
                               fname="local_%s" % local_gb,
                               cow=FLAGS.use_cow_images,
-                              local_gb=local_gb)
+                              local_size=local_gb)
 
         for eph in driver.block_device_info_get_ephemerals(block_device_info):
             self._cache_image(fn=self._create_local,
                               target=basepath(_get_eph_disk(eph)),
                               fname="local_%s" % eph['size'],
                               cow=FLAGS.use_cow_images,
-                              local_gb=eph['size'])
+                              local_size=eph['size'])
 
         swap_gb = 0
 
@@ -877,8 +883,23 @@ class LibvirtConnection(driver.ComputeDriver):
         if not inst['kernel_id']:
             target_partition = "1"
 
-        if FLAGS.libvirt_type == 'lxc':
+        config_drive_id = inst.get('config_drive_id')
+        config_drive = inst.get('config_drive')
+
+        if any((FLAGS.libvirt_type == 'lxc', config_drive, config_drive_id)):
             target_partition = None
+
+        if config_drive_id:
+            fname = '%08x' % int(config_drive_id)
+            self._cache_image(fn=self._fetch_image,
+                              target=basepath('disk.config'),
+                              fname=fname,
+                              image_id=config_drive_id,
+                              user=user,
+                              project=project)
+        elif config_drive:
+            self._create_local(basepath('disk.config'), 64, prefix="M",
+                               fs_format='msdos')  # 64MB
 
         if inst['key_data']:
             key = str(inst['key_data'])
@@ -923,19 +944,29 @@ class LibvirtConnection(driver.ComputeDriver):
                                searchList=[{'interfaces': nets,
                                             'use_ipv6': FLAGS.use_ipv6}]))
 
-        if key or net:
+        metadata = inst.get('metadata')
+        if any((key, net, metadata)):
             inst_name = inst['name']
-            img_id = inst.image_ref
-            if key:
-                LOG.info(_('instance %(inst_name)s: injecting key into'
-                        ' image %(img_id)s') % locals())
-            if net:
-                LOG.info(_('instance %(inst_name)s: injecting net into'
-                        ' image %(img_id)s') % locals())
+
+            if config_drive:  # Should be True or None by now.
+                injection_path = basepath('disk.config')
+                img_id = 'config-drive'
+                tune2fs = False
+            else:
+                injection_path = basepath('disk')
+                img_id = inst.image_ref
+                tune2fs = True
+
+            for injection in ('metadata', 'key', 'net'):
+                if locals()[injection]:
+                    LOG.info(_('instance %(inst_name)s: injecting '
+                               '%(injection)s into image %(img_id)s' 
+                               % locals()))
             try:
-                disk.inject_data(basepath('disk'), key, net,
+                disk.inject_data(injection_path, key, net, metadata,
                                  partition=target_partition,
-                                 nbd=FLAGS.use_cow_images)
+                                 nbd=FLAGS.use_cow_images,
+                                 tune2fs=tune2fs)
 
                 if FLAGS.libvirt_type == 'lxc':
                     disk.setup_container(basepath('disk'),
@@ -1068,6 +1099,11 @@ class LibvirtConnection(driver.ComputeDriver):
               not self._volume_in_mapping(self.default_swap_device,
                                           block_device_info)):
             xml_info['swap_device'] = self.default_swap_device
+
+
+        config_drive = False
+        if instance.get('config_drive') or instance.get('config_drive_id'):
+            xml_info['config_drive'] = xml_info['basepath'] + "/disk.config"
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
             xml_info['vncserver_host'] = FLAGS.vncserver_host

@@ -639,13 +639,14 @@ class VMHelper(HelperBase):
         # if at all, so determine whether it's required first, and then do
         # everything
         mount_required = False
-        key, net = _prepare_injectables(instance, network_info)
+        key, net, metadata  = _prepare_injectables(instance, network_info)
         mount_required = key or net
         if not mount_required:
             return
 
         with_vdi_attached_here(session, vdi_ref, False,
-                               lambda dev: _mounted_processing(dev, key, net))
+                               lambda dev: _mounted_processing(dev, key, net,
+                                                               metadata))
 
     @classmethod
     def lookup_kernel_ramdisk(cls, session, vm):
@@ -1040,7 +1041,7 @@ def _find_guest_agent(base_dir, agent_rel_path):
     return False
 
 
-def _mounted_processing(device, key, net):
+def _mounted_processing(device, key, net, metadata):
     """Callback which runs with the image VDI attached"""
 
     dev_path = '/dev/' + device + '1'  # NB: Partition 1 hardcoded
@@ -1054,7 +1055,7 @@ def _mounted_processing(device, key, net):
                 if not _find_guest_agent(tmpdir, FLAGS.xenapi_agent_path):
                     LOG.info(_('Manipulating interface files '
                             'directly'))
-                    disk.inject_data_into_fs(tmpdir, key, net,
+                    disk.inject_data_into_fs(tmpdir, key, net, metadata,
                         utils.execute)
             finally:
                 utils.execute('umount', dev_path, run_as_root=True)
@@ -1077,6 +1078,7 @@ def _prepare_injectables(inst, networks_info):
     template = t.Template
     template_data = open(FLAGS.injected_network_template).read()
 
+    metadata = inst['metadata']
     key = str(inst['key_data'])
     net = None
     if networks_info:
@@ -1114,4 +1116,4 @@ def _prepare_injectables(inst, networks_info):
             net = str(template(template_data,
                                 searchList=[{'interfaces': interfaces_info,
                                             'use_ipv6': FLAGS.use_ipv6}]))
-    return key, net
+    return key, net, metadata

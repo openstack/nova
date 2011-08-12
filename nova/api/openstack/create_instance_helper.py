@@ -106,6 +106,7 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         personality = server_dict.get('personality')
+        config_drive = server_dict.get('config_drive')
 
         injected_files = []
         if personality:
@@ -143,6 +144,7 @@ class CreateInstanceHelper(object):
             extra_values = {
                 'instance_type': inst_type,
                 'image_ref': image_href,
+                'config_drive': config_drive,
                 'password': password}
 
             return (extra_values,
@@ -161,7 +163,8 @@ class CreateInstanceHelper(object):
                                   zone_blob=zone_blob,
                                   reservation_id=reservation_id,
                                   min_count=min_count,
-                                  max_count=max_count))
+                                  max_count=max_count,
+                                  config_drive=config_drive,))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
@@ -175,6 +178,8 @@ class CreateInstanceHelper(object):
     def _handle_quota_error(self, error):
         """
         Reraise quota errors as api-specific http exceptions
+
+
         """
         if error.code == "OnsetFileLimitExceeded":
             expl = _("Personality file limit exceeded")
