@@ -96,7 +96,7 @@ class UserdataRequestHandler(wsgi.Application):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        remote_address = "10.0.1.6"#req.remote_addr
+        remote_address = req.remote_addr
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
