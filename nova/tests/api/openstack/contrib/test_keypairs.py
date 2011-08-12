@@ -78,20 +78,20 @@ class KeypairsTest(test.TestCase):
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
 
     def test_keypair_import(self):
-        body = {'keypair': {'name': 'create_test',
-                            'public_key': 'ssh-rsa '
-                                          'AAAAB3NzaC1yc2EAAAADAQABAAABAQDBY'
-                                          'IznAx9D7118Q1VKGpXy2HDiKyUTM8XcUu'
-                                          'hQpo0srqb9rboUp4a9NmCwpWpeElDLuva'
-                                          '707GOUnfaBAvHBwsRXyxHJjRaI6YQj2oL'
-                                          'JwqvaSaWUbyT1vtryRqy6J3TecN0WINY7'
-                                          '1f4uymiMZP0wby4bKBcYnac8KiCIlvkEl'
-                                          '0ETjkOGUq8OyWRmn7ljj5SESEUdBP0Jnu'
-                                          'TFKddWTU/wD6wydeJaUhBTqOlHn0kX1Gy'
-                                          'qoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJ'
-                                          'LCJtJ8LoGcj7YaN4uPg1rBle+izwE/tLo'
-                                          'nRrds+cev8p6krSSrxWOwBbHkXa6OciiJ'
-                                          'DvkRzJXzf'}}
+        body = {
+            'keypair': {
+                'name': 'create_test',
+                'public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBYIznA'
+                              'x9D7118Q1VKGpXy2HDiKyUTM8XcUuhQpo0srqb9rboUp4'
+                              'a9NmCwpWpeElDLuva707GOUnfaBAvHBwsRXyxHJjRaI6Y'
+                              'Qj2oLJwqvaSaWUbyT1vtryRqy6J3TecN0WINY71f4uymi'
+                              'MZP0wby4bKBcYnac8KiCIlvkEl0ETjkOGUq8OyWRmn7lj'
+                              'j5SESEUdBP0JnuTFKddWTU/wD6wydeJaUhBTqOlHn0kX1'
+                              'GyqoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJLCJtJ8LoGc'
+                              'j7YaN4uPg1rBle+izwE/tLonRrds+cev8p6krSSrxWOwB'
+                              'bHkXa6OciiJDvkRzJXzf',
+            },
+        }
 
         req = webob.Request.blank('/v1.1/os-keypairs')
         req.method = 'POST'
