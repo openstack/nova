@@ -31,6 +31,7 @@ import uuid
 from xml.dom import minidom
 
 import glance.client
+from nova import db
 from nova import exception
 from nova import flags
 import nova.image
@@ -368,7 +369,7 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def fetch_image(cls, context, session, instance_id, image, user_id,
+    def fetch_image(cls, context, session, instance, image, user_id,
                     project_id, image_type):
         """Fetch image from glance based on image type.
 
@@ -377,18 +378,19 @@ class VMHelper(HelperBase):
         """
         if image_type == ImageType.DISK_VHD:
             return cls._fetch_image_glance_vhd(context,
-                session, instance_id, image, image_type)
+                session, instance, image, image_type)
         else:
             return cls._fetch_image_glance_disk(context,
-                session, instance_id, image, image_type)
+                session, instance, image, image_type)
 
     @classmethod
-    def _fetch_image_glance_vhd(cls, context, session, instance_id, image,
+    def _fetch_image_glance_vhd(cls, context, session, instance, image,
                                 image_type):
         """Tell glance to download an image and put the VHDs into the SR
 
         Returns: A list of dictionaries that describe VDIs
         """
+        instance_id = instance.id
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
         sr_ref = safe_find_sr(session)
@@ -422,17 +424,57 @@ class VMHelper(HelperBase):
 
         cls.scan_sr(session, instance_id, sr_ref)
 
-        # Pull out the UUID of the first VDI
-        vdi_uuid = vdis[0]['vdi_uuid']
+        # Pull out the UUID of the first VDI (which is the os VDI)
+        os_vdi_uuid = vdis[0]['vdi_uuid']
+
         # Set the name-label to ease debugging
-        vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
+        vdi_ref = session.get_xenapi().VDI.get_by_uuid(os_vdi_uuid)
         primary_name_label = get_name_label_for_image(image)
         session.get_xenapi().VDI.set_name_label(vdi_ref, primary_name_label)
 
+        cls._check_vdi_size(context, session, instance, os_vdi_uuid)
         return vdis
 
     @classmethod
-    def _fetch_image_glance_disk(cls, context, session, instance_id, image,
+    def _get_vdi_chain_size(cls, context, session, vdi_uuid):
+        """Compute the total size of a VDI chain, starting with the specified
+        VDI UUID.
+
+        This will walk the VDI chain to the root, add the size of each VDI into
+        the total.
+        """
+        size_bytes = 0
+        for vdi_rec in walk_vdi_chain(session, vdi_uuid):
+            vdi_size_bytes = int(vdi_rec['physical_utilisation'])
+            LOG.debug(_('vdi_uuid=%(vdi_uuid)s vdi_size_bytes='
+                        '%(vdi_size_bytes)d' % locals()))
+            size_bytes += vdi_size_bytes
+        return size_bytes
+
+    @classmethod
+    def _check_vdi_size(cls, context, session, instance, vdi_uuid):
+        size_bytes = cls._get_vdi_chain_size(context, session, vdi_uuid)
+
+        # FIXME(sirp): this was copied directly from compute.manager.py, let's
+        # refactor this to a common area
+        instance_type_id = instance['instance_type_id']
+        instance_type = db.instance_type_get(context,
+                instance_type_id)
+        allowed_size_gb = instance_type['local_gb']
+        allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
+
+        LOG.debug(_("image_size_bytes=%(size_bytes)d, allowed_size_bytes="
+                    "%(allowed_size_bytes)d") % locals())
+
+        if size_bytes > allowed_size_bytes:
+            LOG.info(_("Image size %(size_bytes)d exceeded"
+                       " instance_type allowed size "
+                       "%(allowed_size_bytes)d")
+                       % locals())
+            raise exception.ImageTooLarge()
+
+    @classmethod
+    def _fetch_image_glance_disk(cls, context, session, instance, image,
                                  image_type):
         """Fetch the image from Glance
 
@@ -444,6 +486,7 @@ class VMHelper(HelperBase):
         Returns: A single filename if image_type is KERNEL_RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
+        instance_id = instance.id
         # FIXME(sirp): Since the Glance plugin seems to be required for the
         # VHD disk, it may be worth using the plugin for both VHD and RAW and
         # DISK restores
@@ -748,6 +791,21 @@ def get_vhd_parent_uuid(session, vdi_ref):
         return parent_rec["uuid"]
     else:
         return None
+
+
+def walk_vdi_chain(session, vdi_uuid):
+    """Yield vdi_recs for each element in a VDI chain"""
+    # TODO: perhaps make get_vhd_parent use this
+    while True:
+        vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
+        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+        yield vdi_rec
+
+        parent_uuid = vdi_rec['sm_config'].get('vhd-parent')
+        if parent_uuid:
+            vdi_uuid = parent_uuid
+        else:
+            break
 
 
 def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
