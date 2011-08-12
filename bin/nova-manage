@@ -1124,6 +1124,8 @@ class VsaCommands(object):
 
         if instance_type_name == '':
             instance_type_name = None
+        instance_type = instance_types.get_instance_type_by_name(
+                                instance_type_name)
 
         if image_name == '':
             image_name = None
@@ -1140,7 +1142,7 @@ class VsaCommands(object):
             'display_name': name,
             'display_description': description,
             'vc_count': int(vc_count),
-            'instance_type': instance_type_name,
+            'instance_type': instance_type,
             'image_name': image_name,
             'availability_zone': az,
             'storage': storage_list,
