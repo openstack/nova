@@ -20,6 +20,7 @@ import json
 
 from nova import exception
 from nova import test
+from nova.scheduler import host_filter
 from nova.scheduler import filters
 
 
@@ -55,7 +56,7 @@ class HostFilterTestCase(test.TestCase):
 
     def setUp(self):
         super(HostFilterTestCase, self).setUp()
-        default_host_filter = 'nova.scheduler.filteris.AllHostsFilter'
+        default_host_filter = 'AllHostsFilter'
         self.flags(default_host_filter=default_host_filter)
         self.instance_type = dict(name='tiny',
                 memory_mb=50,
@@ -98,13 +99,10 @@ class HostFilterTestCase(test.TestCase):
     def test_choose_filter(self):
         # Test default filter ...
         hf = host_filter.choose_host_filter()
-        self.assertEquals(hf._full_name(),
-                        'nova.scheduler.host_filter.AllHostsFilter')
+        self.assertEquals(hf._full_name().split(".")[-1], 'AllHostsFilter')
         # Test valid filter ...
-        hf = host_filter.choose_host_filter(
-                        'nova.scheduler.host_filter.InstanceTypeFilter')
-        self.assertEquals(hf._full_name(),
-                        'nova.scheduler.host_filter.InstanceTypeFilter')
+        hf = host_filter.choose_host_filter('InstanceTypeFilter')
+        self.assertEquals(hf._full_name().split(".")[-1], 'InstanceTypeFilter')
         # Test invalid filter ...
         try:
             host_filter.choose_host_filter('does not exist')
@@ -113,7 +111,7 @@ class HostFilterTestCase(test.TestCase):
             pass
 
     def test_all_host_filter(self):
-        hf = host_filter.AllHostsFilter()
+        hf = filters.AllHostsFilter()
         cooked = hf.instance_type_to_filter(self.instance_type)
         hosts = hf.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(10, len(hosts))
@@ -121,11 +119,10 @@ class HostFilterTestCase(test.TestCase):
             self.assertTrue(host.startswith('host'))
 
     def test_instance_type_filter(self):
-        hf = host_filter.InstanceTypeFilter()
+        hf = filters.InstanceTypeFilter()
         # filter all hosts that can support 50 ram and 500 disk
         name, cooked = hf.instance_type_to_filter(self.instance_type)
-        self.assertEquals('nova.scheduler.host_filter.InstanceTypeFilter',
-                          name)
+        self.assertEquals(name.split(".")[-1], 'InstanceTypeFilter')
         hosts = hf.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]
@@ -134,21 +131,20 @@ class HostFilterTestCase(test.TestCase):
         self.assertEquals('host10', just_hosts[5])
 
     def test_instance_type_filter_extra_specs(self):
-        hf = host_filter.InstanceTypeFilter()
+        hf = filters.InstanceTypeFilter()
         # filter all hosts that can support 50 ram and 500 disk
         name, cooked = hf.instance_type_to_filter(self.gpu_instance_type)
-        self.assertEquals('nova.scheduler.host_filter.InstanceTypeFilter',
-                          name)
+        self.assertEquals(name.split(".")[-1], 'InstanceTypeFilter')
         hosts = hf.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(1, len(hosts))
         just_hosts = [host for host, caps in hosts]
         self.assertEquals('host07', just_hosts[0])
 
     def test_json_filter(self):
-        hf = host_filter.JsonFilter()
+        hf = filters.JsonFilter()
         # filter all hosts that can support 50 ram and 500 disk
         name, cooked = hf.instance_type_to_filter(self.instance_type)
-        self.assertEquals('nova.scheduler.host_filter.JsonFilter', name)
+        self.assertEquals(name.split(".")[-1], 'JsonFilter')
         hosts = hf.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]
@@ -191,6 +187,12 @@ class HostFilterTestCase(test.TestCase):
 
         raw = ['in', '$compute.host_memory_free', 20, 40, 60, 80, 100]
         cooked = json.dumps(raw)
+        def debug(*args):
+            with file("/tmp/debug", "a") as dbg:
+                msg = " ".join([str(arg) for arg in args])
+                dbg.write("%s\n" % msg)
+
+        debug("cooked", cooked, type(cooked))
         hosts = hf.filter_hosts(self.zone_manager, cooked)
 
         self.assertEquals(5, len(hosts))

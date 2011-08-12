@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from abstract_filter import AbstractHostFilter
 from all_hosts_filter import AllHostsFilter
 from instance_type_filter import InstanceTypeFilter
 from json_filter import JsonFilter

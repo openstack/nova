@@ -14,10 +14,11 @@
 #    under the License.
 
 
-from nova.scheduler import host_filter
+import nova.scheduler
+from nova.scheduler.filters import abstract_filter
 
 
-class InstanceTypeFilter(host_filter.AbstractHostFilter):
+class InstanceTypeFilter(abstract_filter.AbstractHostFilter):
     """HostFilter hard-coded to work with InstanceType records."""
     def instance_type_to_filter(self, instance_type):
         """Use instance_type to filter hosts."""

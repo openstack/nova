@@ -14,49 +14,64 @@
 #    under the License.
 
 
+import json
 import operator
 
-from nova.scheduler import host_filter
+import nova.scheduler
+from nova.scheduler.filters import abstract_filter
+
+def debug(*args):
+    with file("/tmp/debug", "a") as dbg:
+        msg = " ".join([str(arg) for arg in args])
+        dbg.write("%s\n" % msg)
 
 
-class JsonFilter(host_filter.AbstractHostFilter):
+class JsonFilter(abstract_filter.AbstractHostFilter):
     """Host Filter to allow simple JSON-based grammar for
     selecting hosts.
     """
-    def _op_comp(self, args, op):
+    def _op_compare(self, args, op):
         """Returns True if the specified operator can successfully
         compare the first item in the args with all the rest. Will
         return False if only one item is in the list.
         """
         if len(args) < 2:
             return False
-        bad = [arg for arg in args[1:]
-                if not op(args[0], arg)]
+        if op is operator.contains:
+            debug("ARGS", type(args), args)
+            debug("op", op)
+            debug("REVERSED!!!")
+            # operator.contains reverses the param order.
+            bad = [arg for arg in args[1:]
+                    if not op(args, args[0])]
+        else:
+            bad = [arg for arg in args[1:]
+                    if not op(args[0], arg)]
         return not bool(bad)
 
     def _equals(self, args):
         """First term is == all the other terms."""
-        return self._op_comp(args, operator.eq)
+        return self._op_compare(args, operator.eq)
 
     def _less_than(self, args):
         """First term is < all the other terms."""
-        return self._op_comp(args, operator.lt)
+        return self._op_compare(args, operator.lt)
 
     def _greater_than(self, args):
         """First term is > all the other terms."""
-        return self._op_comp(args, operator.gt)
+        return self._op_compare(args, operator.gt)
 
     def _in(self, args):
         """First term is in set of remaining terms"""
-        return self._op_comp(args, operator.contains)
+        return self._op_compare(args, operator.contains)
 
     def _less_than_equal(self, args):
         """First term is <= all the other terms."""
-        return self._op_comp(args, operator.le)
+        return self._op_compare(args, operator.le)
 
     def _greater_than_equal(self, args):
         """First term is >= all the other terms."""
-        return self._op_comp(args, operator.ge)
+        return self._op_compare(args, operator.ge)
 
     def _not(self, args):
         """Flip each of the arguments."""
@@ -129,6 +144,8 @@ class JsonFilter(host_filter.AbstractHostFilter):
         specified in the query.
         """
         expanded = json.loads(query)
+
+        debug("expanded", type(expanded), expanded)
         filtered_hosts = []
         for host, services in zone_manager.service_states.iteritems():
             result = self._process_filter(zone_manager, expanded, host,

@@ -15,9 +15,10 @@
 
 
 import nova.scheduler
+from nova.scheduler.filters import abstract_filter
 
 
-class AllHostsFilter(nova.scheduler.host_filter.AbstractHostFilter):
+class AllHostsFilter(abstract_filter.AbstractHostFilter):
     """NOP host filter. Returns all hosts in ZoneManager."""
     def instance_type_to_filter(self, instance_type):
         """Return anything to prevent base-class from raising
