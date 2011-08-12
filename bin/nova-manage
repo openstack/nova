@@ -741,6 +741,9 @@ class NetworkCommands(object):
         if not dns1 and FLAGS.flat_network_dns:
             dns1 = FLAGS.flat_network_dns
 
+        if not network_size:
+            network_size = FLAGS.network_size
+
         # create the network
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
