@@ -445,8 +445,9 @@ class VMHelper(HelperBase):
         """
         size_bytes = 0
         for vdi_rec in walk_vdi_chain(session, vdi_uuid):
+            cur_vdi_uuid = vdi_rec['uuid']
             vdi_size_bytes = int(vdi_rec['physical_utilisation'])
-            LOG.debug(_('vdi_uuid=%(vdi_uuid)s vdi_size_bytes='
+            LOG.debug(_('vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes='
                         '%(vdi_size_bytes)d' % locals()))
             size_bytes += vdi_size_bytes
         return size_bytes
