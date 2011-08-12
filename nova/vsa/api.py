@@ -159,7 +159,7 @@ class API(base.Base):
             shared = True
 
         # check if image is ready before starting any work
-        if image_name is None or image_name == '':
+        if image_name is None:
             image_name = FLAGS.vc_image_name
         try:
             image_service = self.compute_api.image_service

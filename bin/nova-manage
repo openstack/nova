@@ -96,6 +96,8 @@ from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.compute import instance_types
 from nova.db import migration
+from nova import vsa
+from nova.vsa import drive_types
 
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
@@ -1028,9 +1030,8 @@ class VsaCommands(object):
     """Methods for dealing with VSAs"""
 
     def __init__(self, *args, **kwargs):
-        self.controller = cloud.CloudController()
         self.manager = manager.AuthManager()
-
+        self.vsa_api = vsa.API()
         self.context = context.get_admin_context()
 
     def _list(self, vsas):
@@ -1049,15 +1050,15 @@ class VsaCommands(object):
 
         for vsa in vsas:
             print format_str %\
-                (vsa['vsaId'],
+                (vsa['id'],
                 vsa['name'],
-                vsa['displayName'],
-                vsa['vcType'],
-                vsa['vcCount'],
-                vsa['volCount'],
+                vsa['display_name'],
+                vsa['vsa_instance_type'].get('name', None),
+                vsa['vc_count'],
+                vsa['vol_count'],
                 vsa['status'],
-                vsa['availabilityZone'],
-                str(vsa['createTime']))
+                vsa['availability_zone'],
+                str(vsa['created_at']))
 
     @args('--storage', dest='storage',
         metavar="[{'drive_name': 'type', 'num_drives': N, 'size': M},..]",
@@ -1124,6 +1125,9 @@ class VsaCommands(object):
         if instance_type_name == '':
             instance_type_name = None
 
+        if image_name == '':
+            image_name = None
+
         if shared in [None, False, "--full_drives"]:
             shared = False
         elif shared in [True, "--shared"]:
@@ -1136,15 +1140,15 @@ class VsaCommands(object):
             'display_name': name,
             'display_description': description,
             'vc_count': int(vc_count),
-            'vc_type': instance_type_name,
+            'instance_type': instance_type_name,
             'image_name': image_name,
+            'availability_zone': az,
             'storage': storage_list,
             'shared': shared,
-            'placement': {'AvailabilityZone': az}
             }
 
-        result = self.controller.create_vsa(ctxt, **values)
-        self._list(result['vsaSet'])
+        result = self.vsa_api.create(ctxt, **values)
+        self._list([result])
 
     @args('--id', dest='vsa_id', metavar="<vsa_id>", help='VSA ID')
     @args('--name', dest='name', metavar="<name>", help='VSA name')
@@ -1162,32 +1166,38 @@ class VsaCommands(object):
         if vc_count is not None:
             values['vc_count'] = int(vc_count)
 
-        self.controller.update_vsa(self.context, vsa_id, **values)
+        vsa_id = ec2utils.ec2_id_to_id(vsa_id)
+        result = self.vsa_api.update(self.context, vsa_id=vsa_id, **values)
+        self._list([result])
 
     @args('--id', dest='vsa_id', metavar="<vsa_id>", help='VSA ID')
     def delete(self, vsa_id):
         """Delete a VSA."""
-        self.controller.delete_vsa(self.context, vsa_id)
+        vsa_id = ec2utils.ec2_id_to_id(vsa_id)
+        self.vsa_api.delete(self.context, vsa_id)
 
     @args('--id', dest='vsa_id', metavar="<vsa_id>",
         help='VSA ID (optional)')
     def list(self, vsa_id=None):
         """Describe all available VSAs (or particular one)."""
 
+        vsas = []
         if vsa_id is not None:
-            vsa_id = [vsa_id]
+            internal_id = ec2utils.ec2_id_to_id(vsa_id)
+            vsa = self.vsa_api.get(self.context, internal_id)
+            vsas.append(vsa)
+        else:
+            vsas = self.vsa_api.get_all(self.context)
 
-        result = self.controller.describe_vsas(self.context, vsa_id)
-        self._list(result['vsaSet'])
+        self._list(vsas)
 
 
 class VsaDriveTypeCommands(object):
     """Methods for dealing with VSA drive types"""
 
     def __init__(self, *args, **kwargs):
-        self.controller = cloud.CloudController()
-        self.manager = manager.AuthManager()
         super(VsaDriveTypeCommands, self).__init__(*args, **kwargs)
+        self.context = context.get_admin_context()
 
     def _list(self, drives):
         format_str = "%-5s %-30s %-10s %-10s %-10s %-20s %-10s %s"
@@ -1234,23 +1244,17 @@ class VsaDriveTypeCommands(object):
             raise ValueError(_('Visible parameter should be set to --show '\
                                'or --hide'))
 
-        values = {
-            'type': type,
-            'size_gb': int(size_gb),
-            'rpm': rpm,
-            'capabilities': capabilities,
-            'visible': visible,
-            'name': name
-            }
-        result = self.controller.create_drive_type(context.get_admin_context(),
-                                                   **values)
-        self._list(result['driveTypeSet'])
+        result = drive_types.create(self.context,
+                                type, int(size_gb), rpm,
+                                capabilities, visible, name)
+        self._list([result])
 
     @args('--name', dest='name', metavar="<name>", help='Drive name')
     def delete(self, name):
         """Delete drive type."""
 
-        self.controller.delete_drive_type(context.get_admin_context(), name)
+        dtype = drive_types.get_by_name(self.context, name)
+        drive_types.delete(self.context, dtype['id'])
 
     @args('--name', dest='name', metavar="<name>", help='Drive name')
     @args('--new_name', dest='new_name', metavar="<name>",
@@ -1258,8 +1262,9 @@ class VsaDriveTypeCommands(object):
     def rename(self, name, new_name=None):
         """Rename drive type."""
 
-        self.controller.rename_drive_type(context.get_admin_context(),
-                                          name, new_name)
+        dtype = drive_types.rename(self.context,
+                                   name, new_name)
+        self._list([dtype])
 
     @args('--all', dest='visible', action="store_false",
         help='Show all drives')
@@ -1271,11 +1276,12 @@ class VsaDriveTypeCommands(object):
         visible = False if visible in ["--all", False] else True
 
         if name is not None:
-            name = [name]
+            drive = drive_types.get_by_name(self.context, name)
+            drives = [drive]
+        else:
+            drives = drive_types.get_all(self.context, visible)
 
-        result = self.controller.describe_drive_types(
-                        context.get_admin_context(), name, visible)
-        self._list(result['driveTypeSet'])
+        self._list(drives)
 
     @args('--name', dest='name', metavar="<name>", help='Drive name')
     @args('--type', dest='type', metavar="<type>",
@@ -1305,8 +1311,9 @@ class VsaDriveTypeCommands(object):
                 raise ValueError(_("Visible parameter should be set to "\
                                    "--show or --hide"))
 
-        self.controller.update_drive_type(context.get_admin_context(),
-                                          name, **values)
+        dtype = drive_types.get_by_name(self.context, name)
+        dtype = drive_types.update(self.context, dtype['id'], **values)
+        self._list([dtype])
 
 
 class VolumeCommands(object):

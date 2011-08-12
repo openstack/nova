@@ -64,8 +64,23 @@ def create(context, type, size_gb, rpm, capabilities='',
 
 
 def update(context, id, **kwargs):
-    LOG.debug(_("Updating drive type with id %(id)s"), locals())
-    return db.drive_type_update(context, id, kwargs)
+
+    LOG.debug(_("Updating drive type with id %(id)s: %(kwargs)s"), locals())
+
+    updatable_fields = ['type',
+                        'size_gb',
+                        'rpm',
+                        'capabilities',
+                        'visible']
+    changes = {}
+    for field in updatable_fields:
+        if field in kwargs and \
+           kwargs[field] is not None and \
+           kwargs[field] != '':
+            changes[field] = kwargs[field]
+
+    # call update regadless if changes is empty or not
+    return db.drive_type_update(context, id, changes)
 
 
 def rename(context, name, new_name=None):
