@@ -781,6 +781,7 @@ class LibvirtConnection(driver.ComputeDriver):
                         network_info=None, block_device_mapping=None):
         block_device_mapping = block_device_mapping or []
 
+
         if not suffix:
             suffix = ''
 
@@ -857,7 +858,7 @@ class LibvirtConnection(driver.ComputeDriver):
                               target=basepath('disk.local'),
                               fname="local_%s" % inst_type['local_gb'],
                               cow=FLAGS.use_cow_images,
-                              local_gb=inst_type['local_gb'])
+                              local_size=inst_type['local_gb'])
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -866,20 +867,23 @@ class LibvirtConnection(driver.ComputeDriver):
         if not inst['kernel_id']:
             target_partition = "1"
 
-        if FLAGS.libvirt_type == 'lxc':
+        config_drive_id = inst.get('config_drive_id')
+        config_drive = inst.get('config_drive')
+
+        if any((FLAGS.libvirt_type == 'lxc', config_drive, config_drive_id)):
             target_partition = None
-        else:
-            if inst['config_drive_id']:
-                fname = '%08x' % int(inst['config_drive_id'])
-                self._cache_image(fn=self._fetch_image,
-                                  target=basepath('config'),
-                                  fname=fname,
-                                  image_id=inst['config_drive_id'],
-                                  user=user,
-                                  project=project)
-            elif inst['config_drive']:
-                self._create_local(basepath('config'), 64, prefix="M",
-                                   fs_format='msdos')  # 64MB
+
+        if config_drive_id:
+            fname = '%08x' % int(config_drive_id)
+            self._cache_image(fn=self._fetch_image,
+                              target=basepath('disk.config'),
+                              fname=fname,
+                              image_id=config_drive_id,
+                              user=user,
+                              project=project)
+        elif config_drive:
+            self._create_local(basepath('disk.config'), 64, prefix="M",
+                               fs_format='msdos')  # 64MB
 
         if inst['key_data']:
             key = str(inst['key_data'])
@@ -924,15 +928,18 @@ class LibvirtConnection(driver.ComputeDriver):
                                searchList=[{'interfaces': nets,
                                             'use_ipv6': FLAGS.use_ipv6}]))
 
-        if any(key, net, inst['metadata']):
+        metadata = inst.get('metadata')
+        if any((key, net, metadata)):
             inst_name = inst['name']
 
-            if inst['config_drive']:  # Should be True or None by now.
-                injection_path = basepath('config')
+            if config_drive:  # Should be True or None by now.
+                injection_path = basepath('disk.config')
                 img_id = 'config-drive'
+                tune2fs = False
             else:
                 injection_path = basepath('disk')
                 img_id = inst.image_ref
+                tune2fs = True
 
             for injection in ('metadata', 'key', 'net'):
                 if locals()[injection]:
@@ -940,9 +947,10 @@ class LibvirtConnection(driver.ComputeDriver):
                                '%(injection)s into image %(img_id)s' 
                                % locals()))
             try:
-                disk.inject_data(injection_path, key, net, inst['metadata'],
+                disk.inject_data(injection_path, key, net, metadata,
                                  partition=target_partition,
-                                 nbd=FLAGS.use_cow_images)
+                                 nbd=FLAGS.use_cow_images,
+                                 tune2fs=tune2fs)
 
                 if FLAGS.libvirt_type == 'lxc':
                     disk.setup_container(basepath('disk'),
@@ -1042,6 +1050,11 @@ class LibvirtConnection(driver.ComputeDriver):
                     'nics': nics,
                     'ebs_root': ebs_root,
                     'volumes': block_device_mapping}
+
+
+        config_drive = False
+        if instance.get('config_drive') or instance.get('config_drive_id'):
+            xml_info['config_drive'] = xml_info['basepath'] + "/disk.config"
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
             xml_info['vncserver_host'] = FLAGS.vncserver_host

@@ -55,13 +55,6 @@
             <target dir='/'/>
         </filesystem>
 #else
-    #if $getVar('config', False)
-        <disk type='file'>
-            <driver type='${driver_type}' />
-            <source file='${basepath}/disk.config' />
-            <target dev='${disk_prefix}z' bus='${disk_bus}' />
-        </disk>
-    #end if
     #if $getVar('rescue', False)
         <disk type='file'>
             <driver type='${driver_type}'/>
@@ -95,6 +88,13 @@
                 <target dev='${vol.mount_device}' bus='${disk_bus}'/>
             </disk>
         #end for
+    #end if
+    #if $getVar('config_drive', False)
+        <disk type='file'>
+            <driver type='raw' />
+            <source file='${basepath}/disk.config' />
+            <target dev='${disk_prefix}z' bus='${disk_bus}' />
+        </disk>
     #end if
 #end if
 
