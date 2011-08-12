@@ -28,6 +28,7 @@ import netaddr
 import os
 import random
 import re
+import shlex
 import socket
 import struct
 import sys
@@ -126,29 +127,47 @@ def fetchfile(url, target):
 
 
 def execute(*cmd, **kwargs):
+    """
+    Helper method to execute command with optional retry.
+
+    :cmd                Passed to subprocess.Popen.
+    :process_input      Send to opened process.
+    :check_exit_code    Defaults to 0. Raise exception.ProcessExecutionError
+                        unless program exits with this code.
+    :delay_on_retry     True | False. Defaults to True. If set to True, wait a
+                        short amount of time before retrying.
+    :attempts           How many times to retry cmd.
+    :run_as_root        True | False. Defaults to False. If set to True,
+                        the command is prefixed by the command specified
+                        in the root_helper FLAG.
+
+    :raises exception.Error on receiving unknown arguments
+    :raises exception.ProcessExecutionError
+    """
+
     process_input = kwargs.pop('process_input', None)
-    addl_env = kwargs.pop('addl_env', None)
     check_exit_code = kwargs.pop('check_exit_code', 0)
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
+    run_as_root = kwargs.pop('run_as_root', False)
     if len(kwargs):
         raise exception.Error(_('Got unknown keyword args '
                                 'to utils.execute: %r') % kwargs)
+
+    if run_as_root:
+        cmd = shlex.split(FLAGS.root_helper) + list(cmd)
     cmd = map(str, cmd)
 
     while attempts > 0:
         attempts -= 1
         try:
             LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
-            env = os.environ.copy()
-            if addl_env:
-                env.update(addl_env)
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
             obj = subprocess.Popen(cmd,
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
-                                   env=env)
+                                   close_fds=True)
             result = None
             if process_input is not None:
                 result = obj.communicate(process_input)
@@ -223,7 +242,7 @@ def abspath(s):
 
 def novadir():
     import nova
-    return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
+    return os.path.abspath(nova.__file__).split('nova/__init__.py')[0]
 
 
 def default_flagfile(filename='nova.conf', args=None):
@@ -513,25 +532,61 @@ def utf8(value):
     return value
 
 
-def to_primitive(value):
-    if type(value) is type([]) or type(value) is type((None,)):
-        o = []
-        for v in value:
-            o.append(to_primitive(v))
-        return o
-    elif type(value) is type({}):
-        o = {}
-        for k, v in value.iteritems():
-            o[k] = to_primitive(v)
-        return o
-    elif isinstance(value, datetime.datetime):
-        return str(value)
-    elif hasattr(value, 'iteritems'):
-        return to_primitive(dict(value.iteritems()))
-    elif hasattr(value, '__iter__'):
-        return to_primitive(list(value))
-    else:
-        return value
+def to_primitive(value, convert_instances=False, level=0):
+    """Convert a complex object into primitives.
+
+    Handy for JSON serialization. We can optionally handle instances,
+    but since this is a recursive function, we could have cyclical
+    data structures.
+
+    To handle cyclical data structures we could track the actual objects
+    visited in a set, but not all objects are hashable. Instead we just
+    track the depth of the object inspections and don't go too deep.
+
+    Therefore, convert_instances=True is lossy ... be aware.
+
+    """
+    if inspect.isclass(value):
+        return unicode(value)
+
+    if level > 3:
+        return []
+
+    # The try block may not be necessary after the class check above,
+    # but just in case ...
+    try:
+        if type(value) is type([]) or type(value) is type((None,)):
+            o = []
+            for v in value:
+                o.append(to_primitive(v, convert_instances=convert_instances,
+                                      level=level))
+            return o
+        elif type(value) is type({}):
+            o = {}
+            for k, v in value.iteritems():
+                o[k] = to_primitive(v, convert_instances=convert_instances,
+                                    level=level)
+            return o
+        elif isinstance(value, datetime.datetime):
+            return str(value)
+        elif hasattr(value, 'iteritems'):
+            return to_primitive(dict(value.iteritems()),
+                                convert_instances=convert_instances,
+                                level=level)
+        elif hasattr(value, '__iter__'):
+            return to_primitive(list(value), level)
+        elif convert_instances and hasattr(value, '__dict__'):
+            # Likely an instance of something. Watch for cycles.
+            # Ignore class member vars.
+            return to_primitive(value.__dict__,
+                                convert_instances=convert_instances,
+                                level=level + 1)
+        else:
+            return value
+    except TypeError, e:
+        # Class objects are tricky since they may define something like
+        # __iter__ defined but it isn't callable as list().
+        return unicode(value)
 
 
 def dumps(value):
@@ -754,7 +809,7 @@ def parse_server_string(server_str):
         (address, port) = server_str.split(':')
         return (address, port)
 
-    except:
+    except Exception:
         LOG.debug(_('Invalid server_string: %s' % server_str))
         return ('', '')
 

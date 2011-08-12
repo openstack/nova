@@ -296,8 +296,8 @@ class ServiceWrapper(object):
               'application/json': nova.api.openstack.wsgi.JSONDictSerializer(),
             }[content_type]
             return serializer.serialize(result)
-        except:
-            raise exception.Error("returned non-serializable type: %s"
+        except Exception, e:
+            raise exception.Error(_("Returned non-serializable type: %s")
                                   % result)
 
 

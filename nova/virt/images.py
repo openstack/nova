@@ -21,7 +21,6 @@
 Handling of VM disk images.
 """
 
-from nova import context
 from nova import flags
 from nova.image import glance as glance_image_service
 import nova.image
@@ -33,13 +32,12 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.virt.images')
 
 
-def fetch(image_href, path, _user_id, _project_id):
+def fetch(context, image_href, path, _user_id, _project_id):
     # TODO(vish): Improve context handling and add owner and auth data
     #             when it is added to glance.  Right now there is no
     #             auth checking in glance, so we assume that access was
     #             checked before we got here.
     (image_service, image_id) = nova.image.get_image_service(image_href)
     with open(path, "wb") as image_file:
-        elevated = context.get_admin_context()
-        metadata = image_service.get(elevated, image_id, image_file)
+        metadata = image_service.get(context, image_id, image_file)
     return metadata

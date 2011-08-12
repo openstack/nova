@@ -819,12 +819,15 @@ class FakeHttplibConnection(object):
         self.app = app
         self.host = host
 
-    def request(self, method, path, body="", headers={}):
+    def request(self, method, path, body="", headers=None):
         """
         Requests made via this connection actually get translated and routed
         into our WSGI app, we then wait for the response and turn it back into
         an `httplib.HTTPResponse`.
         """
+        if not headers:
+            headers = {}
+
         req = webob.Request.blank(path)
         req.method = method
         req.headers = headers

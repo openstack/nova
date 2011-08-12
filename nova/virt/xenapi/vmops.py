@@ -30,7 +30,7 @@ import sys
 import time
 import uuid
 
-from nova import context
+from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
@@ -113,16 +113,16 @@ class VMOps(object):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._start(instance, vm_ref)
 
-    def finish_migration(self, instance, disk_info, network_info,
+    def finish_migration(self, context, instance, disk_info, network_info,
                       resize_instance):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
-        vm_ref = self._create_vm(instance,
+        vm_ref = self._create_vm(context, instance,
                                  [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
                                  network_info)
         if resize_instance:
             self.resize_instance(instance, vdi_uuid)
-        self._spawn(instance, vm_ref)
+        self._start(instance, vm_ref=vm_ref)
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
@@ -134,19 +134,19 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def _create_disks(self, instance):
+    def _create_disks(self, context, instance):
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        vdis = VMHelper.fetch_image(self._session,
+        vdis = VMHelper.fetch_image(context, self._session,
                 instance.id, instance.image_ref,
                 instance.user_id, instance.project_id,
                 disk_image_type)
         return vdis
 
-    def spawn(self, instance, network_info):
+    def spawn(self, context, instance, network_info):
         vdis = None
         try:
-            vdis = self._create_disks(instance)
-            vm_ref = self._create_vm(instance, vdis, network_info)
+            vdis = self._create_disks(context, instance)
+            vm_ref = self._create_vm(context, instance, vdis, network_info)
             self._spawn(instance, vm_ref)
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
             LOG.exception(_("instance %s: Failed to spawn"),
@@ -156,11 +156,11 @@ class VMOps(object):
             self._handle_spawn_error(vdis, spawn_error)
             raise spawn_error
 
-    def spawn_rescue(self, instance):
+    def spawn_rescue(self, context, instance, network_info):
         """Spawn a rescue instance."""
-        self.spawn(instance)
+        self.spawn(context, instance, network_info)
 
-    def _create_vm(self, instance, vdis, network_info):
+    def _create_vm(self, context, instance, vdis, network_info):
         """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -171,7 +171,7 @@ class VMOps(object):
         if not VMHelper.ensure_free_mem(self._session, instance):
             LOG.exception(_('instance %(instance_name)s: not enough free '
                           'memory') % locals())
-            db.instance_set_state(context.get_admin_context(),
+            db.instance_set_state(nova_context.get_admin_context(),
                                   instance['id'],
                                   power_state.SHUTDOWN)
             return
@@ -181,12 +181,12 @@ class VMOps(object):
         ramdisk = None
         try:
             if instance.kernel_id:
-                kernel = VMHelper.fetch_image(self._session, instance.id,
-                        instance.kernel_id, instance.user_id,
+                kernel = VMHelper.fetch_image(context, self._session,
+                        instance.id, instance.kernel_id, instance.user_id,
                         instance.project_id, ImageType.KERNEL)[0]
             if instance.ramdisk_id:
-                ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                        instance.kernel_id, instance.user_id,
+                ramdisk = VMHelper.fetch_image(context, self._session,
+                        instance.id, instance.kernel_id, instance.user_id,
                         instance.project_id, ImageType.RAMDISK)[0]
             # Create the VM ref and attach the first disk
             first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
@@ -206,7 +206,7 @@ class VMOps(object):
 
             if instance.vm_mode != vm_mode:
                 # Update database with normalized (or determined) value
-                db.instance_update(context.get_admin_context(),
+                db.instance_update(nova_context.get_admin_context(),
                                    instance['id'], {'vm_mode': vm_mode})
             vm_ref = VMHelper.create_vm(self._session, instance,
                     kernel and kernel.get('file', None) or None,
@@ -268,7 +268,7 @@ class VMOps(object):
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
-        ctx = context.get_admin_context()
+        ctx = nova_context.get_admin_context()
         agent_build = db.agent_build_get_by_triple(ctx, 'xen',
                               instance.os_type, instance.architecture)
         if agent_build:
@@ -282,6 +282,7 @@ class VMOps(object):
                         'architecture': instance.architecture})
 
         def _check_agent_version():
+            LOG.debug(_("Querying agent version"))
             if instance.os_type == 'windows':
                 # Windows will generally perform a setup process on first boot
                 # that can take a couple of minutes and then reboot. So we
@@ -292,7 +293,6 @@ class VMOps(object):
             else:
                 version = self.get_agent_version(instance)
             if not version:
-                LOG.info(_('No agent version returned by instance'))
                 return
 
             LOG.info(_('Instance agent version: %s') % version)
@@ -327,6 +327,10 @@ class VMOps(object):
                 LOG.debug(_("Setting admin password"))
                 self.set_admin_password(instance, admin_password)
 
+        def _reset_network():
+            LOG.debug(_("Resetting network"))
+            self.reset_network(instance, vm_ref)
+
         # NOTE(armando): Do we really need to do this in virt?
         # NOTE(tr3buchet): not sure but wherever we do it, we need to call
         #                  reset_network afterwards
@@ -341,7 +345,7 @@ class VMOps(object):
                     _check_agent_version()
                     _inject_files()
                     _set_admin_password()
-                    self.reset_network(instance, vm_ref)
+                    _reset_network()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
@@ -412,7 +416,7 @@ class VMOps(object):
 
         # if instance_or_vm is an int/long it must be instance id
         elif isinstance(instance_or_vm, (int, long)):
-            ctx = context.get_admin_context()
+            ctx = nova_context.get_admin_context()
             instance_obj = db.instance_get(ctx, instance_or_vm)
             instance_name = instance_obj.name
         else:
@@ -437,9 +441,10 @@ class VMOps(object):
             vm,
             "start")
 
-    def snapshot(self, instance, image_id):
+    def snapshot(self, context, instance, image_id):
         """Create snapshot from a running VM instance.
 
+        :param context: request context
         :param instance: instance to be snapshotted
         :param image_id: id of image to upload to
 
@@ -464,7 +469,7 @@ class VMOps(object):
         try:
             template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
             # call plugin to ship snapshot off to glance
-            VMHelper.upload_image(
+            VMHelper.upload_image(context,
                     self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
@@ -596,13 +601,13 @@ class VMOps(object):
             transaction_id = str(uuid.uuid4())
             args = {'id': transaction_id}
             resp = self._make_agent_call('version', instance, '', args)
-            if resp is None:
-                # No response from the agent
-                return
-            resp_dict = json.loads(resp)
+            if resp['returncode'] != '0':
+                LOG.error(_('Failed to query agent version: %(resp)r') %
+                          locals())
+                return None
             # Some old versions of the Windows agent have a trailing \\r\\n
             # (ie CRLF escaped) for some reason. Strip that off.
-            return resp_dict['message'].replace('\\r\\n', '')
+            return resp['message'].replace('\\r\\n', '')
 
         if timeout:
             vm_ref = self._get_vm_opaque_ref(instance)
@@ -633,13 +638,10 @@ class VMOps(object):
         transaction_id = str(uuid.uuid4())
         args = {'id': transaction_id, 'url': url, 'md5sum': md5sum}
         resp = self._make_agent_call('agentupdate', instance, '', args)
-        if resp is None:
-            # No response from the agent
-            return
-        resp_dict = json.loads(resp)
-        if resp_dict['returncode'] != '0':
-            raise RuntimeError(resp_dict['message'])
-        return resp_dict['message']
+        if resp['returncode'] != '0':
+            LOG.error(_('Failed to update agent: %(resp)r') % locals())
+            return None
+        return resp['message']
 
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance.
@@ -658,18 +660,13 @@ class VMOps(object):
         key_init_args = {'id': key_init_transaction_id,
                          'pub': str(dh.get_public())}
         resp = self._make_agent_call('key_init', instance, '', key_init_args)
-        if resp is None:
-            # No response from the agent
-            return
-        resp_dict = json.loads(resp)
         # Successful return code from key_init is 'D0'
-        if resp_dict['returncode'] != 'D0':
-            # There was some sort of error; the message will contain
-            # a description of the error.
-            raise RuntimeError(resp_dict['message'])
+        if resp['returncode'] != 'D0':
+            LOG.error(_('Failed to exchange keys: %(resp)r') % locals())
+            return None
         # Some old versions of the Windows agent have a trailing \\r\\n
         # (ie CRLF escaped) for some reason. Strip that off.
-        agent_pub = int(resp_dict['message'].replace('\\r\\n', ''))
+        agent_pub = int(resp['message'].replace('\\r\\n', ''))
         dh.compute_shared(agent_pub)
         # Some old versions of Linux and Windows agent expect trailing \n
         # on password to work correctly.
@@ -678,17 +675,14 @@ class VMOps(object):
         password_transaction_id = str(uuid.uuid4())
         password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
         resp = self._make_agent_call('password', instance, '', password_args)
-        if resp is None:
-            # No response from the agent
-            return
-        resp_dict = json.loads(resp)
         # Successful return code from password is '0'
-        if resp_dict['returncode'] != '0':
-            raise RuntimeError(resp_dict['message'])
-        db.instance_update(context.get_admin_context(),
+        if resp['returncode'] != '0':
+            LOG.error(_('Failed to update password: %(resp)r') % locals())
+            return None
+        db.instance_update(nova_context.get_admin_context(),
                                   instance['id'],
                                   dict(admin_pass=new_pass))
-        return resp_dict['message']
+        return resp['message']
 
     def inject_file(self, instance, path, contents):
         """Write a file to the VM instance.
@@ -711,12 +705,10 @@ class VMOps(object):
         # If the agent doesn't support file injection, a NotImplementedError
         # will be raised with the appropriate message.
         resp = self._make_agent_call('inject_file', instance, '', args)
-        resp_dict = json.loads(resp)
-        if resp_dict['returncode'] != '0':
-            # There was some other sort of error; the message will contain
-            # a description of the error.
-            raise RuntimeError(resp_dict['message'])
-        return resp_dict['message']
+        if resp['returncode'] != '0':
+            LOG.error(_('Failed to inject file: %(resp)r') % locals())
+            return None
+        return resp['message']
 
     def _shutdown(self, instance, vm_ref, hard=True):
         """Shutdown an instance."""
@@ -741,6 +733,17 @@ class VMOps(object):
             self._session.wait_for_task(task, instance.id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
+
+    def _find_rescue_vbd_ref(self, vm_ref, rescue_vm_ref):
+        """Find and return the rescue VM's vbd_ref.
+
+        We use the second VBD here because swap is first with the root file
+        system coming in second."""
+        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[1]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
+
+        return VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref, 1,
+                False)
 
     def _shutdown_rescue(self, rescue_vm_ref):
         """Shutdown a rescue instance."""
@@ -913,7 +916,7 @@ class VMOps(object):
                                          True)
         self._wait_with_callback(instance.id, task, callback)
 
-    def rescue(self, instance, callback):
+    def rescue(self, context, instance, _callback, network_info):
         """Rescue the specified instance.
 
             - shutdown the instance VM.
@@ -931,17 +934,13 @@ class VMOps(object):
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
         instance._rescue = True
-        self.spawn_rescue(instance)
+        self.spawn_rescue(context, instance, network_info)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
-
-        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
-        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
-        rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
-                                             vdi_ref, 1, False)
+        rescue_vbd_ref = self._find_rescue_vbd_ref(vm_ref, rescue_vm_ref)
 
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
-    def unrescue(self, instance, callback):
+    def unrescue(self, instance, _callback):
         """Unrescue the specified instance.
 
             - unplug the instance VM's disk from the rescue VM.
@@ -1023,11 +1022,23 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
+    def host_power_action(self, host, action):
+        """Reboots or shuts down the host."""
+        args = {"action": json.dumps(action)}
+        methods = {"reboot": "host_reboot", "shutdown": "host_shutdown"}
+        json_resp = self._call_xenhost(methods[action], args)
+        resp = json.loads(json_resp)
+        return resp["power_action"]
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         args = {"enabled": json.dumps(enabled)}
-        json_resp = self._call_xenhost("set_host_enabled", args)
-        resp = json.loads(json_resp)
+        xenapi_resp = self._call_xenhost("set_host_enabled", args)
+        try:
+            resp = json.loads(xenapi_resp)
+        except TypeError as e:
+            # Already logged; return the message
+            return xenapi_resp.details[-1]
         return resp["status"]
 
     def _call_xenhost(self, method, arg_dict):
@@ -1043,7 +1054,7 @@ class VMOps(object):
                     #args={"params": arg_dict})
             ret = self._session.wait_for_task(task, task_id)
         except self.XenAPI.Failure as e:
-            ret = None
+            ret = e
             LOG.error(_("The call to %(method)s returned an error: %(e)s.")
                     % locals())
         return ret
@@ -1158,8 +1169,19 @@ class VMOps(object):
 
     def _make_agent_call(self, method, vm, path, addl_args=None):
         """Abstracts out the interaction with the agent xenapi plugin."""
-        return self._make_plugin_call('agent', method=method, vm=vm,
+        ret = self._make_plugin_call('agent', method=method, vm=vm,
                 path=path, addl_args=addl_args)
+        if isinstance(ret, dict):
+            return ret
+        try:
+            return json.loads(ret)
+        except TypeError:
+            instance_id = vm.id
+            LOG.error(_('The agent call to %(method)s returned an invalid'
+                      ' response: %(ret)r. VM id=%(instance_id)s;'
+                      ' path=%(path)s; args=%(addl_args)r') % locals())
+            return {'returncode': 'error',
+                    'message': 'unable to deserialize response'}
 
     def _make_plugin_call(self, plugin, method, vm, path, addl_args=None,
                                                           vm_ref=None):
@@ -1177,20 +1199,20 @@ class VMOps(object):
             ret = self._session.wait_for_task(task, instance_id)
         except self.XenAPI.Failure, e:
             ret = None
-            err_trace = e.details[-1]
-            err_msg = err_trace.splitlines()[-1]
-            strargs = str(args)
+            err_msg = e.details[-1].splitlines()[-1]
             if 'TIMEOUT:' in err_msg:
                 LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
-                        'VM id=%(instance_id)s; args=%(strargs)s') % locals())
+                        'VM id=%(instance_id)s; args=%(args)r') % locals())
+                return {'returncode': 'timeout', 'message': err_msg}
             elif 'NOT IMPLEMENTED:' in err_msg:
                 LOG.error(_('NOT IMPLEMENTED: The call to %(method)s is not'
                         ' supported by the agent. VM id=%(instance_id)s;'
-                        ' args=%(strargs)s') % locals())
-                raise NotImplementedError(err_msg)
+                        ' args=%(args)r') % locals())
+                return {'returncode': 'notimplemented', 'message': err_msg}
             else:
                 LOG.error(_('The call to %(method)s returned an error: %(e)s. '
-                        'VM id=%(instance_id)s; args=%(strargs)s') % locals())
+                        'VM id=%(instance_id)s; args=%(args)r') % locals())
+                return {'returncode': 'error', 'message': err_msg}
         return ret
 
     def add_to_xenstore(self, vm, path, key, value):
@@ -1312,12 +1334,6 @@ class VMOps(object):
     ########################################################################
 
 
-def _runproc(cmd):
-    pipe = subprocess.PIPE
-    return subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
-            stderr=pipe, close_fds=True)
-
-
 class SimpleDH(object):
     """
     This class wraps all the functionality needed to implement
@@ -1374,22 +1390,18 @@ class SimpleDH(object):
         mpi = M2Crypto.m2.bn_to_mpi(bn)
         return mpi
 
-    def _run_ssl(self, text, extra_args=None):
-        if not extra_args:
-            extra_args = ''
-        cmd = 'enc -aes-128-cbc -A -a -pass pass:%s -nosalt %s' % (
-                self._shared, extra_args)
-        proc = _runproc('openssl %s' % cmd)
-        proc.stdin.write(text)
-        proc.stdin.close()
-        proc.wait()
-        err = proc.stderr.read()
+    def _run_ssl(self, text, decrypt=False):
+        cmd = ['openssl', 'aes-128-cbc', '-A', '-a', '-pass',
+              'pass:%s' % self._shared, '-nosalt']
+        if decrypt:
+            cmd.append('-d')
+        out, err = utils.execute(*cmd, process_input=text)
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read()
+        return out
 
     def encrypt(self, text):
         return self._run_ssl(text).strip('\n')
 
     def decrypt(self, text):
-        return self._run_ssl(text, '-d')
+        return self._run_ssl(text, decrypt=True)

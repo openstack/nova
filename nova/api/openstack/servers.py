@@ -14,6 +14,7 @@
 #    under the License.
 
 import base64
+import os
 import traceback
 
 from webob import exc
@@ -43,7 +44,7 @@ FLAGS = flags.FLAGS
 
 
 class Controller(object):
-    """ The Server API controller for the OpenStack API """
+    """ The Server API base controller class for the OpenStack API """
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -52,17 +53,21 @@ class Controller(object):
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
         try:
-            servers = self._items(req, is_detail=False)
+            servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
             return exc.HTTPBadRequest(explanation=str(err))
+        except exception.NotFound:
+            return exc.HTTPNotFound()
         return servers
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
         try:
-            servers = self._items(req, is_detail=True)
+            servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
             return exc.HTTPBadRequest(explanation=str(err))
+        except exception.NotFound as err:
+            return exc.HTTPNotFound()
         return servers
 
     def _build_view(self, req, instance, is_detail=False):
@@ -74,22 +79,55 @@ class Controller(object):
     def _action_rebuild(self, info, request, instance_id):
         raise NotImplementedError()
 
-    def _items(self, req, is_detail):
-        """Returns a list of servers for a given user.
-
-        builder - the response model builder
+    def _get_servers(self, req, is_detail):
+        """Returns a list of servers, taking into account any search
+        options specified.
         """
-        query_str = req.str_GET
-        reservation_id = query_str.get('reservation_id')
-        project_id = query_str.get('project_id')
-        fixed_ip = query_str.get('fixed_ip')
-        recurse_zones = utils.bool_from_str(query_str.get('recurse_zones'))
+
+        search_opts = {}
+        search_opts.update(req.str_GET)
+
+        context = req.environ['nova.context']
+        remove_invalid_options(context, search_opts,
+                self._get_server_search_options())
+
+        # Convert recurse_zones into a boolean
+        search_opts['recurse_zones'] = utils.bool_from_str(
+                search_opts.get('recurse_zones', False))
+
+        # If search by 'status', we need to convert it to 'state'
+        # If the status is unknown, bail.
+        # Leave 'state' in search_opts so compute can pass it on to
+        # child zones..
+        if 'status' in search_opts:
+            status = search_opts['status']
+            search_opts['state'] = common.power_states_from_status(status)
+            if len(search_opts['state']) == 0:
+                reason = _('Invalid server status: %(status)s') % locals()
+                LOG.error(reason)
+                raise exception.InvalidInput(reason=reason)
+
+        # By default, compute's get_all() will return deleted instances.
+        # If an admin hasn't specified a 'deleted' search option, we need
+        # to filter out deleted instances by setting the filter ourselves.
+        # ... Unless 'changes-since' is specified, because 'changes-since'
+        # should return recently deleted images according to the API spec.
+
+        if 'deleted' not in search_opts:
+            # Admin hasn't specified deleted filter
+            if 'changes-since' not in search_opts:
+                # No 'changes-since', so we need to find non-deleted servers
+                search_opts['deleted'] = False
+            else:
+                # This is the default, but just in case..
+                search_opts['deleted'] = True
+
         instance_list = self.compute_api.get_all(
-                req.environ['nova.context'],
-                reservation_id=reservation_id,
-                project_id=project_id,
-                fixed_ip=fixed_ip,
-                recurse_zones=recurse_zones)
+                context, search_opts=search_opts)
+
+        # FIXME(comstud): 'changes-since' is not fully implemented.  Where
+        # should this be filtered?
+
         limited_list = self._limit_items(instance_list, req)
         servers = [self._build_view(req, inst, is_detail)['server']
                 for inst in limited_list]
@@ -154,22 +192,95 @@ class Controller(object):
 
     @scheduler_api.redirect_handler
     def action(self, req, id, body):
-        """Multi-purpose method used to reboot, rebuild, or
-        resize a server"""
+        """Multi-purpose method used to take actions on a server"""
 
-        actions = {
+        self.actions = {
             'changePassword': self._action_change_password,
             'reboot': self._action_reboot,
             'resize': self._action_resize,
             'confirmResize': self._action_confirm_resize,
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,
-            'migrate': self._action_migrate}
+            'createImage': self._action_create_image,
+        }
 
-        for key in actions.keys():
+        if FLAGS.allow_admin_api:
+            admin_actions = {
+                'createBackup': self._action_create_backup,
+            }
+            self.actions.update(admin_actions)
+
+        for key in self.actions.keys():
             if key in body:
-                return actions[key](body, req, id)
+                return self.actions[key](body, req, id)
+
         raise exc.HTTPNotImplemented()
+
+    def _action_create_backup(self, input_dict, req, instance_id):
+        """Backup a server instance.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
+
+        """
+        entity = input_dict["createBackup"]
+
+        try:
+            image_name = entity["name"]
+            backup_type = entity["backup_type"]
+            rotation = entity["rotation"]
+
+        except KeyError as missing_key:
+            msg = _("createBackup entity requires %s attribute") % missing_key
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        except TypeError:
+            msg = _("Malformed createBackup entity")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            rotation = int(rotation)
+        except ValueError:
+            msg = _("createBackup attribute 'rotation' must be an integer")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url,
+                                  'servers',
+                                  str(instance_id))
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        context = req.environ["nova.context"]
+        common.check_img_metadata_quota_limit(context, metadata)
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        image = self.compute_api.backup(context,
+                                        instance_id,
+                                        image_name,
+                                        backup_type,
+                                        rotation,
+                                        extra_properties=props)
+
+        # build location of newly-created image entity
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
+
+    @common.check_snapshots_enabled
+    def _action_create_image(self, input_dict, req, id):
+        return exc.HTTPNotImplemented()
 
     def _action_change_password(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
@@ -195,10 +306,16 @@ class Controller(object):
 
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
-            reboot_type = input_dict['reboot']['type']
+            valid_reboot_types = ['HARD', 'SOFT']
+            reboot_type = input_dict['reboot']['type'].upper()
+            if not valid_reboot_types.count(reboot_type):
+                msg = _("Argument 'type' for reboot is not HARD or SOFT")
+                LOG.exception(msg)
+                raise exc.HTTPBadRequest(explanation=msg)
         else:
-            LOG.exception(_("Missing argument 'type' for reboot"))
-            raise exc.HTTPUnprocessableEntity()
+            msg = _("Missing argument 'type' for reboot")
+            LOG.exception(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
@@ -206,14 +323,6 @@ class Controller(object):
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
             raise exc.HTTPUnprocessableEntity()
-        return webob.Response(status_int=202)
-
-    def _action_migrate(self, input_dict, req, id):
-        try:
-            self.compute_api.resize(req.environ['nova.context'], id)
-        except Exception, e:
-            LOG.exception(_("Error in migrate %s"), e)
-            raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
@@ -226,7 +335,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.lock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::lock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -242,7 +351,7 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.unlock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unlock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -257,14 +366,14 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.get_lock(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::get_lock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def reset_network(self, req, id, body):
+    def reset_network(self, req, id):
         """
         Reset networking on an instance (admin only).
 
@@ -272,14 +381,14 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.reset_network(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def inject_network_info(self, req, id, body):
+    def inject_network_info(self, req, id):
         """
         Inject network info for an instance (admin only).
 
@@ -287,58 +396,67 @@ class Controller(object):
         context = req.environ['nova.context']
         try:
             self.compute_api.inject_network_info(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::inject_network_info %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def pause(self, req, id, body):
+    def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
         try:
             self.compute_api.pause(ctxt, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def unpause(self, req, id, body):
+    def unpause(self, req, id):
         """ Permit Admins to Unpause the server. """
         ctxt = req.environ['nova.context']
         try:
             self.compute_api.unpause(ctxt, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def suspend(self, req, id, body):
+    def suspend(self, req, id):
         """permit admins to suspend the server"""
         context = req.environ['nova.context']
         try:
             self.compute_api.suspend(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def resume(self, req, id, body):
+    def resume(self, req, id):
         """permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
         try:
             self.compute_api.resume(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
             raise exc.HTTPUnprocessableEntity()
+        return webob.Response(status_int=202)
+
+    @scheduler_api.redirect_handler
+    def migrate(self, req, id):
+        try:
+            self.compute_api.resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in migrate %s"), e)
+            raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
@@ -347,7 +465,7 @@ class Controller(object):
         context = req.environ["nova.context"]
         try:
             self.compute_api.rescue(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::rescue %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -359,7 +477,7 @@ class Controller(object):
         context = req.environ["nova.context"]
         try:
             self.compute_api.unrescue(context, id)
-        except:
+        except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::unrescue %s"), readable)
             raise exc.HTTPUnprocessableEntity()
@@ -405,8 +523,27 @@ class Controller(object):
                 error=item.error))
         return dict(actions=actions)
 
+    def resize(self, req, instance_id, flavor_id):
+        """Begin the resize process with given instance/flavor."""
+        context = req.environ["nova.context"]
+
+        try:
+            self.compute_api.resize(context, instance_id, flavor_id)
+        except exception.FlavorNotFound:
+            msg = _("Unable to locate requested flavor.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.CannotResizeToSameSize:
+            msg = _("Resize requires a change in size.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.CannotResizeToSmallerSize:
+            msg = _("Resizing to a smaller size is not supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return webob.Response(status_int=202)
+
 
 class ControllerV10(Controller):
+    """v1.0 OpenStack API controller"""
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -444,16 +581,7 @@ class ControllerV10(Controller):
             msg = _("Resize requests require 'flavorId' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        try:
-            i_type = instance_types.get_instance_type_by_flavor_id(flavor_id)
-        except exception.FlavorNotFound:
-            msg = _("Unable to locate requested flavor.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        context = req.environ["nova.context"]
-        self.compute_api.resize(context, id, i_type["id"])
-
-        return webob.Response(status_int=202)
+        return self.resize(req, id, flavor_id)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -478,8 +606,13 @@ class ControllerV10(Controller):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_old_style(server)
 
+    def _get_server_search_options(self):
+        """Return server search options allowed by non-admin"""
+        return 'reservation_id', 'fixed_ip', 'name', 'recurse_zones'
+
 
 class ControllerV11(Controller):
+    """v1.1 OpenStack API controller"""
 
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -564,20 +697,14 @@ class ControllerV11(Controller):
         """ Resizes a given instance to the flavor size requested """
         try:
             flavor_ref = input_dict["resize"]["flavorRef"]
+            if not flavor_ref:
+                msg = _("Resize request has invalid 'flavorRef' attribute.")
+                raise exc.HTTPBadRequest(explanation=msg)
         except (KeyError, TypeError):
             msg = _("Resize requests require 'flavorRef' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        try:
-            i_type = instance_types.get_instance_type_by_flavor_id(flavor_ref)
-        except exception.FlavorNotFound:
-            msg = _("Unable to locate requested flavor.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        context = req.environ["nova.context"]
-        self.compute_api.resize(context, id, i_type["id"])
-
-        return webob.Response(status_int=202)
+        return self.resize(req, id, flavor_ref)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -607,6 +734,50 @@ class ControllerV11(Controller):
 
         return webob.Response(status_int=202)
 
+    @common.check_snapshots_enabled
+    def _action_create_image(self, input_dict, req, instance_id):
+        """Snapshot a server instance."""
+        entity = input_dict.get("createImage", {})
+
+        try:
+            image_name = entity["name"]
+
+        except KeyError:
+            msg = _("createImage entity requires name attribute")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        except TypeError:
+            msg = _("Malformed createImage entity")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url,
+                                  'servers',
+                                  str(instance_id))
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        context = req.environ['nova.context']
+        common.check_img_metadata_quota_limit(context, metadata)
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        image = self.compute_api.snapshot(context,
+                                          instance_id,
+                                          image_name,
+                                          extra_properties=props)
+
+        # build location of newly-created image entity
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
+
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
 
@@ -614,8 +785,16 @@ class ControllerV11(Controller):
         """ Determine the admin password for a server on creation """
         return self.helper._get_server_admin_password_new_style(server)
 
+    def _get_server_search_options(self):
+        """Return server search options allowed by non-admin"""
+        return ('reservation_id', 'name', 'recurse_zones',
+                'status', 'image', 'flavor', 'changes-since')
+
 
 class HeadersSerializer(wsgi.ResponseHeadersSerializer):
+
+    def create(self, response, data):
+        response.status_int = 202
 
     def delete(self, response, data):
         response.status_int = 204
@@ -776,11 +955,31 @@ def create_resource(version='1.0'):
         'application/xml': xml_serializer,
     }
 
+    xml_deserializer = {
+        '1.0': helper.ServerXMLDeserializer(),
+        '1.1': helper.ServerXMLDeserializerV11(),
+    }[version]
+
     body_deserializers = {
-        'application/xml': helper.ServerXMLDeserializer(),
+        'application/xml': xml_deserializer,
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
     deserializer = wsgi.RequestDeserializer(body_deserializers)
 
     return wsgi.Resource(controller, deserializer, serializer)
+
+
+def remove_invalid_options(context, search_options, allowed_search_options):
+    """Remove search options that are not valid for non-admin API/context"""
+    if FLAGS.allow_admin_api and context.is_admin:
+        # Allow all options
+        return
+    # Otherwise, strip out all unknown options
+    unknown_options = [opt for opt in search_options
+            if opt not in allowed_search_options]
+    unk_opt_str = ", ".join(unknown_options)
+    log_msg = _("Removing options '%(unk_opt_str)s' from query") % locals()
+    LOG.debug(log_msg)
+    for opt in unknown_options:
+        search_options.pop(opt, None)

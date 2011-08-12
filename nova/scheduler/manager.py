@@ -69,8 +69,10 @@ class SchedulerManager(manager.Manager):
         return self.zone_manager.get_zone_capabilities(context)
 
     def update_service_capabilities(self, context=None, service_name=None,
-                                                host=None, capabilities={}):
+                                                host=None, capabilities=None):
         """Process a capability update from a service node."""
+        if not capability:
+            capability = {}
         self.zone_manager.update_service_capabilities(service_name,
                             host, capabilities)
 

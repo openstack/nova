@@ -17,16 +17,11 @@
 
 import os
 
-from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 
 
 LOG = logging.getLogger('nova.tests.integrated')
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 class ExtensionsTest(integrated_helpers._IntegratedTestBase):

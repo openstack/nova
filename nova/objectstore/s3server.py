@@ -155,7 +155,10 @@ class BaseRequestHandler(object):
         self.finish('<?xml version="1.0" encoding="UTF-8"?>\n' +
                     ''.join(parts))
 
-    def _render_parts(self, value, parts=[]):
+    def _render_parts(self, value, parts=None):
+        if not parts:
+            parts = []
+
         if isinstance(value, basestring):
             parts.append(utils.xhtml_escape(value))
         elif isinstance(value, int) or isinstance(value, long):

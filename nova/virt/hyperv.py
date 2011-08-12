@@ -138,7 +138,8 @@ class HyperVConnection(driver.ComputeDriver):
 
         return instance_infos
 
-    def spawn(self, instance, network_info, block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """ Create a new VM and start it."""
         vm = self._lookup(instance.name)
         if vm is not None:
@@ -373,7 +374,7 @@ class HyperVConnection(driver.ComputeDriver):
             raise exception.InstanceNotFound(instance_id=instance.id)
         self._set_vm_state(instance.name, 'Reboot')
 
-    def destroy(self, instance, network_info):
+    def destroy(self, instance, network_info, cleanup=True):
         """Destroy the VM. Also destroy the associated VHD disk files"""
         LOG.debug(_("Got request to destroy vm %s"), instance.name)
         vm = self._lookup(instance.name)
@@ -496,6 +497,10 @@ class HyperVConnection(driver.ComputeDriver):
 
     def get_host_stats(self, refresh=False):
         """See xenapi_conn.py implementation."""
+        pass
+
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
         pass
 
     def set_host_enabled(self, host, enabled):
