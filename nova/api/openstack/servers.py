@@ -163,7 +163,7 @@ class Controller(object):
 
     @scheduler_api.redirect_handler
     def update(self, req, id, body):
-        """ Updates the server name or password """
+        """Update server name then pass on to version-specific controller"""
         if len(req.body) == 0:
             raise exc.HTTPUnprocessableEntity()
 
