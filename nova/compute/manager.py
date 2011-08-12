@@ -336,10 +336,22 @@ class ComputeManager(manager.SchedulerDependentManager):
                    image, but is accurate because it reflects the image's
                    actual size.
             """
+            # NOTE(jk0): image_ref is defined in the DB model, image_href is
+            # used by the image service. This should be refactored to be
+            # consistent.
             image_href = instance['image_ref']
             image_service, image_id = nova.image.get_image_service(image_href)
             image_meta = image_service.show(context, image_id)
-            size_bytes = image_meta['size']
+
+            try:
+                size_bytes = image_meta['size']
+            except KeyError:
+                # Size is not a required field in the image service (yet), so
+                # we are unable to rely on it being there even though it's in
+                # glance.
+
+                # TODO(jk0): Should size be required in the image service?
+                return
 
             instance_type_id = instance['instance_type_id']
             instance_type = self.db.instance_type_get(context,
@@ -360,6 +372,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
+
         if instance['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
 

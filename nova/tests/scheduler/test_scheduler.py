@@ -256,7 +256,9 @@ class SimpleDriverTestCase(test.TestCase):
     def _create_instance(self, **kwargs):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 1
+        # NOTE(jk0): If an integer is passed as the image_ref, the image
+        # service will use the default image service (in this case, the fake).
+        inst['image_ref'] = '1'
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
