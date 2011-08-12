@@ -240,7 +240,6 @@ class Requestify(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        LOG.audit("in request", context=req.environ['nova.context'])
         non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
                     'SignatureVersion', 'Version', 'Timestamp']
         args = dict(req.params)
@@ -331,8 +330,6 @@ class Authorizer(wsgi.Middleware):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         context = req.environ['nova.context']
-        LOG.warn(req.environ['nova.context'].__dict__)
-        LOG.warn(req.environ['ec2.request'].__dict__)
         controller = req.environ['ec2.request'].controller.__class__.__name__
         action = req.environ['ec2.request'].action
         allowed_roles = self.action_roles[controller].get(action, ['none'])
