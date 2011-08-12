@@ -633,7 +633,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             subnets_v6 = fixed_net_v6.subnet(prefixlen_v6, count=num_networks)
 
         if cidr:
-            fixed_net = netaddr.IPNetwork(cidr)
+            fixed_net_v4 = netaddr.IPNetwork(cidr)
             prefixlen_v4 = 32 - subnet_bits
             subnets_v4 = fixed_net_v4.subnet(prefixlen_v4, count=num_networks)
 
