@@ -20,6 +20,7 @@ Starting point for routing EC2 requests.
 
 """
 
+import httplib2
 import webob
 import webob.dec
 import webob.exc
@@ -37,15 +38,17 @@ from nova.auth import manager
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api")
-flags.DEFINE_boolean('use_forwarded_for', False,
-                     'Treat X-Forwarded-For as the canonical remote address. '
-                     'Only enable this if you have a sanitizing proxy.')
 flags.DEFINE_integer('lockout_attempts', 5,
                      'Number of failed auths before lockout.')
 flags.DEFINE_integer('lockout_minutes', 15,
                      'Number of minutes to lockout if triggered.')
 flags.DEFINE_integer('lockout_window', 15,
                      'Number of minutes for lockout window.')
+flags.DEFINE_integer('lockout_window', 15,
+                     'Number of minutes for lockout window.')
+flags.DEFINE_string('keystone_ec2_url',
+                    'http://localhost:5000/v2.0/ec2tokens',
+                    'URL to get token from ec2 request.')
 
 
 class RequestLogging(wsgi.Middleware):
@@ -138,6 +141,49 @@ class Lockout(wsgi.Middleware):
         return res
 
 
+class ToToken(wsgi.Middleware):
+    """Authenticate an EC2 request with keystone and convert to token."""
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        # Read request signature and access id.
+        try:
+            signature = req.params['Signature']
+            access = req.params['AWSAccessKeyId']
+        except KeyError, e:
+            raise webob.exc.HTTPBadRequest()
+
+        # Make a copy of args for authentication and signature verification.
+        auth_params = dict(req.params)
+        # Not part of authentication args
+        auth_params.pop('Signature')
+
+        # Authenticate the request.
+        client = httplib2.Http()
+        creds = {'ec2Credentials': {'access': access,
+                                    'signature': signature,
+                                    'host': req.host,
+                                    'verb': req.method,
+                                    'path': req.path,
+                                    'params': auth_params,
+                                   }}
+        headers = {'Content-Type': 'application/json'},
+        resp, content = client.request(FLAGS.keystone_ec2_url,
+                                       'POST',
+                                       headers=headers,
+                                       body=utils.dumps(creds))
+        # NOTE(vish): We could save a call to keystone by
+        #             having keystone return token, tenant,
+        #             user, and roles from this call.
+        result = utils.loads(content)
+        # TODO(vish): check for errors
+        token_id = result['auth']['token']['id']
+
+        # Authenticated!
+        req.headers['X-Auth-Token'] = token_id
+        return self.application
+
+
 class Authenticate(wsgi.Middleware):
     """Authenticate an EC2 request and add 'nova.context' to WSGI environ."""
 
@@ -196,6 +242,7 @@ class Requestify(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
+        LOG.audit("in request", context=req.environ['nova.context'])
         non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
                     'SignatureVersion', 'Version', 'Timestamp']
         args = dict(req.params)
@@ -286,6 +333,8 @@ class Authorizer(wsgi.Middleware):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         context = req.environ['nova.context']
+        LOG.warn(req.environ['nova.context'].__dict__)
+        LOG.warn(req.environ['ec2.request'].__dict__)
         controller = req.environ['ec2.request'].controller.__class__.__name__
         action = req.environ['ec2.request'].action
         allowed_roles = self.action_roles[controller].get(action, ['none'])
