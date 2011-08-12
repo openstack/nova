@@ -689,7 +689,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             if not network:
                 raise ValueError(_('Network already exists!'))
 
-            if network and cidr:
+            if network and cidr and subnet_v4:
                 self._create_fixed_ips(context, network['id'])
 
     @property
