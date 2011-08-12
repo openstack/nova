@@ -45,6 +45,7 @@ topologies.  All of the network commands are issued to a subclass of
 """
 
 import datetime
+import itertools
 import math
 import netaddr
 import socket
@@ -618,61 +619,63 @@ class NetworkManager(manager.SchedulerDependentManager):
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, **kwargs):
         """Create networks based on parameters."""
+        # NOTE(jkoelker): these are dummy values to make sure iter works
+        fixed_net_v4 = netaddr.IPNetwork('0/32')
+        fixed_net_v6 = netaddr.IPNetwork('::0/128')
+        subnets_v4 = []
+        subnets_v6 = []
+
+        subnet_bits = int(math.ceil(math.log(network_size, 2))
+
         if cidr_v6:
             fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
-            significant_bits_v6 = 64
-            network_size_v6 = 1 << 64
+            prefixlen_v6 = 128 - subnet_bits
+            subnets_v6 = fixed_net_v6.subnet(prefixlen_v6, count=num_networks)
 
         if cidr:
             fixed_net = netaddr.IPNetwork(cidr)
-            significant_bits = 32 - int(math.log(network_size, 2))
+            prefixlen_v4 = 32 - subnet_bits
+            subnets_v4 = fixed_net_v4.subnet(prefixlen_v4, count=num_networks)
 
-        for index in range(num_networks):
+        subnets = itertools.izip_longest(subnets_v4, subnets_v6)
+        for index, (subnet_v4, subnet_v6) in enumerate(subnets):
             net = {}
             net['bridge'] = bridge
             net['bridge_interface'] = bridge_interface
+            net['multi_host'] = multi_host
+
             net['dns1'] = dns1
             net['dns2'] = dns2
-
-            if cidr:
-                start = index * network_size
-                project_net = netaddr.IPNetwork('%s/%s' % (fixed_net[start],
-                                                           significant_bits))
-                net['cidr'] = str(project_net)
-                net['multi_host'] = multi_host
-                net['netmask'] = str(project_net.netmask)
-                net['gateway'] = str(project_net[1])
-                net['broadcast'] = str(project_net.broadcast)
-                net['dhcp_start'] = str(project_net[2])
 
             if num_networks > 1:
                 net['label'] = '%s_%d' % (label, index)
             else:
                 net['label'] = label
 
+            if cidr:
+                net['cidr'] = str(subnet_v4)
+                net['netmask'] = str(subnet_v4.netmask)
+                net['gateway'] = str(subnet_v4[1])
+                net['broadcast'] = str(subnet_v4.broadcast)
+                net['dhcp_start'] = str(subnet_v4[2])
+
             if cidr_v6:
-                start_v6 = index * network_size_v6
-                cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
-                                     significant_bits_v6)
-                net['cidr_v6'] = cidr_v6
-
-                project_net_v6 = netaddr.IPNetwork(cidr_v6)
-
+                net['cidr_v6'] = str(subnet_v6)
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
                     net['gateway_v6'] = str(gateway_v6)
                 else:
-                    net['gateway_v6'] = str(project_net_v6[1])
+                    net['gateway_v6'] = str(subnet_v6[1])
 
-                net['netmask_v6'] = str(project_net_v6._prefixlen)
+                net['netmask_v6'] = str(subnet_v6._prefixlen)
 
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
                 del net['dns1']
                 del net['dns2']
                 vlan = kwargs['vlan_start'] + index
-                net['vpn_private_address'] = str(project_net[2])
-                net['dhcp_start'] = str(project_net[3])
+                net['vpn_private_address'] = str(subnet_v4[2])
+                net['dhcp_start'] = str(subnet_v4[3])
                 net['vlan'] = vlan
                 net['bridge'] = 'br%s' % vlan
 
