@@ -366,7 +366,7 @@ class Security_groups(extensions.ExtensionDescriptor):
         }
         deserializer = wsgi.RequestDeserializer(body_deserializers)
 
-        res = extensions.ResourceExtension('security_groups',
+        res = extensions.ResourceExtension('os-security-groups',
                                 controller=SecurityGroupController(),
                                 deserializer=deserializer,
                                 serializer=serializer)
@@ -378,7 +378,7 @@ class Security_groups(extensions.ExtensionDescriptor):
         }
         deserializer = wsgi.RequestDeserializer(body_deserializers)
 
-        res = extensions.ResourceExtension('security_group_rules',
+        res = extensions.ResourceExtension('os-security-group-rules',
                                 controller=SecurityGroupRulesController(),
                                 deserializer=deserializer,
                                 serializer=serializer)

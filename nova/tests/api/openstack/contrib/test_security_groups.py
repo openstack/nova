@@ -25,7 +25,7 @@ from nova.tests.api.openstack import fakes
 
 
 def _get_create_request_json(body_dict):
-    req = webob.Request.blank('/v1.1/security_groups')
+    req = webob.Request.blank('/v1.1/os-security-groups')
     req.headers['Content-Type'] = 'application/json'
     req.method = 'POST'
     req.body = json.dumps(body_dict)
@@ -84,7 +84,7 @@ class TestSecurityGroups(test.TestCase):
         return ''.join(body_parts)
 
     def _get_create_request_xml(self, body_dict):
-        req = webob.Request.blank('/v1.1/security_groups')
+        req = webob.Request.blank('/v1.1/os-security-groups')
         req.headers['Content-Type'] = 'application/xml'
         req.content_type = 'application/xml'
         req.accept = 'application/xml'
@@ -99,7 +99,7 @@ class TestSecurityGroups(test.TestCase):
         return response
 
     def _delete_security_group(self, id):
-        request = webob.Request.blank('/v1.1/security_groups/%s'
+        request = webob.Request.blank('/v1.1/os-security-groups/%s'
                                       % id)
         request.method = 'DELETE'
         response = request.get_response(fakes.wsgi_app())
@@ -238,7 +238,7 @@ class TestSecurityGroups(test.TestCase):
         security_group['description'] = "group-description"
         response = _create_security_group_json(security_group)
 
-        req = webob.Request.blank('/v1.1/security_groups')
+        req = webob.Request.blank('/v1.1/os-security-groups')
         req.headers['Content-Type'] = 'application/json'
         req.method = 'GET'
         response = req.get_response(fakes.wsgi_app())
@@ -272,7 +272,7 @@ class TestSecurityGroups(test.TestCase):
         response = _create_security_group_json(security_group)
 
         res_dict = json.loads(response.body)
-        req = webob.Request.blank('/v1.1/security_groups/%s' %
+        req = webob.Request.blank('/v1.1/os-security-groups/%s' %
                                   res_dict['security_group']['id'])
         req.headers['Content-Type'] = 'application/json'
         req.method = 'GET'
@@ -292,14 +292,14 @@ class TestSecurityGroups(test.TestCase):
         self.assertEquals(res_dict, expected)
 
     def test_get_security_group_by_invalid_id(self):
-        req = webob.Request.blank('/v1.1/security_groups/invalid')
+        req = webob.Request.blank('/v1.1/os-security-groups/invalid')
         req.headers['Content-Type'] = 'application/json'
         req.method = 'GET'
         response = req.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 400)
 
     def test_get_security_group_by_non_existing_id(self):
-        req = webob.Request.blank('/v1.1/security_groups/111111111')
+        req = webob.Request.blank('/v1.1/os-security-groups/111111111')
         req.headers['Content-Type'] = 'application/json'
         req.method = 'GET'
         response = req.get_response(fakes.wsgi_app())
@@ -354,7 +354,7 @@ class TestSecurityGroupRules(test.TestCase):
         super(TestSecurityGroupRules, self).tearDown()
 
     def _create_security_group_rule_json(self, rules):
-        request = webob.Request.blank('/v1.1/security_group_rules')
+        request = webob.Request.blank('/v1.1/os-security-group-rules')
         request.headers['Content-Type'] = 'application/json'
         request.method = 'POST'
         request.body = json.dumps(rules)
@@ -362,7 +362,7 @@ class TestSecurityGroupRules(test.TestCase):
         return response
 
     def _delete_security_group_rule(self, id):
-        request = webob.Request.blank('/v1.1/security_group_rules/%s'
+        request = webob.Request.blank('/v1.1/os-security-group-rules/%s'
                                       % id)
         request.method = 'DELETE'
         response = request.get_response(fakes.wsgi_app())
@@ -420,7 +420,7 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertEquals(response.status_int, 400)
 
     def test_create_with_no_body_json(self):
-        request = webob.Request.blank('/v1.1/security_group_rules')
+        request = webob.Request.blank('/v1.1/os-security-group-rules')
         request.headers['Content-Type'] = 'application/json'
         request.method = 'POST'
         request.body = json.dumps(None)
@@ -428,7 +428,7 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertEquals(response.status_int, 422)
 
     def test_create_with_no_security_group_rule_in_body_json(self):
-        request = webob.Request.blank('/v1.1/security_group_rules')
+        request = webob.Request.blank('/v1.1/os-security-group-rules')
         request.headers['Content-Type'] = 'application/json'
         request.method = 'POST'
         body_dict = {'test': "test"}
