@@ -625,7 +625,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         subnets_v4 = []
         subnets_v6 = []
 
-        subnet_bits = int(math.ceil(math.log(network_size, 2))
+        subnet_bits = int(math.ceil(math.log(network_size, 2)))
 
         if cidr_v6:
             fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
