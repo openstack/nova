@@ -14,10 +14,10 @@
 #    under the License.
 
 """
-The AbsractScheduler is an abstract class Scheduler for creating instances
-locally or across zones. Two methods should be overridden in order to 
-customize the behavior: filter_hosts() and weigh_hosts(). The default
-behavior is to simply select all hosts and weight them the same.
+The BaseScheduler is the base class Scheduler for creating instances
+across zones. There are two expansion points to this class for:
+1. Assigning Weights to hosts for requested instances
+2. Filtering Hosts based on required instance capabilities
 """
 
 import operator
@@ -185,11 +185,13 @@ class AbstractScheduler(driver.Scheduler):
         for zone_id, result in child_results:
             if not result:
                 continue
+
             assert isinstance(zone_id, int)
 
             for zone_rec in zones:
                 if zone_rec['id'] != zone_id:
                     continue
+
                 for item in result:
                     try:
                         offset = zone_rec['weight_offset']
@@ -200,10 +202,10 @@ class AbstractScheduler(driver.Scheduler):
                         item['raw_weight'] = raw_weight
                     except KeyError:
                         LOG.exception(_("Bad child zone scaling values "
-                                "for Zone: %(zone_id)s") % locals())
+                                        "for Zone: %(zone_id)s") % locals())
 
     def schedule_run_instance(self, context, instance_id, request_spec,
-            *args, **kwargs):
+                              *args, **kwargs):
         """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
         passed in to see if this is a request to:
@@ -212,11 +214,13 @@ class AbstractScheduler(driver.Scheduler):
            to simply create the instance (either in this zone or
            a child zone).
         """
+
         # TODO(sandy): We'll have to look for richer specs at some point.
+
         blob = request_spec.get('blob')
         if blob:
             self._provision_resource(context, request_spec, instance_id,
-                    request_spec, kwargs)
+                                    request_spec, kwargs)
             return None
 
         num_instances = request_spec.get('num_instances', 1)
@@ -234,7 +238,7 @@ class AbstractScheduler(driver.Scheduler):
 
             build_plan_item = build_plan.pop(0)
             self._provision_resource(context, build_plan_item, instance_id,
-                    request_spec, kwargs)
+                                     request_spec, kwargs)
 
         # Returning None short-circuits the routing to Compute (since
         # we've already done it here)
@@ -247,49 +251,58 @@ class AbstractScheduler(driver.Scheduler):
         anything about the children.
         """
         return self._schedule(context, "compute", request_spec,
-                *args, **kwargs)
+                              *args, **kwargs)
 
+    # TODO(sandy): We're only focused on compute instances right now,
+    # so we don't implement the default "schedule()" method required
+    # of Schedulers.
     def schedule(self, context, topic, request_spec, *args, **kwargs):
         """The schedule() contract requires we return the one
         best-suited host for this request.
         """
-        # TODO(sandy): We're only focused on compute instances right now,
-        # so we don't implement the default "schedule()" method required
-        # of Schedulers.
-        msg = _("No host selection for %s defined." % topic)
-        raise driver.NoValidHost(msg)
+        raise driver.NoValidHost(_('No hosts were available'))
 
     def _schedule(self, context, topic, request_spec, *args, **kwargs):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
+
         if topic != "compute":
-            msg = _("Scheduler only understands Compute nodes (for now)")
-            raise NotImplementedError(msg)
+            raise NotImplementedError(_("Scheduler only understands"
+                                        " Compute nodes (for now)"))
 
-        # Get all available hosts.
-        all_hosts = self.zone_manager.service_states.iteritems()
-        print "-"*88
-        ss = self.zone_manager.service_states
-        print ss
-        print "KEYS", ss.keys()
-        print "-"*88
+        num_instances = request_spec.get('num_instances', 1)
+        instance_type = request_spec['instance_type']
 
-        unfiltered_hosts = [(host, services[host])
-                for host, services in all_hosts
-                if topic in services[host]]
+        weighted = []
+        host_list = None
 
-        # Filter local hosts based on requirements ...
-        filtered_hosts = self.filter_hosts(topic, request_spec, host_list)
-        if not filtered_hosts:
-            LOG.warn(_("No hosts available"))
-            return []
+        for i in xrange(num_instances):
+            # Filter local hosts based on requirements ...
+            #
+            # The first pass through here will pass 'None' as the
+            # host_list.. which tells the filter to build the full
+            # list of hosts.
+            # On a 2nd pass, the filter can modify the host_list with
+            # any updates it needs to make based on resources that
+            # may have been consumed from a previous build..
+            host_list = self.filter_hosts(topic, request_spec, host_list)
+            if not host_list:
+                LOG.warn(_("Filter returned no hosts after processing "
+                        "%(i)d of %(num_instances)d instances") % locals())
+                break
 
-        # weigh the selected hosts.
-        # weighted_hosts = [{weight=weight, hostname=hostname,
-        #         capabilities=capabs}, ...]
-        weighted_hosts = self.weigh_hosts(topic, request_spec, filtered_hosts)
-        # Next, tack on the host weights from the child zones
+            # then weigh the selected hosts.
+            # weighted = [{weight=weight, hostname=hostname,
+            #              capabilities=capabs}, ...]
+            weights = self.weigh_hosts(topic, request_spec, host_list)
+            weights.sort(key=operator.itemgetter('weight'))
+            best_weight = weights[0]
+            weighted.append(best_weight)
+            self.consume_resources(topic, best_weight['capabilities'],
+                    instance_type)
+
+        # Next, tack on the best weights from the child zones ...
         json_spec = json.dumps(request_spec)
         all_zones = db.zone_get_all(context)
         child_results = self._call_zone_method(context, "select",
@@ -301,13 +314,14 @@ class AbstractScheduler(driver.Scheduler):
                 # it later if needed. This implicitly builds a zone
                 # path structure.
                 host_dict = {"weight": weighting["weight"],
-                        "child_zone": child_zone,
-                        "child_blob": weighting["blob"]}
-                weighted_hosts.append(host_dict)
-        weighted_hosts.sort(key=operator.itemgetter('weight'))
-        return weighted_hosts
+                             "child_zone": child_zone,
+                             "child_blob": weighting["blob"]}
+                weighted.append(host_dict)
 
-    def basic_ram_filter(self, hostname, capabilities, request_spec):
+        weighted.sort(key=operator.itemgetter('weight'))
+        return weighted
+
+    def compute_filter(self, hostname, capabilities, request_spec):
         """Return whether or not we can schedule to this compute node.
         Derived classes should override this and return True if the host
         is acceptable for scheduling.
@@ -316,20 +330,74 @@ class AbstractScheduler(driver.Scheduler):
         requested_mem = instance_type['memory_mb'] * 1024 * 1024
         return capabilities['host_memory_free'] >= requested_mem
 
+    def hold_filter_hosts(self, topic, request_spec, hosts=None):
+        """Filter the full host list (from the ZoneManager)"""
+        # NOTE(dabo): The logic used by the current _schedule() method
+        # is incorrect. Since this task is just to refactor the classes,
+        # I'm not fixing the logic now - that will be the next task.
+        # So for now this method is just renamed; afterwards this will
+        # become the filter_hosts() method, and the one below will
+        # be removed.
+        filter_name = request_spec.get('filter', None)
+        # Make sure that the requested filter is legitimate.
+        selected_filter = host_filter.choose_host_filter(filter_name)
+
+        # TODO(sandy): We're only using InstanceType-based specs
+        # currently. Later we'll need to snoop for more detailed
+        # host filter requests.
+        instance_type = request_spec['instance_type']
+        name, query = selected_filter.instance_type_to_filter(instance_type)
+        return selected_filter.filter_hosts(self.zone_manager, query)
+
     def filter_hosts(self, topic, request_spec, host_list=None):
-        """Filter the full host list returned from the ZoneManager. By default,
-        this method only applies the basic_ram_filter(), meaning all hosts
-        with at least enough RAM for the requested instance are returned. 
-        
-        Override in subclasses to provide greater selectivity.
+        """Return a list of hosts which are acceptable for scheduling.
+        Return value should be a list of (hostname, capability_dict)s.
+        Derived classes may override this, but may find the
+        '<topic>_filter' function more appropriate.
         """
-        return [(host, services) for host, services in host_list
-                if basic_ram_filter(host, services, request_spec)]
+        def _default_filter(self, hostname, capabilities, request_spec):
+            """Default filter function if there's no <topic>_filter"""
+            # NOTE(sirp): The default logic is the equivalent to
+            # AllHostsFilter
+            return True
+
+        filter_func = getattr(self, '%s_filter' % topic, _default_filter)
+
+        if host_list is None:
+            first_run = True
+            host_list = self.zone_manager.service_states.iteritems()
+        else:
+            first_run = False
+
+        filtered_hosts = []
+        for host, services in host_list:
+            if first_run:
+                if topic not in services:
+                    continue
+                services = services[topic]
+            if filter_func(host, services, request_spec):
+                filtered_hosts.append((host, services))
+        return filtered_hosts
 
     def weigh_hosts(self, topic, request_spec, hosts):
-        """This version assigns a weight of 1 to all hosts, making selection
-        of any host basically a random event. Override this method in your
-        subclass to add logic to prefer one potential host over another.
+        """Derived classes may override this to provide more sophisticated
+        scheduling objectives
         """
+        # NOTE(sirp): The default logic is the same as the NoopCostFunction
         return [dict(weight=1, hostname=hostname, capabilities=capabilities)
                 for hostname, capabilities in hosts]
+
+    def compute_consume(self, capabilities, instance_type):
+        """Consume compute resources for selected host"""
+
+        requested_mem = max(instance_type['memory_mb'], 0) * 1024 * 1024
+        capabilities['host_memory_free'] -= requested_mem
+
+    def consume_resources(self, topic, capabilities, instance_type):
+        """Consume resources for a specific host.  'host' is a tuple
+        of the hostname and the services"""
+
+        consume_func = getattr(self, '%s_consume' % topic, None)
+        if not consume_func:
+            return
+        consume_func(capabilities, instance_type)
