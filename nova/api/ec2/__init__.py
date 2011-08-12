@@ -148,7 +148,7 @@ class ToToken(wsgi.Middleware):
         try:
             signature = req.params['Signature']
             access = req.params['AWSAccessKeyId']
-        except KeyError, e:
+        except KeyError:
             raise webob.exc.HTTPBadRequest()
 
         # Make a copy of args for authentication and signature verification.
@@ -191,7 +191,7 @@ class Authenticate(wsgi.Middleware):
         try:
             signature = req.params['Signature']
             access = req.params['AWSAccessKeyId']
-        except KeyError, e:
+        except KeyError:
             raise webob.exc.HTTPBadRequest()
 
         # Make a copy of args for authentication and signature verification.

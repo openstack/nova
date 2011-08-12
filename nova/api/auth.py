@@ -18,11 +18,12 @@ Common Auth Middleware.
 
 """
 
+import webob.dec
+import webob.exc
+
 from nova import context
 from nova import flags
 from nova import wsgi
-import webob.dec
-import webob.exc
 
 
 FLAGS = flags.FLAGS
@@ -33,6 +34,7 @@ flags.DEFINE_boolean('use_forwarded_for', False,
 
 class InjectContext(wsgi.Middleware):
     """Add a 'nova.context' to WSGI environ."""
+
     def __init__(self, context, *args, **kwargs):
         self.context = context
         super(InjectContext, self).__init__(*args, **kwargs)
@@ -43,24 +45,6 @@ class InjectContext(wsgi.Middleware):
         return self.application
 
 
-class AdminContext(wsgi.Middleware):
-    """Return an admin context no matter what"""
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        # Build a context, including the auth_token...
-        remote_address = req.remote_addr
-        if FLAGS.use_forwarded_for:
-            remote_address = req.headers.get('X-Forwarded-For', remote_address)
-        ctx = context.RequestContext('admin',
-                                     'admin',
-                                     is_admin=True,
-                                     remote_address=remote_address)
-
-        req.environ['nova.context'] = ctx
-        return self.application
-
-
 class KeystoneContext(wsgi.Middleware):
     """Make a request context from keystone headers"""
 
@@ -68,7 +52,7 @@ class KeystoneContext(wsgi.Middleware):
     def __call__(self, req):
         try:
             user_id = req.headers['X_USER']
-        except:
+        except KeyError:
             return webob.exc.HTTPUnauthorized()
         # get the roles
         roles = [r.strip() for r in req.headers.get('X_ROLE', '').split(',')]
