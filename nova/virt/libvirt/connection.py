@@ -1502,7 +1502,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return
 
-    def ensure_filtering_rules_for_instance(self, instance_ref,
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info,
                                             time=None):
         """Setting up filtering rules and waiting for its completion.
 
@@ -1532,14 +1532,15 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # If any instances never launch at destination host,
         # basic-filtering must be set here.
-        self.firewall_driver.setup_basic_filtering(instance_ref)
+        self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
         # setting up n)ova-instance-instance-xx mainly.
-        self.firewall_driver.prepare_instance_filter(instance_ref)
+        self.firewall_driver.prepare_instance_filter(instance_ref, network_info)
 
         # wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)
         while timeout_count:
-            if self.firewall_driver.instance_filter_exists(instance_ref):
+            if self.firewall_driver.instance_filter_exists(instance_ref,
+                                                           network_info):
                 break
             timeout_count.pop()
             if len(timeout_count) == 0:

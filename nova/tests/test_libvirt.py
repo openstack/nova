@@ -644,6 +644,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.create_fake_libvirt_mock()
         instance_ref = db.instance_create(self.context, self.test_instance)
+        network_info = _create_network_info()
 
         # Start test
         self.mox.ReplayAll()
@@ -653,6 +654,7 @@ class LibvirtConnTestCase(test.TestCase):
             conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
             conn.firewall_driver.setattr('instance_filter_exists', fake_none)
             conn.ensure_filtering_rules_for_instance(instance_ref,
+                                                     network_info,
                                                      time=fake_timer)
         except exception.Error, e:
             c1 = (0 <= e.message.find('Timeout migrating for'))

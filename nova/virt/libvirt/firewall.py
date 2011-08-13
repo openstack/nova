@@ -92,7 +92,7 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def instance_filter_exists(self, instance):
+    def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists"""
         raise NotImplementedError()
 
@@ -391,9 +391,7 @@ class NWFilterFirewall(FirewallDriver):
         self._define_filter(self._filter_container(filter_name,
                                                    filter_children))
 
-    def refresh_security_group_rules(self,
-                                     security_group_id,
-                                     network_info=None):
+    def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))
 
@@ -702,15 +700,15 @@ class IptablesFirewallDriver(FirewallDriver):
 
         return ipv4_rules, ipv6_rules
 
-    def instance_filter_exists(self, instance):
+    def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists"""
-        return self.nwfilter.instance_filter_exists(instance)
+        return self.nwfilter.instance_filter_exists(instance, network_info)
 
     def refresh_security_group_members(self, security_group):
         pass
 
-    def refresh_security_group_rules(self, security_group, network_info=None):
-        self.do_refresh_security_group_rules(security_group, network_info)
+    def refresh_security_group_rules(self, security_group):
+        self.do_refresh_security_group_rules(security_group)
         self.iptables.apply()
 
     @utils.synchronized('iptables', external=True)

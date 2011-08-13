@@ -487,7 +487,7 @@ class FakeConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
-    def ensure_filtering_rules_for_instance(self, instance_ref):
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
@@ -496,7 +496,7 @@ class FakeConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         return
 
-    def unfilter_instance(self, instance_ref, network_info=None):
+    def unfilter_instance(self, instance_ref, network_info):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
