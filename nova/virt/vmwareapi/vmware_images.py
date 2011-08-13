@@ -33,11 +33,15 @@ QUEUE_BUFFER_SIZE = 10
 
 
 def start_transfer(read_file_handle, data_size, write_file_handle=None,
-                   glance_client=None, image_id=None, image_meta={}):
+                   glance_client=None, image_id=None, image_meta=None):
     """Start the data transfer from the reader to the writer.
     Reader writes to the pipe and the writer reads from the pipe. This means
     that the total transfer time boils down to the slower of the read/write
     and not the addition of the two times."""
+
+    if not image_meta:
+        image_meta = {}
+
     # The pipe that acts as an intermediate store of data for reader to write
     # to and writer to grab from.
     thread_safe_pipe = io_util.ThreadSafePipe(QUEUE_BUFFER_SIZE, data_size)

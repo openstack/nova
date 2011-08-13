@@ -27,6 +27,7 @@ import random
 import StringIO
 import webob
 
+from nova import block_device
 from nova import context
 from nova import exception
 from nova import test
@@ -147,10 +148,12 @@ class Ec2utilsTestCase(test.TestCase):
         properties0 = {'mappings': mappings}
         properties1 = {'root_device_name': '/dev/sdb', 'mappings': mappings}
 
-        root_device_name = ec2utils.properties_root_device_name(properties0)
+        root_device_name = block_device.properties_root_device_name(
+            properties0)
         self.assertEqual(root_device_name, '/dev/sda1')
 
-        root_device_name = ec2utils.properties_root_device_name(properties1)
+        root_device_name = block_device.properties_root_device_name(
+            properties1)
         self.assertEqual(root_device_name, '/dev/sdb')
 
     def test_mapping_prepend_dev(self):
@@ -184,7 +187,7 @@ class Ec2utilsTestCase(test.TestCase):
              'device': '/dev/sdc1'},
             {'virtual': 'ephemeral1',
              'device': '/dev/sdc1'}]
-        self.assertDictListMatch(ec2utils.mappings_prepend_dev(mappings),
+        self.assertDictListMatch(block_device.mappings_prepend_dev(mappings),
                                  expected_result)
 
 
@@ -335,6 +338,33 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.ec2.delete_security_group(security_group_name)
+
+    def test_group_name_valid_chars_security_group(self):
+        """ Test that we sanely handle invalid security group names.
+         API Spec states we should only accept alphanumeric characters,
+         spaces, dashes, and underscores. """
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        # Test block group_name of non alphanumeric characters, spaces,
+        # dashes, and underscores.
+        security_group_name = "aa #^% -=99"
+
+        self.assertRaises(EC2ResponseError, self.ec2.create_security_group,
+                          security_group_name, 'test group')
+
+    def test_group_name_valid_length_security_group(self):
+        """Test that we sanely handle invalid security group names.
+         API Spec states that the length should not exceed 255 chars """
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        # Test block group_name > 255 chars
+        security_group_name = "".join(random.choice("poiuytrewqasdfghjklmnbvc")
+                                      for x in range(random.randint(256, 266)))
+
+        self.assertRaises(EC2ResponseError, self.ec2.create_security_group,
+                          security_group_name, 'test group')
 
     def test_authorize_revoke_security_group_cidr(self):
         """

@@ -25,6 +25,7 @@ from nova.network import linux_net
 from nova.virt.libvirt import netutils
 from nova import utils
 from nova.virt.vif import VIFDriver
+from nova import exception
 
 LOG = logging.getLogger('nova.virt.libvirt.vif')
 
@@ -104,16 +105,18 @@ class LibvirtOpenVswitchDriver(VIFDriver):
         dev = "tap-%s" % vif_id
         iface_id = "nova-" + vif_id
         if not linux_net._device_exists(dev):
-            utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
-            utils.execute('sudo', 'ip', 'link', 'set', dev, 'up')
-        utils.execute('sudo', 'ovs-vsctl', '--', '--may-exist', 'add-port',
+            utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
+                          run_as_root=True)
+            utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
+        utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
                 FLAGS.libvirt_ovs_bridge, dev,
                 '--', 'set', 'Interface', dev,
                 "external-ids:iface-id=%s" % iface_id,
                 '--', 'set', 'Interface', dev,
                 "external-ids:iface-status=active",
                 '--', 'set', 'Interface', dev,
-                "external-ids:attached-mac=%s" % mapping['mac'])
+                "external-ids:attached-mac=%s" % mapping['mac'],
+                run_as_root=True)
 
         result = {
             'script': '',
@@ -127,10 +130,10 @@ class LibvirtOpenVswitchDriver(VIFDriver):
         vif_id = str(instance['id']) + "-" + str(network['id'])
         dev = "tap-%s" % vif_id
         try:
-            utils.execute('sudo', 'ovs-vsctl', 'del-port',
-                          network['bridge'], dev)
-            utils.execute('sudo', 'ip', 'link', 'delete', dev)
-        except:
+            utils.execute('ovs-vsctl', 'del-port',
+                          network['bridge'], dev, run_as_root=True)
+            utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
+        except exception.ProcessExecutionError:
             LOG.warning(_("Failed while unplugging vif of instance '%s'"),
                         instance['name'])
             raise

@@ -180,6 +180,7 @@ class Instance(BASE, NovaBase):
     image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
+    server_name = Column(String(255))
 
 #    image_ref = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -202,7 +203,7 @@ class Instance(BASE, NovaBase):
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-    # aka flavor_id
+    # *not* flavor_id
     instance_type_id = Column(Integer)
 
     user_data = Column(Text)
@@ -511,8 +512,8 @@ class Migration(BASE, NovaBase):
     source_compute = Column(String(255))
     dest_compute = Column(String(255))
     dest_host = Column(String(255))
-    old_flavor_id = Column(Integer())
-    new_flavor_id = Column(Integer())
+    old_instance_type_id = Column(Integer())
+    new_instance_type_id = Column(Integer())
     instance_uuid = Column(String(255), ForeignKey('instances.uuid'),
             nullable=True)
     #TODO(_cerberus_): enum

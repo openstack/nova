@@ -15,8 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import re
-from urlparse import urlparse
+import urlparse
 from xml.dom import minidom
 
 import webob
@@ -24,7 +25,9 @@ import webob
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import quota
 from nova.api.openstack import wsgi
+from nova.compute import power_state as compute_power_state
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
@@ -33,6 +36,38 @@ FLAGS = flags.FLAGS
 
 XML_NS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
+
+
+_STATUS_MAP = {
+    None: 'BUILD',
+    compute_power_state.NOSTATE: 'BUILD',
+    compute_power_state.RUNNING: 'ACTIVE',
+    compute_power_state.BLOCKED: 'ACTIVE',
+    compute_power_state.SUSPENDED: 'SUSPENDED',
+    compute_power_state.PAUSED: 'PAUSED',
+    compute_power_state.SHUTDOWN: 'SHUTDOWN',
+    compute_power_state.SHUTOFF: 'SHUTOFF',
+    compute_power_state.CRASHED: 'ERROR',
+    compute_power_state.FAILED: 'ERROR',
+    compute_power_state.BUILDING: 'BUILD',
+}
+
+
+def status_from_power_state(power_state):
+    """Map the power state to the server status string"""
+    return _STATUS_MAP[power_state]
+
+
+def power_states_from_status(status):
+    """Map the server status string to a list of power states"""
+    power_states = []
+    for power_state, status_map in _STATUS_MAP.iteritems():
+        # Skip the 'None' state
+        if power_state is None:
+            continue
+        if status.lower() == status_map.lower():
+            power_states.append(power_state)
+    return power_states
 
 
 def get_pagination_params(request):
@@ -137,8 +172,8 @@ def get_id_from_href(href):
     if re.match(r'\d+$', str(href)):
         return int(href)
     try:
-        return int(urlparse(href).path.split('/')[-1])
-    except:
+        return int(urlparse.urlsplit(href).path.split('/')[-1])
+    except ValueError, e:
         LOG.debug(_("Error extracting id from href: %s") % href)
         raise ValueError(_('could not parse id from href'))
 
@@ -153,22 +188,18 @@ def remove_version_from_href(href):
     Returns: 'http://www.nova.com'
 
     """
-    try:
-        #removes the first instance that matches /v#.#/
-        new_href = re.sub(r'[/][v][0-9]+\.[0-9]+[/]', '/', href, count=1)
+    parsed_url = urlparse.urlsplit(href)
+    new_path = re.sub(r'^/v[0-9]+\.[0-9]+(/|$)', r'\1', parsed_url.path,
+                      count=1)
 
-        #if no version was found, try finding /v#.# at the end of the string
-        if new_href == href:
-            new_href = re.sub(r'[/][v][0-9]+\.[0-9]+$', '', href, count=1)
-    except:
-        LOG.debug(_("Error removing version from href: %s") % href)
-        msg = _('could not parse version from href')
+    if new_path == parsed_url.path:
+        msg = _('href %s does not contain version') % href
+        LOG.debug(msg)
         raise ValueError(msg)
 
-    if new_href == href:
-        msg = _('href does not contain version')
-        raise ValueError(msg)
-    return new_href
+    parsed_url = list(parsed_url)
+    parsed_url[2] = new_path
+    return urlparse.urlunsplit(parsed_url)
 
 
 def get_version_from_href(href):
@@ -196,7 +227,27 @@ def get_version_from_href(href):
     return version
 
 
-class MetadataXMLDeserializer(wsgi.MetadataXMLDeserializer):
+def check_img_metadata_quota_limit(context, metadata):
+    if metadata is None:
+        return
+    num_metadata = len(metadata)
+    quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+    if quota_metadata < num_metadata:
+        expl = _("Image metadata limit exceeded")
+        raise webob.exc.HTTPBadRequest(explanation=expl)
+
+
+class MetadataXMLDeserializer(wsgi.XMLDeserializer):
+
+    def extract_metadata(self, metadata_node):
+        """Marshal the metadata attribute of a parsed request"""
+        if metadata_node is None:
+            return {}
+        metadata = {}
+        for meta_node in self.find_children_named(metadata_node, "meta"):
+            key = meta_node.getAttribute("key")
+            metadata[key] = self.extract_text(meta_node)
+        return metadata
 
     def _extract_metadata_container(self, datastring):
         dom = minidom.parseString(datastring)
@@ -247,7 +298,7 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
         container_node = self.meta_list_to_xml(xml_doc, items)
         xml_doc.appendChild(container_node)
         self._add_xmlns(container_node)
-        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
+        return xml_doc.toxml('UTF-8')
 
     def index(self, metadata_dict):
         return self._meta_list_to_xml_string(metadata_dict)
@@ -264,7 +315,7 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
         item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
         xml_doc.appendChild(item_node)
         self._add_xmlns(item_node)
-        return xml_doc.toprettyxml(indent='    ', encoding='UTF-8')
+        return xml_doc.toxml('UTF-8')
 
     def show(self, meta_item_dict):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
@@ -274,3 +325,15 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
 
     def default(self, *args, **kwargs):
         return ''
+
+
+def check_snapshots_enabled(f):
+    @functools.wraps(f)
+    def inner(*args, **kwargs):
+        if not FLAGS.allow_instance_snapshots:
+            LOG.warn(_('Rejecting snapshot request, snapshots currently'
+                       ' disabled'))
+            msg = _("Instance snapshots are not permitted at this time.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        return f(*args, **kwargs)
+    return inner

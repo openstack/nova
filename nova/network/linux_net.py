@@ -301,14 +301,14 @@ class IptablesManager(object):
 
         for cmd, tables in s:
             for table in tables:
-                current_table, _ = self.execute('sudo',
-                                                '%s-save' % (cmd,),
+                current_table, _ = self.execute('%s-save' % (cmd,),
                                                 '-t', '%s' % (table,),
+                                                run_as_root=True,
                                                 attempts=5)
                 current_lines = current_table.split('\n')
                 new_filter = self._modify_rules(current_lines,
                                                 tables[table])
-                self.execute('sudo', '%s-restore' % (cmd,),
+                self.execute('%s-restore' % (cmd,), run_as_root=True,
                              process_input='\n'.join(new_filter),
                              attempts=5)
 
@@ -401,21 +401,22 @@ def init_host():
 
 def bind_floating_ip(floating_ip, check_exit_code=True):
     """Bind ip to public interface."""
-    _execute('sudo', 'ip', 'addr', 'add', floating_ip,
+    _execute('ip', 'addr', 'add', floating_ip,
              'dev', FLAGS.public_interface,
-             check_exit_code=check_exit_code)
+             run_as_root=True, check_exit_code=check_exit_code)
 
 
 def unbind_floating_ip(floating_ip):
     """Unbind a public ip from public interface."""
-    _execute('sudo', 'ip', 'addr', 'del', floating_ip,
-             'dev', FLAGS.public_interface)
+    _execute('ip', 'addr', 'del', floating_ip,
+             'dev', FLAGS.public_interface, run_as_root=True)
 
 
 def ensure_metadata_ip():
     """Sets up local metadata ip."""
-    _execute('sudo', 'ip', 'addr', 'add', '169.254.169.254/32',
-             'scope', 'link', 'dev', 'lo', check_exit_code=False)
+    _execute('ip', 'addr', 'add', '169.254.169.254/32',
+             'scope', 'link', 'dev', 'lo',
+             run_as_root=True, check_exit_code=False)
 
 
 def ensure_vpn_forward(public_ip, port, private_ip):
@@ -462,28 +463,29 @@ def initialize_gateway_device(dev, network_ref):
 
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
-        suffix = network_ref['cidr'].rpartition('/')[2]
-        out, err = _execute('sudo', 'ip', 'addr', 'add',
+        suffix = net_attrs['cidr'].rpartition('/')[2]
+        out, err = _execute('ip', 'addr', 'add',
                             '%s/%s' %
                             (network_ref['dhcp_server'], suffix),
                             'brd',
                             network_ref['broadcast'],
                             'dev',
                             dev,
+                            run_as_root=True,
                             check_exit_code=False)
         if err and err != 'RTNETLINK answers: File exists\n':
             raise exception.Error('Failed to add ip: %s' % err)
         if(FLAGS.use_ipv6):
-            _execute('sudo', 'ip', '-f', 'inet6', 'addr',
-                     'change', network_ref['cidr_v6'],
-                     'dev', dev)
+            _execute('ip', '-f', 'inet6', 'addr',
+                     'change', net_attrs['cidr_v6'],
+                     'dev', dev, run_as_root=True)
         # NOTE(vish): If the public interface is the same as the
         #             bridge, then the bridge has to be in promiscuous
         #             to forward packets properly.
         if(FLAGS.public_interface == dev):
-            _execute('sudo', 'ip', 'link', 'set',
-                     'dev', dev, 'promisc', 'on')
-        _execute('sudo', 'ip', 'link', 'set', dev, 'up')
+            _execute('ip', 'link', 'set',
+                     'dev', dev, 'promisc', 'on', run_as_root=True)
+        _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
 
 
 def get_dhcp_leases(context, network_ref):
@@ -536,18 +538,33 @@ def update_dhcp(context, dev, network_ref):
                              check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo', 'kill', '-HUP', pid)
+                _execute('kill', '-HUP', pid, run_as_root=True)
                 return
             except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_('Hupping dnsmasq threw %s'), exc)
         else:
             LOG.debug(_('Pid %d is stale, relaunching dnsmasq'), pid)
 
-    # FLAGFILE and NETWORK_ID in env
-    env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
-           'NETWORK_ID': str(network_ref['id'])}
-    command = _dnsmasq_cmd(dev, network_ref)
-    _execute(*command, addl_env=env)
+    cmd = ['FLAGFILE=%s' % FLAGS.dhcpbridge_flagfile,
+           'NETWORK_ID=%s' % str(network_ref['id']),
+           'dnsmasq',
+           '--strict-order',
+           '--bind-interfaces',
+           '--interface=%s' % dev,
+           '--conf-file=%s' % FLAGS.dnsmasq_config_file,
+           '--domain=%s' % FLAGS.dhcp_domain,
+           '--pid-file=%s' % _dhcp_file(dev, 'pid'),
+           '--listen-address=%s' % network_ref['dhcp_server'],
+           '--except-interface=lo',
+           '--dhcp-range=%s,static,120s' % network_ref['dhcp_start'],
+           '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(network_ref['cidr'])),
+           '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
+           '--dhcp-script=%s' % FLAGS.dhcpbridge,
+           '--leasefile-ro']
+    if FLAGS.dns_server:
+        cmd += ['-h', '-R', '--server=%s' % FLAGS.dns_server]
+
+    _execute(*cmd, run_as_root=True)
 
 
 @utils.synchronized('radvd_start')
@@ -580,13 +597,17 @@ interface %s
                              % pid, check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo', 'kill', pid)
+                _execute('kill', pid, run_as_root=True)
             except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_('killing radvd threw %s'), exc)
         else:
             LOG.debug(_('Pid %d is stale, relaunching radvd'), pid)
-    command = _ra_cmd(dev)
-    _execute(*command)
+
+    cmd = ['radvd',
+           '-C', '%s' % _ra_file(dev, 'conf'),
+           '-p', '%s' % _ra_file(dev, 'pid')]
+
+    _execute(*cmd, run_as_root=True)
 
 
 def _host_lease(fixed_ip_ref):
@@ -630,43 +651,13 @@ def _device_exists(device):
     return not err
 
 
-def _dnsmasq_cmd(dev, net):
-    """Builds dnsmasq command."""
-    cmd = ['sudo', '-E', 'dnsmasq',
-           '--strict-order',
-           '--bind-interfaces',
-           '--interface=%s' % dev,
-           '--conf-file=%s' % FLAGS.dnsmasq_config_file,
-           '--domain=%s' % FLAGS.dhcp_domain,
-           '--pid-file=%s' % _dhcp_file(dev, 'pid'),
-           '--listen-address=%s' % net['dhcp_server'],
-           '--except-interface=lo',
-           '--dhcp-range=%s,static,120s' % net['dhcp_start'],
-           '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(net['cidr'])),
-           '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
-           '--dhcp-script=%s' % FLAGS.dhcpbridge,
-           '--leasefile-ro']
-    if FLAGS.dns_server:
-        cmd += ['-h', '-R', '--server=%s' % FLAGS.dns_server]
-    return cmd
-
-
-def _ra_cmd(dev):
-    """Builds radvd command."""
-    cmd = ['sudo', '-E', 'radvd',
-#           '-u', 'nobody',
-           '-C', '%s' % _ra_file(dev, 'conf'),
-           '-p', '%s' % _ra_file(dev, 'pid')]
-    return cmd
-
-
 def _stop_dnsmasq(dev):
     """Stops the dnsmasq instance for a given network."""
     pid = _dnsmasq_pid_for(dev)
 
     if pid:
         try:
-            _execute('sudo', 'kill', '-TERM', pid)
+            _execute('kill', '-TERM', pid, run_as_root=True)
         except Exception as exc:  # pylint: disable=W0703
             LOG.debug(_('Killing dnsmasq threw %s'), exc)
 
@@ -722,7 +713,7 @@ def _ra_pid_for(dev):
 
 def _ip_bridge_cmd(action, params, device):
     """Build commands to add/del ips to bridges/devices."""
-    cmd = ['sudo', 'ip', 'addr', action]
+    cmd = ['ip', 'addr', action]
     cmd.extend(params)
     cmd.extend(['dev', device])
     return cmd
@@ -792,10 +783,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         interface = 'vlan%s' % vlan_num
         if not _device_exists(interface):
             LOG.debug(_('Starting VLAN inteface %s'), interface)
-            _execute('sudo', 'vconfig', 'set_name_type',
-                                    'VLAN_PLUS_VID_NO_PAD')
-            _execute('sudo', 'vconfig', 'add', bridge_interface, vlan_num)
-            _execute('sudo', 'ip', 'link', 'set', interface, 'up')
+            _execute('vconfig', 'set_name_type',
+                     'VLAN_PLUS_VID_NO_PAD', run_as_root=True)
+            _execute('vconfig', 'add', bridge_interface,
+                        vlan_num, run_as_root=True)
+            _execute('ip', 'link', 'set', interface, 'up', run_as_root=True)
         return interface
 
     @classmethod
@@ -816,28 +808,29 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         """
         if not _device_exists(bridge):
             LOG.debug(_('Starting Bridge interface for %s'), interface)
-            _execute('sudo', 'brctl', 'addbr', bridge)
-            _execute('sudo', 'brctl', 'setfd', bridge, 0)
-            # _execute('sudo brctl setageing %s 10' % bridge)
-            _execute('sudo', 'brctl', 'stp', bridge, 'off')
+            _execute('brctl', 'addbr', bridge, run_as_root=True)
+            _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
+            # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
+            _execute('brctl', 'stp', bridge, 'off', run_as_root=True)
 
         if interface:
-            out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
-                            check_exit_code=False)
+            out, err = _execute('brctl', 'addif', bridge, interface,
+                            check_exit_code=False, run_as_root=True)
 
             # NOTE(vish): This will break if there is already an ip on the
             #             interface, so we move any ips to the bridge
             gateway = None
-            out, err = _execute('sudo', 'route', '-n')
+            out, err = _execute('route', '-n', run_as_root=True)
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and fields[0] == '0.0.0.0' and \
                                 fields[-1] == interface:
                     gateway = fields[1]
-                    _execute('sudo', 'route', 'del', 'default', 'gw', gateway,
-                             'dev', interface, check_exit_code=False)
-            out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
-                                'scope', 'global')
+                    _execute('route', 'del', 'default', 'gw', gateway,
+                             'dev', interface, check_exit_code=False,
+                             run_as_root=True)
+            out, err = _execute('ip', 'addr', 'show', 'dev', interface,
+                                'scope', 'global', run_as_root=True)
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and fields[0] == 'inet':
@@ -845,7 +838,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                     _execute(*_ip_bridge_cmd('del', params, fields[-1]))
                     _execute(*_ip_bridge_cmd('add', params, bridge))
             if gateway:
-                _execute('sudo', 'route', 'add', 'default', 'gw', gateway)
+                _execute('route', 'add', 'default', 'gw', gateway,
+                            run_as_root=True)
 
             if (err and err != "device %s is already a member of a bridge;"
                      "can't enslave it to bridge %s.\n" % (interface, bridge)):
@@ -867,7 +861,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         if not _device_exists(dev):
             bridge = FLAGS.linuxnet_ovs_integration_bridge
             mac_addr = utils.generate_mac_address()
-            _execute('sudo', 'ovs-vsctl',
+            _execute('ovs-vsctl',
                         '--', '--may-exist', 'add-port', bridge, dev,
                         '--', 'set', 'Interface', dev, "type=internal",
                         '--', 'set', 'Interface', dev,
@@ -875,9 +869,10 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         '--', 'set', 'Interface', dev,
                                 "external-ids:iface-status=active",
                         '--', 'set', 'Interface', dev,
-                                "external-ids:attached-mac=%s" % mac_addr)
-            _execute('sudo', 'ip', 'link', 'set',
-                                        dev, "address", mac_addr)
+                                "external-ids:attached-mac=%s" % mac_addr,
+                        run_as_root=True)
+            _execute('ip', 'link', 'set', dev, "address", mac_addr,
+                        run_as_root=True)
         return dev
 
     def unplug(self, network):

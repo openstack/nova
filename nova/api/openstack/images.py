@@ -106,6 +106,7 @@ class Controller(object):
 class ControllerV10(Controller):
     """Version 1.0 specific controller logic."""
 
+    @common.check_snapshots_enabled
     def create(self, req, body):
         """Snapshot a server instance and save the image."""
         try:
@@ -116,13 +117,17 @@ class ControllerV10(Controller):
 
         try:
             image_name = image["name"]
-            server_id = image["serverId"]
+            instance_id = image["serverId"]
         except KeyError as missing_key:
             msg = _("Image entity requires %s") % missing_key
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ["nova.context"]
-        image = self._compute_service.snapshot(context, server_id, image_name)
+        props = {'instance_id': instance_id}
+        image = self._compute_service.snapshot(context,
+                                          instance_id,
+                                          image_name,
+                                          extra_properties=props)
 
         return dict(image=self.get_builder(req).build(image, detail=True))
 
@@ -139,7 +144,7 @@ class ControllerV10(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        images = self._image_service.index(context, filters)
+        images = self._image_service.index(context, filters=filters)
         images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
@@ -152,7 +157,7 @@ class ControllerV10(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        images = self._image_service.detail(context, filters)
+        images = self._image_service.detail(context, filters=filters)
         images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])

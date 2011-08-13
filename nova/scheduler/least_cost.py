@@ -96,7 +96,8 @@ class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):
                     cost_fn_str=cost_fn_str)
 
             try:
-                weight = getattr(FLAGS, "%s_weight" % cost_fn.__name__)
+                flag_name = "%s_weight" % cost_fn.__name__
+                weight = getattr(FLAGS, flag_name)
             except AttributeError:
                 raise exception.SchedulerWeightFlagNotFound(
                     flag_name=flag_name)

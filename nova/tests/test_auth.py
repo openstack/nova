@@ -62,7 +62,12 @@ class project_generator(object):
 
 
 class user_and_project_generator(object):
-    def __init__(self, manager, user_state={}, project_state={}):
+    def __init__(self, manager, user_state=None, project_state=None):
+        if not user_state:
+            user_state = {}
+        if not project_state:
+            project_state = {}
+
         self.manager = manager
         if 'name' not in user_state:
             user_state['name'] = 'test1'
@@ -83,9 +88,9 @@ class user_and_project_generator(object):
 
 class _AuthManagerBaseTestCase(test.TestCase):
     def setUp(self):
-        FLAGS.auth_driver = self.auth_driver
         super(_AuthManagerBaseTestCase, self).setUp()
-        self.flags(connection_type='fake')
+        self.flags(auth_driver=self.auth_driver,
+                connection_type='fake')
         self.manager = manager.AuthManager(new=True)
         self.manager.mc.cache = {}
 

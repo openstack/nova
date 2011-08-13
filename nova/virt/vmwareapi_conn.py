@@ -137,7 +137,7 @@ class VMWareESXConnection(driver.ComputeDriver):
         """Reboot VM instance."""
         self._vmops.reboot(instance, network_info)
 
-    def destroy(self, instance, network_info):
+    def destroy(self, instance, network_info, cleanup=True):
         """Destroy VM instance."""
         self._vmops.destroy(instance, network_info)
 
@@ -190,6 +190,10 @@ class VMWareESXConnection(driver.ComputeDriver):
     def update_available_resource(self, ctxt, host):
         """This method is supported only by libvirt."""
         return
+
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
+        pass
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
