@@ -40,17 +40,17 @@ except ImportError:
 
 
 class FirewallDriver(object):
-    def prepare_instance_filter(self, instance, network_info=None):
+    def prepare_instance_filter(self, instance, network_info):
         """Prepare filters for the instance.
 
         At this point, the instance isn't running yet."""
         raise NotImplementedError()
 
-    def unfilter_instance(self, instance, network_info=None):
+    def unfilter_instance(self, instance, network_info):
         """Stop filtering instance"""
         raise NotImplementedError()
 
-    def apply_instance_filter(self, instance):
+    def apply_instance_filter(self, instance, network_info):
         """Apply instance filter.
 
         Once this method returns, the instance should be firewalled
@@ -60,9 +60,7 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def refresh_security_group_rules(self,
-                                     security_group_id,
-                                     network_info=None):
+    def refresh_security_group_rules(self, security_group_id):
         """Refresh security group rules from data store
 
         Gets called when a rule has been added to or removed from
@@ -85,7 +83,7 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def setup_basic_filtering(self, instance, network_info=None):
+    def setup_basic_filtering(self, instance, network_info):
         """Create rules to block spoofing and allow dhcp.
 
         This gets called when spawning an instance, before
@@ -150,7 +148,7 @@ class NWFilterFirewall(FirewallDriver):
         self.static_filters_configured = False
         self.handle_security_groups = False
 
-    def apply_instance_filter(self, instance):
+    def apply_instance_filter(self, instance, network_info):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
@@ -189,12 +187,9 @@ class NWFilterFirewall(FirewallDriver):
                               </rule>
                             </filter>'''
 
-    def setup_basic_filtering(self, instance, network_info=None):
+    def setup_basic_filtering(self, instance, network_info):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
         logging.info('called setup_basic_filtering in nwfilter')
-
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
 
         if self.handle_security_groups:
             # No point in setting up a filter set that we'll be overriding
@@ -300,10 +295,8 @@ class NWFilterFirewall(FirewallDriver):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
-    def unfilter_instance(self, instance, network_info=None):
+    def unfilter_instance(self, instance, network_info):
         """Clear out the nwfilter rules."""
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
         instance_name = instance.name
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
@@ -326,16 +319,13 @@ class NWFilterFirewall(FirewallDriver):
             LOG.debug(_('The nwfilter(%(instance_secgroup_filter_name)s) '
                         'for %(instance_name)s is not found.') % locals())
 
-    def prepare_instance_filter(self, instance, network_info=None):
+    def prepare_instance_filter(self, instance, network_info):
         """Creates an NWFilter for the given instance.
 
         In the process, it makes sure the filters for the provider blocks,
         security groups, and base filter are all in place.
 
         """
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
-
         self.refresh_provider_fw_rules()
 
         ctxt = context.get_admin_context()
@@ -500,9 +490,8 @@ class NWFilterFirewall(FirewallDriver):
             return 'nova-instance-%s' % (instance['name'])
         return 'nova-instance-%s-%s' % (instance['name'], nic_id)
 
-    def instance_filter_exists(self, instance):
+    def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists"""
-        network_info = netutils.get_network_info(instance)
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
@@ -521,6 +510,7 @@ class IptablesFirewallDriver(FirewallDriver):
         from nova.network import linux_net
         self.iptables = linux_net.iptables_manager
         self.instances = {}
+        self.network_infos = {}
         self.nwfilter = NWFilterFirewall(kwargs['get_connection'])
         self.basicly_filtered = False
 
@@ -529,22 +519,22 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables.ipv6['filter'].add_chain('sg-fallback')
         self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
-    def setup_basic_filtering(self, instance, network_info=None):
+    def setup_basic_filtering(self, instance, network_info):
         """Set up provider rules and basic NWFilter."""
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
         self.nwfilter.setup_basic_filtering(instance, network_info)
         if not self.basicly_filtered:
             LOG.debug(_('iptables firewall: Setup Basic Filtering'))
             self.refresh_provider_fw_rules()
             self.basicly_filtered = True
 
-    def apply_instance_filter(self, instance):
+    def apply_instance_filter(self, instance, network_info):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
-    def unfilter_instance(self, instance, network_info=None):
+    def unfilter_instance(self, instance, network_info):
         if self.instances.pop(instance['id'], None):
+            # NOTE(vish): use the passed info instead of the stored info
+            self.network_infos.pop(instance['id'])
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
             self.nwfilter.unfilter_instance(instance, network_info)
@@ -552,11 +542,10 @@ class IptablesFirewallDriver(FirewallDriver):
             LOG.info(_('Attempted to unfilter instance %s which is not '
                      'filtered'), instance['id'])
 
-    def prepare_instance_filter(self, instance, network_info=None):
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
+    def prepare_instance_filter(self, instance, network_info):
         self.instances[instance['id']] = instance
-        self.add_filters_for_instance(instance, network_info)
+        self.network_infos[instance['id']] = network_info
+        self.add_filters_for_instance(instance)
         self.iptables.apply()
 
     def _create_filter(self, ips, chain_name):
@@ -583,7 +572,8 @@ class IptablesFirewallDriver(FirewallDriver):
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
 
-    def add_filters_for_instance(self, instance, network_info=None):
+    def add_filters_for_instance(self, instance):
+        network_info = self.network_infos[instance['id']]
         chain_name = self._instance_chain_name(instance)
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].add_chain(chain_name)
@@ -601,9 +591,7 @@ class IptablesFirewallDriver(FirewallDriver):
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].remove_chain(chain_name)
 
-    def instance_rules(self, instance, network_info=None):
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
+    def instance_rules(self, instance, network_info):
         ctxt = context.get_admin_context()
 
         ipv4_rules = []
@@ -726,14 +714,10 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables.apply()
 
     @utils.synchronized('iptables', external=True)
-    def do_refresh_security_group_rules(self,
-                                        security_group,
-                                        network_info=None):
+    def do_refresh_security_group_rules(self, security_group):
         for instance in self.instances.values():
             self.remove_filters_for_instance(instance)
-            if not network_info:
-                network_info = netutils.get_network_info(instance)
-            self.add_filters_for_instance(instance, network_info)
+            self.add_filters_for_instance(instance)
 
     def refresh_provider_fw_rules(self):
         """See class:FirewallDriver: docs."""

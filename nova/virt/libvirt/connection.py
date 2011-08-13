@@ -471,10 +471,10 @@ class LibvirtConnection(driver.ComputeDriver):
         # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, network_info, cleanup=False)
         self.plug_vifs(instance, network_info)
-        self.firewall_driver.setup_basic_filtering(instance)
-        self.firewall_driver.prepare_instance_filter(instance)
+        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_new_domain(xml)
-        self.firewall_driver.apply_instance_filter(instance)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -531,7 +531,7 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         self.destroy(instance, network_info, cleanup=False)
 
-        xml = self.to_xml(instance, rescue=True)
+        xml = self.to_xml(instance, network_info, rescue=True)
         rescue_images = {'image_id': FLAGS.rescue_image_id,
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
@@ -574,9 +574,9 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, context, instance,
-              network_info=None, block_device_info=None):
-        xml = self.to_xml(instance, False, network_info=network_info,
+    def spawn(self, context, instance, network_info,
+              block_device_info=None):
+        xml = self.to_xml(instance, network_info, False,
                           block_device_info=block_device_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
@@ -584,7 +584,7 @@ class LibvirtConnection(driver.ComputeDriver):
                            block_device_info=block_device_info)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
-        self.firewall_driver.apply_instance_filter(instance)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
@@ -992,10 +992,6 @@ class LibvirtConnection(driver.ComputeDriver):
                           block_device_info=None):
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
-        # TODO(adiantum) remove network_info creation code
-        # when multinics will be completed
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
 
         nics = []
         for (network, mapping) in network_info:
@@ -1082,7 +1078,7 @@ class LibvirtConnection(driver.ComputeDriver):
             xml_info['disk'] = xml_info['basepath'] + "/disk"
         return xml_info
 
-    def to_xml(self, instance, rescue=False, network_info=None,
+    def to_xml(self, instance, network_info, rescue=False,
                block_device_info=None):
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
