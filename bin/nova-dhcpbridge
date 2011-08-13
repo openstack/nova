@@ -52,7 +52,7 @@ flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
 LOG = logging.getLogger('nova.dhcpbridge')
 
 
-def add_lease(mac, ip_address, _hostname):
+def add_lease(mac, ip_address, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
         LOG.debug(_("leasing ip"))
@@ -66,13 +66,13 @@ def add_lease(mac, ip_address, _hostname):
                   "args": {"address": ip_address}})
 
 
-def old_lease(mac, ip_address, hostname):
+def old_lease(mac, ip_address, interface):
     """Update just as add lease."""
-    LOG.debug(_("Adopted old lease or got a change of mac/hostname"))
-    add_lease(mac, ip_address, hostname)
+    LOG.debug(_("Adopted old lease or got a change of mac"))
+    add_lease(mac, ip_address, interface)
 
 
-def del_lease(mac, ip_address, _hostname):
+def del_lease(mac, ip_address, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
         LOG.debug(_("releasing ip"))
@@ -115,11 +115,10 @@ def main():
     if action in ['add', 'del', 'old']:
         mac = argv[2]
         ip = argv[3]
-        hostname = argv[4]
-        msg = _("Called %(action)s for mac %(mac)s with ip %(ip)s and"
-                " hostname %(hostname)s on network %(network_id)s") % locals()
+        msg = _("Called %(action)s for mac %(mac)s with ip %(ip)s"
+                " on interface %(interface)s") % locals()
         LOG.debug(msg)
-        globals()[action + '_lease'](mac, ip, hostname)
+        globals()[action + '_lease'](mac, ip, interface)
     else:
         print init_leases(network_id)
 

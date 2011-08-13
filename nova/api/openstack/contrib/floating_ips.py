@@ -104,12 +104,9 @@ class FloatingIPController(object):
         ip = self.network_api.get_floating_ip(context, id)
 
         if 'fixed_ip' in ip:
-            try:
-                self.disassociate(req, id, '')
-            except Exception as e:
-                LOG.exception(_("Error disassociating fixed_ip %s"), e)
+            self.disassociate(req, id)
 
-        self.network_api.release_floating_ip(context, address=ip)
+        self.network_api.release_floating_ip(context, address=ip['address'])
 
         return {'released': {
             "id": ip['id'],
