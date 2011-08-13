@@ -609,7 +609,7 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules += ['-j $provider']
         ipv6_rules += ['-j $provider']
 
-        dhcp_servers = [info['gateway'] for (_n, info) in network_info]
+        dhcp_servers = [info['dhcp_server'] for (_n, info) in network_info]
 
         for dhcp_server in dhcp_servers:
             ipv4_rules.append('-s %s -p udp --sport 67 --dport 68 '
