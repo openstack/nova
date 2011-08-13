@@ -232,7 +232,7 @@ class NWFilterFirewall(FirewallDriver):
         self._define_filter(self.nova_base_ipv6_filter)
         self._define_filter(self.nova_dhcp_filter)
         self._define_filter(self.nova_ra_filter)
-        if FLAGS.allow_project_net_traffic:
+        if FLAGS.allow_same_net_traffic:
             self._define_filter(self.nova_project_filter)
             if FLAGS.use_ipv6:
                 self._define_filter(self.nova_project_filter_v6)
@@ -378,7 +378,7 @@ class NWFilterFirewall(FirewallDriver):
             instance_filter_children = [base_filter, 'nova-provider-rules',
                                         instance_secgroup_filter_name]
 
-            if FLAGS.allow_project_net_traffic:
+            if FLAGS.allow_same_net_traffic:
                 instance_filter_children.append('nova-project')
                 if FLAGS.use_ipv6:
                     instance_filter_children.append('nova-project-v6')
@@ -616,7 +616,7 @@ class IptablesFirewallDriver(FirewallDriver):
                               '-j ACCEPT' % (dhcp_server,))
 
         #Allow project network traffic
-        if FLAGS.allow_project_net_traffic:
+        if FLAGS.allow_same_net_traffic:
             cidrs = [network['cidr'] for (network, _m) in network_info]
             for cidr in cidrs:
                 ipv4_rules.append('-s %s -j ACCEPT' % (cidr,))
@@ -633,7 +633,7 @@ class IptablesFirewallDriver(FirewallDriver):
                         '-s %s/128 -p icmpv6 -j ACCEPT' % (gateway_v6,))
 
             #Allow project network traffic
-            if FLAGS.allow_project_net_traffic:
+            if FLAGS.allow_same_net_traffic:
                 cidrv6s = [network['cidr_v6'] for (network, _m) in
                            network_info]
 

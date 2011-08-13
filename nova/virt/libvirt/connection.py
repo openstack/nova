@@ -32,7 +32,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 :rescue_kernel_id:  Rescue aki image (default: aki-rescue).
 :rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
 :injected_network_template:  Template file for injected network
-:allow_project_net_traffic:  Whether to allow in project network traffic
+:allow_same_net_traffic:  Whether to allow in project network traffic
 
 """
 
@@ -96,9 +96,9 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
-flags.DEFINE_bool('allow_project_net_traffic',
+flags.DEFINE_bool('allow_same_net_traffic',
                   True,
-                  'Whether to allow in project network traffic')
+                  'Whether to allow network traffic from same network')
 flags.DEFINE_bool('use_cow_images',
                   True,
                   'Whether to use cow images')
