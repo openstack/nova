@@ -463,7 +463,7 @@ def initialize_gateway_device(dev, network_ref):
 
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
-        suffix = net_attrs['cidr'].rpartition('/')[2]
+        suffix = network_ref['cidr'].rpartition('/')[2]
         out, err = _execute('ip', 'addr', 'add',
                             '%s/%s' %
                             (network_ref['dhcp_server'], suffix),
@@ -477,7 +477,7 @@ def initialize_gateway_device(dev, network_ref):
             raise exception.Error('Failed to add ip: %s' % err)
         if(FLAGS.use_ipv6):
             _execute('ip', '-f', 'inet6', 'addr',
-                     'change', net_attrs['cidr_v6'],
+                     'change', network_ref['cidr_v6'],
                      'dev', dev, run_as_root=True)
         # NOTE(vish): If the public interface is the same as the
         #             bridge, then the bridge has to be in promiscuous
