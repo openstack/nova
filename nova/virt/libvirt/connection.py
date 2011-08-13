@@ -463,8 +463,8 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         virt_dom = self._conn.lookupByName(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance
-        # instead of using to_xml(instance). This is almost the ultimate
-        # stupid workaround.
+        # instead of using to_xml(instance, network_info). This is almost
+        # the ultimate stupid workaround.
         xml = virt_dom.XMLDesc(0)
         # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
         # better because we cannot ensure flushing dirty buffers
@@ -988,7 +988,7 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             raise exception.InvalidDevicePath(path=device_path)
 
-    def _prepare_xml_info(self, instance, rescue=False, network_info=None,
+    def _prepare_xml_info(self, instance, network_info, rescue,
                           block_device_info=None):
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
@@ -1082,7 +1082,7 @@ class LibvirtConnection(driver.ComputeDriver):
                block_device_info=None):
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-        xml_info = self._prepare_xml_info(instance, rescue, network_info,
+        xml_info = self._prepare_xml_info(instance, network_info, rescue,
                                           block_device_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
         LOG.debug(_('instance %s: finished toXML method'), instance['name'])
