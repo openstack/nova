@@ -122,6 +122,7 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         zone_blob = server_dict.get('blob')
+        availability_zone = server_dict.get('availability_zone')
         name = server_dict['name']
         self._validate_server_name(name)
         name = name.strip()
@@ -161,7 +162,8 @@ class CreateInstanceHelper(object):
                                   zone_blob=zone_blob,
                                   reservation_id=reservation_id,
                                   min_count=min_count,
-                                  max_count=max_count))
+                                  max_count=max_count,
+                                  availability_zone=availability_zone))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
