@@ -34,12 +34,13 @@ from nova.scheduler import zone_manager
 LOG = logging.getLogger('nova.scheduler.manager')
 FLAGS = flags.FLAGS
 flags.DEFINE_string('scheduler_driver',
-                    'nova.scheduler.chance.ChanceScheduler',
-                    'Driver to use for the scheduler')
+                    'nova.scheduler.multi.MultiScheduler',
+                    'Default driver to use for the scheduler')
 
 
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
+
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         self.zone_manager = zone_manager.ZoneManager()
         if not scheduler_driver:
