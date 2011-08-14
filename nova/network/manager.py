@@ -61,6 +61,7 @@ from nova import quota
 from nova import utils
 from nova import rpc
 from nova.network import api as network_api
+from nova.compute import api as compute_api
 import random
 
 
@@ -313,6 +314,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
         self.network_api = network_api.API()
+        self.compute_api = compute_api.API()
         super(NetworkManager, self).__init__(service_name='network',
                                                 *args, **kwargs)
 
@@ -367,6 +369,15 @@ class NetworkManager(manager.SchedulerDependentManager):
                                         network_ref['id'],
                                         self.host)
         return host
+
+    def _do_trigger_security_group_members_refresh_for_instance(self,
+                                                                instance_id):
+        admin_context = context.get_admin_context()
+        instance_ref = self.db.instance_get(admin_context, instance_id)
+        groups = instance_ref['security_groups']
+        group_ids = [group['id'] for group in groups]
+        self.compute_api.trigger_security_group_members_refresh(admin_context,
+                                                                    group_ids)
 
     def _get_networks_for_instance(self, context, instance_id, project_id):
         """Determine & return which networks an instance should connect to."""
@@ -559,6 +570,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             address = self.db.fixed_ip_associate_pool(context.elevated(),
                                                       network['id'],
                                                       instance_id)
+            self._do_trigger_security_group_members_refresh_for_instance(
+                                                                   instance_id)
             get_vif = self.db.virtual_interface_get_by_instance_and_network
             vif = get_vif(context, instance_id, network['id'])
             values = {'allocated': True,
@@ -573,6 +586,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.db.fixed_ip_update(context, address,
                                 {'allocated': False,
                                  'virtual_interface_id': None})
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        instance_ref = fixed_ip_ref['instance']
+        instance_id = instance_ref['id']
+        self._do_trigger_security_group_members_refresh_for_instance(
+                                                                   instance_id)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
@@ -913,7 +931,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             address = self.db.fixed_ip_associate_pool(context,
                                                       network['id'],
                                                       instance_id)
-
+            self._do_trigger_security_group_members_refresh_for_instance(
+                                                                   instance_id)
         vif = self.db.virtual_interface_get_by_instance_and_network(context,
                                                                  instance_id,
                                                                  network['id'])
