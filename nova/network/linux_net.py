@@ -458,13 +458,13 @@ def floating_forward_rules(floating_ip, fixed_ip):
 
 
 def initialize_gateway_device(dev, network_ref):
-        if not network_ref:
-            return
+    if not network_ref:
+        return
 
-        # NOTE(vish): The ip for dnsmasq has to be the first address on the
-        #             bridge for it to respond to reqests properly
-        suffix = network_ref['cidr'].rpartition('/')[2]
-        out, err = _execute('ip', 'addr', 'add',
+    # NOTE(vish): The ip for dnsmasq has to be the first address on the
+    #             bridge for it to respond to reqests properly
+    suffix = network_ref['cidr'].rpartition('/')[2]
+    out, err = _execute('ip', 'addr', 'add',
                             '%s/%s' %
                             (network_ref['dhcp_server'], suffix),
                             'brd',
@@ -473,19 +473,18 @@ def initialize_gateway_device(dev, network_ref):
                             dev,
                             run_as_root=True,
                             check_exit_code=False)
-        if err and err != 'RTNETLINK answers: File exists\n':
-            raise exception.Error('Failed to add ip: %s' % err)
-        if(FLAGS.use_ipv6):
-            _execute('ip', '-f', 'inet6', 'addr',
+    if err and err != 'RTNETLINK answers: File exists\n':
+        raise exception.Error('Failed to add ip: %s' % err)
+    if(FLAGS.use_ipv6):
+        _execute('ip', '-f', 'inet6', 'addr',
                      'change', network_ref['cidr_v6'],
                      'dev', dev, run_as_root=True)
-        # NOTE(vish): If the public interface is the same as the
-        #             bridge, then the bridge has to be in promiscuous
-        #             to forward packets properly.
-        if(FLAGS.public_interface == dev):
-            _execute('ip', 'link', 'set',
+    # NOTE(vish): If the public interface is the same as the
+    #             bridge, then the bridge has to be in promiscuous
+    #             to forward packets properly.
+    if(FLAGS.public_interface == dev):
+        _execute('ip', 'link', 'set',
                      'dev', dev, 'promisc', 'on', run_as_root=True)
-        _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
 
 
 def get_dhcp_leases(context, network_ref):
@@ -718,6 +717,7 @@ def _ip_bridge_cmd(action, params, device):
     cmd.extend(['dev', device])
     return cmd
 
+
 # Similar to compute virt layers, the Linux network node
 # code uses a flexible driver model to support different ways
 # of creating ethernet interfaces and attaching them to the network.
@@ -725,8 +725,8 @@ def _ip_bridge_cmd(action, params, device):
 # act as gateway/dhcp/vpn/etc. endpoints not VM interfaces.
 
 
-def plug(network):
-    return interface_driver.plug(network)
+def plug(network, mac_address):
+    return interface_driver.plug(network, mac_address)
 
 
 def unplug(network):
@@ -737,7 +737,7 @@ class LinuxNetInterfaceDriver(object):
     """Abstract class that defines generic network host API"""
     """ for for all Linux interface drivers."""
 
-    def plug(self, network):
+    def plug(self, network, mac_address):
         """Create Linux device, return device name"""
         raise NotImplementedError()
 
@@ -749,13 +749,14 @@ class LinuxNetInterfaceDriver(object):
 # plugs interfaces using Linux Bridge
 class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
-    def plug(self, network):
+    def plug(self, network, mac_address):
         if network.get('vlan', None) is not None:
             LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
                            network['vlan'],
                            network['bridge'],
                            network['bridge_interface'],
-                           network)
+                           network,
+                           mac_address)
         else:
             LinuxBridgeInterfaceDriver.ensure_bridge(
                           network['bridge'],
@@ -769,16 +770,16 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     @classmethod
     def ensure_vlan_bridge(_self, vlan_num, bridge, bridge_interface,
-                                                      net_attrs=None):
+                                            net_attrs=None, mac_address=None):
         """Create a vlan and bridge unless they already exist."""
         interface = LinuxBridgeInterfaceDriver.ensure_vlan(vlan_num,
-                                                            bridge_interface)
+                                               bridge_interface, mac_address)
         LinuxBridgeInterfaceDriver.ensure_bridge(bridge, interface, net_attrs)
         return interface
 
     @classmethod
     @utils.synchronized('ensure_vlan', external=True)
-    def ensure_vlan(_self, vlan_num, bridge_interface):
+    def ensure_vlan(_self, vlan_num, bridge_interface, mac_address=None):
         """Create a vlan unless it already exists."""
         interface = 'vlan%s' % vlan_num
         if not _device_exists(interface):
@@ -787,6 +788,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                      'VLAN_PLUS_VID_NO_PAD', run_as_root=True)
             _execute('vconfig', 'add', bridge_interface,
                         vlan_num, run_as_root=True)
+            # (danwent) the bridge will inherit this address, so we want to
+            # make sure it is the value set from the NetworkManager
+            if mac_address:
+                _execute('ip', 'link', 'set', interface, "address",
+                            mac_address, run_as_root=True)
             _execute('ip', 'link', 'set', interface, 'up', run_as_root=True)
         return interface
 
@@ -812,6 +818,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
             # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
             _execute('brctl', 'stp', bridge, 'off', run_as_root=True)
+            # (danwent) bridge device MAC address can't be set directly.
+            # instead it inherits the MAC address of the first device on the
+            # bridge, which will either be the vlan interface, or a
+            # physical NIC.
+            _execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
 
         if interface:
             out, err = _execute('brctl', 'addif', bridge, interface,
@@ -856,11 +867,10 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 # plugs interfaces using Open vSwitch
 class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
 
-    def plug(self, network):
+    def plug(self, network, mac_address):
         dev = "gw-" + str(network['id'])
         if not _device_exists(dev):
             bridge = FLAGS.linuxnet_ovs_integration_bridge
-            mac_addr = utils.generate_mac_address()
             _execute('ovs-vsctl',
                         '--', '--may-exist', 'add-port', bridge, dev,
                         '--', 'set', 'Interface', dev, "type=internal",
@@ -869,10 +879,12 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         '--', 'set', 'Interface', dev,
                                 "external-ids:iface-status=active",
                         '--', 'set', 'Interface', dev,
-                                "external-ids:attached-mac=%s" % mac_addr,
+                                "external-ids:attached-mac=%s" % mac_address,
                         run_as_root=True)
-            _execute('ip', 'link', 'set', dev, "address", mac_addr,
+            _execute('ip', 'link', 'set', dev, "address", mac_address,
                         run_as_root=True)
+            _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
+
         return dev
 
     def unplug(self, network):

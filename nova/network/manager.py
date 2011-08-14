@@ -510,7 +510,7 @@ class NetworkManager(manager.SchedulerDependentManager):
     def _allocate_mac_addresses(self, context, instance_id, networks):
         """Generates mac addresses and creates vif rows in db for them."""
         for network in networks:
-            vif = {'address': utils.generate_mac_address(),
+            vif = {'address': self.generate_mac_address(),
                    'instance_id': instance_id,
                    'network_id': network['id']}
             # try FLAG times to create a vif record with a unique mac_address
@@ -519,11 +519,19 @@ class NetworkManager(manager.SchedulerDependentManager):
                     self.db.virtual_interface_create(context, vif)
                     break
                 except exception.VirtualInterfaceCreateException:
-                    vif['address'] = utils.generate_mac_address()
+                    vif['address'] = self.generate_mac_address()
             else:
                 self.db.virtual_interface_delete_by_instance(context,
                                                              instance_id)
                 raise exception.VirtualInterfaceMacAddressException()
+
+    def generate_mac_address(self):
+        """Generate an Ethernet MAC address."""
+        mac = [0x02, 0x16, 0x3e,
+               random.randint(0x00, 0x7f),
+               random.randint(0x00, 0xff),
+               random.randint(0x00, 0xff)]
+        return ':'.join(map(lambda x: "%02x" % x, mac))
 
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
         """Adds a fixed ip to an instance from specified network."""
@@ -796,7 +804,8 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
         """Sets up network on this host."""
         network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
 
-        dev = self.driver.plug(network_ref)
+        mac_address = self.generate_mac_address()
+        dev = self.driver.plug(network_ref, mac_address)
         self.driver.initialize_gateway_device(dev, network_ref)
 
         if not FLAGS.fake_network:
@@ -897,7 +906,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             address = network_ref['vpn_public_address']
         network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
 
-        dev = self.driver.plug(network_ref)
+        mac_address = self.generate_mac_address()
+        dev = self.driver.plug(network_ref, mac_address)
         self.driver.initialize_gateway_device(dev, network_ref)
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
