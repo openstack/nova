@@ -235,21 +235,9 @@ class VMOps(object):
 
             raise vm_create_error
 
-        VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                vdi_ref=first_vdi_ref, userdevice=0, bootable=True)
-
-        # Attach any other disks
-        # userdevice 1 is reserved for rescue
-        userdevice = 2
-        for vdi in vdis[1:]:
-            # vdi['vdi_type'] is either 'os' or 'swap', but we don't
-            # really care what it is right here.
-            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                    vdi['vdi_uuid'])
-            VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                    vdi_ref=vdi_ref, userdevice=userdevice,
-                    bootable=False)
-            userdevice += 1
+        # Add disks to VM
+        self._attach_disks(instance, disk_image_type, vm_ref, first_vdi_ref,
+            vdis)
 
         # Alter the image before VM start for, e.g. network injection
         if FLAGS.flat_injected:
@@ -259,6 +247,48 @@ class VMOps(object):
         self.create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
         return vm_ref
+
+    def _attach_disks(self, instance, disk_image_type, vm_ref, first_vdi_ref,
+            vdis):
+        # device 0 reserved for RW disk
+        userdevice = 0
+
+        # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
+        if disk_image_type == ImageType.DISK_ISO:
+            LOG.debug("detected ISO image type, going to create blank VM for "
+                  "install")
+
+            cd_vdi_ref = first_vdi_ref
+            first_vdi_ref = VMHelper.fetch_blank_disk(session=self._session,
+                        instance_type_id=instance.instance_type_id)
+
+            VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
+                vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=False)
+
+            # device 1 reserved for rescue disk and we've used '0'
+            userdevice = 2
+            VMHelper.create_cd_vbd(session=self._session, vm_ref=vm_ref,
+                    vdi_ref=cd_vdi_ref, userdevice=userdevice, bootable=True)
+
+            # set user device to next free value
+            userdevice += 1
+        else:
+            VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
+                vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=True)
+            # set user device to next free value
+            # userdevice 1 is reserved for rescue and we've used '0'
+            userdevice = 2
+
+        # Attach any other disks
+        for vdi in vdis[1:]:
+            # vdi['vdi_type'] is either 'os' or 'swap', but we don't
+            # really care what it is right here.
+            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                    vdi['vdi_uuid'])
+            VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
+                    vdi_ref=vdi_ref, userdevice=userdevice,
+                    bootable=False)
+            userdevice += 1
 
     def _spawn(self, instance, vm_ref):
         """Spawn a new instance."""
