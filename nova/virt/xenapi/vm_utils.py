@@ -501,7 +501,7 @@ class VMHelper(HelperBase):
     def _check_vdi_size(cls, context, session, instance, vdi_uuid):
         size_bytes = cls._get_vdi_chain_size(context, session, vdi_uuid)
 
-        # FIXME(sirp): this was copied directly from compute.manager.py, let's
+        # FIXME(jk0): this was copied directly from compute.manager.py, let's
         # refactor this to a common area
         instance_type_id = instance['instance_type_id']
         instance_type = db.instance_type_get(context,
@@ -853,7 +853,7 @@ def get_vhd_parent_uuid(session, vdi_ref):
 
 def walk_vdi_chain(session, vdi_uuid):
     """Yield vdi_recs for each element in a VDI chain"""
-    # TODO: perhaps make get_vhd_parent use this
+    # TODO(jk0): perhaps make get_vhd_parent use this
     while True:
         vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
