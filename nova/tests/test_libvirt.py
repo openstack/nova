@@ -627,7 +627,7 @@ class LibvirtConnTestCase(test.TestCase):
             return
 
         # Preparing mocks
-        def fake_none(self):
+        def fake_none(self, *args):
             return
 
         def fake_raise(self):
@@ -1050,7 +1050,7 @@ class IptablesFirewallTestCase(test.TestCase):
         instance_ref = self._create_instance_ref()
 
         _setup_networking(instance_ref['id'], self.test_ip)
-        network_info = _create_network_info
+        network_info = _create_network_info()
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
