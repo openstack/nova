@@ -1315,7 +1315,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # This nwfilter is necessary on the destination host.
         # In addition, this method is creating filtering rule
         # onto destination host.
-        self.driver.ensure_filtering_rules_for_instance(instance_ref, network_info)
+        self.driver.ensure_filtering_rules_for_instance(instance_ref,
+                                                        network_info)
 
         # Preparation for block migration
         if block_migration:
