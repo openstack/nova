@@ -489,7 +489,7 @@ class ServerActionsTestV11(test.TestCase):
 
     def test_server_bad_body(self):
         body = {}
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/fake/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -498,7 +498,7 @@ class ServerActionsTestV11(test.TestCase):
 
     def test_server_unknown_action(self):
         body = {'sockTheFox': {'fakekey': '1234'}}
-        req = webob.Request.blank('/v1.1/servers/1/action')
+        req = webob.Request.blank('/v1.1/fake/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
