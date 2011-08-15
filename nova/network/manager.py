@@ -662,18 +662,26 @@ class NetworkManager(manager.SchedulerDependentManager):
                 nets = []
             used_subnets = [netaddr.IPNetwork(net['cidr']) for net in nets]
 
-            for subnet in subnets_v4:
+            for subnet in list(subnets_v4):
                 if subnet in used_subnets:
-                    raise ValueError(_('cidr already in use'))
+                    next_subnet = subnet.next()
+                    while next_subnet in subnets_v4:
+                        next_subnet = next_subnet.next()
+                    if next_subnet in fixed_net_v4:
+                        subnets_v4.remove(subnet)
+                        subnets_v4.append(next_subnet)
+                        subnet = next_subnet
+                    else:
+                        raise ValueError(_('cidr already in use'))
                 for used_subnet in used_subnets:
                     if subnet in used_subnet:
-                        msg = _('requested cidr (%{cidr}) conflicts with '
-                                'existing supernet (%{super})')
+                        msg = _('requested cidr (%(cidr)s) conflicts with '
+                                'existing supernet (%(super)s)')
                         raise ValueError(msg % {'cidr': subnet,
                                                 'super': used_subnet})
                     if used_subnet in subnet:
-                        msg = _('requested cidr (%{cidr}) conflicts with '
-                                'existing smaller cidr (%{smaller})')
+                        msg = _('requested cidr (%(cidr)s) conflicts with '
+                                'existing smaller cidr (%(smaller)s)')
                         raise ValueError(msg % {'cidr': subnet,
                                                 'smaller': used_subnet})
 
