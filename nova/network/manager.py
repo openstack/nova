@@ -677,6 +677,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                         raise ValueError(msg % {'cidr': subnet,
                                                 'smaller': used_subnet})
 
+        networks = []
         subnets = itertools.izip_longest(subnets_v4, subnets_v6)
         for index, (subnet_v4, subnet_v6) in enumerate(subnets):
             net = {}
@@ -728,9 +729,12 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             if not network:
                 raise ValueError(_('Network already exists!'))
+            else:
+                networks.append(network)
 
             if network and cidr and subnet_v4:
                 self._create_fixed_ips(context, network['id'])
+        return networks
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201
