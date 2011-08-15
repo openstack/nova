@@ -131,7 +131,7 @@ class FloatingIPController(object):
                 "floating_ip": floating_ip,
                 "fixed_ip": fixed_ip}}
 
-    def disassociate(self, req, id):
+    def disassociate(self, req, id, body=None):
         """ POST /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
         floating_ip = self.network_api.get_floating_ip(context, id)

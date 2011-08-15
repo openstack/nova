@@ -177,8 +177,10 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(actual, expected)
 
     def test_floating_ip_disassociate(self):
+        body = dict()
         req = webob.Request.blank('/v1.1/os-floating-ips/1/disassociate')
         req.method = 'POST'
+        req.body = json.dumps(body)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
