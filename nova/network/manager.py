@@ -656,6 +656,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             subnets_v4 = list(fixed_net_v4.subnet(prefixlen_v4,
                                                   count=num_networks))
 
+            # NOTE(jkoelker): This replaces the _validate_cidrs call and
+            #                 prevents looping multiple times
             try:
                 nets = self.db.network_get_all(context)
             except exception.NoNetworksFound:
