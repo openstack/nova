@@ -97,9 +97,12 @@ class APIRouter(base_wsgi.Router):
 
     def __init__(self, ext_mgr=None):
         self.server_members = {}
-        mapper = routes.Mapper()
+        mapper = self._mapper()
         self._setup_routes(mapper)
         super(APIRouter, self).__init__(mapper)
+
+    def _mapper(self):
+        return routes.Mapper()
 
     def _setup_routes(self, mapper):
         raise NotImplementedError(_("You must implement _setup_routes."))
@@ -190,11 +193,8 @@ class APIRouterV10(APIRouter):
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
-    def __init__(self, ext_mgr=None):
-        mapper = ProjectMapper()
-        self.server_members = {}
-        self._setup_routes(mapper)
-        super(APIRouter, self).__init__(mapper)
+    def _mapper(self):
+        return ProjectMapper()
 
     def _setup_routes(self, mapper):
         self._setup_base_routes(mapper, '1.1')
