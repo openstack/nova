@@ -393,10 +393,6 @@ class API(base.Base):
         updates['hostname'] = self.hostname_factory(instance)
 
         instance = self.update(context, instance_id, **updates)
-
-        for group_id in security_groups:
-            self.trigger_security_group_members_refresh(elevated, group_id)
-
         return instance
 
     def _ask_scheduler_to_create_instance(self, context, base_options,
@@ -565,18 +561,20 @@ class API(base.Base):
                      {"method": "refresh_security_group_rules",
                       "args": {"security_group_id": security_group.id}})
 
-    def trigger_security_group_members_refresh(self, context, group_id):
+    def trigger_security_group_members_refresh(self, context, group_ids):
         """Called when a security group gains a new or loses a member.
 
         Sends an update request to each compute node for whom this is
         relevant.
         """
-        # First, we get the security group rules that reference this group as
+        # First, we get the security group rules that reference these groups as
         # the grantee..
-        security_group_rules = \
+        security_group_rules = set()
+        for group_id in group_ids:
+            security_group_rules.update(
                 self.db.security_group_rule_get_by_security_group_grantee(
                                                                      context,
-                                                                     group_id)
+                                                                     group_id))
 
         # ..then we distill the security groups to which they belong..
         security_groups = set()
