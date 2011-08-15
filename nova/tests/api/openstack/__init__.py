@@ -48,7 +48,8 @@ class RateLimitingMiddlewareTest(test.TestCase):
         verify('DELETE', '/fake/servers/4', 'DELETE')
         verify('POST', '/fake/images/4', 'POST')
         verify('POST', '/fake/servers/4', 'POST servers')
-        verify('GET', '/fake/foo?a=4&changes-since=never&b=5', 'GET changes-since')
+        verify('GET', '/fake/foo?a=4&changes-since=never&b=5',
+               'GET changes-since')
         verify('GET', '/fake/foo?a=4&monkeys-since=never&b=5', None)
         verify('GET', '/fake/servers/4', None)
         verify('HEAD', '/fake/servers/4', None)
