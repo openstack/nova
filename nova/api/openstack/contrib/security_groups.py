@@ -56,7 +56,7 @@ class SecurityGroupController(object):
         if rule.group_id:
             source_group = db.security_group_get(context, rule.group_id)
             sg_rule['group'] = {'name': source_group.name,
-                             'project_id': source_group.project_id}
+                             'tenant_id': source_group.project_id}
         else:
             sg_rule['ip_range'] = {'cidr': rule.cidr}
         return sg_rule
@@ -66,7 +66,7 @@ class SecurityGroupController(object):
         security_group['id'] = group.id
         security_group['description'] = group.description
         security_group['name'] = group.name
-        security_group['project_id'] = group.project_id
+        security_group['tenant_id'] = group.project_id
         security_group['rules'] = []
         for rule in group.rules:
             security_group['rules'] += [self._format_security_group_rule(
@@ -118,7 +118,7 @@ class SecurityGroupController(object):
 
         return {'security_groups':
                 list(sorted(result,
-                            key=lambda k: (k['project_id'], k['name'])))}
+                            key=lambda k: (k['tenant_id'], k['name'])))}
 
     def create(self, req, body):
         """Creates a new security group."""

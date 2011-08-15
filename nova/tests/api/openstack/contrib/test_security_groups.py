@@ -247,7 +247,7 @@ class TestSecurityGroups(test.TestCase):
         expected = {'security_groups': [
                     {'id': 1,
                             'name':"default",
-                            'project_id': "123",
+                            'tenant_id': "123",
                             "description":"default",
                             "rules": []
                        },
@@ -257,7 +257,7 @@ class TestSecurityGroups(test.TestCase):
                     {
                         'id': 2,
                         'name': "test",
-                        'project_id': "123",
+                        'tenant_id': "123",
                         "description": "group-description",
                         "rules": []
                     }
@@ -283,12 +283,11 @@ class TestSecurityGroups(test.TestCase):
                       'security_group': {
                           'id': 2,
                           'name': "test",
-                          'project_id': "123",
+                          'tenant_id': "123",
                           'description': "group-description",
                           'rules': []
                        }
                    }
-        self.assertEquals(response.status_int, 200)
         self.assertEquals(res_dict, expected)
 
     def test_get_security_group_by_invalid_id(self):
