@@ -671,7 +671,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                     if used_subnet in subnet:
                         msg = _('requested cidr (%{cidr}) conflicts with '
                                 'existing smaller cidr (%{smaller})')
-                        raise ValueError(msg % {'cidr': subnet
+                        raise ValueError(msg % {'cidr': subnet,
                                                 'smaller': used_subnet})
 
 
