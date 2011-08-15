@@ -494,7 +494,6 @@ class CloudTestCase(test.TestCase):
         db.instance_destroy(self.context, inst1.id)
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]['instancesSet']
-        print result
         self.assertEqual(1, len(result))
 
     def _block_device_mapping_create(self, instance_id, mappings):
