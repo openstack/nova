@@ -170,7 +170,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             elif drv_state == power_state.RUNNING:
                 # Hyper-V and VMWareAPI drivers will raise and exception
                 try:
-                    self.driver.ensure_filtering_rules_for_instance(instance)
+                    net_info = self._get_instance_nw_info(context, instance)
+                    self.driver.ensure_filtering_rules_for_instance(instance,
+                                                                    net_info)
                 except NotImplementedError:
                     LOG.warning(_('Hypervisor driver does not '
                             'support firewall rules'))
@@ -1308,7 +1310,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # This nwfilter is necessary on the destination host.
         # In addition, this method is creating filtering rule
         # onto destination host.
-        self.driver.ensure_filtering_rules_for_instance(instance_ref)
+        self.driver.ensure_filtering_rules_for_instance(instance_ref, network_info)
 
     def live_migration(self, context, instance_id, dest):
         """Executing live migration.

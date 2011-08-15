@@ -32,7 +32,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 :rescue_kernel_id:  Rescue aki image (default: aki-rescue).
 :rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
 :injected_network_template:  Template file for injected network
-:allow_project_net_traffic:  Whether to allow in project network traffic
+:allow_same_net_traffic:  Whether to allow in project network traffic
 
 """
 
@@ -96,9 +96,9 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
-flags.DEFINE_bool('allow_project_net_traffic',
+flags.DEFINE_bool('allow_same_net_traffic',
                   True,
-                  'Whether to allow in project network traffic')
+                  'Whether to allow network traffic from same network')
 flags.DEFINE_bool('use_cow_images',
                   True,
                   'Whether to use cow images')
@@ -463,18 +463,18 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         virt_dom = self._conn.lookupByName(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance
-        # instead of using to_xml(instance). This is almost the ultimate
-        # stupid workaround.
+        # instead of using to_xml(instance, network_info). This is almost
+        # the ultimate stupid workaround.
         xml = virt_dom.XMLDesc(0)
         # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
         # better because we cannot ensure flushing dirty buffers
         # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, network_info, cleanup=False)
         self.plug_vifs(instance, network_info)
-        self.firewall_driver.setup_basic_filtering(instance)
-        self.firewall_driver.prepare_instance_filter(instance)
+        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_new_domain(xml)
-        self.firewall_driver.apply_instance_filter(instance)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -531,7 +531,7 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         self.destroy(instance, network_info, cleanup=False)
 
-        xml = self.to_xml(instance, rescue=True)
+        xml = self.to_xml(instance, network_info, rescue=True)
         rescue_images = {'image_id': FLAGS.rescue_image_id,
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
@@ -574,9 +574,9 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, context, instance,
-              network_info=None, block_device_info=None):
-        xml = self.to_xml(instance, False, network_info=network_info,
+    def spawn(self, context, instance, network_info,
+              block_device_info=None):
+        xml = self.to_xml(instance, network_info, False,
                           block_device_info=block_device_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
@@ -584,7 +584,7 @@ class LibvirtConnection(driver.ComputeDriver):
                            block_device_info=block_device_info)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
-        self.firewall_driver.apply_instance_filter(instance)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
@@ -988,14 +988,10 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             raise exception.InvalidDevicePath(path=device_path)
 
-    def _prepare_xml_info(self, instance, rescue=False, network_info=None,
+    def _prepare_xml_info(self, instance, network_info, rescue,
                           block_device_info=None):
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
-        # TODO(adiantum) remove network_info creation code
-        # when multinics will be completed
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
 
         nics = []
         for (network, mapping) in network_info:
@@ -1082,11 +1078,11 @@ class LibvirtConnection(driver.ComputeDriver):
             xml_info['disk'] = xml_info['basepath'] + "/disk"
         return xml_info
 
-    def to_xml(self, instance, rescue=False, network_info=None,
+    def to_xml(self, instance, network_info, rescue=False,
                block_device_info=None):
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-        xml_info = self._prepare_xml_info(instance, rescue, network_info,
+        xml_info = self._prepare_xml_info(instance, network_info, rescue,
                                           block_device_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
         LOG.debug(_('instance %s: finished toXML method'), instance['name'])
@@ -1506,7 +1502,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return
 
-    def ensure_filtering_rules_for_instance(self, instance_ref,
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info,
                                             time=None):
         """Setting up filtering rules and waiting for its completion.
 
@@ -1536,14 +1532,15 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # If any instances never launch at destination host,
         # basic-filtering must be set here.
-        self.firewall_driver.setup_basic_filtering(instance_ref)
+        self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
         # setting up n)ova-instance-instance-xx mainly.
-        self.firewall_driver.prepare_instance_filter(instance_ref)
+        self.firewall_driver.prepare_instance_filter(instance_ref, network_info)
 
         # wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)
         while timeout_count:
-            if self.firewall_driver.instance_filter_exists(instance_ref):
+            if self.firewall_driver.instance_filter_exists(instance_ref,
+                                                           network_info):
                 break
             timeout_count.pop()
             if len(timeout_count) == 0:

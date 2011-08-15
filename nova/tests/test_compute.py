@@ -632,7 +632,7 @@ class ComputeTestCase(test.TestCase):
             vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
         drivermock.plug_vifs(i_ref, [])
-        drivermock.ensure_filtering_rules_for_instance(i_ref)
+        drivermock.ensure_filtering_rules_for_instance(i_ref, [])
 
         self.compute.db = dbmock
         self.compute.volume_manager = volmock
@@ -657,7 +657,7 @@ class ComputeTestCase(test.TestCase):
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
         compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
         drivermock.plug_vifs(i_ref, [])
-        drivermock.ensure_filtering_rules_for_instance(i_ref)
+        drivermock.ensure_filtering_rules_for_instance(i_ref, [])
 
         self.compute.db = dbmock
         self.compute.driver = drivermock

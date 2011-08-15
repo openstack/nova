@@ -252,7 +252,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         pass
 
-    def ensure_filtering_rules_for_instance(self, instance_ref):
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         """Setting up filtering rules and waiting for its completion.
 
         To migrate an instance, filtering rules to hypervisors
