@@ -656,7 +656,10 @@ class NetworkManager(manager.SchedulerDependentManager):
             subnets_v4 = list(fixed_net_v4.subnet(prefixlen_v4,
                                                   count=num_networks))
 
-            nets = self.db.network_get_all(context)
+            try:
+                nets = self.db.network_get_all(context)
+            except exception.NoNetworksFound:
+                nets = []
             used_subnets = [netaddr.IPNetwork(net['cidr']) for net in nets]
 
             for subnet in subnets_v4:
