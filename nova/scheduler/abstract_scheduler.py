@@ -45,20 +45,19 @@ LOG = logging.getLogger('nova.scheduler.abstract_scheduler')
 
 class InvalidBlob(exception.NovaException):
     message = _("Ill-formed or incorrectly routed 'blob' data sent "
-                "to instance create request.")
+            "to instance create request.")
 
 
 class AbstractScheduler(driver.Scheduler):
     """Base class for creating Schedulers that can work across any nova
     deployment, from simple designs to multiply-nested zones.
     """
-
     def _call_zone_method(self, context, method, specs, zones):
         """Call novaclient zone method. Broken out for testing."""
         return api.call_zone_method(context, method, specs=specs, zones=zones)
 
     def _provision_resource_locally(self, context, build_plan_item,
-                                    request_spec, kwargs):
+            request_spec, kwargs):
         """Create the requested resource in this Zone."""
         host = build_plan_item['hostname']
         base_options = request_spec['instance_properties']
@@ -68,21 +67,21 @@ class AbstractScheduler(driver.Scheduler):
         # support at some point? Also, OS API has no concept of security
         # groups.
         instance = compute_api.API().create_db_entry_for_new_instance(context,
-            image, base_options, None, [])
+                image, base_options, None, [])
 
         instance_id = instance['id']
         kwargs['instance_id'] = instance_id
 
-        rpc.cast(context,
-                 db.queue_get_for(context, "compute", host),
-                 {"method": "run_instance",
-                  "args": kwargs})
+        queue = db.queue_get_for(context, "compute", host)
+        params = {"method": "run_instance", "args": kwargs}
+        rpc.cast(context, queue, params)
         LOG.debug(_("Provisioning locally via compute node %(host)s")
-                            % locals())
+                % locals())
 
     def _decrypt_blob(self, blob):
         """Returns the decrypted blob or None if invalid. Broken out
-        for testing."""
+        for testing.
+        """
         decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
         try:
             json_entry = decryptor(blob)
@@ -92,15 +91,15 @@ class AbstractScheduler(driver.Scheduler):
         return None
 
     def _ask_child_zone_to_create_instance(self, context, zone_info,
-                                           request_spec, kwargs):
+            request_spec, kwargs):
         """Once we have determined that the request should go to one
         of our children, we need to fabricate a new POST /servers/
         call with the same parameters that were passed into us.
 
         Note that we have to reverse engineer from our args to get back the
         image, flavor, ipgroup, etc. since the original call could have
-        come in from EC2 (which doesn't use these things)."""
-
+        come in from EC2 (which doesn't use these things).
+        """
         instance_type = request_spec['instance_type']
         instance_properties = request_spec['instance_properties']
 
@@ -109,30 +108,26 @@ class AbstractScheduler(driver.Scheduler):
         meta = instance_properties['metadata']
         flavor_id = instance_type['flavorid']
         reservation_id = instance_properties['reservation_id']
-
         files = kwargs['injected_files']
         ipgroup = None  # Not supported in OS API ... yet
-
         child_zone = zone_info['child_zone']
         child_blob = zone_info['child_blob']
         zone = db.zone_get(context, child_zone)
         url = zone.api_url
         LOG.debug(_("Forwarding instance create call to child zone %(url)s"
-                    ". ReservationID=%(reservation_id)s")
-                    % locals())
+                ". ReservationID=%(reservation_id)s") % locals())
         nova = None
         try:
             nova = novaclient.Client(zone.username, zone.password, None, url)
             nova.authenticate()
         except novaclient_exceptions.BadRequest, e:
             raise exception.NotAuthorized(_("Bad credentials attempting "
-                            "to talk to zone at %(url)s.") % locals())
-
+                    "to talk to zone at %(url)s.") % locals())
         nova.servers.create(name, image_ref, flavor_id, ipgroup, meta, files,
-                            child_blob, reservation_id=reservation_id)
+                child_blob, reservation_id=reservation_id)
 
     def _provision_resource_from_blob(self, context, build_plan_item,
-                                      instance_id, request_spec, kwargs):
+            instance_id, request_spec, kwargs):
         """Create the requested resource locally or in a child zone
            based on what is stored in the zone blob info.
 
@@ -145,8 +140,8 @@ class AbstractScheduler(driver.Scheduler):
            means we gathered the info from one of our children.
            It's possible that, when we decrypt the 'blob' field, it
            contains "child_blob" data. In which case we forward the
-           request."""
-
+           request.
+           """
         host_info = None
         if "blob" in build_plan_item:
             # Request was passed in from above. Is it for us?
@@ -161,21 +156,20 @@ class AbstractScheduler(driver.Scheduler):
         # Valid data ... is it for us?
         if 'child_zone' in host_info and 'child_blob' in host_info:
             self._ask_child_zone_to_create_instance(context, host_info,
-                                                    request_spec, kwargs)
+                    request_spec, kwargs)
         else:
             self._provision_resource_locally(context, host_info, request_spec,
-                                             kwargs)
+                    kwargs)
 
     def _provision_resource(self, context, build_plan_item, instance_id,
-                            request_spec, kwargs):
+            request_spec, kwargs):
         """Create the requested resource in this Zone or a child zone."""
         if "hostname" in build_plan_item:
             self._provision_resource_locally(context, build_plan_item,
-                                             request_spec, kwargs)
+                    request_spec, kwargs)
             return
-
         self._provision_resource_from_blob(context, build_plan_item,
-                                           instance_id, request_spec, kwargs)
+                instance_id, request_spec, kwargs)
 
     def _adjust_child_weights(self, child_results, zones):
         """Apply the Scale and Offset values from the Zone definition
@@ -231,7 +225,6 @@ class AbstractScheduler(driver.Scheduler):
         for num in xrange(num_instances):
             if not build_plan:
                 break
-
             build_plan_item = build_plan.pop(0)
             self._provision_resource(context, build_plan_item, instance_id,
                     request_spec, kwargs)

@@ -20,43 +20,32 @@ either incompatible or insufficient to accept a newly-requested instance
 are removed by Host Filter classes from consideration. Those that pass
 the filter are then passed on for weighting or other process for ordering.
 
-Three filters are included: AllHosts, Flavor & JSON. AllHosts just
-returns the full, unfiltered list of hosts. Flavor is a hard coded
-matching mechanism based on flavor criteria and JSON is an ad-hoc
-filter grammar.
-
-Why JSON? The requests for instances may come in through the
-REST interface from a user or a parent Zone.
-Currently Flavors and/or InstanceTypes are used for
-specifing the type of instance desired. Specific Nova users have
-noted a need for a more expressive way of specifying instances.
-Since we don't want to get into building full DSL this is a simple
-form as an example of how this could be done. In reality, most
-consumers will use the more rigid filters such as FlavorFilter.
+Filters are in the 'filters' directory that is off the 'scheduler'
+directory of nova. Additional filters can be created and added to that
+directory; be sure to add them to the filters/__init__.py file so that
+they are part of the nova.schedulers.filters namespace.
 """
 
-import json
 import types
 
 from nova import exception
 from nova import flags
-from nova import log as logging
-
 import nova.scheduler
 
 
-LOG = logging.getLogger('nova.scheduler.host_filter')
 FLAGS = flags.FLAGS
 
 
 def _get_filters():
+    # Imported here to avoid circular imports
     from nova.scheduler import filters
     def get_itm(nm):
         return getattr(filters, nm)
 
     return [get_itm(itm) for itm in dir(filters)
             if (type(get_itm(itm)) is types.TypeType)
-            and issubclass(get_itm(itm), filters.AbstractHostFilter)]
+            and issubclass(get_itm(itm), filters.AbstractHostFilter)
+            and get_itm(itm) is not filters.AbstractHostFilter]
 
 
 def choose_host_filter(filter_name=None):

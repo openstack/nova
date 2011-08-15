@@ -43,39 +43,12 @@ class BaseScheduler(abstract_scheduler.AbstractScheduler):
         # TODO(sandy): We're only using InstanceType-based specs
         # currently. Later we'll need to snoop for more detailed
         # host filter requests.
-        instance_type = request_spec['instance_type']
+        instance_type = request_spec.get("instance_type", None)
+        if instance_type is None:
+            # No way to select; return the specified hosts
+            return hosts or []
         name, query = selected_filter.instance_type_to_filter(instance_type)
         return selected_filter.filter_hosts(self.zone_manager, query)
-
-    def filter_hosts(self, topic, request_spec, host_list=None):
-        """Return a list of hosts which are acceptable for scheduling.
-        Return value should be a list of (hostname, capability_dict)s.
-        Derived classes may override this, but may find the
-        '<topic>_filter' function more appropriate.
-        """
-        def _default_filter(self, hostname, capabilities, request_spec):
-            """Default filter function if there's no <topic>_filter"""
-            # NOTE(sirp): The default logic is the equivalent to
-            # AllHostsFilter
-            return True
-
-        filter_func = getattr(self, '%s_filter' % topic, _default_filter)
-
-        if host_list is None:
-            first_run = True
-            host_list = self.zone_manager.service_states.iteritems()
-        else:
-            first_run = False
-
-        filtered_hosts = []
-        for host, services in host_list:
-            if first_run:
-                if topic not in services:
-                    continue
-                services = services[topic]
-            if filter_func(host, services, request_spec):
-                filtered_hosts.append((host, services))
-        return filtered_hosts
 
     def weigh_hosts(self, topic, request_spec, hosts):
         """Derived classes may override this to provide more sophisticated
@@ -84,18 +57,3 @@ class BaseScheduler(abstract_scheduler.AbstractScheduler):
         # NOTE(sirp): The default logic is the same as the NoopCostFunction
         return [dict(weight=1, hostname=hostname, capabilities=capabilities)
                 for hostname, capabilities in hosts]
-
-    def compute_consume(self, capabilities, instance_type):
-        """Consume compute resources for selected host"""
-
-        requested_mem = max(instance_type['memory_mb'], 0) * 1024 * 1024
-        capabilities['host_memory_free'] -= requested_mem
-
-    def consume_resources(self, topic, capabilities, instance_type):
-        """Consume resources for a specific host.  'host' is a tuple
-        of the hostname and the services"""
-
-        consume_func = getattr(self, '%s_consume' % topic, None)
-        if not consume_func:
-            return
-        consume_func(capabilities, instance_type)

@@ -192,9 +192,7 @@ class HostFilterTestCase(test.TestCase):
                 msg = " ".join([str(arg) for arg in args])
                 dbg.write("%s\n" % msg)
 
-        debug("cooked", cooked, type(cooked))
         hosts = hf.filter_hosts(self.zone_manager, cooked)
-
         self.assertEquals(5, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()

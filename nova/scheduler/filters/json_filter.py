@@ -20,11 +20,6 @@ import operator
 import nova.scheduler
 from nova.scheduler.filters import abstract_filter
 
-def debug(*args):
-    with file("/tmp/debug", "a") as dbg:
-        msg = " ".join([str(arg) for arg in args])
-        dbg.write("%s\n" % msg)
-
 
 class JsonFilter(abstract_filter.AbstractHostFilter):
     """Host Filter to allow simple JSON-based grammar for
@@ -38,12 +33,7 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         if len(args) < 2:
             return False
         if op is operator.contains:
-            debug("ARGS", type(args), args)
-            debug("op", op)
-            debug("REVERSED!!!")
-            # operator.contains reverses the param order.
-            bad = [arg for arg in args[1:]
-                    if not op(args, args[0])]
+            bad = not args[0] in args[1:]
         else:
             bad = [arg for arg in args[1:]
                     if not op(args[0], arg)]
@@ -144,8 +134,6 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         specified in the query.
         """
         expanded = json.loads(query)
-
-        debug("expanded", type(expanded), expanded)
         filtered_hosts = []
         for host, services in zone_manager.service_states.iteritems():
             result = self._process_filter(zone_manager, expanded, host,
