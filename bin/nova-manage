@@ -885,6 +885,14 @@ class ServiceCommands(object):
             services = [s for s in services if s['host'] == host]
         if service:
             services = [s for s in services if s['binary'] == service]
+        print_format = "%-16s %-36s %-16s %-10s %-5s %-10s"
+        print print_format % (
+                    _('Binary'),
+                    _('Host'),
+                    _('Zone'),
+                    _('Status'),
+                    _('State'),
+                    _('Updated_At'))
         for svc in services:
             delta = now - (svc['updated_at'] or svc['created_at'])
             alive = (delta.seconds <= 15)
@@ -892,9 +900,9 @@ class ServiceCommands(object):
             active = 'enabled'
             if svc['disabled']:
                 active = 'disabled'
-            print "%-10s %-10s %-8s %s %s" % (svc['host'], svc['binary'],
-                                              active, art,
-                                              svc['updated_at'])
+            print print_format % (svc['binary'], svc['host'],
+                                  svc['availability_zone'], active, art,
+                                  svc['updated_at'])
 
     @args('--host', dest='host', metavar='<host>', help='Host')
     @args('--service', dest='service', metavar='<service>',

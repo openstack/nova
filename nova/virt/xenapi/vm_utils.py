@@ -77,6 +77,7 @@ class ImageType:
         3 - raw disk image (local SR, NOT partitioned by plugin)
         4 - vhd disk image (local SR, NOT inspected by XS, PV assumed for
             linux, HVM assumed for Windows)
+        5 - ISO disk image (local SR, NOT partitioned by plugin)
     """
 
     KERNEL = 0
@@ -84,14 +85,17 @@ class ImageType:
     DISK = 2
     DISK_RAW = 3
     DISK_VHD = 4
-    _ids = (KERNEL, RAMDISK, DISK, DISK_RAW, DISK_VHD)
+    DISK_ISO = 5
+    _ids = (KERNEL, RAMDISK, DISK, DISK_RAW, DISK_VHD, DISK_ISO)
 
     KERNEL_STR = "kernel"
     RAMDISK_STR = "ramdisk"
     DISK_STR = "os"
     DISK_RAW_STR = "os_raw"
     DISK_VHD_STR = "vhd"
-    _strs = (KERNEL_STR, RAMDISK_STR, DISK_STR, DISK_RAW_STR, DISK_VHD_STR)
+    DISK_ISO_STR = "iso"
+    _strs = (KERNEL_STR, RAMDISK_STR, DISK_STR, DISK_RAW_STR, DISK_VHD_STR,
+                DISK_ISO_STR)
 
     @classmethod
     def to_string(cls, image_type):
@@ -220,6 +224,30 @@ class VMHelper(HelperBase):
         vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
         LOG.debug(_('Created VBD %(vbd_ref)s for VM %(vm_ref)s,'
                 ' VDI %(vdi_ref)s.') % locals())
+        return vbd_ref
+
+    @classmethod
+    def create_cd_vbd(cls, session, vm_ref, vdi_ref, userdevice, bootable):
+        """Create a VBD record.  Returns a Deferred that gives the new
+        VBD reference specific to CDRom devices."""
+        vbd_rec = {}
+        vbd_rec['VM'] = vm_ref
+        vbd_rec['VDI'] = vdi_ref
+        vbd_rec['userdevice'] = str(userdevice)
+        vbd_rec['bootable'] = bootable
+        vbd_rec['mode'] = 'RO'
+        vbd_rec['type'] = 'CD'
+        vbd_rec['unpluggable'] = True
+        vbd_rec['empty'] = False
+        vbd_rec['other_config'] = {}
+        vbd_rec['qos_algorithm_type'] = ''
+        vbd_rec['qos_algorithm_params'] = {}
+        vbd_rec['qos_supported_algorithms'] = []
+        LOG.debug(_('Creating a CDROM-specific VBD for VM %(vm_ref)s,'
+                ' VDI %(vdi_ref)s ... ') % locals())
+        vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
+        LOG.debug(_('Created a CDROM-specific VBD %(vbd_ref)s '
+                ' for VM %(vm_ref)s, VDI %(vdi_ref)s.') % locals())
         return vbd_ref
 
     @classmethod
@@ -368,6 +396,23 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
+    def fetch_blank_disk(cls, session, instance_type_id):
+        # Size the blank harddrive to suit the machine type:
+        one_gig = 1024 * 1024 * 1024
+        req_type = instance_types.get_instance_type(instance_type_id)
+        req_size = req_type['local_gb']
+
+        LOG.debug("Creating blank HD of size %(req_size)d gigs"
+                    % locals())
+        vdi_size = one_gig * req_size
+
+        LOG.debug("ISO vm create: Looking for the SR")
+        sr_ref = safe_find_sr(session)
+
+        vdi_ref = cls.create_vdi(session, sr_ref, 'blank HD', vdi_size, False)
+        return vdi_ref
+
+    @classmethod
     def fetch_image(cls, context, session, instance_id, image, user_id,
                     project_id, image_type):
         """Fetch image from glance based on image type.
@@ -449,7 +494,12 @@ class VMHelper(HelperBase):
         # DISK restores
         LOG.debug(_("Fetching image %(image)s") % locals())
         LOG.debug(_("Image Type: %s"), ImageType.to_string(image_type))
-        sr_ref = safe_find_sr(session)
+
+        if image_type == ImageType.DISK_ISO:
+            sr_ref = safe_find_iso_sr(session)
+            LOG.debug(_("ISO: Found sr possibly containing the ISO image"))
+        else:
+            sr_ref = safe_find_sr(session)
 
         glance_client, image_id = nova.image.get_glance_client(image)
         glance_client.set_auth_token(getattr(context, 'auth_token', None))
@@ -527,7 +577,8 @@ class VMHelper(HelperBase):
                              ImageType.RAMDISK: 'RAMDISK',
                              ImageType.DISK: 'DISK',
                              ImageType.DISK_RAW: 'DISK_RAW',
-                             ImageType.DISK_VHD: 'DISK_VHD'}
+                             ImageType.DISK_VHD: 'DISK_VHD',
+                             ImageType.DISK_ISO: 'DISK_ISO'}
             disk_format = pretty_format[image_type]
             image_ref = instance.image_ref
             instance_id = instance.id
@@ -540,7 +591,8 @@ class VMHelper(HelperBase):
                 'aki': ImageType.KERNEL,
                 'ari': ImageType.RAMDISK,
                 'raw': ImageType.DISK_RAW,
-                'vhd': ImageType.DISK_VHD}
+                'vhd': ImageType.DISK_VHD,
+                'iso': ImageType.DISK_ISO}
             image_ref = instance.image_ref
             glance_client, image_id = nova.image.get_glance_client(image_ref)
             meta = glance_client.get_image_meta(image_id)
@@ -574,6 +626,8 @@ class VMHelper(HelperBase):
                available
 
             3. Glance (DISK): pv is assumed
+
+            4. Glance (DISK_ISO): no pv is assumed
         """
 
         LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
@@ -589,6 +643,9 @@ class VMHelper(HelperBase):
         elif disk_image_type == ImageType.DISK:
             # 3. Disk
             is_pv = True
+        elif disk_image_type == ImageType.DISK_ISO:
+            # 4. ISO
+            is_pv = False
         else:
             raise exception.Error(_("Unknown image format %(disk_image_type)s")
                                   % locals())
@@ -828,6 +885,48 @@ def find_sr(session):
         for pbd_ref in sr_rec['PBDs']:
             pbd_rec = session.get_xenapi().PBD.get_record(pbd_ref)
             if pbd_rec['host'] == host:
+                return sr_ref
+    return None
+
+
+def safe_find_iso_sr(session):
+    """Same as find_iso_sr except raises a NotFound exception if SR cannot be
+    determined
+    """
+    sr_ref = find_iso_sr(session)
+    if sr_ref is None:
+        raise exception.NotFound(_('Cannot find SR of content-type ISO'))
+    return sr_ref
+
+
+def find_iso_sr(session):
+    """Return the storage repository to hold ISO images"""
+    host = session.get_xenapi_host()
+    sr_refs = session.get_xenapi().SR.get_all()
+    for sr_ref in sr_refs:
+        sr_rec = session.get_xenapi().SR.get_record(sr_ref)
+
+        LOG.debug(_("ISO: looking at SR %(sr_rec)s") % locals())
+        if not sr_rec['content_type'] == 'iso':
+            LOG.debug(_("ISO: not iso content"))
+            continue
+        if not 'i18n-key' in sr_rec['other_config']:
+            LOG.debug(_("ISO: iso content_type, no 'i18n-key' key"))
+            continue
+        if not sr_rec['other_config']['i18n-key'] == 'local-storage-iso':
+            LOG.debug(_("ISO: iso content_type, i18n-key value not "
+                        "'local-storage-iso'"))
+            continue
+
+        LOG.debug(_("ISO: SR MATCHing our criteria"))
+        for pbd_ref in sr_rec['PBDs']:
+            LOG.debug(_("ISO: ISO, looking to see if it is host local"))
+            pbd_rec = session.get_xenapi().PBD.get_record(pbd_ref)
+            pbd_rec_host = pbd_rec['host']
+            LOG.debug(_("ISO: PBD matching, want %(pbd_rec)s, have %(host)s") %
+                      locals())
+            if pbd_rec_host == host:
+                LOG.debug(_("ISO: SR with local PBD"))
                 return sr_ref
     return None
 
