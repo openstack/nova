@@ -714,11 +714,15 @@ class ComputeTestCase(test.TestCase):
         dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
                              AndReturn(topic)
         rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': i_ref['id']}})
+                            "args": {'instance_id': i_ref['id'],
+                                     'block_migration': False,
+                                     'disk': None}})
+
         self.mox.StubOutWithMock(self.compute.driver, 'live_migration')
         self.compute.driver.live_migration(c, i_ref, i_ref['host'],
                                   self.compute.post_live_migration,
-                                  self.compute.recover_live_migration)
+                                  self.compute.rollback_live_migration,
+                                  False)
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -739,13 +743,18 @@ class ComputeTestCase(test.TestCase):
         dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
                              AndReturn(topic)
         rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': i_ref['id']}}).\
+                            "args": {'instance_id': i_ref['id'],
+                                     'block_migration': False,
+                                     'disk': None}}).\
                             AndRaise(rpc.RemoteError('', '', ''))
         dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
                                                 'state': power_state.RUNNING,
                                                 'host': i_ref['host']})
         for v in i_ref['volumes']:
             dbmock.volume_update(c, v['id'], {'status': 'in-use'})
+            # mock for volume_api.remove_from_compute
+            rpc.call(c, topic, {"method": "remove_volume",
+                                "args": {'volume_id': v['id']}})
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -766,7 +775,9 @@ class ComputeTestCase(test.TestCase):
                              AndReturn(topic)
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': i_ref['id']}}).\
+                            "args": {'instance_id': i_ref['id'],
+                                     'block_migration': False,
+                                     'disk': None}}).\
                             AndRaise(rpc.RemoteError('', '', ''))
         dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
                                                 'state': power_state.RUNNING,
@@ -791,11 +802,14 @@ class ComputeTestCase(test.TestCase):
         dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
                              AndReturn(topic)
         rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': i_ref['id']}})
+                            "args": {'instance_id': i_ref['id'],
+                                     'block_migration': False,
+                                     'disk': None}})
         self.mox.StubOutWithMock(self.compute.driver, 'live_migration')
         self.compute.driver.live_migration(c, i_ref, i_ref['host'],
                                   self.compute.post_live_migration,
-                                  self.compute.recover_live_migration)
+                                  self.compute.rollback_live_migration,
+                                  False)
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -829,6 +843,10 @@ class ComputeTestCase(test.TestCase):
             self.compute.volume_manager.remove_compute_volume(c, v['id'])
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
         self.compute.driver.unfilter_instance(i_ref, [])
+        self.mox.StubOutWithMock(rpc, 'call')
+        rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
+            {"method": "post_live_migration_at_destination",
+             "args": {'instance_id': i_ref['id'], 'block_migration': False}})
 
         # executing
         self.mox.ReplayAll()
