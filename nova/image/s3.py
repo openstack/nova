@@ -193,6 +193,8 @@ class S3ImageService(service.BaseImageService):
 
         def delayed_create():
             """This handles the fetching and decrypting of the part files."""
+            log_vars = {'image_location': image_location,
+                        'image_path': image_path}
             metadata['properties']['image_state'] = 'downloading'
             self.service.update(context, image_id, metadata)
 
@@ -214,7 +216,7 @@ class S3ImageService(service.BaseImageService):
 
             except Exception:
                 LOG.error(_("Failed to download %(image_location)s "
-                            "to %(image_path)s"), locals())
+                            "to %(image_path)s"), log_vars)
                 metadata['properties']['image_state'] = 'failed_download'
                 self.service.update(context, image_id, metadata)
                 raise
@@ -238,7 +240,7 @@ class S3ImageService(service.BaseImageService):
                                     dec_filename)
             except Exception:
                 LOG.error(_("Failed to decrypt %(image_location)s "
-                            "to %(image_path)s"), locals())
+                            "to %(image_path)s"), log_vars)
                 metadata['properties']['image_state'] = 'failed_decrypt'
                 self.service.update(context, image_id, metadata)
                 raise
@@ -250,7 +252,7 @@ class S3ImageService(service.BaseImageService):
                 unz_filename = self._untarzip_image(image_path, dec_filename)
             except Exception:
                 LOG.error(_("Failed to untar %(image_location)s "
-                            "to %(image_path)s"), locals())
+                            "to %(image_path)s"), log_vars)
                 metadata['properties']['image_state'] = 'failed_untar'
                 self.service.update(context, image_id, metadata)
                 raise
@@ -263,7 +265,7 @@ class S3ImageService(service.BaseImageService):
                                         metadata, image_file)
             except Exception:
                 LOG.error(_("Failed to upload %(image_location)s "
-                            "to %(image_path)s"), locals())
+                            "to %(image_path)s"), log_vars)
                 metadata['properties']['image_state'] = 'failed_upload'
                 self.service.update(context, image_id, metadata)
                 raise
