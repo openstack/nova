@@ -846,8 +846,10 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 fields = line.split()
                 if fields and fields[0] == 'inet':
                     params = fields[1:-1]
-                    _execute(*_ip_bridge_cmd('del', params, fields[-1]))
-                    _execute(*_ip_bridge_cmd('add', params, bridge))
+                    _execute(*_ip_bridge_cmd('del', params, fields[-1]),
+                                run_as_root=True)
+                    _execute(*_ip_bridge_cmd('add', params, bridge),
+                                run_as_root=True)
             if gateway:
                 _execute('route', 'add', 'default', 'gw', gateway,
                             run_as_root=True)
