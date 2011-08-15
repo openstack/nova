@@ -18,9 +18,9 @@ import nova.scheduler
 from nova import flags
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('default_host_filter',
-        'AllHostsFilter',
+flags.DEFINE_string('default_host_filter', 'AllHostsFilter',
         'Which filter to use for filtering hosts')
+
 
 class AbstractHostFilter(object):
     """Base class for host filters."""

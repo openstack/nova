@@ -187,11 +187,6 @@ class HostFilterTestCase(test.TestCase):
 
         raw = ['in', '$compute.host_memory_free', 20, 40, 60, 80, 100]
         cooked = json.dumps(raw)
-        def debug(*args):
-            with file("/tmp/debug", "a") as dbg:
-                msg = " ".join([str(arg) for arg in args])
-                dbg.write("%s\n" % msg)
-
         hosts = hf.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(5, len(hosts))
         just_hosts = [host for host, caps in hosts]

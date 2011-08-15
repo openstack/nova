@@ -39,6 +39,7 @@ FLAGS = flags.FLAGS
 def _get_filters():
     # Imported here to avoid circular imports
     from nova.scheduler import filters
+
     def get_itm(nm):
         return getattr(filters, nm)
 

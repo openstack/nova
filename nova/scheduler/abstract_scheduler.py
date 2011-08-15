@@ -15,7 +15,7 @@
 
 """
 The AbsractScheduler is an abstract class Scheduler for creating instances
-locally or across zones. Two methods should be overridden in order to 
+locally or across zones. Two methods should be overridden in order to
 customize the behavior: filter_hosts() and weigh_hosts(). The default
 behavior is to simply select all hosts and weight them the same.
 """
@@ -298,8 +298,8 @@ class AbstractScheduler(driver.Scheduler):
     def filter_hosts(self, topic, request_spec, host_list):
         """Filter the full host list returned from the ZoneManager. By default,
         this method only applies the basic_ram_filter(), meaning all hosts
-        with at least enough RAM for the requested instance are returned. 
-        
+        with at least enough RAM for the requested instance are returned.
+
         Override in subclasses to provide greater selectivity.
         """
         def basic_ram_filter(hostname, capabilities, request_spec):

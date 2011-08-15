@@ -139,7 +139,8 @@ class LeastCostSchedulerTestCase(test.TestCase):
             # free ram will cost 1/N more. Since the lowest cost host has some
             # free ram, we add in the 1/N for the base_cost
             weight = 0.1 + (0.1 * idx)
-            wtd_dict = dict(hostname=hostname, weight=weight, capabilities=caps)
+            wtd_dict = dict(hostname=hostname, weight=weight,
+                    capabilities=caps)
             expected.append(wtd_dict)
 
         self.assertWeights(expected, num, request_spec, hosts)
