@@ -37,6 +37,9 @@ from nova.auth import manager
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api")
+flags.DEFINE_boolean('use_forwarded_for', False,
+                     'Treat X-Forwarded-For as the canonical remote address. '
+                     'Only enable this if you have a sanitizing proxy.')
 flags.DEFINE_integer('lockout_attempts', 5,
                      'Number of failed auths before lockout.')
 flags.DEFINE_integer('lockout_minutes', 15,

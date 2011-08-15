@@ -371,11 +371,6 @@ def metadata_forward():
                                           '-p tcp -m tcp --dport 80 -j DNAT '
                                           '--to-destination %s:%s' % \
                                           (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
-    iptables_manager.ipv4['nat'].add_rule('PREROUTING',
-                                          '-s 0.0.0.0/0 -d 169.254.169.253/32 '
-                                          '-p tcp -m tcp --dport 80 -j DNAT '
-                                          '--to-destination %s:%s' % \
-                                          (FLAGS.osapi_host, FLAGS.osapi_port))
     iptables_manager.apply()
 
 

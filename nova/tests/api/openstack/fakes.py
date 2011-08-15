@@ -36,7 +36,6 @@ from nova.api.openstack import auth
 from nova.api.openstack import extensions
 from nova.api.openstack import versions
 from nova.api.openstack import limits
-from nova.api.openstack import userdatarequesthandler
 from nova.auth.manager import User, Project
 import nova.image.fake
 from nova.image import glance
@@ -100,7 +99,6 @@ def wsgi_app(inner_app10=None, inner_app11=None, fake_auth=True,
     mapper['/v1.0'] = api10
     mapper['/v1.1'] = api11
     mapper['/'] = openstack.FaultWrapper(versions.Versions())
-    mapper['/latest'] = userdatarequesthandler.UserdataRequestHandler()
     return mapper
 
 
