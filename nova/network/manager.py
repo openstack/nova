@@ -677,7 +677,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                         raise ValueError(msg % {'cidr': subnet,
                                                 'smaller': used_subnet})
 
-
         subnets = itertools.izip_longest(subnets_v4, subnets_v6)
         for index, (subnet_v4, subnet_v6) in enumerate(subnets):
             net = {}
