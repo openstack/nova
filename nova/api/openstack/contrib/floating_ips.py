@@ -43,8 +43,8 @@ def _translate_floating_ip_view(floating_ip):
 
 
 def _translate_floating_ips_view(floating_ips):
-    return {'floating_ips': [_translate_floating_ip_view(floating_ip)
-                             for floating_ip in floating_ips]}
+    return {'floating_ips': [_translate_floating_ip_view(ip)['floating_ip']
+                             for ip in floating_ips]}
 
 
 class FloatingIPController(object):
@@ -131,7 +131,7 @@ class FloatingIPController(object):
                 "floating_ip": floating_ip,
                 "fixed_ip": fixed_ip}}
 
-    def disassociate(self, req, id):
+    def disassociate(self, req, id, body=None):
         """ POST /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
         floating_ip = self.network_api.get_floating_ip(context, id)
