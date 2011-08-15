@@ -34,12 +34,13 @@ from nova.scheduler import zone_manager
 LOG = logging.getLogger('nova.scheduler.manager')
 FLAGS = flags.FLAGS
 flags.DEFINE_string('scheduler_driver',
-                    'nova.scheduler.chance.ChanceScheduler',
-                    'Driver to use for the scheduler')
+                    'nova.scheduler.multi.MultiScheduler',
+                    'Default driver to use for the scheduler')
 
 
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
+
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         self.zone_manager = zone_manager.ZoneManager()
         if not scheduler_driver:
@@ -71,8 +72,8 @@ class SchedulerManager(manager.Manager):
     def update_service_capabilities(self, context=None, service_name=None,
                                                 host=None, capabilities=None):
         """Process a capability update from a service node."""
-        if not capability:
-            capability = {}
+        if not capabilities:
+            capabilities = {}
         self.zone_manager.update_service_capabilities(service_name,
                             host, capabilities)
 

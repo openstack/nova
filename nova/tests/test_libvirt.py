@@ -71,12 +71,12 @@ def _create_network_info(count=1, ipv6=None):
     return [(network, mapping) for x in xrange(0, count)]
 
 
-def _setup_networking(instance_id, ip='1.2.3.4'):
+def _setup_networking(instance_id, ip='1.2.3.4', mac='56:12:12:12:12:12'):
     ctxt = context.get_admin_context()
     network_ref = db.project_get_networks(ctxt,
                                            'fake',
                                            associate=True)[0]
-    vif = {'address': '56:12:12:12:12:12',
+    vif = {'address': mac,
            'network_id': network_ref['id'],
            'instance_id': instance_id}
     vif_ref = db.virtual_interface_create(ctxt, vif)
@@ -884,7 +884,11 @@ class IptablesFirewallTestCase(test.TestCase):
 
     def test_static_filters(self):
         instance_ref = self._create_instance_ref()
-        _setup_networking(instance_ref['id'], self.test_ip)
+        src_instance_ref = self._create_instance_ref()
+        src_ip = '10.11.12.14'
+        src_mac = '56:12:12:12:12:13'
+        _setup_networking(instance_ref['id'], self.test_ip, src_mac)
+        _setup_networking(src_instance_ref['id'], src_ip)
 
         admin_ctxt = context.get_admin_context()
         secgroup = db.security_group_create(admin_ctxt,
@@ -892,6 +896,12 @@ class IptablesFirewallTestCase(test.TestCase):
                                              'project_id': 'fake',
                                              'name': 'testgroup',
                                              'description': 'test group'})
+
+        src_secgroup = db.security_group_create(admin_ctxt,
+                                                {'user_id': 'fake',
+                                                 'project_id': 'fake',
+                                                 'name': 'testsourcegroup',
+                                                 'description': 'src group'})
 
         db.security_group_rule_create(admin_ctxt,
                                       {'parent_group_id': secgroup['id'],
@@ -914,9 +924,19 @@ class IptablesFirewallTestCase(test.TestCase):
                                        'to_port': 81,
                                        'cidr': '192.168.10.0/24'})
 
+        db.security_group_rule_create(admin_ctxt,
+                                      {'parent_group_id': secgroup['id'],
+                                       'protocol': 'tcp',
+                                       'from_port': 80,
+                                       'to_port': 81,
+                                       'group_id': src_secgroup['id']})
+
         db.instance_add_security_group(admin_ctxt, instance_ref['id'],
                                        secgroup['id'])
+        db.instance_add_security_group(admin_ctxt, src_instance_ref['id'],
+                                       src_secgroup['id'])
         instance_ref = db.instance_get(admin_ctxt, instance_ref['id'])
+        src_instance_ref = db.instance_get(admin_ctxt, src_instance_ref['id'])
 
 #        self.fw.add_instance(instance_ref)
         def fake_iptables_execute(*cmd, **kwargs):
@@ -969,17 +989,22 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertTrue(security_group_chain,
                         "The security group chain wasn't added")
 
-        regex = re.compile('-A .* -p icmp -s 192.168.11.0/24 -j ACCEPT')
+        regex = re.compile('-A .* -j ACCEPT -p icmp -s 192.168.11.0/24')
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "ICMP acceptance rule wasn't added")
 
-        regex = re.compile('-A .* -p icmp -s 192.168.11.0/24 -m icmp '
-                           '--icmp-type 8 -j ACCEPT')
+        regex = re.compile('-A .* -j ACCEPT -p icmp -m icmp --icmp-type 8'
+                           ' -s 192.168.11.0/24')
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "ICMP Echo Request acceptance rule wasn't added")
 
-        regex = re.compile('-A .* -p tcp -s 192.168.10.0/24 -m multiport '
-                           '--dports 80:81 -j ACCEPT')
+        regex = re.compile('-A .* -j ACCEPT -p tcp -m multiport '
+                           '--dports 80:81 -s %s' % (src_ip,))
+        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
+                        "TCP port 80/81 acceptance rule wasn't added")
+
+        regex = re.compile('-A .* -j ACCEPT -p tcp '
+                           '-m multiport --dports 80:81 -s 192.168.10.0/24')
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "TCP port 80/81 acceptance rule wasn't added")
         db.instance_destroy(admin_ctxt, instance_ref['id'])
