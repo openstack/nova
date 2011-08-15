@@ -662,12 +662,17 @@ class NetworkManager(manager.SchedulerDependentManager):
                 nets = []
             used_subnets = [netaddr.IPNetwork(net['cidr']) for net in nets]
 
+            def find_next(subnet):
+                next_subnet = subnet.next()
+                while next_subnet in subnets_v4:
+                    next_subnet = next_subnet.next()
+                if next_subnet in fixed_net_v4:
+                    return next_subnet
+
             for subnet in list(subnets_v4):
                 if subnet in used_subnets:
-                    next_subnet = subnet.next()
-                    while next_subnet in subnets_v4:
-                        next_subnet = next_subnet.next()
-                    if next_subnet in fixed_net_v4:
+                    next_subnet = find_next(subnet)
+                    if next_subnet:
                         subnets_v4.remove(subnet)
                         subnets_v4.append(next_subnet)
                         subnet = next_subnet
@@ -680,10 +685,17 @@ class NetworkManager(manager.SchedulerDependentManager):
                         raise ValueError(msg % {'cidr': subnet,
                                                 'super': used_subnet})
                     if used_subnet in subnet:
-                        msg = _('requested cidr (%(cidr)s) conflicts with '
-                                'existing smaller cidr (%(smaller)s)')
-                        raise ValueError(msg % {'cidr': subnet,
-                                                'smaller': used_subnet})
+                        next_subnet = find_next(subnet)
+                        if next_subnet:
+                            subnets_v4.remove(subnet)
+                            subnets_v4.append(next_subnet)
+                            subnet = next_subnet
+                        else:
+                            msg = _('requested cidr (%(cidr)s) conflicts '
+                                    'with existing smaller cidr '
+                                    '(%(smaller)s)')
+                            raise ValueError(msg % {'cidr': subnet,
+                                                    'smaller': used_subnet})
 
         networks = []
         subnets = itertools.izip_longest(subnets_v4, subnets_v6)
