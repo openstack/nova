@@ -283,7 +283,7 @@ class ActionExtensionTest(test.TestCase):
         body = dict(blah=dict(name="test"))  # Doesn't exist
         url = "/123/servers/1/action"
         response = self._send_server_action_request(url, body)
-        self.assertEqual(501, response.status_int)
+        self.assertEqual(400, response.status_int)
 
     def test_invalid_action(self):
         body = dict(blah=dict(name="test"))

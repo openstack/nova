@@ -352,7 +352,7 @@ class ServerActionsTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(501, response.status_int)
+        self.assertEqual(400, response.status_int)
 
     def test_create_backup_with_metadata(self):
         self.flags(allow_admin_api=True)
@@ -486,6 +486,24 @@ class ServerActionsTestV11(test.TestCase):
 
     def tearDown(self):
         self.stubs.UnsetAll()
+
+    def test_server_bad_body(self):
+        body = {}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_server_unknown_action(self):
+        body = {'sockTheFox': {'fakekey': '1234'}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
     def test_server_change_password(self):
         mock_method = MockSetAdminPassword()
