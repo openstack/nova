@@ -487,6 +487,16 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
+    def test_describe_instances_deleted(self):
+        args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
+        inst1 = db.instance_create(self.context, args)
+        inst2 = db.instance_create(self.context, args)
+        db.instance_destroy(self.context, inst1.id)
+        result = self.cloud.describe_instances(self.context)
+        result = result['reservationSet'][0]['instancesSet']
+        print result
+        self.assertEqual(1, len(result))
+
     def _block_device_mapping_create(self, instance_id, mappings):
         volumes = []
         for bdm in mappings:
