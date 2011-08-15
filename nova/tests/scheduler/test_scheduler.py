@@ -36,8 +36,9 @@ from nova import test
 from nova import rpc
 from nova import utils
 from nova.scheduler import api
-from nova.scheduler import manager
 from nova.scheduler import driver
+from nova.scheduler import manager
+from nova.scheduler import multi
 from nova.compute import power_state
 
 
@@ -393,7 +394,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_wont_sechedule_if_specified_host_is_down_no_queue(self):
+    def test_wont_schedule_if_specified_host_is_down_no_queue(self):
         compute1 = service.Service('host1',
                                    'nova-compute',
                                    'compute',
@@ -903,6 +904,25 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
+
+
+class MultiDriverTestCase(SimpleDriverTestCase):
+    """Test case for multi driver."""
+
+    def setUp(self):
+        super(MultiDriverTestCase, self).setUp()
+        self.flags(connection_type='fake',
+                   stub_network=True,
+                   max_cores=4,
+                   max_gigabytes=4,
+                   network_manager='nova.network.manager.FlatManager',
+                   volume_driver='nova.volume.driver.FakeISCSIDriver',
+                   compute_scheduler_driver=('nova.scheduler.simple'
+                                             '.SimpleScheduler'),
+                   volume_scheduler_driver=('nova.scheduler.simple'
+                                            '.SimpleScheduler'),
+                   scheduler_driver='nova.scheduler.multi.MultiScheduler')
+        self.scheduler = manager.SchedulerManager()
 
 
 class FakeZone(object):
