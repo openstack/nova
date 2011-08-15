@@ -414,7 +414,7 @@ class VMHelper(HelperBase):
         return vdi_ref
 
     @classmethod
-    def fetch_image(cls, context, session, instance_id, image, user_id,
+    def fetch_image(cls, context, session, instance, image, user_id,
                     project_id, image_type):
         """Fetch image from glance based on image type.
 
