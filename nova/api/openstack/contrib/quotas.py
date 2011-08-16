@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob
 import urlparse
 
 from nova import db
@@ -54,7 +55,6 @@ class QuotaSetsController(object):
         resources = ['metadata_items', 'injected_file_content_bytes',
                 'volumes', 'gigabytes', 'ram', 'floating_ips', 'instances',
                 'injected_files', 'cores']
-
         for key in body['quota_set'].keys():
             if key in resources:
                 value = int(body['quota_set'][key])
@@ -62,6 +62,8 @@ class QuotaSetsController(object):
                     db.quota_update(context, project_id, key, value)
                 except exception.ProjectQuotaNotFound:
                     db.quota_create(context, project_id, key, value)
+                except exception.AdminRequired as e:
+                    return webob.Response(status_int=403)
         return {'quota_set': quota.get_project_quotas(context, project_id)}
 
     def defaults(self, req):
