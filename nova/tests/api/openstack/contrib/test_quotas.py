@@ -78,14 +78,14 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(qs['injected_file_content_bytes'], 10240)
 
     def test_quotas_defaults(self):
-        req = webob.Request.blank('/v1.1/os-quota-sets/defaults')
+        req = webob.Request.blank('/v1.1/os-quota-sets/fake_tenant/defaults')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(res.status_int, 200)
         expected = {'quota_set': {
-                    'id': 'defaults',
+                    'id': 'fake_tenant',
                     'instances': 10,
                     'cores': 20,
                     'ram': 51200,
@@ -98,7 +98,7 @@ class QuotaSetsTest(test.TestCase):
 
         self.assertEqual(json.loads(res.body), expected)
 
-    def test_quotas_show(self):
+    def test_quotas_show_as_admin(self):
         req = webob.Request.blank('/v1.1/os-quota-sets/1234')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
@@ -107,6 +107,16 @@ class QuotaSetsTest(test.TestCase):
 
         self.assertEqual(res.status_int, 200)
         self.assertEqual(json.loads(res.body), quota_set('1234'))
+
+
+    def test_quotas_show_as_unauthorized_user(self):
+        req = webob.Request.blank('/v1.1/os-quota-sets/1234')
+        req.method = 'GET'
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app(
+                               fake_auth_context=self.user_context))
+
+        self.assertEqual(res.status_int, 403)
 
     def test_quotas_update_as_admin(self):
         updated_quota_set = {'quota_set': {'instances': 50,

@@ -44,8 +44,12 @@ class QuotaSetsController(object):
 
     def show(self, req, id):
         context = req.environ['nova.context']
-        return self._format_quota_set(id, quota.get_project_quotas(context,
-                                                                   id))
+        try:
+            db.sqlalchemy.api.authorize_project_context(context, id)
+            return self._format_quota_set(id,
+                                        quota.get_project_quotas(context, id))
+        except exception.NotAuthorized:
+            return webob.Response(status_int=403)
 
     def update(self, req, id, body):
         context = req.environ['nova.context']
