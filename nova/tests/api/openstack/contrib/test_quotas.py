@@ -22,7 +22,6 @@ from nova import context
 from nova import test
 from nova.tests.api.openstack import fakes
 
-
 from nova.api.openstack.contrib.quotas import QuotaSetsController
 
 
@@ -57,9 +56,9 @@ class QuotaSetsTest(test.TestCase):
             'cores': 20,
             'ram': 51200,
             'volumes': 10,
-            'gigabytes': 1000,
             'floating_ips': 10,
             'metadata_items': 128,
+            'gigabytes': 1000,
             'injected_files': 5,
             'injected_file_content_bytes': 10240}
 
@@ -103,7 +102,7 @@ class QuotaSetsTest(test.TestCase):
         req = webob.Request.blank('/v1.1/os-quota-sets/1234')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app(fake_auth_context=
+        res = req.get_response(fakes.wsgi_app(fake_auth_context =
                                               self.admin_context))
 
         self.assertEqual(res.status_int, 200)
@@ -121,7 +120,7 @@ class QuotaSetsTest(test.TestCase):
         req.body = json.dumps(updated_quota_set)
         req.headers['Content-Type'] = 'application/json'
 
-        res = req.get_response(fakes.wsgi_app(fake_auth_context=
+        res = req.get_response(fakes.wsgi_app(fake_auth_context =
                                               self.admin_context))
 
         self.assertEqual(json.loads(res.body), updated_quota_set)
@@ -138,7 +137,7 @@ class QuotaSetsTest(test.TestCase):
         req.body = json.dumps(updated_quota_set)
         req.headers['Content-Type'] = 'application/json'
 
-        res = req.get_response(fakes.wsgi_app(fake_auth_context=
+        res = req.get_response(fakes.wsgi_app(fake_auth_context =
                                               self.user_context))
 
         self.assertEqual(res.status_int, 403)
