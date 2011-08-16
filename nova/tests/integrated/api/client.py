@@ -48,6 +48,14 @@ class OpenStackApiAuthenticationException(OpenStackApiException):
                                                                   response)
 
 
+class OpenStackApiAuthorizationException(OpenStackApiException):
+    def __init__(self, response=None, message=None):
+        if not message:
+            message = _("Authorization error")
+        super(OpenStackApiAuthorizationException, self).__init__(message,
+                                                                  response)
+
+
 class OpenStackApiNotFoundException(OpenStackApiException):
     def __init__(self, response=None, message=None):
         if not message:
@@ -69,6 +77,8 @@ class TestOpenStackClient(object):
         self.auth_user = auth_user
         self.auth_key = auth_key
         self.auth_uri = auth_uri
+        # default project_id
+        self.project_id = 'openstack'
 
     def request(self, url, method='GET', body=None, headers=None):
         _headers = {'Content-Type': 'application/json'}
@@ -128,8 +138,7 @@ class TestOpenStackClient(object):
         # NOTE(justinsb): httplib 'helpfully' converts headers to lower case
         base_uri = auth_result['x-server-management-url']
 
-        # /openstack is the project_id
-        full_uri = base_uri + '/openstack' + relative_uri
+        full_uri = '%s/%s%s' % (base_uri, self.project_id, relative_uri)
 
         headers = kwargs.setdefault('headers', {})
         headers['X-Auth-Token'] = auth_result['x-auth-token']
@@ -143,6 +152,8 @@ class TestOpenStackClient(object):
             if not http_status in check_response_status:
                 if http_status == 404:
                     raise OpenStackApiNotFoundException(response=response)
+                elif http_status == 401:
+                    raise OpenStackApiAuthorizationException(response=response)
                 else:
                     raise OpenStackApiException(
                                         message=_("Unexpected status code"),

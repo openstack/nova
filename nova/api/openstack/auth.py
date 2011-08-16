@@ -55,23 +55,36 @@ class AuthMiddleware(wsgi.Middleware):
             LOG.warn(msg % locals())
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
+        # Get all valid projects for the user
+        projects = self.auth.get_projects(user_id)
+        if not projects:
+            return faults.Fault(webob.exc.HTTPUnauthorized())
+
         project_id = ""
         path_parts = req.path.split('/')
         # TODO(wwolf): this v1.1 check will be temporary as
         # keystone should be taking this over at some point
         if len(path_parts) > 1 and path_parts[1] == 'v1.1':
             project_id = path_parts[2]
+            # Check that the project for project_id exists, and that user
+            # is authorized to use it
+            try:
+                project = self.auth.get_project(project_id)
+            except exception.ProjectNotFound:
+                project = None
+            if project:
+                user = self.auth.get_user(user_id)
+                if not project.has_member(user):
+                    return faults.Fault(webob.exc.HTTPUnauthorized())
+            else:
+                return faults.Fault(webob.exc.HTTPUnauthorized())
         elif len(path_parts) > 1 and path_parts[1] == 'v1.0':
             try:
                 project_id = req.headers["X-Auth-Project-Id"]
             except KeyError:
                 # FIXME(usrleon): It needed only for compatibility
                 # while osapi clients don't use this header
-                projects = self.auth.get_projects(user_id)
-                if projects:
-                    project_id = projects[0].id
-                else:
-                    return faults.Fault(webob.exc.HTTPUnauthorized())
+                project_id = projects[0].id
 
         is_admin = self.auth.is_admin(user_id)
         req.environ['nova.context'] = context.RequestContext(user_id,
