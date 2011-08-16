@@ -72,13 +72,13 @@ class ServerVirtualInterfaceController(object):
                            entity_maker=_translate_vif_summary_view)
 
 
-class VirtualInterfaces(extensions.ExtensionDescriptor):
+class Virtual_interfaces(extensions.ExtensionDescriptor):
 
     def get_name(self):
-        return "VirtualInterfaces"
+        return "Virtual_interfaces"
 
     def get_alias(self):
-        return "os-virtual_interfaces"
+        return "os-virtual-interfaces"
 
     def get_description(self):
         return "Virtual interface support"
@@ -92,7 +92,7 @@ class VirtualInterfaces(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        res = extensions.ResourceExtension('os-virtual_interfaces',
+        res = extensions.ResourceExtension('os-virtual-interfaces',
                                            ServerVirtualInterfaceController(),
                                            parent=dict(
                                                member_name='server',
