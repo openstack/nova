@@ -111,7 +111,7 @@ class ExtensionControllerTest(test.TestCase):
         self.assertEqual(names, self.ext_list)
 
         # Make sure that at least Fox in Sox is correct.
-        (fox_ext,) = [
+        (fox_ext, ) = [
             x for x in data['extensions'] if x['alias'] == 'FOXNSOX']
         self.assertEqual(fox_ext, {
                 'namespace': 'http://www.fox.in.socks/api/ext/pie/v1.0',
@@ -156,7 +156,7 @@ class ExtensionControllerTest(test.TestCase):
         self.assertEqual(len(exts), len(self.ext_list))
 
         # Make sure that at least Fox in Sox is correct.
-        (fox_ext,) = [x for x in exts if x.get('alias') == 'FOXNSOX']
+        (fox_ext, ) = [x for x in exts if x.get('alias') == 'FOXNSOX']
         self.assertEqual(fox_ext.get('name'), 'Fox In Socks')
         self.assertEqual(fox_ext.get('namespace'),
             'http://www.fox.in.socks/api/ext/pie/v1.0')
@@ -228,6 +228,7 @@ class ResourceExtensionTest(test.TestCase):
 
 
 class InvalidExtension(object):
+
     def get_alias(self):
         return "THIRD"
 
