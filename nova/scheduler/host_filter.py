@@ -14,7 +14,12 @@
 #    under the License.
 
 """
-Host Filter is a mechanism for requesting instance resources.
+The Host Filter classes are a way to ensure that only hosts that are
+appropriate are considered when creating a new instance. Hosts that are
+either incompatible or insufficient to accept a newly-requested instance
+are removed by Host Filter classes from consideration. Those that pass
+the filter are then passed on for weighting or other process for ordering.
+
 Three filters are included: AllHosts, Flavor & JSON. AllHosts just
 returns the full, unfiltered list of hosts. Flavor is a hard coded
 matching mechanism based on flavor criteria and JSON is an ad-hoc
@@ -28,12 +33,6 @@ noted a need for a more expressive way of specifying instances.
 Since we don't want to get into building full DSL this is a simple
 form as an example of how this could be done. In reality, most
 consumers will use the more rigid filters such as FlavorFilter.
-
-Note: These are "required" capability filters. These capabilities
-used must be present or the host will be excluded. The hosts
-returned are then weighed by the Weighted Scheduler. Weights
-can take the more esoteric factors into consideration (such as
-server affinity and customer separation).
 """
 
 import json
@@ -41,9 +40,7 @@ import json
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.scheduler import zone_aware_scheduler
 from nova import utils
-from nova.scheduler import zone_aware_scheduler
 
 LOG = logging.getLogger('nova.scheduler.host_filter')
 
@@ -125,9 +122,8 @@ class InstanceTypeFilter(HostFilter):
             spec_disk = instance_type['local_gb']
             extra_specs = instance_type['extra_specs']
 
-            if host_ram_mb >= spec_ram and \
-               disk_bytes >= spec_disk and \
-               self._satisfies_extra_specs(capabilities, instance_type):
+            if ((host_ram_mb >= spec_ram) and (disk_bytes >= spec_disk) and
+                    self._satisfies_extra_specs(capabilities, instance_type)):
                 selected_hosts.append((host, capabilities))
         return selected_hosts
 
@@ -309,7 +305,6 @@ def choose_host_filter(filter_name=None):
     function checks the filter name against a predefined set
     of acceptable filters.
     """
-
     if not filter_name:
         filter_name = FLAGS.default_host_filter
     for filter_class in FILTERS:
@@ -317,33 +312,3 @@ def choose_host_filter(filter_name=None):
         if host_match == filter_name:
             return filter_class()
     raise exception.SchedulerHostFilterNotFound(filter_name=filter_name)
-
-
-class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
-    """The HostFilterScheduler uses the HostFilter to filter
-    hosts for weighing. The particular filter used may be passed in
-    as an argument or the default will be used.
-
-    request_spec = {'filter': <Filter name>,
-                    'instance_type': <InstanceType dict>}
-    """
-
-    def filter_hosts(self, topic, request_spec, hosts=None):
-        """Filter the full host list (from the ZoneManager)"""
-
-        filter_name = request_spec.get('filter', None)
-        host_filter = choose_host_filter(filter_name)
-
-        # TODO(sandy): We're only using InstanceType-based specs
-        # currently. Later we'll need to snoop for more detailed
-        # host filter requests.
-        instance_type = request_spec['instance_type']
-        name, query = host_filter.instance_type_to_filter(instance_type)
-        return host_filter.filter_hosts(self.zone_manager, query)
-
-    def weigh_hosts(self, topic, request_spec, hosts):
-        """Derived classes must override this method and return
-        a lists of hosts in [{weight, hostname}] format.
-        """
-        return [dict(weight=1, hostname=hostname, capabilities=caps)
-                for hostname, caps in hosts]
