@@ -108,7 +108,6 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(json.loads(res.body), quota_set('1234'))
 
-
     def test_quotas_show_as_unauthorized_user(self):
         req = webob.Request.blank('/v1.1/os-quota-sets/1234')
         req.method = 'GET'
