@@ -28,10 +28,10 @@ from nova import utils
 
 def stubout_instance_snapshot(stubs):
     @classmethod
-    def fake_fetch_image(cls, context, session, instance_id, image, user,
+    def fake_fetch_image(cls, context, session, instance, image, user,
                          project, type):
         from nova.virt.xenapi.fake import create_vdi
-        name_label = "instance-%s" % instance_id
+        name_label = "instance-%s" % instance.id
         #TODO: create fake SR record
         sr_ref = "fakesr"
         vdi_ref = create_vdi(name_label=name_label, read_only=False,
