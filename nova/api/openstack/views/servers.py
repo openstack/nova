@@ -111,14 +111,14 @@ class ViewBuilderV10(ViewBuilder):
         response['uuid'] = inst['uuid']
 
     def _build_image(self, response, inst):
-        if 'image_ref' in dict(inst):
+        if inst.get('image_ref', None):
             image_ref = inst['image_ref']
             if str(image_ref).startswith('http'):
                 raise exception.ListingImageRefsNotSupported()
             response['imageId'] = int(image_ref)
 
     def _build_flavor(self, response, inst):
-        if 'instance_type' in dict(inst):
+        if inst.get('instance_type', None):
             response['flavorId'] = inst['instance_type']['flavorid']
 
     def _build_addresses(self, response, inst):
