@@ -523,7 +523,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         for network in networks:
             vif = {'address': self.generate_mac_address(),
                    'instance_id': instance_id,
-                   'network_id': network['id']}
+                   'network_id': network['id'],
+                   'uuid': utils.gen_uuid()}
             # try FLAG times to create a vif record with a unique mac_address
             for i in range(FLAGS.create_unique_mac_address_attempts):
                 try:
