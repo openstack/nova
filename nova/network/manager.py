@@ -499,6 +499,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'dhcp_server': dhcp_server,
                 'broadcast': network['broadcast'],
                 'mac': vif['address'],
+                'vif_uuid': vif['uuid'],
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [],
                 'ips': [ip_dict(ip) for ip in network_IPs],
