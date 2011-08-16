@@ -104,6 +104,12 @@ def fetch_ca(project_id=None, chain=True):
     return buffer
 
 
+def generate_fingerprint(public_key):
+    (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f', public_key)
+    fingerprint = out.split(' ')[1]
+    return fingerprint
+
+
 def generate_key_pair(bits=1024):
     # what is the magic 65537?
 
@@ -111,9 +117,7 @@ def generate_key_pair(bits=1024):
     keyfile = os.path.join(tmpdir, 'temp')
     utils.execute('ssh-keygen', '-q', '-b', bits, '-N', '',
                   '-f', keyfile)
-    (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
-                               '%s.pub' % (keyfile))
-    fingerprint = out.split(' ')[1]
+    fingerprint = generate_fingerprint('%s.pub' % (keyfile))
     private_key = open(keyfile).read()
     public_key = open(keyfile + '.pub').read()
 

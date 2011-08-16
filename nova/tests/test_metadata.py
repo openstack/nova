@@ -43,17 +43,21 @@ class MetadataTestCase(test.TestCase):
                          'reservation_id': 'r-xxxxxxxx',
                          'user_data': '',
                          'image_ref': 7,
+                         'fixed_ips': [],
                          'root_device_name': '/dev/sda1',
                          'hostname': 'test'})
 
         def instance_get(*args, **kwargs):
             return self.instance
 
+        def instance_get_list(*args, **kwargs):
+            return [self.instance]
+
         def floating_get(*args, **kwargs):
             return '99.99.99.99'
 
         self.stubs.Set(api, 'instance_get', instance_get)
-        self.stubs.Set(api, 'fixed_ip_get_instance', instance_get)
+        self.stubs.Set(api, 'instance_get_all_by_filters', instance_get_list)
         self.stubs.Set(api, 'instance_get_floating_address', floating_get)
         self.app = metadatarequesthandler.MetadataRequestHandler()
 

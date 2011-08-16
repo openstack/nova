@@ -18,6 +18,7 @@
 """
 Implementation of SQLAlchemy backend.
 """
+import re
 import warnings
 
 from nova import block_device
@@ -829,28 +830,6 @@ def fixed_ip_get_by_virtual_interface(context, vif_id):
     return rv
 
 
-@require_context
-def fixed_ip_get_instance(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    return fixed_ip_ref.instance
-
-
-@require_context
-def fixed_ip_get_instance_v6(context, address):
-    session = get_session()
-
-    # convert IPv6 address to mac
-    mac = ipv6.to_mac(address)
-
-    # get virtual interface
-    vif_ref = virtual_interface_get_by_address(context, mac)
-
-    # look up instance based on instance_id from vif row
-    result = session.query(models.Instance).\
-                     filter_by(id=vif_ref['instance_id'])
-    return result
-
-
 @require_admin_context
 def fixed_ip_get_network(context, address):
     fixed_ip_ref = fixed_ip_get_by_address(context, address)
@@ -1160,13 +1139,125 @@ def instance_get_all(context):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('virtual_interfaces')).\
+                   options(joinedload_all('virtual_interfaces.network')).\
+                   options(joinedload_all(
+                           'virtual_interfaces.fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces.instance')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
+
+
+@require_context
+def instance_get_all_by_filters(context, filters):
+    """Return instances that match all filters.  Deleted instances
+    will be returned by default, unless there's a filter that says
+    otherwise"""
+
+    def _regexp_filter_by_ipv6(instance, filter_re):
+        for interface in instance['virtual_interfaces']:
+            fixed_ipv6 = interface.get('fixed_ipv6')
+            if fixed_ipv6 and filter_re.match(fixed_ipv6):
+                return True
+        return False
+
+    def _regexp_filter_by_ip(instance, filter_re):
+        for interface in instance['virtual_interfaces']:
+            for fixed_ip in interface['fixed_ips']:
+                if not fixed_ip or not fixed_ip['address']:
+                    continue
+                if filter_re.match(fixed_ip['address']):
+                    return True
+                for floating_ip in fixed_ip.get('floating_ips', []):
+                    if not floating_ip or not floating_ip['address']:
+                        continue
+                    if filter_re.match(floating_ip['address']):
+                        return True
+        return False
+
+    def _regexp_filter_by_column(instance, filter_name, filter_re):
+        try:
+            v = getattr(instance, filter_name)
+        except AttributeError:
+            return True
+        if v and filter_re.match(str(v)):
+            return True
+        return False
+
+    def _exact_match_filter(query, column, value):
+        """Do exact match against a column.  value to match can be a list
+        so you can match any value in the list.
+        """
+        if isinstance(value, list):
+            column_attr = getattr(models.Instance, column)
+            return query.filter(column_attr.in_(value))
+        else:
+            filter_dict = {}
+            filter_dict[column] = value
+            return query.filter_by(**filter_dict)
+
+    session = get_session()
+    query_prefix = session.query(models.Instance).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload_all('virtual_interfaces.network')).\
+                   options(joinedload_all(
+                           'virtual_interfaces.fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces.instance')).\
+                   options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ips.network')).\
+                   options(joinedload('metadata')).\
+                   options(joinedload('instance_type'))
+
+    # Make a copy of the filters dictionary to use going forward, as we'll
+    # be modifying it and we shouldn't affect the caller's use of it.
+    filters = filters.copy()
+
+    if not context.is_admin:
+        # If we're not admin context, add appropriate filter..
+        if context.project_id:
+            filters['project_id'] = context.project_id
+        else:
+            filters['user_id'] = context.user_id
+
+    # Filters for exact matches that we can do along with the SQL query...
+    # For other filters that don't match this, we will do regexp matching
+    exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
+            'state', 'instance_type_id', 'deleted']
+
+    query_filters = [key for key in filters.iterkeys()
+            if key in exact_match_filter_names]
+
+    for filter_name in query_filters:
+        # Do the matching and remove the filter from the dictionary
+        # so we don't try it again below..
+        query_prefix = _exact_match_filter(query_prefix, filter_name,
+                filters.pop(filter_name))
+
+    instances = query_prefix.all()
+
+    if not instances:
+        return []
+
+    # Now filter on everything else for regexp matching..
+    # For filters not in the list, we'll attempt to use the filter_name
+    # as a column name in Instance..
+    regexp_filter_funcs = {'ip6': _regexp_filter_by_ipv6,
+            'ip': _regexp_filter_by_ip}
+
+    for filter_name in filters.iterkeys():
+        filter_func = regexp_filter_funcs.get(filter_name, None)
+        filter_re = re.compile(str(filters[filter_name]))
+        if filter_func:
+            filter_l = lambda instance: filter_func(instance, filter_re)
+        else:
+            filter_l = lambda instance: _regexp_filter_by_column(instance,
+                    filter_name, filter_re)
+        instances = filter(filter_l, instances)
+
+    return instances
 
 
 @require_admin_context
@@ -1237,30 +1328,48 @@ def instance_get_all_by_project(context, project_id):
 @require_context
 def instance_get_all_by_reservation(context, reservation_id):
     session = get_session()
+    query = session.query(models.Instance).\
+                    filter_by(reservation_id=reservation_id).\
+                    options(joinedload_all('fixed_ips.floating_ips')).\
+                    options(joinedload('virtual_interfaces')).\
+                    options(joinedload('security_groups')).\
+                    options(joinedload_all('fixed_ips.network')).\
+                    options(joinedload('metadata')).\
+                    options(joinedload('instance_type'))
 
     if is_admin_context(context):
-        return session.query(models.Instance).\
-                       options(joinedload_all('fixed_ips.floating_ips')).\
-                       options(joinedload('virtual_interfaces')).\
-                       options(joinedload('security_groups')).\
-                       options(joinedload_all('fixed_ips.network')).\
-                       options(joinedload('metadata')).\
-                       options(joinedload('instance_type')).\
-                       filter_by(reservation_id=reservation_id).\
-                       filter_by(deleted=can_read_deleted(context)).\
-                       all()
+        return query.\
+                filter_by(deleted=can_read_deleted(context)).\
+                all()
     elif is_user_context(context):
-        return session.query(models.Instance).\
-                       options(joinedload_all('fixed_ips.floating_ips')).\
-                       options(joinedload('virtual_interfaces')).\
-                       options(joinedload('security_groups')).\
-                       options(joinedload_all('fixed_ips.network')).\
-                       options(joinedload('metadata')).\
-                       options(joinedload('instance_type')).\
-                       filter_by(project_id=context.project_id).\
-                       filter_by(reservation_id=reservation_id).\
-                       filter_by(deleted=False).\
-                       all()
+        return query.\
+                filter_by(project_id=context.project_id).\
+                filter_by(deleted=False).\
+                all()
+
+
+@require_context
+def instance_get_by_fixed_ip(context, address):
+    """Return instance ref by exact match of FixedIP"""
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.instance
+
+
+@require_context
+def instance_get_by_fixed_ipv6(context, address):
+    """Return instance ref by exact match of IPv6"""
+    session = get_session()
+
+    # convert IPv6 address to mac
+    mac = ipv6.to_mac(address)
+
+    # get virtual interface
+    vif_ref = virtual_interface_get_by_address(context, mac)
+
+    # look up instance based on instance_id from vif row
+    result = session.query(models.Instance).\
+                     filter_by(id=vif_ref['instance_id'])
+    return result
 
 
 @require_admin_context
@@ -1302,7 +1411,7 @@ def instance_get_fixed_addresses_v6(context, instance_id):
         network_refs = network_get_all_by_instance(context, instance_id)
         # compile a list of cidr_v6 prefixes sorted by network id
         prefixes = [ref.cidr_v6 for ref in
-                    sorted(network_refs, key=lambda ref: ref.id)]
+                sorted(network_refs, key=lambda ref: ref.id)]
         # get vifs associated with instance
         vif_refs = virtual_interface_get_by_instance(context, instance_ref.id)
         # compile list of the mac_addresses for vifs sorted by network id
@@ -1371,45 +1480,6 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                                 session=session)
         instance_ref.security_groups += [security_group_ref]
         instance_ref.save(session=session)
-
-
-@require_context
-def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.vcpus))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.memory_mb))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.local_gb))
-    if not result:
-        return 0
-    return result
 
 
 @require_context
@@ -3243,8 +3313,6 @@ def instance_metadata_update(context, instance_id, metadata, delete):
         try:
             meta_ref = instance_metadata_get_item(context, instance_id,
                                                   meta_key, session)
-
-        # if the item doesn't exist, we also need to set key and instance_id
         except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
             item.update({"key": meta_key, "instance_id": instance_id})
@@ -3342,6 +3410,7 @@ def instance_type_extra_specs_delete(context, instance_type_id, key):
 @require_context
 def instance_type_extra_specs_get_item(context, instance_type_id, key,
                                        session=None):
+
     if not session:
         session = get_session()
 
@@ -3365,10 +3434,8 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
     spec_ref = None
     for key, value in specs.iteritems():
         try:
-            spec_ref = instance_type_extra_specs_get_item(context,
-                                                          instance_type_id,
-                                                          key,
-                                                          session)
+            spec_ref = instance_type_extra_specs_get_item(
+                context, instance_type_id, key, session)
         except exception.InstanceTypeExtraSpecsNotFound, e:
             spec_ref = models.InstanceTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,

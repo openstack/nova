@@ -209,6 +209,10 @@ class InvalidContentType(Invalid):
     message = _("Invalid content type %(content_type)s.")
 
 
+class InvalidCidr(Invalid):
+    message = _("Invalid cidr %(cidr)s.")
+
+
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
@@ -267,6 +271,11 @@ class InvalidHypervisorType(Invalid):
 class DestinationHypervisorTooOld(Invalid):
     message = _("The instance requires a newer hypervisor version than "
                 "has been provided.")
+
+
+class DestinationDiskExists(Invalid):
+    message = _("The supplied disk path (%(path)s) already exists, "
+                "it is expected not to exist.")
 
 
 class InvalidDevicePath(Invalid):
@@ -693,6 +702,10 @@ class ProjectExists(Duplicate):
 
 class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
+
+
+class InvalidSharedStorage(NovaException):
+    message = _("%(path)s is on shared storage: %(reason)s")
 
 
 class MigrationError(NovaException):

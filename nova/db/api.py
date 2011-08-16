@@ -387,15 +387,6 @@ def fixed_ip_get_by_virtual_interface(context, vif_id):
     return IMPL.fixed_ip_get_by_virtual_interface(context, vif_id)
 
 
-def fixed_ip_get_instance(context, address):
-    """Get an instance for a fixed ip by address."""
-    return IMPL.fixed_ip_get_instance(context, address)
-
-
-def fixed_ip_get_instance_v6(context, address):
-    return IMPL.fixed_ip_get_instance_v6(context, address)
-
-
 def fixed_ip_get_network(context, address):
     """Get a network for a fixed ip by address."""
     return IMPL.fixed_ip_get_network(context, address)
@@ -500,6 +491,11 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
+def instance_get_all_by_filters(context, filters):
+    """Get all instances that match all filters."""
+    return IMPL.instance_get_all_by_filters(context, filters)
+
+
 def instance_get_active_by_window(context, begin, end=None):
     """Get instances active during a certain time window."""
     return IMPL.instance_get_active_by_window(context, begin, end)
@@ -521,8 +517,18 @@ def instance_get_all_by_host(context, host):
 
 
 def instance_get_all_by_reservation(context, reservation_id):
-    """Get all instance belonging to a reservation."""
+    """Get all instances belonging to a reservation."""
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
+
+
+def instance_get_by_fixed_ip(context, address):
+    """Get an instance for a fixed ip by address."""
+    return IMPL.instance_get_by_fixed_ip(context, address)
+
+
+def instance_get_by_fixed_ipv6(context, address):
+    """Get an instance for a fixed ip by IPv6 address."""
+    return IMPL.instance_get_by_fixed_ipv6(context, address)
 
 
 def instance_get_fixed_addresses(context, instance_id):
@@ -562,27 +568,6 @@ def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance."""
     return IMPL.instance_add_security_group(context, instance_id,
                                             security_group_id)
-
-
-def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    """Get instances.vcpus by host and project."""
-    return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
-                                                          hostname,
-                                                          proj_id)
-
-
-def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    """Get amount of memory by host and project."""
-    return IMPL.instance_get_memory_sum_by_host_and_project(context,
-                                                            hostname,
-                                                            proj_id)
-
-
-def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    """Get total amount of disk by host and project."""
-    return IMPL.instance_get_disk_sum_by_host_and_project(context,
-                                                          hostname,
-                                                          proj_id)
 
 
 def instance_action_create(context, values):
@@ -1094,6 +1079,11 @@ def security_group_rule_get_by_security_group_grantee(context,
 def security_group_rule_destroy(context, security_group_rule_id):
     """Deletes a security group rule."""
     return IMPL.security_group_rule_destroy(context, security_group_rule_id)
+
+
+def security_group_rule_get(context, security_group_rule_id):
+    """Gets a security group rule."""
+    return IMPL.security_group_rule_get(context, security_group_rule_id)
 
 
 ###################
