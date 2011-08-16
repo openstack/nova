@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests For Zone Aware Scheduler.
+Tests For Abstract Scheduler.
 """
 
 import json
@@ -25,7 +25,7 @@ from nova import rpc
 from nova import test
 from nova.compute import api as compute_api
 from nova.scheduler import driver
-from nova.scheduler import zone_aware_scheduler
+from nova.scheduler import abstract_scheduler
 from nova.scheduler import zone_manager
 
 
@@ -60,7 +60,7 @@ def fake_zone_manager_service_states(num_hosts):
     return states
 
 
-class FakeZoneAwareScheduler(zone_aware_scheduler.ZoneAwareScheduler):
+class FakeAbstractScheduler(abstract_scheduler.AbstractScheduler):
     # No need to stub anything at the moment
     pass
 
@@ -161,15 +161,15 @@ def fake_zone_get_all(context):
     ]
 
 
-class ZoneAwareSchedulerTestCase(test.TestCase):
-    """Test case for Zone Aware Scheduler."""
+class AbstractSchedulerTestCase(test.TestCase):
+    """Test case for Abstract Scheduler."""
 
-    def test_zone_aware_scheduler(self):
+    def test_abstract_scheduler(self):
         """
         Create a nested set of FakeZones, try to build multiple instances
         and ensure that a select call returns the appropriate build plan.
         """
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
         self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
 
@@ -194,7 +194,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         properly adjusted based on the scale/offset in the zone
         db entries.
         """
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         child_results = fake_call_zone_method(None, None, None, None)
         zones = fake_zone_get_all(None)
         sched._adjust_child_weights(child_results, zones)
@@ -209,11 +209,11 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
                 if zone == 'zone3':  # Scale x1000
                     self.assertEqual(scaled.pop(0), w)
 
-    def test_empty_zone_aware_scheduler(self):
+    def test_empty_abstract_scheduler(self):
         """
         Ensure empty hosts & child_zones result in NoValidHosts exception.
         """
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         self.stubs.Set(sched, '_call_zone_method', fake_empty_call_zone_method)
         self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
 
@@ -231,7 +231,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         If the zone_blob hint was passed in, don't re-schedule.
         """
         global was_called
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         was_called = False
         self.stubs.Set(sched, '_provision_resource', fake_provision_resource)
         request_spec = {
@@ -248,7 +248,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
     def test_provision_resource_local(self):
         """Provision a resource locally or remotely."""
         global was_called
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         was_called = False
         self.stubs.Set(sched, '_provision_resource_locally',
                        fake_provision_resource_locally)
@@ -260,7 +260,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
     def test_provision_resource_remote(self):
         """Provision a resource locally or remotely."""
         global was_called
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         was_called = False
         self.stubs.Set(sched, '_provision_resource_from_blob',
                        fake_provision_resource_from_blob)
@@ -272,9 +272,9 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
     def test_provision_resource_from_blob_empty(self):
         """Provision a resource locally or remotely given no hints."""
         global was_called
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         request_spec = {}
-        self.assertRaises(zone_aware_scheduler.InvalidBlob,
+        self.assertRaises(abstract_scheduler.InvalidBlob,
                           sched._provision_resource_from_blob,
                           None, {}, 1, {}, {})
 
@@ -283,7 +283,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         Provision a resource locally or remotely when blob hint passed in.
         """
         global was_called
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         was_called = False
 
         def fake_create_db_entry_for_new_instance(self, context,
@@ -317,7 +317,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         passed in.
         """
         global was_called
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         self.stubs.Set(sched, '_decrypt_blob',
                        fake_decrypt_blob_returns_child_info)
         was_called = False
@@ -336,7 +336,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         from an immediate child.
         """
         global was_called
-        sched = FakeZoneAwareScheduler()
+        sched = FakeAbstractScheduler()
         was_called = False
         self.stubs.Set(sched, '_ask_child_zone_to_create_instance',
                        fake_ask_child_zone_to_create_instance)
@@ -350,14 +350,14 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
     def test_decrypt_blob(self):
         """Test that the decrypt method works."""
 
-        fixture = FakeZoneAwareScheduler()
+        fixture = FakeAbstractScheduler()
         test_data = {"foo": "bar"}
 
         class StubDecryptor(object):
             def decryptor(self, key):
                 return lambda blob: blob
 
-        self.stubs.Set(zone_aware_scheduler, 'crypto',
+        self.stubs.Set(abstract_scheduler, 'crypto',
                        StubDecryptor())
 
         self.assertEqual(fixture._decrypt_blob(test_data),

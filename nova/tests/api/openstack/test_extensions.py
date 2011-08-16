@@ -84,6 +84,19 @@ class ExtensionControllerTest(test.TestCase):
         super(ExtensionControllerTest, self).setUp()
         ext_path = os.path.join(os.path.dirname(__file__), "extensions")
         self.flags(osapi_extensions_path=ext_path)
+        self.ext_list = [
+            "Createserverext"
+            "FlavorExtraSpecs",
+            "Floating_ips",
+            "Fox In Socks",
+            "Hosts",
+            "Keypairs",
+            "Multinic",
+            "Quotas",
+            "SecurityGroups",
+            "Volumes",
+            ]
+        self.ext_list.sort()
 
     def test_list_extensions_json(self):
         app = openstack.APIRouterV11()
@@ -96,12 +109,10 @@ class ExtensionControllerTest(test.TestCase):
         data = json.loads(response.body)
         names = [x['name'] for x in data['extensions']]
         names.sort()
-        self.assertEqual(names, ["Createserverext", "FlavorExtraSpecs",
-            "Floating_ips", "Fox In Socks", "Hosts", "Keypairs", "Multinic",
-            "SecurityGroups", "Volumes"])
+        self.assertEqual(names, self.ext_list)
 
         # Make sure that at least Fox in Sox is correct.
-        (fox_ext,) = [
+        (fox_ext, ) = [
             x for x in data['extensions'] if x['alias'] == 'FOXNSOX']
         self.assertEqual(fox_ext, {
                 'namespace': 'http://www.fox.in.socks/api/ext/pie/v1.0',
@@ -143,10 +154,10 @@ class ExtensionControllerTest(test.TestCase):
 
         # Make sure we have all the extensions.
         exts = root.findall('{0}extension'.format(NS))
-        self.assertEqual(len(exts), 9)
+        self.assertEqual(len(exts), len(self.ext_list))
 
         # Make sure that at least Fox in Sox is correct.
-        (fox_ext,) = [x for x in exts if x.get('alias') == 'FOXNSOX']
+        (fox_ext, ) = [x for x in exts if x.get('alias') == 'FOXNSOX']
         self.assertEqual(fox_ext.get('name'), 'Fox In Socks')
         self.assertEqual(fox_ext.get('namespace'),
             'http://www.fox.in.socks/api/ext/pie/v1.0')
@@ -218,6 +229,7 @@ class ResourceExtensionTest(test.TestCase):
 
 
 class InvalidExtension(object):
+
     def get_alias(self):
         return "THIRD"
 

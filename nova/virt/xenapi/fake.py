@@ -140,6 +140,7 @@ def create_vdi(name_label, read_only, sr_ref, sharable):
                            'location': '',
                            'xenstore_data': '',
                            'sm_config': {},
+                           'physical_utilisation': '123',
                            'VBDs': {}})
 
 
