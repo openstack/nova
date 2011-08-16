@@ -304,15 +304,6 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
         return password
 
-    def _validate_fixed_ip(self, value):
-        if not isinstance(value, basestring):
-            msg = _("Fixed IP is not a string or unicode")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if value.strip() == '':
-            msg = _("Fixed IP is an empty string")
-            raise exc.HTTPBadRequest(explanation=msg)
-
     def _get_requested_networks(self, requested_networks):
         """
         Create a list of requested networks from the networks attribute
@@ -320,30 +311,32 @@ class CreateInstanceHelper(object):
         networks = []
         for network in requested_networks:
             try:
-                network_id = network['id']
-                network_id = int(network_id)
+                network_uuid = network['uuid']
+
+                if not utils.is_uuid_like(network_uuid):
+                    msg = _("Bad networks format: network uuid is not in"
+                         " proper format (%s)") % network_uuid
+                    raise exc.HTTPBadRequest(explanation=msg)
+
                 #fixed IP address is optional
                 #if the fixed IP address is not provided then
                 #it will use one of the available IP address from the network
-                fixed_ip = network.get('fixed_ip', None)
-                if fixed_ip is not None:
-                    self._validate_fixed_ip(fixed_ip)
+                address = network.get('fixed_ip', None)
+                if address is not None and not utils.is_valid_ipv4(address):
+                    msg = _("Invalid fixed IP address (%s)") % address
+                    raise exc.HTTPBadRequest(explanation=msg)
                 # check if the network id is already present in the list,
                 # we don't want duplicate networks to be passed
                 # at the boot time
                 for id, ip in networks:
-                    if id == network_id:
+                    if id == network_uuid:
                         expl = _("Duplicate networks (%s) are not allowed")\
-                                % network_id
+                                % network_uuid
                         raise exc.HTTPBadRequest(explanation=expl)
 
-                networks.append((network_id, fixed_ip))
+                networks.append((network_uuid, address))
             except KeyError as key:
                 expl = _('Bad network format: missing %s') % key
-                raise exc.HTTPBadRequest(explanation=expl)
-            except ValueError:
-                expl = _("Bad networks format: network id should "
-                         "be integer (%s)") % network_id
                 raise exc.HTTPBadRequest(explanation=expl)
             except TypeError:
                 expl = _('Bad networks format')
@@ -543,8 +536,8 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
             for network_node in self.find_children_named(node,
                                                          "network"):
                 item = {}
-                if network_node.hasAttribute("id"):
-                    item["id"] = network_node.getAttribute("id")
+                if network_node.hasAttribute("uuid"):
+                    item["uuid"] = network_node.getAttribute("uuid")
                 if network_node.hasAttribute("fixed_ip"):
                     item["fixed_ip"] = network_node.getAttribute("fixed_ip")
                 networks.append(item)

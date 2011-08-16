@@ -557,6 +557,7 @@ class Network(BASE, NovaBase):
 
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+    uuid = Column(String(36))
 
 
 class VirtualInterface(BASE, NovaBase):

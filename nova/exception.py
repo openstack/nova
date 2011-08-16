@@ -428,7 +428,7 @@ class NoNetworksFound(NotFound):
 
 
 class NetworkNotFoundForProject(NotFound):
-    message = _("Either Network %(network_id)s is not present or "
+    message = _("Either Network uuid %(network_uuid)s is not present or "
                 "is not assigned to the project %(project_id)s.")
 
 
@@ -471,7 +471,7 @@ class FixedIpNotFoundForHost(FixedIpNotFound):
 
 class FixedIpNotFoundForNetwork(FixedIpNotFound):
     message = _("Fixed IP address (%(address)s) does not exist in "
-                "network (%(network_id)s).")
+                "network (%(network_uuid)s).")
 
 
 class FixedIpAlreadyInUse(AlreadyInUse):

@@ -825,26 +825,6 @@ def fixed_ip_get_by_address(context, address, session=None):
 
 
 @require_context
-def fixed_ip_validate_by_network_address(context, network_id,
-                                         address):
-    session = get_session()
-    fixed_ip_ref = session.query(models.FixedIp).\
-                     filter_by(address=address).\
-                     filter_by(reserved=False).\
-                     filter_by(network_id=network_id).\
-                     filter_by(deleted=can_read_deleted(context)).\
-                     first()
-
-    if fixed_ip_ref is None:
-        raise exception.FixedIpNotFoundForNetwork(address=address,
-                                            network_id=network_id)
-    if fixed_ip_ref.instance is not None:
-            raise exception.FixedIpAlreadyInUse(address=address)
-
-    return fixed_ip_ref
-
-
-@require_context
 def fixed_ip_get_by_instance(context, instance_id):
     session = get_session()
     rv = session.query(models.FixedIp).\
@@ -1778,10 +1758,10 @@ def network_get_all(context):
 
 
 @require_admin_context
-def network_get_networks_by_ids(context, network_ids):
+def network_get_networks_by_uuids(context, network_uuids):
     session = get_session()
     result = session.query(models.Network).\
-                 filter(models.Network.id.in_(network_ids)).\
+                 filter(models.Network.uuid.in_(network_uuids)).\
                  filter_by(deleted=False).all()
     if not result:
         raise exception.NoNetworksFound()
@@ -1794,14 +1774,14 @@ def network_get_networks_by_ids(context, network_ids):
 
     #check if the result contains all the networks
     #we are looking for
-    for network_id in network_ids:
+    for network_uuid in network_uuids:
         found = False
         for network in result:
-            if network['id'] == network_id:
+            if network['uuid'] == network_uuid:
                 found = True
                 break
         if not found:
-            raise exception.NetworkNotFound(network_id=network_id)
+            raise exception.NetworkNotFound(network_id=network_uuid)
 
     return result
 
@@ -2962,10 +2942,10 @@ def project_get_networks(context, project_id, associate=True):
 
 
 @require_context
-def project_get_networks_by_ids(context, network_ids):
+def project_get_networks_by_uuids(context, network_uuids):
     session = get_session()
     result = session.query(models.Network).\
-                 filter(models.Network.id.in_(network_ids)).\
+                 filter(models.Network.uuid.in_(network_uuids)).\
                  filter_by(deleted=False).\
                  filter_by(project_id=context.project_id).all()
 
@@ -2980,14 +2960,14 @@ def project_get_networks_by_ids(context, network_ids):
 
     #check if the result contains all the networks
     #we are looking for
-    for network_id in network_ids:
+    for uuid in network_uuids:
         found = False
         for network in result:
-            if network['id'] == network_id:
+            if network['uuid'] == uuid:
                 found = True
                 break
         if not found:
-            raise exception.NetworkNotFoundForProject(network_id=network_id,
+            raise exception.NetworkNotFoundForProject(network_uuid=uuid,
                                               project_id=context.project_id)
     return result
 

@@ -135,8 +135,8 @@ class RPCAllocateFixedIP(object):
         for network in networks:
             address = None
             if requested_networks is not None:
-                for address in (fixed_ip for (id, fixed_ip) in \
-                              requested_networks if network['id'] == id):
+                for address in (fixed_ip for (uuid, fixed_ip) in \
+                              requested_networks if network['uuid'] == uuid):
                     break
 
             # NOTE(vish): if we are not multi_host pass to the network host
@@ -397,9 +397,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 there is a better way to determine which networks
         #                 a non-vlan instance should connect to
         if requested_networks is not None and len(requested_networks) != 0:
-            network_ids = [id for (id, fixed_ip) in requested_networks]
-            networks = self.db.network_get_networks_by_ids(context,
-                                                           network_ids)
+            network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
+            networks = self.db.network_get_networks_by_uuids(context,
+                                                           network_uuids)
         else:
             try:
                 networks = self.db.network_get_all(context)
@@ -827,18 +827,24 @@ class NetworkManager(manager.SchedulerDependentManager):
         if networks is None or len(networks) == 0:
             return
 
-        network_ids = [id for (id, fixed_ip) in networks]
-        result = self.db.network_get_networks_by_ids(context, network_ids)
-        for network_id, fixed_ip in networks:
+        network_uuids = [uuid for (uuid, fixed_ip) in networks]
+
+        self.db.network_get_networks_by_uuids(context, network_uuids)
+
+        for network_uuid, address in networks:
             # check if the fixed IP address is valid and
             # it actually belongs to the network
-            if fixed_ip is not None:
-                if not utils.is_valid_ipv4(fixed_ip):
-                    raise exception.FixedIpInvalid(address=fixed_ip)
+            if address is not None:
+                if not utils.is_valid_ipv4(address):
+                    raise exception.FixedIpInvalid(address=address)
 
-                self.db.fixed_ip_validate_by_network_address(context,
-                                                             network_id,
-                                                             fixed_ip)
+                fixed_ip_ref = self.db.fixed_ip_get_by_address(context,
+                                                               address)
+                if fixed_ip_ref['network']['uuid'] != network_uuid:
+                    raise exception.FixedIpNotFoundForNetwork(address=address,
+                                            network_uuid=network_uuid)
+                if fixed_ip_ref['instance'] is not None:
+                    raise exception.FixedIpAlreadyInUse(address=address)
 
 
 class FlatManager(NetworkManager):
@@ -878,8 +884,8 @@ class FlatManager(NetworkManager):
         for network in networks:
             address = None
             if requested_networks is not None:
-                for address in (fixed_ip for (id, fixed_ip) in \
-                              requested_networks if network['id'] == id):
+                for address in (fixed_ip for (uuid, fixed_ip) in \
+                              requested_networks if network['uuid'] == uuid):
                     break
 
             self.allocate_fixed_ip(context, instance_id,
@@ -999,9 +1005,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Determine which networks an instance should connect to."""
         # get networks associated with project
         if requested_networks is not None and len(requested_networks) != 0:
-            network_ids = [id for (id, fixed_ip) in requested_networks]
-            networks = self.db.project_get_networks_by_ids(context,
-                                                    network_ids)
+            network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
+            networks = self.db.project_get_networks_by_uuids(context,
+                                                    network_uuids)
         else:
             networks = self.db.project_get_networks(context, project_id)
         return networks
@@ -1060,19 +1066,24 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         if networks is None or len(networks) == 0:
             return
 
-        network_ids = [id for (id, fixed_ip) in networks]
-        result = self.db.project_get_networks_by_ids(context, network_ids)
+        network_uuids = [uuid for (uuid, fixed_ip) in networks]
 
-        for network_id, fixed_ip in networks:
+        self.db.project_get_networks_by_uuids(context, network_uuids)
+
+        for network_uuid, address in networks:
             # check if the fixed IP address is valid and
             # it actually belongs to the network
             if fixed_ip is not None:
-                if not utils.is_valid_ipv4(fixed_ip):
-                    raise exception.FixedIpInvalid(address=fixed_ip)
+                if not utils.is_valid_ipv4(address):
+                    raise exception.FixedIpInvalid(address=address)
 
-                self.db.fixed_ip_validate_by_network_address(context,
-                                                             network_id,
-                                                             fixed_ip)
+                fixed_ip_ref = self.db.fixed_ip_get_by_address(context,
+                                                               address)
+                if fixed_ip_ref['network']['uuid'] != network_uuid:
+                    raise exception.FixedIpNotFoundForNetwork(address=address,
+                                            network_uuid=network_uuid)
+                if fixed_ip_ref['instance'] is not None:
+                    raise exception.FixedIpAlreadyInUse(address=address)
 
     @property
     def _bottom_reserved_ips(self):

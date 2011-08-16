@@ -2662,7 +2662,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
+       <network uuid="1" fixed_ip="10.0.1.12"/>
     </networks>
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
@@ -2670,7 +2670,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"}],
+                "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"}],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2679,8 +2679,8 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
-       <network id="2" fixed_ip="10.0.2.12"/>
+       <network uuid="1" fixed_ip="10.0.1.12"/>
+       <network uuid="2" fixed_ip="10.0.2.12"/>
     </networks>
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
@@ -2688,8 +2688,8 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"},
-                             {"id": "2", "fixed_ip": "10.0.2.12"}],
+                "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"},
+                             {"uuid": "2", "fixed_ip": "10.0.2.12"}],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2698,10 +2698,10 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
-       <network id="1" fixed_ip="10.0.1.12"/>
+       <network uuid="1" fixed_ip="10.0.1.12"/>
     </networks>
     <networks>
-       <network id="2" fixed_ip="10.0.2.12"/>
+       <network uuid="2" fixed_ip="10.0.2.12"/>
     </networks>
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
@@ -2709,7 +2709,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"}],
+                "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"}],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2735,7 +2735,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
-       <network id="1"/>
+       <network uuid="1"/>
     </networks>
 </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
@@ -2743,7 +2743,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": [{"id": "1"}],
+                "networks": [{"uuid": "1"}],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2752,7 +2752,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
     <server xmlns="http://docs.openstack.org/compute/api/v1.1"
      name="new-server-test" imageRef="1" flavorRef="1">
         <networks>
-           <network id="" fixed_ip="10.0.1.12"/>
+           <network uuid="" fixed_ip="10.0.1.12"/>
         </networks>
     </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
@@ -2760,7 +2760,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": [{"id": "", "fixed_ip": "10.0.1.12"}],
+                "networks": [{"uuid": "", "fixed_ip": "10.0.1.12"}],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2769,7 +2769,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
     <server xmlns="http://docs.openstack.org/compute/api/v1.1"
      name="new-server-test" imageRef="1" flavorRef="1">
         <networks>
-           <network id="1" fixed_ip=""/>
+           <network uuid="1" fixed_ip=""/>
         </networks>
     </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
@@ -2777,7 +2777,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": [{"id": "1", "fixed_ip": ""}],
+                "networks": [{"uuid": "1", "fixed_ip": ""}],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -2786,8 +2786,8 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
     <server xmlns="http://docs.openstack.org/compute/api/v1.1"
      name="new-server-test" imageRef="1" flavorRef="1">
         <networks>
-           <network id="1" fixed_ip="10.0.1.12"/>
-           <network id="1" fixed_ip="10.0.2.12"/>
+           <network uuid="1" fixed_ip="10.0.1.12"/>
+           <network uuid="1" fixed_ip="10.0.2.12"/>
         </networks>
     </server>"""
         request = self.deserializer.deserialize(serial_request, 'create')
@@ -2795,8 +2795,8 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": [{"id": "1", "fixed_ip": "10.0.1.12"},
-                             {"id": "1", "fixed_ip": "10.0.2.12"}],
+                "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"},
+                             {"uuid": "1", "fixed_ip": "10.0.2.12"}],
                 }}
         self.assertEquals(request['body'], expected)
 
