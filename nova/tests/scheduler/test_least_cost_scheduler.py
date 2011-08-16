@@ -18,7 +18,7 @@ Tests For Least Cost Scheduler
 
 from nova import test
 from nova.scheduler import least_cost
-from nova.tests.scheduler import test_zone_aware_scheduler
+from nova.tests.scheduler import test_abstract_scheduler
 
 MB = 1024 * 1024
 
@@ -70,7 +70,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
 
         zone_manager = FakeZoneManager()
 
-        states = test_zone_aware_scheduler.fake_zone_manager_service_states(
+        states = test_abstract_scheduler.fake_zone_manager_service_states(
             num_hosts=10)
         zone_manager.service_states = states
 
