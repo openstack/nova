@@ -68,8 +68,8 @@ class QuotaSetsController(object):
                     return webob.Response(status_int=403)
         return {'quota_set': quota.get_project_quotas(context, project_id)}
 
-    def defaults(self, req):
-        return self._format_quota_set('defaults', quota._get_default_quotas())
+    def defaults(self, req, id):
+        return self._format_quota_set(id, quota._get_default_quotas())
 
 
 class Quotas(extensions.ExtensionDescriptor):
