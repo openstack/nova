@@ -361,9 +361,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             allowed_size_gb = instance_type['local_gb']
 
             if allowed_size_gb == 0:
-            # NOTE(jk0): Since the default local_gb of m1.tiny is 0, we will
-            # allow the check to proceed. We may want to look into changing the
-            # default size to 1GB.
+            # NOTE(jk0): Since libvirt uses local_gb as a secondary drive, we
+            # need to handle potential situations where local_gb is 0. This is
+            # the default for m1.tiny.
                 return
 
             allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
