@@ -359,6 +359,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance_type = self.db.instance_type_get(context,
                     instance_type_id)
             allowed_size_gb = instance_type['local_gb']
+
+            if allowed_size_gb == 0:
+            # NOTE(jk0): Since the default local_gb of m1.tiny is 0, we will
+            # allow the check to proceed. We may want to look into changing the
+            # default size to 1GB.
+                return
+
             allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
             LOG.debug(_("image_id=%(image_id)d, image_size_bytes="
@@ -1368,7 +1375,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # This nwfilter is necessary on the destination host.
         # In addition, this method is creating filtering rule
         # onto destination host.
-        self.driver.ensure_filtering_rules_for_instance(instance_ref, network_info)
+        self.driver.ensure_filtering_rules_for_instance(instance_ref,
+                network_info)
 
         # Preparation for block migration
         if block_migration:
