@@ -32,7 +32,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 :rescue_kernel_id:  Rescue aki image (default: aki-rescue).
 :rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
 :injected_network_template:  Template file for injected network
-:allow_project_net_traffic:  Whether to allow in project network traffic
+:allow_same_net_traffic:  Whether to allow in project network traffic
 
 """
 
@@ -96,9 +96,9 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
-flags.DEFINE_bool('allow_project_net_traffic',
+flags.DEFINE_bool('allow_same_net_traffic',
                   True,
-                  'Whether to allow in project network traffic')
+                  'Whether to allow network traffic from same network')
 flags.DEFINE_bool('use_cow_images',
                   True,
                   'Whether to use cow images')
@@ -117,6 +117,10 @@ flags.DEFINE_string('live_migration_uri',
 flags.DEFINE_string('live_migration_flag',
                     "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
                     'Define live migration behavior.')
+flags.DEFINE_string('block_migration_flag',
+                    "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, "
+                    "VIR_MIGRATE_NON_SHARED_INC",
+                    'Define block migration behavior.')
 flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
 flags.DEFINE_string('qemu_img', 'qemu-img',
@@ -463,18 +467,18 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         virt_dom = self._conn.lookupByName(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance
-        # instead of using to_xml(instance). This is almost the ultimate
-        # stupid workaround.
+        # instead of using to_xml(instance, network_info). This is almost
+        # the ultimate stupid workaround.
         xml = virt_dom.XMLDesc(0)
         # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
         # better because we cannot ensure flushing dirty buffers
         # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, network_info, cleanup=False)
         self.plug_vifs(instance, network_info)
-        self.firewall_driver.setup_basic_filtering(instance)
-        self.firewall_driver.prepare_instance_filter(instance)
+        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_new_domain(xml)
-        self.firewall_driver.apply_instance_filter(instance)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -531,7 +535,7 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         self.destroy(instance, network_info, cleanup=False)
 
-        xml = self.to_xml(instance, rescue=True)
+        xml = self.to_xml(instance, network_info, rescue=True)
         rescue_images = {'image_id': FLAGS.rescue_image_id,
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
@@ -574,9 +578,9 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, context, instance,
-              network_info=None, block_device_info=None):
-        xml = self.to_xml(instance, False, network_info=network_info,
+    def spawn(self, context, instance, network_info,
+              block_device_info=None):
+        xml = self.to_xml(instance, network_info, False,
                           block_device_info=block_device_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
@@ -584,7 +588,7 @@ class LibvirtConnection(driver.ComputeDriver):
                            block_device_info=block_device_info)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
-        self.firewall_driver.apply_instance_filter(instance)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
@@ -727,6 +731,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         If cow is True, it will make a CoW image instead of a copy.
         """
+
         if not os.path.exists(target):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
             if not os.path.exists(base_dir):
@@ -988,14 +993,10 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             raise exception.InvalidDevicePath(path=device_path)
 
-    def _prepare_xml_info(self, instance, rescue=False, network_info=None,
+    def _prepare_xml_info(self, instance, network_info, rescue,
                           block_device_info=None):
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
-        # TODO(adiantum) remove network_info creation code
-        # when multinics will be completed
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
 
         nics = []
         for (network, mapping) in network_info:
@@ -1082,11 +1083,11 @@ class LibvirtConnection(driver.ComputeDriver):
             xml_info['disk'] = xml_info['basepath'] + "/disk"
         return xml_info
 
-    def to_xml(self, instance, rescue=False, network_info=None,
+    def to_xml(self, instance, network_info, rescue=False,
                block_device_info=None):
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-        xml_info = self._prepare_xml_info(instance, rescue, network_info,
+        xml_info = self._prepare_xml_info(instance, network_info, rescue,
                                           block_device_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
         LOG.debug(_('instance %s: finished toXML method'), instance['name'])
@@ -1506,7 +1507,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return
 
-    def ensure_filtering_rules_for_instance(self, instance_ref,
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info,
                                             time=None):
         """Setting up filtering rules and waiting for its completion.
 
@@ -1536,14 +1537,15 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # If any instances never launch at destination host,
         # basic-filtering must be set here.
-        self.firewall_driver.setup_basic_filtering(instance_ref)
+        self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
         # setting up n)ova-instance-instance-xx mainly.
-        self.firewall_driver.prepare_instance_filter(instance_ref)
+        self.firewall_driver.prepare_instance_filter(instance_ref, network_info)
 
         # wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)
         while timeout_count:
-            if self.firewall_driver.instance_filter_exists(instance_ref):
+            if self.firewall_driver.instance_filter_exists(instance_ref,
+                                                           network_info):
                 break
             timeout_count.pop()
             if len(timeout_count) == 0:
@@ -1552,7 +1554,7 @@ class LibvirtConnection(driver.ComputeDriver):
             time.sleep(1)
 
     def live_migration(self, ctxt, instance_ref, dest,
-                       post_method, recover_method):
+                       post_method, recover_method, block_migration=False):
         """Spawning live_migration operation for distributing high-load.
 
         :params ctxt: security context
@@ -1560,20 +1562,22 @@ class LibvirtConnection(driver.ComputeDriver):
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :params dest: destination host
+        :params block_migration: destination host
         :params post_method:
             post operation method.
             expected nova.compute.manager.post_live_migration.
         :params recover_method:
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
+        :params block_migration: if true, do block migration.
 
         """
 
         greenthread.spawn(self._live_migration, ctxt, instance_ref, dest,
-                          post_method, recover_method)
+                          post_method, recover_method, block_migration)
 
-    def _live_migration(self, ctxt, instance_ref, dest,
-                        post_method, recover_method):
+    def _live_migration(self, ctxt, instance_ref, dest, post_method,
+                        recover_method, block_migration=False):
         """Do live migration.
 
         :params ctxt: security context
@@ -1592,27 +1596,21 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # Do live migration.
         try:
-            flaglist = FLAGS.live_migration_flag.split(',')
+            if block_migration:
+                flaglist = FLAGS.block_migration_flag.split(',')
+            else:
+                flaglist = FLAGS.live_migration_flag.split(',')
             flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
             logical_sum = reduce(lambda x, y: x | y, flagvals)
 
-            if self.read_only:
-                tmpconn = self._connect(self.libvirt_uri, False)
-                dom = tmpconn.lookupByName(instance_ref.name)
-                dom.migrateToURI(FLAGS.live_migration_uri % dest,
-                                 logical_sum,
-                                 None,
-                                 FLAGS.live_migration_bandwidth)
-                tmpconn.close()
-            else:
-                dom = self._conn.lookupByName(instance_ref.name)
-                dom.migrateToURI(FLAGS.live_migration_uri % dest,
-                                 logical_sum,
-                                 None,
-                                 FLAGS.live_migration_bandwidth)
+            dom = self._conn.lookupByName(instance_ref.name)
+            dom.migrateToURI(FLAGS.live_migration_uri % dest,
+                             logical_sum,
+                             None,
+                             FLAGS.live_migration_bandwidth)
 
         except Exception:
-            recover_method(ctxt, instance_ref, dest=dest)
+            recover_method(ctxt, instance_ref, dest, block_migration)
             raise
 
         # Waiting for completion of live_migration.
@@ -1624,10 +1622,149 @@ class LibvirtConnection(driver.ComputeDriver):
                 self.get_info(instance_ref.name)['state']
             except exception.NotFound:
                 timer.stop()
-                post_method(ctxt, instance_ref, dest)
+                post_method(ctxt, instance_ref, dest, block_migration)
 
         timer.f = wait_for_live_migration
         timer.start(interval=0.5, now=True)
+
+    def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
+        """Preparation block migration.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params disk_info_json:
+            json strings specified in get_instance_disk_info
+
+        """
+        disk_info = utils.loads(disk_info_json)
+
+        # make instance directory
+        instance_dir = os.path.join(FLAGS.instances_path, instance_ref['name'])
+        if os.path.exists(instance_dir):
+            raise exception.DestinationDiskExists(path=instance_dir)
+        os.mkdir(instance_dir)
+
+        for info in disk_info:
+            base = os.path.basename(info['path'])
+            # Get image type and create empty disk image.
+            instance_disk = os.path.join(instance_dir, base)
+            utils.execute('sudo', 'qemu-img', 'create', '-f', info['type'],
+                          instance_disk, info['local_gb'])
+
+        # if image has kernel and ramdisk, just download
+        # following normal way.
+        if instance_ref['kernel_id']:
+            user = manager.AuthManager().get_user(instance_ref['user_id'])
+            project = manager.AuthManager().get_project(
+                instance_ref['project_id'])
+            self._fetch_image(nova_context.get_admin_context(),
+                              os.path.join(instance_dir, 'kernel'),
+                              instance_ref['kernel_id'],
+                              user,
+                              project)
+            if instance_ref['ramdisk_id']:
+                self._fetch_image(nova_context.get_admin_context(),
+                                  os.path.join(instance_dir, 'ramdisk'),
+                                  instance_ref['ramdisk_id'],
+                                  user,
+                                  project)
+
+    def post_live_migration_at_destination(self, ctxt,
+                                           instance_ref,
+                                           network_info,
+                                           block_migration):
+        """Post operation of live migration at destination host.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params network_info: instance network infomation
+        :params : block_migration: if true, post operation of block_migraiton.
+        """
+        # Define migrated instance, otherwise, suspend/destroy does not work.
+        dom_list = self._conn.listDefinedDomains()
+        if instance_ref.name not in dom_list:
+            instance_dir = os.path.join(FLAGS.instances_path,
+                                        instance_ref.name)
+            xml_path = os.path.join(instance_dir, 'libvirt.xml')
+            # In case of block migration, destination does not have
+            # libvirt.xml
+            if not os.path.isfile(xml_path):
+                xml = self.to_xml(instance_ref, network_info=network_info)
+                f = open(os.path.join(instance_dir, 'libvirt.xml'), 'w+')
+                f.write(xml)
+                f.close()
+            # libvirt.xml should be made by to_xml(), but libvirt
+            # does not accept to_xml() result, since uuid is not
+            # included in to_xml() result.
+            dom = self._lookup_by_name(instance_ref.name)
+            self._conn.defineXML(dom.XMLDesc(0))
+
+    def get_instance_disk_info(self, ctxt, instance_ref):
+        """Preparation block migration.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :return:
+            json strings with below format.
+           "[{'path':'disk', 'type':'raw', 'local_gb':'10G'},...]"
+
+        """
+        disk_info = []
+
+        virt_dom = self._lookup_by_name(instance_ref.name)
+        xml = virt_dom.XMLDesc(0)
+        doc = libxml2.parseDoc(xml)
+        disk_nodes = doc.xpathEval('//devices/disk')
+        path_nodes = doc.xpathEval('//devices/disk/source')
+        driver_nodes = doc.xpathEval('//devices/disk/driver')
+
+        for cnt, path_node in enumerate(path_nodes):
+            disk_type = disk_nodes[cnt].get_properties().getContent()
+            path = path_node.get_properties().getContent()
+
+            if disk_type != 'file':
+                LOG.debug(_('skipping %(path)s since it looks like volume') %
+                          locals())
+                continue
+
+            # In case of libvirt.xml, disk type can be obtained
+            # by the below statement.
+            # -> disk_type = driver_nodes[cnt].get_properties().getContent()
+            # but this xml is generated by kvm, format is slightly different.
+            disk_type = \
+                driver_nodes[cnt].get_properties().get_next().getContent()
+            if disk_type == 'raw':
+                size = int(os.path.getsize(path))
+            else:
+                out, err = utils.execute('sudo', 'qemu-img', 'info', path)
+                size = [i.split('(')[1].split()[0] for i in out.split('\n')
+                    if i.strip().find('virtual size') >= 0]
+                size = int(size[0])
+
+            # block migration needs same/larger size of empty image on the
+            # destination host. since qemu-img creates bit smaller size image
+            # depending on original image size, fixed value is necessary.
+            for unit, divisor in [('G', 1024 ** 3), ('M', 1024 ** 2),
+                                  ('K', 1024), ('', 1)]:
+                if size / divisor == 0:
+                    continue
+                if size % divisor != 0:
+                    size = size / divisor + 1
+                else:
+                    size = size / divisor
+                size = str(size) + unit
+                break
+
+            disk_info.append({'type': disk_type, 'path': path,
+                              'local_gb': size})
+
+        return utils.dumps(disk_info)
 
     def unfilter_instance(self, instance_ref, network_info):
         """See comments of same method in firewall_driver."""

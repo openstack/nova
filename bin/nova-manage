@@ -834,11 +834,13 @@ class VmCommands(object):
                 instance['availability_zone'],
                 instance['launch_index'])
 
-    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
-    @args('--dest', dest='dest', metavar='<Destanation>',
-            help='destanation node')
-    def live_migration(self, ec2_id, dest):
-        """Migrates a running instance to a new machine."""
+    def _migration(self, ec2_id, dest, block_migration=False):
+        """Migrates a running instance to a new machine.
+         :param ec2_id: instance id which comes from euca-describe-instance.
+         :param dest: destination host name.
+         :param block_migration: if True, do block_migration.
+
+        """
 
         ctxt = context.get_admin_context()
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
@@ -859,10 +861,27 @@ class VmCommands(object):
                  {"method": "live_migration",
                   "args": {"instance_id": instance_id,
                            "dest": dest,
-                           "topic": FLAGS.compute_topic}})
+                           "topic": FLAGS.compute_topic,
+                           "block_migration": block_migration}})
 
         print _('Migration of %s initiated.'
                'Check its progress using euca-describe-instances.') % ec2_id
+
+    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
+    @args('--dest', dest='dest', metavar='<Destanation>',
+            help='destanation node')
+    def live_migration(self, ec2_id, dest):
+        """Migrates a running instance to a new machine."""
+
+        self._migration(ec2_id, dest)
+
+    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
+    @args('--dest', dest='dest', metavar='<Destanation>',
+            help='destanation node')
+    def block_migration(self, ec2_id, dest):
+        """Migrates a running instance to a new machine with storage data."""
+
+        self._migration(ec2_id, dest, True)
 
 
 class ServiceCommands(object):
@@ -945,9 +964,19 @@ class ServiceCommands(object):
             mem_u = result['resource']['memory_mb_used']
             hdd_u = result['resource']['local_gb_used']
 
+            cpu_sum = 0
+            mem_sum = 0
+            hdd_sum = 0
             print 'HOST\t\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
             print '%s(total)\t\t\t%s\t%s\t%s' % (host, cpu, mem, hdd)
-            print '%s(used)\t\t\t%s\t%s\t%s' % (host, cpu_u, mem_u, hdd_u)
+            print '%s(used_now)\t\t\t%s\t%s\t%s' % (host, cpu_u, mem_u, hdd_u)
+            for p_id, val in result['usage'].items():
+                cpu_sum += val['vcpus']
+                mem_sum += val['memory_mb']
+                hdd_sum += val['local_gb']
+            print '%s(used_max)\t\t\t%s\t%s\t%s' % (host, cpu_sum,
+                                                    mem_sum, hdd_sum)
+
             for p_id, val in result['usage'].items():
                 print '%s\t\t%s\t\t%s\t%s\t%s' % (host,
                                                   p_id,
