@@ -61,6 +61,7 @@ from nova import quota
 from nova import utils
 from nova import rpc
 from nova.network import api as network_api
+from nova.compute import api as compute_api
 import random
 
 
@@ -324,6 +325,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
         self.network_api = network_api.API()
+        self.compute_api = compute_api.API()
         super(NetworkManager, self).__init__(service_name='network',
                                                 *args, **kwargs)
 
@@ -378,6 +380,15 @@ class NetworkManager(manager.SchedulerDependentManager):
                                         network_ref['id'],
                                         self.host)
         return host
+
+    def _do_trigger_security_group_members_refresh_for_instance(self,
+                                                                instance_id):
+        admin_context = context.get_admin_context()
+        instance_ref = self.db.instance_get(admin_context, instance_id)
+        groups = instance_ref['security_groups']
+        group_ids = [group['id'] for group in groups]
+        self.compute_api.trigger_security_group_members_refresh(admin_context,
+                                                                    group_ids)
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):
@@ -578,6 +589,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                   network['id'],
                                                   instance_id,
                                                   kwargs.get('address', None))
+            self._do_trigger_security_group_members_refresh_for_instance(
+                                                                   instance_id)
             get_vif = self.db.virtual_interface_get_by_instance_and_network
             vif = get_vif(context, instance_id, network['id'])
             values = {'allocated': True,
@@ -592,6 +605,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.db.fixed_ip_update(context, address,
                                 {'allocated': False,
                                  'virtual_interface_id': None})
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        instance_ref = fixed_ip_ref['instance']
+        instance_id = instance_ref['id']
+        self._do_trigger_security_group_members_refresh_for_instance(
+                                                                   instance_id)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
@@ -633,6 +651,64 @@ class NetworkManager(manager.SchedulerDependentManager):
                 network_ref = self.db.fixed_ip_get_network(context, address)
                 self._setup_network(context, network_ref)
 
+    def _validate_cidrs(self, context, cidr, num_networks, network_size):
+        significant_bits = 32 - int(math.log(network_size, 2))
+        req_net = netaddr.IPNetwork(cidr)
+        req_net_ip = str(req_net.ip)
+        req_size = network_size * num_networks
+        if req_size > req_net.size:
+            msg = _("network_size * num_networks exceeds cidr size")
+            raise ValueError(msg)
+        adjusted_cidr_str = req_net_ip + '/' + str(significant_bits)
+        adjusted_cidr = netaddr.IPNetwork(adjusted_cidr_str)
+        try:
+            used_nets = self.db.network_get_all(context)
+        except exception.NoNetworksFound:
+            used_nets = []
+        used_cidrs = [netaddr.IPNetwork(net['cidr']) for net in used_nets]
+        if adjusted_cidr in used_cidrs:
+            raise ValueError(_("cidr already in use"))
+        for adjusted_cidr_supernet in adjusted_cidr.supernet():
+            if adjusted_cidr_supernet in used_cidrs:
+                msg = _("requested cidr (%s) conflicts with existing supernet")
+                raise ValueError(msg % str(adjusted_cidr))
+        # watch for smaller subnets conflicting
+        used_supernets = []
+        for used_cidr in used_cidrs:
+            if not used_cidr:
+                continue
+            if used_cidr.size < network_size:
+                for ucsupernet in used_cidr.supernet():
+                    if ucsupernet.size == network_size:
+                        used_supernets.append(ucsupernet)
+        all_req_nets = []
+        if num_networks == 1:
+            if adjusted_cidr in used_supernets:
+                msg = _("requested cidr (%s) conflicts with existing smaller"
+                        " cidr")
+                raise ValueError(msg % str(adjusted_cidr))
+            else:
+                all_req_nets.append(adjusted_cidr)
+        elif num_networks >= 2:
+            # split supernet into subnets
+            next_cidr = adjusted_cidr
+            for index in range(num_networks):
+                if next_cidr.first > req_net.last:
+                    msg = _("Not enough subnets avail to satisfy requested "
+                            "num_net works - some subnets in requested range"
+                            " already in use")
+                    raise ValueError(msg)
+                while True:
+                    used_values = used_cidrs + used_supernets
+                    if next_cidr in used_values:
+                        next_cidr = next_cidr.next()
+                    else:
+                        all_req_nets.append(next_cidr)
+                        next_cidr = next_cidr.next()
+                        break
+        all_req_nets = sorted(list(set(all_req_nets)))
+        return all_req_nets
+
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, **kwargs):
@@ -643,8 +719,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             network_size_v6 = 1 << 64
 
         if cidr:
-            fixed_net = netaddr.IPNetwork(cidr)
-            significant_bits = 32 - int(math.log(network_size, 2))
+            req_cidrs = self._validate_cidrs(context, cidr, num_networks,
+                                             network_size)
 
         for index in range(num_networks):
             net = {}
@@ -654,9 +730,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             net['dns2'] = dns2
 
             if cidr:
-                start = index * network_size
-                project_net = netaddr.IPNetwork('%s/%s' % (fixed_net[start],
-                                                           significant_bits))
+                project_net = req_cidrs[index]
                 net['cidr'] = str(project_net)
                 net['multi_host'] = multi_host
                 net['netmask'] = str(project_net.netmask)
@@ -905,7 +979,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                                 network['id'],
                                                 instance_id,
                                                 kwargs.get('address', None))
-
+            self._do_trigger_security_group_members_refresh_for_instance(
+                                                                   instance_id)
         vif = self.db.virtual_interface_get_by_instance_and_network(context,
                                                                  instance_id,
                                                                  network['id'])

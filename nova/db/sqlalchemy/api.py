@@ -1537,45 +1537,6 @@ def instance_add_security_group(context, instance_id, security_group_id):
 
 
 @require_context
-def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.vcpus))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.memory_mb))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.local_gb))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
 def instance_action_create(context, values):
     """Create an instance action from the values dictionary."""
     action_ref = models.InstanceActions()

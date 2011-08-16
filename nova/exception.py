@@ -277,6 +277,11 @@ class DestinationHypervisorTooOld(Invalid):
                 "has been provided.")
 
 
+class DestinationDiskExists(Invalid):
+    message = _("The supplied disk path (%(path)s) already exists, "
+                "it is expected not to exist.")
+
+
 class InvalidDevicePath(Invalid):
     message = _("The supplied device path (%(path)s) is invalid.")
 
@@ -723,6 +728,10 @@ class ProjectExists(Duplicate):
 
 class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
+
+
+class InvalidSharedStorage(NovaException):
+    message = _("%(path)s is on shared storage: %(reason)s")
 
 
 class MigrationError(NovaException):
