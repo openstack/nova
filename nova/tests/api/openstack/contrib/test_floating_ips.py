@@ -143,10 +143,13 @@ class FloatingIpTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         print res
         self.assertEqual(res.status_int, 200)
-        ip = json.loads(res.body)['allocated']
+        ip = json.loads(res.body)['floating_ip']
+
         expected = {
             "id": 1,
-            "floating_ip": '10.10.10.10'}
+            "instance_id": None,
+            "ip": "10.10.10.10",
+            "fixed_ip": None}
         self.assertEqual(ip, expected)
 
     def test_floating_ip_release(self):

@@ -85,7 +85,7 @@ class FloatingIPController(object):
 
         return _translate_floating_ips_view(floating_ips)
 
-    def create(self, req, body):
+    def create(self, req, body=None):
         context = req.environ['nova.context']
 
         try:
