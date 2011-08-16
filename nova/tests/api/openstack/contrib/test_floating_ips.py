@@ -116,14 +116,14 @@ class FloatingIpTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
-        response = {'floating_ips': [{'floating_ip': {'instance_id': 11,
-                                                      'ip': '10.10.10.10',
-                                                      'fixed_ip': '10.0.0.1',
-                                                      'id': 1}},
-                                     {'floating_ip': {'instance_id': None,
-                                                      'ip': '10.10.10.11',
-                                                      'fixed_ip': None,
-                                                      'id': 2}}]}
+        response = {'floating_ips': [{'instance_id': 11,
+                                      'ip': '10.10.10.10',
+                                      'fixed_ip': '10.0.0.1',
+                                      'id': 1},
+                                     {'instance_id': None,
+                                      'ip': '10.10.10.11',
+                                      'fixed_ip': None,
+                                      'id': 2}]}
         self.assertEqual(res_dict, response)
 
     def test_floating_ip_show(self):
@@ -177,8 +177,10 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(actual, expected)
 
     def test_floating_ip_disassociate(self):
+        body = dict()
         req = webob.Request.blank('/v1.1/123/os-floating-ips/1/disassociate')
         req.method = 'POST'
+        req.body = json.dumps(body)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)

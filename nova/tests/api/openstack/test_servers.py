@@ -3058,7 +3058,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             image_builder,
             base_url,
             project_id,
-            )
+        )
         return view_builder
 
     def test_build_server(self):
