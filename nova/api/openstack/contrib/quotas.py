@@ -24,7 +24,7 @@ from nova.auth import manager as auth_manager
 from nova.api.openstack import extensions
 
 
-class QuotasController(object):
+class QuotaSetsController(object):
 
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict"""
@@ -42,22 +42,6 @@ class QuotasController(object):
             'injected_files': quota_set['injected_files'],
             'cores': quota_set['cores'],
         }}
-
-    def index(self, req):
-        # NOTE(jakedahn): If http param defaults is true, list system defaults.
-        if urlparse.parse_qs(req.environ['QUERY_STRING']).get('defaults',
-                                                              False):
-            return {'quota_set_list': [self._format_quota_set('__defaults__',
-                                       quota._get_default_quotas())]}
-        else:
-            context = req.environ['nova.context']
-            user = req.environ.get('user')
-            projects = auth_manager.AuthManager().get_projects(user=user)
-
-            quota_set_list = [self._format_quota_set(project.name,
-                              quota.get_project_quotas(context, project.name))
-                              for project in projects]
-            return {'quota_set_list': quota_set_list}
 
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -80,6 +64,8 @@ class QuotasController(object):
                     db.quota_create(context, project_id, key, value)
         return {'quota_set': quota.get_project_quotas(context, project_id)}
 
+    def defaults(self, req):
+        return self._format_quota_set('defaults', quota._get_default_quotas())
 
 class Quotas(extensions.ExtensionDescriptor):
 
@@ -87,13 +73,13 @@ class Quotas(extensions.ExtensionDescriptor):
         return "Quotas"
 
     def get_alias(self):
-        return "os-quotas"
+        return "os-quota-sets"
 
     def get_description(self):
         return "Quotas management support"
 
     def get_namespace(self):
-        return "http://docs.openstack.org/ext/quotas/api/v1.1"
+        return "http://docs.openstack.org/ext/quotas-sets/api/v1.1"
 
     def get_updated(self):
         return "2011-08-08T00:00:00+00:00"
@@ -101,7 +87,9 @@ class Quotas(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        res = extensions.ResourceExtension('os-quotas', QuotasController())
+        res = extensions.ResourceExtension('os-quota-sets',
+                                            QuotaSetsController(),
+                                            member_actions={'defaults': 'GET'})
         resources.append(res)
 
         return resources

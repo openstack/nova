@@ -24,7 +24,7 @@ from nova.auth import manager as auth_manager
 from nova.tests.api.openstack import fakes
 
 
-from nova.api.openstack.contrib.quotas import QuotasController
+from nova.api.openstack.contrib.quotas import QuotaSetsController
 
 
 def quota_set(id):
@@ -55,11 +55,11 @@ def delete_user(name):
     auth_manager.AuthManager().delete_user(name)
 
 
-class QuotasTest(test.TestCase):
+class QuotaSetsTest(test.TestCase):
 
     def setUp(self):
-        super(QuotasTest, self).setUp()
-        self.controller = QuotasController()
+        super(QuotaSetsTest, self).setUp()
+        self.controller = QuotaSetsController()
         self.context = context.get_admin_context()
 
         create_admin_user('foo')
@@ -86,7 +86,7 @@ class QuotasTest(test.TestCase):
             'injected_file_content_bytes': 10240,
         }
 
-        quota_set = QuotasController()._format_quota_set('1234', raw_quota_set)
+        quota_set = QuotaSetsController()._format_quota_set('1234', raw_quota_set)
         quota_set_check = quota_set['quota_set']
 
         self.assertEqual(quota_set_check['id'], '1234')
@@ -100,15 +100,15 @@ class QuotasTest(test.TestCase):
         self.assertEqual(quota_set_check['injected_files'], 5)
         self.assertEqual(quota_set_check['injected_file_content_bytes'], 10240)
 
-    def test_quotas_index_with_default_param(self):
-        req = webob.Request.blank('/v1.1/os-quotas?defaults=True')
+    def test_quotas_defaults(self):
+        req = webob.Request.blank('/v1.1/os-quota-sets/defaults')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(res.status_int, 200)
-        expected = {'quota_set_list': [{'quota_set': {
-            'id': '__defaults__',
+        expected = {'quota_set': {
+            'id': 'defaults',
             'instances': 10,
             'cores': 20,
             'ram': 51200,
@@ -117,21 +117,12 @@ class QuotasTest(test.TestCase):
             'floating_ips': 10,
             'metadata_items': 128,
             'injected_files': 5,
-            'injected_file_content_bytes': 10240}}]}
+            'injected_file_content_bytes': 10240}}
 
         self.assertEqual(json.loads(res.body), expected)
 
-    def test_quotas_index(self):
-        req = webob.Request.blank('/v1.1/os-quotas')
-        req.method = 'GET'
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
-
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(json.loads(res.body), quota_set_list())
-
     def test_quotas_show(self):
-        req = webob.Request.blank('/v1.1/os-quotas/1234')
+        req = webob.Request.blank('/v1.1/os-quota-sets/1234')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
@@ -146,7 +137,7 @@ class QuotasTest(test.TestCase):
                              'metadata_items': 128, 'injected_files': 5,
                              'injected_file_content_bytes': 10240}}
 
-        req = webob.Request.blank('/v1.1/os-quotas/update_me')
+        req = webob.Request.blank('/v1.1/os-quota-sets/update_me')
         req.method = 'PUT'
         req.body = json.dumps(updated_quota_set)
         req.headers['Content-Type'] = 'application/json'
