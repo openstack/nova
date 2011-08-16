@@ -16,7 +16,6 @@
 #    under the License.
 
 import webob
-import urlparse
 
 from nova import db
 from nova import exception
@@ -61,7 +60,7 @@ class QuotaSetsController(object):
                     db.quota_update(context, project_id, key, value)
                 except exception.ProjectQuotaNotFound:
                     db.quota_create(context, project_id, key, value)
-                except exception.AdminRequired as e:
+                except exception.AdminRequired:
                     return webob.Response(status_int=403)
         return {'quota_set': quota.get_project_quotas(context, project_id)}
 

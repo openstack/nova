@@ -20,7 +20,6 @@ import webob
 
 from nova import context
 from nova import test
-from nova.auth import manager as auth_manager
 from nova.tests.api.openstack import fakes
 
 
