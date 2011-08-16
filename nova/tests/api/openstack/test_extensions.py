@@ -91,6 +91,7 @@ class ExtensionControllerTest(test.TestCase):
             "Hosts",
             "Keypairs",
             "Multinic",
+            "Quotas",
             "SecurityGroups",
             "Volumes",
             ]
