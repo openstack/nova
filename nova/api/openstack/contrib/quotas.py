@@ -21,7 +21,6 @@ import urlparse
 from nova import db
 from nova import exception
 from nova import quota
-from nova.auth import manager as auth_manager
 from nova.api.openstack import extensions
 
 
@@ -68,6 +67,7 @@ class QuotaSetsController(object):
 
     def defaults(self, req):
         return self._format_quota_set('defaults', quota._get_default_quotas())
+
 
 class Quotas(extensions.ExtensionDescriptor):
 

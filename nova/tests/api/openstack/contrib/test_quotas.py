@@ -127,7 +127,6 @@ class QuotaSetsTest(test.TestCase):
 
         self.assertEqual(json.loads(res.body), updated_quota_set)
 
-
     def test_quotas_update_as_user(self):
         updated_quota_set = {'quota_set': {'instances': 50,
                              'cores': 50, 'ram': 51200, 'volumes': 10,
