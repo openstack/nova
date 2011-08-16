@@ -129,8 +129,8 @@ class FakeConnection(driver.ComputeDriver):
             info_list.append(self._map_to_instance_info(instance))
         return info_list
 
-    def spawn(self, context, instance, network_info,
-              block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """
         Create a new instance/VM/domain on the virtualization platform.
 
@@ -294,7 +294,7 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
-    def destroy(self, instance, network_info):
+    def destroy(self, instance, network_info, cleanup=True):
         key = instance.name
         if key in self.instances:
             del self.instances[key]
@@ -487,16 +487,16 @@ class FakeConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
-    def ensure_filtering_rules_for_instance(self, instance_ref):
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
     def live_migration(self, context, instance_ref, dest,
-                       post_method, recover_method):
+                       post_method, recover_method, block_migration=False):
         """This method is supported only by libvirt."""
         return
 
-    def unfilter_instance(self, instance_ref, network_info=None):
+    def unfilter_instance(self, instance_ref, network_info):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
@@ -511,6 +511,10 @@ class FakeConnection(driver.ComputeDriver):
     def get_host_stats(self, refresh=False):
         """Return fake Host Status of ram, disk, network."""
         return self.host_status
+
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
+        pass
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""

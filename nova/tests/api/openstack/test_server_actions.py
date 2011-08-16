@@ -9,6 +9,7 @@ import webob
 from nova import context
 from nova import db
 from nova import utils
+from nova import flags
 from nova.api.openstack import create_instance_helper
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -16,6 +17,9 @@ import nova.db.api
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
+
+
+FLAGS = flags.FLAGS
 
 
 def return_server_by_id(context, id):
@@ -348,7 +352,7 @@ class ServerActionsTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(501, response.status_int)
+        self.assertEqual(400, response.status_int)
 
     def test_create_backup_with_metadata(self):
         self.flags(allow_admin_api=True)
@@ -369,6 +373,26 @@ class ServerActionsTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(202, response.status_int)
         self.assertTrue(response.headers['Location'])
+
+    def test_create_backup_with_too_much_metadata(self):
+        self.flags(allow_admin_api=True)
+
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+                'metadata': {'123': 'asdf'},
+            },
+        }
+        for num in range(FLAGS.quota_metadata_items + 1):
+            body['createBackup']['metadata']['foo%i' % num] = "bar"
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
     def test_create_backup_no_name(self):
         """Name is required for backups"""
@@ -458,9 +482,28 @@ class ServerActionsTestV11(test.TestCase):
         self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
+        self.flags(allow_instance_snapshots=True)
 
     def tearDown(self):
         self.stubs.UnsetAll()
+
+    def test_server_bad_body(self):
+        body = {}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_server_unknown_action(self):
+        body = {'sockTheFox': {'fakekey': '1234'}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
     def test_server_change_password(self):
         mock_method = MockSetAdminPassword()
@@ -470,6 +513,21 @@ class ServerActionsTestV11(test.TestCase):
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(mock_method.instance_id, '1')
+        self.assertEqual(mock_method.password, '1234pass')
+
+    def test_server_change_password_xml(self):
+        mock_method = MockSetAdminPassword()
+        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = "application/xml"
+        req.body = """<?xml version="1.0" encoding="UTF-8"?>
+                    <changePassword
+                        xmlns="http://docs.openstack.org/compute/api/v1.1"
+                        adminPass="1234pass"/>"""
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
         self.assertEqual(mock_method.instance_id, '1')
@@ -504,6 +562,42 @@ class ServerActionsTestV11(test.TestCase):
 
     def test_server_change_password_none(self):
         body = {'changePassword': {'adminPass': None}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_server_reboot_hard(self):
+        body = dict(reboot=dict(type="HARD"))
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_reboot_soft(self):
+        body = dict(reboot=dict(type="SOFT"))
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_reboot_incorrect_type(self):
+        body = dict(reboot=dict(type="NOT_A_TYPE"))
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_server_reboot_missing_type(self):
+        body = dict(reboot=dict())
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
@@ -653,6 +747,62 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
 
+    def test_resize_server_no_flavor(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(resize=dict())
+        req.body = json.dumps(body_dict)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_resize_server_no_flavor_ref(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(resize=dict(flavorRef=None))
+        req.body = json.dumps(body_dict)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_confirm_resize_server(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(confirmResize=None)
+        req.body = json.dumps(body_dict)
+
+        self.confirm_resize_called = False
+
+        def cr_mock(*args):
+            self.confirm_resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'confirm_resize', cr_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
+        self.assertEqual(self.confirm_resize_called, True)
+
+    def test_revert_resize_server(self):
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(revertResize=None)
+        req.body = json.dumps(body_dict)
+
+        self.revert_resize_called = False
+
+        def revert_mock(*args):
+            self.revert_resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'revert_resize', revert_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.revert_resize_called, True)
+
     def test_create_image(self):
         body = {
             'createImage': {
@@ -667,6 +817,23 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(202, response.status_int)
         location = response.headers['Location']
         self.assertEqual('http://localhost/v1.1/images/123', location)
+
+    def test_create_image_snapshots_disabled(self):
+        """Don't permit a snapshot if the allow_instance_snapshots flag is
+        False
+        """
+        self.flags(allow_instance_snapshots=False)
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
     def test_create_image_with_metadata(self):
         body = {
@@ -683,6 +850,22 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(202, response.status_int)
         location = response.headers['Location']
         self.assertEqual('http://localhost/v1.1/images/123', location)
+
+    def test_create_image_with_too_much_metadata(self):
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+                'metadata': {},
+            },
+        }
+        for num in range(FLAGS.quota_metadata_items + 1):
+            body['createImage']['metadata']['foo%i' % num] = "bar"
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
     def test_create_image_no_name(self):
         body = {
@@ -730,10 +913,10 @@ class ServerActionsTestV11(test.TestCase):
         self.assertTrue(response.headers['Location'])
 
 
-class TestServerActionXMLDeserializer(test.TestCase):
+class TestServerActionXMLDeserializerV11(test.TestCase):
 
     def setUp(self):
-        self.deserializer = create_instance_helper.ServerXMLDeserializer()
+        self.deserializer = create_instance_helper.ServerXMLDeserializerV11()
 
     def tearDown(self):
         pass
@@ -746,7 +929,6 @@ class TestServerActionXMLDeserializer(test.TestCase):
         expected = {
             "createImage": {
                 "name": "new-server-test",
-                "metadata": {},
             },
         }
         self.assertEquals(request['body'], expected)
@@ -767,3 +949,145 @@ class TestServerActionXMLDeserializer(test.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
+
+    def test_change_pass(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <changePassword
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    adminPass="1234pass"/> """
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "changePassword": {
+                "adminPass": "1234pass",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_change_pass_no_pass(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <changePassword
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/> """
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')
+
+    def test_reboot(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <reboot
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    type="HARD"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "reboot": {
+                "type": "HARD",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_reboot_no_type(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <reboot
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')
+
+    def test_resize(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <resize
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    flavorRef="http://localhost/flavors/3"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "resize": {"flavorRef": "http://localhost/flavors/3"},
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_resize_no_flavor_ref(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <resize
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')
+
+    def test_confirm_resize(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <confirmResize
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "confirmResize": None,
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_revert_resize(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <revertResize
+                   xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "revertResize": None,
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_rebuild(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    name="new-server-test"
+                    imageRef="http://localhost/images/1">
+                    <metadata>
+                        <meta key="My Server Name">Apache1</meta>
+                    </metadata>
+                    <personality>
+                        <file path="/etc/banner.txt">Mg==</file>
+                    </personality>
+                </rebuild>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "rebuild": {
+                "name": "new-server-test",
+                "imageRef": "http://localhost/images/1",
+                "metadata": {
+                    "My Server Name": "Apache1",
+                },
+                "personality": [
+                    {"path": "/etc/banner.txt", "contents": "Mg=="},
+                ],
+            },
+        }
+        self.assertDictMatch(request['body'], expected)
+
+    def test_rebuild_minimum(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    imageRef="http://localhost/images/1"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "rebuild": {
+                "imageRef": "http://localhost/images/1",
+            },
+        }
+        self.assertDictMatch(request['body'], expected)
+
+    def test_rebuild_no_imageRef(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    name="new-server-test">
+                    <metadata>
+                        <meta key="My Server Name">Apache1</meta>
+                    </metadata>
+                    <personality>
+                        <file path="/etc/banner.txt">Mg==</file>
+                    </personality>
+                </rebuild>"""
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')

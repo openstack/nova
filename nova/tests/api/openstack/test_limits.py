@@ -819,12 +819,15 @@ class FakeHttplibConnection(object):
         self.app = app
         self.host = host
 
-    def request(self, method, path, body="", headers={}):
+    def request(self, method, path, body="", headers=None):
         """
         Requests made via this connection actually get translated and routed
         into our WSGI app, we then wait for the response and turn it back into
         an `httplib.HTTPResponse`.
         """
+        if not headers:
+            headers = {}
+
         req = webob.Request.blank(path)
         req.method = method
         req.headers = headers
@@ -912,86 +915,56 @@ class LimitsViewBuilderV11Test(test.TestCase):
 
     def setUp(self):
         self.view_builder = views.limits.ViewBuilderV11()
-        self.rate_limits = [
-            {
-                "URI": "*",
-                "regex": ".*",
-                "value": 10,
-                "verb": "POST",
-                "remaining": 2,
-                "unit": "MINUTE",
-                "resetTime": 1311272226,
-            },
-            {
-                "URI": "*/servers",
-                "regex": "^/servers",
-                "value": 50,
-                "verb": "POST",
-                "remaining": 10,
-                "unit": "DAY",
-                "resetTime": 1311272226,
-            },
-        ]
-        self.absolute_limits = {
-            "metadata_items": 1,
-            "injected_files": 5,
-            "injected_file_content_bytes": 5,
-        }
+        self.rate_limits = [{"URI": "*",
+                             "regex": ".*",
+                             "value": 10,
+                             "verb": "POST",
+                             "remaining": 2,
+                             "unit": "MINUTE",
+                             "resetTime": 1311272226},
+                            {"URI": "*/servers",
+                             "regex": "^/servers",
+                             "value": 50,
+                             "verb": "POST",
+                             "remaining": 10,
+                             "unit": "DAY",
+                             "resetTime": 1311272226}]
+        self.absolute_limits = {"metadata_items": 1,
+                                "injected_files": 5,
+                                "injected_file_content_bytes": 5}
 
     def tearDown(self):
         pass
 
     def test_build_limits(self):
-        expected_limits = {
-            "limits": {
-                "rate": [
-                    {
-                        "uri": "*",
-                        "regex": ".*",
-                        "limit": [
-                            {
-                                "value": 10,
-                                "verb": "POST",
-                                "remaining": 2,
-                                "unit": "MINUTE",
-                                "next-available": "2011-07-21T18:17:06Z",
-                            },
-                        ]
-                    },
-                    {
-                        "uri": "*/servers",
-                        "regex": "^/servers",
-                        "limit": [
-                            {
-                                "value": 50,
-                                "verb": "POST",
-                                "remaining": 10,
-                                "unit": "DAY",
-                                "next-available": "2011-07-21T18:17:06Z",
-                            },
-                        ]
-                    },
-                ],
-                "absolute": {
-                    "maxServerMeta": 1,
-                    "maxImageMeta": 1,
-                    "maxPersonality": 5,
-                    "maxPersonalitySize": 5
-                }
-            }
-        }
+        expected_limits = {"limits": {
+                "rate": [{
+                      "uri": "*",
+                      "regex": ".*",
+                      "limit": [{"value": 10,
+                                 "verb": "POST",
+                                 "remaining": 2,
+                                 "unit": "MINUTE",
+                                 "next-available": "2011-07-21T18:17:06Z"}]},
+                   {"uri": "*/servers",
+                    "regex": "^/servers",
+                    "limit": [{"value": 50,
+                               "verb": "POST",
+                               "remaining": 10,
+                               "unit": "DAY",
+                               "next-available": "2011-07-21T18:17:06Z"}]}],
+                "absolute": {"maxServerMeta": 1,
+                             "maxImageMeta": 1,
+                             "maxPersonality": 5,
+                             "maxPersonalitySize": 5}}}
 
         output = self.view_builder.build(self.rate_limits,
                                          self.absolute_limits)
         self.assertDictMatch(output, expected_limits)
 
     def test_build_limits_empty_limits(self):
-        expected_limits = {
-            "limits": {
-                "rate": [],
-                "absolute": {},
-            }
-        }
+        expected_limits = {"limits": {"rate": [],
+                           "absolute": {}}}
 
         abs_limits = {}
         rate_limits = []
@@ -1009,45 +982,28 @@ class LimitsXMLSerializationTest(test.TestCase):
 
     def test_index(self):
         serializer = limits.LimitsXMLSerializer()
-
-        fixture = {
-            "limits": {
-                "rate": [
-                    {
-                        "uri": "*",
-                        "regex": ".*",
-                        "limit": [
-                            {
-                                "value": 10,
-                                "verb": "POST",
-                                "remaining": 2,
-                                "unit": "MINUTE",
-                                "next-available": "2011-12-15T22:42:45Z",
-                            },
-                        ]
-                    },
-                    {
-                        "uri": "*/servers",
-                        "regex": "^/servers",
-                        "limit": [
-                            {
-                                "value": 50,
-                                "verb": "POST",
-                                "remaining": 10,
-                                "unit": "DAY",
-                                "next-available": "2011-12-15T22:42:45Z"
-                            },
-                        ]
-                    },
-                ],
-                "absolute": {
-                    "maxServerMeta": 1,
-                    "maxImageMeta": 1,
-                    "maxPersonality": 5,
-                    "maxPersonalitySize": 10240
-                }
-            }
-        }
+        fixture = {"limits": {
+                   "rate": [{
+                         "uri": "*",
+                         "regex": ".*",
+                         "limit": [{
+                              "value": 10,
+                              "verb": "POST",
+                              "remaining": 2,
+                              "unit": "MINUTE",
+                              "next-available": "2011-12-15T22:42:45Z"}]},
+                          {"uri": "*/servers",
+                           "regex": "^/servers",
+                           "limit": [{
+                              "value": 50,
+                              "verb": "POST",
+                              "remaining": 10,
+                              "unit": "DAY",
+                              "next-available": "2011-12-15T22:42:45Z"}]}],
+                    "absolute": {"maxServerMeta": 1,
+                                 "maxImageMeta": 1,
+                                 "maxPersonality": 5,
+                                 "maxPersonalitySize": 10240}}}
 
         output = serializer.serialize(fixture, 'index')
         actual = minidom.parseString(output.replace("  ", ""))
@@ -1080,12 +1036,9 @@ class LimitsXMLSerializationTest(test.TestCase):
     def test_index_no_limits(self):
         serializer = limits.LimitsXMLSerializer()
 
-        fixture = {
-            "limits": {
-                "rate": [],
-                "absolute": {},
-            }
-        }
+        fixture = {"limits": {
+                   "rate": [],
+                   "absolute": {}}}
 
         output = serializer.serialize(fixture, 'index')
         actual = minidom.parseString(output.replace("  ", ""))

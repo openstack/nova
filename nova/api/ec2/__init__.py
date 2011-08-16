@@ -354,6 +354,14 @@ class Executor(wsgi.Application):
             LOG.debug(_('KeyPairExists raised: %s'), unicode(ex),
                      context=context)
             return self._error(req, context, type(ex).__name__, unicode(ex))
+        except exception.InvalidParameterValue as ex:
+            LOG.debug(_('InvalidParameterValue raised: %s'), unicode(ex),
+                     context=context)
+            return self._error(req, context, type(ex).__name__, unicode(ex))
+        except exception.InvalidPortRange as ex:
+            LOG.debug(_('InvalidPortRange raised: %s'), unicode(ex),
+                     context=context)
+            return self._error(req, context, type(ex).__name__, unicode(ex))
         except Exception as ex:
             extra = {'environment': req.environ}
             LOG.exception(_('Unexpected error raised: %s'), unicode(ex),

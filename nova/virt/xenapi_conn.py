@@ -184,14 +184,14 @@ class XenAPIConnection(driver.ComputeDriver):
     def list_instances_detail(self):
         return self._vmops.list_instances_detail()
 
-    def spawn(self, context, instance, network_info,
-              block_device_mapping=None):
+    def spawn(self, context, instance,
+              network_info=None, block_device_info=None):
         """Create VM instance"""
         self._vmops.spawn(context, instance, network_info)
 
     def revert_migration(self, instance):
         """Reverts a resize, powering back on the instance"""
-        self._vmops.revert_resize(instance)
+        self._vmops.revert_migration(instance)
 
     def finish_migration(self, context, instance, disk_info, network_info,
                          resize_instance=False):
@@ -217,7 +217,7 @@ class XenAPIConnection(driver.ComputeDriver):
         """
         self._vmops.inject_file(instance, b64_path, b64_contents)
 
-    def destroy(self, instance, network_info):
+    def destroy(self, instance, network_info, cleanup=True):
         """Destroy VM instance"""
         self._vmops.destroy(instance, network_info)
 
@@ -309,12 +309,12 @@ class XenAPIConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
-    def ensure_filtering_rules_for_instance(self, instance_ref):
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         """This method is supported only libvirt."""
         return
 
     def live_migration(self, context, instance_ref, dest,
-                       post_method, recover_method):
+                       post_method, recover_method, block_migration=False):
         """This method is supported only by libvirt."""
         return
 
@@ -331,6 +331,19 @@ class XenAPIConnection(driver.ComputeDriver):
         """Return the current state of the host. If 'refresh' is
            True, run the update first."""
         return self.HostState.get_host_stats(refresh=refresh)
+
+    def host_power_action(self, host, action):
+        """The only valid values for 'action' on XenServer are 'reboot' or
+        'shutdown', even though the API also accepts 'startup'. As this is
+        not technically possible on XenServer, since the host is the same
+        physical machine as the hypervisor, if this is requested, we need to
+        raise an exception.
+        """
+        if action in ("reboot", "shutdown"):
+            return self._vmops.host_power_action(host, action)
+        else:
+            msg = _("Host startup on XenServer is not supported.")
+            raise NotImplementedError(msg)
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""

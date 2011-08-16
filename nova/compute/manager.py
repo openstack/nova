@@ -45,6 +45,7 @@ import functools
 from eventlet import greenthread
 
 import nova.context
+from nova import block_device
 from nova import exception
 from nova import flags
 import nova.image
@@ -169,7 +170,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             elif drv_state == power_state.RUNNING:
                 # Hyper-V and VMWareAPI drivers will raise and exception
                 try:
-                    self.driver.ensure_filtering_rules_for_instance(instance)
+                    net_info = self._get_instance_nw_info(context, instance)
+                    self.driver.ensure_filtering_rules_for_instance(instance,
+                                                                    net_info)
                 except NotImplementedError:
                     LOG.warning(_('Hypervisor driver does not '
                             'support firewall rules'))
@@ -260,6 +263,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         volume_api = volume.API()
         block_device_mapping = []
+        swap = None
+        ephemerals = []
         for bdm in self.db.block_device_mapping_get_all_by_instance(
             context, instance_id):
             LOG.debug(_("setting up bdm %s"), bdm)
@@ -267,11 +272,18 @@ class ComputeManager(manager.SchedulerDependentManager):
             if bdm['no_device']:
                 continue
             if bdm['virtual_name']:
-                # TODO(yamahata):
-                # block devices for swap and ephemeralN will be
-                # created by virt driver locally in compute node.
-                assert (bdm['virtual_name'] == 'swap' or
-                        bdm['virtual_name'].startswith('ephemeral'))
+                virtual_name = bdm['virtual_name']
+                device_name = bdm['device_name']
+                assert block_device.is_swap_or_ephemeral(virtual_name)
+                if virtual_name == 'swap':
+                    swap = {'device_name': device_name,
+                            'swap_size': bdm['volume_size']}
+                elif block_device.is_ephemeral(virtual_name):
+                    eph = {'num': block_device.ephemeral_num(virtual_name),
+                           'virtual_name': virtual_name,
+                           'device_name': device_name,
+                           'size': bdm['volume_size']}
+                    ephemerals.append(eph)
                 continue
 
             if ((bdm['snapshot_id'] is not None) and
@@ -307,7 +319,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              'mount_device':
                                              bdm['device_name']})
 
-        return block_device_mapping
+        return (swap, ephemerals, block_device_mapping)
 
     def _run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
@@ -348,13 +360,21 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # all vif creation and network injection, maybe this is correct
                 network_info = []
 
-            bd_mapping = self._setup_block_device_mapping(context, instance_id)
+            (swap, ephemerals,
+             block_device_mapping) = self._setup_block_device_mapping(
+                context, instance_id)
+            block_device_info = {
+                'root_device_name': instance['root_device_name'],
+                'swap': swap,
+                'ephemerals': ephemerals,
+                'block_device_mapping': block_device_mapping}
 
             # TODO(vish) check to make sure the availability zone matches
             self._update_state(context, instance_id, power_state.BUILDING)
 
             try:
-                self.driver.spawn(context, instance, network_info, bd_mapping)
+                self.driver.spawn(context, instance,
+                                  network_info, block_device_info)
             except Exception as ex:  # pylint: disable=W0702
                 msg = _("Instance '%(instance_id)s' failed to spawn. Is "
                         "virtualization enabled in the BIOS? Details: "
@@ -748,7 +768,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'finish_revert_resize',
-                 'args': {'migration_id': migration_ref['id']},
+                 'args': {'instance_id': instance_ref['uuid'],
+                          'migration_id': migration_ref['id']},
                 })
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -957,8 +978,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        result))
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def set_host_enabled(self, context, instance_id=None, host=None,
-            enabled=None):
+    def host_power_action(self, context, host=None, action=None):
+        """Reboots, shuts down or powers up the host."""
+        return self.driver.host_power_action(host, action)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def set_host_enabled(self, context, host=None, enabled=None):
         """Sets the specified host's ability to accept new instances."""
         return self.driver.set_host_enabled(host, enabled)
 
@@ -1201,6 +1226,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def check_shared_storage_test_file(self, context, filename):
         """Confirms existence of the tmpfile under FLAGS.instances_path.
+           Cannot confirm tmpfile return False.
 
         :param context: security context
         :param filename: confirm existence of FLAGS.instances_path/thisfile
@@ -1208,7 +1234,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         tmp_file = os.path.join(FLAGS.instances_path, filename)
         if not os.path.exists(tmp_file):
-            raise exception.FileNotFound(file_path=tmp_file)
+            return False
+        else:
+            return True
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def cleanup_shared_storage_test_file(self, context, filename):
@@ -1231,11 +1259,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.update_available_resource(context, self.host)
 
-    def pre_live_migration(self, context, instance_id, time=None):
+    def pre_live_migration(self, context, instance_id, time=None,
+                           block_migration=False, disk=None):
         """Preparations for live migration at dest host.
 
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param block_migration: if true, prepare for block migration
 
         """
         if not time:
@@ -1285,19 +1315,26 @@ class ComputeManager(manager.SchedulerDependentManager):
         # This nwfilter is necessary on the destination host.
         # In addition, this method is creating filtering rule
         # onto destination host.
-        self.driver.ensure_filtering_rules_for_instance(instance_ref)
+        self.driver.ensure_filtering_rules_for_instance(instance_ref, network_info)
 
-    def live_migration(self, context, instance_id, dest):
+        # Preparation for block migration
+        if block_migration:
+            self.driver.pre_block_migration(context,
+                                            instance_ref,
+                                            disk)
+
+    def live_migration(self, context, instance_id,
+                       dest, block_migration=False):
         """Executing live migration.
 
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param dest: destination host
+        :param block_migration: if true, do block migration
 
         """
         # Get instance for error handling.
         instance_ref = self.db.instance_get(context, instance_id)
-        i_name = instance_ref.name
 
         try:
             # Checking volume node is working correctly when any volumes
@@ -1308,16 +1345,25 @@ class ComputeManager(manager.SchedulerDependentManager):
                           {"method": "check_for_export",
                            "args": {'instance_id': instance_id}})
 
-            # Asking dest host to preparing live migration.
+            if block_migration:
+                disk = self.driver.get_instance_disk_info(context,
+                                                          instance_ref)
+            else:
+                disk = None
+
             rpc.call(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, dest),
                      {"method": "pre_live_migration",
-                      "args": {'instance_id': instance_id}})
+                      "args": {'instance_id': instance_id,
+                               'block_migration': block_migration,
+                               'disk': disk}})
 
         except Exception:
+            i_name = instance_ref.name
             msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
             LOG.error(msg % locals())
-            self.recover_live_migration(context, instance_ref)
+            self.rollback_live_migration(context, instance_ref,
+                                         dest, block_migration)
             raise
 
         # Executing live migration
@@ -1325,9 +1371,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         # nothing must be recovered in this version.
         self.driver.live_migration(context, instance_ref, dest,
                                    self.post_live_migration,
-                                   self.recover_live_migration)
+                                   self.rollback_live_migration,
+                                   block_migration)
 
-    def post_live_migration(self, ctxt, instance_ref, dest):
+    def post_live_migration(self, ctxt, instance_ref,
+                            dest, block_migration=False):
         """Post operations for live migration.
 
         This method is called from live_migration
@@ -1336,6 +1384,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param ctxt: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param dest: destination host
+        :param block_migration: if true, do block migration
 
         """
 
@@ -1378,8 +1427,29 @@ class ComputeManager(manager.SchedulerDependentManager):
                         "%(i_name)s cannot inherit floating "
                         "ip.\n%(e)s") % (locals()))
 
-        # Restore instance/volume state
-        self.recover_live_migration(ctxt, instance_ref, dest)
+        # Define domain at destination host, without doing it,
+        # pause/suspend/terminate do not work.
+        rpc.call(ctxt,
+                 self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
+                     {"method": "post_live_migration_at_destination",
+                      "args": {'instance_id': instance_ref.id,
+                               'block_migration': block_migration}})
+
+        # Restore instance state
+        self.db.instance_update(ctxt,
+                                instance_ref['id'],
+                                {'state_description': 'running',
+                                 'state': power_state.RUNNING,
+                                 'host': dest})
+        # Restore volume state
+        for volume_ref in instance_ref['volumes']:
+            volume_id = volume_ref['id']
+            self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
+
+        # No instance booting at source host, but instance dir
+        # must be deleted for preparing next block migration
+        if block_migration:
+            self.driver.destroy(instance_ref, network_info)
 
         LOG.info(_('Migrating %(i_name)s to %(dest)s finished successfully.')
                  % locals())
@@ -1387,31 +1457,64 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
 
-    def recover_live_migration(self, ctxt, instance_ref, host=None, dest=None):
-        """Recovers Instance/volume state from migrating -> running.
+    def post_live_migration_at_destination(self, context,
+                                instance_id, block_migration=False):
+        """Post operations for live migration .
 
-        :param ctxt: security context
+        :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
-        :param host: DB column value is updated by this hostname.
-                     If none, the host instance currently running is selected.
+        :param block_migration: block_migration
 
         """
-        if not host:
-            host = instance_ref['host']
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.info(_('Post operation of migraton started for %s .')
+                 % instance_ref.name)
+        network_info = self._get_instance_nw_info(context, instance_ref)
+        self.driver.post_live_migration_at_destination(context,
+                                                       instance_ref,
+                                                       network_info,
+                                                       block_migration)
 
-        self.db.instance_update(ctxt,
+    def rollback_live_migration(self, context, instance_ref,
+                                dest, block_migration):
+        """Recovers Instance/volume state from migrating -> running.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param dest:
+            This method is called from live migration src host.
+            This param specifies destination host.
+        """
+        host = instance_ref['host']
+        self.db.instance_update(context,
                                 instance_ref['id'],
                                 {'state_description': 'running',
                                  'state': power_state.RUNNING,
                                  'host': host})
 
-        if dest:
-            volume_api = volume.API()
         for volume_ref in instance_ref['volumes']:
             volume_id = volume_ref['id']
-            self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
-            if dest:
-                volume_api.remove_from_compute(ctxt, volume_id, dest)
+            self.db.volume_update(context, volume_id, {'status': 'in-use'})
+            volume.API().remove_from_compute(context, volume_id, dest)
+
+        # Block migration needs empty image at destination host
+        # before migration starts, so if any failure occurs,
+        # any empty images has to be deleted.
+        if block_migration:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, dest),
+                     {"method": "rollback_live_migration_at_destination",
+                      "args": {'instance_id': instance_ref['id']}})
+
+    def rollback_live_migration_at_destination(self, context, instance_id):
+        """ Cleaning up image directory that is created pre_live_migration.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        """
+        instances_ref = self.db.instance_get(context, instance_id)
+        network_info = self._get_instance_nw_info(context, instances_ref)
+        self.driver.destroy(instances_ref, network_info)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""

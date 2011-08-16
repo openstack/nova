@@ -18,7 +18,7 @@
 import json
 import os.path
 import webob
-from xml.etree import ElementTree
+from lxml import etree
 
 from nova import context
 from nova import test
@@ -26,6 +26,7 @@ from nova.api import openstack
 from nova.api.openstack import extensions
 from nova.api.openstack import flavors
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova.tests.api.openstack import fakes
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -96,7 +97,8 @@ class ExtensionControllerTest(test.TestCase):
         names = [x['name'] for x in data['extensions']]
         names.sort()
         self.assertEqual(names, ["FlavorExtraSpecs", "Floating_ips",
-            "Fox In Socks", "Hosts", "Multinic", "Volumes"])
+            "Fox In Socks", "Hosts", "Keypairs", "Multinic", "SecurityGroups",
+            "Volumes"])
 
         # Make sure that at least Fox in Sox is correct.
         (fox_ext,) = [
@@ -107,7 +109,7 @@ class ExtensionControllerTest(test.TestCase):
                 'updated': '2011-01-22T13:25:27-06:00',
                 'description': 'The Fox In Socks Extension',
                 'alias': 'FOXNSOX',
-                'links': [],
+                'links': []
             },
         )
 
@@ -125,9 +127,7 @@ class ExtensionControllerTest(test.TestCase):
                 "updated": "2011-01-22T13:25:27-06:00",
                 "description": "The Fox In Socks Extension",
                 "alias": "FOXNSOX",
-                "links": [],
-            },
-        )
+                "links": []})
 
     def test_list_extensions_xml(self):
         app = openstack.APIRouterV11()
@@ -138,12 +138,12 @@ class ExtensionControllerTest(test.TestCase):
         self.assertEqual(200, response.status_int)
         print response.body
 
-        root = ElementTree.XML(response.body)
+        root = etree.XML(response.body)
         self.assertEqual(root.tag.split('extensions')[0], NS)
 
         # Make sure we have all the extensions.
         exts = root.findall('{0}extension'.format(NS))
-        self.assertEqual(len(exts), 6)
+        self.assertEqual(len(exts), 8)
 
         # Make sure that at least Fox in Sox is correct.
         (fox_ext,) = [x for x in exts if x.get('alias') == 'FOXNSOX']
@@ -154,6 +154,8 @@ class ExtensionControllerTest(test.TestCase):
         self.assertEqual(fox_ext.findtext('{0}description'.format(NS)),
             'The Fox In Socks Extension')
 
+        xmlutil.validate_schema(root, 'extensions')
+
     def test_get_extension_xml(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
@@ -161,9 +163,10 @@ class ExtensionControllerTest(test.TestCase):
         request.accept = "application/xml"
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
-        print response.body
+        xml = response.body
+        print xml
 
-        root = ElementTree.XML(response.body)
+        root = etree.XML(xml)
         self.assertEqual(root.tag.split('extension')[0], NS)
         self.assertEqual(root.get('alias'), 'FOXNSOX')
         self.assertEqual(root.get('name'), 'Fox In Socks')
@@ -172,6 +175,8 @@ class ExtensionControllerTest(test.TestCase):
         self.assertEqual(root.get('updated'), '2011-01-22T13:25:27-06:00')
         self.assertEqual(root.findtext('{0}description'.format(NS)),
             'The Fox In Socks Extension')
+
+        xmlutil.validate_schema(root, 'extension')
 
 
 class ResourceExtensionTest(test.TestCase):
@@ -274,7 +279,7 @@ class ActionExtensionTest(test.TestCase):
     def test_invalid_action_body(self):
         body = dict(blah=dict(name="test"))  # Doesn't exist
         response = self._send_server_action_request("/servers/1/action", body)
-        self.assertEqual(501, response.status_int)
+        self.assertEqual(400, response.status_int)
 
     def test_invalid_action(self):
         body = dict(blah=dict(name="test"))
@@ -329,30 +334,22 @@ class ExtensionsXMLSerializerTest(test.TestCase):
 
     def test_serialize_extenstion(self):
         serializer = extensions.ExtensionsXMLSerializer()
-        data = {
-            'extension': {
-                'name': 'ext1',
-                'namespace': 'http://docs.rack.com/servers/api/ext/pie/v1.0',
-                'alias': 'RS-PIE',
-                'updated': '2011-01-22T13:25:27-06:00',
-                'description': 'Adds the capability to share an image.',
-                'links': [
-                    {
-                        'rel': 'describedby',
-                        'type': 'application/pdf',
-                        'href': 'http://docs.rack.com/servers/api/ext/cs.pdf',
-                    },
-                    {
-                        'rel': 'describedby',
-                        'type': 'application/vnd.sun.wadl+xml',
-                        'href': 'http://docs.rack.com/servers/api/ext/cs.wadl',
-                    },
-                ],
-            },
-        }
+        data = {'extension': {
+          'name': 'ext1',
+          'namespace': 'http://docs.rack.com/servers/api/ext/pie/v1.0',
+          'alias': 'RS-PIE',
+          'updated': '2011-01-22T13:25:27-06:00',
+          'description': 'Adds the capability to share an image.',
+          'links': [{'rel': 'describedby',
+                     'type': 'application/pdf',
+                     'href': 'http://docs.rack.com/servers/api/ext/cs.pdf'},
+                    {'rel': 'describedby',
+                     'type': 'application/vnd.sun.wadl+xml',
+                     'href': 'http://docs.rack.com/servers/api/ext/cs.wadl'}]}}
 
         xml = serializer.serialize(data, 'show')
-        root = ElementTree.XML(xml)
+        print xml
+        root = etree.XML(xml)
         ext_dict = data['extension']
         self.assertEqual(root.findtext('{0}description'.format(NS)),
             ext_dict['description'])
@@ -366,54 +363,38 @@ class ExtensionsXMLSerializerTest(test.TestCase):
             for key, value in link.items():
                 self.assertEqual(link_nodes[i].get(key), value)
 
+        xmlutil.validate_schema(root, 'extension')
+
     def test_serialize_extensions(self):
         serializer = extensions.ExtensionsXMLSerializer()
-        data = {
-            "extensions": [
-                {
-                    "name": "Public Image Extension",
-                    "namespace": "http://foo.com/api/ext/pie/v1.0",
-                    "alias": "RS-PIE",
-                    "updated": "2011-01-22T13:25:27-06:00",
-                    "description": "Adds the capability to share an image.",
-                    "links": [
-                        {
-                            "rel": "describedby",
+        data = {"extensions": [{
+                "name": "Public Image Extension",
+                "namespace": "http://foo.com/api/ext/pie/v1.0",
+                "alias": "RS-PIE",
+                "updated": "2011-01-22T13:25:27-06:00",
+                "description": "Adds the capability to share an image.",
+                "links": [{"rel": "describedby",
                             "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-pie.pdf",
-                        },
-                        {
-                            "rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-pie.wadl",
-                        },
-                    ],
-                },
-                {
-                    "name": "Cloud Block Storage",
-                    "namespace": "http://foo.com/api/ext/cbs/v1.0",
-                    "alias": "RS-CBS",
-                    "updated": "2011-01-12T11:22:33-06:00",
-                    "description": "Allows mounting cloud block storage.",
-                    "links": [
-                        {
-                            "rel": "describedby",
-                            "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-cbs.pdf",
-                        },
-                        {
-                            "rel": "describedby",
+                            "href": "http://foo.com/api/ext/cs-pie.pdf"},
+                           {"rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-cbs.wadl",
-                        },
-                    ],
-                },
-            ],
-        }
+                            "href": "http://foo.com/api/ext/cs-pie.wadl"}]},
+                {"name": "Cloud Block Storage",
+                 "namespace": "http://foo.com/api/ext/cbs/v1.0",
+                 "alias": "RS-CBS",
+                 "updated": "2011-01-12T11:22:33-06:00",
+                 "description": "Allows mounting cloud block storage.",
+                 "links": [{"rel": "describedby",
+                             "type": "application/pdf",
+                             "href": "http://foo.com/api/ext/cs-cbs.pdf"},
+                            {"rel": "describedby",
+                             "type": "application/vnd.sun.wadl+xml",
+                             "href": "http://foo.com/api/ext/cs-cbs.wadl"}]}]}
 
         xml = serializer.serialize(data, 'index')
         print xml
-        root = ElementTree.XML(xml)
+        root = etree.XML(xml)
         ext_elems = root.findall('{0}extension'.format(NS))
         self.assertEqual(len(ext_elems), 2)
         for i, ext_elem in enumerate(ext_elems):
@@ -429,3 +410,5 @@ class ExtensionsXMLSerializerTest(test.TestCase):
             for i, link in enumerate(ext_dict['links']):
                 for key, value in link.items():
                     self.assertEqual(link_nodes[i].get(key), value)
+
+        xmlutil.validate_schema(root, 'extensions')

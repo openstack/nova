@@ -519,6 +519,11 @@ class XenAPIVMTestCase(test.TestCase):
                          os_type="windows", architecture="i386")
         self.check_vm_params_for_windows()
 
+    def test_spawn_iso_glance(self):
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_ISO, None, None,
+                         os_type="windows", architecture="i386")
+        self.check_vm_params_for_windows()
+
     def test_spawn_glance(self):
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
@@ -548,8 +553,8 @@ class XenAPIVMTestCase(test.TestCase):
             return '', ''
 
         fake_utils.fake_execute_set_repliers([
-            # Capture the sudo tee .../etc/network/interfaces command
-            (r'(sudo\s+)?tee.*interfaces', _tee_handler),
+            # Capture the tee .../etc/network/interfaces command
+            (r'tee.*interfaces', _tee_handler),
         ])
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
@@ -592,9 +597,9 @@ class XenAPIVMTestCase(test.TestCase):
             return '', ''
 
         fake_utils.fake_execute_set_repliers([
-            (r'(sudo\s+)?mount', _mount_handler),
-            (r'(sudo\s+)?umount', _umount_handler),
-            (r'(sudo\s+)?tee.*interfaces', _tee_handler)])
+            (r'mount', _mount_handler),
+            (r'umount', _umount_handler),
+            (r'tee.*interfaces', _tee_handler)])
         self._test_spawn(1, 2, 3, check_injection=True)
 
         # tee must not run in this case, where an injection-capable
@@ -653,6 +658,24 @@ class XenAPIVMTestCase(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         # Ensure that it will not unrescue a non-rescued instance.
         self.assertRaises(Exception, conn.unrescue, instance, None)
+
+    def test_revert_migration(self):
+        instance = self._create_instance()
+
+        class VMOpsMock():
+
+            def __init__(self):
+                self.revert_migration_called = False
+
+            def revert_migration(self, instance):
+                self.revert_migration_called = True
+
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+
+        conn = xenapi_conn.get_connection(False)
+        conn._vmops = VMOpsMock()
+        conn.revert_migration(instance)
+        self.assertTrue(conn._vmops.revert_migration_called)
 
     def _create_instance(self, instance_id=1, spawn=True):
         """Creates and spawns a test instance."""
@@ -766,6 +789,52 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(instance, '127.0.0.1')
+
+    def test_revert_migrate(self):
+        instance = db.instance_create(self.context, self.values)
+        self.called = False
+        self.fake_vm_start_called = False
+        self.fake_revert_migration_called = False
+
+        def fake_vm_start(*args, **kwargs):
+            self.fake_vm_start_called = True
+
+        def fake_vdi_resize(*args, **kwargs):
+            self.called = True
+
+        def fake_revert_migration(*args, **kwargs):
+            self.fake_revert_migration_called = True
+
+        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+                "VDI_resize_online", fake_vdi_resize)
+        self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
+        self.stubs.Set(vmops.VMOps, 'revert_migration', fake_revert_migration)
+
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        stubs.stubout_loopingcall_start(self.stubs)
+        conn = xenapi_conn.get_connection(False)
+        network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+                          {'broadcast': '192.168.0.255',
+                           'dns': ['192.168.0.1'],
+                           'gateway': '192.168.0.1',
+                           'gateway6': 'dead:beef::1',
+                           'ip6s': [{'enabled': '1',
+                                     'ip': 'dead:beef::dcad:beff:feef:0',
+                                           'netmask': '64'}],
+                           'ips': [{'enabled': '1',
+                                    'ip': '192.168.0.100',
+                                    'netmask': '255.255.255.0'}],
+                           'label': 'fake',
+                           'mac': 'DE:AD:BE:EF:00:00',
+                           'rxtx_cap': 3})]
+        conn.finish_migration(self.context, instance,
+                              dict(base_copy='hurr', cow='durr'),
+                              network_info, resize_instance=True)
+        self.assertEqual(self.called, True)
+        self.assertEqual(self.fake_vm_start_called, True)
+
+        conn.revert_migration(instance)
+        self.assertEqual(self.fake_revert_migration_called, True)
 
     def test_finish_migrate(self):
         instance = db.instance_create(self.context, self.values)
