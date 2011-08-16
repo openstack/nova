@@ -151,7 +151,7 @@ class QuotasTest(test.TestCase):
         req.body = json.dumps(updated_quota_set)
         req.headers['Content-Type'] = 'application/json'
 
-        res = req.get_response(fakes.wsgi_app(fake_auth_context=\
+        res = req.get_response(fakes.wsgi_app(fake_auth_context=
                                context.RequestContext('fake', 'fake',
                                                       is_admin=True)))
 
