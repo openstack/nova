@@ -78,11 +78,14 @@ class FloatingIPController(object):
     def index(self, req):
         context = req.environ['nova.context']
 
-        floating_ips = self.network_api.list_floating_ips(context)
+        try:
+            floating_ips = self.network_api.list_floating_ips(context)
+        except exception.FloatingIpNotFoundForProject:
+            floating_ips = []
 
         return _translate_floating_ips_view(floating_ips)
 
-    def create(self, req):
+    def create(self, req, body):
         context = req.environ['nova.context']
 
         try:
@@ -95,9 +98,7 @@ class FloatingIPController(object):
             else:
                 raise
 
-        return {'allocated': {
-            "id": ip['id'],
-            "floating_ip": ip['address']}}
+        return _translate_floating_ip_view(ip)
 
     def delete(self, req, id):
         context = req.environ['nova.context']
@@ -125,26 +126,22 @@ class FloatingIPController(object):
         except rpc.RemoteError:
             raise
 
-        return {'associated':
-                {
-                "floating_ip_id": id,
-                "floating_ip": floating_ip,
-                "fixed_ip": fixed_ip}}
+        floating_ip = self.network_api.get_floating_ip(context, id)
+        return _translate_floating_ip_view(floating_ip)
 
     def disassociate(self, req, id, body=None):
         """ POST /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
         floating_ip = self.network_api.get_floating_ip(context, id)
         address = floating_ip['address']
-        fixed_ip = floating_ip['fixed_ip']['address']
 
         try:
             self.network_api.disassociate_floating_ip(context, address)
         except rpc.RemoteError:
             raise
 
-        return {'disassociated': {'floating_ip': address,
-                                  'fixed_ip': fixed_ip}}
+        floating_ip = self.network_api.get_floating_ip(context, id)
+        return _translate_floating_ip_view(floating_ip)
 
     def _get_ip_by_id(self, context, value):
         """Checks that value is id and then returns its address."""
