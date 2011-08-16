@@ -305,7 +305,7 @@ class CloudController(object):
                 'hostname': hostname,
                 'instance-action': 'none',
                 'instance-id': ec2_id,
-                'instance-type': instance_ref['instance_type'].name,
+                'instance-type': instance_ref['instance_type']['name'],
                 'local-hostname': hostname,
                 'local-ipv4': address,
                 'placement': {'availability-zone': availability_zone},
