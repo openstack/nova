@@ -1959,6 +1959,7 @@ def quota_get(context, project_id, resource, session=None):
 
 @require_context
 def quota_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
     session = get_session()
     result = {'project_id': project_id}
     rows = session.query(models.Quota).\
