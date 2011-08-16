@@ -84,6 +84,17 @@ class ExtensionControllerTest(test.TestCase):
         super(ExtensionControllerTest, self).setUp()
         ext_path = os.path.join(os.path.dirname(__file__), "extensions")
         self.flags(osapi_extensions_path=ext_path)
+        self.ext_list = [
+            "FlavorExtraSpecs",
+            "Floating_ips",
+            "Fox In Socks",
+            "Hosts",
+            "Keypairs",
+            "Multinic",
+            "SecurityGroups",
+            "Volumes",
+            ]
+        self.ext_list.sort()
 
     def test_list_extensions_json(self):
         app = openstack.APIRouterV11()
@@ -96,9 +107,7 @@ class ExtensionControllerTest(test.TestCase):
         data = json.loads(response.body)
         names = [x['name'] for x in data['extensions']]
         names.sort()
-        self.assertEqual(names, ["FlavorExtraSpecs", "Floating_ips",
-            "Fox In Socks", "Hosts", "Keypairs", "Multinic", "SecurityGroups",
-            "Volumes"])
+        self.assertEqual(names, self.ext_list)
 
         # Make sure that at least Fox in Sox is correct.
         (fox_ext,) = [
@@ -143,7 +152,7 @@ class ExtensionControllerTest(test.TestCase):
 
         # Make sure we have all the extensions.
         exts = root.findall('{0}extension'.format(NS))
-        self.assertEqual(len(exts), 8)
+        self.assertEqual(len(exts), len(self.ext_list))
 
         # Make sure that at least Fox in Sox is correct.
         (fox_ext,) = [x for x in exts if x.get('alias') == 'FOXNSOX']

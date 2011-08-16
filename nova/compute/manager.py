@@ -323,10 +323,63 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
+        def _check_image_size():
+            """Ensure image is smaller than the maximum size allowed by the
+            instance_type.
+
+            The image stored in Glance is potentially compressed, so we use two
+            checks to ensure that the size isn't exceeded:
+
+                1) This one - checks compressed size, this a quick check to
+                   eliminate any images which are obviously too large
+
+                2) Check uncompressed size in nova.virt.xenapi.vm_utils. This
+                   is a slower check since it requires uncompressing the entire
+                   image, but is accurate because it reflects the image's
+                   actual size.
+            """
+            # NOTE(jk0): image_ref is defined in the DB model, image_href is
+            # used by the image service. This should be refactored to be
+            # consistent.
+            image_href = instance['image_ref']
+            image_service, image_id = nova.image.get_image_service(image_href)
+            image_meta = image_service.show(context, image_id)
+
+            try:
+                size_bytes = image_meta['size']
+            except KeyError:
+                # Size is not a required field in the image service (yet), so
+                # we are unable to rely on it being there even though it's in
+                # glance.
+
+                # TODO(jk0): Should size be required in the image service?
+                return
+
+            instance_type_id = instance['instance_type_id']
+            instance_type = self.db.instance_type_get(context,
+                    instance_type_id)
+            allowed_size_gb = instance_type['local_gb']
+            allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
+
+            LOG.debug(_("image_id=%(image_id)d, image_size_bytes="
+                        "%(size_bytes)d, allowed_size_bytes="
+                        "%(allowed_size_bytes)d") % locals())
+
+            if size_bytes > allowed_size_bytes:
+                LOG.info(_("Image '%(image_id)d' size %(size_bytes)d exceeded"
+                           " instance_type allowed size "
+                           "%(allowed_size_bytes)d")
+                           % locals())
+                raise exception.ImageTooLarge()
+
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
+
         if instance['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
+
+        _check_image_size()
+
         LOG.audit(_("instance %s: starting..."), instance_id,
                   context=context)
         updates = {}
