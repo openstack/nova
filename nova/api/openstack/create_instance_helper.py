@@ -443,7 +443,8 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
         server = {}
         server_node = self.find_first_child_named(node, 'server')
 
-        attributes = ["name", "imageRef", "flavorRef", "adminPass"]
+        attributes = ["name", "imageRef", "flavorRef", "adminPass",
+                      "accessIPv4", "accessIPv6"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)

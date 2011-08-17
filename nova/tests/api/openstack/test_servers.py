@@ -2491,6 +2491,62 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
         }
         self.assertEquals(request['body'], expected)
 
+    def test_access_ipv4(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2"
+        accessIPv4="1.2.3.4"/>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "accessIPv4": "1.2.3.4",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_access_ipv6(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2"
+        accessIPv6="fead:::::1234"/>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "accessIPv6": "fead:::::1234",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
+    def test_access_ip(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2"
+        accessIPv4="1.2.3.4"
+        accessIPv6="fead:::::1234"/>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "accessIPv4": "1.2.3.4",
+                "accessIPv6": "fead:::::1234",
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
     def test_admin_pass(self):
         serial_request = """
 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
