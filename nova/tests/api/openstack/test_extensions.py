@@ -85,7 +85,7 @@ class ExtensionControllerTest(test.TestCase):
         ext_path = os.path.join(os.path.dirname(__file__), "extensions")
         self.flags(osapi_extensions_path=ext_path)
         self.ext_list = [
-            "Createserverext"
+            "Createserverext",
             "FlavorExtraSpecs",
             "Floating_ips",
             "Fox In Socks",
