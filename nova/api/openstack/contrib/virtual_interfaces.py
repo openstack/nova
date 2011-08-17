@@ -76,10 +76,10 @@ class ServerVirtualInterfaceController(object):
 class Virtual_interfaces(extensions.ExtensionDescriptor):
 
     def get_name(self):
-        return "Virtual_interfaces"
+        return "VirtualInterfaces"
 
     def get_alias(self):
-        return "os-virtual-interfaces"
+        return "virtual_interfaces"
 
     def get_description(self):
         return "Virtual interface support"
@@ -98,12 +98,11 @@ class Virtual_interfaces(extensions.ExtensionDescriptor):
             'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
                                                       xmlns=wsgi.XMLNS_V11)}
         serializer = wsgi.ResponseSerializer(body_serializers, None)
-        res = extensions.ResourceExtension('os-virtual-interfaces',
-                                           ServerVirtualInterfaceController(),
-                                           parent=dict(
-                                               member_name='server',
-                                               collection_name='servers'),
-                                           serializer=serializer)
+        res = extensions.ResourceExtension(
+            'os-virtual-interfaces',
+            controller=ServerVirtualInterfaceController(),
+            parent=dict(member_name='server', collection_name='servers'),
+            serializer=serializer)
         resources.append(res)
 
         return resources
