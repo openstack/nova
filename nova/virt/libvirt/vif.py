@@ -80,12 +80,14 @@ class LibvirtBridgeDriver(VIFDriver):
                 LOG.debug(_('Ensuring vlan %(vlan)s and bridge %(bridge)s'),
                           {'vlan': network['vlan'],
                            'bridge': network['bridge']})
-                linux_net.ensure_vlan_bridge(network['vlan'],
+                linux_net.LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
+                                             network['vlan'],
                                              network['bridge'],
                                              network['bridge_interface'])
             else:
                 LOG.debug(_("Ensuring bridge %s"), network['bridge'])
-                linux_net.ensure_bridge(network['bridge'],
+                linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(
+                                        network['bridge'],
                                         network['bridge_interface'])
 
         return self._get_configurations(network, mapping)
