@@ -46,6 +46,7 @@ def _get_default_vsa_param():
         'display_description': 'Test_VSA_description',
         'vc_count': 1,
         'instance_type': 'm1.small',
+        'instance_type_id': 5,
         'image_name': None,
         'availability_zone': None,
         'storage': [],
@@ -58,6 +59,7 @@ def stub_vsa_create(self, context, **param):
     LOG.debug(_("_create: param=%s"), param)
     param['id'] = 123
     param['name'] = 'Test name'
+    param['instance_type_id'] = 5
     last_param = param
     return param
 

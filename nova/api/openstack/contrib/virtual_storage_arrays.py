@@ -23,6 +23,7 @@ from webob import exc
 
 from nova import vsa
 from nova import volume
+from nova import compute
 from nova import db
 from nova import quota
 from nova import exception
@@ -31,6 +32,7 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
+from nova.api.openstack import servers
 from nova.api.openstack.contrib import volumes
 from nova.compute import instance_types
 
@@ -40,7 +42,7 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.vsa")
 
 
-def _vsa_view(context, vsa, details=False):
+def _vsa_view(context, vsa, details=False, instances=None):
     """Map keys for vsa summary/detailed view."""
     d = {}
 
@@ -55,10 +57,26 @@ def _vsa_view(context, vsa, details=False):
     if 'vsa_instance_type' in vsa:
         d['vcType'] = vsa['vsa_instance_type'].get('name', None)
     else:
-        d['vcType'] = None
+        d['vcType'] = vsa['instance_type_id']
 
     d['vcCount'] = vsa.get('vc_count')
     d['driveCount'] = vsa.get('vol_count')
+
+    d['ipAddress'] = None
+    for instance in instances:
+        fixed_addr = None
+        floating_addr = None
+        if instance['fixed_ips']:
+            fixed = instance['fixed_ips'][0]
+            fixed_addr = fixed['address']
+            if fixed['floating_ips']:
+                floating_addr = fixed['floating_ips'][0]['address']
+
+        if floating_addr:
+            d['ipAddress'] = floating_addr
+            break
+        else:
+            d['ipAddress'] = d['ipAddress'] or fixed_addr
 
     return d
 
@@ -79,10 +97,12 @@ class VsaController(object):
                     "vcType",
                     "vcCount",
                     "driveCount",
+                    "ipAddress",
                     ]}}}
 
     def __init__(self):
         self.vsa_api = vsa.API()
+        self.compute_api = compute.API()
         super(VsaController, self).__init__()
 
     def _items(self, req, details):
@@ -90,8 +110,13 @@ class VsaController(object):
         context = req.environ['nova.context']
         vsas = self.vsa_api.get_all(context)
         limited_list = common.limited(vsas, req)
-        res = [_vsa_view(context, vsa, details) for vsa in limited_list]
-        return {'vsaSet': res}
+
+        vsa_list = []
+        for vsa in limited_list:
+            instances = self.compute_api.get_all(context,
+                    search_opts={'metadata': dict(vsa_id=str(vsa.get('id')))})
+            vsa_list.append(_vsa_view(context, vsa, details, instances))
+        return {'vsaSet': vsa_list}
 
     def index(self, req):
         """Return a short list of VSAs."""
@@ -110,7 +135,10 @@ class VsaController(object):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-        return {'vsa': _vsa_view(context, vsa, details=True)}
+        instances = self.compute_api.get_all(context,
+                search_opts={'metadata': dict(vsa_id=str(vsa.get('id')))})
+
+        return {'vsa': _vsa_view(context, vsa, True, instances)}
 
     def create(self, req, body):
         """Create a new VSA."""
@@ -140,9 +168,12 @@ class VsaController(object):
                 availability_zone=vsa.get('placement', {}).\
                                           get('AvailabilityZone'))
 
-        result = self.vsa_api.create(context, **args)
+        vsa = self.vsa_api.create(context, **args)
 
-        return {'vsa': _vsa_view(context, result, details=True)}
+        instances = self.compute_api.get_all(context,
+                search_opts={'metadata': dict(vsa_id=str(vsa.get('id')))})
+
+        return {'vsa': _vsa_view(context, vsa, True, instances)}
 
     def delete(self, req, id):
         """Delete a VSA."""
@@ -405,6 +436,61 @@ class VsaVPoolController(object):
         return faults.Fault(exc.HTTPBadRequest())
 
 
+class VsaVCController(servers.ControllerV11):
+    """The VSA Virtual Controller API controller for the OpenStack API."""
+
+    def __init__(self):
+        self.vsa_api = vsa.API()
+        self.compute_api = compute.API()
+        self.vsa_id = None      # VP-TODO: temporary ugly hack
+        super(VsaVCController, self).__init__()
+
+    def _get_servers(self, req, is_detail):
+        """Returns a list of servers, taking into account any search
+        options specified.
+        """
+
+        if self.vsa_id is None:
+            super(VsaVCController, self)._get_servers(req, is_detail)
+
+        context = req.environ['nova.context']
+
+        search_opts = {'metadata': dict(vsa_id=str(self.vsa_id))}
+        instance_list = self.compute_api.get_all(
+                context, search_opts=search_opts)
+
+        limited_list = self._limit_items(instance_list, req)
+        servers = [self._build_view(req, inst, is_detail)['server']
+                for inst in limited_list]
+        return dict(servers=servers)
+
+    def index(self, req, vsa_id):
+        """Return list of instances for particular VSA."""
+
+        LOG.audit(_("Index instances for VSA %s"), vsa_id)
+
+        self.vsa_id = vsa_id    # VP-TODO: temporary ugly hack
+        result = super(VsaVCController, self).detail(req)
+        self.vsa_id = None
+        return result
+
+    def create(self, req, vsa_id, body):
+        """Create a new instance for VSA."""
+        return faults.Fault(exc.HTTPBadRequest())
+
+    def update(self, req, vsa_id, id, body):
+        """Update VSA instance."""
+        return faults.Fault(exc.HTTPBadRequest())
+
+    def delete(self, req, vsa_id, id):
+        """Delete VSA instance."""
+        return faults.Fault(exc.HTTPBadRequest())
+
+    def show(self, req, vsa_id, id):
+        """Return data about the given instance."""
+        return super(VsaVCController, self).show(req, id)
+
+
 class Virtual_storage_arrays(extensions.ExtensionDescriptor):
 
     def get_name(self):
@@ -450,6 +536,13 @@ class Virtual_storage_arrays(extensions.ExtensionDescriptor):
 
         res = extensions.ResourceExtension('vpools',
                             VsaVPoolController(),
+                            parent=dict(
+                                member_name='vsa',
+                                collection_name='zadr-vsa'))
+        resources.append(res)
+
+        res = extensions.ResourceExtension('instances',
+                            VsaVCController(),
                             parent=dict(
                                 member_name='vsa',
                                 collection_name='zadr-vsa'))

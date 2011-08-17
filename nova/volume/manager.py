@@ -61,6 +61,8 @@ flags.DEFINE_string('volume_driver', 'nova.volume.driver.ISCSIDriver',
                     'Driver to use for volume creation')
 flags.DEFINE_boolean('use_local_volumes', True,
                      'if True, will not discover local volumes')
+flags.DEFINE_boolean('volume_force_update_capabilities', False,
+                     'if True will force update capabilities on each check')
 
 
 class VolumeManager(manager.SchedulerDependentManager):
@@ -138,6 +140,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                                                  'launched_at': now})
         LOG.debug(_("volume %s: created successfully"), volume_ref['name'])
         self._notify_vsa(context, volume_ref, 'available')
+        self._reset_stats()
         return volume_id
 
     def _notify_vsa(self, context, volume_ref, status):
@@ -158,6 +161,7 @@ class VolumeManager(manager.SchedulerDependentManager):
         if volume_ref['host'] != self.host:
             raise exception.Error(_("Volume is not local to this node"))
 
+        self._reset_stats()
         try:
             LOG.debug(_("volume %s: removing export"), volume_ref['name'])
             self.driver.remove_export(context, volume_ref)
@@ -265,6 +269,8 @@ class VolumeManager(manager.SchedulerDependentManager):
         return error_list
 
     def _volume_stats_changed(self, stat1, stat2):
+        if FLAGS.volume_force_update_capabilities:
+            return True
         if len(stat1) != len(stat2):
             return True
         for (k, v) in stat1.iteritems():
@@ -289,6 +295,10 @@ class VolumeManager(manager.SchedulerDependentManager):
                 # avoid repeating fanouts
                 self.update_service_capabilities(None)
 
+    def _reset_stats(self):
+        LOG.info(_("Clear capabilities"))
+        self._last_volume_stats = []
+
     def notification(self, context, event):
         LOG.info(_("Notification {%s} received"), event)
-        self._last_volume_stats = []
+        self._reset_stats()

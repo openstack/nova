@@ -96,6 +96,8 @@ from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.compute import instance_types
 from nova.db import migration
+from nova import compute
+from nova import volume
 from nova import vsa
 from nova.vsa import drive_types
 
@@ -1032,33 +1034,153 @@ class VsaCommands(object):
     def __init__(self, *args, **kwargs):
         self.manager = manager.AuthManager()
         self.vsa_api = vsa.API()
+        self.compute_api = compute.API()
+        self.volume_api = volume.API()
         self.context = context.get_admin_context()
 
-    def _list(self, vsas):
-        format_str = "%-5s %-15s %-25s %-10s %-6s %-9s %-10s %-10s %10s"
-        if len(vsas):
-            print format_str %\
-                   (_('ID'),
-                    _('vsa_id'),
-                    _('displayName'),
-                    _('vc_type'),
-                    _('vc_cnt'),
-                    _('drive_cnt'),
-                    _('status'),
-                    _('AZ'),
-                    _('createTime'))
+        self._format_str_vsa = "%-5s %-15s %-25s %-10s %-6s "\
+                               "%-9s %-10s %-10s %10s"
+        self._format_str_volume = "\t%-4s %-15s %-5s %-10s %-20s %s"
+        self._format_str_drive = "\t%-4s %-15s %-5s %-10s %-20s %s"
+        self._format_str_instance = "\t%-4s %-10s %-20s %-12s %-10s "\
+                                    "%-15s %-15s %-10s %-15s %s"
+
+    def _print_vsa_header(self):
+        print self._format_str_vsa %\
+               (_('ID'),
+                _('vsa_id'),
+                _('displayName'),
+                _('vc_type'),
+                _('vc_cnt'),
+                _('drive_cnt'),
+                _('status'),
+                _('AZ'),
+                _('createTime'))
+
+    def _print_vsa(self, vsa):
+        print self._format_str_vsa %\
+            (vsa['id'],
+            vsa['name'],
+            vsa['display_name'],
+            vsa['vsa_instance_type'].get('name', None),
+            vsa['vc_count'],
+            vsa['vol_count'],
+            vsa['status'],
+            vsa['availability_zone'],
+            str(vsa['created_at']))
+
+    def _print_volume_header(self):
+        print _('      === Volumes ===')
+        print self._format_str_volume %\
+               (_('ID'),
+                _('name'),
+                _('size'),
+                _('status'),
+                _('attachment'),
+                _('createTime'))
+
+    def _print_volume(self, vol):
+        print self._format_str_volume %\
+            (vol['id'],
+             vol['display_name'],
+             vol['size'],
+             vol['status'],
+             vol['attach_status'],
+             str(vol['created_at']))
+
+    def _print_drive_header(self):
+        print _('      === Drives ===')
+        print self._format_str_drive %\
+               (_('ID'),
+                _('name'),
+                _('size'),
+                _('status'),
+                _('host'),
+                _('createTime'))
+
+    def _print_drive(self, drive):
+        print self._format_str_volume %\
+            (drive['id'],
+             drive['display_name'],
+             drive['size'],
+             drive['status'],
+             drive['host'],
+             str(drive['created_at']))
+
+    def _print_instance_header(self):
+        print _('      === Instances ===')
+        print self._format_str_instance %\
+               (_('ID'),
+                _('name'),
+                _('disp_name'),
+                _('image'),
+                _('type'),
+                _('floating_IP'),
+                _('fixed_IP'),
+                _('status'),
+                _('host'),
+                _('createTime'))
+
+    def _print_instance(self, vc):
+
+        fixed_addr = None
+        floating_addr = None
+        if vc['fixed_ips']:
+            fixed = vc['fixed_ips'][0]
+            fixed_addr = fixed['address']
+            if fixed['floating_ips']:
+                floating_addr = fixed['floating_ips'][0]['address']
+        floating_addr = floating_addr or fixed_addr
+
+        print self._format_str_instance %\
+            (vc['id'],
+             ec2utils.id_to_ec2_id(vc['id']),
+             vc['display_name'],
+             ('ami-%08x' % int(vc['image_ref'])),
+             vc['instance_type']['name'],
+             floating_addr,
+             fixed_addr,
+             vc['state_description'],
+             vc['host'],
+             str(vc['created_at']))
+
+    def _list(self, context, vsas, print_drives=False,
+                    print_volumes=False, print_instances=False):
+        if vsas:
+            self._print_vsa_header()
 
         for vsa in vsas:
-            print format_str %\
-                (vsa['id'],
-                vsa['name'],
-                vsa['display_name'],
-                vsa['vsa_instance_type'].get('name', None),
-                vsa['vc_count'],
-                vsa['vol_count'],
-                vsa['status'],
-                vsa['availability_zone'],
-                str(vsa['created_at']))
+            self._print_vsa(vsa)
+            vsa_id = vsa.get('id')
+
+            if print_instances:
+                instances = self.compute_api.get_all(context,
+                                    search_opts={'metadata':
+                                                 dict(vsa_id=str(vsa_id))})
+                if instances:
+                    print
+                    self._print_instance_header()
+                    for instance in instances:
+                        self._print_instance(instance)
+                    print
+
+            if print_drives:
+                drives = self.volume_api.get_all_by_vsa(context,
+                                                        vsa_id, "to")
+                if drives:
+                    self._print_drive_header()
+                    for drive in drives:
+                        self._print_drive(drive)
+                    print
+
+            if print_volumes:
+                volumes = self.volume_api.get_all_by_vsa(context,
+                                                         vsa_id, "from")
+                if volumes:
+                    self._print_volume_header()
+                    for volume in volumes:
+                        self._print_volume(volume)
+                    print
 
     @args('--storage', dest='storage',
         metavar="[{'drive_name': 'type', 'num_drives': N, 'size': M},..]",
@@ -1150,7 +1272,7 @@ class VsaCommands(object):
             }
 
         result = self.vsa_api.create(ctxt, **values)
-        self._list([result])
+        self._list(ctxt, [result])
 
     @args('--id', dest='vsa_id', metavar="<vsa_id>", help='VSA ID')
     @args('--name', dest='name', metavar="<name>", help='VSA name')
@@ -1170,7 +1292,7 @@ class VsaCommands(object):
 
         vsa_id = ec2utils.ec2_id_to_id(vsa_id)
         result = self.vsa_api.update(self.context, vsa_id=vsa_id, **values)
-        self._list([result])
+        self._list(self.context, [result])
 
     @args('--id', dest='vsa_id', metavar="<vsa_id>", help='VSA ID')
     def delete(self, vsa_id):
@@ -1180,7 +1302,16 @@ class VsaCommands(object):
 
     @args('--id', dest='vsa_id', metavar="<vsa_id>",
         help='VSA ID (optional)')
-    def list(self, vsa_id=None):
+    @args('--all', dest='all', action="store_true",
+        help='Show all available details')
+    @args('--drives', dest='drives', action="store_true",
+        help='Include drive-level details')
+    @args('--volumes', dest='volumes', action="store_true",
+        help='Include volume-level details')
+    @args('--instances', dest='instances', action="store_true",
+        help='Include instance-level details')
+    def list(self, vsa_id=None, all=False,
+             drives=False, volumes=False, instances=False):
         """Describe all available VSAs (or particular one)."""
 
         vsas = []
@@ -1191,7 +1322,18 @@ class VsaCommands(object):
         else:
             vsas = self.vsa_api.get_all(self.context)
 
-        self._list(vsas)
+        if all:
+            drives = volumes = instances = True
+
+        self._list(self.context, vsas, drives, volumes, instances)
+
+    def update_capabilities(self):
+        """Forces updates capabilities on all nova-volume nodes."""
+
+        rpc.fanout_cast(context.get_admin_context(),
+                 FLAGS.volume_topic,
+                 {"method": "notification",
+                  "args": {"event": "startup"}})
 
 
 class VsaDriveTypeCommands(object):
