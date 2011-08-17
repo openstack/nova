@@ -115,7 +115,8 @@ class TestOpenStackClient(object):
 
         auth_uri = self.auth_uri
         headers = {'X-Auth-User': self.auth_user,
-                   'X-Auth-Key': self.auth_key}
+                   'X-Auth-Key': self.auth_key,
+                   'X-Auth-Project-Id': self.project_id}
         response = self.request(auth_uri,
                                 headers=headers)
 
@@ -138,7 +139,7 @@ class TestOpenStackClient(object):
         # NOTE(justinsb): httplib 'helpfully' converts headers to lower case
         base_uri = auth_result['x-server-management-url']
 
-        full_uri = '%s/%s%s' % (base_uri, self.project_id, relative_uri)
+        full_uri = '%s/%s' % (base_uri, relative_uri)
 
         headers = kwargs.setdefault('headers', {})
         headers['X-Auth-Token'] = auth_result['x-auth-token']
