@@ -24,28 +24,23 @@ from nova import log as logging
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import faults
+from nova.api.openstack import wsgi
 
 
 LOG = logging.getLogger("nova.api.virtual_interfaces")
 
 
 def _translate_vif_summary_view(_context, vif):
-    """Maps keys for attachment summary view."""
+    """Maps keys for VIF summary view."""
     d = {}
     d['id'] = vif['uuid']
-    d['macAddress'] = vif['address']
+    d['mac_address'] = vif['address']
     return d
 
 
 class ServerVirtualInterfaceController(object):
     """The instance VIF API controller for the Openstack API.
     """
-
-    _serialization_metadata = {
-        'application/xml': {
-            'attributes': {
-                'serverVirtualInterface': ['id',
-                                           'macAddress']}}}
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -63,7 +58,7 @@ class ServerVirtualInterfaceController(object):
         vifs = instance['virtual_interfaces']
         limited_list = common.limited(vifs, req)
         res = [entity_maker(context, vif) for vif in limited_list]
-        return {'serverVirtualInterfaces': res}
+        return {'virtual_interfaces': res}
 
     def index(self, req, server_id):
         """Returns the list of VIFs for a given instance."""
@@ -91,11 +86,24 @@ class Virtual_interfaces(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
+        metadata = _get_metadata()
+        body_serializers = {
+            'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
+                                                      xmlns=wsgi.XMLNS_V11)}
+        serializer = wsgi.ResponseSerializer(body_serializers, None)
         res = extensions.ResourceExtension('os-virtual-interfaces',
                                            ServerVirtualInterfaceController(),
                                            parent=dict(
                                                member_name='server',
-                                               collection_name='servers'))
+                                               collection_name='servers'),
+                                           serializer=serializer)
         resources.append(res)
 
         return resources
+
+
+def _get_metadata():
+    metadata = {
+        "attributes": {
+                'virtual_interface': ["id", "mac_address"]}}
+    return metadata
