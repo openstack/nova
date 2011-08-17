@@ -38,6 +38,13 @@ def _translate_vif_summary_view(_context, vif):
     return d
 
 
+def _get_metadata():
+    metadata = {
+        "attributes": {
+                'virtual_interface': ["id", "mac_address"]}}
+    return metadata
+
+
 class ServerVirtualInterfaceController(object):
     """The instance VIF API controller for the Openstack API.
     """
@@ -100,10 +107,3 @@ class Virtual_interfaces(extensions.ExtensionDescriptor):
         resources.append(res)
 
         return resources
-
-
-def _get_metadata():
-    metadata = {
-        "attributes": {
-                'virtual_interface': ["id", "mac_address"]}}
-    return metadata
