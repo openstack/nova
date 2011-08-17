@@ -28,6 +28,7 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 LOG = logging.getLogger('nova.api.openstack')
@@ -71,19 +72,16 @@ class AuthMiddleware(wsgi.Middleware):
             try:
                 project = self.auth.get_project(project_id)
             except exception.ProjectNotFound:
-                project = None
-            if project:
-                user = self.auth.get_user(user_id)
-                if not project.has_member(user):
-                    return faults.Fault(webob.exc.HTTPUnauthorized())
-            else:
                 return faults.Fault(webob.exc.HTTPUnauthorized())
-        elif len(path_parts) > 1 and path_parts[1] == 'v1.0':
+            if project_id not in [p.id for p in projects]:
+                return faults.Fault(webob.exc.HTTPUnauthorized())
+        else:
+            # As a fallback, set project_id from the headers, which is the v1.0
+            # behavior. As a last resort, be forgiving to the user and set
+            # project_id based on a valid project of theirs.
             try:
                 project_id = req.headers["X-Auth-Project-Id"]
             except KeyError:
-                # FIXME(usrleon): It needed only for compatibility
-                # while osapi clients don't use this header
                 project_id = projects[0].id
 
         is_admin = self.auth.is_admin(user_id)
@@ -115,12 +113,20 @@ class AuthMiddleware(wsgi.Middleware):
             LOG.warn(msg)
             return faults.Fault(webob.exc.HTTPUnauthorized(explanation=msg))
 
+        # Gabe did this.
+        def _get_auth_header(key):
+            """Ensures that the KeyError returned is meaningful."""
+            try:
+                return req.headers[key]
+            except KeyError as ex:
+                raise KeyError(key)
         try:
-            username = req.headers['X-Auth-User']
-            key = req.headers['X-Auth-Key']
+            username = _get_auth_header('X-Auth-User')
+            key = _get_auth_header('X-Auth-Key')
         except KeyError as ex:
-            LOG.warn(_("Could not find %s in request.") % ex)
-            return faults.Fault(webob.exc.HTTPUnauthorized())
+            msg = _("Could not find %s in request.") % ex
+            LOG.warn(msg)
+            return faults.Fault(webob.exc.HTTPUnauthorized(explanation=msg))
 
         token, user = self._authorize_user(username, key, req)
         if user and token:
@@ -169,6 +175,16 @@ class AuthMiddleware(wsgi.Middleware):
         """
         ctxt = context.get_admin_context()
 
+        project_id = req.headers.get('X-Auth-Project-Id')
+        if project_id is None:
+            # If the project_id is not provided in the headers, be forgiving to
+            # the user and set project_id based on a valid project of theirs.
+            user = self.auth.get_user_from_access_key(key)
+            projects = self.auth.get_projects(user.id)
+            if not projects:
+                raise webob.exc.HTTPUnauthorized()
+            project_id = projects[0].id
+
         try:
             user = self.auth.get_user_from_access_key(key)
         except exception.NotFound:
@@ -182,7 +198,10 @@ class AuthMiddleware(wsgi.Middleware):
             token_dict['token_hash'] = token_hash
             token_dict['cdn_management_url'] = ''
             os_url = req.url
-            token_dict['server_management_url'] = os_url
+            token_dict['server_management_url'] = os_url.strip('/')
+            version = common.get_version_from_href(os_url)
+            if version == '1.1':
+                token_dict['server_management_url'] += '/' + project_id
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
             token = self.db.auth_token_create(ctxt, token_dict)
