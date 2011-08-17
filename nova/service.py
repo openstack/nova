@@ -20,12 +20,11 @@
 """Generic Node baseclass for all workers that run on hosts."""
 
 import inspect
-import multiprocessing
 import os
+import signal
 
+import eventlet
 import greenlet
-
-from eventlet import greenthread
 
 from nova import context
 from nova import db
@@ -77,10 +76,7 @@ class Launcher(object):
 
         """
         service.start()
-        try:
-            service.wait()
-        except KeyboardInterrupt:
-            service.stop()
+        service.wait()
 
     def launch_service(self, service):
         """Load and start the given service.
@@ -89,10 +85,8 @@ class Launcher(object):
         :returns: None
 
         """
-        process = multiprocessing.Process(target=self.run_service,
-                                          args=(service,))
-        process.start()
-        self._services.append(process)
+        gt = eventlet.spawn(self.run_service, service)
+        self._services.append(gt)
 
     def stop(self):
         """Stop all services which are currently running.
@@ -101,8 +95,7 @@ class Launcher(object):
 
         """
         for service in self._services:
-            if service.is_alive():
-                service.terminate()
+            service.kill()
 
     def wait(self):
         """Waits until all services have been stopped, and then returns.
@@ -111,7 +104,10 @@ class Launcher(object):
 
         """
         for service in self._services:
-            service.join()
+            try:
+                service.wait()
+            except greenlet.GreenletExit:
+                pass
 
 
 class Service(object):
@@ -121,6 +117,7 @@ class Service(object):
                  periodic_interval=None, *args, **kwargs):
         self.host = host
         self.binary = binary
+        self.name = binary
         self.topic = topic
         self.manager_class_name = manager
         manager_class = utils.import_class(self.manager_class_name)
@@ -173,7 +170,7 @@ class Service(object):
             finally:
                 consumer_set.close()
 
-        self.consumer_set_thread = greenthread.spawn(_wait)
+        self.consumer_set_thread = eventlet.spawn(_wait)
 
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
@@ -339,7 +336,17 @@ class WSGIService(object):
         self.server.wait()
 
 
+# NOTE(vish): the global launcher is to maintain the existing
+#             functionality of calling service.serve +
+#             service.wait
+_launcher = None
+
+
 def serve(*services):
+    global _launcher
+    if not _launcher:
+        _launcher = Launcher()
+        signal.signal(signal.SIGTERM, lambda *args: _launcher.stop())
     try:
         if not services:
             services = [Service.create()]
@@ -354,7 +361,7 @@ def serve(*services):
         flags.DEFINE_flag(flags.HelpXMLFlag())
         FLAGS.ParseNewFlags()
 
-    name = '_'.join(x.binary for x in services)
+    name = '_'.join(x.name for x in services)
     logging.debug(_('Serving %s'), name)
     logging.debug(_('Full set of FLAGS:'))
     for flag in FLAGS:
@@ -362,9 +369,11 @@ def serve(*services):
         logging.debug('%(flag)s : %(flag_get)s' % locals())
 
     for x in services:
-        x.start()
+        _launcher.launch_service(x)
 
 
 def wait():
-    while True:
-        greenthread.sleep(5)
+    try:
+        _launcher.wait()
+    except KeyboardInterrupt:
+        _launcher.stop()
