@@ -48,7 +48,6 @@ flags.DECLARE('auth_driver', 'nova.auth.manager')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
-flags.DEFINE_string('dnsmasq_interface', 'br0', 'Default Dnsmasq interface')
 
 LOG = logging.getLogger('nova.dhcpbridge')
 
@@ -87,10 +86,10 @@ def del_lease(mac, ip_address, _interface):
                   "args": {"address": ip_address}})
 
 
-def init_leases(interface):
-    """Get the list of hosts for an interface."""
+def init_leases(network_id):
+    """Get the list of hosts for a network."""
     ctxt = context.get_admin_context()
-    network_ref = db.network_get_by_bridge(ctxt, interface)
+    network_ref = db.network_get(ctxt, network_id)
     return linux_net.get_dhcp_leases(ctxt, network_ref)
 
 
@@ -101,7 +100,8 @@ def main():
     argv = FLAGS(sys.argv)
     logging.setup()
     # check ENV first so we don't break any older deploys
-    interface = os.environ.get('DNSMASQ_INTERFACE', FLAGS.dnsmasq_interface)
+    network_id = int(os.environ.get('NETWORK_ID'))
+
     if int(os.environ.get('TESTING', '0')):
         from nova.tests import fake_flags
 
@@ -120,7 +120,7 @@ def main():
         LOG.debug(msg)
         globals()[action + '_lease'](mac, ip, interface)
     else:
-        print init_leases(interface)
+        print init_leases(network_id)
 
 if __name__ == "__main__":
     main()

@@ -137,7 +137,7 @@ class VMOps(object):
     def _create_disks(self, context, instance):
         disk_image_type = VMHelper.determine_disk_image_type(instance)
         vdis = VMHelper.fetch_image(context, self._session,
-                instance.id, instance.image_ref,
+                instance, instance.image_ref,
                 instance.user_id, instance.project_id,
                 disk_image_type)
         return vdis
@@ -182,11 +182,11 @@ class VMOps(object):
         try:
             if instance.kernel_id:
                 kernel = VMHelper.fetch_image(context, self._session,
-                        instance.id, instance.kernel_id, instance.user_id,
+                        instance, instance.kernel_id, instance.user_id,
                         instance.project_id, ImageType.KERNEL)[0]
             if instance.ramdisk_id:
                 ramdisk = VMHelper.fetch_image(context, self._session,
-                        instance.id, instance.ramdisk_id, instance.user_id,
+                        instance, instance.ramdisk_id, instance.user_id,
                         instance.project_id, ImageType.RAMDISK)[0]
             # Create the VM ref and attach the first disk
             first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',

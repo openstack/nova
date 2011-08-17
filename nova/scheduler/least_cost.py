@@ -22,11 +22,14 @@ The cost-function and weights are tabulated, and the host with the least cost
 is then selected for provisioning.
 """
 
+# TODO(dabo): This class will be removed in the next merge prop; it remains now
+# because much of the code will be refactored into different classes.
+
 import collections
 
 from nova import flags
 from nova import log as logging
-from nova.scheduler import zone_aware_scheduler
+from nova.scheduler import abstract_scheduler
 from nova import utils
 from nova import exception
 
@@ -61,7 +64,7 @@ def compute_fill_first_cost_fn(host):
     return free_mem
 
 
-class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):
+class LeastCostScheduler(abstract_scheduler.AbstractScheduler):
     def __init__(self, *args, **kwargs):
         self.cost_fns_cache = {}
         super(LeastCostScheduler, self).__init__(*args, **kwargs)
