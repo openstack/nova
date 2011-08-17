@@ -88,7 +88,7 @@ class Virtual_interfaces(extensions.ExtensionDescriptor):
         return "http://docs.openstack.org/ext/virtual_interfaces/api/v1.1"
 
     def get_updated(self):
-        return "2011-08-05T00:00:00+00:00"
+        return "2011-08-17T00:00:00+00:00"
 
     def get_resources(self):
         resources = []
