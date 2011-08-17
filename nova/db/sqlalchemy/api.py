@@ -1442,7 +1442,7 @@ def instance_get_floating_address(context, instance_id):
 def instance_set_power_state(context, instance_id, power_state):
     session = get_session()
     partial = session.query(models.Instance)
-  
+
     if utils.is_uuid_like(instance_id):
         result = partial.filter_by(uuid=instance_id)
     else:
@@ -1456,7 +1456,7 @@ def instance_set_vm_state(context, instance_id, vm_state):
     # vm_state = running, halted, suspended, paused
     session = get_session()
     partial = session.query(models.Instance)
-  
+
     if utils.is_uuid_like(instance_id):
         result = partial.filter_by(uuid=instance_id)
     else:
@@ -1469,7 +1469,7 @@ def instance_set_task_state(context, instance_id, task_state):
     # task_state = running, halted, suspended, paused
     session = get_session()
     partial = session.query(models.Instance)
-  
+
     if utils.is_uuid_like(instance_id):
         result = partial.filter_by(uuid=instance_id)
     else:
