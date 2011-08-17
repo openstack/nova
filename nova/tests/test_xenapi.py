@@ -519,6 +519,11 @@ class XenAPIVMTestCase(test.TestCase):
                          os_type="windows", architecture="i386")
         self.check_vm_params_for_windows()
 
+    def test_spawn_iso_glance(self):
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_ISO, None, None,
+                         os_type="windows", architecture="i386")
+        self.check_vm_params_for_windows()
+
     def test_spawn_glance(self):
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,

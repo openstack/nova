@@ -306,6 +306,7 @@ DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
 DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
+DEFINE_boolean('rabbit_durable_queues', False, 'use durable queues')
 DEFINE_list('enabled_apis', ['ec2', 'osapi'],
             'list of APIs to enable by default')
 DEFINE_string('ec2_host', '$my_ip', 'ip of api server')
@@ -346,6 +347,12 @@ DEFINE_string('logdir', None, 'output to a per-service log file in named '
                               'directory')
 DEFINE_integer('logfile_mode', 0644, 'Default file mode of the logs.')
 DEFINE_string('sqlite_db', 'nova.sqlite', 'file name for sqlite')
+DEFINE_integer('sql_pool_timeout', 30,
+               'seconds to wait for connection from pool before erroring')
+DEFINE_integer('sql_min_pool_size', 10,
+               'minimum number of SQL connections to pool')
+DEFINE_integer('sql_max_pool_size', 10,
+               'maximum number of SQL connections to pool')
 DEFINE_string('sql_connection',
               'sqlite:///$state_path/$sqlite_db',
               'connection string for sql database')

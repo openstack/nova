@@ -1139,7 +1139,10 @@ def instance_get_all(context):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('virtual_interfaces')).\
+                   options(joinedload_all('virtual_interfaces.network')).\
+                   options(joinedload_all(
+                           'virtual_interfaces.fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces.instance')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
@@ -1215,6 +1218,7 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload_all('virtual_interfaces.network')).\
                    options(joinedload_all(
                            'virtual_interfaces.fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces.instance')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
@@ -1494,45 +1498,6 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                                 session=session)
         instance_ref.security_groups += [security_group_ref]
         instance_ref.save(session=session)
-
-
-@require_context
-def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.vcpus))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.memory_mb))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.local_gb))
-    if not result:
-        return 0
-    return result
 
 
 @require_context
@@ -2012,6 +1977,7 @@ def quota_get(context, project_id, resource, session=None):
 
 @require_context
 def quota_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
     session = get_session()
     result = {'project_id': project_id}
     rows = session.query(models.Quota).\
