@@ -359,6 +359,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance_type = self.db.instance_type_get(context,
                     instance_type_id)
             allowed_size_gb = instance_type['local_gb']
+
+            # NOTE(jk0): Since libvirt uses local_gb as a secondary drive, we
+            # need to handle potential situations where local_gb is 0. This is
+            # the default for m1.tiny.
+            if allowed_size_gb == 0:
+                return
+
             allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
             LOG.debug(_("image_id=%(image_id)d, image_size_bytes="
@@ -1369,7 +1376,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # In addition, this method is creating filtering rule
         # onto destination host.
         self.driver.ensure_filtering_rules_for_instance(instance_ref,
-                                                        network_info)
+                network_info)
 
         # Preparation for block migration
         if block_migration:

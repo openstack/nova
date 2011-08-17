@@ -538,7 +538,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 raise exception.VirtualInterfaceMacAddressException()
 
     def generate_mac_address(self):
-        """Generate a mac address for a vif on an instance."""
+        """Generate an Ethernet MAC address."""
         mac = [0x02, 0x16, 0x3e,
                random.randint(0x00, 0x7f),
                random.randint(0x00, 0xff),
@@ -872,14 +872,16 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
         network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
-        self.driver.ensure_bridge(network_ref['bridge'],
-                                  network_ref['bridge_interface'],
-                                  network_ref)
+
+        mac_address = self.generate_mac_address()
+        dev = self.driver.plug(network_ref, mac_address)
+        self.driver.initialize_gateway_device(dev, network_ref)
+
         if not FLAGS.fake_network:
-            self.driver.update_dhcp(context, network_ref)
+            self.driver.update_dhcp(context, dev, network_ref)
             if(FLAGS.use_ipv6):
-                self.driver.update_ra(context, network_ref)
-                gateway = utils.get_my_linklocal(network_ref['bridge'])
+                self.driver.update_ra(context, dev, network_ref)
+                gateway = utils.get_my_linklocal(dev)
                 self.db.network_update(context, network_ref['id'],
                                        {'gateway_v6': gateway})
 
@@ -973,23 +975,23 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         else:
             address = network_ref['vpn_public_address']
         network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
-        self.driver.ensure_vlan_bridge(network_ref['vlan'],
-                                       network_ref['bridge'],
-                                       network_ref['bridge_interface'],
-                                       network_ref)
+
+        mac_address = self.generate_mac_address()
+        dev = self.driver.plug(network_ref, mac_address)
+        self.driver.initialize_gateway_device(dev, network_ref)
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.
         if address == FLAGS.vpn_ip and hasattr(self.driver,
-                                               "ensure_vlan_forward"):
-            self.driver.ensure_vlan_forward(FLAGS.vpn_ip,
+                                               "ensure_vpn_forward"):
+            self.driver.ensure_vpn_forward(FLAGS.vpn_ip,
                                             network_ref['vpn_public_port'],
                                             network_ref['vpn_private_address'])
         if not FLAGS.fake_network:
-            self.driver.update_dhcp(context, network_ref)
+            self.driver.update_dhcp(context, dev, network_ref)
             if(FLAGS.use_ipv6):
-                self.driver.update_ra(context, network_ref)
-                gateway = utils.get_my_linklocal(network_ref['bridge'])
+                self.driver.update_ra(context, dev, network_ref)
+                gateway = utils.get_my_linklocal(dev)
                 self.db.network_update(context, network_ref['id'],
                                        {'gateway_v6': gateway})
 
