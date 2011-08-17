@@ -47,9 +47,9 @@ class ServerVirtualInterfaceTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
-        response = {'serverVirtualInterfaces': [
+        response = {'virtual_interfaces': [
                         {'id': '00000000-0000-0000-0000-00000000000000000',
-                         'macAddress': '00-00-00-00-00-00'},
+                         'mac_address': '00-00-00-00-00-00'},
                         {'id': '11111111-1111-1111-1111-11111111111111111',
-                         'macAddress': '11-11-11-11-11-11'}]}
+                         'mac_address': '11-11-11-11-11-11'}]}
         self.assertEqual(res_dict, response)
