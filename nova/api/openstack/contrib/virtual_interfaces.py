@@ -34,7 +34,6 @@ def _translate_vif_summary_view(_context, vif):
     d = {}
     d['id'] = vif['uuid']
     d['macAddress'] = vif['address']
-    d['serverId'] = vif['instance_id']
     return d
 
 
