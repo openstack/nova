@@ -102,45 +102,38 @@ class FloatingIPController(object):
 
     def delete(self, req, id):
         context = req.environ['nova.context']
-        ip = self.network_api.get_floating_ip(context, id)
+        floating_ip = self.network_api.get_floating_ip(context, id)
 
-        if 'fixed_ip' in ip:
-            try:
-                self.disassociate(req, id)
-            except exception.ApiError:
-                LOG.warn("disassociate failure %s", id)
+        if 'fixed_ip' in floating_ip:
+            self.network_api.disassociate_floating_ip(context, floating_ip['address'])
 
-        self.network_api.release_floating_ip(context, address=ip['address'])
+        self.network_api.release_floating_ip(context, address=floating_ip['address'])
         return exc.HTTPAccepted()
 
     def associate(self, req, id, body):
-        """ /floating_ips/{id}/associate  fixed ip in body """
+        """PUT /floating_ips/{id}/associate fixed ip in body """
         context = req.environ['nova.context']
         floating_ip = self._get_ip_by_id(context, id)
 
-        fixed_ip = body['associate_address']['fixed_ip']
+        fixed_ip = body['floating_ip']['fixed_ip']
 
-        try:
-            self.network_api.associate_floating_ip(context,
-                                                   floating_ip, fixed_ip)
-        except rpc.RemoteError:
-            raise
+        self.network_api.associate_floating_ip(context,
+                                               floating_ip, fixed_ip)
 
         floating_ip = self.network_api.get_floating_ip(context, id)
         return _translate_floating_ip_view(floating_ip)
 
     def disassociate(self, req, id, body=None):
-        """ POST /floating_ips/{id}/disassociate """
+        """PUT /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
         floating_ip = self.network_api.get_floating_ip(context, id)
         address = floating_ip['address']
 
-        try:
+        # no-op if this ip is already disassociated
+        if 'fixed_ip' in floating_ip:
             self.network_api.disassociate_floating_ip(context, address)
-        except rpc.RemoteError:
-            raise
+            floating_ip = self.network_api.get_floating_ip(context, id)
 
-        floating_ip = self.network_api.get_floating_ip(context, id)
         return _translate_floating_ip_view(floating_ip)
 
     def _get_ip_by_id(self, context, value):
@@ -170,8 +163,8 @@ class Floating_ips(extensions.ExtensionDescriptor):
         res = extensions.ResourceExtension('os-floating-ips',
                          FloatingIPController(),
                          member_actions={
-                            'associate': 'POST',
-                            'disassociate': 'POST'})
+                            'associate': 'PUT',
+                            'disassociate': 'PUT'})
         resources.append(res)
 
         return resources
