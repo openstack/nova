@@ -17,12 +17,27 @@
 
 """Possible task states for instances"""
 
-BUILD_BLOCK_DEVICE_MAPPING='block_device_mapping'
+BLOCK_DEVICE_MAPPING='block_device_mapping'
 NETWORKING='networking'
+SPAWN='spawn'
 
+SNAPSHOT='snapshot'
+BACKUP='backup'
 PASSWORD='password'
 
 RESIZE_PREP='resize_prep'
 RESIZE_MIGRATING='resize_migrating'
 RESIZE_MIGRATED='resize_migrated'
 RESIZE_FINISH='resize_finish'
+
+REBUILDING='rebuilding'
+
+REBOOTING='rebooting'
+PAUSING='pausing'
+UNPAUSING='unpausing'
+SUSPENDING='suspending'
+RESUMING='resuming'
+
+RESCUING='rescuing'
+RESCUED='rescued'
+UNRESCUING='unrescuing'
