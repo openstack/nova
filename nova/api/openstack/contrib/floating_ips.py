@@ -105,9 +105,11 @@ class FloatingIPController(object):
         floating_ip = self.network_api.get_floating_ip(context, id)
 
         if 'fixed_ip' in floating_ip:
-            self.network_api.disassociate_floating_ip(context, floating_ip['address'])
+            self.network_api.disassociate_floating_ip(context,
+                                                      floating_ip['address'])
 
-        self.network_api.release_floating_ip(context, address=floating_ip['address'])
+        self.network_api.release_floating_ip(context,
+                                             address=floating_ip['address'])
         return exc.HTTPAccepted()
 
     def associate(self, req, id, body):
