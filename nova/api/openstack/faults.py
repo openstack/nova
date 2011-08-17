@@ -53,7 +53,7 @@ class Fault(webob.exc.HTTPException):
             fault_name: {
                 'code': code,
                 'message': self.wrapped_exc.explanation}}
-        if code == 413 and self.wrapped_exc.headers['Retry-After']:
+        if code == 413:
             retry = self.wrapped_exc.headers['Retry-After']
             fault_data[fault_name]['retryAfter'] = retry
 
