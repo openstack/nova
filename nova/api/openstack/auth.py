@@ -113,7 +113,6 @@ class AuthMiddleware(wsgi.Middleware):
             LOG.warn(msg)
             return faults.Fault(webob.exc.HTTPUnauthorized(explanation=msg))
 
-        # Gabe did this.
         def _get_auth_header(key):
             """Ensures that the KeyError returned is meaningful."""
             try:
