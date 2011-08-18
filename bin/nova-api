@@ -26,7 +26,6 @@ Starts both the EC2 and OpenStack APIs in separate greenthreads.
 import eventlet
 eventlet.monkey_patch()
 
-import gettext
 import os
 import sys
 
@@ -36,7 +35,6 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(
 if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
     sys.path.insert(0, possible_topdir)
 
-gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
@@ -47,8 +45,8 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
-    services = []
+    servers = []
     for api in flags.FLAGS.enabled_apis:
-        services.append(service.WSGIService(api))
-    service.serve(*services)
+        servers.append(service.WSGIService(api))
+    service.serve(*servers)
     service.wait()
