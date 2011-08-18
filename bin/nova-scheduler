@@ -43,6 +43,6 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
-    server = service.Service.create(binary='nova-compute')
+    server = service.Service.create(binary='nova-scheduler')
     service.serve(server)
     service.wait()
