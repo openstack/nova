@@ -34,7 +34,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.auth import manager
 # TODO(eday): Eventually changes these to something not ec2-specific
 from nova.api.ec2 import cloud
 
@@ -57,7 +56,6 @@ LOG = logging.getLogger('nova.cloudpipe')
 class CloudPipe(object):
     def __init__(self):
         self.controller = cloud.CloudController()
-        self.manager = manager.AuthManager()
 
     def get_encoded_zip(self, project_id):
         # Make a payload.zip
