@@ -143,6 +143,12 @@ class ViewBuilderV11(ViewBuilder):
                 response['server']['progress'] = 100
             elif response['server']['status'] == "BUILD":
                 response['server']['progress'] = 0
+
+        if inst.get('access_ip_v4'):
+            response['server']['accessIPv4'] = inst['access_ip_v4']
+        if inst.get('access_ip_v6'):
+            response['server']['accessIPv6'] = inst['access_ip_v6']
+
         return response
 
     def _build_image(self, response, inst):
@@ -182,10 +188,6 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['uuid'] = inst['uuid']
-        if inst.get('access_ip_v4'):
-            response['accessIPv4'] = inst['access_ip_v4']
-        if inst.get('access_ip_v6'):
-            response['accessIPv6'] = inst['access_ip_v6']
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
