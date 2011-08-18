@@ -180,13 +180,20 @@ class CreateInstanceHelper(object):
         """
         if error.code == "OnsetFileLimitExceeded":
             expl = _("Personality file limit exceeded")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         if error.code == "OnsetFilePathLimitExceeded":
             expl = _("Personality file path too long")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         if error.code == "OnsetFileContentLimitExceeded":
             expl = _("Personality file content too long")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
+        if error.code == "InstanceLimitExceeded":
+            expl = _("Instance quotas have been exceeded")
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         # if the original error is okay, just reraise it
         raise error
 
