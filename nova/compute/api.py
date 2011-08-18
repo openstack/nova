@@ -415,7 +415,7 @@ class API(base.Base):
             'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
-            'filter': 'InstanceTypeFilter'
+            'filter': None,
             'blob': zone_blob,
             'num_instances': num_instances,
         }
