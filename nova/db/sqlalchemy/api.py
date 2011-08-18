@@ -3500,50 +3500,50 @@ def volume_type_get_all(context, inactive=False):
     """
     session = get_session()
     if inactive:
-        inst_types = session.query(models.VolumeTypes).\
+        vol_types = session.query(models.VolumeTypes).\
                         options(joinedload('extra_specs')).\
                         order_by("name").\
                         all()
     else:
-        inst_types = session.query(models.VolumeTypes).\
+        vol_types = session.query(models.VolumeTypes).\
                         options(joinedload('extra_specs')).\
                         filter_by(deleted=False).\
                         order_by("name").\
                         all()
-    inst_dict = {}
-    if inst_types:
-        for i in inst_types:
-            inst_dict[i['name']] = _dict_with_extra_specs(i)
-    return inst_dict
+    vol_dict = {}
+    if vol_types:
+        for i in vol_types:
+            vol_dict[i['name']] = _dict_with_extra_specs(i)
+    return vol_dict
 
 
 @require_context
 def volume_type_get(context, id):
     """Returns a dict describing specific volume_type"""
     session = get_session()
-    inst_type = session.query(models.VolumeTypes).\
+    vol_type = session.query(models.VolumeTypes).\
                     options(joinedload('extra_specs')).\
                     filter_by(id=id).\
                     first()
 
-    if not inst_type:
+    if not vol_type:
         raise exception.VolumeTypeNotFound(volume_type=id)
     else:
-        return _dict_with_extra_specs(inst_type)
+        return _dict_with_extra_specs(vol_type)
 
 
 @require_context
 def volume_type_get_by_name(context, name):
     """Returns a dict describing specific volume_type"""
     session = get_session()
-    inst_type = session.query(models.VolumeTypes).\
+    vol_type = session.query(models.VolumeTypes).\
                     options(joinedload('extra_specs')).\
                     filter_by(name=name).\
                     first()
-    if not inst_type:
+    if not vol_type:
         raise exception.VolumeTypeNotFoundByName(volume_type_name=name)
     else:
-        return _dict_with_extra_specs(inst_type)
+        return _dict_with_extra_specs(vol_type)
 
 
 @require_admin_context

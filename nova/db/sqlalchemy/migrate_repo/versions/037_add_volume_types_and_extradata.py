@@ -73,15 +73,6 @@ new_tables = (volume_types, volume_type_extra_specs_table)
 
 
 def upgrade(migrate_engine):
-
-    from nova import context
-    from nova import db
-    from nova import flags
-
-    FLAGS = flags.FLAGS
-
-    # Upgrade operations go here. Don't create your own engine;
-    # bind migrate_engine to your metadata
     meta.bind = migrate_engine
 
     for table in new_tables:
