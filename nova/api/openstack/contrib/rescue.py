@@ -48,7 +48,7 @@ class Rescue(exts.ExtensionDescriptor):
                 self.compute_api.unrescue(context, instance_id)
         except Exception, e:
             LOG.exception(_("Error in %(action)s: %(e)s") % locals())
-            return faults.Fault(exc.HTTPBadRequest())
+            return faults.Fault(exc.HTTPInternalServerError())
 
         return webob.Response(status_int=202)
 
@@ -60,7 +60,7 @@ class Rescue(exts.ExtensionDescriptor):
         return "Rescue"
 
     def get_alias(self):
-        return "rescue"
+        return "os-rescue"
 
     def get_description(self):
         return "Instance rescue mode"
