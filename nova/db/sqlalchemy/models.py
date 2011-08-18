@@ -339,7 +339,7 @@ class VolumeTypeExtraSpecs(BASE, NovaBase):
     volume_type = relationship(VolumeTypes, backref="extra_specs",
                  foreign_keys=volume_type_id,
                  primaryjoin='and_('
-                 'VolumeTypeExtraSpecs.instance_type_id == VolumeTypes.id,'
+                 'VolumeTypeExtraSpecs.volume_type_id == VolumeTypes.id,'
                  'VolumeTypeExtraSpecs.deleted == False)')
 
 
