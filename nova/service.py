@@ -21,7 +21,6 @@
 
 import inspect
 import os
-import signal
 
 import eventlet
 import greenlet
@@ -346,33 +345,21 @@ def serve(*services):
     global _launcher
     if not _launcher:
         _launcher = Launcher()
-        signal.signal(signal.SIGTERM, lambda *args: _launcher.stop())
-    try:
-        if not services:
-            services = [Service.create()]
-    except Exception:
-        logging.exception('in Service.create()')
-        raise
-    finally:
-        # After we've loaded up all our dynamic bits, check
-        # whether we should print help
-        flags.DEFINE_flag(flags.HelpFlag())
-        flags.DEFINE_flag(flags.HelpshortFlag())
-        flags.DEFINE_flag(flags.HelpXMLFlag())
-        FLAGS.ParseNewFlags()
-
-    name = '_'.join(x.name for x in services)
-    logging.debug(_('Serving %s'), name)
-    logging.debug(_('Full set of FLAGS:'))
-    for flag in FLAGS:
-        flag_get = FLAGS.get(flag, None)
-        logging.debug('%(flag)s : %(flag_get)s' % locals())
-
     for x in services:
         _launcher.launch_service(x)
 
 
 def wait():
+    # After we've loaded up all our dynamic bits, check
+    # whether we should print help
+    flags.DEFINE_flag(flags.HelpFlag())
+    flags.DEFINE_flag(flags.HelpshortFlag())
+    flags.DEFINE_flag(flags.HelpXMLFlag())
+    FLAGS.ParseNewFlags()
+    logging.debug(_('Full set of FLAGS:'))
+    for flag in FLAGS:
+        flag_get = FLAGS.get(flag, None)
+        logging.debug('%(flag)s : %(flag_get)s' % locals())
     try:
         _launcher.wait()
     except KeyboardInterrupt:
