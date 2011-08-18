@@ -67,24 +67,24 @@ class Launcher(object):
         self._services = []
 
     @staticmethod
-    def run_service(service):
-        """Start and wait for a service to finish.
+    def run_server(server):
+        """Start and wait for a server to finish.
 
-        :param service: Service to run and wait for.
+        :param service: Server to run and wait for.
         :returns: None
 
         """
-        service.start()
-        service.wait()
+        server.start()
+        server.wait()
 
-    def launch_service(self, service):
-        """Load and start the given service.
+    def launch_server(self, server):
+        """Load and start the given server.
 
-        :param service: The service you would like to start.
+        :param server: The server you would like to start.
         :returns: None
 
         """
-        gt = eventlet.spawn(self.run_service, service)
+        gt = eventlet.spawn(self.run_server, server)
         self._services.append(gt)
 
     def stop(self):
@@ -110,13 +110,16 @@ class Launcher(object):
 
 
 class Service(object):
-    """Base class for workers that run on hosts."""
+    """Service object for binaries running on hosts.
+
+    A service takes a manager and enables rpc by listening to queues based
+    on topic. It also periodically runs tasks on the manager and reports
+    it state to the database services table."""
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
                  periodic_interval=None, *args, **kwargs):
         self.host = host
         self.binary = binary
-        self.name = binary
         self.topic = topic
         self.manager_class_name = manager
         manager_class = utils.import_class(self.manager_class_name)
@@ -289,9 +292,9 @@ class WSGIService(object):
     """Provides ability to launch API from a 'paste' configuration."""
 
     def __init__(self, name, loader=None):
-        """Initialize, but do not start the WSGI service.
+        """Initialize, but do not start the WSGI server.
 
-        :param name: The name of the WSGI service given to the loader.
+        :param name: The name of the WSGI server given to the loader.
         :param loader: Loads the WSGI application using the given name.
         :returns: None
 
@@ -341,12 +344,12 @@ class WSGIService(object):
 _launcher = None
 
 
-def serve(*services):
+def serve(*servers):
     global _launcher
     if not _launcher:
         _launcher = Launcher()
-    for x in services:
-        _launcher.launch_service(x)
+    for server in servers:
+        _launcher.launch_server(server)
 
 
 def wait():

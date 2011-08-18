@@ -42,6 +42,6 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
-    server = service.Server(binary='nova-console')
+    server = service.Service.create(binary='nova-console')
     service.serve(server)
     service.wait()
