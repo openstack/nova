@@ -26,39 +26,37 @@ from nova.api.openstack import faults
 LOG = logging.getLogger("nova.api.contrib.rescue")
 
 
+def wrap_errors(fn):
+    """"Ensure errors are not passed along."""
+    def wrapped(*args):
+        try:
+            fn(*args)
+        except Exception, e:
+            return faults.Fault(exc.HTTPInternalServerError())
+    return wrapped
+
+
 class Rescue(exts.ExtensionDescriptor):
     """The Rescue controller for the OpenStack API."""
     def __init__(self):
         super(Rescue, self).__init__()
         self.compute_api = compute.API()
 
-    def _rescue(self, input_dict, req, instance_id, exit_rescue=False):
-        """Rescue an instance.
-
-        If exit_rescue is True, rescue mode should be torn down and the
-        instance restored to its original state.
-        """
+    @wrap_errors
+    def _rescue(self, input_dict, req, instance_id):
+        """Rescue an instance."""
         context = req.environ["nova.context"]
-        action = "unrescue" if exit_rescue else "rescue"
-
-        try:
-            if action == "rescue":
-                self.compute_api.rescue(context, instance_id)
-            elif action == "unrescue":
-                self.compute_api.unrescue(context, instance_id)
-        except Exception, e:
-            LOG.exception(_("Error in %(action)s: %(e)s") % locals())
-            return faults.Fault(exc.HTTPInternalServerError())
+        self.compute_api.rescue(context, instance_id)
 
         return webob.Response(status_int=202)
 
+    @wrap_errors
     def _unrescue(self, input_dict, req, instance_id):
-        """Unrescue an instance.
+        """Rescue an instance."""
+        context = req.environ["nova.context"]
+        self.compute_api.unrescue(context, instance_id)
 
-        We pass exit_rescue=True here so _rescue() knows we would like to exit
-        rescue mode.
-        """
-        self._rescue(input_dict, req, instance_id, exit_rescue=True)
+        return webob.Response(status_int=202)
 
     def get_name(self):
         return "Rescue"
