@@ -34,6 +34,23 @@ LOG = logging.getLogger('nova.api.openstack')
 FLAGS = flags.FLAGS
 
 
+class NoAuthMiddleware(wsgi.Middleware):
+    """Return a fake token if one isn't specified."""
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        if 'X-Auth-Token' in req.headers:
+            return self.application
+        logging.debug("Got no auth token, returning fake info.")
+        res = webob.Response()
+        res.headers['X-Auth-Token'] = 'fake'
+        res.headers['X-Server-Management-Url'] = req.url
+        res.headers['X-Storage-Url'] = ''
+        res.headers['X-CDN-Management-Url'] = ''
+        res.content_type = 'text/plain'
+        res.status = '204'
+        return res
+
 class AuthMiddleware(wsgi.Middleware):
     """Authorize the openstack API request or return an HTTP Forbidden."""
 

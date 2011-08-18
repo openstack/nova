@@ -51,7 +51,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
                           self.api.post_server, post)
 
         # With an invalid imageRef, this throws 500.
-        server['imageRef'] = self.user.get_invalid_image()
+        server['imageRef'] = self.get_invalid_image()
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
