@@ -273,6 +273,11 @@ class DestinationHypervisorTooOld(Invalid):
                 "has been provided.")
 
 
+class DestinationDiskExists(Invalid):
+    message = _("The supplied disk path (%(path)s) already exists, "
+                "it is expected not to exist.")
+
+
 class InvalidDevicePath(Invalid):
     message = _("The supplied device path (%(path)s) is invalid.")
 
@@ -699,6 +704,10 @@ class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
 
 
+class InvalidSharedStorage(NovaException):
+    message = _("%(path)s is on shared storage: %(reason)s")
+
+
 class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
 
@@ -721,3 +730,7 @@ class CannotResizeToSameSize(NovaException):
 
 class CannotResizeToSmallerSize(NovaException):
     message = _("Resizing to a smaller size is not supported.")
+
+
+class ImageTooLarge(NovaException):
+    message = _("Image is larger than instance type allows")
