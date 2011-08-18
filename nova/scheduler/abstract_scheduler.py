@@ -62,12 +62,13 @@ class AbstractScheduler(driver.Scheduler):
         host = build_plan_item['hostname']
         base_options = request_spec['instance_properties']
         image = request_spec['image']
+        instance_type = request_spec['instance_type']
 
         # TODO(sandy): I guess someone needs to add block_device_mapping
         # support at some point? Also, OS API has no concept of security
         # groups.
         instance = compute_api.API().create_db_entry_for_new_instance(context,
-                image, base_options, None, [])
+                instance_type, image, base_options, None, [])
 
         instance_id = instance['id']
         kwargs['instance_id'] = instance_id
@@ -158,8 +159,8 @@ class AbstractScheduler(driver.Scheduler):
             self._ask_child_zone_to_create_instance(context, host_info,
                     request_spec, kwargs)
         else:
-            self._provision_resource_locally(context, host_info, request_spec,
-                    kwargs)
+            self._provision_resource_locally(context, instance_type, host_info,
+                    request_spec, kwargs)
 
     def _provision_resource(self, context, build_plan_item, instance_id,
             request_spec, kwargs):
