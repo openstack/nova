@@ -52,7 +52,7 @@ class Rescue(exts.ExtensionDescriptor):
 
     @wrap_errors
     def _unrescue(self, input_dict, req, instance_id):
-        """Rescue an instance."""
+        """Unrescue an instance."""
         context = req.environ["nova.context"]
         self.compute_api.unrescue(context, instance_id)
 
