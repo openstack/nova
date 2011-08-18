@@ -78,6 +78,9 @@ class ViewBuilder(object):
             metadata[item['key']] = str(item['value'])
         inst_dict['metadata'] = metadata
 
+        inst_dict['key_name'] = inst.get('key_name')
+        inst_dict['security_group'] = inst.get('security_group')
+
         inst_dict['hostId'] = ''
         if inst.get('host'):
             inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
