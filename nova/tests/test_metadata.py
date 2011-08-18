@@ -39,7 +39,7 @@ class MetadataTestCase(test.TestCase):
                          'key_name': None,
                          'host': 'test',
                          'launch_index': 1,
-                         'instance_type': 'm1.tiny',
+                         'instance_type': {'name': 'm1.tiny'},
                          'reservation_id': 'r-xxxxxxxx',
                          'user_data': '',
                          'image_ref': 7,

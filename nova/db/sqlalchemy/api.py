@@ -1178,6 +1178,19 @@ def instance_get_all_by_filters(context, filters):
                         return True
         return False
 
+    def _regexp_filter_by_metadata(instance, meta):
+        inst_metadata = [{node['key']: node['value']} \
+                         for node in instance['metadata']]
+        if isinstance(meta, list):
+            for node in meta:
+                if node not in inst_metadata:
+                    return False
+        elif isinstance(meta, dict):
+            for k, v in meta.iteritems():
+                if {k: v} not in inst_metadata:
+                    return False
+        return True
+
     def _regexp_filter_by_column(instance, filter_name, filter_re):
         try:
             v = getattr(instance, filter_name)
@@ -1236,7 +1249,9 @@ def instance_get_all_by_filters(context, filters):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    instances = query_prefix.all()
+    instances = query_prefix.\
+                    filter_by(deleted=can_read_deleted(context)).\
+                    all()
 
     if not instances:
         return []
@@ -1252,6 +1267,9 @@ def instance_get_all_by_filters(context, filters):
         filter_re = re.compile(str(filters[filter_name]))
         if filter_func:
             filter_l = lambda instance: filter_func(instance, filter_re)
+        elif filter_name == 'metadata':
+            filter_l = lambda instance: _regexp_filter_by_metadata(instance,
+                    filters[filter_name])
         else:
             filter_l = lambda instance: _regexp_filter_by_column(instance,
                     filter_name, filter_re)
@@ -1493,45 +1511,6 @@ def instance_remove_security_group(context, instance_id, security_group_id):
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
-
-
-@require_context
-def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.vcpus))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.memory_mb))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.local_gb))
-    if not result:
-        return 0
-    return result
 
 
 @require_context
@@ -2011,6 +1990,7 @@ def quota_get(context, project_id, resource, session=None):
 
 @require_context
 def quota_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
     session = get_session()
     result = {'project_id': project_id}
     rows = session.query(models.Quota).\

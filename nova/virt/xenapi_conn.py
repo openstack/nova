@@ -309,12 +309,12 @@ class XenAPIConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
-    def ensure_filtering_rules_for_instance(self, instance_ref):
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         """This method is supported only libvirt."""
         return
 
     def live_migration(self, context, instance_ref, dest,
-                       post_method, recover_method):
+                       post_method, recover_method, block_migration=False):
         """This method is supported only by libvirt."""
         return
 
