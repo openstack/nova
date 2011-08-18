@@ -53,7 +53,11 @@ class Rescue(exts.ExtensionDescriptor):
         return webob.Response(status_int=202)
 
     def _unrescue(self, input_dict, req, instance_id):
-        """Unrescue an instance."""
+        """Unrescue an instance.
+
+        We pass exit_rescue=True here so _rescue() knows we would like to exit
+        rescue mode.
+        """
         self._rescue(input_dict, req, instance_id, exit_rescue=True)
 
     def get_name(self):
