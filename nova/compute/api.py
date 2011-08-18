@@ -411,12 +411,11 @@ class API(base.Base):
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " (all-at-once)") % locals())
 
-        filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
             'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
-            'filter': filter_class,
+            'filter': 'InstanceTypeFilter'
             'blob': zone_blob,
             'num_instances': num_instances,
         }
