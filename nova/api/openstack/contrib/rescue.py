@@ -31,10 +31,10 @@ class Rescue(exts.ExtensionDescriptor):
         super(Rescue, self).__init__()
         self.compute_api = compute.API()
 
-    def _rescue(self, input_dict, req, instance_id):
-        """Enable or disable rescue mode."""
+    def _rescue(self, input_dict, req, instance_id, exit_rescue=False):
+        """Rescue an instance."""
         context = req.environ["nova.context"]
-        action = input_dict["rescue"]["action"]
+        action = "unrescue" if exit_rescue else "rescue"
 
         try:
             if action == "rescue":
@@ -46,6 +46,10 @@ class Rescue(exts.ExtensionDescriptor):
             return faults.Fault(exc.HTTPBadRequest())
 
         return webob.Response(status_int=202)
+
+    def _unrescue(self, input_dict, req, instance_id):
+        """Unrescue an instance."""
+        self._rescue(input_dict, req, instance_id, exit_rescue=True)
 
     def get_name(self):
         return "Rescue"
@@ -66,7 +70,7 @@ class Rescue(exts.ExtensionDescriptor):
         """Return the actions the extension adds, as required by contract."""
         actions = [
                 exts.ActionExtension("servers", "rescue", self._rescue),
-                exts.ActionExtension("servers", "unrescue", self._rescue),
+                exts.ActionExtension("servers", "unrescue", self._unrescue),
         ]
 
         return actions
