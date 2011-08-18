@@ -77,6 +77,9 @@ class FakeZoneManager(zone_manager.ZoneManager):
             'host3': {
                 'compute': {'host_memory_free': 3221225472},
             },
+            'host4': {
+                'compute': {'host_memory_free': 999999999},
+            },
         }
 
 
