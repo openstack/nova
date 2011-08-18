@@ -44,7 +44,7 @@ class LibvirtBridgeDriver(VIFDriver):
         gateway6 = mapping.get('gateway6')
         mac_id = mapping['mac'].replace(':', '')
 
-        if FLAGS.allow_project_net_traffic:
+        if FLAGS.allow_same_net_traffic:
             template = "<parameter name=\"%s\"value=\"%s\" />\n"
             net, mask = netutils.get_net_and_mask(network['cidr'])
             values = [("PROJNET", net), ("PROJMASK", mask)]
@@ -80,12 +80,14 @@ class LibvirtBridgeDriver(VIFDriver):
                 LOG.debug(_('Ensuring vlan %(vlan)s and bridge %(bridge)s'),
                           {'vlan': network['vlan'],
                            'bridge': network['bridge']})
-                linux_net.ensure_vlan_bridge(network['vlan'],
+                linux_net.LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
+                                             network['vlan'],
                                              network['bridge'],
                                              network['bridge_interface'])
             else:
                 LOG.debug(_("Ensuring bridge %s"), network['bridge'])
-                linux_net.ensure_bridge(network['bridge'],
+                linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(
+                                        network['bridge'],
                                         network['bridge_interface'])
 
         return self._get_configurations(network, mapping)

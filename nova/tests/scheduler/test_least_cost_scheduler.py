@@ -15,10 +15,11 @@
 """
 Tests For Least Cost Scheduler
 """
+import copy
 
 from nova import test
 from nova.scheduler import least_cost
-from nova.tests.scheduler import test_zone_aware_scheduler
+from nova.tests.scheduler import test_abstract_scheduler
 
 MB = 1024 * 1024
 
@@ -70,7 +71,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
 
         zone_manager = FakeZoneManager()
 
-        states = test_zone_aware_scheduler.fake_zone_manager_service_states(
+        states = test_abstract_scheduler.fake_zone_manager_service_states(
             num_hosts=10)
         zone_manager.service_states = states
 
@@ -81,7 +82,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
         super(LeastCostSchedulerTestCase, self).tearDown()
 
     def assertWeights(self, expected, num, request_spec, hosts):
-        weighted = self.sched.weigh_hosts(num, request_spec, hosts)
+        weighted = self.sched.weigh_hosts("compute", request_spec, hosts)
         self.assertDictListMatch(weighted, expected, approx_equal=True)
 
     def test_no_hosts(self):
@@ -122,19 +123,24 @@ class LeastCostSchedulerTestCase(test.TestCase):
         self.flags(least_cost_scheduler_cost_functions=[
                 'nova.scheduler.least_cost.compute_fill_first_cost_fn'],
                 compute_fill_first_cost_fn_weight=1)
-
         num = 1
         instance_type = {'memory_mb': 1024}
         request_spec = {'instance_type': instance_type}
-        hosts = self.sched.filter_hosts('compute', request_spec, None)
+        svc_states = self.sched.zone_manager.service_states.iteritems()
+        all_hosts = [(host, services["compute"])
+                for host, services in svc_states
+                if "compute" in services]
+        hosts = self.sched.filter_hosts('compute', request_spec, all_hosts)
 
         expected = []
-        for idx, (hostname, caps) in enumerate(hosts):
+        for idx, (hostname, services) in enumerate(hosts):
+            caps = copy.deepcopy(services["compute"])
             # Costs are normalized so over 10 hosts, each host with increasing
             # free ram will cost 1/N more. Since the lowest cost host has some
             # free ram, we add in the 1/N for the base_cost
             weight = 0.1 + (0.1 * idx)
-            weight_dict = dict(weight=weight, hostname=hostname)
-            expected.append(weight_dict)
+            wtd_dict = dict(hostname=hostname, weight=weight,
+                    capabilities=caps)
+            expected.append(wtd_dict)
 
         self.assertWeights(expected, num, request_spec, hosts)
