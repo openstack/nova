@@ -241,11 +241,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _setup_block_device_mapping(self, context, instance_id):
         """setup volumes for block device mapping"""
-        self.db.instance_set_state(context,
-                                   instance_id,
-                                   power_state.NOSTATE,
-                                   'block_device_mapping')
-
         volume_api = volume.API()
         block_device_mapping = []
         swap = None
@@ -472,8 +467,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         for volume in volumes:
             self._detach_volume(context, instance_id, volume['id'], False)
 
-        if (instance['state'] == power_state.SHUTOFF and
-            instance['state_description'] != 'stopped'):
+        if instance['power_state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
                                     ' instance: %s') % instance_id)
@@ -532,16 +526,22 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              power_state=current_power_state,
                               vm_state=vm_state.REBUILD,
-                              task_state=task_state.SPAWN)
+                              task_state=task_state.BLOCK_DEVICE_MAPPING)
+
+        bd_mapping = self._setup_block_device_mapping(context, instance_id)
 
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
         instance_ref.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
-                                                              instance_ref)
-        bd_mapping = self._setup_block_device_mapping(context, instance_id)
+                                                             instance_ref)
+
+        self._instance_update(context,
+                              instance_id,
+                              vm_state=vm_state.REBUILD,
+                              task_state=task_state.SPAWN)
+
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
 
         current_power_state = self._get_power_state(context, instance_ref)
@@ -709,7 +709,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         for i in xrange(max_tries):
             instance_ref = self.db.instance_get(context, instance_id)
             instance_id = instance_ref["id"]
-            instance_state = instance_ref["state"]
+            instance_state = instance_ref["power_state"]
             expected_state = power_state.RUNNING
 
             if instance_state != expected_state:
@@ -744,7 +744,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         instance_id = instance_ref['id']
-        instance_state = instance_ref['state']
+        instance_state = instance_ref['power_state']
         expected_state = power_state.RUNNING
         if instance_state != expected_state:
             LOG.warn(_('trying to inject a file into a non-running '
@@ -762,7 +762,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         instance_id = instance_ref['id']
-        instance_state = instance_ref['state']
+        instance_state = instance_ref['power_state']
         expected_state = power_state.RUNNING
         if instance_state != expected_state:
             LOG.warn(_('trying to update agent on a non-running '
@@ -1092,7 +1092,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get(context, instance_id)
-        if instance_ref["state"] == power_state.RUNNING:
+        if instance_ref["power_state"] == power_state.RUNNING:
             LOG.audit(_("instance %s: retrieving diagnostics"), instance_id,
                       context=context)
             return self.driver.get_diagnostics(instance_ref)
@@ -1682,6 +1682,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         vm_instances = self.driver.list_instances_detail()
+        vm_instances = dict((vm.name, vm) for vm in vm_instances)
         db_instances = self.db.instance_get_all_by_host(context, self.host)
 
         num_vm_instances = len(vm_instances)

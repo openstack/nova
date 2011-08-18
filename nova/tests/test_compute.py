@@ -23,6 +23,7 @@ from nova import compute
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
+from nova.compute import vm_state
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -747,8 +748,8 @@ class ComputeTestCase(test.TestCase):
                                      'block_migration': False,
                                      'disk': None}}).\
                             AndRaise(rpc.RemoteError('', '', ''))
-        dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
-                                                'state': power_state.RUNNING,
+        dbmock.instance_update(c, i_ref['id'], {'vm_state': vm_state.ACTIVE,
+                                                'task_state': None,
                                                 'host': i_ref['host']})
         for v in i_ref['volumes']:
             dbmock.volume_update(c, v['id'], {'status': 'in-use'})
@@ -779,8 +780,8 @@ class ComputeTestCase(test.TestCase):
                                      'block_migration': False,
                                      'disk': None}}).\
                             AndRaise(rpc.RemoteError('', '', ''))
-        dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
-                                                'state': power_state.RUNNING,
+        dbmock.instance_update(c, i_ref['id'], {'vm_state': vm_state.ACTIVE,
+                                                'task_state': None,
                                                 'host': i_ref['host']})
 
         self.compute.db = dbmock
@@ -825,8 +826,8 @@ class ComputeTestCase(test.TestCase):
         c = context.get_admin_context()
         instance_id = self._create_instance()
         i_ref = db.instance_get(c, instance_id)
-        db.instance_update(c, i_ref['id'], {'state_description': 'migrating',
-                                            'state': power_state.PAUSED})
+        db.instance_update(c, i_ref['id'], {'vm_state': vm_state.MIGRATE,
+                                            'power_state': power_state.PAUSED})
         v_ref = db.volume_create(c, {'size': 1, 'instance_id': instance_id})
         fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',
                                           'instance_id': instance_id})
@@ -887,7 +888,7 @@ class ComputeTestCase(test.TestCase):
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After force-killing instances: %s"), instances)
         self.assertEqual(len(instances), 1)
-        self.assertEqual(power_state.SHUTOFF, instances[0]['state'])
+        self.assertEqual(power_state.NOSTATE, instances[0]['power_state'])
 
     def test_get_all_by_name_regexp(self):
         """Test searching instances by name (display_name)"""
@@ -1307,25 +1308,25 @@ class ComputeTestCase(test.TestCase):
         """Test searching instances by state"""
 
         c = context.get_admin_context()
-        instance_id1 = self._create_instance({'state': power_state.SHUTDOWN})
+        instance_id1 = self._create_instance({'power_state': power_state.SHUTDOWN})
         instance_id2 = self._create_instance({
                 'id': 2,
-                'state': power_state.RUNNING})
+                'power_state': power_state.RUNNING})
         instance_id3 = self._create_instance({
                 'id': 10,
-                'state': power_state.RUNNING})
+                'power_state': power_state.RUNNING})
 
         instances = self.compute_api.get_all(c,
-                search_opts={'state': power_state.SUSPENDED})
+                search_opts={'power_state': power_state.SUSPENDED})
         self.assertEqual(len(instances), 0)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'state': power_state.SHUTDOWN})
+                search_opts={'power_state': power_state.SHUTDOWN})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0].id, instance_id1)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'state': power_state.RUNNING})
+                search_opts={'power_state': power_state.RUNNING})
         self.assertEqual(len(instances), 2)
         instance_ids = [instance.id for instance in instances]
         self.assertTrue(instance_id2 in instance_ids)
@@ -1333,7 +1334,7 @@ class ComputeTestCase(test.TestCase):
 
         # Test passing a list as search arg
         instances = self.compute_api.get_all(c,
-                search_opts={'state': [power_state.SHUTDOWN,
+                search_opts={'power_state': [power_state.SHUTDOWN,
                         power_state.RUNNING]})
         self.assertEqual(len(instances), 3)
 

@@ -30,6 +30,8 @@ from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
+from nova.compute import task_state
+from nova.compute import vm_state
 from nova.api.ec2 import ec2utils
 
 
@@ -104,10 +106,8 @@ class Scheduler(object):
                                           dest, block_migration)
 
         # Changing instance_state.
-        db.instance_set_state(context,
-                              instance_id,
-                              power_state.PAUSED,
-                              'migrating')
+        values = {"vm_state": vm_state.MIGRATE}
+        db.instance_update(context, instance_id, values)
 
         # Changing volume state
         for volume_ref in instance_ref['volumes']:
@@ -129,8 +129,7 @@ class Scheduler(object):
         """
 
         # Checking instance is running.
-        if (power_state.RUNNING != instance_ref['state'] or \
-           'running' != instance_ref['state_description']):
+        if instance_ref['power_state'] != power_state.RUNNING:
             instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
             raise exception.InstanceNotRunning(instance_id=instance_id)
 

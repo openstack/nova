@@ -1079,8 +1079,8 @@ def instance_stop(context, instance_id):
         session.query(models.Instance).\
                 filter_by(id=instance_id).\
                 update({'host': None,
-                        'state': power_state.SHUTOFF,
-                        'state_description': 'stopped',
+                        'vm_state': vm_state.STOP,
+                        'task_state': None,
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(instance_id=instance_id).\
