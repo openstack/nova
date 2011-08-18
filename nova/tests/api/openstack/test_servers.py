@@ -335,6 +335,8 @@ class ServersTest(test.TestCase):
                 "name": "server1",
                 "status": "BUILD",
                 "hostId": '',
+                "key_name": '',
+                "security_group": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -497,6 +499,8 @@ class ServersTest(test.TestCase):
                 "name": "server1",
                 "status": "ACTIVE",
                 "hostId": '',
+                "key_name": '',
+                "security_group": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -588,6 +592,8 @@ class ServersTest(test.TestCase):
                 "name": "server1",
                 "status": "ACTIVE",
                 "hostId": '',
+                "key_name": '',
+                "security_group": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -3094,6 +3100,8 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "name": "test_server",
                 "status": "BUILD",
                 "hostId": '',
+                "key_name": '',
+                "security_group": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3145,6 +3153,8 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "name": "test_server",
                 "status": "ACTIVE",
                 "hostId": '',
+                "key_name": '',
+                "security_group": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3200,6 +3210,8 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "name": "test_server",
                 "status": "BUILD",
                 "hostId": '',
+                "key_name": '',
+                "security_group": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3265,6 +3277,8 @@ class ServerXMLSerializationTest(test.TestCase):
                 "name": "test_server",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
+                "key_name": '',
+                "security_group": '',
                 "image": {
                     "id": "5",
                     "links": [
