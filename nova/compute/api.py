@@ -423,7 +423,6 @@ class API(base.Base):
             'num_instances': num_instances,
         }
 
-        print base_options
         rpc.cast(context,
                  FLAGS.scheduler_topic,
                  {"method": "run_instance",

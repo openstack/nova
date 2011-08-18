@@ -2580,14 +2580,14 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
         name="new-server-test"
         imageRef="1"
         flavorRef="2"
-        accessIPv6="fead:::::1234"/>"""
+        accessIPv6="fead::1234"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "2",
-                "accessIPv6": "fead:::::1234",
+                "accessIPv6": "fead::1234",
             },
         }
         self.assertEquals(request['body'], expected)
@@ -2599,7 +2599,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
         imageRef="1"
         flavorRef="2"
         accessIPv4="1.2.3.4"
-        accessIPv6="fead:::::1234"/>"""
+        accessIPv6="fead::1234"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
@@ -2607,7 +2607,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "imageRef": "1",
                 "flavorRef": "2",
                 "accessIPv4": "1.2.3.4",
-                "accessIPv6": "fead:::::1234",
+                "accessIPv6": "fead::1234",
             },
         }
         self.assertEquals(request['body'], expected)
@@ -3161,7 +3161,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             "locked": False,
             "metadata": [],
             "accessIPv4": "1.2.3.4",
-            "accessIPv6": "fead::::1234",
+            "accessIPv6": "fead::1234",
             #"address": ,
             #"floating_ips": [{"address":ip} for ip in public_addresses]}
             "uuid": "deadbeef-feed-edee-beef-d0ea7beefedd"}
