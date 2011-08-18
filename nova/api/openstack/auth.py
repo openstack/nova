@@ -51,6 +51,7 @@ class NoAuthMiddleware(wsgi.Middleware):
         res.status = '204'
         return res
 
+
 class AuthMiddleware(wsgi.Middleware):
     """Authorize the openstack API request or return an HTTP Forbidden."""
 
