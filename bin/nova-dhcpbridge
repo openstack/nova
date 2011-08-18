@@ -99,8 +99,6 @@ def main():
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
     logging.setup()
-    # check ENV first so we don't break any older deploys
-    network_id = int(os.environ.get('NETWORK_ID'))
 
     if int(os.environ.get('TESTING', '0')):
         from nova.tests import fake_flags
@@ -115,11 +113,11 @@ def main():
     if action in ['add', 'del', 'old']:
         mac = argv[2]
         ip = argv[3]
-        msg = _("Called %(action)s for mac %(mac)s with ip %(ip)s"
-                " for network %(network_id)s") % locals()
+        msg = _("Called %(action)s for mac %(mac)s with ip %(ip)s") % locals()
         LOG.debug(msg)
         globals()[action + '_lease'](mac, ip)
     else:
+        network_id = int(os.environ.get('NETWORK_ID'))
         print init_leases(network_id)
 
 if __name__ == "__main__":
