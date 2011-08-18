@@ -230,7 +230,7 @@ class ImageMetaDataTest(test.TestCase):
         req.body = json_string
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, res.status_int)
+        self.assertEqual(413, res.status_int)
 
     def test_too_many_metadata_items_on_put(self):
         req = webob.Request.blank('/v1.1/fake/images/3/metadata/blah')
@@ -238,4 +238,4 @@ class ImageMetaDataTest(test.TestCase):
         req.body = '{"meta": {"blah": "blah"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, res.status_int)
+        self.assertEqual(413, res.status_int)

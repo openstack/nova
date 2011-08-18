@@ -417,9 +417,9 @@ class ServerMetaDataTest(test.TestCase):
         req.body = json_string
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, res.status_int)
+        self.assertEqual(413, res.status_int)
 
-    def test_to_many_metadata_items_on_update_item(self):
+    def test_too_many_metadata_items_on_update_item(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_update',
                        return_create_instance_metadata_max)
         req = webob.Request.blank('/v1.1/fake/servers/1/metadata/key1')

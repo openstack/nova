@@ -76,3 +76,20 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(instance['id'], result['id'])
         self.assertEqual(result['fixed_ips'][0]['floating_ips'][0].address,
                          '1.2.1.2')
+
+    def test_instance_get_all_by_filters(self):
+        args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
+        inst1 = db.instance_create(self.context, args)
+        inst2 = db.instance_create(self.context, args)
+        result = db.instance_get_all_by_filters(self.context, {})
+        self.assertTrue(2, len(result))
+
+    def test_instance_get_all_by_filters_deleted(self):
+        args1 = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
+        inst1 = db.instance_create(self.context, args1)
+        args2 = {'reservation_id': 'b', 'image_ref': 1, 'host': 'host1'}
+        inst2 = db.instance_create(self.context, args2)
+        db.instance_destroy(self.context, inst1.id)
+        result = db.instance_get_all_by_filters(self.context.elevated(), {})
+        self.assertEqual(1, len(result))
+        self.assertEqual(result[0].id, inst2.id)
