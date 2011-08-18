@@ -1068,14 +1068,20 @@ class API(base.Base):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
 
+    def _make_compute_call_for_host(self context, host, params):
+        """Call method deliberately designed to make host/service only calls"""
+        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        kwargs = {'method': method, 'args': params}
+        return rpc.call(context, queue, kwargs)
+
     def set_host_enabled(self, context, host, enabled):
         """Sets the specified host's ability to accept new instances."""
-        return self._call_compute_message("set_host_enabled", context,
+        return self._make_compute_call_for_host("set_host_enabled", context,
                 host=host, params={"enabled": enabled})
 
     def host_power_action(self, context, host, action):
         """Reboots, shuts down or powers up the host."""
-        return self._call_compute_message("host_power_action", context,
+        return self._make_compute_call_for_host("host_power_action", context,
                 host=host, params={"action": action})
 
     @scheduler_api.reroute_compute("diagnostics")
