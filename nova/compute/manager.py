@@ -392,7 +392,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         updates = {}
         updates['host'] = self.host
         updates['launched_on'] = self.host
-        # NOTE(vish): used by virt but not in database
         instance = self.db.instance_update(context,
                                            instance_id,
                                            updates)
