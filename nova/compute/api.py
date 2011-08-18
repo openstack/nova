@@ -153,7 +153,7 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, access_ip_v4=None, access_ip_v6=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -247,6 +247,8 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'metadata': metadata,
+            'access_ip_v4': access_ip_v4,
+            'access_ip_v6': access_ip_v6,
             'availability_zone': availability_zone,
             'os_type': os_type,
             'architecture': architecture,
@@ -421,6 +423,7 @@ class API(base.Base):
             'num_instances': num_instances,
         }
 
+        print base_options
         rpc.cast(context,
                  FLAGS.scheduler_topic,
                  {"method": "run_instance",
@@ -438,7 +441,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
@@ -454,7 +458,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, access_ip_v4, access_ip_v6)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
@@ -472,7 +476,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -496,7 +501,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, access_ip_v4, access_ip_v6)
 
         block_device_mapping = block_device_mapping or []
         instances = []

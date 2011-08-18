@@ -157,6 +157,8 @@ class CreateInstanceHelper(object):
                                   key_name=key_name,
                                   key_data=key_data,
                                   metadata=server_dict.get('metadata', {}),
+                                  access_ip_v4=server_dict.get('accessIPv4'),
+                                  access_ip_v6=server_dict.get('accessIPv6'),
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,

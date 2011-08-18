@@ -1379,6 +1379,8 @@ class ServersTest(test.TestCase):
                     'display_name': 'server_test',
                     'uuid': FAKE_UUID,
                     'instance_type': dict(inst_type),
+                    'access_ip_v4': '1.2.3.4',
+                    'access_ip_v6': 'fead::1234',
                     'image_ref': image_ref,
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                     "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
@@ -1578,6 +1580,69 @@ class ServersTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_with_access_ip_v1_1(self):
+        self._setup_for_create_instance()
+
+        # proper local hrefs must start with 'http://localhost/v1.1/'
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/flavors/3'
+        access_ipv4 = '1.2.3.4'
+        access_ipv6 = 'fead::1234'
+        expected_flavor = {
+            "id": "3",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/flavors/3',
+                },
+            ],
+        }
+        expected_image = {
+            "id": "2",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/images/2',
+                },
+            ],
+        }
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 202)
+        server = json.loads(res.body)['server']
+        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(1, server['id'])
+        self.assertEqual(0, server['progress'])
+        self.assertEqual('server_test', server['name'])
+        self.assertEqual(expected_flavor, server['flavor'])
+        self.assertEqual(expected_image, server['image'])
+        self.assertEqual(access_ipv4, server['accessIPv4'])
 
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
@@ -3095,6 +3160,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "display_description": "",
             "locked": False,
             "metadata": [],
+            "accessIPv4": "1.2.3.4",
+            "accessIPv6": "fead::::1234",
             #"address": ,
             #"floating_ips": [{"address":ip} for ip in public_addresses]}
             "uuid": "deadbeef-feed-edee-beef-d0ea7beefedd"}
@@ -3221,6 +3288,112 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, True)
+        self.assertDictMatch(output, expected_server)
+
+    def test_build_server_detail_with_accessipv4(self):
+
+        self.instance['access_ip_v4'] = '1.2.3.4'
+
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": self.instance['uuid'],
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": '',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                    "links": [
+                                              {
+                            "rel": "bookmark",
+                            "href": flavor_bookmark,
+                        },
+                    ],
+                },
+                "addresses": {},
+                "metadata": {},
+                "accessIPv4": "1.2.3.4",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/servers/1",
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.build(self.instance, True)
+        self.assertDictMatch(output, expected_server)
+
+    def test_build_server_detail_with_accessipv6(self):
+
+        self.instance['access_ip_v6'] = 'fead::1234'
+
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": self.instance['uuid'],
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": '',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                    "links": [
+                                              {
+                            "rel": "bookmark",
+                            "href": flavor_bookmark,
+                        },
+                    ],
+                },
+                "addresses": {},
+                "metadata": {},
+                "accessIPv6": "fead::1234",
                 "links": [
                     {
                         "rel": "self",
