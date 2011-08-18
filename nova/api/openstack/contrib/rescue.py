@@ -22,17 +22,22 @@ from nova import log as logging
 from nova.api.openstack import extensions as exts
 from nova.api.openstack import faults
 
+
 LOG = logging.getLogger("nova.api.contrib.rescue")
 
 
 class Rescue(exts.ExtensionDescriptor):
-    """The Rescue API controller for the OpenStack API."""
+    """The Rescue controller for the OpenStack API."""
     def __init__(self):
         super(Rescue, self).__init__()
         self.compute_api = compute.API()
 
     def _rescue(self, input_dict, req, instance_id, exit_rescue=False):
-        """Rescue an instance."""
+        """Rescue an instance.
+
+        If exit_rescue is True, rescue mode should be torn down and the
+        instance restored to its original state.
+        """
         context = req.environ["nova.context"]
         action = "unrescue" if exit_rescue else "rescue"
 
