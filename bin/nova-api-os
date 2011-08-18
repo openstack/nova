@@ -17,11 +17,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Starter script for Nova API.
-
-Starts both the EC2 and OpenStack APIs in separate greenthreads.
-
-"""
+"""Starter script for Nova OS API."""
 
 import eventlet
 eventlet.monkey_patch()
