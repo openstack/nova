@@ -163,7 +163,7 @@ class Controller(object):
 
     @scheduler_api.redirect_handler
     def update(self, req, id, body):
-        """Update server name then pass on to version-specific controller"""
+        """Update server then pass on to version-specific controller"""
         if len(req.body) == 0:
             raise exc.HTTPUnprocessableEntity()
 
@@ -177,6 +177,14 @@ class Controller(object):
             name = body['server']['name']
             self.helper._validate_server_name(name)
             update_dict['display_name'] = name.strip()
+
+        if 'accessIPv4' in body['server']:
+            access_ipv4 = body['server']['accessIPv4']
+            update_dict['access_ip_v4'] = access_ipv4.strip()
+
+        if 'accessIPv6' in body['server']:
+            access_ipv6 = body['server']['accessIPv6']
+            update_dict['access_ip_v6'] = access_ipv6.strip()
 
         try:
             self.compute_api.update(ctxt, id, **update_dict)

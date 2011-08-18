@@ -145,7 +145,8 @@ def instance_addresses(context, instance_id):
 def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
                   public_addresses=None, host=None, power_state=0,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
-                  flavor_id="1", interfaces=None, name=None):
+                  flavor_id="1", interfaces=None, name=None,
+                  access_ipv4=None, access_ipv6=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -197,6 +198,8 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "display_description": "",
         "locked": False,
         "metadata": metadata,
+        "access_ip_v4": access_ipv4,
+        "access_ip_v6": access_ipv6,
         "uuid": uuid,
         "virtual_interfaces": interfaces}
 
@@ -1944,6 +1947,28 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_update_server_all_attributes_v1_1(self):
+        self.stubs.Set(nova.db.api, 'instance_get',
+                return_server_with_attributes(name='server_test',
+                                              access_ipv4='0.0.0.0',
+                                              access_ipv6='beef::0123'))
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        body = {'server': {
+                  'name': 'server_test',
+                  'accessIPv4': '0.0.0.0',
+                  'accessIPv6': 'beef::0123',
+               }}
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['name'], 'server_test')
+        self.assertEqual(res_dict['server']['accessIPv4'], '0.0.0.0')
+        self.assertEqual(res_dict['server']['accessIPv6'], 'beef::0123')
+
     def test_update_server_name_v1_1(self):
         self.stubs.Set(nova.db.api, 'instance_get',
                 return_server_with_attributes(name='server_test'))
@@ -1956,6 +1981,32 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server_test')
+
+    def test_update_server_access_ipv4_v1_1(self):
+        self.stubs.Set(nova.db.api, 'instance_get',
+                return_server_with_attributes(access_ipv4='0.0.0.0'))
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        req.body = json.dumps({'server': {'accessIPv4': '0.0.0.0'}})
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['accessIPv4'], '0.0.0.0')
+
+    def test_update_server_access_ipv6_v1_1(self):
+        self.stubs.Set(nova.db.api, 'instance_get',
+                return_server_with_attributes(access_ipv6='beef::0123'))
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        req.body = json.dumps({'server': {'accessIPv6': 'beef::0123'}})
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['accessIPv6'], 'beef::0123')
 
     def test_update_server_adminPass_ignored_v1_1(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
