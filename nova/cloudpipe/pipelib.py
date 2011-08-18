@@ -93,11 +93,10 @@ class CloudPipe(object):
         zippy.close()
         return encoded
 
-    def launch_vpn_instance(self, project_id):
+    def launch_vpn_instance(self, project_id, user_id):
         LOG.debug(_("Launching VPN for %s") % (project_id))
-        project = self.manager.get_project(project_id)
-        ctxt = context.RequestContext(user=project.project_manager_id,
-                                      project=project.id)
+        ctxt = context.RequestContext(user_id=user_id,
+                                      project_id=project_id)
         key_name = self.setup_key_pair(ctxt)
         group_name = self.setup_security_group(ctxt)
 
