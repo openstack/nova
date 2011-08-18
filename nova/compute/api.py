@@ -1068,10 +1068,10 @@ class API(base.Base):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
 
-    def _make_compute_call_for_host(self, context, host, params):
+    def _make_compute_call_for_host(self, action, context, host, params):
         """Call method deliberately designed to make host/service only calls"""
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        kwargs = {'method': method, 'args': params}
+        kwargs = {'method': action, 'args': params}
         return rpc.call(context, queue, kwargs)
 
     def set_host_enabled(self, context, host, enabled):
