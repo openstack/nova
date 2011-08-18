@@ -837,6 +837,10 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         node.setAttribute('created', str(server['created']))
         node.setAttribute('updated', str(server['updated']))
         node.setAttribute('status', server['status'])
+        if 'accessIPv4' in server:
+            node.setAttribute('accessIPv4', str(server['accessIPv4']))
+        if 'accessIPv6' in server:
+            node.setAttribute('accessIPv6', str(server['accessIPv6']))
         if 'progress' in server:
             node.setAttribute('progress', str(server['progress']))
 

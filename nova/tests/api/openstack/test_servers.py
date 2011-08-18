@@ -3494,6 +3494,8 @@ class ServerXMLSerializationTest(test.TestCase):
                 "name": "test_server",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
+                "accessIPv4": "1.2.3.4",
+                "accessIPv6": "fead::1234",
                 "image": {
                     "id": "5",
                     "links": [
@@ -3570,6 +3572,8 @@ class ServerXMLSerializationTest(test.TestCase):
                 created="%(expected_now)s"
                 hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
                 status="BUILD"
+                accessIPv4="1.2.3.4"
+                accessIPv6="fead::1234"
                 progress="0">
             <atom:link href="%(expected_server_href)s" rel="self"/>
             <atom:link href="%(expected_server_bookmark)s" rel="bookmark"/>
@@ -3614,6 +3618,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 "progress": 0,
                 "name": "test_server",
                 "status": "BUILD",
+                "accessIPv6": "fead::1234",
                 "hostId": "e4d909c290d0fb1ca068ffaddf22cbd0",
                 "adminPass": "test_password",
                 "image": {
@@ -3692,6 +3697,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 created="%(expected_now)s"
                 hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
                 status="BUILD"
+                accessIPv6="fead::1234"
                 adminPass="test_password"
                 progress="0">
             <atom:link href="%(expected_server_href)s" rel="self"/>
