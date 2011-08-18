@@ -255,7 +255,7 @@ class CommonNetworkTestCase(test.TestCase):
                 raise exception.NetworkNotFoundForCidr()
 
             def network_create_safe(self, context, net):
-                fakenet = {}
+                fakenet = dict(net)
                 fakenet['id'] = 999
                 return fakenet
 
@@ -268,6 +268,9 @@ class CommonNetworkTestCase(test.TestCase):
 
         def deallocate_fixed_ip(self, context, address):
             self.deallocate_called = address
+
+        def _create_fixed_ips(self, context, network_id):
+            pass
 
     def fake_create_fixed_ips(self, context, network_id):
         return None
@@ -286,16 +289,20 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_validate_cidrs(self):
         manager = self.FakeNetworkManager()
-        nets = manager._validate_cidrs(None, '192.168.0.0/24', 1, 256)
+        nets = manager.create_networks(None, 'fake', '192.168.0.0/24',
+                                       False, 1, 256, None, None, None,
+                                       None)
         self.assertEqual(1, len(nets))
-        cidrs = [str(net) for net in nets]
+        cidrs = [str(net['cidr']) for net in nets]
         self.assertTrue('192.168.0.0/24' in cidrs)
 
     def test_validate_cidrs_split_exact_in_half(self):
         manager = self.FakeNetworkManager()
-        nets = manager._validate_cidrs(None, '192.168.0.0/24', 2, 128)
+        nets = manager.create_networks(None, 'fake', '192.168.0.0/24',
+                                       False, 2, 128, None, None, None,
+                                       None)
         self.assertEqual(2, len(nets))
-        cidrs = [str(net) for net in nets]
+        cidrs = [str(net['cidr']) for net in nets]
         self.assertTrue('192.168.0.0/25' in cidrs)
         self.assertTrue('192.168.0.128/25' in cidrs)
 
@@ -306,9 +313,11 @@ class CommonNetworkTestCase(test.TestCase):
         manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
                                      'cidr': '192.168.2.0/24'}])
         self.mox.ReplayAll()
-        nets = manager._validate_cidrs(None, '192.168.0.0/16', 4, 256)
+        nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
+                                       False, 4, 256, None, None, None,
+                                       None)
         self.assertEqual(4, len(nets))
-        cidrs = [str(net) for net in nets]
+        cidrs = [str(net['cidr']) for net in nets]
         exp_cidrs = ['192.168.0.0/24', '192.168.1.0/24', '192.168.3.0/24',
                      '192.168.4.0/24']
         for exp_cidr in exp_cidrs:
@@ -324,8 +333,9 @@ class CommonNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
         # ValueError: requested cidr (192.168.2.0/24) conflicts with
         #             existing smaller cidr
-        args = [None, '192.168.2.0/24', 1, 256]
-        self.assertRaises(ValueError, manager._validate_cidrs, *args)
+        args = (None, 'fake', '192.168.2.0/24', False, 1, 256, None, None,
+                None, None)
+        self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_split_smaller_cidr_in_use(self):
         manager = self.FakeNetworkManager()
@@ -334,9 +344,10 @@ class CommonNetworkTestCase(test.TestCase):
         manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
                                      'cidr': '192.168.2.0/25'}])
         self.mox.ReplayAll()
-        nets = manager._validate_cidrs(None, '192.168.0.0/16', 4, 256)
+        nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
+                                       False, 4, 256, None, None, None, None)
         self.assertEqual(4, len(nets))
-        cidrs = [str(net) for net in nets]
+        cidrs = [str(net['cidr']) for net in nets]
         exp_cidrs = ['192.168.0.0/24', '192.168.1.0/24', '192.168.3.0/24',
                      '192.168.4.0/24']
         for exp_cidr in exp_cidrs:
@@ -350,9 +361,10 @@ class CommonNetworkTestCase(test.TestCase):
         manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
                                      'cidr': '192.168.2.9/29'}])
         self.mox.ReplayAll()
-        nets = manager._validate_cidrs(None, '192.168.2.0/24', 3, 32)
+        nets = manager.create_networks(None, 'fake', '192.168.2.0/24',
+                                       False, 3, 32, None, None, None, None)
         self.assertEqual(3, len(nets))
-        cidrs = [str(net) for net in nets]
+        cidrs = [str(net['cidr']) for net in nets]
         exp_cidrs = ['192.168.2.32/27', '192.168.2.64/27', '192.168.2.96/27']
         for exp_cidr in exp_cidrs:
             self.assertTrue(exp_cidr in cidrs)
@@ -367,17 +379,19 @@ class CommonNetworkTestCase(test.TestCase):
                   {'id': 3, 'cidr': '192.168.2.128/26'}]
         manager.db.network_get_all(ctxt).AndReturn(in_use)
         self.mox.ReplayAll()
-        args = [None, '192.168.2.0/24', 3, 64]
+        args = (None, 'fake', '192.168.2.0/24', False, 3, 64, None, None,
+                None, None)
         # ValueError: Not enough subnets avail to satisfy requested num_
         #             networks - some subnets in requested range already
         #             in use
-        self.assertRaises(ValueError, manager._validate_cidrs, *args)
+        self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_one_in_use(self):
         manager = self.FakeNetworkManager()
-        args = [None, '192.168.0.0/24', 2, 256]
+        args = (None, 'fake', '192.168.0.0/24', False, 2, 256, None, None,
+                None, None)
         # ValueError: network_size * num_networks exceeds cidr size
-        self.assertRaises(ValueError, manager._validate_cidrs, *args)
+        self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_already_used(self):
         manager = self.FakeNetworkManager()
@@ -387,20 +401,23 @@ class CommonNetworkTestCase(test.TestCase):
                                      'cidr': '192.168.0.0/24'}])
         self.mox.ReplayAll()
         # ValueError: cidr already in use
-        args = [None, '192.168.0.0/24', 1, 256]
-        self.assertRaises(ValueError, manager._validate_cidrs, *args)
+        args = (None, 'fake', '192.168.0.0/24', False, 1, 256, None, None,
+                None, None)
+        self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_too_many(self):
         manager = self.FakeNetworkManager()
-        args = [None, '192.168.0.0/24', 200, 256]
+        args = (None, 'fake', '192.168.0.0/24', False, 200, 256, None, None,
+                None, None)
         # ValueError: Not enough subnets avail to satisfy requested
         #             num_networks
-        self.assertRaises(ValueError, manager._validate_cidrs, *args)
+        self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_split_partial(self):
         manager = self.FakeNetworkManager()
-        nets = manager._validate_cidrs(None, '192.168.0.0/16', 2, 256)
-        returned_cidrs = [str(net) for net in nets]
+        nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
+                                       False, 2, 256, None, None, None, None)
+        returned_cidrs = [str(net['cidr']) for net in nets]
         self.assertTrue('192.168.0.0/24' in returned_cidrs)
         self.assertTrue('192.168.1.0/24' in returned_cidrs)
 
@@ -411,10 +428,11 @@ class CommonNetworkTestCase(test.TestCase):
         fakecidr = [{'id': 1, 'cidr': '192.168.0.0/8'}]
         manager.db.network_get_all(ctxt).AndReturn(fakecidr)
         self.mox.ReplayAll()
-        args = [None, '192.168.0.0/24', 1, 256]
+        args = (None, 'fake', '192.168.0.0/24', False, 1, 256, None, None,
+                None, None)
         # ValueError: requested cidr (192.168.0.0/24) conflicts
         #             with existing supernet
-        self.assertRaises(ValueError, manager._validate_cidrs, *args)
+        self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_create_networks(self):
         cidr = '192.168.0.0/24'
@@ -424,7 +442,7 @@ class CommonNetworkTestCase(test.TestCase):
         args = [None, 'foo', cidr, None, 1, 256, 'fd00::/48', None, None,
                 None]
         result = manager.create_networks(*args)
-        self.assertEqual(manager.create_networks(*args), None)
+        self.assertTrue(manager.create_networks(*args))
 
     def test_create_networks_cidr_already_used(self):
         manager = self.FakeNetworkManager()
@@ -444,4 +462,4 @@ class CommonNetworkTestCase(test.TestCase):
                                 self.fake_create_fixed_ips)
         args = [None, 'foo', cidr, None, 10, 256, 'fd00::/48', None, None,
                 None]
-        self.assertEqual(manager.create_networks(*args), None)
+        self.assertTrue(manager.create_networks(*args))
