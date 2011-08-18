@@ -113,11 +113,19 @@ def main():
     if action in ['add', 'del', 'old']:
         mac = argv[2]
         ip = argv[3]
-        msg = _("Called %(action)s for mac %(mac)s with ip %(ip)s") % locals()
+        msg = _("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'") % \
+                    {"action": action,
+                     "mac": mac,
+                     "ip": ip}
         LOG.debug(msg)
         globals()[action + '_lease'](mac, ip)
     else:
-        network_id = int(os.environ.get('NETWORK_ID'))
+        try:
+            network_id = int(os.environ.get('NETWORK_ID'))
+        except TypeError:
+            LOG.error(_("Environment variable 'NETWORK_ID' must be set."))
+            sys.exit(1)
+
         print init_leases(network_id)
 
 if __name__ == "__main__":
