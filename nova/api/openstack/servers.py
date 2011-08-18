@@ -146,7 +146,6 @@ class Controller(object):
     def create(self, req, body):
         """ Creates a new server for a given user """
         extra_values = None
-        result = None
         extra_values, instances = self.helper.create_instance(
                 req, body, self.compute_api.create)
 
