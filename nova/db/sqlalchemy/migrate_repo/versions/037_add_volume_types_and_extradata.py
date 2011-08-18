@@ -65,7 +65,25 @@ volume_type_extra_specs_table = Table('volume_type_extra_specs', meta,
                       unicode_error=None, _warn_on_bytestring=False)))
 
 
-new_tables = (volume_types, volume_type_extra_specs_table)
+volume_metadata_table = Table('volume_metadata', meta,
+        Column('created_at', DateTime(timezone=False)),
+        Column('updated_at', DateTime(timezone=False)),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('deleted', Boolean(create_constraint=True, name=None)),
+        Column('id', Integer(), primary_key=True, nullable=False),
+        Column('volume_id',
+               Integer(),
+               ForeignKey('volumes.id'),
+               nullable=False),
+        Column('key',
+               String(length=255, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('value',
+               String(length=255, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)))
+
+
+new_tables = (volume_types, volume_type_extra_specs_table, volume_metadata_table)
 
 #
 # Tables to alter

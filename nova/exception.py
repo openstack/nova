@@ -338,6 +338,11 @@ class VolumeNotFoundForInstance(VolumeNotFound):
     message = _("Volume not found for instance %(instance_id)s.")
 
 
+class VolumeMetadataNotFound(NotFound):
+    message = _("Volume %(volume_id)s has no metadata with "
+                "key %(metadata_key)s.")
+
+
 class NoVolumeTypesFound(NotFound):
     message = _("Zero volume types found.")
 

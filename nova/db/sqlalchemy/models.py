@@ -315,6 +315,20 @@ class Volume(BASE, NovaBase):
     volume_type_id = Column(Integer)
 
 
+class VolumeMetadata(BASE, NovaBase):
+    """Represents a metadata key/value pair for a volume"""
+    __tablename__ = 'volume_metadata'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=False)
+    volume = relationship(Volume, backref="metadata",
+                            foreign_keys=volume_id,
+                            primaryjoin='and_('
+                                'VolumeMetadata.volume_id == Volume.id,'
+                                'VolumeMetadata.deleted == False)')
+
+
 class VolumeTypes(BASE, NovaBase):
     """Represent possible volume_types of volumes offered"""
     __tablename__ = "volume_types"
@@ -824,6 +838,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
+              VolumeMetadata, VolumeTypes, VolumeTypeExtraSpecs,
               AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:

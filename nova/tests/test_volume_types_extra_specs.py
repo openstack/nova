@@ -37,6 +37,8 @@ class VolumeTypeExtraSpecsTestCase(test.TestCase):
         self.vol_type1['extra_specs'] = self.vol_type1_specs
         ref = db.api.volume_type_create(self.context, self.vol_type1)
         self.volume_type1_id = ref.id
+        for k, v in self.vol_type1_specs.iteritems():
+            self.vol_type1_specs[k] = str(v)
 
         self.vol_type2_noextra = dict(name="TEST: Volume type without extra")
         ref = db.api.volume_type_create(self.context, self.vol_type2_noextra)
@@ -71,7 +73,7 @@ class VolumeTypeExtraSpecsTestCase(test.TestCase):
 
     def test_volume_type_extra_specs_update(self):
         expected_specs = self.vol_type1_specs.copy()
-        expected_specs['vol_extra3'] = 4
+        expected_specs['vol_extra3'] = "4"
         db.api.volume_type_extra_specs_update_or_create(
                               context.get_admin_context(),
                               self.volume_type1_id,
@@ -89,7 +91,7 @@ class VolumeTypeExtraSpecsTestCase(test.TestCase):
                               context.get_admin_context(),
                               self.volume_type1_id,
                               dict(vol_extra4="value4",
-                                   vol_extra5=5))
+                                   vol_extra5="value5"))
         actual_specs = db.api.volume_type_extra_specs_get(
                               context.get_admin_context(),
                               self.volume_type1_id)

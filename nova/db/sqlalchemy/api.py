@@ -132,6 +132,20 @@ def require_instance_exists(f):
     return wrapper
 
 
+def require_volume_exists(f):
+    """Decorator to require the specified volume to exist.
+
+    Requres the wrapped function to use context and volume_id as
+    their first two arguments.
+    """
+
+    def wrapper(context, volume_id, *args, **kwargs):
+        db.api.volume_get(context, volume_id)
+        return f(context, volume_id, *args, **kwargs)
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+
 ###################
 
 
@@ -2083,6 +2097,8 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 
 @require_context
 def volume_create(context, values):
+    values['metadata'] = _metadata_refs(values.get('metadata'))
+
     volume_ref = models.Volume()
     volume_ref.update(values)
 
@@ -2119,6 +2135,11 @@ def volume_destroy(context, volume_id):
         session.query(models.IscsiTarget).\
                 filter_by(volume_id=volume_id).\
                 update({'volume_id': None})
+        session.query(models.VolumeMetadata).\
+                filter_by(volume_id=volume_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_admin_context
@@ -2142,12 +2163,16 @@ def volume_get(context, volume_id, session=None):
     if is_admin_context(context):
         result = session.query(models.Volume).\
                          options(joinedload('instance')).\
+                         options(joinedload('metadata')).\
+                         options(joinedload('volume_type')).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Volume).\
                          options(joinedload('instance')).\
+                         options(joinedload('metadata')).\
+                         options(joinedload('volume_type')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=False).\
@@ -2163,6 +2188,8 @@ def volume_get_all(context):
     session = get_session()
     return session.query(models.Volume).\
                    options(joinedload('instance')).\
+                   options(joinedload('metadata')).\
+                   options(joinedload('volume_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -2172,6 +2199,8 @@ def volume_get_all_by_host(context, host):
     session = get_session()
     return session.query(models.Volume).\
                    options(joinedload('instance')).\
+                   options(joinedload('metadata')).\
+                   options(joinedload('volume_type')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -2181,6 +2210,8 @@ def volume_get_all_by_host(context, host):
 def volume_get_all_by_instance(context, instance_id):
     session = get_session()
     result = session.query(models.Volume).\
+                     options(joinedload('metadata')).\
+                     options(joinedload('volume_type')).\
                      filter_by(instance_id=instance_id).\
                      filter_by(deleted=False).\
                      all()
@@ -2196,6 +2227,8 @@ def volume_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Volume).\
                    options(joinedload('instance')).\
+                   options(joinedload('metadata')).\
+                   options(joinedload('volume_type')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -2208,6 +2241,8 @@ def volume_get_instance(context, volume_id):
                      filter_by(id=volume_id).\
                      filter_by(deleted=can_read_deleted(context)).\
                      options(joinedload('instance')).\
+                     options(joinedload('metadata')).\
+                     options(joinedload('volume_type')).\
                      first()
     if not result:
         raise exception.VolumeNotFound(volume_id=volume_id)
@@ -2242,10 +2277,115 @@ def volume_get_iscsi_target_num(context, volume_id):
 @require_context
 def volume_update(context, volume_id, values):
     session = get_session()
+    metadata = values.get('metadata')
+    if metadata is not None:
+        volume_metadata_update(context,
+                                volume_id,
+                                values.pop('metadata'),
+                                delete=True)
     with session.begin():
         volume_ref = volume_get(context, volume_id, session=session)
         volume_ref.update(values)
         volume_ref.save(session=session)
+
+
+
+####################
+
+
+@require_context
+@require_volume_exists
+def volume_metadata_get(context, volume_id):
+    session = get_session()
+
+    meta_results = session.query(models.VolumeMetadata).\
+                    filter_by(volume_id=volume_id).\
+                    filter_by(deleted=False).\
+                    all()
+
+    meta_dict = {}
+    for i in meta_results:
+        meta_dict[i['key']] = i['value']
+    return meta_dict
+
+
+@require_context
+@require_volume_exists
+def volume_metadata_delete(context, volume_id, key):
+    session = get_session()
+    session.query(models.VolumeMetadata).\
+        filter_by(volume_id=volume_id).\
+        filter_by(key=key).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': utils.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+@require_context
+@require_volume_exists
+def volume_metadata_delete_all(context, volume_id):
+    session = get_session()
+    session.query(models.VolumeMetadata).\
+        filter_by(volume_id=volume_id).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': utils.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+@require_context
+@require_volume_exists
+def volume_metadata_get_item(context, volume_id, key, session=None):
+    if not session:
+        session = get_session()
+
+    meta_result = session.query(models.VolumeMetadata).\
+                    filter_by(volume_id=volume_id).\
+                    filter_by(key=key).\
+                    filter_by(deleted=False).\
+                    first()
+
+    if not meta_result:
+        raise exception.VolumeMetadataNotFound(metadata_key=key,
+                                               volume_id=volume_id)
+    return meta_result
+
+
+@require_context
+@require_volume_exists
+def volume_metadata_update(context, volume_id, metadata, delete):
+    session = get_session()
+
+    # Set existing metadata to deleted if delete argument is True
+    if delete:
+        original_metadata = volume_metadata_get(context, volume_id)
+        for meta_key, meta_value in original_metadata.iteritems():
+            if meta_key not in metadata:
+                meta_ref = volume_metadata_get_item(context, volume_id,
+                                                    meta_key, session)
+                meta_ref.update({'deleted': True})
+                meta_ref.save(session=session)
+
+    meta_ref = None
+
+    # Now update all existing items with new values, or create new meta objects
+    for meta_key, meta_value in metadata.iteritems():
+
+        # update the value whether it exists or not
+        item = {"value": meta_value}
+
+        try:
+            meta_ref = volume_metadata_get_item(context, volume_id,
+                                                  meta_key, session)
+        except exception.VolumeMetadataNotFound, e:
+            meta_ref = models.VolumeMetadata()
+            item.update({"key": meta_key, "volume_id": volume_id})
+
+        meta_ref.update(item)
+        meta_ref.save(session=session)
+
+    return metadata
 
 
 ###################

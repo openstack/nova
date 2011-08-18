@@ -1429,6 +1429,24 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
 ##################
 
 
+def volume_metadata_get(context, volume_id):
+    """Get all metadata for a volume."""
+    return IMPL.volume_metadata_get(context, volume_id)
+
+
+def volume_metadata_delete(context, volume_id, key):
+    """Delete the given metadata item."""
+    IMPL.volume_metadata_delete(context, volume_id, key)
+
+
+def volume_metadata_update(context, volume_id, metadata, delete):
+    """Update metadata if it exists, otherwise create it."""
+    IMPL.volume_metadata_update(context, volume_id, metadata, delete)
+
+
+##################
+
+
 def volume_type_create(context, values):
     """Create a new volume type."""
     return IMPL.volume_type_create(context, values)
