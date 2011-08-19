@@ -126,6 +126,10 @@ flags.DEFINE_string('libvirt_vif_type', 'bridge',
 flags.DEFINE_string('libvirt_vif_driver',
                     'nova.virt.libvirt.vif.LibvirtBridgeDriver',
                     'The libvirt VIF driver to configure the VIFs.')
+flags.DEFINE_string('default_local_format', 
+                    None, 
+                    'The default format a local_volume will be formatted with '
+                    'on creation.')
 
 
 def get_connection(read_only):
