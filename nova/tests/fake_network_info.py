@@ -90,6 +90,7 @@ def vifs(n):
 
 def fake_get_instance_nw_info(stubs, n=1, ips_per_vif=2):
     network = network_manager.FlatManager(host=HOST)
+    network.db = db
 
     def fixed_ips_fake(*args, **kwargs):
         return fixed_ips()
