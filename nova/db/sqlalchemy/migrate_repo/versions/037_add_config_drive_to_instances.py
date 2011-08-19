@@ -23,19 +23,14 @@ meta = MetaData()
 
 instances = Table("instances", meta,
         Column("id", Integer(), primary_key=True, nullable=False))
-config_drive_column = Column("config_drive", String(255)) # matches image_ref
+
+# matches the size of an image_ref
+config_drive_column = Column("config_drive", String(255), nullable=True)
 
 
 def upgrade(migrate_engine):
     meta.bind = migrate_engine
     instances.create_column(config_drive_column)
-
-    rows = migrate_engine.execute(instances.select())
-    for row in rows:
-        instance_config_drive = None # pre-existing instances don't have one.
-        migrate_engine.execute(instances.update()\
-                .where(instances.c.id == row[0])\
-                .values(config_drive=instance_config_drive))
 
 
 def downgrade(migrate_engine):
