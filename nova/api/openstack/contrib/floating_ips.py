@@ -131,6 +131,9 @@ class Floating_ips(extensions.ExtensionDescriptor):
 
         try:
             address = input_dict['addFloatingIp']['address']
+        except TypeError:
+            msg = _("Missing parameter dict")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         except KeyError:
             msg = _("Address not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)
@@ -145,6 +148,9 @@ class Floating_ips(extensions.ExtensionDescriptor):
 
         try:
             address = input_dict['removeFloatingIp']['address']
+        except TypeError:
+            msg = _("Missing parameter dict")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         except KeyError:
             msg = _("Address not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)

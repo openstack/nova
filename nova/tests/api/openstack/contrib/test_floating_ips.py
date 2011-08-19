@@ -183,3 +183,43 @@ class FloatingIpTest(test.TestCase):
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
+
+    def test_bad_address_param_in_remove_floating_ip(self):
+        body = dict(removeFloatingIp=dict(badparam='11.0.0.1'))
+        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 400)
+
+    def test_missing_dict_param_in_remove_floating_ip(self):
+        body = dict(removeFloatingIp='11.0.0.1')
+        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 400)
+
+    def test_bad_address_param_in_add_floating_ip(self):
+        body = dict(addFloatingIp=dict(badparam='11.0.0.1'))
+        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 400)
+
+    def test_missing_dict_param_in_add_floating_ip(self):
+        body = dict(addFloatingIp='11.0.0.1')
+        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 400)
