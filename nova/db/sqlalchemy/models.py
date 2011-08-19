@@ -570,6 +570,8 @@ class VirtualInterface(BASE, NovaBase):
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
     instance = relationship(Instance, backref=backref('virtual_interfaces'))
 
+    uuid = Column(String(36))
+
     @property
     def fixed_ipv6(self):
         cidr_v6 = self.network.cidr_v6

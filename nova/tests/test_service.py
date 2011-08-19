@@ -205,6 +205,6 @@ class TestLauncher(test.TestCase):
     def test_launch_app(self):
         self.assertEquals(0, self.service.port)
         launcher = service.Launcher()
-        launcher.launch_service(self.service)
+        launcher.launch_server(self.service)
         self.assertEquals(0, self.service.port)
         launcher.stop()
