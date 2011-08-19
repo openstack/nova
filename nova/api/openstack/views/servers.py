@@ -27,6 +27,7 @@ from nova.api.openstack.views import addresses as addresses_view
 from nova.api.openstack.views import flavors as flavors_view
 from nova.api.openstack.views import images as images_view
 from nova import utils
+from nova.compute import vm_states
 
 
 class ViewBuilder(object):
@@ -60,11 +61,13 @@ class ViewBuilder(object):
 
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
+        vm_state = inst.get('vm_state', vm_states.BUILD)
+        task_state = inst.get('task_state')
 
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
-            'status': common.status_from_power_state(inst.get('state'))}
+            'status': common.status_from_state(vm_state, task_state)}
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()

@@ -27,7 +27,8 @@ from nova import flags
 from nova import log as logging
 from nova import quota
 from nova.api.openstack import wsgi
-from nova.compute import power_state as compute_power_state
+from nova.compute import vm_states
+from nova.compute import task_state
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
@@ -38,36 +39,35 @@ XML_NS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
 
-_STATUS_MAP = {
-    None: 'BUILD',
-    compute_power_state.NOSTATE: 'BUILD',
-    compute_power_state.RUNNING: 'ACTIVE',
-    compute_power_state.BLOCKED: 'ACTIVE',
-    compute_power_state.SUSPENDED: 'SUSPENDED',
-    compute_power_state.PAUSED: 'PAUSED',
-    compute_power_state.SHUTDOWN: 'SHUTDOWN',
-    compute_power_state.SHUTOFF: 'SHUTOFF',
-    compute_power_state.CRASHED: 'ERROR',
-    compute_power_state.FAILED: 'ERROR',
-    compute_power_state.BUILDING: 'BUILD',
+_STATE_MAP = {
+    vm_states.ACTIVE: 'ACTIVE',
+    vm_states.BUILD: 'BUILD',
+    vm_states.REBUILD: 'REBUILD',
+    vm_states.REBOOT: 'REBOOT',
+    vm_states.HARD_REBOOT: 'HARD_REBOOT',
+    vm_states.STOP: 'STOPPED',
+    vm_states.MIGRATE: 'MIGRATING',
+    vm_states.RESIZE: 'RESIZE',
+    vm_states.VERIFY_RESIZE: 'VERIFY_RESIZE',
+    vm_states.PAUSE: 'PAUSED',
+    vm_states.SUSPEND: 'SUSPENDED',
+    vm_states.RESCUE: 'RESCUE',
+    vm_states.ERROR: 'ERROR',
 }
 
 
-def status_from_power_state(power_state):
-    """Map the power state to the server status string"""
-    return _STATUS_MAP[power_state]
+def status_from_state(_vm_state, _task_state=None):
+    """Given vm_state and task_state, return a status string."""
+    if _vm_state == vm_states.ACTIVE and _task_state == task_state.PASSWORD:
+        return "PASSWORD"
+    return _STATE_MAP.get(_vm_state, "UNKNOWN_STATE")
 
 
-def power_states_from_status(status):
-    """Map the server status string to a list of power states"""
-    power_states = []
-    for power_state, status_map in _STATUS_MAP.iteritems():
-        # Skip the 'None' state
-        if power_state is None:
-            continue
-        if status.lower() == status_map.lower():
-            power_states.append(power_state)
-    return power_states
+def vm_state_from_status(status):
+    """Map the server status string to a vm state."""
+    for state, status_string in _STATE_MAP.iteritems():
+        if status.lower() == status_string.lower():
+            return state
 
 
 def get_pagination_params(request):

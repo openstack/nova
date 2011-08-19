@@ -12,7 +12,8 @@ from nova import utils
 from nova import flags
 from nova.api.openstack import create_instance_helper
 from nova.compute import instance_types
-from nova.compute import power_state
+from nova.compute import vm_states
+from nova.compute import task_state
 import nova.db.api
 from nova import test
 from nova.tests.api.openstack import common
@@ -30,17 +31,18 @@ def instance_update(context, instance_id, kwargs):
     return _get_instance()
 
 
-def return_server_with_power_state(power_state):
+def return_server_with_state(vm_state, task_state=None):
     def _return_server(context, id):
         instance = _get_instance()
-        instance['state'] = power_state
+        instance['vm_state'] = vm_state
+        instance['task_state'] = task_state
         return instance
     return _return_server
 
 
-def return_server_with_uuid_and_power_state(power_state):
+def return_server_with_uuid_and_state(vm_state, task_state=None):
     def _return_server(context, id):
-        return return_server_with_power_state(power_state)
+        return return_server_with_state(vm_state, task_state)
     return _return_server
 
 
@@ -68,8 +70,8 @@ def _get_instance():
         "launch_index": 0,
         "key_name": "",
         "key_data": "",
-        "state": 0,
-        "state_description": "",
+        "vm_state": vm_states.ACTIVE,
+        "task_state": None,
         "memory_mb": 0,
         "vcpus": 0,
         "local_gb": 0,
@@ -164,11 +166,11 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        state = power_state.BUILDING
-        new_return_server = return_server_with_power_state(state)
+        state = vm_states.BUILD
+        new_return_server = return_server_with_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_with_uuid_and_power_state(state))
+                       return_server_with_uuid_and_state(state))
 
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
@@ -627,11 +629,11 @@ class ServerActionsTestV11(test.TestCase):
             },
         }
 
-        state = power_state.BUILDING
-        new_return_server = return_server_with_power_state(state)
+        state = vm_states.BUILD
+        new_return_server = return_server_with_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_with_uuid_and_power_state(state))
+                       return_server_with_uuid_and_state(state))
 
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
