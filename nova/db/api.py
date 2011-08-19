@@ -323,13 +323,13 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 ####################
 
 
-def fixed_ip_associate(context, address, instance_id):
+def fixed_ip_associate(context, address, instance_id, network_id=None):
     """Associate fixed ip to instance.
 
     Raises if fixed ip is not available.
 
     """
-    return IMPL.fixed_ip_associate(context, address, instance_id)
+    return IMPL.fixed_ip_associate(context, address, instance_id, network_id)
 
 
 def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
@@ -340,14 +340,6 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
     """
     return IMPL.fixed_ip_associate_pool(context, network_id,
                                         instance_id, host)
-
-
-def fixed_ip_associate_by_address(context, network_id, instance_id, address):
-    """check if the address is free and is in the network
-    and it is not associated to any instance.
-    """
-    return IMPL.fixed_ip_associate_by_address(context, network_id,
-                                              instance_id, address)
 
 
 def fixed_ip_create(context, values):
@@ -687,9 +679,9 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
-def network_get_networks_by_uuids(context, network_uuids):
+def network_get_all_by_uuids(context, network_uuids, project_id=None):
     """Return networks by ids."""
-    return IMPL.network_get_networks_by_uuids(context, network_uuids)
+    return IMPL.network_get_all_by_uuids(context, network_uuids, project_id)
 
 
 # pylint: disable=C0103
@@ -1242,11 +1234,6 @@ def project_get_networks(context, project_id, associate=True):
 
     """
     return IMPL.project_get_networks(context, project_id, associate)
-
-
-def project_get_networks_by_uuids(context, network_uuids):
-    """Return the networks by uuids associated with the project."""
-    return IMPL.project_get_networks_by_uuids(context, network_uuids)
 
 
 def project_get_networks_v6(context, project_id):

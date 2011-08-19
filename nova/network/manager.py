@@ -399,8 +399,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 a non-vlan instance should connect to
         if requested_networks is not None and len(requested_networks) != 0:
             network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
-            networks = self.db.network_get_networks_by_uuids(context,
-                                                           network_uuids)
+            networks = self.db.network_get_all_by_uuids(context,
+                                                    network_uuids)
         else:
             try:
                 networks = self.db.network_get_all(context)
@@ -588,10 +588,15 @@ class NetworkManager(manager.SchedulerDependentManager):
         #             network_get_by_compute_host
         address = None
         if network['cidr']:
-            address = self.db.fixed_ip_associate_by_address(context.elevated(),
-                                                  network['id'],
-                                                  instance_id,
-                                                  kwargs.get('address', None))
+            address = kwargs.get('address', None)
+            if address:
+                address = self.db.fixed_ip_associate(context,
+                                                     address, instance_id,
+                                                     network['id'])
+            else:
+                address = self.db.fixed_ip_associate_pool(context.elevated(),
+                                                          network['id'],
+                                                          instance_id)
             self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
             get_vif = self.db.virtual_interface_get_by_instance_and_network
@@ -826,7 +831,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         network_uuids = [uuid for (uuid, fixed_ip) in networks]
 
-        self.db.network_get_networks_by_uuids(context, network_uuids)
+        self._get_networks_by_uuids(context, network_uuids)
 
         for network_uuid, address in networks:
             # check if the fixed IP address is valid and
@@ -842,6 +847,9 @@ class NetworkManager(manager.SchedulerDependentManager):
                                             network_uuid=network_uuid)
                 if fixed_ip_ref['instance'] is not None:
                     raise exception.FixedIpAlreadyInUse(address=address)
+
+    def _get_networks_by_uuids(self, context, network_uuids):
+        return self.db.network_get_all_by_uuids(context, network_uuids)
 
 
 class FlatManager(NetworkManager):
@@ -980,10 +988,15 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                        address,
                                        instance_id)
         else:
-            address = self.db.fixed_ip_associate_by_address(context,
-                                                network['id'],
-                                                instance_id,
-                                                kwargs.get('address', None))
+            address = kwargs.get('address', None)
+            if address:
+                address = self.db.fixed_ip_associate(context, address,
+                                                     instance_id,
+                                                     network['id'])
+            else:
+                address = self.db.fixed_ip_associate_pool(context,
+                                                          network['id'],
+                                                          instance_id)
             self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
         vif = self.db.virtual_interface_get_by_instance_and_network(context,
@@ -1005,8 +1018,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         # get networks associated with project
         if requested_networks is not None and len(requested_networks) != 0:
             network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
-            networks = self.db.project_get_networks_by_uuids(context,
-                                                    network_uuids)
+            networks = self.db.network_get_all_by_uuids(context,
+                                                    network_uuids,
+                                                    project_id)
         else:
             networks = self.db.project_get_networks(context, project_id)
         return networks
@@ -1058,31 +1072,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                 self.db.network_update(context, network_ref['id'],
                                        {'gateway_v6': gateway})
 
-    def validate_networks(self, context, networks):
-        """check if the networks exists and host
-        is set to each network.
-        """
-        if networks is None or len(networks) == 0:
-            return
-
-        network_uuids = [uuid for (uuid, fixed_ip) in networks]
-
-        self.db.project_get_networks_by_uuids(context, network_uuids)
-
-        for network_uuid, address in networks:
-            # check if the fixed IP address is valid and
-            # it actually belongs to the network
-            if fixed_ip is not None:
-                if not utils.is_valid_ipv4(address):
-                    raise exception.FixedIpInvalid(address=address)
-
-                fixed_ip_ref = self.db.fixed_ip_get_by_address(context,
-                                                               address)
-                if fixed_ip_ref['network']['uuid'] != network_uuid:
-                    raise exception.FixedIpNotFoundForNetwork(address=address,
-                                            network_uuid=network_uuid)
-                if fixed_ip_ref['instance'] is not None:
-                    raise exception.FixedIpAlreadyInUse(address=address)
+    def _get_networks_by_uuids(self, context, network_uuids):
+        return self.db.network_get_all_by_uuids(context, network_uuids,
+                                                     context.project_id)
 
     @property
     def _bottom_reserved_ips(self):
