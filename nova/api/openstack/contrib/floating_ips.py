@@ -80,7 +80,7 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
 
         try:
-            # FIXME - why does self.network_api.list_floating_ips raise this?
+            # FIXME(ja) - why does self.network_api.list_floating_ips raise?
             floating_ips = self.network_api.list_floating_ips(context)
         except exception.FloatingIpNotFoundForProject:
             floating_ips = []
