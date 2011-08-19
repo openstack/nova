@@ -18,7 +18,6 @@
 from nova import db
 from nova import test
 from nova.network import manager as network_manager
-from network_
 
 
 HOST = "testhost"
