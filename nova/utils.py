@@ -636,7 +636,7 @@ def synchronized(name, external=False):
 
     Different methods can share the same lock:
     @synchronized('mylock')
-    Gdef foo(self, *args):
+    def foo(self, *args):
        ...
 
     @synchronized('mylock')
