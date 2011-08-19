@@ -458,7 +458,7 @@ class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
 def _get_metadata():
     metadata = {
         "attributes": {
-            "security_group": ["id", "project_id", "name"],
+            "security_group": ["id", "tenant_id", "name"],
             "rule": ["id", "parent_group_id"],
             "security_group_rule": ["id", "parent_group_id"],
         }
