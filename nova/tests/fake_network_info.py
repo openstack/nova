@@ -57,7 +57,7 @@ def fake_network(n):
 def fixed_ips(num_networks, num_ips):
     for network in xrange(num_networks):
         for ip in xrange(num_ips):
-            yield {'id': network * ip,
+            yield {'id': network * num_ips + ip,
                    'network_id': network,
                    'address': '192.168.%d.100' % network,
                    'instance_id': 0,
@@ -82,7 +82,7 @@ def vifs(n):
     for x in xrange(n):
         yield {'id': x,
                'address': 'DE:AD:BE:EF:00:%02x' % x,
-               'uuid': '00000000-0000-0000-0000-00000000000000%2d' % x,
+               'uuid': '00000000-0000-0000-0000-00000000000000%02d' % x,
                'network_id': x,
                'network': FakeModel(**fake_network(x)),
                'instance_id': 0}
@@ -93,7 +93,7 @@ def fake_get_instance_nw_info(stubs, n=1, ips_per_vif=2):
     network.db = db
 
     def fixed_ips_fake(*args, **kwargs):
-        return fixed_ips(n, ips_per_vif)
+        return list(fixed_ips(n, ips_per_vif))
 
     def virtual_interfaces_fake(*args, **kwargs):
         return [vif for vif in vifs(n)]
