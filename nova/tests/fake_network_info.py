@@ -93,7 +93,7 @@ def fake_get_instance_nw_info(stubs, n=1, ips_per_vif=2):
     network.db = db
 
     def fixed_ips_fake(*args, **kwargs):
-        return fixed_ips()
+        return fixed_ips(n, ips_per_vif)
 
     def virtual_interfaces_fake(*args, **kwargs):
         return [vif for vif in vifs(n)]
