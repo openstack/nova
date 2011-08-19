@@ -19,6 +19,7 @@ import base64
 import datetime
 import json
 import unittest
+from lxml import etree
 from xml.dom import minidom
 
 import webob
@@ -32,6 +33,7 @@ import nova.api.openstack
 from nova.api.openstack import create_instance_helper
 from nova.api.openstack import servers
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 import nova.compute.api
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -46,6 +48,8 @@ from nova.tests.api.openstack import fakes
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+NS = "{http://docs.openstack.org/compute/api/v1.1}"
+ATOMNS = "{http://www.w3.org/2005/Atom}"
 
 
 def fake_gen_uuid():
@@ -3605,7 +3609,9 @@ class ServerXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'server')
 
         expected_server_href = self.SERVER_HREF
         expected_server_bookmark = self.SERVER_BOOKMARK
@@ -3613,49 +3619,58 @@ class ServerXMLSerializationTest(test.TestCase):
         expected_flavor_bookmark = self.FLAVOR_BOOKMARK
         expected_now = self.TIMESTAMP
         expected_uuid = FAKE_UUID
-        expected = minidom.parseString("""
-        <server id="1"
-                uuid="%(expected_uuid)s"
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                name="test_server"
-                updated="%(expected_now)s"
-                created="%(expected_now)s"
-                hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
-                status="BUILD"
-                accessIPv4="1.2.3.4"
-                accessIPv6="fead::1234"
-                progress="0">
-            <atom:link href="%(expected_server_href)s" rel="self"/>
-            <atom:link href="%(expected_server_bookmark)s" rel="bookmark"/>
-            <image id="5">
-                <atom:link rel="bookmark" href="%(expected_image_bookmark)s"/>
-            </image>
-            <flavor id="1">
-                <atom:link rel="bookmark" href="%(expected_flavor_bookmark)s"/>
-            </flavor>
-            <metadata>
-                <meta key="Open">
-                    Stack
-                </meta>
-                <meta key="Number">
-                    1
-                </meta>
-            </metadata>
-            <addresses>
-                <network id="network_one">
-                    <ip version="4" addr="67.23.10.138"/>
-                    <ip version="6" addr="::babe:67.23.10.138"/>
-                </network>
-                <network id="network_two">
-                    <ip version="4" addr="67.23.10.139"/>
-                    <ip version="6" addr="::babe:67.23.10.139"/>
-                </network>
-            </addresses>
-        </server>
-        """.replace("  ", "") % (locals()))
+        server_dict = fixture['server']
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        for key in ['name', 'id', 'uuid', 'created', 'accessIPv4',
+                    'updated', 'progress', 'status', 'hostId',
+                    'accessIPv6']:
+            self.assertEqual(root.get(key), str(server_dict[key]))
+
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(server_dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        metadata_root = root.find('{0}metadata'.format(NS))
+        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
+        self.assertEqual(len(metadata_elems), 2)
+        for i, metadata_elem in enumerate(metadata_elems):
+            (meta_key, meta_value) = server_dict['metadata'].items()[i]
+            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
+            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
+
+        image_root = root.find('{0}image'.format(NS))
+        self.assertEqual(image_root.get('id'), server_dict['image']['id'])
+        link_nodes = image_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 1)
+        for i, link in enumerate(server_dict['image']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        flavor_root = root.find('{0}flavor'.format(NS))
+        self.assertEqual(flavor_root.get('id'), server_dict['flavor']['id'])
+        link_nodes = flavor_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 1)
+        for i, link in enumerate(server_dict['flavor']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        addresses_root = root.find('{0}addresses'.format(NS))
+        addresses_dict = server_dict['addresses']
+        network_elems = addresses_root.findall('{0}network'.format(NS))
+        self.assertEqual(len(network_elems), 2)
+        for i, network_elem in enumerate(network_elems):
+            network = addresses_dict.items()[i]
+            self.assertEqual(str(network_elem.get('id')), str(network[0]))
+            ip_elems = network_elem.findall('{0}ip'.format(NS))
+            for z, ip_elem in enumerate(ip_elems):
+                ip = network[1][z]
+                self.assertEqual(str(ip_elem.get('version')),
+                                 str(ip['version']))
+                self.assertEqual(str(ip_elem.get('addr')),
+                                 str(ip['addr']))
+
 
     def test_create(self):
         serializer = servers.ServerXMLSerializer()
