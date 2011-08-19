@@ -565,4 +565,3 @@ class ComputeDriver(object):
         Note that this function takes an instance ID.
         """
         raise NotImplementedError()
-
