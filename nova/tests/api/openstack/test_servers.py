@@ -145,7 +145,7 @@ def instance_addresses(context, instance_id):
 def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
                   public_addresses=None, host=None, power_state=0,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
-                  flavor_id="1", interfaces=None, name=None):
+                  flavor_id="1", interfaces=None, name=None, key_name=''):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -159,6 +159,11 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
 
     if host is not None:
         host = str(host)
+
+    if key_name:
+        key_data = 'FAKE'
+    else:
+        key_data = ''
 
     # ReservationID isn't sent back, hack it in there.
     server_name = name or "server%s" % id
@@ -176,8 +181,8 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "kernel_id": "",
         "ramdisk_id": "",
         "launch_index": 0,
-        "key_name": "",
-        "key_data": "",
+        "key_name": key_name,
+        "key_data": key_data,
         "state": power_state,
         "state_description": "",
         "memory_mb": 0,
