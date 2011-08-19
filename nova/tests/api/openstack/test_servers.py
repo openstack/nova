@@ -330,6 +330,7 @@ class ServersTest(test.TestCase):
                 "id": 1,
                 "uuid": FAKE_UUID,
                 "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -494,6 +495,7 @@ class ServersTest(test.TestCase):
                 "id": 1,
                 "uuid": FAKE_UUID,
                 "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -587,6 +589,7 @@ class ServersTest(test.TestCase):
                 "id": 1,
                 "uuid": FAKE_UUID,
                 "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -1152,6 +1155,25 @@ class ServersTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], 100)
 
+    def test_tenant_id_filter_converts_to_project_id_for_admin(self):
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertEqual(search_opts['project_id'], 'faketenant')
+            self.assertFalse(search_opts.get('tenant_id'))
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+        self.flags(allow_admin_api=True)
+
+        req = webob.Request.blank('/v1.1/servers?tenant_id=faketenant')
+        # Use admin context
+        context = nova.context.RequestContext('testuser', 'testproject',
+                is_admin=True)
+        res = req.get_response(fakes.wsgi_app(fake_auth_context=context))
+        res_dict = json.loads(res.body)
+        # Failure in fake_get_all returns non 200 status code
+        self.assertEqual(res.status_int, 200)
+
     def test_get_servers_allows_flavor_v1_1(self):
         def fake_get_all(compute_self, context, search_opts=None):
             self.assertNotEqual(search_opts, None)
@@ -1388,6 +1410,7 @@ class ServersTest(test.TestCase):
                     'image_ref': image_ref,
                     'display_description': 'fakedescription',
                     'user_id': 'fake',
+                    'project_id': 'fake',
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                     "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
                    }
@@ -2728,6 +2751,7 @@ class TestServerInstanceCreation(test.TestCase):
                     self.injected_files = None
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'user_id': 'fake',
+                         'project_id': 'fake',
                          'display_description': 'fakedescription',
                          'uuid': FAKE_UUID}]
 
@@ -3021,7 +3045,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             "updated_at": updated_at,
             "admin_pass": "",
             "user_id": "fake",
-            "project_id": "",
+            "project_id": "fake",
             "image_ref": "5",
             "kernel_id": "",
             "ramdisk_id": "",
@@ -3099,6 +3123,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3152,6 +3177,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -3209,6 +3235,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
