@@ -58,8 +58,6 @@ def choose_host_filter(filter_name=None):
     if not filter_name:
         filter_name = FLAGS.default_host_filter
     for filter_class in _get_filters():
-        host_match = "%s.%s" % (filter_class.__module__, filter_class.__name__)
-        if (host_match.startswith("nova.scheduler.filters") and
-                (host_match.split(".")[-1] == filter_name)):
+        if filter_class.__name__ == filter_name:
             return filter_class()
     raise exception.SchedulerHostFilterNotFound(filter_name=filter_name)
