@@ -39,6 +39,24 @@ class BadPriorityException(Exception):
     pass
 
 
+def notify_decorator(name, fn):
+    def wrapped_func(*args, **kwarg):
+        body = {}
+        body['args'] = []
+        body['kwarg'] = {}
+        for arg in args:
+            body['args'].append(arg)
+        for key in kwarg:
+            body['kwarg'][key] = kwarg[key]
+        LOG.debug("Notify Decorator: %s %r" % (name, body))
+        notify(FLAGS.host,
+                            name,
+                            DEBUG,
+                            body)
+        fn(*args, **kwarg)
+    return wrapped_func
+
+
 def publisher_id(service, host=None):
     if not host:
         host = FLAGS.host

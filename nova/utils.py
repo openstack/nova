@@ -35,6 +35,7 @@ import sys
 import time
 import types
 import uuid
+import pyclbr
 from xml.sax import saxutils
 
 from eventlet import event
@@ -634,7 +635,7 @@ def synchronized(name, external=False):
 
     Different methods can share the same lock:
     @synchronized('mylock')
-    def foo(self, *args):
+    Gdef foo(self, *args):
        ...
 
     @synchronized('mylock')
@@ -873,3 +874,24 @@ class Bootstrapper(object):
         for key in FLAGS:
             value = FLAGS.get(key, None)
             logging.audit(_("%(key)s : %(value)s" % locals()))
+
+
+def monkey_patch():
+    if not FLAGS.monkey_patch:
+        return
+    for module_and_decorator in FLAGS.monkey_patch_modules:
+        module, decorator_name = module_and_decorator.split(':')
+        decorator = import_class(decorator_name)
+        __import__(module)
+        module_data = pyclbr.readmodule_ex(module)
+        for key in module_data.keys():
+            if isinstance(module_data[key], pyclbr.Class):
+                clz = import_class("%s.%s" % (module, key))
+                for method, func in inspect.getmembers(clz, inspect.ismethod):
+                    setattr(clz, method,\
+                        decorator("%s.%s" % (module, key), func))
+            if isinstance(module_data[key], pyclbr.Function):
+                func = import_class("%s.%s" % (module, key))
+                setattr(sys.modules[module], key,\
+                    setattr(sys.modules[module], key, \
+                    decorator("%s.%s" % (module, key), func)))

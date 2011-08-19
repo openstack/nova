@@ -49,6 +49,7 @@ if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
     logging.setup()
+    utils.monkey_patch()
     router = s3server.S3Application(FLAGS.buckets_path)
     server = wsgi.Server("S3 Objectstore",
                          router,

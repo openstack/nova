@@ -45,7 +45,7 @@ FLAGS = flags.FLAGS
 def main():
     """Launch EC2 and OSAPI services."""
     nova.utils.Bootstrapper.bootstrap_binary(sys.argv)
-
+    nova.utils.monkey_patch()
     launcher = nova.service.Launcher()
 
     for api in FLAGS.enabled_apis:
