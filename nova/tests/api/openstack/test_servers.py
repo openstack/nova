@@ -3671,7 +3671,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
 
-
     def test_create(self):
         serializer = servers.ServerXMLSerializer()
 
@@ -4013,7 +4012,8 @@ class ServerXMLSerializationTest(test.TestCase):
             for i, metadata_elem in enumerate(metadata_elems):
                 (meta_key, meta_value) = server_dict['metadata'].items()[i]
                 self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
-                self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
+                self.assertEqual(str(metadata_elem.text).strip(),
+                                 str(meta_value))
 
             image_root = server_elem.find('{0}image'.format(NS))
             self.assertEqual(image_root.get('id'), server_dict['image']['id'])
@@ -4024,7 +4024,8 @@ class ServerXMLSerializationTest(test.TestCase):
                     self.assertEqual(link_nodes[i].get(key), value)
 
             flavor_root = server_elem.find('{0}flavor'.format(NS))
-            self.assertEqual(flavor_root.get('id'), server_dict['flavor']['id'])
+            self.assertEqual(flavor_root.get('id'),
+                             server_dict['flavor']['id'])
             link_nodes = flavor_root.findall('{0}link'.format(ATOMNS))
             self.assertEqual(len(link_nodes), 1)
             for i, link in enumerate(server_dict['flavor']['links']):
