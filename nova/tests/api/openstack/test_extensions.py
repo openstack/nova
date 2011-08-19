@@ -92,9 +92,10 @@ class ExtensionControllerTest(test.TestCase):
             "Keypairs",
             "Multinic",
             "Quotas",
+            "Rescue",
             "SecurityGroups",
-            "Volumes",
             "VirtualInterfaces",
+            "Volumes",
             ]
         self.ext_list.sort()
 
