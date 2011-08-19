@@ -134,7 +134,7 @@ class ComputeTestCase(test.TestCase):
 
     def test_create_instance_defaults_display_name(self):
         """Verify that an instance cannot be created without a display_name."""
-        print fake_network_info.fake_get_instance_nw_info(self.stubs, 1, 2)
+        print fake_network_info.fake_get_instance_nw_info(self.stubs, 2, 1)
         self.assertEqual(True, False)
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
