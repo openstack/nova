@@ -122,6 +122,7 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         zone_blob = server_dict.get('blob')
+        user_data = server_dict.get('user_data')
         availability_zone = server_dict.get('availability_zone')
         name = server_dict['name']
         self._validate_server_name(name)
@@ -165,6 +166,7 @@ class CreateInstanceHelper(object):
                                   reservation_id=reservation_id,
                                   min_count=min_count,
                                   max_count=max_count,
+                                  user_data=user_data,
                                   availability_zone=availability_zone))
         except quota.QuotaError as error:
             self._handle_quota_error(error)

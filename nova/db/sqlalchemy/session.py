@@ -73,9 +73,11 @@ def get_engine():
 
     elif MySQLdb and "mysql" in connection_dict.drivername:
         LOG.info(_("Using mysql/eventlet db_pool."))
+        # MySQLdb won't accept 'None' in the password field
+        password = connection_dict.password or ''
         pool_args = {
             "db": connection_dict.database,
-            "passwd": connection_dict.password,
+            "passwd": password,
             "host": connection_dict.host,
             "user": connection_dict.username,
             "min_size": FLAGS.sql_min_pool_size,
