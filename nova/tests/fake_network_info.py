@@ -101,7 +101,7 @@ def fake_get_instance_nw_info(stubs, n=1, ips_per_vif=2):
         return flavor
 
     stubs.Set(db, 'fixed_ip_get_by_instance', fixed_ips_fake)
-    stubs.Set(db, 'virtual_interface_get_by_instance', virtual_interface_fake)
+    stubs.Set(db, 'virtual_interface_get_by_instance', virtual_interfaces_fake)
     stubs.Set(db, 'instance_type_get', instance_type_fake)
 
     nw_info = self.network.get_instance_nw_info(None, 0, 0, None)
