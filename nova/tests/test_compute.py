@@ -35,6 +35,7 @@ from nova import rpc
 from nova import test
 from nova import utils
 from nova.notifier import test_notifier
+from nova.tests import fake_network_info
 
 LOG = logging.getLogger('nova.tests.compute')
 FLAGS = flags.FLAGS
@@ -133,6 +134,9 @@ class ComputeTestCase(test.TestCase):
 
     def test_create_instance_defaults_display_name(self):
         """Verify that an instance cannot be created without a display_name."""
+        import pretty_print as pp
+        pp(fake_get_instance_nw_info(self.stubs, 1, 2))
+        self.assertEqual(True, False)
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
             ref = self.compute_api.create(self.context,
