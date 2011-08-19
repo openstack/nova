@@ -104,6 +104,7 @@ class ComputeDriver(object):
         """Get the current status of an instance, by name (not ID!)
 
         Returns a dict containing:
+
         :state:           the running state, one of the power_state codes
         :max_mem:         (int) the maximum memory in KBytes allowed
         :mem:             (int) the memory in KBytes used by the domain
@@ -131,16 +132,20 @@ class ComputeDriver(object):
         """
         Create a new instance/VM/domain on the virtualization platform.
 
-        The given parameter is an instance of nova.compute.service.Instance.
-        This function should use the data there to guide the creation of
-        the new instance.
-
         Once this successfully completes, the instance should be
         running (power_state.RUNNING).
 
         If this fails, any partial instance should be completely
         cleaned up, and the virtualization platform should be in the state
         that it was before this call began.
+
+        :param context: security context
+        :param instance: Instance of {nova.compute.service.Instance}.
+                         This function should use the data there to guide
+                         the creation of the new instance.
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param block_device_info:
         """
         raise NotImplementedError()
 
@@ -148,14 +153,16 @@ class ComputeDriver(object):
         """Destroy (shutdown and delete) the specified instance.
 
         The given parameter is an instance of nova.compute.service.Instance,
-        and so the instance is being specified as instance.name.
-
-        The work will be done asynchronously.  This function returns a
-        task that allows the caller to detect when it is complete.
 
         If the instance is not found (for example if networking failed), this
         function should still succeed.  It's probably a good idea to log a
         warning in that case.
+
+        :param instance: Instance of {nova.compute.service.Instance} and so
+                         the instance is being specified as instance.name.
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param cleanup:
 
         """
         # TODO(Vek): Need to pass context in for access to auth_token
@@ -164,8 +171,10 @@ class ComputeDriver(object):
     def reboot(self, instance, network_info):
         """Reboot the specified instance.
 
-        The given parameter is an instance of nova.compute.service.Instance,
-        and so the instance is being specified as instance.name.
+        :param instance: Instance of {nova.compute.service.Instance} and so
+                         the instance is being specified as instance.name.
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
@@ -206,6 +215,17 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def compare_cpu(self, cpu_info):
+        """Compares given cpu info against host
+
+        Before attempting to migrate a VM to this host,
+        compare_cpu is called to ensure that the VM will
+        actually run here.
+
+        :param cpu_info: (str) JSON structure describing the source CPU.
+        :returns: None if migration is acceptable
+        :raises: :py:class:`~nova.exception.InvalidCPUInfo` if migration
+                 is not acceptable.
+        """
         raise NotImplementedError()
 
     def migrate_disk_and_power_off(self, instance, dest):
@@ -229,7 +249,11 @@ class ComputeDriver(object):
 
     def finish_migration(self, context, instance, disk_info, network_info,
                          resize_instance):
-        """Completes a resize, turning on the migrated instance"""
+        """Completes a resize, turning on the migrated instance
+
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        """
         raise NotImplementedError()
 
     def revert_migration(self, instance):
@@ -283,15 +307,15 @@ class ComputeDriver(object):
                        post_method, recover_method):
         """Spawning live_migration operation for distributing high-load.
 
-        :params ctxt: security context
-        :params instance_ref:
+        :param ctxt: security context
+        :param instance_ref:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :params dest: destination host
-        :params post_method:
+        :param dest: destination host
+        :param post_method:
             post operation method.
             expected nova.compute.manager.post_live_migration.
-        :params recover_method:
+        :param recover_method:
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
 
@@ -541,3 +565,4 @@ class ComputeDriver(object):
         Note that this function takes an instance ID.
         """
         raise NotImplementedError()
+
