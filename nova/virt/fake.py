@@ -152,11 +152,9 @@ class FakeConnection(driver.ComputeDriver):
                         (key, self.instances))
 
     def attach_volume(self, instance_name, device_path, mountpoint):
-        self._mounts[mountpoint] = device_path
         return True
 
     def detach_volume(self, instance_name, mountpoint):
-        del self._mounts[mountpoint]
         return True
 
     def get_info(self, instance_name):
