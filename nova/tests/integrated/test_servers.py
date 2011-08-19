@@ -27,6 +27,7 @@ LOG = logging.getLogger('nova.tests.integrated')
 
 
 class ServersTest(integrated_helpers._IntegratedTestBase):
+
     def test_get_servers(self):
         """Simple check that listing servers works."""
         servers = self.api.get_servers()
@@ -103,6 +104,10 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # It should be available...
         # TODO(justinsb): Mock doesn't yet do this...
         #self.assertEqual('available', found_server['status'])
+        servers = self.api.get_servers(detail=True)
+        for server in servers:
+            self.assertTrue("image" in server)
+            self.assertTrue("flavor" in server)
 
         self._delete_server(created_server_id)
 

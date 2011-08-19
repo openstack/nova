@@ -100,10 +100,12 @@ class LibvirtBridgeDriver(VIFDriver):
 class LibvirtOpenVswitchDriver(VIFDriver):
     """VIF driver for Open vSwitch."""
 
+    def get_dev_name(_self, iface_id):
+        return "tap-" + iface_id[0:15]
+
     def plug(self, instance, network, mapping):
-        vif_id = str(instance['id']) + "-" + str(network['id'])
-        dev = "tap-%s" % vif_id
-        iface_id = "nova-" + vif_id
+        iface_id = mapping['vif_uuid']
+        dev = self.get_dev_name(iface_id)
         if not linux_net._device_exists(dev):
             utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
                           run_as_root=True)
@@ -127,11 +129,10 @@ class LibvirtOpenVswitchDriver(VIFDriver):
     def unplug(self, instance, network, mapping):
         """Unplug the VIF from the network by deleting the port from
         the bridge."""
-        vif_id = str(instance['id']) + "-" + str(network['id'])
-        dev = "tap-%s" % vif_id
+        dev = self.get_dev_name(mapping['vif_uuid'])
         try:
             utils.execute('ovs-vsctl', 'del-port',
-                          network['bridge'], dev, run_as_root=True)
+                          FLAGS.libvirt_ovs_bridge, dev, run_as_root=True)
             utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
         except exception.ProcessExecutionError:
             LOG.warning(_("Failed while unplugging vif of instance '%s'"),

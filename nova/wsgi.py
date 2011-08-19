@@ -39,9 +39,6 @@ from nova import log as logging
 from nova import utils
 
 
-eventlet.patcher.monkey_patch(socket=True, time=True)
-
-
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.wsgi')
 

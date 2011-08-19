@@ -392,7 +392,7 @@ class ServerActionsTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
+        self.assertEqual(413, response.status_int)
 
     def test_create_backup_no_name(self):
         """Name is required for backups"""
@@ -865,7 +865,7 @@ class ServerActionsTestV11(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
+        self.assertEqual(413, response.status_int)
 
     def test_create_image_no_name(self):
         body = {

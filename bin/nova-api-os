@@ -17,11 +17,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Starter script for Nova API.
-
-Starts both the EC2 and OpenStack APIs in separate greenthreads.
-
-"""
+"""Starter script for Nova OS API."""
 
 import eventlet
 eventlet.monkey_patch()
@@ -45,8 +41,6 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
-    servers = []
-    for api in flags.FLAGS.enabled_apis:
-        servers.append(service.WSGIService(api))
-    service.serve(*servers)
+    server = service.WSGIService('osapi')
+    service.serve(server)
     service.wait()
