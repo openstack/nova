@@ -185,6 +185,10 @@ class Invalid(NovaException):
     message = _("Unacceptable parameters.")
 
 
+class AlreadyInUse(NovaException):
+    message = _("Already is in use.")
+
+
 class InvalidSignature(Invalid):
     message = _("Invalid signature %(signature)s for user %(user)s.")
 
@@ -207,6 +211,10 @@ class InvalidIpProtocol(Invalid):
 
 class InvalidContentType(Invalid):
     message = _("Invalid content type %(content_type)s.")
+
+
+class InvalidCidr(Invalid):
+    message = _("Invalid cidr %(cidr)s.")
 
 
 # Cannot be templated as the error syntax varies.
@@ -267,6 +275,11 @@ class InvalidHypervisorType(Invalid):
 class DestinationHypervisorTooOld(Invalid):
     message = _("The instance requires a newer hypervisor version than "
                 "has been provided.")
+
+
+class DestinationDiskExists(Invalid):
+    message = _("The supplied disk path (%(path)s) already exists, "
+                "it is expected not to exist.")
 
 
 class InvalidDevicePath(Invalid):
@@ -414,6 +427,15 @@ class NoNetworksFound(NotFound):
     message = _("No networks defined.")
 
 
+class NetworkNotFoundForProject(NotFound):
+    message = _("Either Network uuid %(network_uuid)s is not present or "
+                "is not assigned to the project %(project_id)s.")
+
+
+class NetworkHostNotSet(NovaException):
+    message = _("Host is not set to the network (%(network_id)s).")
+
+
 class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
@@ -445,6 +467,19 @@ class FixedIpNotFoundForVirtualInterface(FixedIpNotFound):
 
 class FixedIpNotFoundForHost(FixedIpNotFound):
     message = _("Host %(host)s has zero fixed ips.")
+
+
+class FixedIpNotFoundForNetwork(FixedIpNotFound):
+    message = _("Fixed IP address (%(address)s) does not exist in "
+                "network (%(network_uuid)s).")
+
+
+class FixedIpAlreadyInUse(AlreadyInUse):
+    message = _("Fixed IP address %(address)s is already in use.")
+
+
+class FixedIpInvalid(Invalid):
+    message = _("Fixed IP address %(address)s is invalid.")
 
 
 class NoMoreFixedIps(Error):
@@ -695,6 +730,10 @@ class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
 
 
+class InvalidSharedStorage(NovaException):
+    message = _("%(path)s is on shared storage: %(reason)s")
+
+
 class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
 
@@ -717,3 +756,7 @@ class CannotResizeToSameSize(NovaException):
 
 class CannotResizeToSmallerSize(NovaException):
     message = _("Resizing to a smaller size is not supported.")
+
+
+class ImageTooLarge(NovaException):
+    message = _("Image is larger than instance type allows")

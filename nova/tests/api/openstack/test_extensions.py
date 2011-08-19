@@ -84,6 +84,19 @@ class ExtensionControllerTest(test.TestCase):
         super(ExtensionControllerTest, self).setUp()
         ext_path = os.path.join(os.path.dirname(__file__), "extensions")
         self.flags(osapi_extensions_path=ext_path)
+        self.ext_list = [
+            "Createserverext",
+            "FlavorExtraSpecs",
+            "Floating_ips",
+            "Fox In Socks",
+            "Hosts",
+            "Keypairs",
+            "Multinic",
+            "Quotas",
+            "SecurityGroups",
+            "Volumes",
+            ]
+        self.ext_list.sort()
 
     def test_list_extensions_json(self):
         app = openstack.APIRouterV11()
@@ -96,11 +109,10 @@ class ExtensionControllerTest(test.TestCase):
         data = json.loads(response.body)
         names = [x['name'] for x in data['extensions']]
         names.sort()
-        self.assertEqual(names, ["FlavorExtraSpecs", "Floating_ips",
-            "Fox In Socks", "Hosts", "Keypairs", "Multinic", "Volumes"])
+        self.assertEqual(names, self.ext_list)
 
         # Make sure that at least Fox in Sox is correct.
-        (fox_ext,) = [
+        (fox_ext, ) = [
             x for x in data['extensions'] if x['alias'] == 'FOXNSOX']
         self.assertEqual(fox_ext, {
                 'namespace': 'http://www.fox.in.socks/api/ext/pie/v1.0',
@@ -108,7 +120,7 @@ class ExtensionControllerTest(test.TestCase):
                 'updated': '2011-01-22T13:25:27-06:00',
                 'description': 'The Fox In Socks Extension',
                 'alias': 'FOXNSOX',
-                'links': [],
+                'links': []
             },
         )
 
@@ -126,9 +138,7 @@ class ExtensionControllerTest(test.TestCase):
                 "updated": "2011-01-22T13:25:27-06:00",
                 "description": "The Fox In Socks Extension",
                 "alias": "FOXNSOX",
-                "links": [],
-            },
-        )
+                "links": []})
 
     def test_list_extensions_xml(self):
         app = openstack.APIRouterV11()
@@ -144,10 +154,10 @@ class ExtensionControllerTest(test.TestCase):
 
         # Make sure we have all the extensions.
         exts = root.findall('{0}extension'.format(NS))
-        self.assertEqual(len(exts), 7)
+        self.assertEqual(len(exts), len(self.ext_list))
 
         # Make sure that at least Fox in Sox is correct.
-        (fox_ext,) = [x for x in exts if x.get('alias') == 'FOXNSOX']
+        (fox_ext, ) = [x for x in exts if x.get('alias') == 'FOXNSOX']
         self.assertEqual(fox_ext.get('name'), 'Fox In Socks')
         self.assertEqual(fox_ext.get('namespace'),
             'http://www.fox.in.socks/api/ext/pie/v1.0')
@@ -219,6 +229,7 @@ class ResourceExtensionTest(test.TestCase):
 
 
 class InvalidExtension(object):
+
     def get_alias(self):
         return "THIRD"
 
@@ -280,7 +291,7 @@ class ActionExtensionTest(test.TestCase):
     def test_invalid_action_body(self):
         body = dict(blah=dict(name="test"))  # Doesn't exist
         response = self._send_server_action_request("/servers/1/action", body)
-        self.assertEqual(501, response.status_int)
+        self.assertEqual(400, response.status_int)
 
     def test_invalid_action(self):
         body = dict(blah=dict(name="test"))
@@ -335,27 +346,18 @@ class ExtensionsXMLSerializerTest(test.TestCase):
 
     def test_serialize_extenstion(self):
         serializer = extensions.ExtensionsXMLSerializer()
-        data = {
-            'extension': {
-                'name': 'ext1',
-                'namespace': 'http://docs.rack.com/servers/api/ext/pie/v1.0',
-                'alias': 'RS-PIE',
-                'updated': '2011-01-22T13:25:27-06:00',
-                'description': 'Adds the capability to share an image.',
-                'links': [
-                    {
-                        'rel': 'describedby',
-                        'type': 'application/pdf',
-                        'href': 'http://docs.rack.com/servers/api/ext/cs.pdf',
-                    },
-                    {
-                        'rel': 'describedby',
-                        'type': 'application/vnd.sun.wadl+xml',
-                        'href': 'http://docs.rack.com/servers/api/ext/cs.wadl',
-                    },
-                ],
-            },
-        }
+        data = {'extension': {
+          'name': 'ext1',
+          'namespace': 'http://docs.rack.com/servers/api/ext/pie/v1.0',
+          'alias': 'RS-PIE',
+          'updated': '2011-01-22T13:25:27-06:00',
+          'description': 'Adds the capability to share an image.',
+          'links': [{'rel': 'describedby',
+                     'type': 'application/pdf',
+                     'href': 'http://docs.rack.com/servers/api/ext/cs.pdf'},
+                    {'rel': 'describedby',
+                     'type': 'application/vnd.sun.wadl+xml',
+                     'href': 'http://docs.rack.com/servers/api/ext/cs.wadl'}]}}
 
         xml = serializer.serialize(data, 'show')
         print xml
@@ -377,48 +379,30 @@ class ExtensionsXMLSerializerTest(test.TestCase):
 
     def test_serialize_extensions(self):
         serializer = extensions.ExtensionsXMLSerializer()
-        data = {
-            "extensions": [
-                {
-                    "name": "Public Image Extension",
-                    "namespace": "http://foo.com/api/ext/pie/v1.0",
-                    "alias": "RS-PIE",
-                    "updated": "2011-01-22T13:25:27-06:00",
-                    "description": "Adds the capability to share an image.",
-                    "links": [
-                        {
-                            "rel": "describedby",
+        data = {"extensions": [{
+                "name": "Public Image Extension",
+                "namespace": "http://foo.com/api/ext/pie/v1.0",
+                "alias": "RS-PIE",
+                "updated": "2011-01-22T13:25:27-06:00",
+                "description": "Adds the capability to share an image.",
+                "links": [{"rel": "describedby",
                             "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-pie.pdf",
-                        },
-                        {
-                            "rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-pie.wadl",
-                        },
-                    ],
-                },
-                {
-                    "name": "Cloud Block Storage",
-                    "namespace": "http://foo.com/api/ext/cbs/v1.0",
-                    "alias": "RS-CBS",
-                    "updated": "2011-01-12T11:22:33-06:00",
-                    "description": "Allows mounting cloud block storage.",
-                    "links": [
-                        {
-                            "rel": "describedby",
-                            "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-cbs.pdf",
-                        },
-                        {
-                            "rel": "describedby",
+                            "href": "http://foo.com/api/ext/cs-pie.pdf"},
+                           {"rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-cbs.wadl",
-                        },
-                    ],
-                },
-            ],
-        }
+                            "href": "http://foo.com/api/ext/cs-pie.wadl"}]},
+                {"name": "Cloud Block Storage",
+                 "namespace": "http://foo.com/api/ext/cbs/v1.0",
+                 "alias": "RS-CBS",
+                 "updated": "2011-01-12T11:22:33-06:00",
+                 "description": "Allows mounting cloud block storage.",
+                 "links": [{"rel": "describedby",
+                             "type": "application/pdf",
+                             "href": "http://foo.com/api/ext/cs-cbs.pdf"},
+                            {"rel": "describedby",
+                             "type": "application/vnd.sun.wadl+xml",
+                             "href": "http://foo.com/api/ext/cs-cbs.wadl"}]}]}
 
         xml = serializer.serialize(data, 'index')
         print xml

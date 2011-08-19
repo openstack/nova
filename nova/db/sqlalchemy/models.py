@@ -127,14 +127,14 @@ class ComputeNode(BASE, NovaBase):
                                 'ComputeNode.service_id == Service.id,'
                                 'ComputeNode.deleted == False)')
 
-    vcpus = Column(Integer, nullable=True)
-    memory_mb = Column(Integer, nullable=True)
-    local_gb = Column(Integer, nullable=True)
-    vcpus_used = Column(Integer, nullable=True)
-    memory_mb_used = Column(Integer, nullable=True)
-    local_gb_used = Column(Integer, nullable=True)
-    hypervisor_type = Column(Text, nullable=True)
-    hypervisor_version = Column(Integer, nullable=True)
+    vcpus = Column(Integer)
+    memory_mb = Column(Integer)
+    local_gb = Column(Integer)
+    vcpus_used = Column(Integer)
+    memory_mb_used = Column(Integer)
+    local_gb_used = Column(Integer)
+    hypervisor_type = Column(Text)
+    hypervisor_version = Column(Integer)
 
     # Note(masumotok): Expected Strings example:
     #
@@ -479,6 +479,11 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
     group_id = Column(Integer, ForeignKey('security_groups.id'))
+    grantee_group = relationship("SecurityGroup",
+                                 foreign_keys=group_id,
+                                 primaryjoin='and_('
+        'SecurityGroupIngressRule.group_id == SecurityGroup.id,'
+        'SecurityGroupIngressRule.deleted == False)')
 
 
 class ProviderFirewallRule(BASE, NovaBase):
@@ -552,6 +557,7 @@ class Network(BASE, NovaBase):
 
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+    uuid = Column(String(36))
 
 
 class VirtualInterface(BASE, NovaBase):

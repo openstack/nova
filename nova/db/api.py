@@ -342,6 +342,14 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
                                         instance_id, host)
 
 
+def fixed_ip_associate_by_address(context, network_id, instance_id, address):
+    """check if the address is free and is in the network
+    and it is not associated to any instance.
+    """
+    return IMPL.fixed_ip_associate_by_address(context, network_id,
+                                              instance_id, address)
+
+
 def fixed_ip_create(context, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_create(context, values)
@@ -395,7 +403,6 @@ def fixed_ip_get_network(context, address):
 def fixed_ip_update(context, address, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_update(context, address, values)
-
 
 ####################
 
@@ -570,27 +577,6 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                             security_group_id)
 
 
-def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    """Get instances.vcpus by host and project."""
-    return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
-                                                          hostname,
-                                                          proj_id)
-
-
-def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    """Get amount of memory by host and project."""
-    return IMPL.instance_get_memory_sum_by_host_and_project(context,
-                                                            hostname,
-                                                            proj_id)
-
-
-def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    """Get total amount of disk by host and project."""
-    return IMPL.instance_get_disk_sum_by_host_and_project(context,
-                                                          hostname,
-                                                          proj_id)
-
-
 def instance_action_create(context, values):
     """Create an instance action from the values dictionary."""
     return IMPL.instance_action_create(context, values)
@@ -701,7 +687,14 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
+def network_get_networks_by_uuids(context, network_uuids):
+    """Return networks by ids."""
+    return IMPL.network_get_networks_by_uuids(context, network_uuids)
+
+
 # pylint: disable=C0103
+
+
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
     return IMPL.network_get_associated_fixed_ips(context, network_id)
@@ -1102,6 +1095,11 @@ def security_group_rule_destroy(context, security_group_rule_id):
     return IMPL.security_group_rule_destroy(context, security_group_rule_id)
 
 
+def security_group_rule_get(context, security_group_rule_id):
+    """Gets a security group rule."""
+    return IMPL.security_group_rule_get(context, security_group_rule_id)
+
+
 ###################
 
 
@@ -1244,6 +1242,11 @@ def project_get_networks(context, project_id, associate=True):
 
     """
     return IMPL.project_get_networks(context, project_id, associate)
+
+
+def project_get_networks_by_uuids(context, network_uuids):
+    """Return the networks by uuids associated with the project."""
+    return IMPL.project_get_networks_by_uuids(context, network_uuids)
 
 
 def project_get_networks_v6(context, project_id):

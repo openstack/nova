@@ -266,7 +266,7 @@ def service_get_all_network_sorted(context):
     session = get_session()
     with session.begin():
         topic = 'network'
-        label = 'network_count'
+        label = 'network_'
         subq = session.query(models.Network.host,
                              func.count(models.Network.id).label(label)).\
                        filter_by(deleted=False).\
@@ -699,6 +699,40 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
                                                  session=session)
         if host:
             fixed_ip_ref.host = host
+        session.add(fixed_ip_ref)
+    return fixed_ip_ref['address']
+
+
+@require_admin_context
+def fixed_ip_associate_by_address(context, network_id, instance_id,
+                                  address):
+    if address is None:
+        return fixed_ip_associate_pool(context, network_id, instance_id)
+
+    session = get_session()
+    with session.begin():
+        fixed_ip_ref = session.query(models.FixedIp).\
+                               filter_by(reserved=False).\
+                               filter_by(deleted=False).\
+                               filter_by(network_id=network_id).\
+                               filter_by(address=address).\
+                               with_lockmode('update').\
+                               first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if fixed_ip_ref is None:
+            raise exception.FixedIpNotFoundForNetwork(address=address,
+                                            network_id=network_id)
+        if fixed_ip_ref.instance is not None:
+            raise exception.FixedIpAlreadyInUse(address=address)
+
+        if not fixed_ip_ref.network:
+            fixed_ip_ref.network = network_get(context,
+                                           network_id,
+                                           session=session)
+        fixed_ip_ref.instance = instance_get(context,
+                                             instance_id,
+                                             session=session)
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
@@ -1139,7 +1173,10 @@ def instance_get_all(context):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('virtual_interfaces')).\
+                   options(joinedload_all('virtual_interfaces.network')).\
+                   options(joinedload_all(
+                           'virtual_interfaces.fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces.instance')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
@@ -1175,6 +1212,19 @@ def instance_get_all_by_filters(context, filters):
                         return True
         return False
 
+    def _regexp_filter_by_metadata(instance, meta):
+        inst_metadata = [{node['key']: node['value']} \
+                         for node in instance['metadata']]
+        if isinstance(meta, list):
+            for node in meta:
+                if node not in inst_metadata:
+                    return False
+        elif isinstance(meta, dict):
+            for k, v in meta.iteritems():
+                if {k: v} not in inst_metadata:
+                    return False
+        return True
+
     def _regexp_filter_by_column(instance, filter_name, filter_re):
         try:
             v = getattr(instance, filter_name)
@@ -1202,6 +1252,7 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload_all('virtual_interfaces.network')).\
                    options(joinedload_all(
                            'virtual_interfaces.fixed_ips.floating_ips')).\
+                   options(joinedload('virtual_interfaces.instance')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
@@ -1232,7 +1283,9 @@ def instance_get_all_by_filters(context, filters):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    instances = query_prefix.all()
+    instances = query_prefix.\
+                    filter_by(deleted=can_read_deleted(context)).\
+                    all()
 
     if not instances:
         return []
@@ -1248,6 +1301,9 @@ def instance_get_all_by_filters(context, filters):
         filter_re = re.compile(str(filters[filter_name]))
         if filter_func:
             filter_l = lambda instance: filter_func(instance, filter_re)
+        elif filter_name == 'metadata':
+            filter_l = lambda instance: _regexp_filter_by_metadata(instance,
+                    filters[filter_name])
         else:
             filter_l = lambda instance: _regexp_filter_by_column(instance,
                     filter_name, filter_re)
@@ -1476,45 +1532,6 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                                 session=session)
         instance_ref.security_groups += [security_group_ref]
         instance_ref.save(session=session)
-
-
-@require_context
-def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.vcpus))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.memory_mb))
-    if not result:
-        return 0
-    return result
-
-
-@require_context
-def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    session = get_session()
-    result = session.query(models.Instance).\
-                      filter_by(host=hostname).\
-                      filter_by(project_id=proj_id).\
-                      filter_by(deleted=False).\
-                      value(func.sum(models.Instance.local_gb))
-    if not result:
-        return 0
-    return result
 
 
 @require_context
@@ -1758,6 +1775,34 @@ def network_get_all(context):
     return result
 
 
+@require_admin_context
+def network_get_networks_by_uuids(context, network_uuids):
+    session = get_session()
+    result = session.query(models.Network).\
+                 filter(models.Network.uuid.in_(network_uuids)).\
+                 filter_by(deleted=False).all()
+    if not result:
+        raise exception.NoNetworksFound()
+
+    #check if host is set to all of the networks
+    # returned in the result
+    for network in result:
+            if network['host'] is None:
+                raise exception.NetworkHostNotSet(network_id=network['id'])
+
+    #check if the result contains all the networks
+    #we are looking for
+    for network_uuid in network_uuids:
+        found = False
+        for network in result:
+            if network['uuid'] == network_uuid:
+                found = True
+                break
+        if not found:
+            raise exception.NetworkNotFound(network_id=network_uuid)
+
+    return result
+
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable=C0103
@@ -1994,6 +2039,7 @@ def quota_get(context, project_id, resource, session=None):
 
 @require_context
 def quota_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
     session = get_session()
     result = {'project_id': project_id}
     rows = session.query(models.Quota).\
@@ -2911,6 +2957,37 @@ def project_get_networks(context, project_id, associate=True):
         if not associate:
             return []
         return [network_associate(context, project_id)]
+    return result
+
+
+@require_context
+def project_get_networks_by_uuids(context, network_uuids):
+    session = get_session()
+    result = session.query(models.Network).\
+                 filter(models.Network.uuid.in_(network_uuids)).\
+                 filter_by(deleted=False).\
+                 filter_by(project_id=context.project_id).all()
+
+    if not result:
+        raise exception.NoNetworksFound()
+
+    #check if host is set to all of the networks
+    # returned in the result
+    for network in result:
+            if network['host'] is None:
+                raise exception.NetworkHostNotSet(network_id=network['id'])
+
+    #check if the result contains all the networks
+    #we are looking for
+    for uuid in network_uuids:
+        found = False
+        for network in result:
+            if network['uuid'] == uuid:
+                found = True
+                break
+        if not found:
+            raise exception.NetworkNotFoundForProject(network_uuid=uuid,
+                                              project_id=context.project_id)
     return result
 
 

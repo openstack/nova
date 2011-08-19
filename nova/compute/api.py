@@ -146,6 +146,16 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
+    def _check_requested_networks(self, context, requested_networks):
+        """ Check if the networks requested belongs to the project
+            and the fixed IP address for each network provided is within
+            same the network block
+        """
+        if requested_networks is None:
+            return
+
+        self.network_api.validate_networks(context, requested_networks)
+
     def _check_create_parameters(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
                min_count=None, max_count=None,
@@ -153,7 +163,7 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, requested_networks=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -182,6 +192,7 @@ class API(base.Base):
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
+        self._check_requested_networks(context, requested_networks)
 
         (image_service, image_id) = nova.image.get_image_service(image_href)
         image = image_service.show(context, image_id)
@@ -393,18 +404,14 @@ class API(base.Base):
         updates['hostname'] = self.hostname_factory(instance)
 
         instance = self.update(context, instance_id, **updates)
-
-        for group_id in security_groups:
-            self.trigger_security_group_members_refresh(elevated, group_id)
-
         return instance
 
     def _ask_scheduler_to_create_instance(self, context, base_options,
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
-                                          admin_password,
-                                          image,
-                                          instance_id=None, num_instances=1):
+                                          admin_password, image,
+                                          instance_id=None, num_instances=1,
+                                          requested_networks=None):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
         uid = context.user_id
@@ -433,7 +440,8 @@ class API(base.Base):
                            "request_spec": request_spec,
                            "availability_zone": availability_zone,
                            "admin_password": admin_password,
-                           "injected_files": injected_files}})
+                           "injected_files": injected_files,
+                           "requested_networks": requested_networks}})
 
     def create_all_at_once(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
@@ -442,7 +450,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               requested_networks=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
@@ -458,14 +467,14 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, requested_networks)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
-                                      admin_password,
-                                      image,
-                                      num_instances=num_instances)
+                                      admin_password, image,
+                                      num_instances=num_instances,
+                                      requested_networks=requested_networks)
 
         return base_options['reservation_id']
 
@@ -476,7 +485,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               requested_networks=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -500,7 +510,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, requested_networks)
 
         block_device_mapping = block_device_mapping or []
         instances = []
@@ -514,11 +524,11 @@ class API(base.Base):
             instance_id = instance['id']
 
             self._ask_scheduler_to_create_instance(context, base_options,
-                                          instance_type, zone_blob,
-                                          availability_zone, injected_files,
-                                          admin_password,
-                                          image,
-                                          instance_id=instance_id)
+                                        instance_type, zone_blob,
+                                        availability_zone, injected_files,
+                                        admin_password, image,
+                                        instance_id=instance_id,
+                                        requested_networks=requested_networks)
 
         return [dict(x.iteritems()) for x in instances]
 
@@ -565,18 +575,20 @@ class API(base.Base):
                      {"method": "refresh_security_group_rules",
                       "args": {"security_group_id": security_group.id}})
 
-    def trigger_security_group_members_refresh(self, context, group_id):
+    def trigger_security_group_members_refresh(self, context, group_ids):
         """Called when a security group gains a new or loses a member.
 
         Sends an update request to each compute node for whom this is
         relevant.
         """
-        # First, we get the security group rules that reference this group as
+        # First, we get the security group rules that reference these groups as
         # the grantee..
-        security_group_rules = \
+        security_group_rules = set()
+        for group_id in group_ids:
+            security_group_rules.update(
                 self.db.security_group_rule_get_by_security_group_grantee(
                                                                      context,
-                                                                     group_id)
+                                                                     group_id))
 
         # ..then we distill the security groups to which they belong..
         security_groups = set()
