@@ -103,7 +103,7 @@ class NetworkCommandsTestCase(test.TestCase):
         self.commands.create(
                              label = 'Test',
                              fixed_range_v4 = '10.2.0.0/24',
-                             fixed_range_v6 = 'fd00:2::/64',
+                             fixed_range_v6 = 'fd00:2::/120',
                              num_networks = 1,
                              network_size = 256,
                              vlan_start = 200,
@@ -113,34 +113,38 @@ class NetworkCommandsTestCase(test.TestCase):
         self.assertEqual(net['label'], 'Test')
         self.assertEqual(net['cidr'], '10.2.0.0/24')
         self.assertEqual(net['netmask'], '255.255.255.0')
-        self.assertEqual(net['cidr_v6'], 'fd00:2::/64')
+        self.assertEqual(net['cidr_v6'], 'fd00:2::/120')
         self.assertEqual(net['bridge_interface'], 'eth0')
         self.assertEqual(net['vlan'], 200)
 
     def test_list(self):
-        format = "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"
-        head = format % (
-            _('IPv4'),
-            _('IPv6'),
-            _('start address'),
-            _('DNS1'),
-            _('DNS2'),
-            _('VlanID'),
-            _('project'))
-        body = format % (
-            '10.2.0.0/24',
-            'fd00:2::/64',
-            '10.2.0.3',
-            'None',
-            'None',
-            '200',
-            'None',)
         self.test_create()
+        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
         output = StringIO.StringIO()
         sys.stdout = output
         self.commands.list()
         sys.stdout = sys.__stdout__
         result = output.getvalue()
+        _fmt = "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"
+        head = _fmt % (_('id'),
+                          _('IPv4'),
+                          _('IPv6'),
+                          _('start address'),
+                          _('DNS1'),
+                          _('DNS2'),
+                          _('VlanID'),
+                          _('project'),
+                          _("uuid"))
+        body = _fmt % (
+            net['id'],
+            '10.2.0.0/24',
+            'fd00:2::/120',
+            '10.2.0.3',
+            'None',
+            'None',
+            '200',
+            'None',
+            net['uuid'],)
         answer = '%s\n%s\n' % (head, body)
         self.assertEqual(result, answer)
 
