@@ -258,6 +258,7 @@ def cleanup(dct):
 #    out["host_suspend-image-sr-uuid"] = dct.get("suspend-image-sr-uuid", "")
 #    out["host_crash-dump-sr-uuid"] = dct.get("crash-dump-sr-uuid", "")
 #    out["host_local-cache-sr"] = dct.get("local-cache-sr", "")
+    out["enabled"] = dct.get("enabled", "true") == "true"
     out["host_memory"] = omm = {}
     omm["total"] = safe_int(dct.get("memory-total", ""))
     omm["overhead"] = safe_int(dct.get("memory-overhead", ""))

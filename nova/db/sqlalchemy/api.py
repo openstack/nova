@@ -1178,6 +1178,19 @@ def instance_get_all_by_filters(context, filters):
                         return True
         return False
 
+    def _regexp_filter_by_metadata(instance, meta):
+        inst_metadata = [{node['key']: node['value']} \
+                         for node in instance['metadata']]
+        if isinstance(meta, list):
+            for node in meta:
+                if node not in inst_metadata:
+                    return False
+        elif isinstance(meta, dict):
+            for k, v in meta.iteritems():
+                if {k: v} not in inst_metadata:
+                    return False
+        return True
+
     def _regexp_filter_by_column(instance, filter_name, filter_re):
         try:
             v = getattr(instance, filter_name)
@@ -1209,7 +1222,8 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
-                   options(joinedload('instance_type'))
+                   options(joinedload('instance_type')).\
+                   filter_by(deleted=can_read_deleted(context))
 
     # Make a copy of the filters dictionary to use going forward, as we'll
     # be modifying it and we shouldn't affect the caller's use of it.
@@ -1236,7 +1250,9 @@ def instance_get_all_by_filters(context, filters):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    instances = query_prefix.all()
+    instances = query_prefix.\
+                    filter_by(deleted=can_read_deleted(context)).\
+                    all()
 
     if not instances:
         return []
@@ -1252,6 +1268,9 @@ def instance_get_all_by_filters(context, filters):
         filter_re = re.compile(str(filters[filter_name]))
         if filter_func:
             filter_l = lambda instance: filter_func(instance, filter_re)
+        elif filter_name == 'metadata':
+            filter_l = lambda instance: _regexp_filter_by_metadata(instance,
+                    filters[filter_name])
         else:
             filter_l = lambda instance: _regexp_filter_by_column(instance,
                     filter_name, filter_re)
@@ -1987,6 +2006,7 @@ def quota_get(context, project_id, resource, session=None):
 
 @require_context
 def quota_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
     session = get_session()
     result = {'project_id': project_id}
     rows = session.query(models.Quota).\

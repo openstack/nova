@@ -128,12 +128,12 @@ class XenAPIOpenVswitchDriver(VIFDriver):
         vif_rec['VM'] = vm_ref
         vif_rec['MAC'] = network_mapping['mac']
         vif_rec['MTU'] = '1500'
-        vif_id = "nova-" + str(instance['id']) + "-" + str(network['id'])
         vif_rec['qos_algorithm_type'] = ""
         vif_rec['qos_algorithm_params'] = {}
         # OVS on the hypervisor monitors this key and uses it to
         # set the iface-id attribute
-        vif_rec['other_config'] = {"nicira-iface-id": vif_id}
+        vif_rec['other_config'] = \
+                {"nicira-iface-id": network_mapping['vif_uuid']}
         return vif_rec
 
     def unplug(self, instance, network, mapping):
