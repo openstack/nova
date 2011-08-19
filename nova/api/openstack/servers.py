@@ -936,7 +936,21 @@ def create_resource(version='1.0'):
         '1.1': ControllerV11,
     }[version]()
 
-    metadata = _get_metadata()
+    metadata = {
+        "attributes": {
+            "server": ["id", "imageId", "name", "flavorId", "hostId",
+                       "status", "progress", "adminPass", "flavorRef",
+                       "imageRef"],
+            "link": ["rel", "type", "href"],
+        },
+        "dict_collections": {
+            "metadata": {"item_name": "meta", "item_key": "key"},
+        },
+        "list_collections": {
+            "public": {"item_name": "ip", "item_key": "addr"},
+            "private": {"item_name": "ip", "item_key": "addr"},
+        },
+    }
 
     xmlns = {
         '1.0': wsgi.XMLNS_V10,
@@ -967,25 +981,6 @@ def create_resource(version='1.0'):
     deserializer = wsgi.RequestDeserializer(body_deserializers)
 
     return wsgi.Resource(controller, deserializer, serializer)
-
-
-def _get_metadata():
-    metadata = {
-        "attributes": {
-            "server": ["id", "imageId", "name", "flavorId", "hostId",
-                       "status", "progress", "adminPass", "flavorRef",
-                       "imageRef"],
-            "link": ["rel", "type", "href"],
-        },
-        "dict_collections": {
-            "metadata": {"item_name": "meta", "item_key": "key"},
-        },
-        "list_collections": {
-            "public": {"item_name": "ip", "item_key": "addr"},
-            "private": {"item_name": "ip", "item_key": "addr"},
-        },
-    }
-    return metadata
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):
