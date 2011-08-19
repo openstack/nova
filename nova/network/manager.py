@@ -500,6 +500,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'dhcp_server': dhcp_server,
                 'broadcast': network['broadcast'],
                 'mac': vif['address'],
+                'vif_uuid': vif['uuid'],
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [],
                 'ips': [ip_dict(ip) for ip in network_IPs],
@@ -524,7 +525,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         for network in networks:
             vif = {'address': self.generate_mac_address(),
                    'instance_id': instance_id,
-                   'network_id': network['id']}
+                   'network_id': network['id'],
+                   'uuid': str(utils.gen_uuid())}
             # try FLAG times to create a vif record with a unique mac_address
             for i in range(FLAGS.create_unique_mac_address_attempts):
                 try:
