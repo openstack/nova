@@ -80,6 +80,7 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
 
         try:
+            # FIXME - why does self.network_api.list_floating_ips raise this?
             floating_ips = self.network_api.list_floating_ips(context)
         except exception.FloatingIpNotFoundForProject:
             floating_ips = []
@@ -174,9 +175,7 @@ class Floating_ips(extensions.ExtensionDescriptor):
 
         res = extensions.ResourceExtension('os-floating-ips',
                          FloatingIPController(),
-                         member_actions={
-                            'associate': 'PUT',
-                            'disassociate': 'PUT'})
+                         member_actions={})
         resources.append(res)
 
         return resources
