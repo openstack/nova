@@ -17,6 +17,7 @@ import json
 import stubout
 import webob
 
+from nova import compute
 from nova import context
 from nova import db
 from nova import test
@@ -29,6 +30,11 @@ from nova.api.openstack.contrib.floating_ips import _translate_floating_ip_view
 
 
 def network_api_get_floating_ip(self, context, id):
+    return {'id': 1, 'address': '10.10.10.10',
+            'fixed_ip': None}
+
+
+def network_api_get_floating_ip_by_ip(self, context, address):
     return {'id': 1, 'address': '10.10.10.10',
             'fixed_ip': {'address': '11.0.0.1'}}
 
@@ -50,7 +56,7 @@ def network_api_release(self, context, address):
     pass
 
 
-def network_api_associate(self, context, floating_ip, fixed_ip):
+def compute_api_associate(self, context, instance_id, floating_ip):
     pass
 
 
@@ -78,14 +84,16 @@ class FloatingIpTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(network.api.API, "get_floating_ip",
                        network_api_get_floating_ip)
+        self.stubs.Set(network.api.API, "get_floating_ip_by_ip",
+                       network_api_get_floating_ip)
         self.stubs.Set(network.api.API, "list_floating_ips",
                        network_api_list_floating_ips)
         self.stubs.Set(network.api.API, "allocate_floating_ip",
                        network_api_allocate)
         self.stubs.Set(network.api.API, "release_floating_ip",
                        network_api_release)
-        self.stubs.Set(network.api.API, "associate_floating_ip",
-                       network_api_associate)
+        self.stubs.Set(compute.api.API, "associate_floating_ip",
+                       compute_api_associate)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        network_api_disassociate)
         self.context = context.get_admin_context()
@@ -133,7 +141,6 @@ class FloatingIpTest(test.TestCase):
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['floating_ip']['id'], 1)
         self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
-        self.assertEqual(res_dict['floating_ip']['fixed_ip'], '11.0.0.1')
         self.assertEqual(res_dict['floating_ip']['instance_id'], None)
 
     def test_floating_ip_allocate(self):
@@ -141,7 +148,6 @@ class FloatingIpTest(test.TestCase):
         req.method = 'POST'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
-        print res
         self.assertEqual(res.status_int, 200)
         ip = json.loads(res.body)['floating_ip']
 
@@ -158,37 +164,22 @@ class FloatingIpTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
-    def test_floating_ip_associate(self):
-        body = dict(floating_ip=dict(fixed_ip='11.0.0.1'))
-        req = webob.Request.blank('/v1.1/os-floating-ips/1/associate')
-        req.method = 'PUT'
+    def test_add_floating_ip_to_instance(self):
+        body = dict(addFloatingIp=dict(address='11.0.0.1'))
+        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        actual = json.loads(res.body)['floating_ip']
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 202)
 
-        expected = {
-            "id": 1,
-            "instance_id": None,
-            "ip": "10.10.10.10",
-            "fixed_ip": "11.0.0.1"}
-        self.assertEqual(actual, expected)
-
-    def test_floating_ip_disassociate(self):
-        body = dict()
-        req = webob.Request.blank('/v1.1/os-floating-ips/1/disassociate')
-        req.method = 'PUT'
+    def test_remove_floating_ip_from_instance(self):
+        body = dict(removeFloatingIp=dict(address='11.0.0.1'))
+        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req.method = "POST"
         req.body = json.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        ip = json.loads(res.body)['floating_ip']
-        expected = {
-            "id": 1,
-            "instance_id": None,
-            "ip": '10.10.10.10',
-            "fixed_ip": '11.0.0.1'}
+        req.headers["content-type"] = "application/json"
 
-        self.assertEqual(ip, expected)
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 202)
