@@ -18,6 +18,7 @@
 from nova import db
 from nova import test
 from nova.network import manager as network_manager
+from network_
 
 
 HOST = "testhost"
@@ -104,4 +105,4 @@ def fake_get_instance_nw_info(stubs, n=1, ips_per_vif=2):
     stubs.Set(db, 'virtual_interface_get_by_instance', virtual_interfaces_fake)
     stubs.Set(db, 'instance_type_get', instance_type_fake)
 
-    nw_info = network_manager.get_instance_nw_info(None, 0, 0, None)
+    nw_info = network.get_instance_nw_info(None, 0, 0, None)
