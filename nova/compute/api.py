@@ -36,7 +36,7 @@ from nova import utils
 from nova import volume
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.compute import vm_state
+from nova.compute import vm_states
 from nova.compute.utils import terminate_volumes
 from nova.scheduler import api as scheduler_api
 from nova.db import base
@@ -76,10 +76,10 @@ def generate_default_hostname(instance):
 
 def _is_able_to_shutdown(instance, instance_id):
     states = {
-        vm_state.DELETE: "Instance %s is already being terminated",
-        vm_state.MIGRATE: "Instance %s is being migrated",
-        vm_state.RESIZE: "Instance %s is being resized",
-        vm_state.STOP: "Instance %s is being stopped",
+        vm_states.DELETE: "Instance %s is already being terminated",
+        vm_states.MIGRATE: "Instance %s is being migrated",
+        vm_states.RESIZE: "Instance %s is being resized",
+        vm_states.STOP: "Instance %s is being stopped",
     }
     msg = states.get(instance['vm_state'])
     if msg:
@@ -236,7 +236,7 @@ class API(base.Base):
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
             'power_state': power_state.NOSTATE,
-            'vm_state': vm_state.BUILD,
+            'vm_state': vm_states.BUILD,
             'user_id': context.user_id,
             'project_id': context.project_id,
             'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -653,7 +653,7 @@ class API(base.Base):
 
         self.update(context,
                     instance_id,
-                    vm_state=vm_state.DELETE,
+                    vm_state=vm_states.DELETE,
                     terminated_at=utils.utcnow())
 
         host = instance['host']
@@ -675,7 +675,7 @@ class API(base.Base):
 
         self.update(context,
                     instance_id,
-                    vm_state=vm_state.STOP,
+                    vm_state=vm_states.STOP,
                     terminated_at=utils.utcnow())
 
         host = instance['host']
@@ -689,12 +689,12 @@ class API(base.Base):
         instance = self._get_instance(context, instance_id, 'starting')
         vm_state = instance["vm_state"]
 
-        if vm_state != vm_state.STOP:
+        if vm_state != vm_states.STOP:
             LOG.warning(_("Instance %(instance_id)s is not "
                           "stopped. (%(vm_state)s)") % locals())
             return
 
-        self.update(context, instance_id, vm_state=vm_state.ACTIVE)
+        self.update(context, instance_id, vm_state=vm_states.ACTIVE)
 
         # TODO(yamahata): injected_files isn't supported right now.
         #                 It is used only for osapi. not for ec2 api.
@@ -923,7 +923,7 @@ class API(base.Base):
     @scheduler_api.reroute_compute("reboot")
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
-        self.update(context, instance_id, vm_state=vm_state.REBOOT)
+        self.update(context, instance_id, vm_state=vm_states.REBOOT)
         self._cast_compute_message('reboot_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("rebuild")
@@ -932,8 +932,8 @@ class API(base.Base):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
         invalid_rebuild_states = [
-            vm_state.BUILD,
-            vm_state.REBUILD,
+            vm_states.BUILD,
+            vm_states.REBUILD,
         ]
 
         if instance["vm_state"] in invalid_rebuild_states:
@@ -956,7 +956,7 @@ class API(base.Base):
             "injected_files": files_to_inject,
         }
 
-        self.update(context, instance_id, vm_state=vm_state.REBUILD)
+        self.update(context, instance_id, vm_state=vm_states.REBUILD)
 
         self._cast_compute_message('rebuild_instance',
                                    context,
@@ -975,7 +975,7 @@ class API(base.Base):
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
 
-        self.update(context, instance_id, vm_state=vm_state.ACTIVE)
+        self.update(context, instance_id, vm_state=vm_states.ACTIVE)
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,
@@ -998,7 +998,7 @@ class API(base.Base):
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
 
-        self.update(context, instance_id, vm_state=vm_state.ACTIVE)
+        self.update(context, instance_id, vm_state=vm_states.ACTIVE)
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context,
@@ -1045,7 +1045,7 @@ class API(base.Base):
         if (current_memory_mb == new_memory_mb) and flavor_id:
             raise exception.CannotResizeToSameSize()
 
-        self.update(context, instance_id, vm_state=vm_state.RESIZE)
+        self.update(context, instance_id, vm_state=vm_states.RESIZE)
 
         instance_ref = self._get_instance(context, instance_id, 'resize')
         self._cast_scheduler_message(context,
@@ -1080,13 +1080,13 @@ class API(base.Base):
     @scheduler_api.reroute_compute("pause")
     def pause(self, context, instance_id):
         """Pause the given instance."""
-        self.update(context, instance_id, vm_state=vm_state.PAUSE)
+        self.update(context, instance_id, vm_state=vm_states.PAUSE)
         self._cast_compute_message('pause_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("unpause")
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
-        self.update(context, instance_id, vm_state=vm_state.ACTIVE)
+        self.update(context, instance_id, vm_state=vm_states.ACTIVE)
         self._cast_compute_message('unpause_instance', context, instance_id)
 
     def _call_compute_message_for_host(self, action, context, host, params):
@@ -1119,25 +1119,25 @@ class API(base.Base):
     @scheduler_api.reroute_compute("suspend")
     def suspend(self, context, instance_id):
         """Suspend the given instance."""
-        self.update(context, instance_id, vm_state=vm_state.SUSPEND)
+        self.update(context, instance_id, vm_state=vm_states.SUSPEND)
         self._cast_compute_message('suspend_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("resume")
     def resume(self, context, instance_id):
         """Resume the given instance."""
-        self.update(context, instance_id, vm_state=vm_state.ACTIVE)
+        self.update(context, instance_id, vm_state=vm_states.ACTIVE)
         self._cast_compute_message('resume_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("rescue")
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
-        self.update(context, instance_id, vm_state=vm_state.RESCUE)
+        self.update(context, instance_id, vm_state=vm_states.RESCUE)
         self._cast_compute_message('rescue_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
-        self.update(context, instance_id, vm_state=vm_state.ACTIVE)
+        self.update(context, instance_id, vm_state=vm_states.ACTIVE)
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("set_admin_password")

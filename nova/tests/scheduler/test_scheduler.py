@@ -40,7 +40,7 @@ from nova.scheduler import driver
 from nova.scheduler import manager
 from nova.scheduler import multi
 from nova.compute import power_state
-from nova.compute import vm_state
+from nova.compute import vm_states
 
 
 FLAGS = flags.FLAGS

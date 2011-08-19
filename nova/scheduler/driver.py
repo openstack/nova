@@ -31,7 +31,7 @@ from nova import rpc
 from nova import utils
 from nova.compute import power_state
 from nova.compute import task_state
-from nova.compute import vm_state
+from nova.compute import vm_states
 from nova.api.ec2 import ec2utils
 
 
@@ -106,7 +106,7 @@ class Scheduler(object):
                                           dest, block_migration)
 
         # Changing instance_state.
-        values = {"vm_state": vm_state.MIGRATE}
+        values = {"vm_state": vm_states.MIGRATE}
         db.instance_update(context, instance_id, values)
 
         # Changing volume state

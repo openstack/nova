@@ -57,7 +57,7 @@ from nova import utils
 from nova import volume
 from nova.compute import power_state
 from nova.compute import task_state
-from nova.compute import vm_state
+from nova.compute import vm_states
 from nova.notifier import api as notifier
 from nova.compute.utils import terminate_volumes
 from nova.virt import driver
@@ -372,7 +372,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         updates = {}
         updates['host'] = self.host
         updates['launched_on'] = self.host
-        updates['vm_state'] = vm_state.BUILD
+        updates['vm_state'] = vm_states.BUILD
         updates['task_state'] = task_state.NETWORKING
         instance = self.db.instance_update(context, instance_id, updates)
         instance['injected_files'] = kwargs.get('injected_files', [])
@@ -397,7 +397,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._instance_update(context,
                                   instance_id,
-                                  vm_state=vm_state.BUILD,
+                                  vm_state=vm_states.BUILD,
                                   task_state=task_state.BLOCK_DEVICE_MAPPING)
 
             (swap, ephemerals,
@@ -428,7 +428,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._instance_update(context,
                                   instance_id,
                                   power_state=current_power_state,
-                                  vm_state=vm_state.ACTIVE,
+                                  vm_state=vm_states.ACTIVE,
                                   task_state=None,
                                   launched_at=utils.utcnow())
 
@@ -523,7 +523,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.REBUILD,
+                              vm_state=vm_states.REBUILD,
                               task_state=task_state.REBUILDING)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
@@ -531,7 +531,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.REBUILD,
+                              vm_state=vm_states.REBUILD,
                               task_state=task_state.BLOCK_DEVICE_MAPPING)
 
         bd_mapping = self._setup_block_device_mapping(context, instance_id)
@@ -544,7 +544,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.REBUILD,
+                              vm_state=vm_states.REBUILD,
                               task_state=task_state.SPAWN)
 
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
@@ -553,7 +553,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=None,
                               image_ref=image_ref,
                               launched_at=utils.utcnow())
@@ -577,7 +577,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.REBOOT,
+                              vm_state=vm_states.REBOOT,
                               task_state=task_state.REBOOTING)
 
         if instance_ref['power_state'] != power_state.RUNNING:
@@ -595,7 +595,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -622,7 +622,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=image_type)
 
         LOG.audit(_('instance %s: snapshotting'), instance_id,
@@ -787,7 +787,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.RESCUE,
+                              vm_state=vm_states.RESCUE,
                               task_state=task_state.RESCUING)
 
         instance_ref = self.db.instance_get(context, instance_id)
@@ -799,7 +799,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.RESCUE,
+                              vm_state=vm_states.RESCUE,
                               task_state=task_state.RESCUED,
                               power_state=current_power_state)
 
@@ -812,7 +812,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=task_state.UNRESCUING)
 
         instance_ref = self.db.instance_get(context, instance_id)
@@ -824,7 +824,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=None,
                               power_state=current_power_state)
 
@@ -1048,7 +1048,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.PAUSE,
+                              vm_state=vm_states.PAUSE,
                               task_state=task_state.PAUSING)
 
         instance_ref = self.db.instance_get(context, instance_id)
@@ -1058,7 +1058,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.PAUSE,
+                              vm_state=vm_states.PAUSE,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1070,7 +1070,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=task_state.UNPAUSING)
 
         instance_ref = self.db.instance_get(context, instance_id)
@@ -1080,7 +1080,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1111,7 +1111,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.SUSPEND,
+                              vm_state=vm_states.SUSPEND,
                               task_state=task_state.SUSPENDING)
 
         instance_ref = self.db.instance_get(context, instance_id)
@@ -1121,7 +1121,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.SUSPEND,
+                              vm_state=vm_states.SUSPEND,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1133,7 +1133,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=task_state.RESUMING)
 
         instance_ref = self.db.instance_get(context, instance_id)
@@ -1143,7 +1143,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1560,7 +1560,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               instance_ref["id"],
                               host=dest,
                               power_state=current_power_state,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=None)
 
         # Restore volume state
@@ -1611,7 +1611,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_ref['id'],
                               host=host,
-                              vm_state=vm_state.ACTIVE,
+                              vm_state=vm_states.ACTIVE,
                               task_state=None)
 
         for volume_ref in instance_ref['volumes']:

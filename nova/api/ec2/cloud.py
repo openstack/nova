@@ -47,6 +47,7 @@ from nova import utils
 from nova import volume
 from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
+from nova.compute import vm_states
 from nova.image import s3
 
 
@@ -1039,11 +1040,10 @@ class CloudController(object):
 
         def _format_attr_instance_initiated_shutdown_behavior(instance,
                                                                result):
-            state_description = instance['state_description']
-            state_to_value = {'stopping': 'stop',
-                              'stopped': 'stop',
-                              'terminating': 'terminate'}
-            value = state_to_value.get(state_description)
+            vm_state = instance['vm_state']
+            state_to_value = {vm_states.STOP: 'stop',
+                              vm_states.DELETE: 'terminate'}
+            value = state_to_value.get(vm_state)
             if value:
                 result['instanceInitiatedShutdownBehavior'] = value
 
@@ -1198,8 +1198,8 @@ class CloudController(object):
             self._format_kernel_id(instance, i, 'kernelId')
             self._format_ramdisk_id(instance, i, 'ramdiskId')
             i['instanceState'] = {
-                'code': instance['state'],
-                'name': instance['state_description']}
+                'code': instance['power_state'],
+                'name': instance['vm_state']} #FIXME
             fixed_addr = None
             floating_addr = None
             if instance['fixed_ips']:
@@ -1618,22 +1618,22 @@ class CloudController(object):
         # stop the instance if necessary
         restart_instance = False
         if not no_reboot:
-            state_description = instance['state_description']
+            vm_state = instance['vm_state']
 
             # if the instance is in subtle state, refuse to proceed.
-            if state_description not in ('running', 'stopping', 'stopped'):
+            if vm_state not in (vm_states.ACTIVE, vm_states.STOP):
                 raise exception.InstanceNotRunning(instance_id=ec2_instance_id)
 
-            if state_description == 'running':
+            if vm_state == vm_states.ACTIVE:
                 restart_instance = True
                 self.compute_api.stop(context, instance_id=instance_id)
 
             # wait instance for really stopped
             start_time = time.time()
-            while state_description != 'stopped':
+            while vm_state != vm_states.STOP:
                 time.sleep(1)
                 instance = self.compute_api.get(context, instance_id)
-                state_description = instance['state_description']
+                vm_state = instance['vm_state']
                 # NOTE(yamahata): timeout and error. 1 hour for now for safety.
                 #                 Is it too short/long?
                 #                 Or is there any better way?

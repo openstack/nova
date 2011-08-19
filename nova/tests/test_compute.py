@@ -23,7 +23,7 @@ from nova import compute
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
-from nova.compute import vm_state
+from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -748,7 +748,7 @@ class ComputeTestCase(test.TestCase):
                                      'block_migration': False,
                                      'disk': None}}).\
                             AndRaise(rpc.RemoteError('', '', ''))
-        dbmock.instance_update(c, i_ref['id'], {'vm_state': vm_state.ACTIVE,
+        dbmock.instance_update(c, i_ref['id'], {'vm_state': vm_states.ACTIVE,
                                                 'task_state': None,
                                                 'host': i_ref['host']})
         for v in i_ref['volumes']:
@@ -780,7 +780,7 @@ class ComputeTestCase(test.TestCase):
                                      'block_migration': False,
                                      'disk': None}}).\
                             AndRaise(rpc.RemoteError('', '', ''))
-        dbmock.instance_update(c, i_ref['id'], {'vm_state': vm_state.ACTIVE,
+        dbmock.instance_update(c, i_ref['id'], {'vm_state': vm_states.ACTIVE,
                                                 'task_state': None,
                                                 'host': i_ref['host']})
 
@@ -826,7 +826,7 @@ class ComputeTestCase(test.TestCase):
         c = context.get_admin_context()
         instance_id = self._create_instance()
         i_ref = db.instance_get(c, instance_id)
-        db.instance_update(c, i_ref['id'], {'vm_state': vm_state.MIGRATE,
+        db.instance_update(c, i_ref['id'], {'vm_state': vm_states.MIGRATE,
                                             'power_state': power_state.PAUSED})
         v_ref = db.volume_create(c, {'size': 1, 'instance_id': instance_id})
         fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',
