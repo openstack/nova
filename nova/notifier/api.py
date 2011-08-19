@@ -48,12 +48,11 @@ def notify_decorator(name, fn):
             body['args'].append(arg)
         for key in kwarg:
             body['kwarg'][key] = kwarg[key]
-        LOG.debug("Notify Decorator: %s %r" % (name, body))
         notify(FLAGS.host,
                             name,
                             DEBUG,
                             body)
-        fn(*args, **kwarg)
+        return fn(*args, **kwarg)
     return wrapped_func
 
 
