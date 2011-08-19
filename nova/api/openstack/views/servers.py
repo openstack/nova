@@ -144,10 +144,8 @@ class ViewBuilderV11(ViewBuilder):
             elif response['server']['status'] == "BUILD":
                 response['server']['progress'] = 0
 
-        if inst.get('access_ip_v4'):
-            response['server']['accessIPv4'] = inst['access_ip_v4']
-        if inst.get('access_ip_v6'):
-            response['server']['accessIPv6'] = inst['access_ip_v6']
+        response['server']['accessIPv4'] = inst.get('access_ip_v4') or ""
+        response['server']['accessIPv6'] = inst.get('access_ip_v6') or ""
 
         return response
 

@@ -341,6 +341,8 @@ class ServersTest(test.TestCase):
                 "progress": 0,
                 "name": "server1",
                 "status": "BUILD",
+                "accessIPv4": "",
+                "accessIPv6": "",
                 "hostId": '',
                 "image": {
                     "id": "10",
@@ -438,6 +440,8 @@ class ServersTest(test.TestCase):
                 created="%(expected_created)s"
                 hostId=""
                 status="BUILD"
+                accessIPv4=""
+                accessIPv6=""
                 progress="0">
             <atom:link href="%(server_href)s" rel="self"/>
             <atom:link href="%(server_bookmark)s" rel="bookmark"/>
@@ -503,6 +507,8 @@ class ServersTest(test.TestCase):
                 "progress": 100,
                 "name": "server1",
                 "status": "ACTIVE",
+                "accessIPv4": "",
+                "accessIPv6": "",
                 "hostId": '',
                 "image": {
                     "id": "10",
@@ -594,6 +600,8 @@ class ServersTest(test.TestCase):
                 "progress": 100,
                 "name": "server1",
                 "status": "ACTIVE",
+                "accessIPv4": "",
+                "accessIPv6": "",
                 "hostId": '',
                 "image": {
                     "id": "10",
@@ -1650,6 +1658,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(expected_flavor, server['flavor'])
         self.assertEqual(expected_image, server['image'])
         self.assertEqual(access_ipv4, server['accessIPv4'])
+        self.assertEqual(access_ipv6, server['accessIPv6'])
 
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
@@ -1708,6 +1717,8 @@ class ServersTest(test.TestCase):
         self.assertEqual('server_test', server['name'])
         self.assertEqual(expected_flavor, server['flavor'])
         self.assertEqual(expected_image, server['image'])
+        self.assertEqual('1.2.3.4', server['accessIPv4'])
+        self.assertEqual('fead::1234', server['accessIPv6'])
 
     def test_create_instance_v1_1_invalid_flavor_href(self):
         self._setup_for_create_instance()
@@ -3271,6 +3282,8 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "progress": 0,
                 "name": "test_server",
                 "status": "BUILD",
+                "accessIPv4": "",
+                "accessIPv6": "",
                 "hostId": '',
                 "image": {
                     "id": "5",
@@ -3322,6 +3335,8 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "progress": 100,
                 "name": "test_server",
                 "status": "ACTIVE",
+                "accessIPv4": "",
+                "accessIPv6": "",
                 "hostId": '',
                 "image": {
                     "id": "5",
@@ -3396,6 +3411,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "addresses": {},
                 "metadata": {},
                 "accessIPv4": "1.2.3.4",
+                "accessIPv6": "",
                 "links": [
                     {
                         "rel": "self",
@@ -3448,6 +3464,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "accessIPv4": "",
                 "accessIPv6": "fead::1234",
                 "links": [
                     {
@@ -3483,6 +3500,8 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "progress": 0,
                 "name": "test_server",
                 "status": "BUILD",
+                "accessIPv4": "",
+                "accessIPv6": "",
                 "hostId": '',
                 "image": {
                     "id": "5",
