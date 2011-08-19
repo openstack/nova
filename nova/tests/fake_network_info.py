@@ -81,7 +81,7 @@ floating_ip = {'id': 0,
 def vifs(n):
     for x in xrange(n):
         yield {'id': x,
-               'address': 'DE:AD:BE:EF:00:%2x' % x,
+               'address': 'DE:AD:BE:EF:00:%02x' % x,
                'uuid': '00000000-0000-0000-0000-00000000000000%2d' % x,
                'network_id': x,
                'network': FakeModel(**fake_network(x)),
