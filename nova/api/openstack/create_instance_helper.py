@@ -119,7 +119,6 @@ class CreateInstanceHelper(object):
 
         # optional openstack extensions:
         key_name = server_dict.get('key_name')
-        security_group = server_dict.get('security_group')
         user_data = server_dict.get('user_data')
 
         reservation_id = server_dict.get('reservation_id')
@@ -150,7 +149,6 @@ class CreateInstanceHelper(object):
                                   display_name=name,
                                   display_description=name,
                                   key_name=key_name,
-                                  security_group=security_group,
                                   metadata=server_dict.get('metadata', {}),
                                   injected_files=injected_files,
                                   admin_password=password,
@@ -167,6 +165,9 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.FlavorNotFound as error:
             msg = _("Invalid flavorRef provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.KeypairNotFound as error:
+            msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
         # Let the caller deal with unhandled exceptions.
 

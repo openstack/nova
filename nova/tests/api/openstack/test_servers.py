@@ -336,7 +336,6 @@ class ServersTest(test.TestCase):
                 "status": "BUILD",
                 "hostId": '',
                 "key_name": '',
-                "security_group": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -500,7 +499,6 @@ class ServersTest(test.TestCase):
                 "status": "ACTIVE",
                 "hostId": '',
                 "key_name": '',
-                "security_group": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -593,7 +591,6 @@ class ServersTest(test.TestCase):
                 "status": "ACTIVE",
                 "hostId": '',
                 "key_name": '',
-                "security_group": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -1642,6 +1639,41 @@ class ServersTest(test.TestCase):
         self.assertEqual('server_test', server['name'])
         self.assertEqual(expected_flavor, server['flavor'])
         self.assertEqual(expected_image, server['image'])
+
+    def test_create_instance_v1_1_invalid_key_name(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/flavors/3'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            key_name='nonexistentkey'))
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_valid_key_name(self):
+        self._setup_for_create_instance()
+
+        def key_pair_get(context, user_id, key_name):
+            return dict(name='mykey', public_key='public_key')
+
+        self.stubs.Set(nova.db, 'key_pair_get', key_pair_get)
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/flavors/3'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            key_name='mykey'))
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
 
     def test_create_instance_v1_1_invalid_flavor_href(self):
         self._setup_for_create_instance()
@@ -3101,7 +3133,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "status": "BUILD",
                 "hostId": '',
                 "key_name": '',
-                "security_group": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3154,7 +3185,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "status": "ACTIVE",
                 "hostId": '',
                 "key_name": '',
-                "security_group": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3211,7 +3241,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "status": "BUILD",
                 "hostId": '',
                 "key_name": '',
-                "security_group": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3278,7 +3307,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
                 "key_name": '',
-                "security_group": '',
                 "image": {
                     "id": "5",
                     "links": [
