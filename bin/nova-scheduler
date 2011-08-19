@@ -46,5 +46,6 @@ if __name__ == '__main__':
     flags.FLAGS(sys.argv)
     logging.setup()
     utils.monkey_patch()
-    service.serve()
+    server = service.Service.create(binary='nova-scheduler')
+    service.serve(server)
     service.wait()
