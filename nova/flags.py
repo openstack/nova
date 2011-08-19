@@ -409,4 +409,4 @@ DEFINE_bool('monkey_patch', False,
 DEFINE_list('monkey_patch_modules',
                 ['nova.api.ec2.cloud:nova.notifier.api.notify_decorator',
                 'nova.compute.api:nova.notifier.api.notify_decorator'],
-                 'Module list representng monkey patched module and decorator')
+                 'Module list representing monkey patched module and decorator')
