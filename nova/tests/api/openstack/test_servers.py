@@ -194,7 +194,7 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "terminated_at": utils.utcnow(),
         "availability_zone": "",
         "display_name": server_name,
-        "display_description": "",
+        "display_description": "fakedescription",
         "locked": False,
         "metadata": metadata,
         "uuid": uuid,
@@ -329,10 +329,12 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "server1",
+                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {
@@ -491,10 +493,12 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
                 "name": "server1",
+                "description": "fakedescription",
                 "status": "ACTIVE",
                 "hostId": '',
                 "image": {
@@ -582,10 +586,12 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
                 "name": "server1",
+                "description": "fakedescription",
                 "status": "ACTIVE",
                 "hostId": '',
                 "image": {
@@ -1380,6 +1386,8 @@ class ServersTest(test.TestCase):
                     'uuid': FAKE_UUID,
                     'instance_type': dict(inst_type),
                     'image_ref': image_ref,
+                    'display_description': 'fakedescription',
+                    'user_id': 'fake',
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                     "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
                    }
@@ -2719,6 +2727,8 @@ class TestServerInstanceCreation(test.TestCase):
                 else:
                     self.injected_files = None
                 return [{'id': '1234', 'display_name': 'fakeinstance',
+                         'user_id': 'fake',
+                         'display_description': 'fakedescription',
                          'uuid': FAKE_UUID}]
 
             def set_admin_password(self, *args, **kwargs):
@@ -3010,7 +3020,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             "created_at": created_at,
             "updated_at": updated_at,
             "admin_pass": "",
-            "user_id": "",
+            "user_id": "fake",
             "project_id": "",
             "image_ref": "5",
             "kernel_id": "",
@@ -3036,7 +3046,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             "terminated_at": utils.utcnow(),
             "availability_zone": "",
             "display_name": "test_server",
-            "display_description": "",
+            "display_description": "fakedescription",
             "locked": False,
             "metadata": [],
             #"address": ,
@@ -3088,10 +3098,12 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
+                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {
@@ -3139,10 +3151,12 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
                 "name": "test_server",
+                "description": "fakedescription",
                 "status": "ACTIVE",
                 "hostId": '',
                 "image": {
@@ -3194,10 +3208,12 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
+                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {

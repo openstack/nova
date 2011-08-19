@@ -64,6 +64,8 @@ class ViewBuilder(object):
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
+            'user_id': inst['user_id'],
+            'description': inst['display_description'],
             'status': common.status_from_power_state(inst.get('state'))}
 
         ctxt = nova.context.get_admin_context()

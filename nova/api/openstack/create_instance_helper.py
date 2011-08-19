@@ -154,7 +154,8 @@ class CreateInstanceHelper(object):
                                   kernel_id=kernel_id,
                                   ramdisk_id=ramdisk_id,
                                   display_name=name,
-                                  display_description=name,
+                                  display_description=\
+                                        server_dict.get('description', ''),
                                   key_name=key_name,
                                   key_data=key_data,
                                   metadata=server_dict.get('metadata', {}),
