@@ -59,7 +59,7 @@ def fixed_ips(num_networks, num_ips):
         for ip in xrange(num_ips):
             yield {'id': network * num_ips + ip,
                    'network_id': network,
-                   'address': '192.168.%d.100' % network,
+                   'address': '192.168.%d.1%02d' % (network, ip),
                    'instance_id': 0,
                    'allocated': False,
                    # and since network_id and vif_id happen to be equivalent
