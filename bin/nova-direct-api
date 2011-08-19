@@ -20,7 +20,9 @@
 
 """Starter script for Nova Direct API."""
 
-import gettext
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import sys
 
@@ -32,12 +34,12 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-gettext.install('nova', unicode=1)
 
 from nova import compute
 from nova import flags
 from nova import log as logging
 from nova import network
+from nova import service
 from nova import utils
 from nova import volume
 from nova import wsgi
@@ -97,5 +99,6 @@ if __name__ == '__main__':
                          with_auth,
                          host=FLAGS.direct_host,
                          port=FLAGS.direct_port)
-    server.start()
-    server.wait()
+
+    service.serve(server)
+    service.wait()

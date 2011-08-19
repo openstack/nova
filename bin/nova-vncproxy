@@ -19,7 +19,8 @@
 """VNC Console Proxy Server."""
 
 import eventlet
-import gettext
+eventlet.monkey_patch()
+
 import os
 import sys
 
@@ -29,7 +30,6 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
@@ -41,7 +41,7 @@ from nova.vnc import auth
 from nova.vnc import proxy
 
 
-LOG = logging.getLogger('nova.vnc-proxy')
+LOG = logging.getLogger('nova.vncproxy')
 
 
 FLAGS = flags.FLAGS
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     FLAGS(sys.argv)
     logging.setup()
 
-    LOG.audit(_("Starting nova-vnc-proxy node (version %s)"),
+    LOG.audit(_("Starting nova-vncproxy node (version %s)"),
               version.version_string_with_vcs())
 
     if not (os.path.exists(FLAGS.vncproxy_wwwroot) and
@@ -107,13 +107,10 @@ if __name__ == "__main__":
     else:
         with_auth = auth.VNCNovaAuthMiddleware(with_logging)
 
-    service.serve()
-
     server = wsgi.Server("VNC Proxy",
                          with_auth,
                          host=FLAGS.vncproxy_host,
                          port=FLAGS.vncproxy_port)
-    server.start()
     server.start_tcp(handle_flash_socket_policy, 843, host=FLAGS.vncproxy_host)
-
-    server.wait()
+    service.serve(server)
+    service.wait()
