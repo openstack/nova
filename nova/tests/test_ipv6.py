@@ -23,7 +23,6 @@ from nova import test
 LOG = logging.getLogger('nova.tests.test_ipv6')
 
 import sys
-import netaddr
 
 
 class IPv6RFC2462TestCase(test.TestCase):
