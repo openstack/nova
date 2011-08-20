@@ -51,20 +51,20 @@ class InstanceTypeTestCase(test.TestCase):
         """return an instance type name not in the DB"""
         nonexistant_flavor = "sdfsfsdf"
         flavors = instance_types.get_all_types()
-        while flavors.has_key(nonexistant_flavor):
-           nonexistant_flavor = nonexistant_flavor.join("z")
+        while nonexistant_flavor in flavors:
+            nonexistant_flavor = nonexistant_flavor.join("z")
         else:
-          return nonexistant_flavor
+            return nonexistant_flavor
 
     def _nonexistant_flavor_id(self):
         """return an instance type ID not in the DB"""
         nonexistant_flavor = 2700
-        flavor_ids = [ value["id"] for key, value in\
-                    instance_types.get_all_types().iteritems() ]
+        flavor_ids = [value["id"] for key, value in\
+                    instance_types.get_all_types().iteritems()]
         while nonexistant_flavor in flavor_ids:
-           nonexistant_flavor += 1
+            nonexistant_flavor += 1
         else:
-          return nonexistant_flavor
+            return nonexistant_flavor
 
     def _existing_flavor(self):
         """return first instance type name"""
@@ -127,12 +127,12 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertRaises(exception.ApiError,
                           instance_types.destroy,
                           self._nonexistant_flavor_name())
-    
+
     def test_will_not_purge_without_name(self):
         """Ensure purge without a name raises error"""
         self.assertRaises(exception.InvalidInstanceType,
                           instance_types.purge, None)
-    
+
     def test_will_not_purge_with_wrong_name(self):
         """Ensure purge without correct name raises error"""
         self.assertRaises(exception.ApiError,
@@ -149,7 +149,7 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensure get by name returns default flavor with no name"""
         self.assertEqual(instance_types.get_default_instance_type(),
                               instance_types.get_instance_type_by_name(None))
-    
+
     def test_will_not_get_instance_type_with_bad_name(self):
         """Ensure get by name returns default flavor with bad name"""
         self.assertRaises(exception.InstanceTypeNotFound,
