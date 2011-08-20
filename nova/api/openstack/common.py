@@ -241,7 +241,8 @@ def check_img_metadata_quota_limit(context, metadata):
     quota_metadata = quota.allowed_metadata_items(context, num_metadata)
     if quota_metadata < num_metadata:
         expl = _("Image metadata limit exceeded")
-        raise webob.exc.HTTPBadRequest(explanation=expl)
+        raise webob.exc.HTTPRequestEntityTooLarge(explanation=expl,
+                                                headers={'Retry-After': 0})
 
 
 class MetadataXMLDeserializer(wsgi.XMLDeserializer):

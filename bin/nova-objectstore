@@ -17,11 +17,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-  Daemon for nova objectstore. Supports S3 API.
-"""
+"""Daemon for nova objectstore. Supports S3 API."""
 
-import gettext
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import sys
 
@@ -33,10 +33,10 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
+from nova import service
 from nova import utils
 from nova import wsgi
 from nova.objectstore import s3server
@@ -54,5 +54,5 @@ if __name__ == '__main__':
                          router,
                          port=FLAGS.s3_port,
                          host=FLAGS.s3_host)
-    server.start()
-    server.wait()
+    service.serve(server)
+    service.wait()

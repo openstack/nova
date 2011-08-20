@@ -23,10 +23,19 @@ import httplib
 
 import webob
 
+from nova import exception
 from nova import test
 from nova import wsgi
 from nova.api.ec2 import metadatarequesthandler
 from nova.db.sqlalchemy import api
+
+
+USER_DATA_STRING = ("This is an encoded string")
+ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
+
+
+def return_non_existing_server_by_address(context, address):
+    raise exception.NotFound()
 
 
 class MetadataTestCase(test.TestCase):
@@ -79,3 +88,34 @@ class MetadataTestCase(test.TestCase):
         self.stubs.Set(api, 'security_group_get_by_instance', sg_get)
         self.assertEqual(self.request('/meta-data/security-groups'),
                          'default\nother')
+
+    def test_user_data_non_existing_fixed_address(self):
+        self.stubs.Set(api, 'instance_get_all_by_filters',
+                       return_non_existing_server_by_address)
+        request = webob.Request.blank('/user-data')
+        request.remote_addr = "127.1.1.1"
+        response = request.get_response(self.app)
+        self.assertEqual(response.status_int, 404)
+
+    def test_user_data_none_fixed_address(self):
+        self.stubs.Set(api, 'instance_get_all_by_filters',
+                       return_non_existing_server_by_address)
+        request = webob.Request.blank('/user-data')
+        request.remote_addr = None
+        response = request.get_response(self.app)
+        self.assertEqual(response.status_int, 500)
+
+    def test_user_data_invalid_url(self):
+        request = webob.Request.blank('/user-data-invalid')
+        request.remote_addr = "127.0.0.1"
+        response = request.get_response(self.app)
+        self.assertEqual(response.status_int, 404)
+
+    def test_user_data_with_use_forwarded_header(self):
+        self.instance['user_data'] = ENCODE_USER_DATA_STRING
+        self.flags(use_forwarded_for=True)
+        request = webob.Request.blank('/user-data')
+        request.remote_addr = "127.0.0.1"
+        response = request.get_response(self.app)
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(response.body, USER_DATA_STRING)

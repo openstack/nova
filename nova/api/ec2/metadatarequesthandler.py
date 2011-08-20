@@ -30,6 +30,7 @@ from nova.api.ec2 import cloud
 
 LOG = logging.getLogger('nova.api.ec2.metadata')
 FLAGS = flags.FLAGS
+flags.DECLARE('use_forwarded_for', 'nova.api.auth')
 
 
 class MetadataRequestHandler(wsgi.Application):

@@ -709,9 +709,6 @@ class VMOps(object):
         if resp['returncode'] != '0':
             LOG.error(_('Failed to update password: %(resp)r') % locals())
             return None
-        db.instance_update(nova_context.get_admin_context(),
-                                  instance['id'],
-                                  dict(admin_pass=new_pass))
         return resp['message']
 
     def inject_file(self, instance, path, contents):

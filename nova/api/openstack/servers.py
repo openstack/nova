@@ -923,6 +923,12 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         node.setAttribute('adminPass', server_dict['server']['adminPass'])
         return self.to_xml_string(node, True)
 
+    def update(self, server_dict):
+        xml_doc = minidom.Document()
+        node = self._server_to_xml_detailed(xml_doc,
+                                       server_dict['server'])
+        return self.to_xml_string(node, True)
+
 
 def create_resource(version='1.0'):
     controller = {

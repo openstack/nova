@@ -108,11 +108,14 @@ floating_ip_fields = {'id': 0,
 
 vifs = [{'id': 0,
          'address': 'DE:AD:BE:EF:00:00',
+         'uuid': '00000000-0000-0000-0000-0000000000000000',
          'network_id': 0,
          'network': FakeModel(**networks[0]),
          'instance_id': 0},
         {'id': 1,
          'address': 'DE:AD:BE:EF:00:01',
+         'uuid': '00000000-0000-0000-0000-0000000000000001',
+         'network_id': 0,
          'network_id': 1,
          'network': FakeModel(**networks[1]),
          'instance_id': 0}]
@@ -163,6 +166,8 @@ class FlatNetworkTestCase(test.TestCase):
                      'ips': 'DONTCARE',
                      'label': 'test%s' % i,
                      'mac': 'DE:AD:BE:EF:00:0%s' % i,
+                     'vif_uuid': ('00000000-0000-0000-0000-000000000000000%s' %
+                                  i),
                      'rxtx_cap': 'DONTCARE',
                      'should_create_vlan': False,
                      'should_create_bridge': False}

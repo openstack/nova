@@ -131,6 +131,7 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         zone_blob = server_dict.get('blob')
+        user_data = server_dict.get('user_data')
         availability_zone = server_dict.get('availability_zone')
         name = server_dict['name']
         self._validate_server_name(name)
@@ -173,6 +174,7 @@ class CreateInstanceHelper(object):
                                   min_count=min_count,
                                   max_count=max_count,
                                   security_group=sg_names,
+                                  user_data=user_data,
                                   availability_zone=availability_zone))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
@@ -192,13 +194,20 @@ class CreateInstanceHelper(object):
         """
         if error.code == "OnsetFileLimitExceeded":
             expl = _("Personality file limit exceeded")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         if error.code == "OnsetFilePathLimitExceeded":
             expl = _("Personality file path too long")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         if error.code == "OnsetFileContentLimitExceeded":
             expl = _("Personality file content too long")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
+        if error.code == "InstanceLimitExceeded":
+            expl = _("Instance quotas have been exceeded")
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         # if the original error is okay, just reraise it
         raise error
 

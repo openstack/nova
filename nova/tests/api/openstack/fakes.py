@@ -32,6 +32,7 @@ from nova import utils
 from nova import wsgi
 import nova.api.openstack.auth
 from nova.api import openstack
+from nova.api import auth as api_auth
 from nova.api.openstack import auth
 from nova.api.openstack import extensions
 from nova.api.openstack import versions
@@ -83,9 +84,9 @@ def wsgi_app(inner_app10=None, inner_app11=None, fake_auth=True,
             ctxt = fake_auth_context
         else:
             ctxt = context.RequestContext('fake', 'fake')
-        api10 = openstack.FaultWrapper(wsgi.InjectContext(ctxt,
+        api10 = openstack.FaultWrapper(api_auth.InjectContext(ctxt,
               limits.RateLimitingMiddleware(inner_app10)))
-        api11 = openstack.FaultWrapper(wsgi.InjectContext(ctxt,
+        api11 = openstack.FaultWrapper(api_auth.InjectContext(ctxt,
               limits.RateLimitingMiddleware(
                   extensions.ExtensionMiddleware(inner_app11))))
     else:
