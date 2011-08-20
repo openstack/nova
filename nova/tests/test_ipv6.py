@@ -55,3 +55,8 @@ class IPv6AccountIdentiferTestCase(test.TestCase):
     def test_to_mac(self):
         mac = ipv6.to_mac('2001:db8::a94a:8fe5:ff33:4455')
         self.assertEquals(mac, '02:16:3e:33:44:55')
+
+    def test_to_global_with_bad_mac(self):
+        bad_mac = '02:16:3e:33:44:5X'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    '2001:db8::', bad_mac, 'test')
