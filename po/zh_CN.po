@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-08-04 05:50+0000\n"
+"PO-Revision-Date: 2011-08-19 09:26+0000\n"
 "Last-Translator: zhangjunfeng <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-08-05 04:47+0000\n"
-"X-Generator: Launchpad (build 13604)\n"
+"X-Launchpad-Export-Date: 2011-08-20 05:06+0000\n"
+"X-Generator: Launchpad (build 13697)\n"
 
 #, python-format
 #~ msgid "Starting %s"
@@ -48,7 +48,7 @@ msgstr ""
 
 #: ../nova/exception.py:107
 msgid "DB exception wrapped"
-msgstr ""
+msgstr "数据库异常"
 
 #. exc_type, exc_value, exc_traceback = sys.exc_info()
 #: ../nova/exception.py:120
@@ -88,7 +88,7 @@ msgstr "获取外网IP失败"
 #: ../nova/api/openstack/servers.py:152
 #, python-format
 msgid "%(param)s property not found for image %(_image_id)s"
-msgstr ""
+msgstr "没有找到镜像文件%(_image_id)s 的属性 %(param)s"
 
 #: ../nova/api/openstack/servers.py:168
 msgid "No keypairs defined"
@@ -97,55 +97,55 @@ msgstr "未定义密钥对"
 #: ../nova/api/openstack/servers.py:238
 #, python-format
 msgid "Compute.api::lock %s"
-msgstr ""
+msgstr "compute.api::加锁 %s"
 
 #: ../nova/api/openstack/servers.py:253
 #, python-format
 msgid "Compute.api::unlock %s"
-msgstr ""
+msgstr "compute.api::解锁 %s"
 
 #: ../nova/api/openstack/servers.py:267
 #, python-format
 msgid "Compute.api::get_lock %s"
-msgstr ""
+msgstr "Compute.api::得到锁 %s"
 
 #: ../nova/api/openstack/servers.py:281
 #, python-format
 msgid "Compute.api::reset_network %s"
-msgstr ""
+msgstr "Compute.api::重置网络 %s"
 
 #: ../nova/api/openstack/servers.py:292
 #, python-format
 msgid "Compute.api::pause %s"
-msgstr ""
+msgstr "Compute.api::暂停 %s"
 
 #: ../nova/api/openstack/servers.py:303
 #, python-format
 msgid "Compute.api::unpause %s"
-msgstr ""
+msgstr "Compute.api::继续 %s"
 
 #: ../nova/api/openstack/servers.py:314
 #, python-format
 msgid "compute.api::suspend %s"
-msgstr ""
+msgstr "compute.api::挂起 %s"
 
 #: ../nova/api/openstack/servers.py:325
 #, python-format
 msgid "compute.api::resume %s"
-msgstr ""
+msgstr "compute.api::回复 %s"
 
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:731 ../nova/virt/libvirt_conn.py:741
 #: ../nova/api/ec2/__init__.py:317
 #, python-format
 msgid "Instance %s not found"
-msgstr ""
+msgstr "实例 %s 没有找到"
 
 #. NOTE: No Resource Pool concept so far
 #: ../nova/virt/xenapi/volumeops.py:51
 #, python-format
 msgid "Attach_volume: %(instance_name)s, %(device_path)s, %(mountpoint)s"
-msgstr ""
+msgstr "挂载卷：%(instance_name)s, %(device_path)s, %(mountpoint)s"
 
 #: ../nova/virt/xenapi/volumeops.py:69
 #, python-format
@@ -2799,100 +2799,8 @@ msgstr "添加用户 %(user)s 到项目 %(project)s 中"
 msgid "Removing user %(user)s from project %(project)s"
 msgstr "从项目 %(project)s 中移除用户 %(user)s"
 
-#, python-format
-#~ msgid ""
-#~ "%s\n"
-#~ "Command: %s\n"
-#~ "Exit code: %s\n"
-#~ "Stdout: %r\n"
-#~ "Stderr: %r"
-#~ msgstr ""
-#~ "%s\n"
-#~ "命令：%s\n"
-#~ "退出代码：%s\n"
-#~ "标准输出(stdout)：%r\n"
-#~ "标准错误(stderr)：%r"
-
-#, python-format
-#~ msgid "Binding %s to %s with key %s"
-#~ msgstr "将%s绑定到%s（以%s键值）"
-
-#, python-format
-#~ msgid "AMQP server on %s:%d is unreachable. Trying again in %d seconds."
-#~ msgstr "位于%s:%d的AMQP服务器不可用。%d秒后重试。"
-
-#, python-format
-#~ msgid "Getting from %s: %s"
-#~ msgstr "从%s获得如下内容：%s"
-
-#, python-format
-#~ msgid "Starting %s node"
-#~ msgstr "启动%s节点"
-
-#, python-format
-#~ msgid "Data store %s is unreachable. Trying again in %d seconds."
-#~ msgstr "数据储存服务%s不可用。%d秒之后继续尝试。"
-
 #~ msgid "Full set of FLAGS:"
 #~ msgstr "FLAGS全集："
-
-#, python-format
-#~ msgid "(%s) publish (key: %s) %s"
-#~ msgstr "（%s）发布（键值：%s）%s"
-
-#, python-format
-#~ msgid "Couldn't get IP, using 127.0.0.1 %s"
-#~ msgstr "不能获取IP,将使用 127.0.0.1 %s"
-
-#, python-format
-#~ msgid ""
-#~ "Access key %s has had %d failed authentications and will be locked out for "
-#~ "%d minutes."
-#~ msgstr "访问键 %s时，存在%d个失败的认证，将于%d分钟后解锁"
-
-#, python-format
-#~ msgid "Authenticated Request For %s:%s)"
-#~ msgstr "为%s:%s申请认证"
-
-#, python-format
-#~ msgid "arg: %s\t\tval: %s"
-#~ msgstr "键为: %s\t\t值为: %s"
-
-#, python-format
-#~ msgid "Getting x509 for user: %s on project: %s"
-#~ msgstr "为用户 %s从工程%s中获取 x509"
-
-#, python-format
-#~ msgid "Create project %s managed by %s"
-#~ msgstr "创建工程%s,此工程由%s管理"
-
-#, python-format
-#~ msgid "Unsupported API request: controller = %s,action = %s"
-#~ msgstr "不支持的API请求: 控制器 = %s,执行 = %s"
-
-#, python-format
-#~ msgid "Adding sitewide role %s to user %s"
-#~ msgstr "增加站点范围的 %s角色给用户 %s"
-
-#, python-format
-#~ msgid "Adding user %s to project %s"
-#~ msgstr "增加用户%s到%s工程"
-
-#, python-format
-#~ msgid "Unauthorized request for controller=%s and action=%s"
-#~ msgstr "对控制器=%s及动作=%s未经授权"
-
-#, python-format
-#~ msgid "Removing user %s from project %s"
-#~ msgstr "正将用户%s从工程%s中移除"
-
-#, python-format
-#~ msgid "Adding role %s to user %s for project %s"
-#~ msgstr "正将%s角色赋予用户%s（在工程%s中）"
-
-#, python-format
-#~ msgid "Removing role %s from user %s for project %s"
-#~ msgstr "正将角色%s从用户%s在工程%s中移除"
 
 #~ msgid "No such process"
 #~ msgstr "没有该进程"
