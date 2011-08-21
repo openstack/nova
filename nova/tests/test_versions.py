@@ -22,6 +22,7 @@ from nova import version
 
 
 class VersionTestCase(test.TestCase):
+    """Test cases for Versions code"""
     def setUp(self):
         """setup test with unchanging values"""
         super(VersionTestCase, self).setUp()
@@ -42,17 +43,19 @@ class VersionTestCase(test.TestCase):
         self.assertEqual("2012.10", self.version.canonical_version_string())
 
     def test_final_version_strings_are_identical(self):
-        """Ensure final version strings match"""
+        """Ensure final version strings match only at release"""
+        self.assertNotEqual(self.version.canonical_version_string(),
+                        self.version.version_string())
         self.version.FINAL = True
         self.assertEqual(self.version.canonical_version_string(),
                         self.version.version_string())
 
     def test_vcs_version_string_is_good(self):
-        """"""
+        """Ensure uninstalled code generates local """
         self.assertEqual("LOCALBRANCH:LOCALREVISION",
                         self.version.vcs_version_string())
 
     def test_version_string_with_vcs_is_good(self):
-        """"""
+        """Ensure uninstalled code get version string"""
         self.assertEqual("2012.10-LOCALBRANCH:LOCALREVISION",
                         self.version.version_string_with_vcs())
