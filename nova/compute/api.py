@@ -613,6 +613,78 @@ class API(base.Base):
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
 
+    def _is_security_group_associated_with_server(self, security_group,
+                                                instance_id):
+        """Check if the security group is already associated
+           with the instance. If Yes, return True.
+        """
+
+        if not security_group:
+            return False
+
+        instances = security_group.get('instances')
+        if not instances:
+            return False
+
+        inst_id = None
+        for inst_id in (instance['id'] for instance in instances \
+                        if instance_id == instance['id']):
+            return True
+
+        return False
+
+    def add_security_group(self, context, instance_id, security_group_name):
+        """Add security group to the instance"""
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
+        # check if the server exists
+        inst = db.instance_get(context, instance_id)
+        #check if the security group is associated with the server
+        if self._is_security_group_associated_with_server(security_group,
+                                                        instance_id):
+            raise exception.SecurityGroupExistsForInstance(
+                                        security_group_id=security_group['id'],
+                                        instance_id=instance_id)
+
+        #check if the instance is in running state
+        if inst['state'] != power_state.RUNNING:
+            raise exception.InstanceNotRunning(instance_id=instance_id)
+
+        db.instance_add_security_group(context.elevated(),
+                                       instance_id,
+                                       security_group['id'])
+        rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             {"method": "refresh_security_group_rules",
+              "args": {"security_group_id": security_group['id']}})
+
+    def remove_security_group(self, context, instance_id, security_group_name):
+        """Remove the security group associated with the instance"""
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
+        # check if the server exists
+        inst = db.instance_get(context, instance_id)
+        #check if the security group is associated with the server
+        if not self._is_security_group_associated_with_server(security_group,
+                                                        instance_id):
+            raise exception.SecurityGroupNotExistsForInstance(
+                                    security_group_id=security_group['id'],
+                                    instance_id=instance_id)
+
+        #check if the instance is in running state
+        if inst['state'] != power_state.RUNNING:
+            raise exception.InstanceNotRunning(instance_id=instance_id)
+
+        db.instance_remove_security_group(context.elevated(),
+                                       instance_id,
+                                       security_group['id'])
+        rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             {"method": "refresh_security_group_rules",
+              "args": {"security_group_id": security_group['id']}})
+
     @scheduler_api.reroute_compute("update")
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.

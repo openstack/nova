@@ -111,6 +111,15 @@ class CreateInstanceHelper(object):
         if personality:
             injected_files = self._get_injected_files(personality)
 
+        sg_names = []
+        security_groups = server_dict.get('security_groups')
+        if security_groups is not None:
+            sg_names = [sg['name'] for sg in security_groups if sg.get('name')]
+        if not sg_names:
+            sg_names.append('default')
+
+        sg_names = list(set(sg_names))
+
         try:
             flavor_id = self.controller._flavor_id_from_req_data(body)
         except ValueError as error:
@@ -164,6 +173,7 @@ class CreateInstanceHelper(object):
                                   reservation_id=reservation_id,
                                   min_count=min_count,
                                   max_count=max_count,
+                                  security_group=sg_names,
                                   user_data=user_data,
                                   availability_zone=availability_zone))
         except quota.QuotaError as error:
@@ -174,6 +184,8 @@ class CreateInstanceHelper(object):
         except exception.FlavorNotFound as error:
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.SecurityGroupNotFound as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
         # Let the caller deal with unhandled exceptions.
 
     def _handle_quota_error(self, error):
@@ -465,6 +477,10 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
         if personality is not None:
             server["personality"] = personality
 
+        security_groups = self._extract_security_groups(server_node)
+        if security_groups is not None:
+            server["security_groups"] = security_groups
+
         return server
 
     def _extract_personality(self, server_node):
@@ -479,5 +495,20 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
                 item["contents"] = self.extract_text(file_node)
                 personality.append(item)
             return personality
+        else:
+            return None
+
+    def _extract_security_groups(self, server_node):
+        """Marshal the security_groups attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "security_groups")
+        if node is not None:
+            security_groups = []
+            for sg_node in self.find_children_named(node, "security_group"):
+                item = {}
+                name_node = self.find_first_child_named(sg_node, "name")
+                if name_node:
+                    item["name"] = self.extract_text(name_node)
+                    security_groups.append(item)
+            return security_groups
         else:
             return None
