@@ -31,6 +31,7 @@ FLAGS = flags.FLAGS
 
 LOG = logging.getLogger('nova.tests.test_virt_drivers')
 
+
 def catch_notimplementederror(f):
     """Decorator to simplify catching drivers raising NotImplementedError
 
@@ -49,6 +50,7 @@ def catch_notimplementederror(f):
     wrapped_func.__name__ = f.__name__
     wrapped_func.__doc__ = f.__doc__
     return wrapped_func
+
 
 class _VirtDriverTestCase(test.TestCase):
     def setUp(self):
@@ -151,14 +153,14 @@ class _VirtDriverTestCase(test.TestCase):
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
         self.connection.rescue(self.ctxt, instance_ref,
-                               lambda x:None, network_info)
+                               lambda x: None, network_info)
 
     @catch_notimplementederror
     def test_unrescue_unrescued_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.unrescue(instance_ref, lambda x:None, network_info)
+        self.connection.unrescue(instance_ref, lambda x: None, network_info)
 
     @catch_notimplementederror
     def test_unrescue_rescued_instance(self):
@@ -166,8 +168,8 @@ class _VirtDriverTestCase(test.TestCase):
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
         self.connection.rescue(self.ctxt, instance_ref,
-                               lambda x:None, network_info)
-        self.connection.unrescue(instance_ref, lambda x:None, network_info)
+                               lambda x: None, network_info)
+        self.connection.unrescue(instance_ref, lambda x: None, network_info)
 
     @catch_notimplementederror
     def test_poll_rescued_instances(self):
@@ -226,7 +228,7 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_destroy_instance_nonexistant(self):
-        fake_instance = { 'id': 42, 'name': 'I just made this up!' }
+        fake_instance = {'id': 42, 'name': 'I just made this up!'}
         network_info = test_utils.get_test_network_info()
         self.connection.destroy(fake_instance, network_info)
 
@@ -410,7 +412,6 @@ class _VirtDriverTestCase(test.TestCase):
         network_info = test_utils.get_test_network_info()
         self.connection.unfilter_instance(instance_ref, network_info)
 
-
     @catch_notimplementederror
     def test_live_migration(self):
         network_info = test_utils.get_test_network_info()
@@ -448,28 +449,33 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_set_host_enabled(self):
-        self.connection.set_host_enabled('Am I a useless argument?', True)
+        self.connection.set_host_enabled('a useless argument?', True)
 
     @catch_notimplementederror
     def test_host_power_action_reboot(self):
-        self.connection.host_power_action('Am I a useless argument?', 'reboot')
+        self.connection.host_power_action('a useless argument?', 'reboot')
 
     @catch_notimplementederror
     def test_host_power_action_shutdown(self):
-        self.connection.host_power_action('Am I a useless argument?', 'shutdown')
+        self.connection.host_power_action('a useless argument?', 'shutdown')
 
     @catch_notimplementederror
     def test_host_power_action_startup(self):
-        self.connection.host_power_action('Am I a useless argument?', 'startup')
+        self.connection.host_power_action('a useless argument?', 'startup')
+
 
 class AbstractDriverTestCase(_VirtDriverTestCase):
     def setUp(self):
         import nova.virt.driver
+
         self.driver_module = nova.virt.driver
+
         def get_driver_connection(_):
             return nova.virt.driver.ComputeDriver()
+
         self.driver_module.get_connection = get_driver_connection
         super(AbstractDriverTestCase, self).setUp()
+
 
 class FakeConnectionTestCase(_VirtDriverTestCase):
     def setUp(self):
