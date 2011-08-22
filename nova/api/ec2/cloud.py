@@ -79,6 +79,29 @@ def _gen_key(context, user_id, key_name):
     return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
+# EC2 API: Valid Values:
+# pending | running | shutting-down | terminated | stopping | stopped
+_STATE_DESCRIPTION_MAP = {
+    vm_states.ACTIVE: 'running',
+    vm_states.BUILD: 'pending',
+    vm_states.REBUILD: 'pending',
+    vm_states.REBOOT: 'reboot',
+    vm_states.DELETE: 'terminated',
+    vm_states.STOP: 'stopped',
+    vm_states.MIGRATE: 'migrate',
+    vm_states.RESIZE: 'resize',
+    vm_states.VERIFY_RESIZE: 'verify_resize',
+    vm_states.PAUSE: 'pause',
+    vm_states.SUSPEND: 'suspend',
+    vm_states.RESCUE: 'rescue'
+}
+
+
+def state_description_from_vm_state(vm_state):
+    """Map the vm state to the server status string"""
+    return _STATE_DESCRIPTION_MAP[vm_state]
+
+
 # TODO(yamahata): hypervisor dependent default device name
 _DEFAULT_ROOT_DEVICE_NAME = '/dev/sda1'
 _DEFAULT_MAPPINGS = {'ami': 'sda1',
@@ -1199,7 +1222,7 @@ class CloudController(object):
             self._format_ramdisk_id(instance, i, 'ramdiskId')
             i['instanceState'] = {
                 'code': instance['power_state'],
-                'name': instance['vm_state']} #FIXME
+                'name': state_description_from_vm_state(instance['vm_state'])}
             fixed_addr = None
             floating_addr = None
             if instance['fixed_ips']:
