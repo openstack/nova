@@ -144,6 +144,10 @@ class ViewBuilderV11(ViewBuilder):
                 response['server']['progress'] = 100
             elif response['server']['status'] == "BUILD":
                 response['server']['progress'] = 0
+
+        response['server']['accessIPv4'] = inst.get('access_ip_v4') or ""
+        response['server']['accessIPv6'] = inst.get('access_ip_v6') or ""
+
         return response
 
     def _build_image(self, response, inst):
