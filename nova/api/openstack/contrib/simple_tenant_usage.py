@@ -43,7 +43,6 @@ INSTANCE_FIELDS = ['id',
 
 
 class SimpleTenantUsageController(object):
-
     def _get_instances_for_time_period(self, period_start, period_stop,
                                        tenant_id):
         tenant_clause = ''
@@ -243,7 +242,6 @@ class SimpleTenantUsageController(object):
 
 
 class Simple_tenant_usage(extensions.ExtensionDescriptor):
-
     def get_name(self):
         return "Simple_tenant_usage"
 
