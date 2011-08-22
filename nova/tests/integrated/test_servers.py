@@ -35,7 +35,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
             server = self.api.get_server(server['id'])
             print server
             retries = retries + 1
-            if retries > 8:
+            if retries > 5:
                 break
         return server
 
@@ -48,8 +48,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
     def test_create_and_delete_server(self):
         """Creates and deletes a server."""
         self.flags(stub_network=True)
-        # Create server
 
+        # Create server
         # Build the server data gradually, checking errors along the way
         server = {}
         good_server = self._build_minimal_create_server_request()
@@ -184,6 +184,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_create_and_rebuild_server(self):
         """Rebuild a server."""
+        self.flags(stub_network=True)
 
         # create a server with initially has no metadata
         server = self._build_minimal_create_server_request()
@@ -216,6 +217,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_create_and_rebuild_server_with_metadata(self):
         """Rebuild a server with metadata."""
+        self.flags(stub_network=True)
 
         # create a server with initially has no metadata
         server = self._build_minimal_create_server_request()
@@ -224,6 +226,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         LOG.debug("created_server: %s" % created_server)
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
+
+        created_server = self._wait_for_creation(created_server)
 
         # rebuild the server with metadata
         post = {}
@@ -252,6 +256,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_create_and_rebuild_server_with_metadata_removal(self):
         """Rebuild a server with metadata."""
+        self.flags(stub_network=True)
 
         # create a server with initially has no metadata
         server = self._build_minimal_create_server_request()
@@ -267,6 +272,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         LOG.debug("created_server: %s" % created_server)
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
+
+        created_server = self._wait_for_creation(created_server)
 
         # rebuild the server with metadata
         post = {}

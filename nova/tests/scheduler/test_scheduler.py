@@ -95,7 +95,7 @@ class SchedulerTestCase(test.TestCase):
         inst['vcpus'] = kwargs.get('vcpus', 1)
         inst['memory_mb'] = kwargs.get('memory_mb', 10)
         inst['local_gb'] = kwargs.get('local_gb', 20)
-        inst['vm_state'] = kwargs.get('vm_state', vm_state.ACTIVE)
+        inst['vm_state'] = kwargs.get('vm_state', vm_states.ACTIVE)
         inst['power_state'] = kwargs.get('power_state', power_state.RUNNING)
         inst['task_state'] = kwargs.get('task_state', None)
         return db.instance_create(ctxt, inst)
@@ -275,7 +275,7 @@ class SimpleDriverTestCase(test.TestCase):
         inst['memory_mb'] = kwargs.get('memory_mb', 20)
         inst['local_gb'] = kwargs.get('local_gb', 30)
         inst['launched_on'] = kwargs.get('launghed_on', 'dummy')
-        inst['vm_state'] = kwargs.get('vm_state', vm_state.ACTIVE)
+        inst['vm_state'] = kwargs.get('vm_state', vm_states.ACTIVE)
         inst['task_state'] = kwargs.get('task_state', None)
         inst['power_state'] = kwargs.get('power_state', power_state.RUNNING)
         return db.instance_create(self.context, inst)['id']
@@ -669,7 +669,7 @@ class SimpleDriverTestCase(test.TestCase):
                                       block_migration=False)
 
         i_ref = db.instance_get(self.context, instance_id)
-        self.assertTrue(i_ref['vm_state'] == vm_state.MIGRATE)
+        self.assertTrue(i_ref['vm_state'] == vm_states.MIGRATE)
         db.instance_destroy(self.context, instance_id)
         db.volume_destroy(self.context, v_ref['id'])
 
