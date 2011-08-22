@@ -798,32 +798,34 @@ class NetworkCommands(object):
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to modify')
     @args('--project', dest="project", metavar='<project name>',
-            help='Project name to associate/disasscociate')
+            help='Project name to associate')
     @args('--host', dest="host", metavar='<host>',
-            help='Host to associate/disasscociate')
-    def modify(self, fixed_range, project=None, host=None):
-        """Associate/Disasscociate Network with Project and/or Host
+            help='Host to associate')
+    @args('--disassociate-project', action="store_true", dest='dis_project',
+          default=False, help='Disassociate Network from Project')
+    @args('--disassociate-host', action="store_true", dest='dis_host',
+          default=False, help='Disassociate Host from Project')
+    def modify(self, fixed_range, project=None, host=None,
+               dis_project=None, dis_host=None):
+        """Associate/Disassociate Network with Project and/or Host
         arguments: network project host
-        specify 'None' to disassociate it
         leave any field blank to ignore it
         """
         admin_context = context.get_admin_context()
         network = db.network_get_by_cidr(admin_context, fixed_range)
-        if project != "None":
-            if project:
-                project_id = manager.Project.safe_id(project)
-                db.network_associate_by_id(admin_context,
-                                           network_id=network['id'],
-                                           project_id=project,
-                                           force=True)
-        else:
+        if project:
+            project_id = manager.Project.safe_id(project)
+            db.network_associate_by_id(admin_context,
+                                       network_id=network['id'],
+                                       project_id=project,
+                                       force=True)
+        elif dis_project:
             db.network_disassociate(admin_context, network_id=network['id'])
-        if host != "None":
-            if host:
-                db.network_set_host(admin_context,
-                                    network['id'],
-                                    host)
-        else:
+        if host:
+            db.network_set_host(admin_context,
+                                network['id'],
+                                host)
+        elif dis_host:
             db.network_set_host(admin_context,
                                 network['id'],
                                 None)

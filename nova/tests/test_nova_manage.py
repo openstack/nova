@@ -36,10 +36,10 @@ import netaddr
 import StringIO
 from nova import context
 from nova import db
-from nova import flags
-from nova import test
 from nova import exception
+from nova import flags
 from nova import log as logging
+from nova import test
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.nova_manage')
@@ -101,7 +101,7 @@ class NetworkCommandsTestCase(test.TestCase):
     def tearDown(self):
         super(NetworkCommandsTestCase, self).tearDown()
 
-    def test_create(self):
+    def _create_network(self):
         FLAGS.network_manager = 'nova.network.manager.VlanManager'
         self.commands.create(
                             label='Test',
@@ -114,7 +114,10 @@ class NetworkCommandsTestCase(test.TestCase):
                             fixed_range_v6='fd00:2::/120',
                             gateway_v6='fd00:2::22',
                             bridge_interface='eth0')
-        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
+        return db.network_get_by_cidr(self.context, '10.2.0.0/24')
+
+    def test_create(self):
+        net = self._create_network()
         self.assertEqual(net['label'], 'Test')
         self.assertEqual(net['cidr'], '10.2.0.0/24')
         self.assertEqual(net['netmask'], '255.255.255.0')
@@ -127,8 +130,7 @@ class NetworkCommandsTestCase(test.TestCase):
         self.assertEqual(net['bridge_interface'], 'eth0')
 
     def test_list(self):
-        self.test_create()
-        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
+        net = self._create_network()
         output = StringIO.StringIO()
         sys.stdout = output
         self.commands.list()
@@ -158,7 +160,7 @@ class NetworkCommandsTestCase(test.TestCase):
         self.assertEqual(result, answer)
 
     def test_delete(self):
-        self.test_create()
+        net = self._create_network()
         self.commands.delete(fixed_range='10.2.0.0/24')
         net_exist = True
         try:
@@ -168,8 +170,7 @@ class NetworkCommandsTestCase(test.TestCase):
         self.assertEqual(net_exist, False)
 
     def test_modify(self):
-        self.test_create()
-        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
+        net = self._create_network()
         db.network_disassociate(self.context, net['id'])
         net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
         self.assertEqual(net['project_id'], None)
@@ -183,7 +184,7 @@ class NetworkCommandsTestCase(test.TestCase):
         net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
         self.assertEqual(net['project_id'], 'test_project')
         self.assertEqual(net['host'], 'test_host')
-        self.commands.modify('10.2.0.0/24', project='None', host='None')
+        self.commands.modify('10.2.0.0/24', dis_project=True, dis_host=True)
         net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
         self.assertEqual(net['project_id'], None)
         self.assertEqual(net['host'], None)
