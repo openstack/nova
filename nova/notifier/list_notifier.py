@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import sys
+
 from nova import flags
 from nova import log as logging
 from nova import utils
@@ -29,15 +31,6 @@ LOG = logging.getLogger('nova.notifier.list_notifier')
 drivers = None
 
 
-class ImportFailureNotifier(object):
-
-    def __init__(self, exception):
-        self.exception = exception
-
-    def notify(message):
-        raise self.exception
-
-
 def _get_drivers():
     """Instantiates and returns drivers based on the flag values."""
     global drivers
@@ -46,8 +39,8 @@ def _get_drivers():
         for notification_driver in FLAGS.list_notifier_drivers:
             try:
                 drivers.append(utils.import_object(notification_driver))
-            except ClassNotFound as e:
-                drivers.append(ImportFailureNotifier(e))
+            except ClassNotFound:
+                sys.exit(1)
     return drivers
 
 def notify(message):
