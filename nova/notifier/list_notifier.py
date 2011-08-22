@@ -16,6 +16,7 @@
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.exception import ClassNotFound
 
 flags.DEFINE_multistring('list_notifier_drivers',
                          ['nova.notifier.no_op_notifier'],
@@ -27,17 +28,31 @@ LOG = logging.getLogger('nova.notifier.list_notifier')
 
 drivers = None
 
-def __get_drivers():
+
+class ImportFailureNotifier(object):
+
+    def __init__(self, exception):
+        self.exception = exception
+
+    def notify(message):
+        raise self.exception
+
+
+def _get_drivers():
     """Instantiates and returns drivers based on the flag values."""
     global drivers
     if not drivers:
-        drivers = [utils.import_object(notification_driver)
-                   for notification_driver in FLAGS.list_notifier_drivers]
+        drivers = []
+        for notification_driver in FLAGS.list_notifier_drivers:
+            try:
+                drivers.append(utils.import_object(notification_driver))
+            except ClassNotFound as e:
+                drivers.append(ImportFailureNotifier(e))
     return drivers
 
 def notify(message):
     """Passes notification to mulitple notifiers in a list."""
-    for driver in __get_drivers():
+    for driver in _get_drivers():
         try:
             driver.notify(message)
         except Exception as e:
