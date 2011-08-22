@@ -516,6 +516,6 @@ class Resource(wsgi.Application):
         controller_method = getattr(self.controller, action)
         try:
             return controller_method(req=request, **action_args)
-        except TypeError, exc:
-            LOG.debug(str(exc))
-            return webob.exc.HTTPBadRequest()
+        except TypeError:
+            LOG.debug(traceback.format_exc())
+            return faults.Fault(webob.exc.HTTPBadRequest())
