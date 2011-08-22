@@ -53,6 +53,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
+        req.headers['X-Auth-Project-Id'] = 'user1_project'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
@@ -73,14 +74,14 @@ class Test(test.TestCase):
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-Server-Management-Url'],
-            "http://foo/v1.0/")
+            "http://foo/v1.0")
         self.assertEqual(result.headers['X-CDN-Management-Url'],
             "")
         self.assertEqual(result.headers['X-Storage-Url'], "")
 
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/fake')
+        req = webob.Request.blank('/v1.0/user1_project')
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '200 OK')
@@ -125,7 +126,7 @@ class Test(test.TestCase):
 
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/fake')
+        req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-Token'] = token
         req.headers['X-Auth-Project-Id'] = 'user2_project'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
@@ -136,6 +137,7 @@ class Test(test.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'unknown_user'
         req.headers['X-Auth-Key'] = 'unknown_user_key'
+        req.headers['X-Auth-Project-Id'] = 'user_project'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 

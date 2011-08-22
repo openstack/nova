@@ -29,6 +29,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import wsgi as base_wsgi
+import nova.api.openstack
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
@@ -220,12 +221,13 @@ class ExtensionMiddleware(base_wsgi.Middleware):
         for action in ext_mgr.get_actions():
             if not action.collection in action_resources.keys():
                 resource = ActionExtensionResource(application)
-                mapper.connect("/%s/:(id)/action.:(format)" %
+                mapper.connect("/:(project_id)/%s/:(id)/action.:(format)" %
                                 action.collection,
                                 action='action',
                                 controller=resource,
                                 conditions=dict(method=['POST']))
-                mapper.connect("/%s/:(id)/action" % action.collection,
+                mapper.connect("/:(project_id)/%s/:(id)/action" %
+                                action.collection,
                                 action='action',
                                 controller=resource,
                                 conditions=dict(method=['POST']))
@@ -258,7 +260,7 @@ class ExtensionMiddleware(base_wsgi.Middleware):
             ext_mgr = ExtensionManager(FLAGS.osapi_extensions_path)
         self.ext_mgr = ext_mgr
 
-        mapper = routes.Mapper()
+        mapper = nova.api.openstack.ProjectMapper()
 
         serializer = wsgi.ResponseSerializer(
             {'application/xml': ExtensionsXMLSerializer()})
@@ -269,13 +271,17 @@ class ExtensionMiddleware(base_wsgi.Middleware):
             if resource.serializer is None:
                 resource.serializer = serializer
 
-            mapper.resource(resource.collection, resource.collection,
+            kargs = dict(
                 controller=wsgi.Resource(
                     resource.controller, resource.deserializer,
                     resource.serializer),
                 collection=resource.collection_actions,
-                member=resource.member_actions,
-                parent_resource=resource.parent)
+                member=resource.member_actions)
+
+            if resource.parent:
+                kargs['parent_resource'] = resource.parent
+
+            mapper.resource(resource.collection, resource.collection, **kargs)
 
         # extended actions
         action_resources = self._action_ext_resources(application, ext_mgr,

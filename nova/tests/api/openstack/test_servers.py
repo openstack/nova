@@ -309,10 +309,10 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_v1_1(self):
-        image_bookmark = "http://localhost/images/10"
-        flavor_ref = "http://localhost/v1.1/flavors/1"
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
 
         public_ip = '192.168.0.3'
         private_ip = '172.19.0.1'
@@ -334,7 +334,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         expected_server = {
@@ -388,11 +388,11 @@ class ServersTest(test.TestCase):
                     {
                         "rel": "self",
                         #FIXME(wwolf) Do we want the links to be id or uuid?
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/fake/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/fake/servers/1",
                     },
                 ],
             }
@@ -401,12 +401,12 @@ class ServersTest(test.TestCase):
         self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_by_id_v1_1_xml(self):
-        image_bookmark = "http://localhost/images/10"
-        flavor_ref = "http://localhost/v1.1/flavors/1"
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
-        server_href = "http://localhost/v1.1/servers/1"
-        server_bookmark = "http://localhost/servers/1"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
+        server_href = "http://localhost/v1.1/fake/servers/1"
+        server_bookmark = "http://localhost/fake/servers/1"
 
         public_ip = '192.168.0.3'
         private_ip = '172.19.0.1'
@@ -428,7 +428,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
         actual = minidom.parseString(res.body.replace('  ', ''))
@@ -475,10 +475,10 @@ class ServersTest(test.TestCase):
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_server_with_active_status_by_id_v1_1(self):
-        image_bookmark = "http://localhost/images/10"
-        flavor_ref = "http://localhost/v1.1/flavors/1"
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
         private_ip = "192.168.0.3"
         public_ip = "1.2.3.4"
 
@@ -500,7 +500,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces, vm_state=vm_states.ACTIVE)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         expected_server = {
@@ -553,11 +553,11 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/fake/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/fake/servers/1",
                     },
                 ],
             }
@@ -567,10 +567,10 @@ class ServersTest(test.TestCase):
 
     def test_get_server_with_id_image_ref_by_id_v1_1(self):
         image_ref = "10"
-        image_bookmark = "http://localhost/images/10"
-        flavor_ref = "http://localhost/v1.1/flavors/1"
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
-        flavor_bookmark = "http://localhost/flavors/1"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
         private_ip = "192.168.0.3"
         public_ip = "1.2.3.4"
 
@@ -593,7 +593,7 @@ class ServersTest(test.TestCase):
             image_ref=image_ref, flavor_id=flavor_id)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         expected_server = {
@@ -646,11 +646,11 @@ class ServersTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/servers/1",
+                        "href": "http://localhost/v1.1/fake/servers/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/servers/1",
+                        "href": "http://localhost/fake/servers/1",
                     },
                 ],
             }
@@ -795,7 +795,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
 
         res_dict = json.loads(res.body)
@@ -839,7 +839,7 @@ class ServersTest(test.TestCase):
             interfaces=interfaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
 
         res_dict = json.loads(res.body)
@@ -889,7 +889,7 @@ class ServersTest(test.TestCase):
                        'virtual_interface_get_by_instance',
                        _return_vifs)
 
-        req = webob.Request.blank('/v1.1/servers/1/ips')
+        req = webob.Request.blank('/v1.1/fake/servers/1/ips')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -939,7 +939,7 @@ class ServersTest(test.TestCase):
                        'virtual_interface_get_by_instance',
                        _return_vifs)
 
-        req = webob.Request.blank('/v1.1/servers/1/ips/network_2')
+        req = webob.Request.blank('/v1.1/fake/servers/1/ips/network_2')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -959,7 +959,7 @@ class ServersTest(test.TestCase):
                        'virtual_interface_get_by_instance',
                        _return_vifs)
 
-        req = webob.Request.blank('/v1.1/servers/1/ips/network_0')
+        req = webob.Request.blank('/v1.1/fake/servers/1/ips/network_0')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -969,7 +969,7 @@ class ServersTest(test.TestCase):
                        'virtual_interface_get_by_instance',
                        _return_vifs)
 
-        req = webob.Request.blank('/v1.1/servers/600/ips')
+        req = webob.Request.blank('/v1.1/fake/servers/600/ips')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -1038,7 +1038,7 @@ class ServersTest(test.TestCase):
                 i += 1
 
     def test_get_server_list_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -1051,11 +1051,11 @@ class ServersTest(test.TestCase):
             expected_links = [
                 {
                     "rel": "self",
-                    "href": "http://localhost/v1.1/servers/%s" % s['id'],
+                    "href": "http://localhost/v1.1/fake/servers/%s" % s['id'],
                 },
                 {
                     "rel": "bookmark",
-                    "href": "http://localhost/servers/%s" % s['id'],
+                    "href": "http://localhost/fake/servers/%s" % s['id'],
                 },
             ]
 
@@ -1102,19 +1102,19 @@ class ServersTest(test.TestCase):
         self.assertTrue(res.body.find('offset param') > -1)
 
     def test_get_servers_with_marker(self):
-        req = webob.Request.blank('/v1.1/servers?marker=2')
+        req = webob.Request.blank('/v1.1/fake/servers?marker=2')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['name'] for s in servers], ["server3", "server4"])
 
     def test_get_servers_with_limit_and_marker(self):
-        req = webob.Request.blank('/v1.1/servers?limit=2&marker=1')
+        req = webob.Request.blank('/v1.1/fake/servers?limit=2&marker=1')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['name'] for s in servers], ['server2', 'server3'])
 
     def test_get_servers_with_bad_marker(self):
-        req = webob.Request.blank('/v1.1/servers?limit=2&marker=asdf')
+        req = webob.Request.blank('/v1.1/fake/servers?limit=2&marker=asdf')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
         self.assertTrue(res.body.find('marker param') > -1)
@@ -1140,7 +1140,7 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = webob.Request.blank('/v1.1/servers?unknownoption=whee')
+        req = webob.Request.blank('/v1.1/fake/servers?unknownoption=whee')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         servers = json.loads(res.body)['servers']
@@ -1157,7 +1157,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?image=12345')
+        req = webob.Request.blank('/v1.1/fake/servers?image=12345')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1177,7 +1177,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?flavor=12345')
+        req = webob.Request.blank('/v1.1/fake/servers?flavor=12345')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1196,7 +1196,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?status=active')
+        req = webob.Request.blank('/v1.1/fake/servers?status=active')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1208,7 +1208,7 @@ class ServersTest(test.TestCase):
     def test_get_servers_invalid_status_v1_1(self):
         """Test getting servers by invalid status"""
         self.flags(allow_admin_api=False)
-        req = webob.Request.blank('/v1.1/servers?status=running')
+        req = webob.Request.blank('/v1.1/fake/servers?status=running')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
         self.assertTrue(res.body.find('Invalid server status') > -1)
@@ -1223,7 +1223,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = webob.Request.blank('/v1.1/servers?name=whee.*')
+        req = webob.Request.blank('/v1.1/fake/servers?name=whee.*')
         res = req.get_response(fakes.wsgi_app())
         # The following assert will fail if either of the asserts in
         # fake_get_all() fail
@@ -1254,7 +1254,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = webob.Request.blank('/v1.1/servers?%s' % query_str)
+        req = webob.Request.blank('/v1.1/fake/servers?%s' % query_str)
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=True)
@@ -1288,7 +1288,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = webob.Request.blank('/v1.1/servers?%s' % query_str)
+        req = webob.Request.blank('/v1.1/fake/servers?%s' % query_str)
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=False)
@@ -1321,7 +1321,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = webob.Request.blank('/v1.1/servers?%s' % query_str)
+        req = webob.Request.blank('/v1.1/fake/servers?%s' % query_str)
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=True)
@@ -1347,7 +1347,7 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = webob.Request.blank('/v1.1/servers?ip=10\..*')
+        req = webob.Request.blank('/v1.1/fake/servers?ip=10\..*')
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=True)
@@ -1373,7 +1373,7 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = webob.Request.blank('/v1.1/servers?ip6=ffff.*')
+        req = webob.Request.blank('/v1.1/fake/servers?ip6=ffff.*')
         # Request admin context
         context = nova.context.RequestContext('testuser', 'testproject',
                 is_admin=True)
@@ -1600,8 +1600,8 @@ class ServersTest(test.TestCase):
         self._setup_for_create_instance()
 
         # proper local hrefs must start with 'http://localhost/v1.1/'
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/flavors/3'
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/123/flavors/3'
         access_ipv4 = '1.2.3.4'
         access_ipv6 = 'fead::1234'
         expected_flavor = {
@@ -1609,7 +1609,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/flavors/3',
+                    "href": 'http://localhost/123/flavors/3',
                 },
             ],
         }
@@ -1618,7 +1618,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/images/2',
+                    "href": 'http://localhost/123/images/2',
                 },
             ],
         }
@@ -1642,7 +1642,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1665,13 +1665,13 @@ class ServersTest(test.TestCase):
 
         # proper local hrefs must start with 'http://localhost/v1.1/'
         image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/flavors/3'
+        flavor_ref = 'http://localhost/123/flavors/3'
         expected_flavor = {
             "id": "3",
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/flavors/3',
+                    "href": 'http://localhost/fake/flavors/3',
                 },
             ],
         }
@@ -1680,7 +1680,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/images/2',
+                    "href": 'http://localhost/fake/images/2',
                 },
             ],
         }
@@ -1702,7 +1702,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1730,7 +1730,7 @@ class ServersTest(test.TestCase):
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1740,13 +1740,13 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1_invalid_flavor_id_int(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
+        image_href = 'http://localhost/v1.1/123/images/2'
         flavor_ref = -1
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1762,7 +1762,7 @@ class ServersTest(test.TestCase):
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1778,7 +1778,7 @@ class ServersTest(test.TestCase):
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1795,7 +1795,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/flavors/3',
+                    "href": 'http://localhost/fake/flavors/3',
                 },
             ],
         }
@@ -1804,7 +1804,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/images/2',
+                    "href": 'http://localhost/fake/images/2',
                 },
             ],
         }
@@ -1816,7 +1816,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1863,7 +1863,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
@@ -1884,7 +1884,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
@@ -1958,7 +1958,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(mock_method.password, 'bacon')
 
     def test_update_server_no_body_v1_1(self):
-        req = webob.Request.blank('/v1.0/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         req.method = 'PUT'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
@@ -1968,7 +1968,7 @@ class ServersTest(test.TestCase):
                 return_server_with_attributes(name='server_test',
                                               access_ipv4='0.0.0.0',
                                               access_ipv6='beef::0123'))
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {
@@ -1988,7 +1988,7 @@ class ServersTest(test.TestCase):
     def test_update_server_name_v1_1(self):
         self.stubs.Set(nova.db.api, 'instance_get',
                 return_server_with_attributes(name='server_test'))
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         req.method = 'PUT'
         req.content_type = 'application/json'
         req.body = json.dumps({'server': {'name': 'server_test'}})
@@ -2001,7 +2001,7 @@ class ServersTest(test.TestCase):
     def test_update_server_access_ipv4_v1_1(self):
         self.stubs.Set(nova.db.api, 'instance_get',
                 return_server_with_attributes(access_ipv4='0.0.0.0'))
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         req.method = 'PUT'
         req.content_type = 'application/json'
         req.body = json.dumps({'server': {'accessIPv4': '0.0.0.0'}})
@@ -2014,7 +2014,7 @@ class ServersTest(test.TestCase):
     def test_update_server_access_ipv6_v1_1(self):
         self.stubs.Set(nova.db.api, 'instance_get',
                 return_server_with_attributes(access_ipv6='beef::0123'))
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/123/servers/1')
         req.method = 'PUT'
         req.content_type = 'application/json'
         req.body = json.dumps({'server': {'accessIPv6': 'beef::0123'}})
@@ -2037,7 +2037,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_get',
                 return_server_with_attributes(name='server_test'))
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         req.method = 'PUT'
         req.content_type = "application/json"
         req.body = self.body
@@ -2070,7 +2070,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 501)
 
     def test_server_backup_schedule_deprecated_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers/1/backup_schedule')
+        req = webob.Request.blank('/v1.1/fake/servers/1/backup_schedule')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -2110,7 +2110,7 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/flavors/1',
+                    "href": 'http://localhost/fake/flavors/1',
                 },
             ],
         }
@@ -2119,11 +2119,11 @@ class ServersTest(test.TestCase):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost/images/10',
+                    "href": 'http://localhost/fake/images/10',
                 },
             ],
         }
-        req = webob.Request.blank('/v1.1/servers/detail')
+        req = webob.Request.blank('/v1.1/fake/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -2282,7 +2282,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 422)
 
     def test_delete_server_instance_v1_1(self):
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         req.method = 'DELETE'
 
         self.server_delete_called = False
@@ -3266,18 +3266,20 @@ class ServersViewBuilderV11Test(test.TestCase):
 
         return instance
 
-    def _get_view_builder(self):
+    def _get_view_builder(self, project_id=""):
         base_url = "http://localhost/v1.1"
         views = nova.api.openstack.views
         address_builder = views.addresses.ViewBuilderV11()
-        flavor_builder = views.flavors.ViewBuilderV11(base_url)
-        image_builder = views.images.ViewBuilderV11(base_url)
+        flavor_builder = views.flavors.ViewBuilderV11(base_url, project_id)
+        image_builder = views.images.ViewBuilderV11(base_url, project_id)
 
         view_builder = nova.api.openstack.views.servers.ViewBuilderV11(
             address_builder,
             flavor_builder,
             image_builder,
-            base_url)
+            base_url,
+            project_id,
+        )
         return view_builder
 
     def test_build_server(self):
@@ -3300,6 +3302,29 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         output = self.view_builder.build(self.instance, False)
+        self.assertDictMatch(output, expected_server)
+
+    def test_build_server_with_project_id(self):
+        expected_server = {
+            "server": {
+                "id": 1,
+                "uuid": self.instance['uuid'],
+                "name": "test_server",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/servers/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/servers/1",
+                    },
+                ],
+            }
+        }
+
+        view_builder = self._get_view_builder(project_id='fake')
+        output = view_builder.build(self.instance, False)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail(self):
