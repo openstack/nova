@@ -100,7 +100,8 @@ class FakeConnection(driver.ComputeDriver):
         self.instances[name] = fake_instance
 
     def snapshot(self, context, instance, name):
-        pass
+        if not instance['name'] in self.instances:
+            raise exception.InstanceNotRunning()
 
     def reboot(self, instance, network_info):
         pass
@@ -145,7 +146,7 @@ class FakeConnection(driver.ComputeDriver):
         pass
 
     def destroy(self, instance, network_info, cleanup=True):
-        key = instance.name
+        key = instance['name']
         if key in self.instances:
             del self.instances[key]
         else:
