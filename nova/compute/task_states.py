@@ -17,6 +17,7 @@
 
 """Possible task states for instances"""
 
+SCHEDULING='scheduling'
 BLOCK_DEVICE_MAPPING='block_device_mapping'
 NETWORKING='networking'
 SPAWN='spawn'

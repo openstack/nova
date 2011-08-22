@@ -36,6 +36,7 @@ from nova import utils
 from nova import volume
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova.compute.utils import terminate_volumes
 from nova.scheduler import api as scheduler_api
@@ -397,6 +398,8 @@ class API(base.Base):
             updates['display_name'] = "Server %s" % instance_id
             instance['display_name'] = updates['display_name']
         updates['hostname'] = self.hostname_factory(instance)
+        updates['vm_state'] = vm_states.BUILD
+        updates['task_state'] = task_states.SCHEDULING
 
         instance = self.update(context, instance_id, **updates)
         return instance
