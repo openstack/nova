@@ -42,8 +42,8 @@ def fake_network(n):
             'gateway_v6': '2001:db8:0:%x::1' % n,
             'netmask_v6': '64',
             'netmask': '255.255.255.0',
-            'bridge': 'fa%d' % n,
-            'bridge_interface': 'fake_br%d' % n,
+            'bridge': 'fake_br%d' % n,
+            'bridge_interface': 'fake_eth%d' % n,
             'gateway': '192.168.%d.1' % n,
             'broadcast': '192.168.%d.255' % n,
             'dns1': '192.168.%d.3' % n,
@@ -54,26 +54,29 @@ def fake_network(n):
             'vpn_public_address': '192.168.%d.2' % n}
 
 
-def fixed_ips(num_networks, num_ips):
+def fixed_ips(num_networks, num_ips, num_floating_ips=0):
     for network in xrange(num_networks):
         for ip in xrange(num_ips):
-            yield {'id': network * num_ips + ip,
+            id = network * num_ips + ip
+            f_ips = [floating_ips(id).next() for i in xrange(num_floating_ips)]
+            yield {'id': id,
                    'network_id': network,
                    'address': '192.168.%d.1%02d' % (network, ip),
                    'instance_id': 0,
                    'allocated': False,
                    # and since network_id and vif_id happen to be equivalent
                    'virtual_interface_id': network,
-                   'floating_ips': [FakeModel(**floating_ip)]}
+                   'floating_ips': [FakeModel(**ip) for ip in f_ips]}
 
 
 flavor = {'id': 0,
           'rxtx_cap': 3}
 
-
-floating_ip = {'id': 0,
-               'address': '10.10.10.10',
-               'fixed_ip_id': 0,
+def floating_ips(fixed_ip_id):
+    for i in xrange(154):
+        yield {'id': 0,
+               'address': '10.10.10.%d' % (i + 100),
+               'fixed_ip_id': fixed_ip_id,
                'project_id': None,
                'auto_assigned': False}
 
