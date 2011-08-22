@@ -42,9 +42,9 @@ def get_connection(_):
 
 class FakeInstance(object):
 
-    def __init__(self, name, power_state):
+    def __init__(self, name, state):
         self.name = name
-        self.power_state = power_state
+        self.state = state
 
 
 class FakeConnection(driver.ComputeDriver):
@@ -150,8 +150,8 @@ class FakeConnection(driver.ComputeDriver):
         """
 
         name = instance.name
-        pstate = power_state.RUNNING
-        fake_instance = FakeInstance(name, pstate)
+        state = power_state.RUNNING
+        fake_instance = FakeInstance(name, state)
         self.instances[name] = fake_instance
 
     def snapshot(self, context, instance, name):
@@ -325,7 +325,7 @@ class FakeConnection(driver.ComputeDriver):
         if instance_name not in self.instances:
             raise exception.InstanceNotFound(instance_id=instance_name)
         i = self.instances[instance_name]
-        return {'state': i.power_state,
+        return {'state': i.state,
                 'max_mem': 0,
                 'mem': 0,
                 'num_cpu': 2,
