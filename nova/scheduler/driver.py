@@ -30,7 +30,6 @@ from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
-from nova.compute import task_state
 from nova.compute import vm_states
 from nova.api.ec2 import ec2utils
 

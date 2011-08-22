@@ -28,7 +28,7 @@ from nova import log as logging
 from nova import quota
 from nova.api.openstack import wsgi
 from nova.compute import vm_states
-from nova.compute import task_state
+from nova.compute import task_states
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
@@ -56,9 +56,9 @@ _STATE_MAP = {
 }
 
 
-def status_from_state(_vm_state, _task_state=None):
+def status_from_state(_vm_state, task_state=None):
     """Given vm_state and task_state, return a status string."""
-    if _vm_state == vm_states.ACTIVE and _task_state == task_state.PASSWORD:
+    if _vm_state == vm_states.ACTIVE and task_state == task_states.PASSWORD:
         return "PASSWORD"
     return _STATE_MAP.get(_vm_state, "UNKNOWN_STATE")
 

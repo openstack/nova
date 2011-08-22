@@ -36,7 +36,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.compute.api
 from nova.compute import instance_types
-from nova.compute import task_state
+from nova.compute import task_states
 from nova.compute import vm_states
 import nova.db.api
 import nova.scheduler.api
@@ -2337,7 +2337,7 @@ class TestServerStatus(test.TestCase):
         self.assertEqual(response['server']['status'], 'VERIFY_RESIZE')
 
     def test_password_update(self):
-        response = self._get_with_state(vm_states.ACTIVE, task_state.PASSWORD)
+        response = self._get_with_state(vm_states.ACTIVE, task_states.PASSWORD)
         self.assertEqual(response['server']['status'], 'PASSWORD')
 
     def test_stopped(self):
