@@ -25,10 +25,11 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import rpc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-
+from nova.compute import power_state
 
 from xml.dom import minidom
 
@@ -73,33 +74,28 @@ class SecurityGroupController(object):
                     context, rule)]
         return security_group
 
-    def show(self, req, id):
-        """Return data about the given security group."""
-        context = req.environ['nova.context']
+    def _get_security_group(self, context, id):
         try:
             id = int(id)
             security_group = db.security_group_get(context, id)
         except ValueError:
-            msg = _("Security group id is not integer")
-            return exc.HTTPBadRequest(explanation=msg)
+            msg = _("Security group id should be integer")
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.NotFound as exp:
-            return exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=unicode(exp))
+        return security_group
 
+    def show(self, req, id):
+        """Return data about the given security group."""
+        context = req.environ['nova.context']
+        security_group = self._get_security_group(context, id)
         return {'security_group': self._format_security_group(context,
                                                               security_group)}
 
     def delete(self, req, id):
         """Delete a security group."""
         context = req.environ['nova.context']
-        try:
-            id = int(id)
-            security_group = db.security_group_get(context, id)
-        except ValueError:
-            msg = _("Security group id is not integer")
-            return exc.HTTPBadRequest(explanation=msg)
-        except exception.SecurityGroupNotFound as exp:
-            return exc.HTTPNotFound(explanation=unicode(exp))
-
+        security_group = self._get_security_group(context, id)
         LOG.audit(_("Delete security group %s"), id, context=context)
         db.security_group_destroy(context, security_group.id)
 
@@ -226,9 +222,9 @@ class SecurityGroupRulesController(SecurityGroupController):
         security_group_rule = db.security_group_rule_create(context, values)
 
         self.compute_api.trigger_security_group_rules_refresh(context,
-                                      security_group_id=security_group['id'])
+                                    security_group_id=security_group['id'])
 
-        return {'security_group_rule': self._format_security_group_rule(
+        return {"security_group_rule": self._format_security_group_rule(
                                                         context,
                                                         security_group_rule)}
 
@@ -336,6 +332,11 @@ class SecurityGroupRulesController(SecurityGroupController):
 
 
 class Security_groups(extensions.ExtensionDescriptor):
+
+    def __init__(self):
+        self.compute_api = compute.API()
+        super(Security_groups, self).__init__()
+
     def get_name(self):
         return "SecurityGroups"
 
@@ -350,6 +351,82 @@ class Security_groups(extensions.ExtensionDescriptor):
 
     def get_updated(self):
         return "2011-07-21T00:00:00+00:00"
+
+    def _addSecurityGroup(self, input_dict, req, instance_id):
+        context = req.environ['nova.context']
+
+        try:
+            body = input_dict['addSecurityGroup']
+            group_name = body['name']
+            instance_id = int(instance_id)
+        except ValueError:
+            msg = _("Server id should be integer")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except TypeError:
+            msg = _("Missing parameter dict")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        except KeyError:
+            msg = _("Security group not specified")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        if not group_name or group_name.strip() == '':
+            msg = _("Security group name cannot be empty")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            self.compute_api.add_security_group(context, instance_id,
+                                                group_name)
+        except exception.SecurityGroupNotFound as exp:
+            return exc.HTTPNotFound(explanation=unicode(exp))
+        except exception.InstanceNotFound as exp:
+            return exc.HTTPNotFound(explanation=unicode(exp))
+        except exception.Invalid as exp:
+            return exc.HTTPBadRequest(explanation=unicode(exp))
+
+        return exc.HTTPAccepted()
+
+    def _removeSecurityGroup(self, input_dict, req, instance_id):
+        context = req.environ['nova.context']
+
+        try:
+            body = input_dict['removeSecurityGroup']
+            group_name = body['name']
+            instance_id = int(instance_id)
+        except ValueError:
+            msg = _("Server id should be integer")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except TypeError:
+            msg = _("Missing parameter dict")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        except KeyError:
+            msg = _("Security group not specified")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        if not group_name or group_name.strip() == '':
+            msg = _("Security group name cannot be empty")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            self.compute_api.remove_security_group(context, instance_id,
+                                                   group_name)
+        except exception.SecurityGroupNotFound as exp:
+            return exc.HTTPNotFound(explanation=unicode(exp))
+        except exception.InstanceNotFound as exp:
+            return exc.HTTPNotFound(explanation=unicode(exp))
+        except exception.Invalid as exp:
+            return exc.HTTPBadRequest(explanation=unicode(exp))
+
+        return exc.HTTPAccepted()
+
+    def get_actions(self):
+        """Return the actions the extensions adds"""
+        actions = [
+                extensions.ActionExtension("servers", "addSecurityGroup",
+                                           self._addSecurityGroup),
+                extensions.ActionExtension("servers", "removeSecurityGroup",
+                                           self._removeSecurityGroup)
+                   ]
+        return actions
 
     def get_resources(self):
         resources = []

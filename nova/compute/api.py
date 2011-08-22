@@ -163,7 +163,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, requested_networks=None):
+               reservation_id=None, access_ip_v4=None, access_ip_v6=None,
+               requested_networks=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -258,6 +259,8 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'metadata': metadata,
+            'access_ip_v4': access_ip_v4,
+            'access_ip_v6': access_ip_v6,
             'availability_zone': availability_zone,
             'os_type': os_type,
             'architecture': architecture,
@@ -450,6 +453,7 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None,
                requested_networks=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
@@ -466,7 +470,8 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id, requested_networks)
+                               reservation_id, access_ip_v4, access_ip_v6,
+                               requested_networks)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
@@ -485,6 +490,7 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None,
                requested_networks=None):
         """
         Provision the instances by sending off a series of single
@@ -509,7 +515,8 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id, requested_networks)
+                               reservation_id, access_ip_v4, access_ip_v6,
+                               requested_networks)
 
         block_device_mapping = block_device_mapping or []
         instances = []
@@ -626,6 +633,78 @@ class API(base.Base):
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
+
+    def _is_security_group_associated_with_server(self, security_group,
+                                                instance_id):
+        """Check if the security group is already associated
+           with the instance. If Yes, return True.
+        """
+
+        if not security_group:
+            return False
+
+        instances = security_group.get('instances')
+        if not instances:
+            return False
+
+        inst_id = None
+        for inst_id in (instance['id'] for instance in instances \
+                        if instance_id == instance['id']):
+            return True
+
+        return False
+
+    def add_security_group(self, context, instance_id, security_group_name):
+        """Add security group to the instance"""
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
+        # check if the server exists
+        inst = db.instance_get(context, instance_id)
+        #check if the security group is associated with the server
+        if self._is_security_group_associated_with_server(security_group,
+                                                        instance_id):
+            raise exception.SecurityGroupExistsForInstance(
+                                        security_group_id=security_group['id'],
+                                        instance_id=instance_id)
+
+        #check if the instance is in running state
+        if inst['state'] != power_state.RUNNING:
+            raise exception.InstanceNotRunning(instance_id=instance_id)
+
+        db.instance_add_security_group(context.elevated(),
+                                       instance_id,
+                                       security_group['id'])
+        rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             {"method": "refresh_security_group_rules",
+              "args": {"security_group_id": security_group['id']}})
+
+    def remove_security_group(self, context, instance_id, security_group_name):
+        """Remove the security group associated with the instance"""
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
+        # check if the server exists
+        inst = db.instance_get(context, instance_id)
+        #check if the security group is associated with the server
+        if not self._is_security_group_associated_with_server(security_group,
+                                                        instance_id):
+            raise exception.SecurityGroupNotExistsForInstance(
+                                    security_group_id=security_group['id'],
+                                    instance_id=instance_id)
+
+        #check if the instance is in running state
+        if inst['state'] != power_state.RUNNING:
+            raise exception.InstanceNotRunning(instance_id=instance_id)
+
+        db.instance_remove_security_group(context.elevated(),
+                                       instance_id,
+                                       security_group['id'])
+        rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             {"method": "refresh_security_group_rules",
+              "args": {"security_group_id": security_group['id']}})
 
     @scheduler_api.reroute_compute("update")
     def update(self, context, instance_id, **kwargs):

@@ -44,14 +44,15 @@ class RateLimitingMiddlewareTest(test.TestCase):
             action = middleware.get_action_name(req)
             self.assertEqual(action, action_name)
 
-        verify('PUT', '/servers/4', 'PUT')
-        verify('DELETE', '/servers/4', 'DELETE')
-        verify('POST', '/images/4', 'POST')
-        verify('POST', '/servers/4', 'POST servers')
-        verify('GET', '/foo?a=4&changes-since=never&b=5', 'GET changes-since')
-        verify('GET', '/foo?a=4&monkeys-since=never&b=5', None)
-        verify('GET', '/servers/4', None)
-        verify('HEAD', '/servers/4', None)
+        verify('PUT', '/fake/servers/4', 'PUT')
+        verify('DELETE', '/fake/servers/4', 'DELETE')
+        verify('POST', '/fake/images/4', 'POST')
+        verify('POST', '/fake/servers/4', 'POST servers')
+        verify('GET', '/fake/foo?a=4&changes-since=never&b=5',
+               'GET changes-since')
+        verify('GET', '/fake/foo?a=4&monkeys-since=never&b=5', None)
+        verify('GET', '/fake/servers/4', None)
+        verify('HEAD', '/fake/servers/4', None)
 
     def exhaust(self, middleware, method, url, username, times):
         req = Request.blank(url, dict(REQUEST_METHOD=method),
@@ -67,13 +68,13 @@ class RateLimitingMiddlewareTest(test.TestCase):
 
     def test_single_action(self):
         middleware = RateLimitingMiddleware(simple_wsgi)
-        self.exhaust(middleware, 'DELETE', '/servers/4', 'usr1', 100)
-        self.exhaust(middleware, 'DELETE', '/servers/4', 'usr2', 100)
+        self.exhaust(middleware, 'DELETE', '/fake/servers/4', 'usr1', 100)
+        self.exhaust(middleware, 'DELETE', '/fake/servers/4', 'usr2', 100)
 
     def test_POST_servers_action_implies_POST_action(self):
         middleware = RateLimitingMiddleware(simple_wsgi)
-        self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
-        self.exhaust(middleware, 'POST', '/images/4', 'usr2', 10)
+        self.exhaust(middleware, 'POST', '/fake/servers/4', 'usr1', 10)
+        self.exhaust(middleware, 'POST', '/fake/images/4', 'usr2', 10)
         self.assertTrue(set(middleware.limiter._levels) == \
                         set(['usr1:POST', 'usr1:POST servers', 'usr2:POST']))
 
@@ -81,11 +82,11 @@ class RateLimitingMiddlewareTest(test.TestCase):
         middleware = RateLimitingMiddleware(simple_wsgi)
         # Use up all of our "POST" allowance for the minute, 5 times
         for i in range(5):
-            self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
+            self.exhaust(middleware, 'POST', '/fake/servers/4', 'usr1', 10)
             # Reset the 'POST' action counter.
             del middleware.limiter._levels['usr1:POST']
         # All 50 daily "POST servers" actions should be all used up
-        self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 0)
+        self.exhaust(middleware, 'POST', '/fake/servers/4', 'usr1', 0)
 
     def test_proxy_ctor_works(self):
         middleware = RateLimitingMiddleware(simple_wsgi)

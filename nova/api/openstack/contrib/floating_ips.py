@@ -15,8 +15,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License
-from webob import exc
+import webob
 
+from nova import compute
 from nova import exception
 from nova import log as logging
 from nova import network
@@ -71,18 +72,22 @@ class FloatingIPController(object):
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            return faults.Fault(webob.exc.HTTPNotFound())
 
         return _translate_floating_ip_view(floating_ip)
 
     def index(self, req):
         context = req.environ['nova.context']
 
-        floating_ips = self.network_api.list_floating_ips(context)
+        try:
+            # FIXME(ja) - why does self.network_api.list_floating_ips raise?
+            floating_ips = self.network_api.list_floating_ips(context)
+        except exception.FloatingIpNotFoundForProject:
+            floating_ips = []
 
         return _translate_floating_ips_view(floating_ips)
 
-    def create(self, req):
+    def create(self, req, body=None):
         context = req.environ['nova.context']
 
         try:
@@ -95,56 +100,19 @@ class FloatingIPController(object):
             else:
                 raise
 
-        return {'allocated': {
-            "id": ip['id'],
-            "floating_ip": ip['address']}}
+        return _translate_floating_ip_view(ip)
 
     def delete(self, req, id):
         context = req.environ['nova.context']
-        ip = self.network_api.get_floating_ip(context, id)
-
-        if 'fixed_ip' in ip:
-            self.disassociate(req, id)
-
-        self.network_api.release_floating_ip(context, address=ip['address'])
-
-        return {'released': {
-            "id": ip['id'],
-            "floating_ip": ip['address']}}
-
-    def associate(self, req, id, body):
-        """ /floating_ips/{id}/associate  fixed ip in body """
-        context = req.environ['nova.context']
-        floating_ip = self._get_ip_by_id(context, id)
-
-        fixed_ip = body['associate_address']['fixed_ip']
-
-        try:
-            self.network_api.associate_floating_ip(context,
-                                                   floating_ip, fixed_ip)
-        except rpc.RemoteError:
-            raise
-
-        return {'associated':
-                {
-                "floating_ip_id": id,
-                "floating_ip": floating_ip,
-                "fixed_ip": fixed_ip}}
-
-    def disassociate(self, req, id, body=None):
-        """ POST /floating_ips/{id}/disassociate """
-        context = req.environ['nova.context']
         floating_ip = self.network_api.get_floating_ip(context, id)
-        address = floating_ip['address']
-        fixed_ip = floating_ip['fixed_ip']['address']
 
-        try:
-            self.network_api.disassociate_floating_ip(context, address)
-        except rpc.RemoteError:
-            raise
+        if 'fixed_ip' in floating_ip:
+            self.network_api.disassociate_floating_ip(context,
+                                                      floating_ip['address'])
 
-        return {'disassociated': {'floating_ip': address,
-                                  'fixed_ip': fixed_ip}}
+        self.network_api.release_floating_ip(context,
+                                             address=floating_ip['address'])
+        return webob.exc.HTTPAccepted()
 
     def _get_ip_by_id(self, context, value):
         """Checks that value is id and then returns its address."""
@@ -152,6 +120,47 @@ class FloatingIPController(object):
 
 
 class Floating_ips(extensions.ExtensionDescriptor):
+    def __init__(self):
+        self.compute_api = compute.API()
+        self.network_api = network.API()
+        super(Floating_ips, self).__init__()
+
+    def _add_floating_ip(self, input_dict, req, instance_id):
+        """Associate floating_ip to an instance."""
+        context = req.environ['nova.context']
+
+        try:
+            address = input_dict['addFloatingIp']['address']
+        except TypeError:
+            msg = _("Missing parameter dict")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        except KeyError:
+            msg = _("Address not specified")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        self.compute_api.associate_floating_ip(context, instance_id, address)
+
+        return webob.Response(status_int=202)
+
+    def _remove_floating_ip(self, input_dict, req, instance_id):
+        """Dissociate floating_ip from an instance."""
+        context = req.environ['nova.context']
+
+        try:
+            address = input_dict['removeFloatingIp']['address']
+        except TypeError:
+            msg = _("Missing parameter dict")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        except KeyError:
+            msg = _("Address not specified")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        floating_ip = self.network_api.get_floating_ip_by_ip(context, address)
+        if 'fixed_ip' in floating_ip:
+            self.network_api.disassociate_floating_ip(context, address)
+
+        return webob.Response(status_int=202)
+
     def get_name(self):
         return "Floating_ips"
 
@@ -172,9 +181,18 @@ class Floating_ips(extensions.ExtensionDescriptor):
 
         res = extensions.ResourceExtension('os-floating-ips',
                          FloatingIPController(),
-                         member_actions={
-                            'associate': 'POST',
-                            'disassociate': 'POST'})
+                         member_actions={})
         resources.append(res)
 
         return resources
+
+    def get_actions(self):
+        """Return the actions the extension adds, as required by contract."""
+        actions = [
+                extensions.ActionExtension("servers", "addFloatingIp",
+                                            self._add_floating_ip),
+                extensions.ActionExtension("servers", "removeFloatingIp",
+                                            self._remove_floating_ip),
+        ]
+
+        return actions

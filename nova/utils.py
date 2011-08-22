@@ -295,7 +295,7 @@ EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
 
 def usage_from_instance(instance_ref, **kw):
     usage_info = dict(
-          tenant_id=instance_ref['project_id'],
+          project_id=instance_ref['project_id'],
           user_id=instance_ref['user_id'],
           instance_id=instance_ref['id'],
           instance_type=instance_ref['instance_type']['name'],
@@ -547,11 +547,17 @@ def to_primitive(value, convert_instances=False, level=0):
     Therefore, convert_instances=True is lossy ... be aware.
 
     """
-    if inspect.isclass(value):
-        return unicode(value)
+    nasty = [inspect.ismodule, inspect.isclass, inspect.ismethod,
+             inspect.isfunction, inspect.isgeneratorfunction,
+             inspect.isgenerator, inspect.istraceback, inspect.isframe,
+             inspect.iscode, inspect.isbuiltin, inspect.isroutine,
+             inspect.isabstract]
+    for test in nasty:
+        if test(value):
+            return unicode(value)
 
     if level > 3:
-        return []
+        return '?'
 
     # The try block may not be necessary after the class check above,
     # but just in case ...
