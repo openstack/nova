@@ -18,7 +18,7 @@
 
 """
 WARNING: This code is deprecated and will be removed.
-Keystone is recommended is the recommended solution for auth management.
+Keystone is the recommended solution for auth management.
 
 Nova authentication management
 """
