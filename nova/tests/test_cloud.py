@@ -38,6 +38,7 @@ from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
+from nova.compute import vm_states
 from nova.image import fake
 
 
@@ -1174,12 +1175,12 @@ class CloudTestCase(test.TestCase):
 
     def _wait_for_running(self, instance_id):
         def is_running(info):
-            return info['vm_state'] == 'running'
+            return info['vm_state'] == vm_states.ACTIVE
         self._wait_for_state(self.context, instance_id, is_running)
 
     def _wait_for_stopped(self, instance_id):
         def is_stopped(info):
-            return info['vm_state'] == 'stopped'
+            return info['vm_state'] == vm_states.STOP
         self._wait_for_state(self.context, instance_id, is_stopped)
 
     def _wait_for_terminate(self, instance_id):
@@ -1562,7 +1563,7 @@ class CloudTestCase(test.TestCase):
                 'id': 0,
                 'root_device_name': '/dev/sdh',
                 'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
-                'vm_state': 'stopped',
+                'vm_state': vm_states.STOP,
                 'instance_type': {'name': 'fake_type'},
                 'kernel_id': 1,
                 'ramdisk_id': 2,

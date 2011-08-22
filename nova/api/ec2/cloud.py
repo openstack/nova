@@ -82,6 +82,7 @@ def _gen_key(context, user_id, key_name):
 # EC2 API: Valid Values:
 # pending | running | shutting-down | terminated | stopping | stopped
 _STATE_DESCRIPTION_MAP = {
+    None: 'pending',
     vm_states.ACTIVE: 'running',
     vm_states.BUILD: 'pending',
     vm_states.REBUILD: 'pending',
