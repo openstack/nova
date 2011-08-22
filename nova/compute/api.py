@@ -153,7 +153,7 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, access_ip_v4=None, access_ip_v6=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -247,6 +247,8 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'metadata': metadata,
+            'access_ip_v4': access_ip_v4,
+            'access_ip_v6': access_ip_v6,
             'availability_zone': availability_zone,
             'os_type': os_type,
             'architecture': architecture,
@@ -411,12 +413,11 @@ class API(base.Base):
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " (all-at-once)") % locals())
 
-        filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
             'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
-            'filter': filter_class,
+            'filter': None,
             'blob': zone_blob,
             'num_instances': num_instances,
         }
@@ -438,7 +439,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
@@ -454,7 +456,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, access_ip_v4, access_ip_v6)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
@@ -472,7 +474,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -496,7 +499,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, access_ip_v4, access_ip_v6)
 
         block_device_mapping = block_device_mapping or []
         instances = []
@@ -613,6 +616,78 @@ class API(base.Base):
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
+
+    def _is_security_group_associated_with_server(self, security_group,
+                                                instance_id):
+        """Check if the security group is already associated
+           with the instance. If Yes, return True.
+        """
+
+        if not security_group:
+            return False
+
+        instances = security_group.get('instances')
+        if not instances:
+            return False
+
+        inst_id = None
+        for inst_id in (instance['id'] for instance in instances \
+                        if instance_id == instance['id']):
+            return True
+
+        return False
+
+    def add_security_group(self, context, instance_id, security_group_name):
+        """Add security group to the instance"""
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
+        # check if the server exists
+        inst = db.instance_get(context, instance_id)
+        #check if the security group is associated with the server
+        if self._is_security_group_associated_with_server(security_group,
+                                                        instance_id):
+            raise exception.SecurityGroupExistsForInstance(
+                                        security_group_id=security_group['id'],
+                                        instance_id=instance_id)
+
+        #check if the instance is in running state
+        if inst['state'] != power_state.RUNNING:
+            raise exception.InstanceNotRunning(instance_id=instance_id)
+
+        db.instance_add_security_group(context.elevated(),
+                                       instance_id,
+                                       security_group['id'])
+        rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             {"method": "refresh_security_group_rules",
+              "args": {"security_group_id": security_group['id']}})
+
+    def remove_security_group(self, context, instance_id, security_group_name):
+        """Remove the security group associated with the instance"""
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
+        # check if the server exists
+        inst = db.instance_get(context, instance_id)
+        #check if the security group is associated with the server
+        if not self._is_security_group_associated_with_server(security_group,
+                                                        instance_id):
+            raise exception.SecurityGroupNotExistsForInstance(
+                                    security_group_id=security_group['id'],
+                                    instance_id=instance_id)
+
+        #check if the instance is in running state
+        if inst['state'] != power_state.RUNNING:
+            raise exception.InstanceNotRunning(instance_id=instance_id)
+
+        db.instance_remove_security_group(context.elevated(),
+                                       instance_id,
+                                       security_group['id'])
+        rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             {"method": "refresh_security_group_rules",
+              "args": {"security_group_id": security_group['id']}})
 
     @scheduler_api.reroute_compute("update")
     def update(self, context, instance_id, **kwargs):
@@ -1068,15 +1143,21 @@ class API(base.Base):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
 
+    def _call_compute_message_for_host(self, action, context, host, params):
+        """Call method deliberately designed to make host/service only calls"""
+        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        kwargs = {'method': action, 'args': params}
+        return rpc.call(context, queue, kwargs)
+
     def set_host_enabled(self, context, host, enabled):
         """Sets the specified host's ability to accept new instances."""
-        return self._call_compute_message("set_host_enabled", context,
+        return self._call_compute_message_for_host("set_host_enabled", context,
                 host=host, params={"enabled": enabled})
 
     def host_power_action(self, context, host, action):
         """Reboots, shuts down or powers up the host."""
-        return self._call_compute_message("host_power_action", context,
-                host=host, params={"action": action})
+        return self._call_compute_message_for_host("host_power_action",
+                context, host=host, params={"action": action})
 
     @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):

@@ -541,6 +541,16 @@ class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
     message = _("Security group with rule %(rule_id)s not found.")
 
 
+class SecurityGroupExistsForInstance(Invalid):
+    message = _("Security group %(security_group_id)s is already associated"
+                 " with the instance %(instance_id)s")
+
+
+class SecurityGroupNotExistsForInstance(Invalid):
+    message = _("Security group %(security_group_id)s is not associated with"
+                 " the instance %(instance_id)s")
+
+
 class MigrationNotFound(NotFound):
     message = _("Migration %(migration_id)s could not be found.")
 

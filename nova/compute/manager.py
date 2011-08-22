@@ -392,12 +392,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         updates = {}
         updates['host'] = self.host
         updates['launched_on'] = self.host
-        # NOTE(vish): used by virt but not in database
-        updates['injected_files'] = kwargs.get('injected_files', [])
-        updates['admin_pass'] = kwargs.get('admin_password', None)
         instance = self.db.instance_update(context,
                                            instance_id,
                                            updates)
+        instance['injected_files'] = kwargs.get('injected_files', [])
+        instance['admin_pass'] = kwargs.get('admin_password', None)
+
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,

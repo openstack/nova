@@ -173,7 +173,6 @@ class Instance(BASE, NovaBase):
             base_name += "-rescue"
         return base_name
 
-    admin_pass = Column(String(255))
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -231,6 +230,11 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
+
+    # User editable field meant to represent what ip should be used
+    # to connect to the instance
+    access_ip_v4 = Column(String(255))
+    access_ip_v6 = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -570,6 +574,8 @@ class VirtualInterface(BASE, NovaBase):
     # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
     instance = relationship(Instance, backref=backref('virtual_interfaces'))
+
+    uuid = Column(String(36))
 
     @property
     def fixed_ipv6(self):

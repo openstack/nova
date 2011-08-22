@@ -1222,7 +1222,8 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
-                   options(joinedload('instance_type'))
+                   options(joinedload('instance_type')).\
+                   filter_by(deleted=can_read_deleted(context))
 
     # Make a copy of the filters dictionary to use going forward, as we'll
     # be modifying it and we shouldn't affect the caller's use of it.
@@ -1498,6 +1499,19 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                                 session=session)
         instance_ref.security_groups += [security_group_ref]
         instance_ref.save(session=session)
+
+
+@require_context
+def instance_remove_security_group(context, instance_id, security_group_id):
+    """Disassociate the given security group from the given instance"""
+    session = get_session()
+
+    session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(instance_id=instance_id).\
+                filter_by(security_group_id=security_group_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -2436,6 +2450,7 @@ def security_group_get(context, security_group_id, session=None):
                          filter_by(deleted=can_read_deleted(context),).\
                          filter_by(id=security_group_id).\
                          options(joinedload_all('rules')).\
+                         options(joinedload_all('instances')).\
                          first()
     else:
         result = session.query(models.SecurityGroup).\
@@ -2443,6 +2458,7 @@ def security_group_get(context, security_group_id, session=None):
                          filter_by(id=security_group_id).\
                          filter_by(project_id=context.project_id).\
                          options(joinedload_all('rules')).\
+                         options(joinedload_all('instances')).\
                          first()
     if not result:
         raise exception.SecurityGroupNotFound(
