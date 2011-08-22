@@ -88,6 +88,7 @@ class FixedIpCommandsTestCase(test.TestCase):
                                              '10.0.0.100')
         self.assertEqual(address['reserved'], False)
 
+
 class NetworkCommandsTestCase(test.TestCase):
     def setUp(self):
         super(NetworkCommandsTestCase, self).setUp()
@@ -101,7 +102,7 @@ class NetworkCommandsTestCase(test.TestCase):
         super(NetworkCommandsTestCase, self).tearDown()
 
     def test_create(self):
-        FLAGS.network_manager='nova.network.manager.VlanManager'
+        FLAGS.network_manager = 'nova.network.manager.VlanManager'
         self.commands.create(
                             label='Test',
                             fixed_range_v4='10.2.0.0/24',
@@ -173,7 +174,8 @@ class NetworkCommandsTestCase(test.TestCase):
         net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
         self.assertEqual(net['project_id'], None)
         self.assertEqual(net['host'], None)
-        self.commands.modify('10.2.0.0/24', project='test_project', host='test_host')
+        self.commands.modify('10.2.0.0/24', project='test_project',
+                             host='test_host')
         net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
         self.assertEqual(net['project_id'], 'test_project')
         self.assertEqual(net['host'], 'test_host')

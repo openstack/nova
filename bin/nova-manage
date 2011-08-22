@@ -812,7 +812,10 @@ class NetworkCommands(object):
         if project != "None":
             if project:
                 project_id = manager.Project.safe_id(project)
-                db.network_associate_by_id(admin_context, network_id=network['id'], project_id=project, force=True)
+                db.network_associate_by_id(admin_context,
+                                           network_id=network['id'],
+                                           project_id=project,
+                                           force=True)
         else:
             db.network_disassociate(admin_context, network_id=network['id'])
         if host != "None":
