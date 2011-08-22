@@ -52,6 +52,13 @@ class IPv6RFC2462TestCase(test.TestCase):
                                     '2001:db8::216:3eff:fe33:4455',
                                     'test')
 
+    def test_to_global_with_bad_project(self):
+        bad_project = 'non-existent-project-name'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    '2001:db8::',
+                                    '2001:db8::a94a:8fe5:ff33:4455',
+                                    bad_project)
+
 
 class IPv6AccountIdentiferTestCase(test.TestCase):
     """Unit tests for IPv6 account_identifier backend operations."""
