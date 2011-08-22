@@ -15,6 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os.path
+
+
 from nova.api.openstack import common
 
 
@@ -59,11 +62,12 @@ class ViewBuilder(object):
 class ViewBuilderV11(ViewBuilder):
     """Openstack API v1.1 flavors view builder."""
 
-    def __init__(self, base_url):
+    def __init__(self, base_url, project_id=""):
         """
         :param base_url: url of the root wsgi application
         """
         self.base_url = base_url
+        self.project_id = project_id
 
     def _build_extra(self, flavor_obj):
         flavor_obj["links"] = self._build_links(flavor_obj)
@@ -88,11 +92,10 @@ class ViewBuilderV11(ViewBuilder):
 
     def generate_href(self, flavor_id):
         """Create an url that refers to a specific flavor id."""
-        return "%s/flavors/%s" % (self.base_url, flavor_id)
+        return os.path.join(self.base_url, self.project_id,
+                            "flavors", str(flavor_id))
 
     def generate_bookmark(self, flavor_id):
         """Create an url that refers to a specific flavor id."""
-        return "%s/flavors/%s" % (
-            common.remove_version_from_href(self.base_url),
-            flavor_id,
-        )
+        return os.path.join(common.remove_version_from_href(self.base_url),
+            self.project_id, "flavors", str(flavor_id))
