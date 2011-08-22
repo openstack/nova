@@ -1,5 +1,6 @@
 
 import json
+import traceback
 import webob
 from xml.dom import minidom
 from xml.parsers import expat
