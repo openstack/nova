@@ -13,7 +13,6 @@ from nova import flags
 from nova.api.openstack import create_instance_helper
 from nova.compute import instance_types
 from nova.compute import vm_states
-from nova.compute import task_state
 import nova.db.api
 from nova import test
 from nova.tests.api.openstack import common

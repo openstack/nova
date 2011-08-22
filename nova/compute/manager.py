@@ -56,7 +56,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import power_state
-from nova.compute import task_state
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova.notifier import api as notifier
 from nova.compute.utils import terminate_volumes
@@ -373,7 +373,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         updates['host'] = self.host
         updates['launched_on'] = self.host
         updates['vm_state'] = vm_states.BUILD
-        updates['task_state'] = task_state.NETWORKING
+        updates['task_state'] = task_states.NETWORKING
         instance = self.db.instance_update(context, instance_id, updates)
         instance['injected_files'] = kwargs.get('injected_files', [])
         instance['admin_pass'] = kwargs.get('admin_password', None)
@@ -398,7 +398,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._instance_update(context,
                                   instance_id,
                                   vm_state=vm_states.BUILD,
-                                  task_state=task_state.BLOCK_DEVICE_MAPPING)
+                                  task_state=task_states.BLOCK_DEVICE_MAPPING)
 
             (swap, ephemerals,
              block_device_mapping) = self._setup_block_device_mapping(
@@ -411,7 +411,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._instance_update(context,
                                   instance_id,
-                                  task_state=task_state.SPAWN)
+                                  task_state=task_states.SPAWN)
 
             # TODO(vish) check to make sure the availability zone matches
             try:
@@ -524,7 +524,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               instance_id,
                               power_state=current_power_state,
                               vm_state=vm_states.REBUILD,
-                              task_state=task_state.REBUILDING)
+                              task_state=task_states.REBUILDING)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.destroy(instance_ref, network_info)
@@ -532,7 +532,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.REBUILD,
-                              task_state=task_state.BLOCK_DEVICE_MAPPING)
+                              task_state=task_states.BLOCK_DEVICE_MAPPING)
 
         bd_mapping = self._setup_block_device_mapping(context, instance_id)
 
@@ -545,7 +545,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.REBUILD,
-                              task_state=task_state.SPAWN)
+                              task_state=task_states.SPAWN)
 
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
 
@@ -578,7 +578,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               instance_id,
                               power_state=current_power_state,
                               vm_state=vm_states.REBOOT,
-                              task_state=task_state.REBOOTING)
+                              task_state=task_states.REBOOTING)
 
         if instance_ref['power_state'] != power_state.RUNNING:
             state = instance_ref['power_state']
@@ -788,7 +788,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.RESCUE,
-                              task_state=task_state.RESCUING)
+                              task_state=task_states.RESCUING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         network_info = self._get_instance_nw_info(context, instance_ref)
@@ -800,7 +800,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.RESCUE,
-                              task_state=task_state.RESCUED,
+                              task_state=task_states.RESCUED,
                               power_state=current_power_state)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -813,7 +813,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.ACTIVE,
-                              task_state=task_state.UNRESCUING)
+                              task_state=task_states.UNRESCUING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         network_info = self._get_instance_nw_info(context, instance_ref)
@@ -1049,7 +1049,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.PAUSE,
-                              task_state=task_state.PAUSING)
+                              task_state=task_states.PAUSING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.pause(instance_ref, lambda result: None)
@@ -1071,7 +1071,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.ACTIVE,
-                              task_state=task_state.UNPAUSING)
+                              task_state=task_states.UNPAUSING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.unpause(instance_ref, lambda result: None)
@@ -1112,7 +1112,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.SUSPEND,
-                              task_state=task_state.SUSPENDING)
+                              task_state=task_states.SUSPENDING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.suspend(instance_ref, lambda result: None)
@@ -1134,7 +1134,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.ACTIVE,
-                              task_state=task_state.RESUMING)
+                              task_state=task_states.RESUMING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.resume(instance_ref, lambda result: None)
