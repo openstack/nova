@@ -39,8 +39,10 @@ from nova import db
 from nova import flags
 from nova import test
 from nova import exception
+from nova import log as logging
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.nova_manage')
 
 
 class FixedIpCommandsTestCase(test.TestCase):
@@ -88,7 +90,6 @@ class FixedIpCommandsTestCase(test.TestCase):
 
 class NetworkCommandsTestCase(test.TestCase):
     def setUp(self):
-#        print 'piyo'
         super(NetworkCommandsTestCase, self).setUp()
         self.commands = nova_manage.NetworkCommands()
         self.context = context.get_admin_context()
@@ -100,22 +101,29 @@ class NetworkCommandsTestCase(test.TestCase):
         super(NetworkCommandsTestCase, self).tearDown()
 
     def test_create(self):
+        FLAGS.network_manager='nova.network.manager.VlanManager'
         self.commands.create(
-                             label = 'Test',
-                             fixed_range_v4 = '10.2.0.0/24',
-                             fixed_range_v6 = 'fd00:2::/120',
-                             num_networks = 1,
-                             network_size = 256,
-                             vlan_start = 200,
-                             bridge_interface = 'eth0',
-                                )
+                            label='Test',
+                            fixed_range_v4='10.2.0.0/24',
+                            num_networks=1,
+                            network_size=256,
+                            multi_host='F',
+                            vlan_start=200,
+                            vpn_start=2000,
+                            fixed_range_v6='fd00:2::/120',
+                            gateway_v6='fd00:2::22',
+                            bridge_interface='eth0')
         net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
         self.assertEqual(net['label'], 'Test')
         self.assertEqual(net['cidr'], '10.2.0.0/24')
         self.assertEqual(net['netmask'], '255.255.255.0')
-        self.assertEqual(net['cidr_v6'], 'fd00:2::/120')
-        self.assertEqual(net['bridge_interface'], 'eth0')
+        self.assertEqual(net['multi_host'], False)
         self.assertEqual(net['vlan'], 200)
+        self.assertEqual(net['bridge'], 'br200')
+        self.assertEqual(net['vpn_public_port'], 2000)
+        self.assertEqual(net['cidr_v6'], 'fd00:2::/120')
+        self.assertEqual(net['gateway_v6'], 'fd00:2::22')
+        self.assertEqual(net['bridge_interface'], 'eth0')
 
     def test_list(self):
         self.test_create()
@@ -150,10 +158,30 @@ class NetworkCommandsTestCase(test.TestCase):
 
     def test_delete(self):
         self.test_create()
-        self.commands.delete(fixed_range = '10.2.0.0/24')
+        self.commands.delete(fixed_range='10.2.0.0/24')
         net_exist = True
         try:
             net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
         except exception.NetworkNotFoundForCidr, e:
             net_exist = False
         self.assertEqual(net_exist, False)
+
+    def test_modify(self):
+        self.test_create()
+        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
+        db.network_disassociate(self.context, net['id'])
+        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
+        self.assertEqual(net['project_id'], None)
+        self.assertEqual(net['host'], None)
+        self.commands.modify('10.2.0.0/24', project='test_project', host='test_host')
+        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
+        self.assertEqual(net['project_id'], 'test_project')
+        self.assertEqual(net['host'], 'test_host')
+        self.commands.modify('10.2.0.0/24')
+        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
+        self.assertEqual(net['project_id'], 'test_project')
+        self.assertEqual(net['host'], 'test_host')
+        self.commands.modify('10.2.0.0/24', project='None', host='None')
+        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
+        self.assertEqual(net['project_id'], None)
+        self.assertEqual(net['host'], None)

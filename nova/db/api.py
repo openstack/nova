@@ -623,6 +623,11 @@ def network_associate(context, project_id, force=False):
     return IMPL.network_associate(context, project_id, force)
 
 
+def network_associate_by_id(context, network_id, project_id, force=False):
+    """Associate a project with a network specified by id."""
+    return IMPL.network_associate_by_id(context, network_id, project_id, force=False)
+
+
 def network_count(context):
     """Return the number of networks."""
     return IMPL.network_count(context)

@@ -1670,6 +1670,38 @@ def network_associate(context, project_id, force=False):
 
 
 @require_admin_context
+def network_associate_by_id(context, network_id, project_id, force=False):
+    """Associate a project with a network specified by id.
+
+    only associate if the network isn't already associated
+    with a project or if force is True
+    """
+    session = get_session()
+    with session.begin():
+
+        def network_query(network_filter):
+            if force:
+                return session.query(models.Network).\
+                               filter_by(deleted=False).\
+                               filter_by(id=network_filter).\
+                               with_lockmode('update').\
+                               first()
+            else:
+                return session.query(models.Network).\
+                               filter_by(deleted=False).\
+                               filter_by(project_id=None).\
+                               filter_by(id=network_filter).\
+                               with_lockmode('update').\
+                               first()
+        network_ref = network_query(network_id)
+        if network_ref:
+            network_ref['project_id'] = project_id
+        session.add(network_ref)
+        LOG.debug("piyo: network_ref['project_id']=%s" % network_ref['project_id'])
+    return network_ref
+
+
+@require_admin_context
 def network_count(context):
     session = get_session()
     return session.query(models.Network).\
