@@ -836,6 +836,7 @@ class LibvirtConnTestCase(test.TestCase):
             count = (0 <= str(e.message).find('Unexpected method call'))
 
         shutil.rmtree(os.path.join(FLAGS.instances_path, instance.name))
+        shutil.rmtree(os.path.join(FLAGS.instances_path, '_base'))
 
         self.assertTrue(count)
 

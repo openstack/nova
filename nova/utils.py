@@ -260,8 +260,9 @@ def default_flagfile(filename='nova.conf', args=None):
             filename = "./nova.conf"
             if not os.path.exists(filename):
                 filename = '/etc/nova/nova.conf'
-        flagfile = '--flagfile=%s' % filename
-        args.insert(1, flagfile)
+        if os.path.exists(filename):
+            flagfile = '--flagfile=%s' % filename
+            args.insert(1, flagfile)
 
 
 def debug(arg):
@@ -853,39 +854,3 @@ def is_valid_ipv4(address):
         except ValueError:
             return False
     return True
-
-
-class Bootstrapper(object):
-    """Provides environment bootstrapping capabilities for entry points."""
-
-    @staticmethod
-    def bootstrap_binary(argv):
-        """Initialize the Nova environment using command line arguments."""
-        Bootstrapper.setup_flags(argv)
-        Bootstrapper.setup_logging()
-        Bootstrapper.log_flags()
-
-    @staticmethod
-    def setup_logging():
-        """Initialize logging and log a message indicating the Nova version."""
-        logging.setup()
-        logging.audit(_("Nova Version (%s)") %
-                        version.version_string_with_vcs())
-
-    @staticmethod
-    def setup_flags(input_flags):
-        """Initialize flags, load flag file, and print help if needed."""
-        default_flagfile(args=input_flags)
-        FLAGS(input_flags or [])
-        flags.DEFINE_flag(flags.HelpFlag())
-        flags.DEFINE_flag(flags.HelpshortFlag())
-        flags.DEFINE_flag(flags.HelpXMLFlag())
-        FLAGS.ParseNewFlags()
-
-    @staticmethod
-    def log_flags():
-        """Log the list of all active flags being used."""
-        logging.audit(_("Currently active flags:"))
-        for key in FLAGS:
-            value = FLAGS.get(key, None)
-            logging.audit(_("%(key)s : %(value)s" % locals()))

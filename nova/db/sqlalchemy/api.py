@@ -266,7 +266,7 @@ def service_get_all_network_sorted(context):
     session = get_session()
     with session.begin():
         topic = 'network'
-        label = 'network_'
+        label = 'network_count'
         subq = session.query(models.Network.host,
                              func.count(models.Network.id).label(label)).\
                        filter_by(deleted=False).\
@@ -652,23 +652,36 @@ def floating_ip_update(context, address, values):
 ###################
 
 
-@require_context
-def fixed_ip_associate(context, address, instance_id):
+@require_admin_context
+def fixed_ip_associate(context, address, instance_id, network_id=None):
     session = get_session()
     with session.begin():
-        instance = instance_get(context, instance_id, session=session)
+        network_or_none = or_(models.FixedIp.network_id == network_id,
+                              models.FixedIp.network_id == None)
         fixed_ip_ref = session.query(models.FixedIp).\
-                               filter_by(address=address).\
+                               filter(network_or_none).\
+                               filter_by(reserved=False).\
                                filter_by(deleted=False).\
-                               filter_by(instance=None).\
+                               filter_by(address=address).\
                                with_lockmode('update').\
                                first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
-        if not fixed_ip_ref:
-            raise exception.NoMoreFixedIps()
-        fixed_ip_ref.instance = instance
+        if fixed_ip_ref is None:
+            raise exception.FixedIpNotFoundForNetwork(address=address,
+                                            network_id=network_id)
+        if fixed_ip_ref.instance is not None:
+            raise exception.FixedIpAlreadyInUse(address=address)
+
+        if not fixed_ip_ref.network:
+            fixed_ip_ref.network = network_get(context,
+                                           network_id,
+                                           session=session)
+        fixed_ip_ref.instance = instance_get(context,
+                                             instance_id,
+                                             session=session)
         session.add(fixed_ip_ref)
+    return fixed_ip_ref['address']
 
 
 @require_admin_context
@@ -699,40 +712,6 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
                                                  session=session)
         if host:
             fixed_ip_ref.host = host
-        session.add(fixed_ip_ref)
-    return fixed_ip_ref['address']
-
-
-@require_admin_context
-def fixed_ip_associate_by_address(context, network_id, instance_id,
-                                  address):
-    if address is None:
-        return fixed_ip_associate_pool(context, network_id, instance_id)
-
-    session = get_session()
-    with session.begin():
-        fixed_ip_ref = session.query(models.FixedIp).\
-                               filter_by(reserved=False).\
-                               filter_by(deleted=False).\
-                               filter_by(network_id=network_id).\
-                               filter_by(address=address).\
-                               with_lockmode('update').\
-                               first()
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
-        if fixed_ip_ref is None:
-            raise exception.FixedIpNotFoundForNetwork(address=address,
-                                            network_id=network_id)
-        if fixed_ip_ref.instance is not None:
-            raise exception.FixedIpAlreadyInUse(address=address)
-
-        if not fixed_ip_ref.network:
-            fixed_ip_ref.network = network_get(context,
-                                           network_id,
-                                           session=session)
-        fixed_ip_ref.instance = instance_get(context,
-                                             instance_id,
-                                             session=session)
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
@@ -1256,7 +1235,8 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
-                   options(joinedload('instance_type'))
+                   options(joinedload('instance_type')).\
+                   filter_by(deleted=can_read_deleted(context))
 
     # Make a copy of the filters dictionary to use going forward, as we'll
     # be modifying it and we shouldn't affect the caller's use of it.
@@ -1807,10 +1787,13 @@ def network_get_all(context):
 
 
 @require_admin_context
-def network_get_networks_by_uuids(context, network_uuids):
+def network_get_all_by_uuids(context, network_uuids, project_id=None):
     session = get_session()
+    project_or_none = or_(models.Network.project_id == project_id,
+                              models.Network.project_id == None)
     result = session.query(models.Network).\
                  filter(models.Network.uuid.in_(network_uuids)).\
+                 filter(project_or_none).\
                  filter_by(deleted=False).all()
     if not result:
         raise exception.NoNetworksFound()
@@ -1830,6 +1813,9 @@ def network_get_networks_by_uuids(context, network_uuids):
                 found = True
                 break
         if not found:
+            if project_id:
+                raise exception.NetworkNotFoundForProject(network_uuid=uuid,
+                                              project_id=context.project_id)
             raise exception.NetworkNotFound(network_id=network_uuid)
 
     return result
@@ -2988,37 +2974,6 @@ def project_get_networks(context, project_id, associate=True):
         if not associate:
             return []
         return [network_associate(context, project_id)]
-    return result
-
-
-@require_context
-def project_get_networks_by_uuids(context, network_uuids):
-    session = get_session()
-    result = session.query(models.Network).\
-                 filter(models.Network.uuid.in_(network_uuids)).\
-                 filter_by(deleted=False).\
-                 filter_by(project_id=context.project_id).all()
-
-    if not result:
-        raise exception.NoNetworksFound()
-
-    #check if host is set to all of the networks
-    # returned in the result
-    for network in result:
-            if network['host'] is None:
-                raise exception.NetworkHostNotSet(network_id=network['id'])
-
-    #check if the result contains all the networks
-    #we are looking for
-    for uuid in network_uuids:
-        found = False
-        for network in result:
-            if network['uuid'] == uuid:
-                found = True
-                break
-        if not found:
-            raise exception.NetworkNotFoundForProject(network_uuid=uuid,
-                                              project_id=context.project_id)
     return result
 
 

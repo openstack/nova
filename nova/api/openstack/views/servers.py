@@ -111,14 +111,14 @@ class ViewBuilderV10(ViewBuilder):
         response['uuid'] = inst['uuid']
 
     def _build_image(self, response, inst):
-        if 'image_ref' in dict(inst):
+        if inst.get('image_ref', None):
             image_ref = inst['image_ref']
             if str(image_ref).startswith('http'):
                 raise exception.ListingImageRefsNotSupported()
             response['imageId'] = int(image_ref)
 
     def _build_flavor(self, response, inst):
-        if 'instance_type' in dict(inst):
+        if inst.get('instance_type', None):
             response['flavorId'] = inst['instance_type']['flavorid']
 
     def _build_addresses(self, response, inst):
@@ -146,7 +146,7 @@ class ViewBuilderV11(ViewBuilder):
         return response
 
     def _build_image(self, response, inst):
-        if 'image_ref' in dict(inst):
+        if inst.get("image_ref", None):
             image_href = inst['image_ref']
             image_id = str(common.get_id_from_href(image_href))
             _bookmark = self.image_builder.generate_bookmark(image_id)
@@ -161,7 +161,7 @@ class ViewBuilderV11(ViewBuilder):
             }
 
     def _build_flavor(self, response, inst):
-        if "instance_type" in dict(inst):
+        if inst.get("instance_type", None):
             flavor_id = inst["instance_type"]['flavorid']
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
             flavor_bookmark = self.flavor_builder.generate_bookmark(flavor_id)

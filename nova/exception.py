@@ -185,10 +185,6 @@ class Invalid(NovaException):
     message = _("Unacceptable parameters.")
 
 
-class AlreadyInUse(NovaException):
-    message = _("Already is in use.")
-
-
 class InvalidSignature(Invalid):
     message = _("Invalid signature %(signature)s for user %(user)s.")
 
@@ -474,7 +470,7 @@ class FixedIpNotFoundForNetwork(FixedIpNotFound):
                 "network (%(network_uuid)s).")
 
 
-class FixedIpAlreadyInUse(AlreadyInUse):
+class FixedIpAlreadyInUse(NovaException):
     message = _("Fixed IP address %(address)s is already in use.")
 
 

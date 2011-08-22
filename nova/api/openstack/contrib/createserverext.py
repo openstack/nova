@@ -45,10 +45,8 @@ class Createserverext(extensions.ExtensionDescriptor):
         resources = []
 
         headers_serializer = servers.HeadersSerializer()
-        metadata = servers._get_metadata()
         body_serializers = {
-            'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                      xmlns=wsgi.XMLNS_V11),
+            'application/xml': servers.ServerXMLSerializer(),
         }
 
         body_deserializers = {
