@@ -1538,8 +1538,9 @@ class LibvirtConnection(driver.ComputeDriver):
         # If any instances never launch at destination host,
         # basic-filtering must be set here.
         self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
-        # setting up n)ova-instance-instance-xx mainly.
-        self.firewall_driver.prepare_instance_filter(instance_ref, network_info)
+        # setting up nova-instance-instance-xx mainly.
+        self.firewall_driver.prepare_instance_filter(instance_ref,
+                network_info)
 
         # wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)

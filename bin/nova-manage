@@ -719,7 +719,7 @@ class NetworkCommands(object):
         # sanitize other input using FLAGS if necessary
         if not num_networks:
             num_networks = FLAGS.num_networks
-        if not network_size:
+        if not network_size and fixed_range_v4:
             fixnet = netaddr.IPNetwork(fixed_range_v4)
             each_subnet_size = fixnet.size / int(num_networks)
             if each_subnet_size > FLAGS.network_size:
@@ -740,6 +740,9 @@ class NetworkCommands(object):
             vpn_start = FLAGS.vpn_start
         if not dns1 and FLAGS.flat_network_dns:
             dns1 = FLAGS.flat_network_dns
+
+        if not network_size:
+            network_size = FLAGS.network_size
 
         # create the network
         net_manager = utils.import_object(FLAGS.network_manager)

@@ -359,6 +359,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance_type = self.db.instance_type_get(context,
                     instance_type_id)
             allowed_size_gb = instance_type['local_gb']
+
+            # NOTE(jk0): Since libvirt uses local_gb as a secondary drive, we
+            # need to handle potential situations where local_gb is 0. This is
+            # the default for m1.tiny.
+            if allowed_size_gb == 0:
+                return
+
             allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
             LOG.debug(_("image_id=%(image_id)d, image_size_bytes="
@@ -385,12 +392,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         updates = {}
         updates['host'] = self.host
         updates['launched_on'] = self.host
-        # NOTE(vish): used by virt but not in database
-        updates['injected_files'] = kwargs.get('injected_files', [])
-        updates['admin_pass'] = kwargs.get('admin_password', None)
         instance = self.db.instance_update(context,
                                            instance_id,
                                            updates)
+        instance['injected_files'] = kwargs.get('injected_files', [])
+        instance['admin_pass'] = kwargs.get('admin_password', None)
+
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -1368,7 +1375,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # This nwfilter is necessary on the destination host.
         # In addition, this method is creating filtering rule
         # onto destination host.
-        self.driver.ensure_filtering_rules_for_instance(instance_ref, network_info)
+        self.driver.ensure_filtering_rules_for_instance(instance_ref,
+                network_info)
 
         # Preparation for block migration
         if block_migration:
