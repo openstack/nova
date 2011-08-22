@@ -1697,7 +1697,6 @@ def network_associate_by_id(context, network_id, project_id, force=False):
         if network_ref:
             network_ref['project_id'] = project_id
         session.add(network_ref)
-        LOG.debug("piyo: network_ref['project_id']=%s" % network_ref['project_id'])
     return network_ref
 
 
