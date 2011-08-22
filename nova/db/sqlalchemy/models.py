@@ -232,6 +232,11 @@ class Instance(BASE, NovaBase):
 
     root_device_name = Column(String(255))
 
+    # User editable field meant to represent what ip should be used
+    # to connect to the instance
+    access_ip_v4 = Column(String(255))
+    access_ip_v6 = Column(String(255))
+
 
 class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
