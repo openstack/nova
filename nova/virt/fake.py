@@ -67,6 +67,7 @@ class FakeConnection(driver.ComputeDriver):
           'disk_used': 100000000000,
           'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
           'host_name_label': 'fake-mini'}
+        self._mounts = {}
 
     @classmethod
     def instance(cls):
@@ -152,9 +153,16 @@ class FakeConnection(driver.ComputeDriver):
                         (key, self.instances))
 
     def attach_volume(self, instance_name, device_path, mountpoint):
+        if not instance_name in self._mounts:
+            self._mounts[instance_name] = {}
+        self._mounts[instance_name][mountpoint] = device_path
         return True
 
     def detach_volume(self, instance_name, mountpoint):
+        try:
+            del self._mounts[instance_name][mountpoint]
+        except KeyError:
+            pass
         return True
 
     def get_info(self, instance_name):
