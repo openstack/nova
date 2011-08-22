@@ -842,21 +842,41 @@ def bool_from_str(val):
 
 
 def monkey_patch():
+    """  If the Flags.monkey_patch set as True,
+    this functuion patches a decorator
+    for all functions in specified modules.
+    You can set decorators for each modules
+    using FLAGS.monkey_patch_modules.
+    The format is "Module path:Decorator function".
+    Example: 'nova.api.ec2.cloud:nova.notifier.api.notify_decorator'
+
+    Parameters of the decorator is as follows.
+    (See nova.notifier.api.notify_decorator)
+
+    name - name of the function
+    function - object of the function
+    """
+
+    # If FLAGS.monkey_patch is not True, this function do nothing.
     if not FLAGS.monkey_patch:
         return
+    # Get list of moudles and decorators
     for module_and_decorator in FLAGS.monkey_patch_modules:
         module, decorator_name = module_and_decorator.split(':')
+        # import decorator function
         decorator = import_class(decorator_name)
         __import__(module)
+        # Retrive module information using pyclbr
         module_data = pyclbr.readmodule_ex(module)
         for key in module_data.keys():
+            # set the decorator for the class methods
             if isinstance(module_data[key], pyclbr.Class):
                 clz = import_class("%s.%s" % (module, key))
                 for method, func in inspect.getmembers(clz, inspect.ismethod):
                     setattr(clz, method,\
-                        decorator("%s.%s" % (module, key), func))
+                        decorator("%s.%s.%s" % (module, key, method), func))
+            # set the decorator for the function
             if isinstance(module_data[key], pyclbr.Function):
                 func = import_class("%s.%s" % (module, key))
                 setattr(sys.modules[module], key,\
-                    setattr(sys.modules[module], key, \
-                    decorator("%s.%s" % (module, key), func)))
+                    decorator("%s.%s" % (module, key), func))

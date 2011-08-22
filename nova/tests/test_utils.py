@@ -18,6 +18,7 @@ import datetime
 import os
 import tempfile
 
+import nova
 from nova import exception
 from nova import test
 from nova import utils
@@ -384,3 +385,46 @@ class ToPrimitiveTestCase(test.TestCase):
     def test_typeerror(self):
         x = bytearray  # Class, not instance
         self.assertEquals(utils.to_primitive(x), u"<type 'bytearray'>")
+
+
+class MonkeyPatchTestCase(test.TestCase):
+    """Unit test for utils.monkey_patch()."""
+    def setUp(self):
+        super(MonkeyPatchTestCase, self).setUp()
+        self.flags(
+            monkey_patch=True,
+            monkey_patch_modules=['nova.tests.example.example_a' + ':'
+            + 'nova.tests.example.example_decorator'])
+
+    def test_monkey_patch(self):
+        utils.monkey_patch()
+        nova.tests.example.CALLED_FUNCTION = []
+        from nova.tests.example import example_a, example_b
+
+        self.assertEqual('Example function', example_a.example_function_a())
+        exampleA = example_a.ExampleClassA()
+        exampleA.example_method()
+        ret_a = exampleA.example_method_add(3, 5)
+        self.assertEqual(ret_a, 8)
+
+        self.assertEqual('Example function', example_b.example_function_b())
+        exampleB = example_b.ExampleClassB()
+        exampleB.example_method()
+        ret_b = exampleB.example_method_add(3, 5)
+
+        self.assertEqual(ret_b, 8)
+        package_a = 'nova.tests.example.example_a.'
+        self.assertTrue(package_a + 'example_function_a'
+            in nova.tests.example.CALLED_FUNCTION)
+
+        self.assertTrue(package_a + 'ExampleClassA.example_method'
+            in nova.tests.example.CALLED_FUNCTION)
+        self.assertTrue(package_a + 'ExampleClassA.example_method_add'
+            in nova.tests.example.CALLED_FUNCTION)
+        package_b = 'nova.tests.example.example_b.'
+        self.assertFalse(package_b + 'example_function_b'
+            in nova.tests.example.CALLED_FUNCTION)
+        self.assertFalse(package_b + 'ExampleClassB.example_method'
+            in nova.tests.example.CALLED_FUNCTION)
+        self.assertFalse(package_b + 'ExampleClassB.example_method_add'
+            in nova.tests.example.CALLED_FUNCTION)

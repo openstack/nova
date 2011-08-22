@@ -34,4 +34,3 @@ coverage
 nosexcover
 GitPython
 paramiko
-pyclbr

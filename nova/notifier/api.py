@@ -40,6 +40,14 @@ class BadPriorityException(Exception):
 
 
 def notify_decorator(name, fn):
+    """ decorator for notify which is used from utils.monkey_patch()
+        Parameters:
+
+        name - name of the function
+        function - object of the function
+
+
+    """
     def wrapped_func(*args, **kwarg):
         body = {}
         body['args'] = []
