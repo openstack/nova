@@ -120,7 +120,7 @@ class FakeConnection(driver.ComputeDriver):
 
     def _map_to_instance_info(self, instance):
         instance = utils.check_isinstance(instance, FakeInstance)
-        info = driver.InstanceInfo(instance.name, instance.power_state)
+        info = driver.InstanceInfo(instance.name, instance.state)
         return info
 
     def list_instances_detail(self):

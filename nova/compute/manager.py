@@ -1706,7 +1706,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vm_instance is None:
                 vm_power_state = power_state.NOSTATE
             else:
-                vm_power_state = vm_instance["power_state"]
+                vm_power_state = vm_instance.state
 
             if vm_power_state == db_power_state:
                 continue
