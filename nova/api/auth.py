@@ -45,24 +45,6 @@ class InjectContext(wsgi.Middleware):
         return self.application
 
 
-class AdminContext(wsgi.Middleware):
-    """Return an admin context no matter what"""
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        # Build a context, including the auth_token...
-        remote_address = req.remote_addr
-        if FLAGS.use_forwarded_for:
-            remote_address = req.headers.get('X-Forwarded-For', remote_address)
-        ctx = context.RequestContext('admin',
-                                     'admin',
-                                     is_admin=True,
-                                     remote_address=remote_address)
-
-        req.environ['nova.context'] = ctx
-        return self.application
-
-
 class KeystoneContext(wsgi.Middleware):
     """Make a request context from keystone headers"""
 
@@ -80,6 +62,7 @@ class KeystoneContext(wsgi.Middleware):
                                      req.headers.get('X_STORAGE_TOKEN'))
 
         # Build a context, including the auth_token...
+        remote_address = getattr(req, 'remote_address', '127.0.0.1')
         remote_address = req.remote_addr
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
