@@ -145,7 +145,8 @@ def instance_addresses(context, instance_id):
 def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
                   public_addresses=None, host=None, power_state=0,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
-                  flavor_id="1", interfaces=None, name=None):
+                  flavor_id="1", interfaces=None, name=None,
+                  description='fakedescription'):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -194,7 +195,7 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "terminated_at": utils.utcnow(),
         "availability_zone": "",
         "display_name": server_name,
-        "display_description": "fakedescription",
+        "display_description": description,
         "locked": False,
         "metadata": metadata,
         "uuid": uuid,
@@ -427,9 +428,12 @@ class ServersTest(test.TestCase):
         expected = minidom.parseString("""
         <server id="1"
                 uuid="%(expected_uuid)s"
+                userId="fake"
+                tenantId="fake"
                 xmlns="http://docs.openstack.org/compute/api/v1.1"
                 xmlns:atom="http://www.w3.org/2005/Atom"
                 name="server1"
+                description="fakedescription"
                 updated="%(expected_updated)s"
                 created="%(expected_created)s"
                 hostId=""
@@ -1923,6 +1927,34 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server_test')
 
+    def test_update_server_description_v1_1(self):
+        DESC = 'updated_desc'
+
+        def server_update(context, id, params):
+            # assert that parameter conversion from description
+            # to display_description worked correctly
+            self.assertEqual(params.get('display_description'), DESC)
+            return stub_instance(1,
+                                 name='server_test',
+                                 description=params['display_description'])
+
+        self.stubs.Set(nova.db.api, 'instance_get',
+                return_server_with_attributes(name='server_test',
+                                              description=DESC))
+
+        self.stubs.Set(nova.db.api, 'instance_update',
+                server_update)
+
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        req.body = json.dumps({'server': {'description': DESC}})
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['description'], DESC)
+
     def test_update_server_adminPass_ignored_v1_1(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
         self.body = json.dumps(dict(server=inst_dict))
@@ -3301,11 +3333,14 @@ class ServerXMLSerializationTest(test.TestCase):
         fixture = {
             "server": {
                 "id": 1,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "uuid": FAKE_UUID,
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
+                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
                 "image": {
@@ -3377,9 +3412,12 @@ class ServerXMLSerializationTest(test.TestCase):
         expected = minidom.parseString("""
         <server id="1"
                 uuid="%(expected_uuid)s"
+                userId="fake"
+                tenantId="fake"
                 xmlns="http://docs.openstack.org/compute/api/v1.1"
                 xmlns:atom="http://www.w3.org/2005/Atom"
                 name="test_server"
+                description="fakedescription"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
@@ -3423,10 +3461,13 @@ class ServerXMLSerializationTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
+                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": "e4d909c290d0fb1ca068ffaddf22cbd0",
                 "adminPass": "test_password",
@@ -3499,9 +3540,12 @@ class ServerXMLSerializationTest(test.TestCase):
         expected = minidom.parseString("""
         <server id="1"
                 uuid="%(expected_uuid)s"
+                userId="fake"
+                tenantId="fake"
                 xmlns="http://docs.openstack.org/compute/api/v1.1"
                 xmlns:atom="http://www.w3.org/2005/Atom"
                 name="test_server"
+                description="fakedescription"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
@@ -3612,10 +3656,13 @@ class ServerXMLSerializationTest(test.TestCase):
             {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
+                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
                 "image": {
@@ -3665,10 +3712,13 @@ class ServerXMLSerializationTest(test.TestCase):
             {
                 "id": 2,
                 "uuid": FAKE_UUID,
+                "user_id": 'fake',
+                "tenant_id": 'fake',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 100,
                 "name": "test_server_2",
+                "description": "fakedescription",
                 "status": "ACTIVE",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
                 "image": {
@@ -3725,7 +3775,10 @@ class ServerXMLSerializationTest(test.TestCase):
                  xmlns:atom="http://www.w3.org/2005/Atom">
         <server id="1"
                 uuid="%(expected_uuid)s"
+                userId="fake"
+                tenantId="fake"
                 name="test_server"
+                description="fakedescription"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
@@ -3753,7 +3806,10 @@ class ServerXMLSerializationTest(test.TestCase):
         </server>
         <server id="2"
                 uuid="%(expected_uuid)s"
+                userId="fake"
+                tenantId="fake"
                 name="test_server_2"
+                description="fakedescription"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 hostId="e4d909c290d0fb1ca068ffaddf22cbd0"
@@ -3790,11 +3846,14 @@ class ServerXMLSerializationTest(test.TestCase):
         fixture = {
             "server": {
                 "id": 1,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "uuid": FAKE_UUID,
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
+                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
                 "image": {
@@ -3866,9 +3925,12 @@ class ServerXMLSerializationTest(test.TestCase):
         expected = minidom.parseString("""
         <server id="1"
                 uuid="%(expected_uuid)s"
+                userId="fake"
+                tenantId="fake"
                 xmlns="http://docs.openstack.org/compute/api/v1.1"
                 xmlns:atom="http://www.w3.org/2005/Atom"
                 name="test_server"
+                description="fakedescription"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
                 hostId="e4d909c290d0fb1ca068ffaddf22cbd0"

@@ -183,6 +183,10 @@ class Controller(object):
             self.helper._validate_server_name(name)
             update_dict['display_name'] = name.strip()
 
+        if 'description' in body['server']:
+            description = body['server']['description']
+            update_dict['display_description'] = description.strip()
+
         try:
             self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
@@ -836,9 +840,12 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
     def _add_server_attributes(self, node, server):
         node.setAttribute('id', str(server['id']))
+        node.setAttribute('userId', str(server['user_id']))
+        node.setAttribute('tenantId', str(server['tenant_id']))
         node.setAttribute('uuid', str(server['uuid']))
         node.setAttribute('hostId', str(server['hostId']))
         node.setAttribute('name', server['name'])
+        node.setAttribute('description', server['description'])
         node.setAttribute('created', str(server['created']))
         node.setAttribute('updated', str(server['updated']))
         node.setAttribute('status', server['status'])
@@ -945,7 +952,7 @@ def create_resource(version='1.0'):
         "attributes": {
             "server": ["id", "imageId", "name", "flavorId", "hostId",
                        "status", "progress", "adminPass", "flavorRef",
-                       "imageRef"],
+                       "imageRef", "userId", "tenantId", "description"],
             "link": ["rel", "type", "href"],
         },
         "dict_collections": {
