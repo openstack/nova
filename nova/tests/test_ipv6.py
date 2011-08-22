@@ -60,3 +60,10 @@ class IPv6AccountIdentiferTestCase(test.TestCase):
         bad_mac = '02:16:3e:33:44:5X'
         self.assertRaises(TypeError, ipv6.to_global,
                                     '2001:db8::', bad_mac, 'test')
+
+    def test_to_global_with_bad_prefix(self):
+        bad_prefix = '78'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    bad_prefix,
+                                    '2001:db8::a94a:8fe5:ff33:4455',
+                                    'test')
