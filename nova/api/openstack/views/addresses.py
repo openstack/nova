@@ -55,7 +55,7 @@ class ViewBuilderV11(ViewBuilder):
             try:
                 network_label = self._extract_network_label(interface)
             except TypeError:
-                LOG.error(traceback.format_exc())
+                LOG.exception(traceback.format_exc())
                 continue
 
             if network_label not in networks:
@@ -91,7 +91,7 @@ class ViewBuilderV11(ViewBuilder):
         try:
             return interface['network']['label']
         except (TypeError, KeyError):
-            LOG.error(traceback.format_exc())
+            LOG.exception(traceback.format_exc())
             raise TypeError
 
     def _extract_ipv4_addresses(self, interface):
