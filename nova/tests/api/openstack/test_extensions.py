@@ -102,7 +102,7 @@ class ExtensionControllerTest(test.TestCase):
     def test_list_extensions_json(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/extensions")
+        request = webob.Request.blank("/123/extensions")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
 
@@ -128,7 +128,7 @@ class ExtensionControllerTest(test.TestCase):
     def test_get_extension_json(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/extensions/FOXNSOX")
+        request = webob.Request.blank("/123/extensions/FOXNSOX")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
 
@@ -144,7 +144,7 @@ class ExtensionControllerTest(test.TestCase):
     def test_list_extensions_xml(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/extensions")
+        request = webob.Request.blank("/123/extensions")
         request.accept = "application/xml"
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
@@ -171,7 +171,7 @@ class ExtensionControllerTest(test.TestCase):
     def test_get_extension_xml(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/extensions/FOXNSOX")
+        request = webob.Request.blank("/123/extensions/FOXNSOX")
         request.accept = "application/xml"
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
@@ -212,7 +212,7 @@ class ResourceExtensionTest(test.TestCase):
         manager = StubExtensionManager(res_ext)
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/tweedles")
+        request = webob.Request.blank("/123/tweedles")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
@@ -223,7 +223,7 @@ class ResourceExtensionTest(test.TestCase):
         manager = StubExtensionManager(res_ext)
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/tweedles")
+        request = webob.Request.blank("/123/tweedles")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
@@ -247,7 +247,7 @@ class ExtensionManagerTest(test.TestCase):
     def test_get_resources(self):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/foxnsocks")
+        request = webob.Request.blank("/123/foxnsocks")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
@@ -280,23 +280,26 @@ class ActionExtensionTest(test.TestCase):
 
     def test_extended_action(self):
         body = dict(add_tweedle=dict(name="test"))
-        response = self._send_server_action_request("/servers/1/action", body)
+        url = "/123/servers/1/action"
+        response = self._send_server_action_request(url, body)
         self.assertEqual(200, response.status_int)
         self.assertEqual("Tweedle Beetle Added.", response.body)
 
         body = dict(delete_tweedle=dict(name="test"))
-        response = self._send_server_action_request("/servers/1/action", body)
+        response = self._send_server_action_request(url, body)
         self.assertEqual(200, response.status_int)
         self.assertEqual("Tweedle Beetle Deleted.", response.body)
 
     def test_invalid_action_body(self):
         body = dict(blah=dict(name="test"))  # Doesn't exist
-        response = self._send_server_action_request("/servers/1/action", body)
+        url = "/123/servers/1/action"
+        response = self._send_server_action_request(url, body)
         self.assertEqual(400, response.status_int)
 
     def test_invalid_action(self):
         body = dict(blah=dict(name="test"))
-        response = self._send_server_action_request("/fdsa/1/action", body)
+        url = "/123/fdsa/1/action"
+        response = self._send_server_action_request(url, body)
         self.assertEqual(404, response.status_int)
 
 
@@ -317,13 +320,13 @@ class RequestExtensionTest(test.TestCase):
             return res
 
         req_ext = extensions.RequestExtension('GET',
-                                                '/v1.1/flavors/:(id)',
+                                                '/v1.1/123/flavors/:(id)',
                                                 _req_handler)
 
         manager = StubExtensionManager(None, None, req_ext)
         app = fakes.wsgi_app()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/v1.1/flavors/1?chewing=bluegoo")
+        request = webob.Request.blank("/v1.1/123/flavors/1?chewing=bluegoo")
         request.environ['api.version'] = '1.1'
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
@@ -334,7 +337,7 @@ class RequestExtensionTest(test.TestCase):
 
         app = fakes.wsgi_app()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/v1.1/flavors/1?chewing=newblue")
+        request = webob.Request.blank("/v1.1/123/flavors/1?chewing=newblue")
         request.environ['api.version'] = '1.1'
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
