@@ -67,3 +67,10 @@ class IPv6AccountIdentiferTestCase(test.TestCase):
                                     bad_prefix,
                                     '2001:db8::a94a:8fe5:ff33:4455',
                                     'test')
+
+    def test_to_global_with_bad_project(self):
+        bad_project = 'non-existent-project-name'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    '2001:db8::',
+                                    '2001:db8::a94a:8fe5:ff33:4455',
+                                    bad_project)
