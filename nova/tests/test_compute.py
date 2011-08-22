@@ -347,7 +347,7 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.create')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['project_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
@@ -371,7 +371,7 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.delete')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['project_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
@@ -454,7 +454,7 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.resize.prep')
         payload = msg['payload']
-        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['project_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
