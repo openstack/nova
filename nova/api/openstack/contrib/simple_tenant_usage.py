@@ -97,8 +97,8 @@ class SimpleTenantUsageController(object):
             # instance hasn't launched, so no charge
             return 0
 
-    def _usage_for_period(self, context, period_start,
-                          period_stop, tenant_id=None, detailed=True):
+    def _tenant_usages_for_period(self, context, period_start,
+                                  period_stop, tenant_id=None, detailed=True):
 
         rows = self._get_instances_for_time_period(period_start,
                                                    period_stop,
@@ -208,32 +208,33 @@ class SimpleTenantUsageController(object):
 
     def index(self, req):
         """Retrive tenant_usage for all tenants"""
-        (period_start, period_stop, detailed) = self._get_datetime_range(req)
         context = req.environ['nova.context']
 
         if not context.is_admin and FLAGS.allow_admin_api:
             return webob.Response(status_int=403)
 
-        usages = self._usage_for_period(context,
-                                        period_start,
-                                        period_stop,
-                                        detailed=detailed)
+        (period_start, period_stop, detailed) = self._get_datetime_range(req)
+        usages = self._tenant_usages_for_period(context,
+                                                period_start,
+                                                period_stop,
+                                                detailed=detailed)
         return {'tenant_usages': usages}
 
     def show(self, req, id):
         """Retrive tenant_usage for a specified tenant"""
-        (period_start, period_stop, ignore) = self._get_datetime_range(req)
+        tenant_id = id
         context = req.environ['nova.context']
 
         if not context.is_admin and FLAGS.allow_admin_api:
-            if id != context.project_id:
+            if tenant_id != context.project_id:
                 return webob.Response(status_int=403)
 
-        usage = self._usage_for_period(context,
-                                       period_start,
-                                       period_stop,
-                                       id,
-                                       detailed=True)
+        (period_start, period_stop, ignore) = self._get_datetime_range(req)
+        usage = self._tenant_usages_for_period(context,
+                                               period_start,
+                                               period_stop,
+                                               tenant_id=tenant_id,
+                                               detailed=True)
         if len(usage):
             usage = usage[0]
         else:
