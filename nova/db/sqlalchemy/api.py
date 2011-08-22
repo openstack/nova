@@ -1239,7 +1239,7 @@ def instance_get_all_by_filters(context, filters):
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
-            'state', 'instance_type_id', 'deleted']
+            'vm_state', 'instance_type_id', 'deleted']
 
     query_filters = [key for key in filters.iterkeys()
             if key in exact_match_filter_names]

@@ -188,7 +188,7 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "launch_index": 0,
         "key_name": "",
         "key_data": "",
-        "vm_state": vm_state or vm_states.BUILD,
+        "vm_state": vm_state or vm_states.BUILDING,
         "task_state": task_state,
         "memory_mb": 0,
         "vcpus": 0,
@@ -2313,15 +2313,17 @@ class TestServerStatus(test.TestCase):
         self.assertEqual(response['server']['status'], 'ACTIVE')
 
     def test_reboot(self):
-        response = self._get_with_state(vm_states.REBOOT)
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.REBOOTING)
         self.assertEqual(response['server']['status'], 'REBOOT')
 
     def test_hard_reboot(self):
-        response = self._get_with_state(vm_states.HARD_REBOOT)
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.HARD_REBOOTING)
         self.assertEqual(response['server']['status'], 'HARD_REBOOT')
 
     def test_rebuild(self):
-        response = self._get_with_state(vm_states.REBUILD)
+        response = self._get_with_state(vm_states.REBUILDING)
         self.assertEqual(response['server']['status'], 'REBUILD')
 
     def test_rebuild_error(self):
@@ -2329,7 +2331,7 @@ class TestServerStatus(test.TestCase):
         self.assertEqual(response['server']['status'], 'ERROR')
 
     def test_resize(self):
-        response = self._get_with_state(vm_states.RESIZE)
+        response = self._get_with_state(vm_states.RESIZING)
         self.assertEqual(response['server']['status'], 'RESIZE')
 
     def test_verify_resize(self):
@@ -2341,7 +2343,7 @@ class TestServerStatus(test.TestCase):
         self.assertEqual(response['server']['status'], 'PASSWORD')
 
     def test_stopped(self):
-        response = self._get_with_state(vm_states.STOP)
+        response = self._get_with_state(vm_states.STOPPED)
         self.assertEqual(response['server']['status'], 'STOPPED')
 
 
@@ -3235,7 +3237,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             "launch_index": 0,
             "key_name": "",
             "key_data": "",
-            "vm_state": vm_states.BUILD,
+            "vm_state": vm_states.BUILDING,
             "task_state": None,
             "memory_mb": 0,
             "vcpus": 0,

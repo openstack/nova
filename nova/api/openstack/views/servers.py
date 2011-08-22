@@ -61,7 +61,7 @@ class ViewBuilder(object):
 
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
-        vm_state = inst.get('vm_state', vm_states.BUILD)
+        vm_state = inst.get('vm_state', vm_states.BUILDING)
         task_state = inst.get('task_state')
 
         inst_dict = {

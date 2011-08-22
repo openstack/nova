@@ -40,32 +40,57 @@ XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
 
 _STATE_MAP = {
-    vm_states.ACTIVE: 'ACTIVE',
-    vm_states.BUILD: 'BUILD',
-    vm_states.REBUILD: 'REBUILD',
-    vm_states.REBOOT: 'REBOOT',
-    vm_states.HARD_REBOOT: 'HARD_REBOOT',
-    vm_states.STOP: 'STOPPED',
-    vm_states.MIGRATE: 'MIGRATING',
-    vm_states.RESIZE: 'RESIZE',
-    vm_states.VERIFY_RESIZE: 'VERIFY_RESIZE',
-    vm_states.PAUSE: 'PAUSED',
-    vm_states.SUSPEND: 'SUSPENDED',
-    vm_states.RESCUE: 'RESCUE',
-    vm_states.ERROR: 'ERROR',
+    vm_states.ACTIVE: {
+        'default': 'ACTIVE',
+        task_states.REBOOTING: 'REBOOT',
+        task_states.HARD_REBOOTING: 'HARD_REBOOT',
+        task_states.PASSWORD: 'PASSWORD',
+    },
+    vm_states.BUILDING: {
+        'default': 'BUILD',
+    },
+    vm_states.REBUILDING: {
+        'default': 'REBUILD',
+    },
+    vm_states.STOPPED: {
+        'default': 'STOPPED',
+    },
+    vm_states.MIGRATING: {
+        'default': 'MIGRATING',
+    },
+    vm_states.RESIZING: {
+        'default': 'RESIZE',
+    },
+    vm_states.VERIFY_RESIZE: {
+        'default': 'VERIFY_RESIZE',
+    },
+    vm_states.PAUSED: {
+        'default': 'PAUSED',
+    },
+    vm_states.SUSPENDED: {
+        'default': 'SUSPENDED',
+    },
+    vm_states.RESCUED: {
+        'default': 'RESCUE',
+    },
+    vm_states.ERROR: {
+        'default': 'ERROR',
+    },
 }
 
 
-def status_from_state(_vm_state, task_state=None):
+def status_from_state(vm_state, task_state='default'):
     """Given vm_state and task_state, return a status string."""
-    if _vm_state == vm_states.ACTIVE and task_state == task_states.PASSWORD:
-        return "PASSWORD"
-    return _STATE_MAP.get(_vm_state, "UNKNOWN_STATE")
+    LOG.debug("Generating status for vm_state=%(vm_state)s "
+              "task_state=%(task_state)s." % locals())
+    task_map = _STATE_MAP.get(vm_state, dict(default='UNKNOWN_STATE'))
+    return task_map.get(task_state, task_map['default'])
 
 
 def vm_state_from_status(status):
     """Map the server status string to a vm state."""
-    for state, status_string in _STATE_MAP.iteritems():
+    for state, task_map in _STATE_MAP.iteritems():
+        status_string = task_map.get("default")
         if status.lower() == status_string.lower():
             return state
 

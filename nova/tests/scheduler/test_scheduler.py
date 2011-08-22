@@ -669,7 +669,7 @@ class SimpleDriverTestCase(test.TestCase):
                                       block_migration=False)
 
         i_ref = db.instance_get(self.context, instance_id)
-        self.assertTrue(i_ref['vm_state'] == vm_states.MIGRATE)
+        self.assertTrue(i_ref['vm_state'] == vm_states.MIGRATING)
         db.instance_destroy(self.context, instance_id)
         db.volume_destroy(self.context, v_ref['id'])
 

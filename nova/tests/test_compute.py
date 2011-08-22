@@ -826,7 +826,7 @@ class ComputeTestCase(test.TestCase):
         c = context.get_admin_context()
         instance_id = self._create_instance()
         i_ref = db.instance_get(c, instance_id)
-        db.instance_update(c, i_ref['id'], {'vm_state': vm_states.MIGRATE,
+        db.instance_update(c, i_ref['id'], {'vm_state': vm_states.MIGRATING,
                                             'power_state': power_state.PAUSED})
         v_ref = db.volume_create(c, {'size': 1, 'instance_id': instance_id})
         fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',

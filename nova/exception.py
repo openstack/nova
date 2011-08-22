@@ -318,9 +318,6 @@ class InvalidEc2Id(Invalid):
 class NotFound(NovaException):
     message = _("Resource could not be found.")
 
-    def __init__(self, *args, **kwargs):
-        super(NotFound, self).__init__(**kwargs)
-
 
 class FlagNotSet(NotFound):
     message = _("Required flag %(flag)s not set.")

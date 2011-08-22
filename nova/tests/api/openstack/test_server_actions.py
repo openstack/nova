@@ -165,7 +165,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        state = vm_states.BUILD
+        state = vm_states.BUILDING
         new_return_server = return_server_with_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
@@ -628,7 +628,7 @@ class ServerActionsTestV11(test.TestCase):
             },
         }
 
-        state = vm_states.BUILD
+        state = vm_states.BUILDING
         new_return_server = return_server_with_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',

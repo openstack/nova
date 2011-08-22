@@ -18,16 +18,17 @@
 """Possible vm states for instances"""
 
 ACTIVE='active'
-BUILD='build'
-REBUILD='rebuild'
-REBOOT='reboot'
-HARD_REBOOT='hard_reboot'
-DELETE='delete'
-STOP='stop'
-MIGRATE='migrate'
-RESIZE='resize'
+BUILDING='building'
+REBUILDING='rebuilding'
+
+PAUSED='paused'
+SUSPENDED='suspended'
+RESCUED='rescued'
+DELETED='deleted'
+STOPPED='stopped'
+
+MIGRATING='migrating'
+RESIZING='resizing'
 VERIFY_RESIZE='verify_resize'
-PAUSE='pause'
-SUSPEND='suspend'
-RESCUE='rescue'
+
 ERROR='error'

@@ -372,7 +372,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         updates = {}
         updates['host'] = self.host
         updates['launched_on'] = self.host
-        updates['vm_state'] = vm_states.BUILD
+        updates['vm_state'] = vm_states.BUILDING
         updates['task_state'] = task_states.NETWORKING
         instance = self.db.instance_update(context, instance_id, updates)
         instance['injected_files'] = kwargs.get('injected_files', [])
@@ -397,7 +397,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._instance_update(context,
                                   instance_id,
-                                  vm_state=vm_states.BUILD,
+                                  vm_state=vm_states.BUILDING,
                                   task_state=task_states.BLOCK_DEVICE_MAPPING)
 
             (swap, ephemerals,
@@ -411,6 +411,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._instance_update(context,
                                   instance_id,
+                                  vm_state=vm_states.BUILDING,
                                   task_state=task_states.SPAWN)
 
             # TODO(vish) check to make sure the availability zone matches
@@ -487,6 +488,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Terminate an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
         instance = self.db.instance_get(context.elevated(), instance_id)
+        self._instance_update(context,
+                              instance_id,
+                              vm_state=vm_states.DELETED,
+                              task_state=None,
+                              terminated_at=utils.utcnow())
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
@@ -500,7 +506,10 @@ class ComputeManager(manager.SchedulerDependentManager):
     def stop_instance(self, context, instance_id):
         """Stopping an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Stopping')
-        # instance state will be updated to stopped by _poll_instance_states()
+        self._instance_update(context,
+                              instance_id,
+                              vm_state=vm_states.STOPPED,
+                              task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -523,15 +532,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_states.REBUILD,
-                              task_state=task_states.REBUILDING)
+                              vm_state=vm_states.REBUILDING,
+                              task_state=None)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.destroy(instance_ref, network_info)
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_states.REBUILD,
+                              vm_state=vm_states.REBUILDING,
                               task_state=task_states.BLOCK_DEVICE_MAPPING)
 
         bd_mapping = self._setup_block_device_mapping(context, instance_id)
@@ -544,7 +553,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_states.REBUILD,
+                              vm_state=vm_states.REBUILDING,
                               task_state=task_states.SPAWN)
 
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
@@ -577,7 +586,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_states.REBOOT,
+                              vm_state=vm_states.ACTIVE,
                               task_state=task_states.REBOOTING)
 
         if instance_ref['power_state'] != power_state.RUNNING:
@@ -612,7 +621,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
-        if image_type != "snapshot" and image_type != "backup":
+        if image_type == "snapshot":
+            task_state = task_states.SNAPSHOTTING
+        elif image_type == "backup":
+            task_state = task_states.BACKING_UP
+        else:
             raise Exception(_('Image type not recognized %s') % image_type)
 
         context = context.elevated()
@@ -623,7 +636,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               instance_id,
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
-                              task_state=image_type)
+                              task_state=task_state)
 
         LOG.audit(_('instance %s: snapshotting'), instance_id,
                   context=context)
@@ -785,11 +798,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
         context = context.elevated()
 
-        self._instance_update(context,
-                              instance_id,
-                              vm_state=vm_states.RESCUE,
-                              task_state=task_states.RESCUING)
-
         instance_ref = self.db.instance_get(context, instance_id)
         network_info = self._get_instance_nw_info(context, instance_ref)
 
@@ -799,8 +807,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_states.RESCUE,
-                              task_state=task_states.RESCUED,
+                              vm_state=vm_states.RESCUED,
+                              task_state=None,
                               power_state=current_power_state)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -809,11 +817,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Rescue an instance on this host."""
         LOG.audit(_('instance %s: unrescuing'), instance_id, context=context)
         context = context.elevated()
-
-        self._instance_update(context,
-                              instance_id,
-                              vm_state=vm_states.ACTIVE,
-                              task_state=task_states.UNRESCUING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         network_info = self._get_instance_nw_info(context, instance_ref)
@@ -1046,11 +1049,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('instance %s: pausing'), instance_id, context=context)
         context = context.elevated()
 
-        self._instance_update(context,
-                              instance_id,
-                              vm_state=vm_states.PAUSE,
-                              task_state=task_states.PAUSING)
-
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.pause(instance_ref, lambda result: None)
 
@@ -1058,7 +1056,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_states.PAUSE,
+                              vm_state=vm_states.PAUSED,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1067,11 +1065,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Unpause a paused instance on this host."""
         LOG.audit(_('instance %s: unpausing'), instance_id, context=context)
         context = context.elevated()
-
-        self._instance_update(context,
-                              instance_id,
-                              vm_state=vm_states.ACTIVE,
-                              task_state=task_states.UNPAUSING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.unpause(instance_ref, lambda result: None)
@@ -1109,11 +1102,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('instance %s: suspending'), instance_id, context=context)
         context = context.elevated()
 
-        self._instance_update(context,
-                              instance_id,
-                              vm_state=vm_states.SUSPEND,
-                              task_state=task_states.SUSPENDING)
-
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.suspend(instance_ref, lambda result: None)
 
@@ -1121,7 +1109,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_states.SUSPEND,
+                              vm_state=vm_states.SUSPENDED,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1130,11 +1118,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Resume the given suspended instance."""
         LOG.audit(_('instance %s: resuming'), instance_id, context=context)
         context = context.elevated()
-
-        self._instance_update(context,
-                              instance_id,
-                              vm_state=vm_states.ACTIVE,
-                              task_state=task_states.RESUMING)
 
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.resume(instance_ref, lambda result: None)

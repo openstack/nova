@@ -84,17 +84,16 @@ def _gen_key(context, user_id, key_name):
 _STATE_DESCRIPTION_MAP = {
     None: 'pending',
     vm_states.ACTIVE: 'running',
-    vm_states.BUILD: 'pending',
-    vm_states.REBUILD: 'pending',
-    vm_states.REBOOT: 'reboot',
-    vm_states.DELETE: 'terminated',
-    vm_states.STOP: 'stopped',
-    vm_states.MIGRATE: 'migrate',
-    vm_states.RESIZE: 'resize',
+    vm_states.BUILDING: 'pending',
+    vm_states.REBUILDING: 'pending',
+    vm_states.DELETED: 'terminated',
+    vm_states.STOPPED: 'stopped',
+    vm_states.MIGRATING: 'migrate',
+    vm_states.RESIZING: 'resize',
     vm_states.VERIFY_RESIZE: 'verify_resize',
-    vm_states.PAUSE: 'pause',
-    vm_states.SUSPEND: 'suspend',
-    vm_states.RESCUE: 'rescue'
+    vm_states.PAUSED: 'pause',
+    vm_states.SUSPENDED: 'suspend',
+    vm_states.RESCUED: 'rescue'
 }
 
 
@@ -1065,8 +1064,8 @@ class CloudController(object):
         def _format_attr_instance_initiated_shutdown_behavior(instance,
                                                                result):
             vm_state = instance['vm_state']
-            state_to_value = {vm_states.STOP: 'stop',
-                              vm_states.DELETE: 'terminate'}
+            state_to_value = {vm_states.STOPPED: 'stop',
+                              vm_states.DELETED: 'terminate'}
             value = state_to_value.get(vm_state)
             if value:
                 result['instanceInitiatedShutdownBehavior'] = value
@@ -1645,7 +1644,7 @@ class CloudController(object):
             vm_state = instance['vm_state']
 
             # if the instance is in subtle state, refuse to proceed.
-            if vm_state not in (vm_states.ACTIVE, vm_states.STOP):
+            if vm_state not in (vm_states.ACTIVE, vm_states.STOPPED):
                 raise exception.InstanceNotRunning(instance_id=ec2_instance_id)
 
             if vm_state == vm_states.ACTIVE:
@@ -1654,7 +1653,7 @@ class CloudController(object):
 
             # wait instance for really stopped
             start_time = time.time()
-            while vm_state != vm_states.STOP:
+            while vm_state != vm_states.STOPPED:
                 time.sleep(1)
                 instance = self.compute_api.get(context, instance_id)
                 vm_state = instance['vm_state']

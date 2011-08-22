@@ -105,7 +105,7 @@ class Scheduler(object):
                                           dest, block_migration)
 
         # Changing instance_state.
-        values = {"vm_state": vm_states.MIGRATE}
+        values = {"vm_state": vm_states.MIGRATING}
         db.instance_update(context, instance_id, values)
 
         # Changing volume state

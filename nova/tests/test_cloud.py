@@ -1175,12 +1175,16 @@ class CloudTestCase(test.TestCase):
 
     def _wait_for_running(self, instance_id):
         def is_running(info):
-            return info['vm_state'] == vm_states.ACTIVE
+            vm_state = info["vm_state"]
+            task_state = info["task_state"]
+            return vm_state == vm_states.ACTIVE and task_state == None
         self._wait_for_state(self.context, instance_id, is_running)
 
     def _wait_for_stopped(self, instance_id):
         def is_stopped(info):
-            return info['vm_state'] == vm_states.STOP
+            vm_state = info["vm_state"]
+            task_state = info["task_state"]
+            return vm_state == vm_states.STOPPED and task_state == None
         self._wait_for_state(self.context, instance_id, is_stopped)
 
     def _wait_for_terminate(self, instance_id):
@@ -1563,7 +1567,7 @@ class CloudTestCase(test.TestCase):
                 'id': 0,
                 'root_device_name': '/dev/sdh',
                 'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
-                'vm_state': vm_states.STOP,
+                'vm_state': vm_states.STOPPED,
                 'instance_type': {'name': 'fake_type'},
                 'kernel_id': 1,
                 'ramdisk_id': 2,
