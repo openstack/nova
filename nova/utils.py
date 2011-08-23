@@ -851,7 +851,6 @@ def is_valid_ipv4(address):
     """valid the address strictly as per format xxx.xxx.xxx.xxx.
     where xxx is a value between 0 and 255.
     """
-
     parts = address.split(".")
     if len(parts) != 4:
         return False
