@@ -49,6 +49,9 @@ class NoAuthMiddleware(wsgi.Middleware):
             if version == '1.1':
                 os_url += '/' + project_id
             res = webob.Response()
+            # NOTE(vish): This is expecting and returning Auth(1.1), whereas
+            #             keystone uses 2.0 auth.  We should probably allow
+            #             2.0 auth here as well.
             res.headers['X-Auth-Token'] = '%s:%s' % (user_id, project_id)
             res.headers['X-Server-Management-Url'] = os_url
             res.headers['X-Storage-Url'] = ''
@@ -56,21 +59,20 @@ class NoAuthMiddleware(wsgi.Middleware):
             res.content_type = 'text/plain'
             res.status = '204'
             return res
-        else:
-            token = req.headers['X-Auth-Token']
-            user_id, _sep, project_id = token.partition(':')
-            project_id = project_id or user_id
-            remote_address = getattr(req, 'remote_address', '127.0.0.1')
-            if FLAGS.use_forwarded_for:
-                remote_address = req.headers.get('X-Forwarded-For',
-                                                 remote_address)
-            ctx = context.RequestContext(user_id,
-                                         project_id,
-                                         is_admin=True,
-                                         remote_address=remote_address)
 
-            req.environ['nova.context'] = ctx
-            return self.application
+        token = req.headers['X-Auth-Token']
+        user_id, _sep, project_id = token.partition(':')
+        project_id = project_id or user_id
+        remote_address = getattr(req, 'remote_address', '127.0.0.1')
+        if FLAGS.use_forwarded_for:
+            remote_address = req.headers.get('X-Forwarded-For', remote_address)
+        ctx = context.RequestContext(user_id,
+                                     project_id,
+                                     is_admin=True,
+                                     remote_address=remote_address)
+
+        req.environ['nova.context'] = ctx
+        return self.application
 
 
 class AuthMiddleware(wsgi.Middleware):
