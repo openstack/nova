@@ -146,6 +146,16 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
+    def _check_requested_networks(self, context, requested_networks):
+        """ Check if the networks requested belongs to the project
+            and the fixed IP address for each network provided is within
+            same the network block
+        """
+        if requested_networks is None:
+            return
+
+        self.network_api.validate_networks(context, requested_networks)
+
     def _check_create_parameters(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
                min_count=None, max_count=None,
@@ -153,7 +163,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, access_ip_v4=None, access_ip_v6=None,
+               requested_networks=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -182,6 +193,7 @@ class API(base.Base):
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
+        self._check_requested_networks(context, requested_networks)
 
         (image_service, image_id) = nova.image.get_image_service(image_href)
         image = image_service.show(context, image_id)
@@ -247,6 +259,8 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'metadata': metadata,
+            'access_ip_v4': access_ip_v4,
+            'access_ip_v6': access_ip_v6,
             'availability_zone': availability_zone,
             'os_type': os_type,
             'architecture': architecture,
@@ -398,9 +412,9 @@ class API(base.Base):
     def _ask_scheduler_to_create_instance(self, context, base_options,
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
-                                          admin_password,
-                                          image,
-                                          instance_id=None, num_instances=1):
+                                          admin_password, image,
+                                          instance_id=None, num_instances=1,
+                                          requested_networks=None):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
         uid = context.user_id
@@ -411,12 +425,11 @@ class API(base.Base):
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " (all-at-once)") % locals())
 
-        filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
             'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
-            'filter': filter_class,
+            'filter': None,
             'blob': zone_blob,
             'num_instances': num_instances,
         }
@@ -429,7 +442,8 @@ class API(base.Base):
                            "request_spec": request_spec,
                            "availability_zone": availability_zone,
                            "admin_password": admin_password,
-                           "injected_files": injected_files}})
+                           "injected_files": injected_files,
+                           "requested_networks": requested_networks}})
 
     def create_all_at_once(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
@@ -438,7 +452,9 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None,
+               requested_networks=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
@@ -454,14 +470,15 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, access_ip_v4, access_ip_v6,
+                               requested_networks)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
-                                      admin_password,
-                                      image,
-                                      num_instances=num_instances)
+                                      admin_password, image,
+                                      num_instances=num_instances,
+                                      requested_networks=requested_networks)
 
         return base_options['reservation_id']
 
@@ -472,7 +489,9 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, block_device_mapping=None):
+               reservation_id=None, block_device_mapping=None,
+               access_ip_v4=None, access_ip_v6=None,
+               requested_networks=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -496,7 +515,8 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id)
+                               reservation_id, access_ip_v4, access_ip_v6,
+                               requested_networks)
 
         block_device_mapping = block_device_mapping or []
         instances = []
@@ -510,11 +530,11 @@ class API(base.Base):
             instance_id = instance['id']
 
             self._ask_scheduler_to_create_instance(context, base_options,
-                                          instance_type, zone_blob,
-                                          availability_zone, injected_files,
-                                          admin_password,
-                                          image,
-                                          instance_id=instance_id)
+                                        instance_type, zone_blob,
+                                        availability_zone, injected_files,
+                                        admin_password, image,
+                                        instance_id=instance_id,
+                                        requested_networks=requested_networks)
 
         return [dict(x.iteritems()) for x in instances]
 
@@ -613,6 +633,78 @@ class API(base.Base):
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
+
+    def _is_security_group_associated_with_server(self, security_group,
+                                                instance_id):
+        """Check if the security group is already associated
+           with the instance. If Yes, return True.
+        """
+
+        if not security_group:
+            return False
+
+        instances = security_group.get('instances')
+        if not instances:
+            return False
+
+        inst_id = None
+        for inst_id in (instance['id'] for instance in instances \
+                        if instance_id == instance['id']):
+            return True
+
+        return False
+
+    def add_security_group(self, context, instance_id, security_group_name):
+        """Add security group to the instance"""
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
+        # check if the server exists
+        inst = db.instance_get(context, instance_id)
+        #check if the security group is associated with the server
+        if self._is_security_group_associated_with_server(security_group,
+                                                        instance_id):
+            raise exception.SecurityGroupExistsForInstance(
+                                        security_group_id=security_group['id'],
+                                        instance_id=instance_id)
+
+        #check if the instance is in running state
+        if inst['state'] != power_state.RUNNING:
+            raise exception.InstanceNotRunning(instance_id=instance_id)
+
+        db.instance_add_security_group(context.elevated(),
+                                       instance_id,
+                                       security_group['id'])
+        rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             {"method": "refresh_security_group_rules",
+              "args": {"security_group_id": security_group['id']}})
+
+    def remove_security_group(self, context, instance_id, security_group_name):
+        """Remove the security group associated with the instance"""
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
+        # check if the server exists
+        inst = db.instance_get(context, instance_id)
+        #check if the security group is associated with the server
+        if not self._is_security_group_associated_with_server(security_group,
+                                                        instance_id):
+            raise exception.SecurityGroupNotExistsForInstance(
+                                    security_group_id=security_group['id'],
+                                    instance_id=instance_id)
+
+        #check if the instance is in running state
+        if inst['state'] != power_state.RUNNING:
+            raise exception.InstanceNotRunning(instance_id=instance_id)
+
+        db.instance_remove_security_group(context.elevated(),
+                                       instance_id,
+                                       security_group['id'])
+        rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             {"method": "refresh_security_group_rules",
+              "args": {"security_group_id": security_group['id']}})
 
     @scheduler_api.reroute_compute("update")
     def update(self, context, instance_id, **kwargs):
