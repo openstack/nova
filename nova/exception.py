@@ -146,6 +146,7 @@ class NovaException(Exception):
     message = _("An unknown exception occurred.")
 
     def __init__(self, **kwargs):
+        self.kwargs = kwargs
         try:
             self._error_string = self.message % kwargs
 
