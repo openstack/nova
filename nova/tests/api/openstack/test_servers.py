@@ -771,6 +771,27 @@ class ServersTest(test.TestCase):
         (ip,) = private_node.getElementsByTagName('ip')
         self.assertEquals(ip.getAttribute('addr'), private)
 
+    # NOTE(bcwaldon): lp830817
+    def test_get_server_by_id_malformed_networks_v1_1(self):
+        ifaces = [
+            {
+                'network': None,
+                'fixed_ips': [
+                    {'address': '192.168.0.3'},
+                    {'address': '192.168.0.4'},
+                ],
+            },
+        ]
+        new_return_server = return_server_with_attributes(interfaces=ifaces)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        req = webob.Request.blank('/v1.1/fake/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['name'], 'server1')
+
     def test_get_server_by_id_with_addresses_v1_1(self):
         self.flags(use_ipv6=True)
         interfaces = [
