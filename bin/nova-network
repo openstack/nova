@@ -43,6 +43,7 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
+    utils.monkey_patch()
     server = service.Service.create(binary='nova-network')
     service.serve(server)
     service.wait()

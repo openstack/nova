@@ -134,3 +134,24 @@ class NotifierTestCase(test.TestCase):
         self.assertEqual(msg['event_type'], 'error_notification')
         self.assertEqual(msg['priority'], 'ERROR')
         self.assertEqual(msg['payload']['error'], 'foo')
+
+    def test_send_notification_by_decorator(self):
+        self.notify_called = False
+
+        def example_api(arg1, arg2):
+            return arg1 + arg2
+
+        example_api = nova.notifier.api.notify_decorator(
+                            'example_api',
+                             example_api)
+
+        def mock_notify(cls, *args):
+            self.notify_called = True
+
+        self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
+                mock_notify)
+
+        class Mock(object):
+            pass
+        self.assertEqual(3, example_api(1, 2))
+        self.assertEqual(self.notify_called, True)
