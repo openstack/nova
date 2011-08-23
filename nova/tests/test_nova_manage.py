@@ -75,17 +75,59 @@ class FixedIpCommandsTestCase(test.TestCase):
 class NetworkCommandsTestCase(test.TestCase):
     def setUp(self):
         super(NetworkCommandsTestCase, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
         self.commands = nova_manage.NetworkCommands()
         self.context = context.get_admin_context()
-        nets = db.network_get_all(self.context)
-        for net in nets:
-            db.network_delete_safe(self.context, net['id'])
+        self.net = {'id': 0,
+                    'label': 'fake',
+                    'injected': False,
+                    'cidr': '192.168.0.0/24',
+                    'cidr_v6': 'dead:beef::/64',
+                    'multi_host': False,
+                    'gateway_v6': 'dead:beef::1',
+                    'netmask_v6': '64',
+                    'netmask': '255.255.255.0',
+                    'bridge': 'fa0',
+                    'bridge_interface': 'fake_fa0',
+                    'gateway': '192.168.0.1',
+                    'broadcast': '192.168.0.255',
+                    'dns1': '8.8.8.8',
+                    'dns2': '8.8.4.4',
+                    'vlan': 200,
+                    'vpn_public_address': '10.0.0.2',
+                    'vpn_public_port': '2222',
+                    'vpn_private_address': '192.168.0.2',
+                    'dhcp_start': '192.168.0.3',
+                    'project_id': 'fake_project',
+                    'host': 'fake_host',
+                    'uuid': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
+
 
     def tearDown(self):
         super(NetworkCommandsTestCase, self).tearDown()
+        self.stubs.UnsetAll()
 
-    def _create_network(self):
+    def test_create(self):
+
+        def fake_create_networks(obj, context, **kwargs):
+            self.assertTrue(context.to_dict()['is_admin'])
+            self.assertEqual(kwargs['label'], 'Test')
+            self.assertEqual(kwargs['cidr'], '10.2.0.0/24')
+            self.assertEqual(kwargs['multi_host'], False)
+            self.assertEqual(kwargs['num_networks'], 1)
+            self.assertEqual(kwargs['network_size'], 256)
+            self.assertEqual(kwargs['vlan_start'], 200)
+            self.assertEqual(kwargs['vpn_start'], 2000)
+            self.assertEqual(kwargs['cidr_v6'], 'fd00:2::/120')
+            self.assertEqual(kwargs['gateway_v6'], 'fd00:2::22')
+            self.assertEqual(kwargs['bridge'], 'br200')
+            self.assertEqual(kwargs['bridge_interface'], 'eth0')
+            self.assertEqual(kwargs['dns1'], '8.8.8.8')
+            self.assertEqual(kwargs['dns2'], '8.8.4.4')
         FLAGS.network_manager = 'nova.network.manager.VlanManager'
+        from nova.network import manager as net_manager
+        self.stubs.Set(net_manager.VlanManager, 'create_networks',
+                       fake_create_networks)
         self.commands.create(
                             label='Test',
                             fixed_range_v4='10.2.0.0/24',
@@ -96,24 +138,16 @@ class NetworkCommandsTestCase(test.TestCase):
                             vpn_start=2000,
                             fixed_range_v6='fd00:2::/120',
                             gateway_v6='fd00:2::22',
-                            bridge_interface='eth0')
-        return db.network_get_by_cidr(self.context, '10.2.0.0/24')
-
-    def test_create(self):
-        net = self._create_network()
-        self.assertEqual(net['label'], 'Test')
-        self.assertEqual(net['cidr'], '10.2.0.0/24')
-        self.assertEqual(net['netmask'], '255.255.255.0')
-        self.assertEqual(net['multi_host'], False)
-        self.assertEqual(net['vlan'], 200)
-        self.assertEqual(net['bridge'], 'br200')
-        self.assertEqual(net['vpn_public_port'], 2000)
-        self.assertEqual(net['cidr_v6'], 'fd00:2::/120')
-        self.assertEqual(net['gateway_v6'], 'fd00:2::22')
-        self.assertEqual(net['bridge_interface'], 'eth0')
+                            bridge='br200',
+                            bridge_interface='eth0',
+                            dns1='8.8.8.8',
+                            dns2='8.8.4.4')
 
     def test_list(self):
-        net = self._create_network()
+
+        def fake_network_get_all(context):
+            return [db_fakes.FakeModel(self.net)]
+        self.stubs.Set(db, 'network_get_all', fake_network_get_all)
         output = StringIO.StringIO()
         sys.stdout = output
         self.commands.list()
@@ -129,45 +163,63 @@ class NetworkCommandsTestCase(test.TestCase):
                           _('VlanID'),
                           _('project'),
                           _("uuid"))
-        body = _fmt % (
-            net['id'],
-            '10.2.0.0/24',
-            'fd00:2::/120',
-            '10.2.0.3',
-            'None',
-            'None',
-            '200',
-            'None',
-            net['uuid'],)
+        body = _fmt % (self.net['id'],
+                       self.net['cidr'],
+                       self.net['cidr_v6'],
+                       self.net['dhcp_start'],
+                       self.net['dns1'],
+                       self.net['dns2'],
+                       self.net['vlan'],
+                       self.net['project_id'],
+                       self.net['uuid'])
         answer = '%s\n%s\n' % (head, body)
         self.assertEqual(result, answer)
 
     def test_delete(self):
-        net = self._create_network()
-        self.commands.delete(fixed_range='10.2.0.0/24')
-        net_exist = True
-        try:
-            net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
-        except exception.NetworkNotFoundForCidr, e:
-            net_exist = False
-        self.assertEqual(net_exist, False)
+        net_dis = self.net
+        net_dis['project_id'] = None
+        net_dis['host'] = None
+
+        def fake_network_get_by_cidr(context, cidr):
+            self.assertTrue(context.to_dict()['is_admin'])
+            self.assertEqual(cidr, net_dis['cidr'])
+            return db_fakes.FakeModel(net_dis)
+        self.stubs.Set(db, 'network_get_by_cidr', fake_network_get_by_cidr)
+
+        def fake_network_delete_safe(context, network_id):
+            self.assertTrue(context.to_dict()['is_admin'])
+            self.assertEqual(network_id, net_dis['id'])
+        self.stubs.Set(db, 'network_delete_safe', fake_network_delete_safe)
+        self.commands.delete(fixed_range=net_dis['cidr'])
 
     def test_modify(self):
-        net = self._create_network()
-        db.network_disassociate(self.context, net['id'])
-        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
-        self.assertEqual(net['project_id'], None)
-        self.assertEqual(net['host'], None)
-        self.commands.modify('10.2.0.0/24', project='test_project',
+
+        def fake_network_get_by_cidr(context, cidr):
+            self.assertTrue(context.to_dict()['is_admin'])
+            self.assertEqual(cidr, self.net['cidr'])
+            return db_fakes.FakeModel(self.net)
+        self.stubs.Set(db, 'network_get_by_cidr', fake_network_get_by_cidr)
+
+        def fake_network_update(context, network_id, values):
+            self.assertTrue(context.to_dict()['is_admin'])
+            self.assertEqual(network_id, self.net['id'])
+            self.assertEqual(values, {'project_id': 'test_project',
+                                      'host': 'test_host'})
+        self.stubs.Set(db, 'network_update', fake_network_update)
+        self.commands.modify(self.net['cidr'], project='test_project',
                              host='test_host')
-        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
-        self.assertEqual(net['project_id'], 'test_project')
-        self.assertEqual(net['host'], 'test_host')
-        self.commands.modify('10.2.0.0/24')
-        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
-        self.assertEqual(net['project_id'], 'test_project')
-        self.assertEqual(net['host'], 'test_host')
-        self.commands.modify('10.2.0.0/24', dis_project=True, dis_host=True)
-        net = db.network_get_by_cidr(self.context, '10.2.0.0/24')
-        self.assertEqual(net['project_id'], None)
-        self.assertEqual(net['host'], None)
+
+        def fake_network_update(context, network_id, values):
+            self.assertTrue(context.to_dict()['is_admin'])
+            self.assertEqual(network_id, self.net['id'])
+            self.assertEqual(values, {})
+        self.stubs.Set(db, 'network_update', fake_network_update)
+        self.commands.modify(self.net['cidr'])
+
+        def fake_network_update(context, network_id, values):
+            self.assertTrue(context.to_dict()['is_admin'])
+            self.assertEqual(network_id, self.net['id'])
+            self.assertEqual(values, {'project_id': None,
+                                      'host': None})
+        self.stubs.Set(db, 'network_update', fake_network_update)
+        self.commands.modify(self.net['cidr'], dis_project=True, dis_host=True)

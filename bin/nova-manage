@@ -813,22 +813,16 @@ class NetworkCommands(object):
         """
         admin_context = context.get_admin_context()
         network = db.network_get_by_cidr(admin_context, fixed_range)
+        net = {}
         if project:
-            project_id = manager.Project.safe_id(project)
-            db.network_associate_by_id(admin_context,
-                                       network_id=network['id'],
-                                       project_id=project,
-                                       force=True)
+            net['project_id'] = project
         elif dis_project:
-            db.network_disassociate(admin_context, network_id=network['id'])
+            net['project_id'] = None
         if host:
-            db.network_set_host(admin_context,
-                                network['id'],
-                                host)
+            net['host'] = host
         elif dis_host:
-            db.network_set_host(admin_context,
-                                network['id'],
-                                None)
+            net['host'] = None
+        db.network_update(admin_context, network['id'], net)
 
 
 class VmCommands(object):
