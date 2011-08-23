@@ -652,23 +652,36 @@ def floating_ip_update(context, address, values):
 ###################
 
 
-@require_context
-def fixed_ip_associate(context, address, instance_id):
+@require_admin_context
+def fixed_ip_associate(context, address, instance_id, network_id=None):
     session = get_session()
     with session.begin():
-        instance = instance_get(context, instance_id, session=session)
+        network_or_none = or_(models.FixedIp.network_id == network_id,
+                              models.FixedIp.network_id == None)
         fixed_ip_ref = session.query(models.FixedIp).\
-                               filter_by(address=address).\
+                               filter(network_or_none).\
+                               filter_by(reserved=False).\
                                filter_by(deleted=False).\
-                               filter_by(instance=None).\
+                               filter_by(address=address).\
                                with_lockmode('update').\
                                first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
-        if not fixed_ip_ref:
-            raise exception.NoMoreFixedIps()
-        fixed_ip_ref.instance = instance
+        if fixed_ip_ref is None:
+            raise exception.FixedIpNotFoundForNetwork(address=address,
+                                            network_id=network_id)
+        if fixed_ip_ref.instance is not None:
+            raise exception.FixedIpAlreadyInUse(address=address)
+
+        if not fixed_ip_ref.network:
+            fixed_ip_ref.network = network_get(context,
+                                           network_id,
+                                           session=session)
+        fixed_ip_ref.instance = instance_get(context,
+                                             instance_id,
+                                             session=session)
         session.add(fixed_ip_ref)
+    return fixed_ip_ref['address']
 
 
 @require_admin_context
@@ -1754,6 +1767,40 @@ def network_get_all(context):
         raise exception.NoNetworksFound()
     return result
 
+
+@require_admin_context
+def network_get_all_by_uuids(context, network_uuids, project_id=None):
+    session = get_session()
+    project_or_none = or_(models.Network.project_id == project_id,
+                              models.Network.project_id == None)
+    result = session.query(models.Network).\
+                 filter(models.Network.uuid.in_(network_uuids)).\
+                 filter(project_or_none).\
+                 filter_by(deleted=False).all()
+    if not result:
+        raise exception.NoNetworksFound()
+
+    #check if host is set to all of the networks
+    # returned in the result
+    for network in result:
+            if network['host'] is None:
+                raise exception.NetworkHostNotSet(network_id=network['id'])
+
+    #check if the result contains all the networks
+    #we are looking for
+    for network_uuid in network_uuids:
+        found = False
+        for network in result:
+            if network['uuid'] == network_uuid:
+                found = True
+                break
+        if not found:
+            if project_id:
+                raise exception.NetworkNotFoundForProject(network_uuid=uuid,
+                                              project_id=context.project_id)
+            raise exception.NetworkNotFound(network_id=network_uuid)
+
+    return result
 
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
