@@ -30,6 +30,15 @@ LOG = logging.getLogger('nova.notifier.list_notifier')
 
 drivers = None
 
+class ImportFailureNotifier(object):
+    """Noisily re-raises some exception over-and-over when notify is called."""
+
+    def __init__(self, exception):
+        self.exception = exception
+
+    def notify(message):
+        raise self.exception
+
 
 def _get_drivers():
     """Instantiates and returns drivers based on the flag values."""
@@ -39,8 +48,8 @@ def _get_drivers():
         for notification_driver in FLAGS.list_notifier_drivers:
             try:
                 drivers.append(utils.import_object(notification_driver))
-            except ClassNotFound:
-                sys.exit(1)
+            except ClassNotFound as e:
+                drivers.append(ImportFailureNotifier(e))
     return drivers
 
 def notify(message):

@@ -48,11 +48,6 @@ class NotifierListTestCase(test.TestCase):
         def mock_notify2(cls, *args):
             raise RuntimeError("Bad notifier.")
         self.stubs.Set(nova.notifier.log_notifier, 'notify', mock_notify2)
-        # mock sys.exit so we don't actually kill the program during our tests.
-        self.sys_exit_code = 0
-        def mock_sys_exit(code):
-            self.sys_exit_code += code
-        self.stubs.Set(sys, 'exit', mock_sys_exit)
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -67,7 +62,6 @@ class NotifierListTestCase(test.TestCase):
                 nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.notify_count, 2)
         self.assertEqual(self.exception_count, 0)
-        self.assertEqual(self.sys_exit_code, 0)
 
     def test_send_notifications_with_errors(self):
 
@@ -77,7 +71,6 @@ class NotifierListTestCase(test.TestCase):
         notify('publisher_id', 'event_type', nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.notify_count, 1)
         self.assertEqual(self.exception_count, 1)
-        self.assertEqual(self.sys_exit_code, 0)
 
     def test_when_driver_fails_to_import(self):
         self.flags(notification_driver='nova.notifier.list_notifier',
@@ -85,6 +78,5 @@ class NotifierListTestCase(test.TestCase):
                                           'nova.notifier.logo_notifier',
                                           'fdsjgsdfhjkhgsfkj'])
         notify('publisher_id', 'event_type', nova.notifier.api.WARN, dict(a=3))
-        self.assertEqual(self.exception_count, 0)
+        self.assertEqual(self.exception_count, 2)
         self.assertEqual(self.notify_count, 1)
-        self.assertEqual(self.sys_exit_code, 2)
