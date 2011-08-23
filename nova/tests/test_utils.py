@@ -401,15 +401,16 @@ class MonkeyPatchTestCase(test.TestCase):
     """Unit test for utils.monkey_patch()."""
     def setUp(self):
         super(MonkeyPatchTestCase, self).setUp()
+        self.example_package = 'nova.tests.monkey_patch_example.'
         self.flags(
             monkey_patch=True,
-            monkey_patch_modules=['nova.tests.example.example_a' + ':'
-            + 'nova.tests.example.example_decorator'])
+            monkey_patch_modules=[self.example_package + 'example_a' + ':'
+            + self.example_package + 'example_decorator'])
 
     def test_monkey_patch(self):
         utils.monkey_patch()
-        nova.tests.example.CALLED_FUNCTION = []
-        from nova.tests.example import example_a, example_b
+        nova.tests.monkey_patch_example.CALLED_FUNCTION = []
+        from nova.tests.monkey_patch_example import example_a, example_b
 
         self.assertEqual('Example function', example_a.example_function_a())
         exampleA = example_a.ExampleClassA()
@@ -423,18 +424,18 @@ class MonkeyPatchTestCase(test.TestCase):
         ret_b = exampleB.example_method_add(3, 5)
 
         self.assertEqual(ret_b, 8)
-        package_a = 'nova.tests.example.example_a.'
+        package_a = self.example_package + 'example_a.'
         self.assertTrue(package_a + 'example_function_a'
-            in nova.tests.example.CALLED_FUNCTION)
+            in nova.tests.monkey_patch_example.CALLED_FUNCTION)
 
         self.assertTrue(package_a + 'ExampleClassA.example_method'
-            in nova.tests.example.CALLED_FUNCTION)
+            in nova.tests.monkey_patch_example.CALLED_FUNCTION)
         self.assertTrue(package_a + 'ExampleClassA.example_method_add'
-            in nova.tests.example.CALLED_FUNCTION)
-        package_b = 'nova.tests.example.example_b.'
+            in nova.tests.monkey_patch_example.CALLED_FUNCTION)
+        package_b = self.example_package + 'example_b.'
         self.assertFalse(package_b + 'example_function_b'
-            in nova.tests.example.CALLED_FUNCTION)
+            in nova.tests.monkey_patch_example.CALLED_FUNCTION)
         self.assertFalse(package_b + 'ExampleClassB.example_method'
-            in nova.tests.example.CALLED_FUNCTION)
+            in nova.tests.monkey_patch_example.CALLED_FUNCTION)
         self.assertFalse(package_b + 'ExampleClassB.example_method_add'
-            in nova.tests.example.CALLED_FUNCTION)
+            in nova.tests.monkey_patch_example.CALLED_FUNCTION)

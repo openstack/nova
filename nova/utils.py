@@ -866,13 +866,13 @@ def monkey_patch():
     # If FLAGS.monkey_patch is not True, this function do nothing.
     if not FLAGS.monkey_patch:
         return
-    # Get list of moudles and decorators
+    # Get list of modules and decorators
     for module_and_decorator in FLAGS.monkey_patch_modules:
         module, decorator_name = module_and_decorator.split(':')
         # import decorator function
         decorator = import_class(decorator_name)
         __import__(module)
-        # Retrive module information using pyclbr
+        # Retrieve module information using pyclbr
         module_data = pyclbr.readmodule_ex(module)
         for key in module_data.keys():
             # set the decorator for the class methods

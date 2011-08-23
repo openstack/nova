@@ -41,11 +41,10 @@ class BadPriorityException(Exception):
 
 def notify_decorator(name, fn):
     """ decorator for notify which is used from utils.monkey_patch()
-        Parameters:
 
-        name - name of the function
-        function - object of the function
-
+        :param name: name of the function
+        :param function: - object of the function
+        :returns: function -- decorated function
 
     """
     def wrapped_func(*args, **kwarg):
