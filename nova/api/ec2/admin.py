@@ -283,8 +283,10 @@ class AdminController(object):
             # NOTE(vish) import delayed because of __init__.py
             from nova.cloudpipe import pipelib
             pipe = pipelib.CloudPipe()
+            proj = manager.AuthManager().get_project(project)
+            user_id = proj.project_manager_id
             try:
-                pipe.launch_vpn_instance(project)
+                pipe.launch_vpn_instance(project, user_id)
             except db.NoMoreNetworks:
                 raise exception.ApiError("Unable to claim IP for VPN instance"
                                          ", ensure it isn't running, and try "

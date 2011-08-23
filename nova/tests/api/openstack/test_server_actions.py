@@ -1,17 +1,13 @@
 import base64
 import json
-import unittest
-from xml.dom import minidom
 
 import stubout
 import webob
 
 from nova import context
-from nova import db
 from nova import utils
 from nova import flags
 from nova.api.openstack import create_instance_helper
-from nova.compute import instance_types
 from nova.compute import power_state
 import nova.db.api
 from nova import test
@@ -103,8 +99,6 @@ class ServerActionsTest(test.TestCase):
         super(ServerActionsTest, self).setUp()
         self.flags(verbose=True)
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db.api, 'instance_update', instance_update)
@@ -468,8 +462,6 @@ class ServerActionsTestV11(test.TestCase):
         self.maxDiff = None
         super(ServerActionsTestV11, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db.api, 'instance_update', instance_update)

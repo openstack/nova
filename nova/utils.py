@@ -847,6 +847,23 @@ def bool_from_str(val):
         return val.lower() == 'true'
 
 
+def is_valid_ipv4(address):
+    """valid the address strictly as per format xxx.xxx.xxx.xxx.
+    where xxx is a value between 0 and 255.
+    """
+
+    parts = address.split(".")
+    if len(parts) != 4:
+        return False
+    for item in parts:
+        try:
+            if not 0 <= int(item) <= 255:
+                return False
+        except ValueError:
+            return False
+    return True
+
+
 def monkey_patch():
     """  If the Flags.monkey_patch set as True,
     this functuion patches a decorator
@@ -862,7 +879,6 @@ def monkey_patch():
     name - name of the function
     function - object of the function
     """
-
     # If FLAGS.monkey_patch is not True, this function do nothing.
     if not FLAGS.monkey_patch:
         return

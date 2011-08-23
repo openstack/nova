@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-03-24 14:51+0000\n"
+"PO-Revision-Date: 2011-07-25 17:40+0000\n"
 "Last-Translator: msinhore <msinhore@gmail.com>\n"
 "Language-Team: Brazilian Portuguese <pt_BR@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-07-23 05:12+0000\n"
-"X-Generator: Launchpad (build 13405)\n"
+"X-Launchpad-Export-Date: 2011-08-03 04:44+0000\n"
+"X-Generator: Launchpad (build 13573)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
@@ -36,6 +36,11 @@ msgid ""
 "Stdout: %(stdout)r\n"
 "Stderr: %(stderr)r"
 msgstr ""
+"%(description)s\n"
+"Comando: %(cmd)s\n"
+"Código de saída: %(exit_code)s\n"
+"Saída padrão: %(stdout)r\n"
+"Erro: %(stderr)r"
 
 #: ../nova/exception.py:107
 msgid "DB exception wrapped"
@@ -392,7 +397,7 @@ msgstr "instância %s: suspendendo"
 #: ../nova/compute/manager.py:472
 #, python-format
 msgid "instance %s: resuming"
-msgstr ""
+msgstr "instância %s: resumindo"
 
 #: ../nova/compute/manager.py:491
 #, python-format
@@ -407,12 +412,12 @@ msgstr "instância %s: desbloqueando"
 #: ../nova/compute/manager.py:513
 #, python-format
 msgid "instance %s: getting locked state"
-msgstr ""
+msgstr "instância %s: obtendo estado de bloqueio"
 
 #: ../nova/compute/manager.py:526
 #, python-format
 msgid "instance %s: reset network"
-msgstr ""
+msgstr "instância %s: reset da rede"
 
 #: ../nova/compute/manager.py:535 ../nova/api/ec2/cloud.py:515
 #, python-format
@@ -429,6 +434,7 @@ msgstr "instância %s: obtendo console ajax"
 msgid ""
 "instance %(instance_id)s: attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr ""
+"instância %(instance_id)s: atachando volume %(volume_id)s para %(mountpoint)s"
 
 #. pylint: disable=W0702
 #. NOTE(vish): The inline callback eats the exception info so we
@@ -438,6 +444,8 @@ msgstr ""
 #, python-format
 msgid "instance %(instance_id)s: attach failed %(mountpoint)s, removing"
 msgstr ""
+"instância %(instance_id)s: falha ao atachar ponto de montagem "
+"%(mountpoint)s, removendo"
 
 #: ../nova/compute/manager.py:585
 #, python-format
@@ -458,7 +466,7 @@ msgstr "Host %s não está ativo"
 
 #: ../nova/scheduler/simple.py:65
 msgid "All hosts have too many cores"
-msgstr ""
+msgstr "Todos os hosts tem muitos núcleos de CPU"
 
 #: ../nova/scheduler/simple.py:87
 #, python-format
@@ -783,7 +791,7 @@ msgstr "Tamanho da imagem %(image)s:%(virtual_size)d"
 #: ../nova/virt/xenapi/vm_utils.py:332
 #, python-format
 msgid "Glance image %s"
-msgstr ""
+msgstr "Visão geral da imagem %s"
 
 #. we need to invoke a plugin for copying VDI's
 #. content into proper path
@@ -815,7 +823,7 @@ msgstr "Kernel PV no VDI: %s"
 #: ../nova/virt/xenapi/vm_utils.py:405
 #, python-format
 msgid "Running pygrub against %s"
-msgstr ""
+msgstr "Rodando pygrub novamente %s"
 
 #: ../nova/virt/xenapi/vm_utils.py:411
 #, python-format
@@ -849,12 +857,12 @@ msgstr "(VM_UTILS) xenapi power_state -> |%s|"
 #: ../nova/virt/xenapi/vm_utils.py:525
 #, python-format
 msgid "VHD %(vdi_uuid)s has parent %(parent_ref)s"
-msgstr ""
+msgstr "O VHD %(vdi_uuid)s tem pai %(parent_ref)s"
 
 #: ../nova/virt/xenapi/vm_utils.py:542
 #, python-format
 msgid "Re-scanning SR %s"
-msgstr ""
+msgstr "Re-escaneando SR %s"
 
 #: ../nova/virt/xenapi/vm_utils.py:567
 #, python-format
@@ -2857,6 +2865,17 @@ msgstr ""
 #~ "Repositório de dados %s não pode ser atingido. Tentando novamente em %d "
 #~ "segundos."
 
+#~ msgid "Full set of FLAGS:"
+#~ msgstr "Conjunto completo de FLAGS:"
+
+#, python-format
+#~ msgid "Starting %s"
+#~ msgstr "Iniciando %s"
+
+#, python-format
+#~ msgid "Serving %s"
+#~ msgstr "Servindo %s"
+
 #, python-format
 #~ msgid "Couldn't get IP, using 127.0.0.1 %s"
 #~ msgstr "Não foi possível obter IP, usando 127.0.0.1 %s"
@@ -2965,3 +2984,14 @@ msgstr ""
 #, python-format
 #~ msgid "Created user %s (admin: %r)"
 #~ msgstr "Criado usuário %s (administrador: %r)"
+
+#~ msgid "No such process"
+#~ msgstr "Processo inexistente"
+
+#, python-format
+#~ msgid "pidfile %s does not exist. Daemon not running?\n"
+#~ msgstr ""
+#~ "Arquivo do id do processo (pidfile) %s não existe. O Daemon está parado?\n"
+
+#~ msgid "Wrong number of arguments."
+#~ msgstr "Número errado de argumentos."

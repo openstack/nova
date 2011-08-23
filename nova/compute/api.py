@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -146,6 +147,16 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
+    def _check_requested_networks(self, context, requested_networks):
+        """ Check if the networks requested belongs to the project
+            and the fixed IP address for each network provided is within
+            same the network block
+        """
+        if requested_networks is None:
+            return
+
+        self.network_api.validate_networks(context, requested_networks)
+
     def _check_create_parameters(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
                min_count=None, max_count=None,
@@ -153,7 +164,8 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None, access_ip_v4=None, access_ip_v6=None):
+               reservation_id=None, access_ip_v4=None, access_ip_v6=None,
+               requested_networks=None, config_drive=None,):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -182,9 +194,15 @@ class API(base.Base):
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
+        self._check_requested_networks(context, requested_networks)
 
         (image_service, image_id) = nova.image.get_image_service(image_href)
         image = image_service.show(context, image_id)
+
+        config_drive_id = None
+        if config_drive and config_drive is not True:
+            # config_drive is volume id
+            config_drive, config_drive_id = None, config_drive
 
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
@@ -213,6 +231,8 @@ class API(base.Base):
             image_service.show(context, kernel_id)
         if ramdisk_id:
             image_service.show(context, ramdisk_id)
+        if config_drive_id:
+            image_service.show(context, config_drive_id)
 
         self.ensure_default_security_group(context)
 
@@ -231,6 +251,8 @@ class API(base.Base):
             'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
+            'config_drive_id': config_drive_id or '',
+            'config_drive': config_drive or '',
             'state': 0,
             'state_description': 'scheduling',
             'user_id': context.user_id,
@@ -400,9 +422,9 @@ class API(base.Base):
     def _ask_scheduler_to_create_instance(self, context, base_options,
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
-                                          admin_password,
-                                          image,
-                                          instance_id=None, num_instances=1):
+                                          admin_password, image,
+                                          instance_id=None, num_instances=1,
+                                          requested_networks=None):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
         uid = context.user_id
@@ -430,7 +452,8 @@ class API(base.Base):
                            "request_spec": request_spec,
                            "availability_zone": availability_zone,
                            "admin_password": admin_password,
-                           "injected_files": injected_files}})
+                           "injected_files": injected_files,
+                           "requested_networks": requested_networks}})
 
     def create_all_at_once(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
@@ -440,7 +463,8 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None,
-               access_ip_v4=None, access_ip_v6=None):
+               access_ip_v4=None, access_ip_v6=None,
+               requested_networks=None, config_drive=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
@@ -456,14 +480,15 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id, access_ip_v4, access_ip_v6)
+                               reservation_id, access_ip_v4, access_ip_v6,
+                               requested_networks, config_drive)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
-                                      admin_password,
-                                      image,
-                                      num_instances=num_instances)
+                                      admin_password, image,
+                                      num_instances=num_instances,
+                                      requested_networks=requested_networks)
 
         return base_options['reservation_id']
 
@@ -475,7 +500,8 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata=None,
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None,
-               access_ip_v4=None, access_ip_v6=None):
+               access_ip_v4=None, access_ip_v6=None,
+               requested_networks=None, config_drive=None,):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -499,7 +525,8 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
-                               reservation_id, access_ip_v4, access_ip_v6)
+                               reservation_id, access_ip_v4, access_ip_v6,
+                               requested_networks, config_drive)
 
         block_device_mapping = block_device_mapping or []
         instances = []
@@ -513,11 +540,11 @@ class API(base.Base):
             instance_id = instance['id']
 
             self._ask_scheduler_to_create_instance(context, base_options,
-                                          instance_type, zone_blob,
-                                          availability_zone, injected_files,
-                                          admin_password,
-                                          image,
-                                          instance_id=instance_id)
+                                        instance_type, zone_blob,
+                                        availability_zone, injected_files,
+                                        admin_password, image,
+                                        instance_id=instance_id,
+                                        requested_networks=requested_networks)
 
         return [dict(x.iteritems()) for x in instances]
 

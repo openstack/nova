@@ -323,13 +323,13 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 ####################
 
 
-def fixed_ip_associate(context, address, instance_id):
+def fixed_ip_associate(context, address, instance_id, network_id=None):
     """Associate fixed ip to instance.
 
     Raises if fixed ip is not available.
 
     """
-    return IMPL.fixed_ip_associate(context, address, instance_id)
+    return IMPL.fixed_ip_associate(context, address, instance_id, network_id)
 
 
 def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
@@ -395,7 +395,6 @@ def fixed_ip_get_network(context, address):
 def fixed_ip_update(context, address, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_update(context, address, values)
-
 
 ####################
 
@@ -686,7 +685,14 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
+def network_get_all_by_uuids(context, network_uuids, project_id=None):
+    """Return networks by ids."""
+    return IMPL.network_get_all_by_uuids(context, network_uuids, project_id)
+
+
 # pylint: disable=C0103
+
+
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
     return IMPL.network_get_associated_fixed_ips(context, network_id)
