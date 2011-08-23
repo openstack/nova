@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010-2011 OpenStack LLC.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -190,6 +191,7 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['uuid'] = inst['uuid']
+        self._build_config_drive(response, inst)
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
@@ -207,6 +209,9 @@ class ViewBuilderV11(ViewBuilder):
         ]
 
         response["links"] = links
+
+    def _build_config_drive(self, response, inst):
+        response['config_drive'] = inst.get('config_drive')
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""

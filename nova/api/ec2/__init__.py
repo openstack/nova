@@ -183,6 +183,27 @@ class ToToken(wsgi.Middleware):
         return self.application
 
 
+class NoAuth(wsgi.Middleware):
+    """Add user:project as 'nova.context' to WSGI environ."""
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        if 'AWSAccessKeyId' not in req.params:
+            raise webob.exc.HTTPBadRequest()
+        user_id, _sep, project_id = req.params['AWSAccessKeyId'].partition(':')
+        project_id = project_id or user_id
+        remote_address = getattr(req, 'remote_address', '127.0.0.1')
+        if FLAGS.use_forwarded_for:
+            remote_address = req.headers.get('X-Forwarded-For', remote_address)
+        ctx = context.RequestContext(user_id,
+                                     project_id,
+                                     is_admin=True,
+                                     remote_address=remote_address)
+
+        req.environ['nova.context'] = ctx
+        return self.application
+
+
 class Authenticate(wsgi.Middleware):
     """Authenticate an EC2 request and add 'nova.context' to WSGI environ."""
 
