@@ -295,7 +295,7 @@ EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
 
 def usage_from_instance(instance_ref, **kw):
     usage_info = dict(
-          tenant_id=instance_ref['project_id'],
+          project_id=instance_ref['project_id'],
           user_id=instance_ref['user_id'],
           instance_id=instance_ref['id'],
           instance_type=instance_ref['instance_type']['name'],
@@ -547,11 +547,17 @@ def to_primitive(value, convert_instances=False, level=0):
     Therefore, convert_instances=True is lossy ... be aware.
 
     """
-    if inspect.isclass(value):
-        return unicode(value)
+    nasty = [inspect.ismodule, inspect.isclass, inspect.ismethod,
+             inspect.isfunction, inspect.isgeneratorfunction,
+             inspect.isgenerator, inspect.istraceback, inspect.isframe,
+             inspect.iscode, inspect.isbuiltin, inspect.isroutine,
+             inspect.isabstract]
+    for test in nasty:
+        if test(value):
+            return unicode(value)
 
     if level > 3:
-        return []
+        return '?'
 
     # The try block may not be necessary after the class check above,
     # but just in case ...
@@ -838,3 +844,19 @@ def bool_from_str(val):
         return True if int(val) else False
     except ValueError:
         return val.lower() == 'true'
+
+
+def is_valid_ipv4(address):
+    """valid the address strictly as per format xxx.xxx.xxx.xxx.
+    where xxx is a value between 0 and 255.
+    """
+    parts = address.split(".")
+    if len(parts) != 4:
+        return False
+    for item in parts:
+        try:
+            if not 0 <= int(item) <= 255:
+                return False
+        except ValueError:
+            return False
+    return True

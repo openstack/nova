@@ -2,6 +2,9 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+#
+# Copyright 2011, Piston Cloud Computing, Inc.
+#
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,6 +25,7 @@ Includes injection of SSH PGP keys into authorized_keys file.
 
 """
 
+import json
 import os
 import tempfile
 import time
@@ -60,7 +64,8 @@ def extend(image, size):
     utils.execute('resize2fs', image, check_exit_code=False)
 
 
-def inject_data(image, key=None, net=None, partition=None, nbd=False):
+def inject_data(image, key=None, net=None, metadata=None,
+                partition=None, nbd=False, tune2fs=True):
     """Injects a ssh key and optionally net data into a disk image.
 
     it will mount the image as a fully partitioned disk and attempt to inject
@@ -89,10 +94,10 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                                       ' only inject raw disk images): %s' %
                                       mapped_device)
 
-            # Configure ext2fs so that it doesn't auto-check every N boots
-            out, err = utils.execute('tune2fs', '-c', 0, '-i', 0,
-                                     mapped_device, run_as_root=True)
-
+            if tune2fs:
+                # Configure ext2fs so that it doesn't auto-check every N boots
+                out, err = utils.execute('tune2fs', '-c', 0, '-i', 0,
+                                         mapped_device, run_as_root=True)
             tmpdir = tempfile.mkdtemp()
             try:
                 # mount loopback to dir
@@ -103,7 +108,8 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                                           % err)
 
                 try:
-                    inject_data_into_fs(tmpdir, key, net, utils.execute)
+                    inject_data_into_fs(tmpdir, key, net, metadata,
+                                        utils.execute)
                 finally:
                     # unmount device
                     utils.execute('umount', mapped_device, run_as_root=True)
@@ -155,6 +161,7 @@ def destroy_container(target, instance, nbd=False):
 
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
+
     if nbd:
         device = _allocate_device()
         utils.execute('qemu-nbd', '-c', device, image, run_as_root=True)
@@ -190,6 +197,7 @@ def _allocate_device():
     # NOTE(vish): This assumes no other processes are allocating nbd devices.
     #             It may race cause a race condition if multiple
     #             workers are running on a given machine.
+
     while True:
         if not _DEVICES:
             raise exception.Error(_('No free nbd devices'))
@@ -203,7 +211,7 @@ def _free_device(device):
     _DEVICES.append(device)
 
 
-def inject_data_into_fs(fs, key, net, execute):
+def inject_data_into_fs(fs, key, net, metadata, execute):
     """Injects data into a filesystem already mounted by the caller.
     Virt connections can call this directly if they mount their fs
     in a different way to inject_data
@@ -212,6 +220,16 @@ def inject_data_into_fs(fs, key, net, execute):
         _inject_key_into_fs(key, fs, execute=execute)
     if net:
         _inject_net_into_fs(net, fs, execute=execute)
+    if metadata:
+        _inject_metadata_into_fs(metadata, fs, execute=execute)
+
+
+def _inject_metadata_into_fs(metadata, fs, execute=None):
+    metadata_path = os.path.join(fs, "meta.js")
+    metadata = dict([(m.key, m.value) for m in metadata])
+
+    utils.execute('sudo', 'tee', metadata_path,
+                  process_input=json.dumps(metadata))
 
 
 def _inject_key_into_fs(key, fs, execute=None):

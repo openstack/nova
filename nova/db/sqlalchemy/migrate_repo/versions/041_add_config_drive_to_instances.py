@@ -1,7 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2011 Justin Santa Barbara
-# All Rights Reserved.
+#
+# Copyright 2011 Piston Cloud Computing, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,17 +14,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from sqlalchemy import Column, Integer, MetaData, String, Table
 
-from nova.log import logging
-from nova.tests.integrated import integrated_helpers
-
-
-LOG = logging.getLogger('nova.tests.integrated')
+from nova import utils
 
 
-class LoginTest(integrated_helpers._IntegratedTestBase):
-    def test_login(self):
-        """Simple check - we list flavors - so we know we're logged in."""
-        flavors = self.api.get_flavors()
-        for flavor in flavors:
-            LOG.debug(_("flavor: %s") % flavor)
+meta = MetaData()
+
+instances = Table("instances", meta,
+        Column("id", Integer(), primary_key=True, nullable=False))
+
+# matches the size of an image_ref
+config_drive_column = Column("config_drive", String(255), nullable=True)
+
+
+def upgrade(migrate_engine):
+    meta.bind = migrate_engine
+    instances.create_column(config_drive_column)
+
+
+def downgrade(migrate_engine):
+    meta.bind = migrate_engine
+    instances.drop_column(config_drive_column)
