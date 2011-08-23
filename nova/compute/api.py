@@ -526,7 +526,7 @@ class API(base.Base):
                                availability_zone, user_data, metadata,
                                injected_files, admin_password, zone_blob,
                                reservation_id, access_ip_v4, access_ip_v6,
-                               requested_networks, config_drive
+                               requested_networks, config_drive)
 
         block_device_mapping = block_device_mapping or []
         instances = []

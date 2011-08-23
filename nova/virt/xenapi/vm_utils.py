@@ -741,7 +741,7 @@ class VMHelper(HelperBase):
         # if at all, so determine whether it's required first, and then do
         # everything
         mount_required = False
-        key, net, metadata  = _prepare_injectables(instance, network_info)
+        key, net, metadata = _prepare_injectables(instance, network_info)
         mount_required = key or net or metadata
         if not mount_required:
             return

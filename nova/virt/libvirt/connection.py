@@ -131,8 +131,8 @@ flags.DEFINE_string('libvirt_vif_type', 'bridge',
 flags.DEFINE_string('libvirt_vif_driver',
                     'nova.virt.libvirt.vif.LibvirtBridgeDriver',
                     'The libvirt VIF driver to configure the VIFs.')
-flags.DEFINE_string('default_local_format', 
-                    None, 
+flags.DEFINE_string('default_local_format',
+                    None,
                     'The default format a local_volume will be formatted with '
                     'on creation.')
 
@@ -970,7 +970,7 @@ class LibvirtConnection(driver.ComputeDriver):
             for injection in ('metadata', 'key', 'net'):
                 if locals()[injection]:
                     LOG.info(_('instance %(inst_name)s: injecting '
-                               '%(injection)s into image %(img_id)s' 
+                               '%(injection)s into image %(img_id)s'
                                % locals()))
             try:
                 disk.inject_data(injection_path, key, net, metadata,
@@ -1105,7 +1105,6 @@ class LibvirtConnection(driver.ComputeDriver):
               not self._volume_in_mapping(self.default_swap_device,
                                           block_device_info)):
             xml_info['swap_device'] = self.default_swap_device
-
 
         config_drive = False
         if instance.get('config_drive') or instance.get('config_drive_id'):

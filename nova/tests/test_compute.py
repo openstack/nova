@@ -163,7 +163,7 @@ class ComputeTestCase(test.TestCase):
     def test_create_instance_associates_config_drive(self):
         """Make sure create associates a config drive."""
 
-        instance_id = self._create_instance(params={'config_drive': True,})
+        instance_id = self._create_instance(params={'config_drive': True, })
 
         try:
             self.compute.run_instance(self.context, instance_id)

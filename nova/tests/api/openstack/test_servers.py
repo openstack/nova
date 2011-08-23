@@ -1776,8 +1776,8 @@ class ServersTest(test.TestCase):
         self.config_drive = True
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1792,12 +1792,13 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
+        print res
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
         self.assertEqual(1, server['id'])
@@ -1807,8 +1808,8 @@ class ServersTest(test.TestCase):
         self.config_drive = 2
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1823,7 +1824,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1840,8 +1841,8 @@ class ServersTest(test.TestCase):
         self.config_drive = "asdf"
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1856,7 +1857,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1867,8 +1868,8 @@ class ServersTest(test.TestCase):
     def test_create_instance_without_config_drive_v1_1(self):
         self._setup_for_create_instance()
 
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1883,7 +1884,7 @@ class ServersTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -3588,6 +3589,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3747,6 +3749,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "",
                 "links": [
@@ -3801,6 +3804,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "accessIPv4": "",
                 "accessIPv6": "fead::1234",
                 "links": [
