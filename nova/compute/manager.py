@@ -527,6 +527,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: `nova.RequestContext` object
         :param instance_id: Instance identifier (integer)
         :param image_ref: Image identifier (href or integer)
+        :param new_pass: password to set on rebuilt instance
         """
         context = context.elevated()
 
@@ -544,6 +545,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self.network_api.get_instance_nw_info(context,
                                                               instance_ref)
         bd_mapping = self._setup_block_device_mapping(context, instance_id)
+
+        # pull in new password here since the original password isn't in the db
+        new_pass = kwargs.get('new_pass')
+        instance_ref.admin_pass = new_pass
+
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
 
         self._update_image_ref(context, instance_id, image_ref)

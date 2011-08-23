@@ -604,8 +604,10 @@ class ControllerV10(Controller):
             LOG.debug(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
+        password = utils.generate_password(16)
+
         try:
-            self.compute_api.rebuild(context, instance_id, image_id)
+            self.compute_api.rebuild(context, instance_id, image_id, password)
         except exception.BuildInProgress:
             msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
@@ -741,15 +743,19 @@ class ControllerV11(Controller):
             self._validate_metadata(metadata)
         self._decode_personalities(personalities)
 
+        password = info["rebuild"].get("adminPass",
+                                       utils.generate_password(16))
+
         try:
-            self.compute_api.rebuild(context, instance_id, image_href, name,
-                                     metadata, personalities)
+            self.compute_api.rebuild(context, instance_id, image_href,
+                                     password, name=name, metadata=metadata,
+                                     files_to_inject=personalities)
         except exception.BuildInProgress:
             msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             raise exc.HTTPConflict(explanation=msg)
 
-        return webob.Response(status_int=202)
+        return webob.Response(status_int=202, headers={'x-nova-password':password})
 
     @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
