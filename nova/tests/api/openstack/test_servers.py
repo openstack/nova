@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010-2011 OpenStack LLC.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -233,7 +234,6 @@ class MockSetAdminPassword(object):
 
 
 class ServersTest(test.TestCase):
-
     def setUp(self):
         self.maxDiff = None
         super(ServersTest, self).setUp()
@@ -265,6 +265,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
 
         self.webreq = common.webob_factory('/v1.0/servers')
+        self.config_drive = None
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -379,6 +380,7 @@ class ServersTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -545,6 +547,7 @@ class ServersTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -638,6 +641,7 @@ class ServersTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -1399,6 +1403,7 @@ class ServersTest(test.TestCase):
                     'image_ref': image_ref,
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                     "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
+                    "config_drive": self.config_drive,
                    }
 
         def server_update(context, id, params):
@@ -1424,8 +1429,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
         self.stubs.Set(nova.rpc, 'call', fake_method)
-        self.stubs.Set(nova.db.api, 'instance_update',
-            server_update)
+        self.stubs.Set(nova.db.api, 'instance_update', server_update)
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
@@ -1767,6 +1771,129 @@ class ServersTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_with_config_drive_v1_1(self):
+        self.config_drive = True
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': True,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/123/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        print res
+        self.assertEqual(res.status_int, 202)
+        server = json.loads(res.body)['server']
+        self.assertEqual(1, server['id'])
+        self.assertTrue(server['config_drive'])
+
+    def test_create_instance_with_config_drive_as_id_v1_1(self):
+        self.config_drive = 2
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': 2,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/123/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 202)
+        server = json.loads(res.body)['server']
+        self.assertEqual(1, server['id'])
+        self.assertTrue(server['config_drive'])
+        self.assertEqual(2, server['config_drive'])
+
+    def test_create_instance_with_bad_config_drive_v1_1(self):
+        self.config_drive = "asdf"
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': 'asdf',
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/123/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_without_config_drive_v1_1(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': True,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/123/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        server = json.loads(res.body)['server']
+        self.assertEqual(1, server['id'])
+        self.assertFalse(server['config_drive'])
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
@@ -3449,6 +3576,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                         "href": "http://localhost/servers/1",
                     },
                 ],
+                "config_drive": None,
             }
         }
 
@@ -3461,6 +3589,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3513,6 +3642,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3566,6 +3696,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3618,6 +3749,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "",
                 "links": [
@@ -3672,6 +3804,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "accessIPv4": "",
                 "accessIPv6": "fead::1234",
                 "links": [
@@ -3734,6 +3867,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                     "Open": "Stack",
                     "Number": "1",
                 },
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
