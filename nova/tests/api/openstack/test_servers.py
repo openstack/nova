@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010-2011 OpenStack LLC.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -233,7 +234,6 @@ class MockSetAdminPassword(object):
 
 
 class ServersTest(test.TestCase):
-
     def setUp(self):
         self.maxDiff = None
         super(ServersTest, self).setUp()
@@ -265,6 +265,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
 
         self.webreq = common.webob_factory('/v1.0/servers')
+        self.config_drive = None
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -379,6 +380,7 @@ class ServersTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -545,6 +547,7 @@ class ServersTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -638,6 +641,7 @@ class ServersTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -1399,6 +1403,7 @@ class ServersTest(test.TestCase):
                     'image_ref': image_ref,
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                     "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
+                    "config_drive": self.config_drive,
                    }
 
         def server_update(context, id, params):
@@ -1424,8 +1429,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
         self.stubs.Set(nova.rpc, 'call', fake_method)
-        self.stubs.Set(nova.db.api, 'instance_update',
-            server_update)
+        self.stubs.Set(nova.db.api, 'instance_update', server_update)
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
@@ -1768,6 +1772,129 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_create_instance_with_config_drive_v1_1(self):
+        self.config_drive = True
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': True,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/123/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        print res
+        self.assertEqual(res.status_int, 202)
+        server = json.loads(res.body)['server']
+        self.assertEqual(1, server['id'])
+        self.assertTrue(server['config_drive'])
+
+    def test_create_instance_with_config_drive_as_id_v1_1(self):
+        self.config_drive = 2
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': 2,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/123/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(res.status_int, 202)
+        server = json.loads(res.body)['server']
+        self.assertEqual(1, server['id'])
+        self.assertTrue(server['config_drive'])
+        self.assertEqual(2, server['config_drive'])
+
+    def test_create_instance_with_bad_config_drive_v1_1(self):
+        self.config_drive = "asdf"
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': 'asdf',
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/123/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_without_config_drive_v1_1(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/123/images/2'
+        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'config_drive_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+                'config_drive': True,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/123/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        server = json.loads(res.body)['server']
+        self.assertEqual(1, server['id'])
+        self.assertFalse(server['config_drive'])
+
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
 
@@ -1887,6 +2014,29 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_whitespace_name(self):
+        self._setup_for_create_instance()
+
+        body = {
+            'server': {
+                'name': '    ',
+                'imageId': 3,
+                'flavorId': 1,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
@@ -2829,6 +2979,164 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
         }
         self.assertEquals(request['body'], expected)
 
+    def test_request_with_empty_networks(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+ name="new-server-test" imageRef="1" flavorRef="1">
+    <networks/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": []
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+ name="new-server-test" imageRef="1" flavorRef="1">
+    <networks>
+       <network uuid="1" fixed_ip="10.0.1.12"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_two_networks(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+ name="new-server-test" imageRef="1" flavorRef="1">
+    <networks>
+       <network uuid="1" fixed_ip="10.0.1.12"/>
+       <network uuid="2" fixed_ip="10.0.2.12"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"},
+                             {"uuid": "2", "fixed_ip": "10.0.2.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_second_network_node_ignored(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+ name="new-server-test" imageRef="1" flavorRef="1">
+    <networks>
+       <network uuid="1" fixed_ip="10.0.1.12"/>
+    </networks>
+    <networks>
+       <network uuid="2" fixed_ip="10.0.2.12"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network_missing_id(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+ name="new-server-test" imageRef="1" flavorRef="1">
+    <networks>
+       <network fixed_ip="10.0.1.12"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": [{"fixed_ip": "10.0.1.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network_missing_fixed_ip(self):
+        serial_request = """
+<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+ name="new-server-test" imageRef="1" flavorRef="1">
+    <networks>
+       <network uuid="1"/>
+    </networks>
+</server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": [{"uuid": "1"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network_empty_id(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+     name="new-server-test" imageRef="1" flavorRef="1">
+        <networks>
+           <network uuid="" fixed_ip="10.0.1.12"/>
+        </networks>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": [{"uuid": "", "fixed_ip": "10.0.1.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_one_network_empty_fixed_ip(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+     name="new-server-test" imageRef="1" flavorRef="1">
+        <networks>
+           <network uuid="1" fixed_ip=""/>
+        </networks>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": [{"uuid": "1", "fixed_ip": ""}],
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_networks_duplicate_ids(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+     name="new-server-test" imageRef="1" flavorRef="1">
+        <networks>
+           <network uuid="1" fixed_ip="10.0.1.12"/>
+           <network uuid="1" fixed_ip="10.0.2.12"/>
+        </networks>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request, 'create')
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"},
+                             {"uuid": "1", "fixed_ip": "10.0.2.12"}],
+                }}
+        self.assertEquals(request['body'], expected)
+
 
 class TestAddressesXMLSerialization(test.TestCase):
 
@@ -2899,12 +3207,14 @@ class TestServerInstanceCreation(test.TestCase):
 
             def __init__(self):
                 self.injected_files = None
+                self.networks = None
 
             def create(self, *args, **kwargs):
                 if 'injected_files' in kwargs:
                     self.injected_files = kwargs['injected_files']
                 else:
                     self.injected_files = None
+
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'uuid': FAKE_UUID}]
 
@@ -3266,6 +3576,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                         "href": "http://localhost/servers/1",
                     },
                 ],
+                "config_drive": None,
             }
         }
 
@@ -3278,6 +3589,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3330,6 +3642,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3383,6 +3696,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3435,6 +3749,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "",
                 "links": [
@@ -3489,6 +3804,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 },
                 "addresses": {},
                 "metadata": {},
+                "config_drive": None,
                 "accessIPv4": "",
                 "accessIPv6": "fead::1234",
                 "links": [
@@ -3551,6 +3867,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                     "Open": "Stack",
                     "Number": "1",
                 },
+                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
