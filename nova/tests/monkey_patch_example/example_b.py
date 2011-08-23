@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2011 Justin Santa Barbara
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,17 +15,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from nova.log import logging
-from nova.tests.integrated import integrated_helpers
+"""Example Module B for testing utils.monkey_patch()."""
 
 
-LOG = logging.getLogger('nova.tests.integrated')
+def example_function_b():
+    return 'Example function'
 
 
-class LoginTest(integrated_helpers._IntegratedTestBase):
-    def test_login(self):
-        """Simple check - we list flavors - so we know we're logged in."""
-        flavors = self.api.get_flavors()
-        for flavor in flavors:
-            LOG.debug(_("flavor: %s") % flavor)
+class ExampleClassB():
+    def example_method(self):
+        return 'Example method'
+
+    def example_method_add(self, arg1, arg2):
+        return arg1 + arg2

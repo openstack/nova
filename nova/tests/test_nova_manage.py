@@ -65,11 +65,21 @@ class FixedIpCommandsTestCase(test.TestCase):
                                              '192.168.0.100')
         self.assertEqual(address['reserved'], True)
 
+    def test_reserve_nonexistent_address(self):
+        self.assertRaises(SystemExit,
+                          self.commands.reserve,
+                          '55.55.55.55')
+
     def test_unreserve(self):
         self.commands.unreserve('192.168.0.100')
         address = db.fixed_ip_get_by_address(context.get_admin_context(),
                                              '192.168.0.100')
         self.assertEqual(address['reserved'], False)
+
+    def test_unreserve_nonexistent_address(self):
+        self.assertRaises(SystemExit,
+                          self.commands.unreserve,
+                          '55.55.55.55')
 
 
 class NetworkCommandsTestCase(test.TestCase):
