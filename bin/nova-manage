@@ -611,6 +611,8 @@ class FixedIpCommands(object):
 
         try:
             fixed_ip = db.fixed_ip_get_by_address(ctxt, address)
+            if fixed_ip is None:
+                raise exception.NotFound('Could not find address')
             db.fixed_ip_update(ctxt, fixed_ip['address'],
                                 {'reserved': reserved})
         except exception.NotFound as ex:
