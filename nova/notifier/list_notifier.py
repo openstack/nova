@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-
 from nova import flags
 from nova import log as logging
 from nova import utils
@@ -30,13 +28,14 @@ LOG = logging.getLogger('nova.notifier.list_notifier')
 
 drivers = None
 
+
 class ImportFailureNotifier(object):
     """Noisily re-raises some exception over-and-over when notify is called."""
 
     def __init__(self, exception):
         self.exception = exception
 
-    def notify(message):
+    def notify(self, message):
         raise self.exception
 
 
@@ -52,6 +51,7 @@ def _get_drivers():
                 drivers.append(ImportFailureNotifier(e))
     return drivers
 
+
 def notify(message):
     """Passes notification to mulitple notifiers in a list."""
     for driver in _get_drivers():
@@ -60,6 +60,7 @@ def notify(message):
         except Exception as e:
             LOG.exception(_("Problem '%(e)s' attempting to send to "
                             "notification driver %(driver)s." % locals()))
+
 
 def _reset_drivers():
     """Used by unit tests to reset the drivers."""

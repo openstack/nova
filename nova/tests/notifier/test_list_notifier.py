@@ -34,19 +34,25 @@ class NotifierListTestCase(test.TestCase):
         list_notifier._reset_drivers()
         self.stubs = stubout.StubOutForTesting()
         # Mock log to add one to exception_count when log.exception is called
+
         def mock_exception(cls, *args):
             self.exception_count += 1
+
         self.exception_count = 0
         list_notifier_log = logging.getLogger('nova.notifier.list_notifier')
         self.stubs.Set(list_notifier_log, "exception", mock_exception)
         # Mock no_op notifier to add one to notify_count when called.
+
         def mock_notify(cls, *args):
             self.notify_count += 1
+
         self.notify_count = 0
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify', mock_notify)
         # Mock log_notifier to raise RuntimeError when called.
+
         def mock_notify2(cls, *args):
             raise RuntimeError("Bad notifier.")
+
         self.stubs.Set(nova.notifier.log_notifier, 'notify', mock_notify2)
 
     def tearDown(self):
