@@ -1,7 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,8 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Example Module B for testing utils.monkey_patch()
-"""
+"""Example Module B for testing utils.monkey_patch()."""
 
 
 def example_function_b():

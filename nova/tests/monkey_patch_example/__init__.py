@@ -1,3 +1,5 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 # Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
@@ -12,8 +14,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""Example Module for testing utils.monkey_patch()
-"""
+"""Example Module for testing utils.monkey_patch()."""
 
 
 CALLED_FUNCTION = []
@@ -21,12 +22,10 @@ CALLED_FUNCTION = []
 
 def example_decorator(name, function):
     """ decorator for notify which is used from utils.monkey_patch()
-        Parameters:
 
-        name - name of the function
-        function - object of the function
-
-
+        :param name: name of the function
+        :param function: - object of the function
+        :returns: function -- decorated function
     """
     def wrapped_func(*args, **kwarg):
         CALLED_FUNCTION.append(name)

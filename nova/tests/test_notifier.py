@@ -141,8 +141,7 @@ class NotifierTestCase(test.TestCase):
         def example_api(arg1, arg2):
             return arg1 + arg2
 
-        example_api =\
-            nova.notifier.api.notify_decorator(
+        example_api = nova.notifier.api.notify_decorator(
                             'example_api',
                              example_api)
 

@@ -25,6 +25,9 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('default_notification_level', 'INFO',
                     'Default notification level for outgoing notifications')
+flags.DEFINE_string('default_publisher_id', FLAGS.host,
+                    'Default publisher_id for outgoing notifications')
+
 
 WARN = 'WARN'
 INFO = 'INFO'
@@ -55,9 +58,9 @@ def notify_decorator(name, fn):
             body['args'].append(arg)
         for key in kwarg:
             body['kwarg'][key] = kwarg[key]
-        notify(FLAGS.host,
+        notify(FLAGS.default_publisher_id,
                             name,
-                            DEBUG,
+                            FLAGS.default_notification_level,
                             body)
         return fn(*args, **kwarg)
     return wrapped_func
