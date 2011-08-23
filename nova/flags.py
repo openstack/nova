@@ -404,3 +404,12 @@ DEFINE_string('root_helper', 'sudo',
               'Command prefix to use for running commands as root')
 
 DEFINE_bool('use_ipv6', False, 'use ipv6')
+
+DEFINE_bool('monkey_patch', False,
+              'Whether to log monkey patching')
+
+DEFINE_list('monkey_patch_modules',
+        ['nova.api.ec2.cloud:nova.notifier.api.notify_decorator',
+        'nova.compute.api:nova.notifier.api.notify_decorator'],
+        'Module list representing monkey '
+        'patched module and decorator')
