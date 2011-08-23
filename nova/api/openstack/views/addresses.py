@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import traceback
-
 from nova import flags
 from nova import utils
 from nova import log as logging
@@ -54,8 +52,7 @@ class ViewBuilderV11(ViewBuilder):
         for interface in interfaces:
             try:
                 network_label = self._extract_network_label(interface)
-            except TypeError:
-                LOG.exception(traceback.format_exc())
+            except TypeError as exc:
                 continue
 
             if network_label not in networks:
@@ -90,8 +87,8 @@ class ViewBuilderV11(ViewBuilder):
     def _extract_network_label(self, interface):
         try:
             return interface['network']['label']
-        except (TypeError, KeyError):
-            LOG.exception(traceback.format_exc())
+        except (TypeError, KeyError) as exc:
+            LOG.exception(exc)
             raise TypeError
 
     def _extract_ipv4_addresses(self, interface):

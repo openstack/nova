@@ -1,6 +1,5 @@
 
 import json
-import traceback
 import webob
 from xml.dom import minidom
 from xml.parsers import expat
@@ -517,6 +516,6 @@ class Resource(wsgi.Application):
         controller_method = getattr(self.controller, action)
         try:
             return controller_method(req=request, **action_args)
-        except TypeError:
-            LOG.debug(traceback.format_exc())
+        except TypeError as exc:
+            LOG.exception(exc)
             return faults.Fault(webob.exc.HTTPBadRequest())
