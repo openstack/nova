@@ -18,9 +18,10 @@ ZoneManager oversees all communications with child Zones.
 """
 
 import datetime
-import novaclient
 import thread
 import traceback
+
+from novaclient import v1_1 as novaclient
 
 from eventlet import greenpool
 
@@ -89,8 +90,8 @@ class ZoneState(object):
 
 def _call_novaclient(zone):
     """Call novaclient. Broken out for testing purposes."""
-    client = novaclient.OpenStack(zone.username, zone.password, None,
-                                  zone.api_url)
+    client = novaclient.Client(zone.username, zone.password, None,
+                               zone.api_url)
     return client.zones.info()._info
 
 
@@ -197,7 +198,7 @@ class ZoneManager(object):
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
         logging.debug(_("Received %(service_name)s service update from "
-                            "%(host)s: %(capabilities)s") % locals())
+                "%(host)s.") % locals())
         service_caps = self.service_states.get(host, {})
         capabilities["timestamp"] = utils.utcnow()  # Reported time
         service_caps[service_name] = capabilities

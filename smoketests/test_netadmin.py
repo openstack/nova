@@ -107,15 +107,23 @@ class AddressTests(base.UserSmokeTestCase):
 
 class SecurityGroupTests(base.UserSmokeTestCase):
 
-    def __public_instance_is_accessible(self):
-        id_url = "latest/meta-data/instance-id"
-        options = "-s --max-time 1"
+    def __get_metadata_item(self, category):
+        id_url = "latest/meta-data/%s" % category
+        options = "-f -s --max-time 1"
         command = "curl %s %s/%s" % (options, self.data['public_ip'], id_url)
-        instance_id = commands.getoutput(command).strip()
+        status, output = commands.getstatusoutput(command)
+        value = output.strip()
+        if status > 0:
+            return False
+        return value
+
+    def __public_instance_is_accessible(self):
+        instance_id = self.__get_metadata_item('instance-id')
         if not instance_id:
             return False
         if instance_id != self.data['instance'].id:
-            raise Exception("Wrong instance id")
+            raise Exception("Wrong instance id. Expected: %s, Got: %s" %
+                               (self.data['instance'].id, instance_id))
         return True
 
     def test_001_can_create_security_group(self):
@@ -162,7 +170,14 @@ class SecurityGroupTests(base.UserSmokeTestCase):
         finally:
             result = self.conn.disassociate_address(self.data['public_ip'])
 
-    def test_005_can_revoke_security_group_ingress(self):
+    def test_005_validate_metadata(self):
+
+        instance = self.data['instance']
+        self.assertTrue(instance.instance_type,
+                            self.__get_metadata_item("instance-type"))
+        #FIXME(dprince): validate more metadata here
+
+    def test_006_can_revoke_security_group_ingress(self):
         self.assertTrue(self.conn.revoke_security_group(TEST_GROUP,
                                                         ip_protocol='tcp',
                                                         from_port=80,

@@ -15,26 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
 import webob
 
 from nova import test
-from nova.api.openstack import shared_ip_groups
 from nova.tests.api.openstack import fakes
 
 
 class SharedIpGroupsTest(test.TestCase):
-    def setUp(self):
-        super(SharedIpGroupsTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(SharedIpGroupsTest, self).tearDown()
-
     def test_get_shared_ip_groups(self):
         req = webob.Request.blank('/v1.0/shared_ip_groups')
         res = req.get_response(fakes.wsgi_app())

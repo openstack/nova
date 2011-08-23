@@ -16,14 +16,11 @@
 
 """Test suite for IPv6."""
 
-from nova import flags
 from nova import ipv6
 from nova import log as logging
 from nova import test
 
 LOG = logging.getLogger('nova.tests.test_ipv6')
-
-FLAGS = flags.FLAGS
 
 import sys
 

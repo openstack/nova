@@ -19,11 +19,11 @@
 Test suite for VMWareAPI.
 """
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import test
 from nova import utils
-from nova.auth import manager
 from nova.compute import power_state
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests.vmwareapi import db_fakes
@@ -40,13 +40,13 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def setUp(self):
         super(VMWareAPIVMTestCase, self).setUp()
+        self.context = context.RequestContext('fake', 'fake', False)
         self.flags(vmwareapi_host_ip='test_url',
                    vmwareapi_host_username='test_username',
                    vmwareapi_host_password='test_pass')
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake',
-                                             admin=True)
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         self.network = utils.import_object(FLAGS.network_manager)
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
@@ -77,14 +77,12 @@ class VMWareAPIVMTestCase(test.TestCase):
     def tearDown(self):
         super(VMWareAPIVMTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
-        self.manager.delete_project(self.project)
-        self.manager.delete_user(self.user)
 
     def _create_instance_in_the_db(self):
         values = {'name': 1,
                   'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
+                  'project_id': self.project_id,
+                  'user_id': self.user_id,
                   'image_ref': "1",
                   'kernel_id': "1",
                   'ramdisk_id': "1",
@@ -97,7 +95,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         """Create and spawn the VM."""
         self._create_instance_in_the_db()
         self.type_data = db.instance_type_get_by_name(None, 'm1.large')
-        self.conn.spawn(self.instance, self.network_info)
+        self.conn.spawn(self.context, self.instance, self.network_info)
         self._check_vm_record()
 
     def _check_vm_record(self):
@@ -159,14 +157,14 @@ class VMWareAPIVMTestCase(test.TestCase):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.snapshot(self.instance, "Test-Snapshot")
+        self.conn.snapshot(self.context, self.instance, "Test-Snapshot")
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_snapshot_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertRaises(Exception, self.conn.snapshot, self.instance,
-                          "Test-Snapshot")
+        self.assertRaises(Exception, self.conn.snapshot, self.context,
+                          self.instance, "Test-Snapshot")
 
     def test_reboot(self):
         self._create_vm()

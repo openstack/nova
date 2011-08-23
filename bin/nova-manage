@@ -56,6 +56,7 @@
 import gettext
 import glob
 import json
+import math
 import netaddr
 import os
 import sys
@@ -133,7 +134,7 @@ class VpnCommands(object):
             help='Project name')
     def list(self, project=None):
         """Print a listing of the VPN data for one or all projects."""
-
+        print "WARNING: This method only works with deprecated auth"
         print "%-12s\t" % 'project',
         print "%-20s\t" % 'ip:port',
         print "%-20s\t" % 'private_ip',
@@ -169,17 +170,22 @@ class VpnCommands(object):
 
     def spawn(self):
         """Run all VPNs."""
+        print "WARNING: This method only works with deprecated auth"
         for p in reversed(self.manager.get_projects()):
             if not self._vpn_for(p.id):
                 print 'spawning %s' % p.id
-                self.pipe.launch_vpn_instance(p.id)
+                self.pipe.launch_vpn_instance(p.id, p.project_manager_id)
                 time.sleep(10)
 
     @args('--project', dest="project_id", metavar='<Project name>',
             help='Project name')
-    def run(self, project_id):
-        """Start the VPN for a given project."""
-        self.pipe.launch_vpn_instance(project_id)
+    @args('--user', dest="user_id", metavar='<user name>', help='User name')
+    def run(self, project_id, user_id):
+        """Start the VPN for a given project and user."""
+        if not user_id:
+            print "WARNING: This method only works with deprecated auth"
+            user_id = self.manager.get_project(project_id).project_manager_id
+        self.pipe.launch_vpn_instance(project_id, user_id)
 
     @args('--project', dest="project_id", metavar='<Project name>',
             help='Project name')
@@ -194,10 +200,6 @@ class VpnCommands(object):
         """
         # TODO(tr3buchet): perhaps this shouldn't update all networks
         # associated with a project in the future
-        project = self.manager.get_project(project_id)
-        if not project:
-            print 'No project %s' % (project_id)
-            return
         admin_context = context.get_admin_context()
         networks = db.project_get_networks(admin_context, project_id)
         for network in networks:
@@ -591,6 +593,33 @@ class FixedIpCommands(object):
                     fixed_ip['address'],
                     mac_address, hostname, host)
 
+    @args('--address', dest="address", metavar='<ip address>',
+          help='IP address')
+    def reserve(self, address):
+        """Mark fixed ip as reserved
+        arguments: address"""
+        self._set_reserved(address, True)
+
+    @args('--address', dest="address", metavar='<ip address>',
+          help='IP address')
+    def unreserve(self, address):
+        """Mark fixed ip as free to use
+        arguments: address"""
+        self._set_reserved(address, False)
+
+    def _set_reserved(self, address, reserved):
+        ctxt = context.get_admin_context()
+
+        try:
+            fixed_ip = db.fixed_ip_get_by_address(ctxt, address)
+            if fixed_ip is None:
+                raise exception.NotFound('Could not find address')
+            db.fixed_ip_update(ctxt, fixed_ip['address'],
+                                {'reserved': reserved})
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
+
 
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
@@ -662,8 +691,9 @@ class NetworkCommands(object):
         # check for certain required inputs
         if not label:
             raise exception.NetworkNotCreated(req='--label')
-        if not fixed_range_v4:
-            raise exception.NetworkNotCreated(req='--fixed_range_v4')
+        if not (fixed_range_v4 or fixed_range_v6):
+            req = '--fixed_range_v4 or --fixed_range_v6'
+            raise exception.NetworkNotCreated(req=req)
 
         bridge = bridge or FLAGS.flat_network_bridge
         if not bridge:
@@ -689,21 +719,20 @@ class NetworkCommands(object):
             if FLAGS.network_manager in interface_required:
                 raise exception.NetworkNotCreated(req='--bridge_interface')
 
-        if FLAGS.use_ipv6:
-            fixed_range_v6 = fixed_range_v6 or FLAGS.fixed_range_v6
-            if not fixed_range_v6:
-                raise exception.NetworkNotCreated(req='with use_ipv6, '
-                                                      '--fixed_range_v6')
-            gateway_v6 = gateway_v6 or FLAGS.gateway_v6
-            if not gateway_v6:
-                raise exception.NetworkNotCreated(req='with use_ipv6, '
-                                                      '--gateway_v6')
-
         # sanitize other input using FLAGS if necessary
         if not num_networks:
             num_networks = FLAGS.num_networks
-        if not network_size:
-            network_size = FLAGS.network_size
+        if not network_size and fixed_range_v4:
+            fixnet = netaddr.IPNetwork(fixed_range_v4)
+            each_subnet_size = fixnet.size / int(num_networks)
+            if each_subnet_size > FLAGS.network_size:
+                network_size = FLAGS.network_size
+                subnet = 32 - int(math.log(network_size, 2))
+                oversize_msg = _('Subnet(s) too large, defaulting to /%s.'
+                         '  To override, specify network_size flag.') % subnet
+                print oversize_msg
+            else:
+                network_size = fixnet.size
         if not multi_host:
             multi_host = FLAGS.multi_host
         else:
@@ -714,6 +743,9 @@ class NetworkCommands(object):
             vpn_start = FLAGS.vpn_start
         if not dns1 and FLAGS.flat_network_dns:
             dns1 = FLAGS.flat_network_dns
+
+        if not network_size:
+            network_size = FLAGS.network_size
 
         # create the network
         net_manager = utils.import_object(FLAGS.network_manager)
@@ -734,23 +766,26 @@ class NetworkCommands(object):
 
     def list(self):
         """List all created networks"""
-        print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
-                                                  _('network'),
-                                                  _('netmask'),
-                                                  _('start address'),
-                                                  _('DNS1'),
-                                                  _('DNS2'),
-                                                  _('VlanID'),
-                                                  'project')
+        _fmt = "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"
+        print _fmt % (_('id'),
+                          _('IPv4'),
+                          _('IPv6'),
+                          _('start address'),
+                          _('DNS1'),
+                          _('DNS2'),
+                          _('VlanID'),
+                          _('project'),
+                          _("uuid"))
         for network in db.network_get_all(context.get_admin_context()):
-            print "%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s" % (
-                                        network.cidr,
-                                        network.netmask,
-                                        network.dhcp_start,
-                                        network.dns1,
-                                        network.dns2,
-                                        network.vlan,
-                                        network.project_id)
+            print _fmt % (network.id,
+                          network.cidr,
+                          network.cidr_v6,
+                          network.dhcp_start,
+                          network.dns1,
+                          network.dns2,
+                          network.vlan,
+                          network.project_id,
+                          network.uuid)
 
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to delete')
@@ -808,11 +843,13 @@ class VmCommands(object):
                 instance['availability_zone'],
                 instance['launch_index'])
 
-    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
-    @args('--dest', dest='dest', metavar='<Destanation>',
-            help='destanation node')
-    def live_migration(self, ec2_id, dest):
-        """Migrates a running instance to a new machine."""
+    def _migration(self, ec2_id, dest, block_migration=False):
+        """Migrates a running instance to a new machine.
+         :param ec2_id: instance id which comes from euca-describe-instance.
+         :param dest: destination host name.
+         :param block_migration: if True, do block_migration.
+
+        """
 
         ctxt = context.get_admin_context()
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
@@ -833,10 +870,27 @@ class VmCommands(object):
                  {"method": "live_migration",
                   "args": {"instance_id": instance_id,
                            "dest": dest,
-                           "topic": FLAGS.compute_topic}})
+                           "topic": FLAGS.compute_topic,
+                           "block_migration": block_migration}})
 
         print _('Migration of %s initiated.'
                'Check its progress using euca-describe-instances.') % ec2_id
+
+    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
+    @args('--dest', dest='dest', metavar='<Destanation>',
+            help='destanation node')
+    def live_migration(self, ec2_id, dest):
+        """Migrates a running instance to a new machine."""
+
+        self._migration(ec2_id, dest)
+
+    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
+    @args('--dest', dest='dest', metavar='<Destanation>',
+            help='destanation node')
+    def block_migration(self, ec2_id, dest):
+        """Migrates a running instance to a new machine with storage data."""
+
+        self._migration(ec2_id, dest, True)
 
 
 class ServiceCommands(object):
@@ -856,6 +910,14 @@ class ServiceCommands(object):
             services = [s for s in services if s['host'] == host]
         if service:
             services = [s for s in services if s['binary'] == service]
+        print_format = "%-16s %-36s %-16s %-10s %-5s %-10s"
+        print print_format % (
+                    _('Binary'),
+                    _('Host'),
+                    _('Zone'),
+                    _('Status'),
+                    _('State'),
+                    _('Updated_At'))
         for svc in services:
             delta = now - (svc['updated_at'] or svc['created_at'])
             alive = (delta.seconds <= 15)
@@ -863,9 +925,9 @@ class ServiceCommands(object):
             active = 'enabled'
             if svc['disabled']:
                 active = 'disabled'
-            print "%-10s %-10s %-8s %s %s" % (svc['host'], svc['binary'],
-                                              active, art,
-                                              svc['updated_at'])
+            print print_format % (svc['binary'], svc['host'],
+                                  svc['availability_zone'], active, art,
+                                  svc['updated_at'])
 
     @args('--host', dest='host', metavar='<host>', help='Host')
     @args('--service', dest='service', metavar='<service>',
@@ -911,9 +973,19 @@ class ServiceCommands(object):
             mem_u = result['resource']['memory_mb_used']
             hdd_u = result['resource']['local_gb_used']
 
+            cpu_sum = 0
+            mem_sum = 0
+            hdd_sum = 0
             print 'HOST\t\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
             print '%s(total)\t\t\t%s\t%s\t%s' % (host, cpu, mem, hdd)
-            print '%s(used)\t\t\t%s\t%s\t%s' % (host, cpu_u, mem_u, hdd_u)
+            print '%s(used_now)\t\t\t%s\t%s\t%s' % (host, cpu_u, mem_u, hdd_u)
+            for p_id, val in result['usage'].items():
+                cpu_sum += val['vcpus']
+                mem_sum += val['memory_mb']
+                hdd_sum += val['local_gb']
+            print '%s(used_max)\t\t\t%s\t%s\t%s' % (host, cpu_sum,
+                                                    mem_sum, hdd_sum)
+
             for p_id, val in result['usage'].items():
                 print '%s\t\t%s\t\t%s\t%s\t%s' % (host,
                                                   p_id,
@@ -1093,10 +1165,12 @@ class InstanceTypeCommands(object):
 
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
-    def delete(self, name, purge=None):
+    @args('--purge', action="store_true", dest='purge', default=False,
+            help='purge record from database')
+    def delete(self, name, purge):
         """Marks instance types / flavors as deleted"""
         try:
-            if purge == "--purge":
+            if purge:
                 instance_types.purge(name)
                 verb = "purged"
             else:
@@ -1233,11 +1307,12 @@ class ImageCommands(object):
                               is_public, architecture)
 
     def _lookup(self, old_image_id):
+        elevated = context.get_admin_context()
         try:
             internal_id = ec2utils.ec2_id_to_id(old_image_id)
-            image = self.image_service.show(context, internal_id)
+            image = self.image_service.show(elevated, internal_id)
         except (exception.InvalidEc2Id, exception.ImageNotFound):
-            image = self.image_service.show_by_name(context, old_image_id)
+            image = self.image_service.show_by_name(elevated, old_image_id)
         return image['id']
 
     def _old_to_new(self, old):

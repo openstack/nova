@@ -42,28 +42,20 @@ def compute_api_remove_fixed_ip(self, context, instance_id, address):
 class FixedIpTest(test.TestCase):
     def setUp(self):
         super(FixedIpTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(compute.api.API, "add_fixed_ip",
                        compute_api_add_fixed_ip)
         self.stubs.Set(compute.api.API, "remove_fixed_ip",
                        compute_api_remove_fixed_ip)
         self.context = context.get_admin_context()
 
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(FixedIpTest, self).tearDown()
-
     def test_add_fixed_ip(self):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -77,7 +69,7 @@ class FixedIpTest(test.TestCase):
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict())
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -91,7 +83,7 @@ class FixedIpTest(test.TestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -105,7 +97,7 @@ class FixedIpTest(test.TestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict())
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'

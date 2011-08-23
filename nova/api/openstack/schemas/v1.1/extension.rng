@@ -1,0 +1,11 @@
+<element name="extension" ns="http://docs.openstack.org/compute/api/v1.1"
+    xmlns="http://relaxng.org/ns/structure/1.0">
+  <attribute name="alias">     <text/> </attribute>
+  <attribute name="name">      <text/> </attribute>
+  <attribute name="namespace"> <text/> </attribute>
+  <attribute name="updated">   <text/> </attribute>
+  <element name="description"> <text/> </element>
+  <zeroOrMore>
+    <externalRef href="../atom-link.rng"/>
+  </zeroOrMore>
+</element>

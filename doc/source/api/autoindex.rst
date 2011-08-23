@@ -26,7 +26,6 @@
    nova..compute.api.rst
    nova..compute.instance_types.rst
    nova..compute.manager.rst
-   nova..compute.monitor.rst
    nova..compute.power_state.rst
    nova..console.api.rst
    nova..console.fake.rst
@@ -115,13 +114,11 @@
    nova..tests.test_scheduler.rst
    nova..tests.test_service.rst
    nova..tests.test_test.rst
-   nova..tests.test_twistd.rst
    nova..tests.test_utils.rst
    nova..tests.test_virt.rst
    nova..tests.test_volume.rst
    nova..tests.test_xenapi.rst
    nova..tests.xenapi.stubs.rst
-   nova..twistd.rst
    nova..utils.rst
    nova..version.rst
    nova..virt.connection.rst

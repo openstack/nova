@@ -26,10 +26,9 @@ from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
-from nova.auth import manager
-from nova.console import manager as console_manager
 
 FLAGS = flags.FLAGS
+flags.DECLARE('console_driver', 'nova.console.manager')
 
 
 class ConsoleTestCase(test.TestCase):
@@ -39,16 +38,10 @@ class ConsoleTestCase(test.TestCase):
         self.flags(console_driver='nova.console.fake.FakeConsoleProxy',
                    stub_compute=True)
         self.console = utils.import_object(FLAGS.console_manager)
-        self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake')
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.get_admin_context()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         self.host = 'test_compute_host'
-
-    def tearDown(self):
-        self.manager.delete_user(self.user)
-        self.manager.delete_project(self.project)
-        super(ConsoleTestCase, self).tearDown()
 
     def _create_instance(self):
         """Create a test instance"""
@@ -58,8 +51,8 @@ class ConsoleTestCase(test.TestCase):
         inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
-        inst['user_id'] = self.user.id
-        inst['project_id'] = self.project.id
+        inst['user_id'] = self.user_id
+        inst['project_id'] = self.project_id
         inst['instance_type_id'] = 1
         inst['ami_launch_index'] = 0
         return db.instance_create(self.context, inst)['id']

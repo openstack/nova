@@ -140,6 +140,7 @@ def create_vdi(name_label, read_only, sr_ref, sharable):
                            'location': '',
                            'xenstore_data': '',
                            'sm_config': {},
+                           'physical_utilisation': '123',
                            'VBDs': {}})
 
 
@@ -194,6 +195,7 @@ def create_local_pifs():
        Do this one per host."""
     for host_ref in _db_content['host'].keys():
         _create_local_pif(host_ref)
+        _create_local_sr_iso(host_ref)
 
 
 def create_local_srs():
@@ -216,6 +218,25 @@ def _create_local_sr(host_ref):
               'other_config': {
                      'i18n-original-value-name_label': 'Local storage',
                      'i18n-key': 'local-storage'},
+              'VDIs': []})
+    pbd_ref = create_pbd('', host_ref, sr_ref, True)
+    _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
+    return sr_ref
+
+
+def _create_local_sr_iso(host_ref):
+    sr_ref = _create_object(
+             'SR',
+             {'name_label': 'Local storage ISO',
+              'type': 'lvm',
+              'content_type': 'iso',
+              'shared': False,
+              'physical_size': str(1 << 30),
+              'physical_utilisation': str(0),
+              'virtual_allocation': str(0),
+              'other_config': {
+                     'i18n-original-value-name_label': 'Local storage ISO',
+                     'i18n-key': 'local-storage-iso'},
               'VDIs': []})
     pbd_ref = create_pbd('', host_ref, sr_ref, True)
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]

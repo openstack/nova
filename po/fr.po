@@ -14,8 +14,8 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-07-23 05:12+0000\n"
-"X-Generator: Launchpad (build 13405)\n"
+"X-Launchpad-Export-Date: 2011-08-03 04:43+0000\n"
+"X-Generator: Launchpad (build 13573)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
@@ -132,35 +132,6 @@ msgstr "compute.api::suspend %s"
 #, python-format
 msgid "compute.api::resume %s"
 msgstr "compute.api::resume %s"
-
-#: ../nova/twistd.py:157
-msgid "Wrong number of arguments."
-msgstr "Nombre d'arguments incorrect."
-
-#: ../nova/twistd.py:209
-#, python-format
-msgid "pidfile %s does not exist. Daemon not running?\n"
-msgstr ""
-"Le fichier pid %s n'existe pas. Est-ce que le processus est en cours "
-"d'exécution ?\n"
-
-#: ../nova/twistd.py:221
-msgid "No such process"
-msgstr "Aucun processus de ce type"
-
-#: ../nova/twistd.py:230 ../nova/service.py:224
-#, python-format
-msgid "Serving %s"
-msgstr "En train de servir %s"
-
-#: ../nova/twistd.py:262 ../nova/service.py:225
-msgid "Full set of FLAGS:"
-msgstr "Ensemble de propriétés complet :"
-
-#: ../nova/twistd.py:266
-#, python-format
-msgid "Starting %s"
-msgstr "Démarrage de %s"
 
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:731 ../nova/virt/libvirt_conn.py:741
@@ -1865,34 +1836,6 @@ msgstr "Tâche [%(name)s] %(task)s état : %(status)s    %(error_info)s"
 msgid "Got exception: %s"
 msgstr "Reçu exception : %s"
 
-#: ../nova/compute/monitor.py:259
-#, python-format
-msgid "updating %s..."
-msgstr "mise à jour %s..."
-
-#: ../nova/compute/monitor.py:289
-msgid "unexpected error during update"
-msgstr "erreur inopinée pendant la ise à jour"
-
-#: ../nova/compute/monitor.py:356
-#, python-format
-msgid "Cannot get blockstats for \"%(disk)s\" on \"%(iid)s\""
-msgstr "Ne peut pas récupérer blockstats pour \"%(disk)s\" sur \"%(iid)s\""
-
-#: ../nova/compute/monitor.py:379
-#, python-format
-msgid "Cannot get ifstats for \"%(interface)s\" on \"%(iid)s\""
-msgstr "Ne peut pas récupérer ifstats pour \"%(interface)s\" sur \"%(iid)s\""
-
-#: ../nova/compute/monitor.py:414
-msgid "unexpected exception getting connection"
-msgstr "erreur inopinée pendant la connexion"
-
-#: ../nova/compute/monitor.py:429
-#, python-format
-msgid "Found instance: %s"
-msgstr "Instance trouvée : %s"
-
 #: ../nova/volume/san.py:67
 #, python-format
 msgid "Could not find iSCSI export  for volume %s"
@@ -2372,10 +2315,6 @@ msgstr "Démarrage %(arg0)s sur %(host)s:%(port)s"
 #: ../nova/wsgi.py:147
 msgid "You must implement __call__"
 msgstr "Vous devez implémenter __call__"
-
-#: ../bin/nova-instancemonitor.py:55
-msgid "Starting instance monitor"
-msgstr "Démarrage du superviseur d'instance"
 
 #: ../bin/nova-dhcpbridge.py:58
 msgid "leasing ip"
@@ -2990,3 +2929,51 @@ msgstr "Ajout de l'utilisateur %(user)s au projet %(project)s"
 #, python-format
 msgid "Removing user %(user)s from project %(project)s"
 msgstr "Suppression de l'utilisateur %(user)s du projet %(project)s"
+
+#~ msgid "Wrong number of arguments."
+#~ msgstr "Nombre d'arguments incorrect."
+
+#~ msgid "No such process"
+#~ msgstr "Aucun processus de ce type"
+
+#, python-format
+#~ msgid "Starting %s"
+#~ msgstr "Démarrage de %s"
+
+#~ msgid "Full set of FLAGS:"
+#~ msgstr "Ensemble de propriétés complet :"
+
+#, python-format
+#~ msgid "pidfile %s does not exist. Daemon not running?\n"
+#~ msgstr ""
+#~ "Le fichier pid %s n'existe pas. Est-ce que le processus est en cours "
+#~ "d'exécution ?\n"
+
+#, python-format
+#~ msgid "Serving %s"
+#~ msgstr "En train de servir %s"
+
+#, python-format
+#~ msgid "Cannot get blockstats for \"%(disk)s\" on \"%(iid)s\""
+#~ msgstr "Ne peut pas récupérer blockstats pour \"%(disk)s\" sur \"%(iid)s\""
+
+#, python-format
+#~ msgid "Cannot get ifstats for \"%(interface)s\" on \"%(iid)s\""
+#~ msgstr "Ne peut pas récupérer ifstats pour \"%(interface)s\" sur \"%(iid)s\""
+
+#~ msgid "unexpected error during update"
+#~ msgstr "erreur inopinée pendant la ise à jour"
+
+#, python-format
+#~ msgid "updating %s..."
+#~ msgstr "mise à jour %s..."
+
+#, python-format
+#~ msgid "Found instance: %s"
+#~ msgstr "Instance trouvée : %s"
+
+#~ msgid "unexpected exception getting connection"
+#~ msgstr "erreur inopinée pendant la connexion"
+
+#~ msgid "Starting instance monitor"
+#~ msgstr "Démarrage du superviseur d'instance"

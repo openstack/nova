@@ -30,6 +30,7 @@ from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
+from nova.api.ec2 import ec2utils
 
 
 FLAGS = flags.FLAGS
@@ -78,7 +79,8 @@ class Scheduler(object):
         """Must override at least this method for scheduler to work."""
         raise NotImplementedError(_("Must implement a fallback schedule"))
 
-    def schedule_live_migration(self, context, instance_id, dest):
+    def schedule_live_migration(self, context, instance_id, dest,
+                                block_migration=False):
         """Live migration scheduling method.
 
         :param context:
@@ -87,9 +89,7 @@ class Scheduler(object):
         :return:
             The host where instance is running currently.
             Then scheduler send request that host.
-
         """
-
         # Whether instance exists and is running.
         instance_ref = db.instance_get(context, instance_id)
 
@@ -97,10 +97,11 @@ class Scheduler(object):
         self._live_migration_src_check(context, instance_ref)
 
         # Checking destination host.
-        self._live_migration_dest_check(context, instance_ref, dest)
-
+        self._live_migration_dest_check(context, instance_ref,
+                                        dest, block_migration)
         # Common checking.
-        self._live_migration_common_check(context, instance_ref, dest)
+        self._live_migration_common_check(context, instance_ref,
+                                          dest, block_migration)
 
         # Changing instance_state.
         db.instance_set_state(context,
@@ -130,7 +131,8 @@ class Scheduler(object):
         # Checking instance is running.
         if (power_state.RUNNING != instance_ref['state'] or \
            'running' != instance_ref['state_description']):
-            raise exception.InstanceNotRunning(instance_id=instance_ref['id'])
+            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+            raise exception.InstanceNotRunning(instance_id=instance_id)
 
         # Checing volume node is running when any volumes are mounted
         # to the instance.
@@ -147,7 +149,8 @@ class Scheduler(object):
         if not self.service_is_up(services[0]):
             raise exception.ComputeServiceUnavailable(host=src)
 
-    def _live_migration_dest_check(self, context, instance_ref, dest):
+    def _live_migration_dest_check(self, context, instance_ref, dest,
+                                   block_migration):
         """Live migration check routine (for destination host).
 
         :param context: security context
@@ -168,16 +171,18 @@ class Scheduler(object):
         # and dest is not same.
         src = instance_ref['host']
         if dest == src:
-            raise exception.UnableToMigrateToSelf(
-                    instance_id=instance_ref['id'],
-                    host=dest)
+            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+            raise exception.UnableToMigrateToSelf(instance_id=instance_id,
+                                                  host=dest)
 
         # Checking dst host still has enough capacities.
         self.assert_compute_node_has_enough_resources(context,
                                                       instance_ref,
-                                                      dest)
+                                                      dest,
+                                                      block_migration)
 
-    def _live_migration_common_check(self, context, instance_ref, dest):
+    def _live_migration_common_check(self, context, instance_ref, dest,
+                                     block_migration):
         """Live migration common check routine.
 
         Below checkings are followed by
@@ -186,11 +191,26 @@ class Scheduler(object):
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest: destination host
+        :param block_migration if True, check for block_migration.
 
         """
 
         # Checking shared storage connectivity
-        self.mounted_on_same_shared_storage(context, instance_ref, dest)
+        # if block migration, instances_paths should not be on shared storage.
+        try:
+            self.mounted_on_same_shared_storage(context, instance_ref, dest)
+            if block_migration:
+                reason = _("Block migration can not be used "
+                           "with shared storage.")
+                raise exception.InvalidSharedStorage(reason=reason, path=dest)
+        except exception.FileNotFound:
+            if not block_migration:
+                src = instance_ref['host']
+                ipath = FLAGS.instances_path
+                logging.error(_("Cannot confirm tmpfile at %(ipath)s is on "
+                                "same shared storage between %(src)s "
+                                "and %(dest)s.") % locals())
+                raise
 
         # Checking dest exists.
         dservice_refs = db.service_get_all_compute_by_host(context, dest)
@@ -229,14 +249,26 @@ class Scheduler(object):
                                 "original host %(src)s.") % locals())
             raise
 
-    def assert_compute_node_has_enough_resources(self, context,
-                                                 instance_ref, dest):
+    def assert_compute_node_has_enough_resources(self, context, instance_ref,
+                                                 dest, block_migration):
+
         """Checks if destination host has enough resource for live migration.
 
-        Currently, only memory checking has been done.
-        If storage migration(block migration, meaning live-migration
-        without any shared storage) will be available, local storage
-        checking is also necessary.
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param dest: destination host
+        :param block_migration: if True, disk checking has been done
+
+        """
+        self.assert_compute_node_has_enough_memory(context, instance_ref, dest)
+        if not block_migration:
+            return
+        self.assert_compute_node_has_enough_disk(context, instance_ref, dest)
+
+    def assert_compute_node_has_enough_memory(self, context,
+                                              instance_ref, dest):
+        """Checks if destination host has enough memory for live migration.
+
 
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
@@ -244,22 +276,69 @@ class Scheduler(object):
 
         """
 
-        # Getting instance information
-        hostname = instance_ref['hostname']
+        # Getting total available memory and disk of host
+        avail = self._get_compute_info(context, dest, 'memory_mb')
 
-        # Getting host information
-        service_refs = db.service_get_all_compute_by_host(context, dest)
-        compute_node_ref = service_refs[0]['compute_node'][0]
+        # Getting total used memory and disk of host
+        # It should be sum of memories that are assigned as max value,
+        # because overcommiting is risky.
+        used = 0
+        instance_refs = db.instance_get_all_by_host(context, dest)
+        used_list = [i['memory_mb'] for i in instance_refs]
+        if used_list:
+            used = reduce(lambda x, y: x + y, used_list)
 
-        mem_total = int(compute_node_ref['memory_mb'])
-        mem_used = int(compute_node_ref['memory_mb_used'])
-        mem_avail = mem_total - mem_used
         mem_inst = instance_ref['memory_mb']
-        if mem_avail <= mem_inst:
-            reason = _("Unable to migrate %(hostname)s to destination: "
-                       "%(dest)s (host:%(mem_avail)s <= instance:"
-                       "%(mem_inst)s)")
+        avail = avail - used
+        if avail <= mem_inst:
+            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+            reason = _("Unable to migrate %(instance_id)s to %(dest)s: "
+                       "Lack of disk(host:%(avail)s <= instance:%(mem_inst)s)")
             raise exception.MigrationError(reason=reason % locals())
+
+    def assert_compute_node_has_enough_disk(self, context,
+                                            instance_ref, dest):
+        """Checks if destination host has enough disk for block migration.
+
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param dest: destination host
+
+        """
+
+        # Getting total available memory and disk of host
+        avail = self._get_compute_info(context, dest, 'local_gb')
+
+        # Getting total used memory and disk of host
+        # It should be sum of disks that are assigned as max value
+        # because overcommiting is risky.
+        used = 0
+        instance_refs = db.instance_get_all_by_host(context, dest)
+        used_list = [i['local_gb'] for i in instance_refs]
+        if used_list:
+            used = reduce(lambda x, y: x + y, used_list)
+
+        disk_inst = instance_ref['local_gb']
+        avail = avail - used
+        if avail <= disk_inst:
+            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+            reason = _("Unable to migrate %(instance_id)s to %(dest)s: "
+                       "Lack of disk(host:%(avail)s "
+                       "<= instance:%(disk_inst)s)")
+            raise exception.MigrationError(reason=reason % locals())
+
+    def _get_compute_info(self, context, host, key):
+        """get compute node's infomation specified by key
+
+        :param context: security context
+        :param host: hostname(must be compute node)
+        :param key: column name of compute_nodes
+        :return: value specified by key
+
+        """
+        compute_node_ref = db.service_get_all_compute_by_host(context, host)
+        compute_node_ref = compute_node_ref[0]['compute_node'][0]
+        return compute_node_ref[key]
 
     def mounted_on_same_shared_storage(self, context, instance_ref, dest):
         """Check if the src and dest host mount same shared storage.
@@ -283,15 +362,13 @@ class Scheduler(object):
                                 {"method": 'create_shared_storage_test_file'})
 
             # make sure existence at src host.
-            rpc.call(context, src_t,
-                     {"method": 'check_shared_storage_test_file',
-                      "args": {'filename': filename}})
+            ret = rpc.call(context, src_t,
+                          {"method": 'check_shared_storage_test_file',
+                           "args": {'filename': filename}})
+            if not ret:
+                raise exception.FileNotFound(file_path=filename)
 
-        except rpc.RemoteError:
-            ipath = FLAGS.instances_path
-            logging.error(_("Cannot confirm tmpfile at %(ipath)s is on "
-                            "same shared storage between %(src)s "
-                            "and %(dest)s.") % locals())
+        except exception.FileNotFound:
             raise
 
         finally:

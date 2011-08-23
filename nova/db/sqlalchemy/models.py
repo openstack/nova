@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -127,14 +128,14 @@ class ComputeNode(BASE, NovaBase):
                                 'ComputeNode.service_id == Service.id,'
                                 'ComputeNode.deleted == False)')
 
-    vcpus = Column(Integer, nullable=True)
-    memory_mb = Column(Integer, nullable=True)
-    local_gb = Column(Integer, nullable=True)
-    vcpus_used = Column(Integer, nullable=True)
-    memory_mb_used = Column(Integer, nullable=True)
-    local_gb_used = Column(Integer, nullable=True)
-    hypervisor_type = Column(Text, nullable=True)
-    hypervisor_version = Column(Integer, nullable=True)
+    vcpus = Column(Integer)
+    memory_mb = Column(Integer)
+    local_gb = Column(Integer)
+    vcpus_used = Column(Integer)
+    memory_mb_used = Column(Integer)
+    local_gb_used = Column(Integer)
+    hypervisor_type = Column(Text)
+    hypervisor_version = Column(Integer)
 
     # Note(masumotok): Expected Strings example:
     #
@@ -173,21 +174,13 @@ class Instance(BASE, NovaBase):
             base_name += "-rescue"
         return base_name
 
-    admin_pass = Column(String(255))
     user_id = Column(String(255))
     project_id = Column(String(255))
-
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    @property
-    def project(self):
-        return auth.manager.AuthManager().get_project(self.project_id)
 
     image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
+    server_name = Column(String(255))
 
 #    image_ref = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -210,7 +203,7 @@ class Instance(BASE, NovaBase):
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-    # aka flavor_id
+    # *not* flavor_id
     instance_type_id = Column(Integer)
 
     user_data = Column(Text)
@@ -238,6 +231,12 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
+    config_drive = Column(String(255))
+
+    # User editable field meant to represent what ip should be used
+    # to connect to the instance
+    access_ip_v4 = Column(String(255))
+    access_ip_v6 = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -465,14 +464,6 @@ class SecurityGroup(BASE, NovaBase):
         'Instance.deleted == False)',
                              backref='security_groups')
 
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    @property
-    def project(self):
-        return auth.manager.AuthManager().get_project(self.project_id)
-
 
 class SecurityGroupIngressRule(BASE, NovaBase):
     """Represents a rule in a security group."""
@@ -494,6 +485,11 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
     group_id = Column(Integer, ForeignKey('security_groups.id'))
+    grantee_group = relationship("SecurityGroup",
+                                 foreign_keys=group_id,
+                                 primaryjoin='and_('
+        'SecurityGroupIngressRule.group_id == SecurityGroup.id,'
+        'SecurityGroupIngressRule.deleted == False)')
 
 
 class ProviderFirewallRule(BASE, NovaBase):
@@ -527,8 +523,8 @@ class Migration(BASE, NovaBase):
     source_compute = Column(String(255))
     dest_compute = Column(String(255))
     dest_host = Column(String(255))
-    old_flavor_id = Column(Integer())
-    new_flavor_id = Column(Integer())
+    old_instance_type_id = Column(Integer())
+    new_instance_type_id = Column(Integer())
     instance_uuid = Column(String(255), ForeignKey('instances.uuid'),
             nullable=True)
     #TODO(_cerberus_): enum
@@ -567,6 +563,7 @@ class Network(BASE, NovaBase):
 
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+    uuid = Column(String(36))
 
 
 class VirtualInterface(BASE, NovaBase):
@@ -580,6 +577,8 @@ class VirtualInterface(BASE, NovaBase):
     # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
     instance = relationship(Instance, backref=backref('virtual_interfaces'))
+
+    uuid = Column(String(36))
 
     @property
     def fixed_ipv6(self):

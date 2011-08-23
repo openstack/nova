@@ -23,12 +23,7 @@
 
 import netaddr
 
-from nova import context
-from nova import db
-from nova import exception
 from nova import flags
-from nova import ipv6
-from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -47,65 +42,3 @@ def get_net_and_prefixlen(cidr):
 def get_ip_version(cidr):
     net = netaddr.IPNetwork(cidr)
     return int(net.version)
-
-
-def get_network_info(instance):
-    # TODO(tr3buchet): this function needs to go away! network info
-    #                  MUST be passed down from compute
-    # TODO(adiantum) If we will keep this function
-    # we should cache network_info
-    admin_context = context.get_admin_context()
-
-    try:
-        fixed_ips = db.fixed_ip_get_by_instance(admin_context, instance['id'])
-    except exception.FixedIpNotFoundForInstance:
-        fixed_ips = []
-
-    vifs = db.virtual_interface_get_by_instance(admin_context, instance['id'])
-    flavor = db.instance_type_get(admin_context,
-                                        instance['instance_type_id'])
-    network_info = []
-
-    for vif in vifs:
-        network = vif['network']
-
-        # determine which of the instance's IPs belong to this network
-        network_ips = [fixed_ip['address'] for fixed_ip in fixed_ips if
-                       fixed_ip['network_id'] == network['id']]
-
-        def ip_dict(ip):
-            return {
-                'ip': ip,
-                'netmask': network['netmask'],
-                'enabled': '1'}
-
-        def ip6_dict():
-            prefix = network['cidr_v6']
-            mac = vif['address']
-            project_id = instance['project_id']
-            return  {
-                'ip': ipv6.to_global(prefix, mac, project_id),
-                'netmask': network['netmask_v6'],
-                'enabled': '1'}
-
-        mapping = {
-            'label': network['label'],
-            'gateway': network['gateway'],
-            'broadcast': network['broadcast'],
-            'dhcp_server': network['gateway'],
-            'mac': vif['address'],
-            'rxtx_cap': flavor['rxtx_cap'],
-            'dns': [],
-            'ips': [ip_dict(ip) for ip in network_ips]}
-
-        if network['dns1']:
-            mapping['dns'].append(network['dns1'])
-        if network['dns2']:
-            mapping['dns'].append(network['dns2'])
-
-        if FLAGS.use_ipv6:
-            mapping['ip6s'] = [ip6_dict()]
-            mapping['gateway6'] = network['gateway_v6']
-
-        network_info.append((network, mapping))
-    return network_info

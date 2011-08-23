@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010-2011 OpenStack LLC.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,11 +16,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import hashlib
 import os
 
 from nova import exception
-from nova.compute import power_state
 import nova.compute
 import nova.context
 from nova.api.openstack import common
@@ -50,7 +51,7 @@ class ViewBuilder(object):
             else:
                 server = self._build_simple(inst)
 
-            self._build_extra(server, inst)
+            self._build_extra(server['server'], inst)
 
         return server
 
@@ -60,24 +61,11 @@ class ViewBuilder(object):
 
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
-        power_mapping = {
-            None: 'BUILD',
-            power_state.NOSTATE: 'BUILD',
-            power_state.RUNNING: 'ACTIVE',
-            power_state.BLOCKED: 'ACTIVE',
-            power_state.SUSPENDED: 'SUSPENDED',
-            power_state.PAUSED: 'PAUSED',
-            power_state.SHUTDOWN: 'SHUTDOWN',
-            power_state.SHUTOFF: 'SHUTOFF',
-            power_state.CRASHED: 'ERROR',
-            power_state.FAILED: 'ERROR',
-            power_state.BUILDING: 'BUILD',
-        }
 
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
-            'status': power_mapping[inst.get('state')]}
+            'status': common.status_from_power_state(inst.get('state'))}
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
@@ -99,7 +87,6 @@ class ViewBuilder(object):
         self._build_flavor(inst_dict, inst)
         self._build_addresses(inst_dict, inst)
 
-        inst_dict['uuid'] = inst['uuid']
         return dict(server=inst_dict)
 
     def _build_addresses(self, response, inst):
@@ -121,15 +108,18 @@ class ViewBuilder(object):
 class ViewBuilderV10(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
 
+    def _build_extra(self, response, inst):
+        response['uuid'] = inst['uuid']
+
     def _build_image(self, response, inst):
-        if 'image_ref' in dict(inst):
+        if inst.get('image_ref', None):
             image_ref = inst['image_ref']
             if str(image_ref).startswith('http'):
                 raise exception.ListingImageRefsNotSupported()
             response['imageId'] = int(image_ref)
 
     def _build_flavor(self, response, inst):
-        if 'instance_type' in dict(inst):
+        if inst.get('instance_type', None):
             response['flavorId'] = inst['instance_type']['flavorid']
 
     def _build_addresses(self, response, inst):
@@ -139,24 +129,57 @@ class ViewBuilderV10(ViewBuilder):
 class ViewBuilderV11(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
     def __init__(self, addresses_builder, flavor_builder, image_builder,
-                 base_url):
+                 base_url, project_id=""):
         ViewBuilder.__init__(self, addresses_builder)
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
         self.base_url = base_url
+        self.project_id = project_id
+
+    def _build_detail(self, inst):
+        response = super(ViewBuilderV11, self)._build_detail(inst)
+        response['server']['created'] = utils.isotime(inst['created_at'])
+        response['server']['updated'] = utils.isotime(inst['updated_at'])
+        if 'status' in response['server']:
+            if response['server']['status'] == "ACTIVE":
+                response['server']['progress'] = 100
+            elif response['server']['status'] == "BUILD":
+                response['server']['progress'] = 0
+
+        response['server']['accessIPv4'] = inst.get('access_ip_v4') or ""
+        response['server']['accessIPv6'] = inst.get('access_ip_v6') or ""
+
+        return response
 
     def _build_image(self, response, inst):
-        if 'image_ref' in dict(inst):
+        if inst.get("image_ref", None):
             image_href = inst['image_ref']
-            if str(image_href).isdigit():
-                image_href = int(image_href)
-            response['imageRef'] = image_href
+            image_id = str(common.get_id_from_href(image_href))
+            _bookmark = self.image_builder.generate_bookmark(image_id)
+            response['image'] = {
+                "id": image_id,
+                "links": [
+                    {
+                        "rel": "bookmark",
+                        "href": _bookmark,
+                    },
+                ]
+            }
 
     def _build_flavor(self, response, inst):
-        if "instance_type" in dict(inst):
+        if inst.get("instance_type", None):
             flavor_id = inst["instance_type"]['flavorid']
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
-            response["flavorRef"] = flavor_ref
+            flavor_bookmark = self.flavor_builder.generate_bookmark(flavor_id)
+            response["flavor"] = {
+                "id": str(common.get_id_from_href(flavor_ref)),
+                "links": [
+                    {
+                        "rel": "bookmark",
+                        "href": flavor_bookmark,
+                    },
+                ]
+            }
 
     def _build_addresses(self, response, inst):
         interfaces = inst.get('virtual_interfaces', [])
@@ -164,6 +187,8 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
+        response['uuid'] = inst['uuid']
+        self._build_config_drive(response, inst)
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
@@ -180,13 +205,17 @@ class ViewBuilderV11(ViewBuilder):
             },
         ]
 
-        response["server"]["links"] = links
+        response["links"] = links
+
+    def _build_config_drive(self, response, inst):
+        response['config_drive'] = inst.get('config_drive')
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""
-        return os.path.join(self.base_url, "servers", str(server_id))
+        return os.path.join(self.base_url, self.project_id,
+                            "servers", str(server_id))
 
     def generate_bookmark(self, server_id):
         """Create an url that refers to a specific flavor id."""
         return os.path.join(common.remove_version_from_href(self.base_url),
-            "servers", str(server_id))
+            self.project_id, "servers", str(server_id))

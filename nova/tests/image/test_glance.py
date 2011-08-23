@@ -31,6 +31,9 @@ class StubGlanceClient(object):
         self.add_response = add_response
         self.update_response = update_response
 
+    def set_auth_token(self, auth_tok):
+        pass
+
     def get_image_meta(self, image_id):
         return self.images[image_id]
 
@@ -232,3 +235,39 @@ class TestMutatorDateTimeTests(BaseGlanceTest):
                    'updated_at': None,
                    'deleted_at': None}
         return fixture
+
+
+class TestGlanceSerializer(unittest.TestCase):
+    def test_serialize(self):
+        metadata = {'name': 'image1',
+                    'is_public': True,
+                    'foo': 'bar',
+                    'properties': {
+                        'prop1': 'propvalue1',
+                        'mappings': [
+                            {'virtual': 'aaa',
+                             'device': 'bbb'},
+                            {'virtual': 'xxx',
+                             'device': 'yyy'}],
+                        'block_device_mapping': [
+                            {'virtual_device': 'fake',
+                             'device_name': '/dev/fake'},
+                            {'virtual_device': 'ephemeral0',
+                             'device_name': '/dev/fake0'}]}}
+
+        converted_expected = {
+            'name': 'image1',
+            'is_public': True,
+            'foo': 'bar',
+            'properties': {
+                'prop1': 'propvalue1',
+                'mappings':
+                '[{"device": "bbb", "virtual": "aaa"}, '
+                '{"device": "yyy", "virtual": "xxx"}]',
+                'block_device_mapping':
+                '[{"virtual_device": "fake", "device_name": "/dev/fake"}, '
+                '{"virtual_device": "ephemeral0", '
+                '"device_name": "/dev/fake0"}]'}}
+        converted = glance._convert_to_string(metadata)
+        self.assertEqual(converted, converted_expected)
+        self.assertEqual(glance._convert_from_string(converted), metadata)

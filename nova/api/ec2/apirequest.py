@@ -104,7 +104,7 @@ class APIRequest(object):
             for key in data.keys():
                 val = data[key]
                 el.appendChild(self._render_data(xml, key, val))
-        except:
+        except Exception:
             LOG.debug(data)
             raise
 

@@ -25,6 +25,7 @@ from nova.network import linux_net
 from nova.virt.libvirt import netutils
 from nova import utils
 from nova.virt.vif import VIFDriver
+from nova import exception
 
 LOG = logging.getLogger('nova.virt.libvirt.vif')
 
@@ -43,7 +44,7 @@ class LibvirtBridgeDriver(VIFDriver):
         gateway6 = mapping.get('gateway6')
         mac_id = mapping['mac'].replace(':', '')
 
-        if FLAGS.allow_project_net_traffic:
+        if FLAGS.allow_same_net_traffic:
             template = "<parameter name=\"%s\"value=\"%s\" />\n"
             net, mask = netutils.get_net_and_mask(network['cidr'])
             values = [("PROJNET", net), ("PROJMASK", mask)]
@@ -79,12 +80,14 @@ class LibvirtBridgeDriver(VIFDriver):
                 LOG.debug(_('Ensuring vlan %(vlan)s and bridge %(bridge)s'),
                           {'vlan': network['vlan'],
                            'bridge': network['bridge']})
-                linux_net.ensure_vlan_bridge(network['vlan'],
+                linux_net.LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
+                                             network['vlan'],
                                              network['bridge'],
                                              network['bridge_interface'])
             else:
                 LOG.debug(_("Ensuring bridge %s"), network['bridge'])
-                linux_net.ensure_bridge(network['bridge'],
+                linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(
+                                        network['bridge'],
                                         network['bridge_interface'])
 
         return self._get_configurations(network, mapping)
@@ -97,21 +100,25 @@ class LibvirtBridgeDriver(VIFDriver):
 class LibvirtOpenVswitchDriver(VIFDriver):
     """VIF driver for Open vSwitch."""
 
+    def get_dev_name(_self, iface_id):
+        return "tap-" + iface_id[0:15]
+
     def plug(self, instance, network, mapping):
-        vif_id = str(instance['id']) + "-" + str(network['id'])
-        dev = "tap-%s" % vif_id
-        iface_id = "nova-" + vif_id
+        iface_id = mapping['vif_uuid']
+        dev = self.get_dev_name(iface_id)
         if not linux_net._device_exists(dev):
-            utils.execute('sudo', 'ip', 'tuntap', 'add', dev, 'mode', 'tap')
-            utils.execute('sudo', 'ip', 'link', 'set', dev, 'up')
-        utils.execute('sudo', 'ovs-vsctl', '--', '--may-exist', 'add-port',
+            utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
+                          run_as_root=True)
+            utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
+        utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
                 FLAGS.libvirt_ovs_bridge, dev,
                 '--', 'set', 'Interface', dev,
                 "external-ids:iface-id=%s" % iface_id,
                 '--', 'set', 'Interface', dev,
                 "external-ids:iface-status=active",
                 '--', 'set', 'Interface', dev,
-                "external-ids:attached-mac=%s" % mapping['mac'])
+                "external-ids:attached-mac=%s" % mapping['mac'],
+                run_as_root=True)
 
         result = {
             'script': '',
@@ -122,13 +129,12 @@ class LibvirtOpenVswitchDriver(VIFDriver):
     def unplug(self, instance, network, mapping):
         """Unplug the VIF from the network by deleting the port from
         the bridge."""
-        vif_id = str(instance['id']) + "-" + str(network['id'])
-        dev = "tap-%s" % vif_id
+        dev = self.get_dev_name(mapping['vif_uuid'])
         try:
-            utils.execute('sudo', 'ovs-vsctl', 'del-port',
-                          network['bridge'], dev)
-            utils.execute('sudo', 'ip', 'link', 'delete', dev)
-        except:
+            utils.execute('ovs-vsctl', 'del-port',
+                          FLAGS.libvirt_ovs_bridge, dev, run_as_root=True)
+            utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
+        except exception.ProcessExecutionError:
             LOG.warning(_("Failed while unplugging vif of instance '%s'"),
                         instance['name'])
             raise

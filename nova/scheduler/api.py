@@ -17,7 +17,8 @@
 Handles all requests relating to schedulers.
 """
 
-import novaclient
+from novaclient import v1_1 as novaclient
+from novaclient import exceptions as novaclient_exceptions
 
 from nova import db
 from nova import exception
@@ -112,7 +113,7 @@ def _wrap_method(function, self):
 def _process(func, zone):
     """Worker stub for green thread pool. Give the worker
     an authenticated nova client and zone info."""
-    nova = novaclient.OpenStack(zone.username, zone.password, None,
+    nova = novaclient.Client(zone.username, zone.password, None,
                                 zone.api_url)
     nova.authenticate()
     return func(nova, zone)
@@ -132,10 +133,10 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
         zones = db.zone_get_all(context)
     for zone in zones:
         try:
-            nova = novaclient.OpenStack(zone.username, zone.password, None,
+            nova = novaclient.Client(zone.username, zone.password, None,
                     zone.api_url)
             nova.authenticate()
-        except novaclient.exceptions.BadRequest, e:
+        except novaclient_exceptions.BadRequest, e:
             url = zone.api_url
             LOG.warn(_("Failed request to zone; URL=%(url)s: %(e)s")
                     % locals())
@@ -188,7 +189,7 @@ def _issue_novaclient_command(nova, zone, collection,
     if method_name in ['find', 'findall']:
         try:
             return getattr(manager, method_name)(**kwargs)
-        except novaclient.NotFound:
+        except novaclient_exceptions.NotFound:
             url = zone.api_url
             LOG.debug(_("%(collection)s.%(method_name)s didn't find "
                     "anything matching '%(kwargs)s' on '%(url)s'" %
@@ -200,7 +201,7 @@ def _issue_novaclient_command(nova, zone, collection,
     item = args.pop(0)
     try:
         result = manager.get(item)
-    except novaclient.NotFound:
+    except novaclient_exceptions.NotFound:
         url = zone.api_url
         LOG.debug(_("%(collection)s '%(item)s' not found on '%(url)s'" %
                                                 locals()))
