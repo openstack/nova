@@ -402,3 +402,5 @@ DEFINE_bool('resume_guests_state_on_host_boot', False,
 
 DEFINE_string('root_helper', 'sudo',
               'Command prefix to use for running commands as root')
+
+DEFINE_bool('use_ipv6', False, 'use the ipv6')
