@@ -52,7 +52,7 @@ class ViewBuilderV11(ViewBuilder):
         for interface in interfaces:
             try:
                 network_label = self._extract_network_label(interface)
-            except TypeError as exc:
+            except TypeError:
                 continue
 
             if network_label not in networks:
