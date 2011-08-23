@@ -112,7 +112,6 @@ class NetworkCommandsTestCase(test.TestCase):
                     'host': 'fake_host',
                     'uuid': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
 
-
     def tearDown(self):
         super(NetworkCommandsTestCase, self).tearDown()
         self.stubs.UnsetAll()
