@@ -63,7 +63,7 @@ class VMWareVlanBridgeDriver(VIFDriver):
         vswitch_associated = network_utils.get_vswitch_for_vlan_interface(
                                             session, vlan_interface)
         if vswitch_associated is None:
-            raise exception.SwicthNotFoundForNetworkAdapter(
+            raise exception.SwitchNotFoundForNetworkAdapter(
                 adapter=vlan_interface)
         # Check whether bridge already exists and retrieve the the ref of the
         # network whose name_label is "bridge"

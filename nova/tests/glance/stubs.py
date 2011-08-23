@@ -32,6 +32,7 @@ class FakeGlance(object):
     IMAGE_RAMDISK = 3
     IMAGE_RAW = 4
     IMAGE_VHD = 5
+    IMAGE_ISO = 6
 
     IMAGE_FIXTURES = {
         IMAGE_MACHINE: {
@@ -58,9 +59,17 @@ class FakeGlance(object):
             'image_meta': {'name': 'fakevhd', 'size': 0,
                            'disk_format': 'vhd',
                            'container_format': 'ovf'},
+            'image_data': StringIO.StringIO('')},
+        IMAGE_ISO: {
+            'image_meta': {'name': 'fakeiso', 'size': 0,
+                           'disk_format': 'iso',
+                           'container_format': 'bare'},
             'image_data': StringIO.StringIO('')}}
 
-    def __init__(self, host, port=None, use_ssl=False):
+    def __init__(self, host, port=None, use_ssl=False, auth_tok=None):
+        pass
+
+    def set_auth_token(self, auth_tok):
         pass
 
     def get_image_meta(self, image_id):

@@ -102,16 +102,6 @@ The :mod:`nova.test` Module
     :show-inheritance:  
 
 
-The :mod:`nova.twistd` Module
------------------------------
-
-.. automodule:: nova.twistd
-    :noindex:
-    :members:
-    :undoc-members:
-    :show-inheritance:  
-
-
 The :mod:`nova.utils` Module
 ----------------------------
 
@@ -209,16 +199,6 @@ The :mod:`runtime_flags` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.runtime_flags
-    :noindex:
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-The :mod:`twistd_unittest` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.tests.twistd_unittest
     :noindex:
     :members:
     :undoc-members:

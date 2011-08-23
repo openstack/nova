@@ -51,7 +51,7 @@ To activate the Nova virtualenv for the extent of your current shell session
 
  Also, make test will automatically use the virtualenv.
 
-If you don't want to create a virtualenv every time you branch (which takes a while as long as we have the large Twisted project as a dependency) you can reuse a single virtualenv for all branches.
+If you don't want to create a virtualenv every time you branch you can reuse a single virtualenv for all branches.
 
  #. If you don't have a nova/ directory containing trunk/ and other branches, do so now.
  #. Go into nova/trunk and install a virtualenv.

@@ -16,7 +16,6 @@
 #    under the License.
 
 import json
-import stubout
 import webob
 import xml.dom.minidom as minidom
 
@@ -56,12 +55,8 @@ def return_instance_type_not_found(context, flavor_id):
 class FlavorsTest(test.TestCase):
     def setUp(self):
         super(FlavorsTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db.api, "instance_type_get_all",
                        return_instance_types)
         self.stubs.Set(nova.db.api, "instance_type_get_by_flavor_id",
@@ -143,7 +138,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_get_flavor_by_id_v1_1(self):
-        req = webob.Request.blank('/v1.1/flavors/12')
+        req = webob.Request.blank('/v1.1/fake/flavors/12')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -157,11 +152,11 @@ class FlavorsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/flavors/12",
+                        "href": "http://localhost/v1.1/fake/flavors/12",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/flavors/12",
+                        "href": "http://localhost/fake/flavors/12",
                     },
                 ],
             },
@@ -169,7 +164,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_v1_1(self):
-        req = webob.Request.blank('/v1.1/flavors')
+        req = webob.Request.blank('/v1.1/fake/flavors')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -182,11 +177,11 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/flavors/1",
+                            "href": "http://localhost/v1.1/fake/flavors/1",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost/flavors/1",
+                            "href": "http://localhost/fake/flavors/1",
                         },
                     ],
                 },
@@ -196,11 +191,11 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/flavors/2",
+                            "href": "http://localhost/v1.1/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost/flavors/2",
+                            "href": "http://localhost/fake/flavors/2",
                         },
                     ],
                 },
@@ -209,7 +204,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_detail_v1_1(self):
-        req = webob.Request.blank('/v1.1/flavors/detail')
+        req = webob.Request.blank('/v1.1/fake/flavors/detail')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -224,11 +219,11 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/flavors/1",
+                            "href": "http://localhost/v1.1/fake/flavors/1",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost/flavors/1",
+                            "href": "http://localhost/fake/flavors/1",
                         },
                     ],
                 },
@@ -240,11 +235,11 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/flavors/2",
+                            "href": "http://localhost/v1.1/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost/flavors/2",
+                            "href": "http://localhost/fake/flavors/2",
                         },
                     ],
                 },
@@ -257,7 +252,7 @@ class FlavorsTest(test.TestCase):
             return {}
         self.stubs.Set(nova.db.api, "instance_type_get_all", _return_empty)
 
-        req = webob.Request.blank('/v1.1/flavors')
+        req = webob.Request.blank('/v1.1/fake/flavors')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavors = json.loads(res.body)["flavors"]
@@ -279,11 +274,11 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/flavors/12",
+                        "href": "http://localhost/v1.1/fake/flavors/12",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/flavors/12",
+                        "href": "http://localhost/fake/flavors/12",
                     },
                 ],
             },
@@ -299,8 +294,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 name="asdf"
                 ram="256"
                 disk="10">
-            <atom:link href="http://localhost/v1.1/flavors/12" rel="self"/>
-            <atom:link href="http://localhost/flavors/12" rel="bookmark"/>
+            <atom:link href="http://localhost/v1.1/fake/flavors/12"
+                 rel="self"/>
+            <atom:link href="http://localhost/fake/flavors/12"
+                 rel="bookmark"/>
         </flavor>
         """.replace("  ", ""))
 
@@ -318,11 +315,11 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/flavors/12",
+                        "href": "http://localhost/v1.1/fake/flavors/12",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/flavors/12",
+                        "href": "http://localhost/fake/flavors/12",
                     },
                 ],
             },
@@ -338,8 +335,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 name="asdf"
                 ram="256"
                 disk="10">
-            <atom:link href="http://localhost/v1.1/flavors/12" rel="self"/>
-            <atom:link href="http://localhost/flavors/12" rel="bookmark"/>
+            <atom:link href="http://localhost/v1.1/fake/flavors/12"
+                 rel="self"/>
+            <atom:link href="http://localhost/fake/flavors/12"
+                 rel="bookmark"/>
         </flavor>
         """.replace("  ", ""))
 
@@ -358,11 +357,11 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/flavors/23",
+                            "href": "http://localhost/v1.1/fake/flavors/23",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost/flavors/23",
+                            "href": "http://localhost/fake/flavors/23",
                         },
                     ],
                 },        {
@@ -373,11 +372,11 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/flavors/13",
+                            "href": "http://localhost/v1.1/fake/flavors/13",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost/flavors/13",
+                            "href": "http://localhost/fake/flavors/13",
                         },
                     ],
                 },
@@ -394,15 +393,19 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     name="flavor 23"
                     ram="512"
                     disk="20">
-                <atom:link href="http://localhost/v1.1/flavors/23" rel="self"/>
-                <atom:link href="http://localhost/flavors/23" rel="bookmark"/>
+                <atom:link href="http://localhost/v1.1/fake/flavors/23"
+                     rel="self"/>
+                <atom:link href="http://localhost/fake/flavors/23"
+                     rel="bookmark"/>
             </flavor>
             <flavor id="13"
                     name="flavor 13"
                     ram="256"
                     disk="10">
-                <atom:link href="http://localhost/v1.1/flavors/13" rel="self"/>
-                <atom:link href="http://localhost/flavors/13" rel="bookmark"/>
+                <atom:link href="http://localhost/v1.1/fake/flavors/13"
+                     rel="self"/>
+                <atom:link href="http://localhost/fake/flavors/13"
+                     rel="bookmark"/>
             </flavor>
         </flavors>
         """.replace("  ", "") % locals())
@@ -422,11 +425,11 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/flavors/23",
+                            "href": "http://localhost/v1.1/fake/flavors/23",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost/flavors/23",
+                            "href": "http://localhost/fake/flavors/23",
                         },
                     ],
                 },        {
@@ -437,11 +440,11 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/flavors/13",
+                            "href": "http://localhost/v1.1/fake/flavors/13",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost/flavors/13",
+                            "href": "http://localhost/fake/flavors/13",
                         },
                     ],
                 },
@@ -455,12 +458,16 @@ class FlavorsXMLSerializationTest(test.TestCase):
         <flavors xmlns="http://docs.openstack.org/compute/api/v1.1"
                  xmlns:atom="http://www.w3.org/2005/Atom">
             <flavor id="23" name="flavor 23">
-                <atom:link href="http://localhost/v1.1/flavors/23" rel="self"/>
-                <atom:link href="http://localhost/flavors/23" rel="bookmark"/>
+                <atom:link href="http://localhost/v1.1/fake/flavors/23"
+                     rel="self"/>
+                <atom:link href="http://localhost/fake/flavors/23"
+                     rel="bookmark"/>
             </flavor>
             <flavor id="13" name="flavor 13">
-                <atom:link href="http://localhost/v1.1/flavors/13" rel="self"/>
-                <atom:link href="http://localhost/flavors/13" rel="bookmark"/>
+                <atom:link href="http://localhost/v1.1/fake/flavors/13"
+                     rel="self"/>
+                <atom:link href="http://localhost/fake/flavors/13"
+                     rel="bookmark"/>
             </flavor>
         </flavors>
         """.replace("  ", "") % locals())

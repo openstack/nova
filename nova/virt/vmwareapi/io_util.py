@@ -68,7 +68,10 @@ class GlanceWriteThread(object):
     """Ensures that image data is written to in the glance client and that
     it is in correct ('active')state."""
 
-    def __init__(self, input, glance_client, image_id, image_meta={}):
+    def __init__(self, input, glance_client, image_id, image_meta=None):
+        if not image_meta:
+            image_meta = {}
+
         self.input = input
         self.glance_client = glance_client
         self.image_id = image_id

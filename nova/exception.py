@@ -25,6 +25,7 @@ SHOULD include dedicated exception logging.
 """
 
 from functools import wraps
+import sys
 
 from nova import log as logging
 
@@ -96,6 +97,10 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
             try:
                 return f(*args, **kw)
             except Exception, e:
+                # Save exception since it can be clobbered during processing
+                # below before we can re-raise
+                exc_info = sys.exc_info()
+
                 if notifier:
                     payload = dict(args=args, exception=e)
                     payload.update(kw)
@@ -122,7 +127,9 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                     LOG.exception(_('Uncaught exception'))
                     #logging.error(traceback.extract_stack(exc_traceback))
                     raise Error(str(e))
-                raise
+
+                # re-raise original exception since it may have been clobbered
+                raise exc_info[0], exc_info[1], exc_info[2]
 
         return wraps(f)(wrapped)
     return inner
@@ -148,6 +155,10 @@ class NovaException(Exception):
 
     def __str__(self):
         return self._error_string
+
+
+class ImagePaginationFailed(NovaException):
+    message = _("Failed to paginate through images from image service")
 
 
 class VirtualInterfaceCreateException(NovaException):
@@ -196,6 +207,16 @@ class InvalidIpProtocol(Invalid):
 
 class InvalidContentType(Invalid):
     message = _("Invalid content type %(content_type)s.")
+
+
+class InvalidCidr(Invalid):
+    message = _("Invalid cidr %(cidr)s.")
+
+
+# Cannot be templated as the error syntax varies.
+# msg needs to be constructed when raised.
+class InvalidParameterValue(Invalid):
+    message = _("%(err)s")
 
 
 class InstanceNotRunning(Invalid):
@@ -250,6 +271,11 @@ class InvalidHypervisorType(Invalid):
 class DestinationHypervisorTooOld(Invalid):
     message = _("The instance requires a newer hypervisor version than "
                 "has been provided.")
+
+
+class DestinationDiskExists(Invalid):
+    message = _("The supplied disk path (%(path)s) already exists, "
+                "it is expected not to exist.")
 
 
 class InvalidDevicePath(Invalid):
@@ -397,6 +423,15 @@ class NoNetworksFound(NotFound):
     message = _("No networks defined.")
 
 
+class NetworkNotFoundForProject(NotFound):
+    message = _("Either Network uuid %(network_uuid)s is not present or "
+                "is not assigned to the project %(project_id)s.")
+
+
+class NetworkHostNotSet(NovaException):
+    message = _("Host is not set to the network (%(network_id)s).")
+
+
 class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
@@ -428,6 +463,19 @@ class FixedIpNotFoundForVirtualInterface(FixedIpNotFound):
 
 class FixedIpNotFoundForHost(FixedIpNotFound):
     message = _("Host %(host)s has zero fixed ips.")
+
+
+class FixedIpNotFoundForNetwork(FixedIpNotFound):
+    message = _("Fixed IP address (%(address)s) does not exist in "
+                "network (%(network_uuid)s).")
+
+
+class FixedIpAlreadyInUse(NovaException):
+    message = _("Fixed IP address %(address)s is already in use.")
+
+
+class FixedIpInvalid(Invalid):
+    message = _("Fixed IP address %(address)s is invalid.")
 
 
 class NoMoreFixedIps(Error):
@@ -513,6 +561,16 @@ class SecurityGroupNotFoundForProject(SecurityGroupNotFound):
 
 class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
     message = _("Security group with rule %(rule_id)s not found.")
+
+
+class SecurityGroupExistsForInstance(Invalid):
+    message = _("Security group %(security_group_id)s is already associated"
+                 " with the instance %(instance_id)s")
+
+
+class SecurityGroupNotExistsForInstance(Invalid):
+    message = _("Security group %(security_group_id)s is not associated with"
+                 " the instance %(instance_id)s")
 
 
 class MigrationNotFound(NotFound):
@@ -678,6 +736,10 @@ class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
 
 
+class InvalidSharedStorage(NovaException):
+    message = _("%(path)s is on shared storage: %(reason)s")
+
+
 class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
 
@@ -692,3 +754,15 @@ class PasteConfigNotFound(NotFound):
 
 class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
+
+
+class CannotResizeToSameSize(NovaException):
+    message = _("When resizing, instances must change size!")
+
+
+class CannotResizeToSmallerSize(NovaException):
+    message = _("Resizing to a smaller size is not supported.")
+
+
+class ImageTooLarge(NovaException):
+    message = _("Image is larger than instance type allows")

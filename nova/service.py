@@ -20,12 +20,10 @@
 """Generic Node baseclass for all workers that run on hosts."""
 
 import inspect
-import multiprocessing
 import os
 
+import eventlet
 import greenlet
-
-from eventlet import greenthread
 
 from nova import context
 from nova import db
@@ -69,30 +67,25 @@ class Launcher(object):
         self._services = []
 
     @staticmethod
-    def run_service(service):
-        """Start and wait for a service to finish.
+    def run_server(server):
+        """Start and wait for a server to finish.
 
-        :param service: Service to run and wait for.
+        :param service: Server to run and wait for.
         :returns: None
 
         """
-        service.start()
-        try:
-            service.wait()
-        except KeyboardInterrupt:
-            service.stop()
+        server.start()
+        server.wait()
 
-    def launch_service(self, service):
-        """Load and start the given service.
+    def launch_server(self, server):
+        """Load and start the given server.
 
-        :param service: The service you would like to start.
+        :param server: The server you would like to start.
         :returns: None
 
         """
-        process = multiprocessing.Process(target=self.run_service,
-                                          args=(service,))
-        process.start()
-        self._services.append(process)
+        gt = eventlet.spawn(self.run_server, server)
+        self._services.append(gt)
 
     def stop(self):
         """Stop all services which are currently running.
@@ -101,8 +94,7 @@ class Launcher(object):
 
         """
         for service in self._services:
-            if service.is_alive():
-                service.terminate()
+            service.kill()
 
     def wait(self):
         """Waits until all services have been stopped, and then returns.
@@ -111,11 +103,18 @@ class Launcher(object):
 
         """
         for service in self._services:
-            service.join()
+            try:
+                service.wait()
+            except greenlet.GreenletExit:
+                pass
 
 
 class Service(object):
-    """Base class for workers that run on hosts."""
+    """Service object for binaries running on hosts.
+
+    A service takes a manager and enables rpc by listening to queues based
+    on topic. It also periodically runs tasks on the manager and reports
+    it state to the database services table."""
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
                  periodic_interval=None, *args, **kwargs):
@@ -149,26 +148,22 @@ class Service(object):
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
-        self.conn = rpc.Connection.instance(new=True)
+        self.conn = rpc.create_connection(new=True)
         logging.debug("Creating Consumer connection for Service %s" %
                       self.topic)
 
         # Share this same connection for these Consumers
-        consumer_all = rpc.TopicAdapterConsumer(
-                connection=self.conn,
-                topic=self.topic,
-                proxy=self)
-        consumer_node = rpc.TopicAdapterConsumer(
-                connection=self.conn,
-                topic='%s.%s' % (self.topic, self.host),
-                proxy=self)
-        fanout = rpc.FanoutAdapterConsumer(
-                connection=self.conn,
-                topic=self.topic,
-                proxy=self)
-        consumer_set = rpc.ConsumerSet(
-                connection=self.conn,
-                consumer_list=[consumer_all, consumer_node, fanout])
+        consumer_all = rpc.create_consumer(self.conn, self.topic, self,
+                                           fanout=False)
+
+        node_topic = '%s.%s' % (self.topic, self.host)
+        consumer_node = rpc.create_consumer(self.conn, node_topic, self,
+                                            fanout=False)
+
+        fanout = rpc.create_consumer(self.conn, self.topic, self, fanout=True)
+
+        consumers = [consumer_all, consumer_node, fanout]
+        consumer_set = rpc.create_consumer_set(self.conn, consumers)
 
         # Wait forever, processing these consumers
         def _wait():
@@ -177,7 +172,7 @@ class Service(object):
             finally:
                 consumer_set.close()
 
-        self.consumer_set_thread = greenthread.spawn(_wait)
+        self.consumer_set_thread = eventlet.spawn(_wait)
 
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
@@ -297,9 +292,9 @@ class WSGIService(object):
     """Provides ability to launch API from a 'paste' configuration."""
 
     def __init__(self, name, loader=None):
-        """Initialize, but do not start the WSGI service.
+        """Initialize, but do not start the WSGI server.
 
-        :param name: The name of the WSGI service given to the loader.
+        :param name: The name of the WSGI server given to the loader.
         :param loader: Loads the WSGI application using the given name.
         :returns: None
 
@@ -343,32 +338,32 @@ class WSGIService(object):
         self.server.wait()
 
 
-def serve(*services):
-    try:
-        if not services:
-            services = [Service.create()]
-    except Exception:
-        logging.exception('in Service.create()')
-        raise
-    finally:
-        # After we've loaded up all our dynamic bits, check
-        # whether we should print help
-        flags.DEFINE_flag(flags.HelpFlag())
-        flags.DEFINE_flag(flags.HelpshortFlag())
-        flags.DEFINE_flag(flags.HelpXMLFlag())
-        FLAGS.ParseNewFlags()
+# NOTE(vish): the global launcher is to maintain the existing
+#             functionality of calling service.serve +
+#             service.wait
+_launcher = None
 
-    name = '_'.join(x.binary for x in services)
-    logging.debug(_('Serving %s'), name)
+
+def serve(*servers):
+    global _launcher
+    if not _launcher:
+        _launcher = Launcher()
+    for server in servers:
+        _launcher.launch_server(server)
+
+
+def wait():
+    # After we've loaded up all our dynamic bits, check
+    # whether we should print help
+    flags.DEFINE_flag(flags.HelpFlag())
+    flags.DEFINE_flag(flags.HelpshortFlag())
+    flags.DEFINE_flag(flags.HelpXMLFlag())
+    FLAGS.ParseNewFlags()
     logging.debug(_('Full set of FLAGS:'))
     for flag in FLAGS:
         flag_get = FLAGS.get(flag, None)
         logging.debug('%(flag)s : %(flag_get)s' % locals())
-
-    for x in services:
-        x.start()
-
-
-def wait():
-    while True:
-        greenthread.sleep(5)
+    try:
+        _launcher.wait()
+    except KeyboardInterrupt:
+        _launcher.stop()

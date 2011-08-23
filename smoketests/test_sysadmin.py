@@ -35,9 +35,9 @@ from smoketests import flags
 from smoketests import base
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
+flags.DEFINE_string('bundle_kernel', 'random.kernel',
               'Local kernel file to use for bundling tests')
-flags.DEFINE_string('bundle_image', 'openwrt-x86-ext2.image',
+flags.DEFINE_string('bundle_image', 'random.image',
               'Local image file to use for bundling tests')
 
 TEST_PREFIX = 'test%s' % int(random.random() * 1000000)

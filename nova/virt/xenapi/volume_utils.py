@@ -252,10 +252,10 @@ def _get_target(volume_id):
                                volume_id)
     result = (None, None)
     try:
-        (r, _e) = utils.execute('sudo', 'iscsiadm',
+        (r, _e) = utils.execute('iscsiadm',
                                 '-m', 'discovery',
                                 '-t', 'sendtargets',
-                                '-p', volume_ref['host'])
+                                '-p', volume_ref['host'], run_as_root=True)
     except exception.ProcessExecutionError, exc:
         LOG.exception(exc)
     else:

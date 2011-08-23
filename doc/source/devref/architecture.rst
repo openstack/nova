@@ -45,7 +45,7 @@ Below you will find a helpful explanation of the different components.
 * Web Dashboard: potential external component that talks to the api
 * api: component that receives http requests, converts commands and communicates with other components via the queue or http (in the case of objectstore)
 * Auth Manager: component responsible for users/projects/and roles.  Can backend to DB or LDAP.  This is not a separate binary, but rather a python class that is used by most components in the system.
-* objectstore: twisted http server that replicates s3 api and allows storage and retrieval of images
+* objectstore: http server that replicates s3 api and allows storage and retrieval of images
 * scheduler: decides which host gets each vm and volume
 * volume: manages dynamically attachable block devices.
 * network: manages ip forwarding, bridges, and vlans

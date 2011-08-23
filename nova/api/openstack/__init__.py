@@ -40,6 +40,7 @@ from nova.api.openstack import servers
 from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
+from nova.api.openstack import versions
 from nova.api.openstack import wsgi
 from nova.api.openstack import zones
 
@@ -49,6 +50,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
+flags.DEFINE_bool('allow_instance_snapshots',
+    True,
+    'When True, this API service will permit instance snapshot operations.')
 
 
 class FaultWrapper(base_wsgi.Middleware):
@@ -64,6 +68,22 @@ class FaultWrapper(base_wsgi.Middleware):
             return faults.Fault(exc)
 
 
+class ProjectMapper(routes.Mapper):
+
+    def resource(self, member_name, collection_name, **kwargs):
+        if not ('parent_resource' in kwargs):
+            kwargs['path_prefix'] = '{project_id}/'
+        else:
+            parent_resource = kwargs['parent_resource']
+            p_collection = parent_resource['collection_name']
+            p_member = parent_resource['member_name']
+            kwargs['path_prefix'] = '{project_id}/%s/:%s_id' % (p_collection,
+                                                               p_member)
+        routes.Mapper.resource(self, member_name,
+                                     collection_name,
+                                     **kwargs)
+
+
 class APIRouter(base_wsgi.Router):
     """
     Routes requests on the OpenStack API to the appropriate controller
@@ -77,11 +97,17 @@ class APIRouter(base_wsgi.Router):
 
     def __init__(self, ext_mgr=None):
         self.server_members = {}
-        mapper = routes.Mapper()
+        mapper = self._mapper()
         self._setup_routes(mapper)
         super(APIRouter, self).__init__(mapper)
 
-    def _setup_routes(self, mapper, version):
+    def _mapper(self):
+        return routes.Mapper()
+
+    def _setup_routes(self, mapper):
+        raise NotImplementedError(_("You must implement _setup_routes."))
+
+    def _setup_base_routes(self, mapper, version):
         """Routes common to all versions."""
 
         server_members = self.server_members
@@ -96,6 +122,7 @@ class APIRouter(base_wsgi.Router):
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
             server_members['rescue'] = 'POST'
+            server_members['migrate'] = 'POST'
             server_members['unrescue'] = 'POST'
             server_members['reset_network'] = 'POST'
             server_members['inject_network_info'] = 'POST'
@@ -114,6 +141,10 @@ class APIRouter(base_wsgi.Router):
                                     'info': 'GET',
                                     'select': 'POST',
                                     'boot': 'POST'})
+
+        mapper.connect("versions", "/",
+                    controller=versions.create_resource(version),
+                    action='show')
 
         mapper.resource("console", "consoles",
                     controller=consoles.create_resource(),
@@ -147,7 +178,7 @@ class APIRouterV10(APIRouter):
     """Define routes specific to OpenStack API V1.0."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV10, self)._setup_routes(mapper, '1.0')
+        self._setup_base_routes(mapper, '1.0')
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
@@ -162,20 +193,33 @@ class APIRouterV10(APIRouter):
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
+    def _mapper(self):
+        return ProjectMapper()
+
     def _setup_routes(self, mapper):
-        super(APIRouterV11, self)._setup_routes(mapper, '1.1')
+        self._setup_base_routes(mapper, '1.1')
+
         image_metadata_controller = image_metadata.create_resource()
+
         mapper.resource("image_meta", "metadata",
                         controller=image_metadata_controller,
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
 
-        mapper.connect("metadata", "/images/{image_id}/metadata",
+        mapper.connect("metadata", "/{project_id}/images/{image_id}/metadata",
                        controller=image_metadata_controller,
                        action='update_all',
                        conditions={"method": ['PUT']})
 
-        mapper.resource("server_meta", "meta",
-                        controller=server_metadata.create_resource(),
+        server_metadata_controller = server_metadata.create_resource()
+
+        mapper.resource("server_meta", "metadata",
+                        controller=server_metadata_controller,
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
+
+        mapper.connect("metadata",
+                       "/{project_id}/servers/{server_id}/metadata",
+                       controller=server_metadata_controller,
+                       action='update_all',
+                       conditions={"method": ['PUT']})

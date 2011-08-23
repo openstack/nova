@@ -107,7 +107,8 @@ class DelegatedAuthMiddleware(wsgi.Middleware):
     def process_request(self, request):
         os_user = request.headers['X-OpenStack-User']
         os_project = request.headers['X-OpenStack-Project']
-        context_ref = context.RequestContext(user=os_user, project=os_project)
+        context_ref = context.RequestContext(user_id=os_user,
+                                             project_id=os_project)
         request.environ['openstack.context'] = context_ref
 
 
@@ -295,8 +296,8 @@ class ServiceWrapper(object):
               'application/json': nova.api.openstack.wsgi.JSONDictSerializer(),
             }[content_type]
             return serializer.serialize(result)
-        except:
-            raise exception.Error("returned non-serializable type: %s"
+        except Exception, e:
+            raise exception.Error(_("Returned non-serializable type: %s")
                                   % result)
 
 

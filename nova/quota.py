@@ -164,5 +164,5 @@ def allowed_injected_file_path_bytes(context):
 
 
 class QuotaError(exception.ApiError):
-    """Quota Exceeeded."""
+    """Quota Exceeded."""
     pass

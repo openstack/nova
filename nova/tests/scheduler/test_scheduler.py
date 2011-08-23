@@ -21,9 +21,10 @@ Tests For Scheduler
 
 import datetime
 import mox
-import novaclient.exceptions
 import stubout
-import webob
+
+from novaclient import v1_1 as novaclient
+from novaclient import exceptions as novaclient_exceptions
 
 from mox import IgnoreArg
 from nova import context
@@ -34,12 +35,11 @@ from nova import service
 from nova import test
 from nova import rpc
 from nova import utils
-from nova.auth import manager as auth_manager
 from nova.scheduler import api
-from nova.scheduler import manager
 from nova.scheduler import driver
+from nova.scheduler import manager
+from nova.scheduler import multi
 from nova.compute import power_state
-from nova.db.sqlalchemy import models
 
 
 FLAGS = flags.FLAGS
@@ -250,23 +250,19 @@ class SimpleDriverTestCase(test.TestCase):
                    volume_driver='nova.volume.driver.FakeISCSIDriver',
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()
-        self.manager = auth_manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake')
-        self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.get_admin_context()
-
-    def tearDown(self):
-        self.manager.delete_user(self.user)
-        self.manager.delete_project(self.project)
-        super(SimpleDriverTestCase, self).tearDown()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
 
     def _create_instance(self, **kwargs):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 1
+        # NOTE(jk0): If an integer is passed as the image_ref, the image
+        # service will use the default image service (in this case, the fake).
+        inst['image_ref'] = '1'
         inst['reservation_id'] = 'r-fakeres'
-        inst['user_id'] = self.user.id
-        inst['project_id'] = self.project.id
+        inst['user_id'] = self.user_id
+        inst['project_id'] = self.project_id
         inst['instance_type_id'] = '1'
         inst['vcpus'] = kwargs.get('vcpus', 1)
         inst['ami_launch_index'] = 0
@@ -310,7 +306,7 @@ class SimpleDriverTestCase(test.TestCase):
         db.compute_node_create(self.context, dic)
         return db.service_get(self.context, s_ref['id'])
 
-    def test_doesnt_report_disabled_hosts_as_up(self):
+    def test_doesnt_report_disabled_hosts_as_up_no_queue(self):
         """Ensures driver doesn't find hosts before they are enabled"""
         # NOTE(vish): constructing service without create method
         #             because we are going to use it without queue
@@ -333,7 +329,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_reports_enabled_hosts_as_up(self):
+    def test_reports_enabled_hosts_as_up_no_queue(self):
         """Ensures driver can find the hosts that are up"""
         # NOTE(vish): constructing service without create method
         #             because we are going to use it without queue
@@ -352,7 +348,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_least_busy_host_gets_instance(self):
+    def test_least_busy_host_gets_instance_no_queue(self):
         """Ensures the host with less cores gets the next one"""
         compute1 = service.Service('host1',
                                    'nova-compute',
@@ -375,7 +371,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_specific_host_gets_instance(self):
+    def test_specific_host_gets_instance_no_queue(self):
         """Ensures if you set availability_zone it launches on that zone"""
         compute1 = service.Service('host1',
                                    'nova-compute',
@@ -398,7 +394,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_wont_sechedule_if_specified_host_is_down(self):
+    def test_wont_schedule_if_specified_host_is_down_no_queue(self):
         compute1 = service.Service('host1',
                                    'nova-compute',
                                    'compute',
@@ -417,7 +413,7 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id2)
         compute1.kill()
 
-    def test_will_schedule_on_disabled_host_if_specified(self):
+    def test_will_schedule_on_disabled_host_if_specified_no_queue(self):
         compute1 = service.Service('host1',
                                    'nova-compute',
                                    'compute',
@@ -432,7 +428,7 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id2)
         compute1.kill()
 
-    def test_too_many_cores(self):
+    def test_too_many_cores_no_queue(self):
         """Ensures we don't go over max cores"""
         compute1 = service.Service('host1',
                                    'nova-compute',
@@ -465,7 +461,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
         compute2.kill()
 
-    def test_least_busy_host_gets_volume(self):
+    def test_least_busy_host_gets_volume_no_queue(self):
         """Ensures the host with less gigabytes gets the next one"""
         volume1 = service.Service('host1',
                                    'nova-volume',
@@ -485,13 +481,8 @@ class SimpleDriverTestCase(test.TestCase):
         self.assertEqual(host, 'host2')
         volume1.delete_volume(self.context, volume_id1)
         db.volume_destroy(self.context, volume_id2)
-        dic = {'service_id': s_ref['id'],
-               'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
-               'vcpus_used': 16, 'memory_mb_used': 12, 'local_gb_used': 10,
-               'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
-               'cpu_info': ''}
 
-    def test_doesnt_report_disabled_hosts_as_up(self):
+    def test_doesnt_report_disabled_hosts_as_up2(self):
         """Ensures driver doesn't find hosts before they are enabled"""
         compute1 = self.start_service('compute', host='host1')
         compute2 = self.start_service('compute', host='host2')
@@ -655,10 +646,13 @@ class SimpleDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(driver_i, '_live_migration_dest_check')
         self.mox.StubOutWithMock(driver_i, '_live_migration_common_check')
         driver_i._live_migration_src_check(nocare, nocare)
-        driver_i._live_migration_dest_check(nocare, nocare, i_ref['host'])
-        driver_i._live_migration_common_check(nocare, nocare, i_ref['host'])
+        driver_i._live_migration_dest_check(nocare, nocare,
+                                            i_ref['host'], False)
+        driver_i._live_migration_common_check(nocare, nocare,
+                                              i_ref['host'], False)
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-        kwargs = {'instance_id': instance_id, 'dest': i_ref['host']}
+        kwargs = {'instance_id': instance_id, 'dest': i_ref['host'],
+                  'block_migration': False}
         rpc.cast(self.context,
                  db.queue_get_for(nocare, FLAGS.compute_topic, i_ref['host']),
                  {"method": 'live_migration', "args": kwargs})
@@ -666,7 +660,8 @@ class SimpleDriverTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.scheduler.live_migration(self.context, FLAGS.compute_topic,
                                       instance_id=instance_id,
-                                      dest=i_ref['host'])
+                                      dest=i_ref['host'],
+                                      block_migration=False)
 
         i_ref = db.instance_get(self.context, instance_id)
         self.assertTrue(i_ref['state_description'] == 'migrating')
@@ -747,7 +742,7 @@ class SimpleDriverTestCase(test.TestCase):
 
         self.assertRaises(exception.ComputeServiceUnavailable,
                           self.scheduler.driver._live_migration_dest_check,
-                          self.context, i_ref, i_ref['host'])
+                          self.context, i_ref, i_ref['host'], False)
 
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
@@ -760,7 +755,7 @@ class SimpleDriverTestCase(test.TestCase):
 
         self.assertRaises(exception.UnableToMigrateToSelf,
                           self.scheduler.driver._live_migration_dest_check,
-                          self.context, i_ref, i_ref['host'])
+                          self.context, i_ref, i_ref['host'], False)
 
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
@@ -768,15 +763,33 @@ class SimpleDriverTestCase(test.TestCase):
     def test_live_migration_dest_check_service_lack_memory(self):
         """Confirms exception raises when dest doesn't have enough memory."""
         instance_id = self._create_instance()
+        instance_id2 = self._create_instance(host='somewhere',
+                                             memory_mb=12)
         i_ref = db.instance_get(self.context, instance_id)
-        s_ref = self._create_compute_service(host='somewhere',
-                                             memory_mb_used=12)
+        s_ref = self._create_compute_service(host='somewhere')
 
         self.assertRaises(exception.MigrationError,
                           self.scheduler.driver._live_migration_dest_check,
-                          self.context, i_ref, 'somewhere')
+                          self.context, i_ref, 'somewhere', False)
 
         db.instance_destroy(self.context, instance_id)
+        db.instance_destroy(self.context, instance_id2)
+        db.service_destroy(self.context, s_ref['id'])
+
+    def test_block_migration_dest_check_service_lack_disk(self):
+        """Confirms exception raises when dest doesn't have enough disk."""
+        instance_id = self._create_instance()
+        instance_id2 = self._create_instance(host='somewhere',
+                                             local_gb=70)
+        i_ref = db.instance_get(self.context, instance_id)
+        s_ref = self._create_compute_service(host='somewhere')
+
+        self.assertRaises(exception.MigrationError,
+                          self.scheduler.driver._live_migration_dest_check,
+                          self.context, i_ref, 'somewhere', True)
+
+        db.instance_destroy(self.context, instance_id)
+        db.instance_destroy(self.context, instance_id2)
         db.service_destroy(self.context, s_ref['id'])
 
     def test_live_migration_dest_check_service_works_correctly(self):
@@ -788,7 +801,8 @@ class SimpleDriverTestCase(test.TestCase):
 
         ret = self.scheduler.driver._live_migration_dest_check(self.context,
                                                              i_ref,
-                                                             'somewhere')
+                                                             'somewhere',
+                                                             False)
         self.assertTrue(ret is None)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
@@ -821,9 +835,10 @@ class SimpleDriverTestCase(test.TestCase):
              "args": {'filename': fpath}})
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.SourceHostUnavailable,
+        #self.assertRaises(exception.SourceHostUnavailable,
+        self.assertRaises(exception.FileNotFound,
                           self.scheduler.driver._live_migration_common_check,
-                          self.context, i_ref, dest)
+                          self.context, i_ref, dest, False)
 
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
@@ -847,7 +862,7 @@ class SimpleDriverTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.InvalidHypervisorType,
                           self.scheduler.driver._live_migration_common_check,
-                          self.context, i_ref, dest)
+                          self.context, i_ref, dest, False)
 
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
@@ -873,7 +888,7 @@ class SimpleDriverTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.DestinationHypervisorTooOld,
                           self.scheduler.driver._live_migration_common_check,
-                          self.context, i_ref, dest)
+                          self.context, i_ref, dest, False)
 
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
@@ -905,7 +920,8 @@ class SimpleDriverTestCase(test.TestCase):
         try:
             self.scheduler.driver._live_migration_common_check(self.context,
                                                                i_ref,
-                                                               dest)
+                                                               dest,
+                                                               False)
         except rpc.RemoteError, e:
             c = (e.message.find(_("doesn't have compatibility to")) >= 0)
 
@@ -913,6 +929,25 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
+
+
+class MultiDriverTestCase(SimpleDriverTestCase):
+    """Test case for multi driver."""
+
+    def setUp(self):
+        super(MultiDriverTestCase, self).setUp()
+        self.flags(connection_type='fake',
+                   stub_network=True,
+                   max_cores=4,
+                   max_gigabytes=4,
+                   network_manager='nova.network.manager.FlatManager',
+                   volume_driver='nova.volume.driver.FakeISCSIDriver',
+                   compute_scheduler_driver=('nova.scheduler.simple'
+                                             '.SimpleScheduler'),
+                   volume_scheduler_driver=('nova.scheduler.simple'
+                                            '.SimpleScheduler'),
+                   scheduler_driver='nova.scheduler.multi.MultiScheduler')
+        self.scheduler = manager.SchedulerManager()
 
 
 class FakeZone(object):
@@ -976,13 +1011,10 @@ class ZoneRedirectTest(test.TestCase):
         self.stubs.Set(db, 'zone_get_all', zone_get_all)
         self.stubs.Set(db, 'instance_get_by_uuid',
                        fake_instance_get_by_uuid)
-
-        self.enable_zone_routing = FLAGS.enable_zone_routing
-        FLAGS.enable_zone_routing = True
+        self.flags(enable_zone_routing=True)
 
     def tearDown(self):
         self.stubs.UnsetAll()
-        FLAGS.enable_zone_routing = self.enable_zone_routing
         super(ZoneRedirectTest, self).tearDown()
 
     def test_trap_found_locally(self):
@@ -1007,12 +1039,12 @@ class ZoneRedirectTest(test.TestCase):
         decorator = FakeRerouteCompute("foo", id_to_return=FAKE_UUID_NOT_FOUND)
         try:
             result = decorator(go_boom)(None, None, 1)
-            self.assertFail(_("Should have rerouted."))
+            self.fail(_("Should have rerouted."))
         except api.RedirectResult, e:
             self.assertEquals(e.results['magic'], 'found me')
 
     def test_routing_flags(self):
-        FLAGS.enable_zone_routing = False
+        self.flags(enable_zone_routing=False)
         decorator = FakeRerouteCompute("foo")
         self.assertRaises(exception.InstanceNotFound, decorator(go_boom),
                           None, None, 1)
@@ -1053,10 +1085,10 @@ class FakeServerCollection(object):
 
 class FakeEmptyServerCollection(object):
     def get(self, f):
-        raise novaclient.NotFound(1)
+        raise novaclient_exceptions.NotFound(1)
 
     def find(self, name):
-        raise novaclient.NotFound(2)
+        raise novaclient_exceptions.NotFound(2)
 
 
 class FakeNovaClient(object):
@@ -1095,14 +1127,14 @@ class DynamicNovaClientTest(test.TestCase):
 
 
 class FakeZonesProxy(object):
-    def do_something(*args, **kwargs):
+    def do_something(self, *args, **kwargs):
         return 42
 
-    def raises_exception(*args, **kwargs):
+    def raises_exception(self, *args, **kwargs):
         raise Exception('testing')
 
 
-class FakeNovaClientOpenStack(object):
+class FakeNovaClientZones(object):
     def __init__(self, *args, **kwargs):
         self.zones = FakeZonesProxy()
 
@@ -1115,7 +1147,7 @@ class CallZoneMethodTest(test.TestCase):
         super(CallZoneMethodTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(db, 'zone_get_all', zone_get_all)
-        self.stubs.Set(novaclient, 'OpenStack', FakeNovaClientOpenStack)
+        self.stubs.Set(novaclient, 'Client', FakeNovaClientZones)
 
     def tearDown(self):
         self.stubs.UnsetAll()

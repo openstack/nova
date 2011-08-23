@@ -5,12 +5,23 @@ Step 1: Read http://www.python.org/dev/peps/pep-0008/
 Step 2: Read http://www.python.org/dev/peps/pep-0008/ again
 Step 3: Read on
 
+
+General
+-------
+- Put two newlines between top-level code (funcs, classes, etc)
+- Put one newline between methods in classes and anywhere else
+- Do not write "except:", use "except Exception:" at the very least
+- Include your name with TODOs as in "#TODO(termie)"
+- Do not name anything the same name as a built-in or reserved word
+
+
 Imports
 -------
-- thou shalt not import objects, only modules
-- thou shalt not import more than one module per line
-- thou shalt not make relative imports
-- thou shalt organize your imports according to the following template
+- Do not import objects, only modules
+- Do not import more than one module per line
+- Do not make relative imports
+- Order your imports by the full module path
+- Organize your imports according to the following template
 
 ::
   # vim: tabstop=4 shiftwidth=4 softtabstop=4
@@ -20,16 +31,6 @@ Imports
   \n
   \n
   {{begin your code}}
-
-
-General
--------
-- thou shalt put two newlines twixt toplevel code (funcs, classes, etc)
-- thou shalt put one newline twixt methods in classes and anywhere else
-- thou shalt not write "except:", use "except Exception:" at the very least
-- thou shalt include your name with TODOs as in "TODO(termie)"
-- thou shalt not name anything the same name as a builtin or reserved word
-- thou shalt not violate causality in our time cone, or else
 
 
 Human Alphabetical Order Examples
@@ -42,11 +43,13 @@ Human Alphabetical Order Examples
   import time
   import unittest
 
-  from nova import flags
-  from nova import test
+  import nova.api.ec2
+  from nova.api import openstack
   from nova.auth import users
-  from nova.endpoint import api
+  import nova.flags
   from nova.endpoint import cloud
+  from nova import test
+
 
 Docstrings
 ----------
@@ -70,6 +73,88 @@ Docstrings
 
   :param foo: the foo parameter
   :param bar: the bar parameter
+  :returns: return_type -- description of the return value
   :returns: description of the return value
+  :raises: AttributeError, KeyError
 
   """
+
+
+Dictionaries/Lists
+------------------
+  If a dictionary (dict) or list object is longer than 80 characters, its
+  items should be split with newlines. Embedded iterables should have their
+  items indented. Additionally, the last item in the dictionary should have
+  a trailing comma. This increases readability and simplifies future diffs.
+
+  Example:
+
+    my_dictionary = {
+        "image": {
+            "name": "Just a Snapshot",
+            "size": 2749573,
+            "properties": {
+                 "user_id": 12,
+                 "arch": "x86_64",
+            },
+            "things": [
+                "thing_one",
+                "thing_two",
+            ],
+            "status": "ACTIVE",
+        },
+    }
+  
+
+Calling Methods
+---------------
+  Calls to methods 80 characters or longer should format each argument with 
+  newlines. This is not a requirement, but a guideline.
+
+    unnecessarily_long_function_name('string one',
+                                     'string two',
+                                     kwarg1=constants.ACTIVE,
+                                     kwarg2=['a', 'b', 'c'])
+
+
+  Rather than constructing parameters inline, it is better to break things up:
+
+    list_of_strings = [
+        'what_a_long_string',
+        'not as long',
+    ]
+
+    dict_of_numbers = {
+        'one': 1,
+        'two': 2,
+        'twenty four': 24,
+    }
+        
+    object_one.call_a_method('string three',
+                             'string four',
+                             kwarg1=list_of_strings,
+                             kwarg2=dict_of_numbers)
+
+
+Internationalization (i18n) Strings
+-----------------------------------
+  In order to support multiple languages, we have a mechanism to support
+  automatic translations of exception and log strings.
+
+  Example:
+    msg = _("An error occurred")
+    raise HTTPBadRequest(explanation=msg)
+  
+  If you have a variable to place within the string, first internationalize
+  the template string then do the replacement.
+
+  Example:
+    msg = _("Missing parameter: %s") % ("flavor",)
+    LOG.error(msg)
+ 
+  If you have multiple variables to place in the string, use keyword
+  parameters. This helps our translators reorder parameters when needed.
+
+  Example:
+    msg = _("The server with id %(s_id)s has no key %(m_key)s")
+    LOG.error(msg % {"s_id": "1234", "m_key": "imageId"})

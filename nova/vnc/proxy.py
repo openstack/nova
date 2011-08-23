@@ -60,7 +60,7 @@ class WebsocketVNCProxy(object):
                     break
                 d = base64.b64encode(d)
                 dest.send(d)
-        except:
+        except Exception:
             source.close()
             dest.close()
 
@@ -72,7 +72,7 @@ class WebsocketVNCProxy(object):
                     break
                 d = base64.b64decode(d)
                 dest.sendall(d)
-        except:
+        except Exception:
             source.close()
             dest.close()
 

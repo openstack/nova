@@ -16,18 +16,12 @@
 
 import json
 
-import stubout
 import webob
 
-from nova import flags
 from nova import test
 from nova.api.openstack import accounts
 from nova.auth.manager import User
 from nova.tests.api.openstack import fakes
-
-
-FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 def fake_init(self):
@@ -41,7 +35,7 @@ def fake_admin_check(self, req):
 class AccountsTest(test.TestCase):
     def setUp(self):
         super(AccountsTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
+        self.flags(verbose=True, allow_admin_api=True)
         self.stubs.Set(accounts.Controller, '__init__',
                        fake_init)
         self.stubs.Set(accounts.Controller, '_check_admin',
@@ -52,8 +46,6 @@ class AccountsTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
 
-        self.allow_admin = FLAGS.allow_admin_api
-        FLAGS.allow_admin_api = True
         fakemgr = fakes.FakeAuthManager()
         joeuser = User('id1', 'guy1', 'acc1', 'secret1', False)
         superuser = User('id2', 'guy2', 'acc2', 'secret2', True)
@@ -61,11 +53,6 @@ class AccountsTest(test.TestCase):
         fakemgr.add_user(superuser)
         fakemgr.create_project('test1', joeuser)
         fakemgr.create_project('test2', superuser)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.allow_admin_api = self.allow_admin
-        super(AccountsTest, self).tearDown()
 
     def test_get_account(self):
         req = webob.Request.blank('/v1.0/accounts/test1')

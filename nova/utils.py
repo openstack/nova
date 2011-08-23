@@ -19,7 +19,6 @@
 
 """Utilities and helper functions."""
 
-import base64
 import datetime
 import functools
 import inspect
@@ -29,8 +28,8 @@ import netaddr
 import os
 import random
 import re
+import shlex
 import socket
-import string
 import struct
 import sys
 import time
@@ -50,7 +49,8 @@ from nova import version
 
 
 LOG = logging.getLogger("nova.utils")
-TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+PERFECT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 FLAGS = flags.FLAGS
 
 
@@ -127,29 +127,47 @@ def fetchfile(url, target):
 
 
 def execute(*cmd, **kwargs):
+    """
+    Helper method to execute command with optional retry.
+
+    :cmd                Passed to subprocess.Popen.
+    :process_input      Send to opened process.
+    :check_exit_code    Defaults to 0. Raise exception.ProcessExecutionError
+                        unless program exits with this code.
+    :delay_on_retry     True | False. Defaults to True. If set to True, wait a
+                        short amount of time before retrying.
+    :attempts           How many times to retry cmd.
+    :run_as_root        True | False. Defaults to False. If set to True,
+                        the command is prefixed by the command specified
+                        in the root_helper FLAG.
+
+    :raises exception.Error on receiving unknown arguments
+    :raises exception.ProcessExecutionError
+    """
+
     process_input = kwargs.pop('process_input', None)
-    addl_env = kwargs.pop('addl_env', None)
     check_exit_code = kwargs.pop('check_exit_code', 0)
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
+    run_as_root = kwargs.pop('run_as_root', False)
     if len(kwargs):
         raise exception.Error(_('Got unknown keyword args '
                                 'to utils.execute: %r') % kwargs)
+
+    if run_as_root:
+        cmd = shlex.split(FLAGS.root_helper) + list(cmd)
     cmd = map(str, cmd)
 
     while attempts > 0:
         attempts -= 1
         try:
             LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
-            env = os.environ.copy()
-            if addl_env:
-                env.update(addl_env)
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
             obj = subprocess.Popen(cmd,
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
-                                   env=env)
+                                   close_fds=True)
             result = None
             if process_input is not None:
                 result = obj.communicate(process_input)
@@ -224,7 +242,7 @@ def abspath(s):
 
 def novadir():
     import nova
-    return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
+    return os.path.abspath(nova.__file__).split('nova/__init__.py')[0]
 
 
 def default_flagfile(filename='nova.conf', args=None):
@@ -242,8 +260,9 @@ def default_flagfile(filename='nova.conf', args=None):
             filename = "./nova.conf"
             if not os.path.exists(filename):
                 filename = '/etc/nova/nova.conf'
-        flagfile = '--flagfile=%s' % filename
-        args.insert(1, flagfile)
+        if os.path.exists(filename):
+            flagfile = '--flagfile=%s' % filename
+            args.insert(1, flagfile)
 
 
 def debug(arg):
@@ -276,7 +295,7 @@ EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
 
 def usage_from_instance(instance_ref, **kw):
     usage_info = dict(
-          tenant_id=instance_ref['project_id'],
+          project_id=instance_ref['project_id'],
           user_id=instance_ref['user_id'],
           instance_id=instance_ref['id'],
           instance_type=instance_ref['instance_type']['name'],
@@ -361,16 +380,26 @@ def clear_time_override():
     utcnow.override_time = None
 
 
-def isotime(at=None):
-    """Returns iso formatted utcnow."""
+def strtime(at=None, fmt=PERFECT_TIME_FORMAT):
+    """Returns formatted utcnow."""
     if not at:
         at = utcnow()
-    return at.strftime(TIME_FORMAT)
+    return at.strftime(fmt)
+
+
+def parse_strtime(timestr, fmt=PERFECT_TIME_FORMAT):
+    """Turn a formatted time back into a datetime."""
+    return datetime.datetime.strptime(timestr, fmt)
+
+
+def isotime(at=None):
+    """Returns iso formatted utcnow."""
+    return strtime(at, ISO_TIME_FORMAT)
 
 
 def parse_isotime(timestr):
     """Turn an iso formatted time back into a datetime."""
-    return datetime.datetime.strptime(timestr, TIME_FORMAT)
+    return parse_strtime(timestr, ISO_TIME_FORMAT)
 
 
 def parse_mailmap(mailmap='.mailmap'):
@@ -504,25 +533,67 @@ def utf8(value):
     return value
 
 
-def to_primitive(value):
-    if type(value) is type([]) or type(value) is type((None,)):
-        o = []
-        for v in value:
-            o.append(to_primitive(v))
-        return o
-    elif type(value) is type({}):
-        o = {}
-        for k, v in value.iteritems():
-            o[k] = to_primitive(v)
-        return o
-    elif isinstance(value, datetime.datetime):
-        return str(value)
-    elif hasattr(value, 'iteritems'):
-        return to_primitive(dict(value.iteritems()))
-    elif hasattr(value, '__iter__'):
-        return to_primitive(list(value))
-    else:
-        return value
+def to_primitive(value, convert_instances=False, level=0):
+    """Convert a complex object into primitives.
+
+    Handy for JSON serialization. We can optionally handle instances,
+    but since this is a recursive function, we could have cyclical
+    data structures.
+
+    To handle cyclical data structures we could track the actual objects
+    visited in a set, but not all objects are hashable. Instead we just
+    track the depth of the object inspections and don't go too deep.
+
+    Therefore, convert_instances=True is lossy ... be aware.
+
+    """
+    nasty = [inspect.ismodule, inspect.isclass, inspect.ismethod,
+             inspect.isfunction, inspect.isgeneratorfunction,
+             inspect.isgenerator, inspect.istraceback, inspect.isframe,
+             inspect.iscode, inspect.isbuiltin, inspect.isroutine,
+             inspect.isabstract]
+    for test in nasty:
+        if test(value):
+            return unicode(value)
+
+    if level > 3:
+        return '?'
+
+    # The try block may not be necessary after the class check above,
+    # but just in case ...
+    try:
+        if type(value) is type([]) or type(value) is type((None,)):
+            o = []
+            for v in value:
+                o.append(to_primitive(v, convert_instances=convert_instances,
+                                      level=level))
+            return o
+        elif type(value) is type({}):
+            o = {}
+            for k, v in value.iteritems():
+                o[k] = to_primitive(v, convert_instances=convert_instances,
+                                    level=level)
+            return o
+        elif isinstance(value, datetime.datetime):
+            return str(value)
+        elif hasattr(value, 'iteritems'):
+            return to_primitive(dict(value.iteritems()),
+                                convert_instances=convert_instances,
+                                level=level)
+        elif hasattr(value, '__iter__'):
+            return to_primitive(list(value), level)
+        elif convert_instances and hasattr(value, '__dict__'):
+            # Likely an instance of something. Watch for cycles.
+            # Ignore class member vars.
+            return to_primitive(value.__dict__,
+                                convert_instances=convert_instances,
+                                level=level + 1)
+        else:
+            return value
+    except TypeError, e:
+        # Class objects are tricky since they may define something like
+        # __iter__ defined but it isn't callable as list().
+        return unicode(value)
 
 
 def dumps(value):
@@ -745,7 +816,7 @@ def parse_server_string(server_str):
         (address, port) = server_str.split(':')
         return (address, port)
 
-    except:
+    except Exception:
         LOG.debug(_('Invalid server_string: %s' % server_str))
         return ('', '')
 
@@ -775,37 +846,17 @@ def bool_from_str(val):
         return val.lower() == 'true'
 
 
-class Bootstrapper(object):
-    """Provides environment bootstrapping capabilities for entry points."""
-
-    @staticmethod
-    def bootstrap_binary(argv):
-        """Initialize the Nova environment using command line arguments."""
-        Bootstrapper.setup_flags(argv)
-        Bootstrapper.setup_logging()
-        Bootstrapper.log_flags()
-
-    @staticmethod
-    def setup_logging():
-        """Initialize logging and log a message indicating the Nova version."""
-        logging.setup()
-        logging.audit(_("Nova Version (%s)") %
-                        version.version_string_with_vcs())
-
-    @staticmethod
-    def setup_flags(input_flags):
-        """Initialize flags, load flag file, and print help if needed."""
-        default_flagfile(args=input_flags)
-        FLAGS(input_flags or [])
-        flags.DEFINE_flag(flags.HelpFlag())
-        flags.DEFINE_flag(flags.HelpshortFlag())
-        flags.DEFINE_flag(flags.HelpXMLFlag())
-        FLAGS.ParseNewFlags()
-
-    @staticmethod
-    def log_flags():
-        """Log the list of all active flags being used."""
-        logging.audit(_("Currently active flags:"))
-        for key in FLAGS:
-            value = FLAGS.get(key, None)
-            logging.audit(_("%(key)s : %(value)s" % locals()))
+def is_valid_ipv4(address):
+    """valid the address strictly as per format xxx.xxx.xxx.xxx.
+    where xxx is a value between 0 and 255.
+    """
+    parts = address.split(".")
+    if len(parts) != 4:
+        return False
+    for item in parts:
+        try:
+            if not 0 <= int(item) <= 255:
+                return False
+        except ValueError:
+            return False
+    return True
