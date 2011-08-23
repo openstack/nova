@@ -134,7 +134,7 @@ class VpnCommands(object):
             help='Project name')
     def list(self, project=None):
         """Print a listing of the VPN data for one or all projects."""
-
+        print "WARNING: This method only works with deprecated auth"
         print "%-12s\t" % 'project',
         print "%-20s\t" % 'ip:port',
         print "%-20s\t" % 'private_ip',
@@ -170,17 +170,22 @@ class VpnCommands(object):
 
     def spawn(self):
         """Run all VPNs."""
+        print "WARNING: This method only works with deprecated auth"
         for p in reversed(self.manager.get_projects()):
             if not self._vpn_for(p.id):
                 print 'spawning %s' % p.id
-                self.pipe.launch_vpn_instance(p.id)
+                self.pipe.launch_vpn_instance(p.id, p.project_manager_id)
                 time.sleep(10)
 
     @args('--project', dest="project_id", metavar='<Project name>',
             help='Project name')
-    def run(self, project_id):
-        """Start the VPN for a given project."""
-        self.pipe.launch_vpn_instance(project_id)
+    @args('--user', dest="user_id", metavar='<user name>', help='User name')
+    def run(self, project_id, user_id):
+        """Start the VPN for a given project and user."""
+        if not user_id:
+            print "WARNING: This method only works with deprecated auth"
+            user_id = self.manager.get_project(project_id).project_manager_id
+        self.pipe.launch_vpn_instance(project_id, user_id)
 
     @args('--project', dest="project_id", metavar='<Project name>',
             help='Project name')
@@ -195,10 +200,6 @@ class VpnCommands(object):
         """
         # TODO(tr3buchet): perhaps this shouldn't update all networks
         # associated with a project in the future
-        project = self.manager.get_project(project_id)
-        if not project:
-            print 'No project %s' % (project_id)
-            return
         admin_context = context.get_admin_context()
         networks = db.project_get_networks(admin_context, project_id)
         for network in networks:
