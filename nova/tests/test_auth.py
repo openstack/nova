@@ -147,6 +147,7 @@ class _AuthManagerBaseTestCase(test.TestCase):
                         '/services/Cloud'))
 
     def test_can_get_credentials(self):
+        self.flags(use_deprecated_auth=True)
         st = {'access': 'access', 'secret': 'secret'}
         with user_and_project_generator(self.manager, user_state=st) as (u, p):
             credentials = self.manager.get_environment_rc(u, p)
