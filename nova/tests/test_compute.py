@@ -1308,14 +1308,17 @@ class ComputeTestCase(test.TestCase):
         """Test searching instances by state"""
 
         c = context.get_admin_context()
-        instance_id1 = self._create_instance({'power_state': power_state.SHUTDOWN})
+        instance_id1 = self._create_instance({
+            'power_state': power_state.SHUTDOWN,
+        })
         instance_id2 = self._create_instance({
-                'id': 2,
-                'power_state': power_state.RUNNING})
+            'id': 2,
+            'power_state': power_state.RUNNING,
+        })
         instance_id3 = self._create_instance({
-                'id': 10,
-                'power_state': power_state.RUNNING})
-
+            'id': 10,
+            'power_state': power_state.RUNNING,
+        })
         instances = self.compute_api.get_all(c,
                 search_opts={'power_state': power_state.SUSPENDED})
         self.assertEqual(len(instances), 0)

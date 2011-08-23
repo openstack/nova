@@ -93,7 +93,7 @@ _STATE_DESCRIPTION_MAP = {
     vm_states.VERIFY_RESIZE: 'verify_resize',
     vm_states.PAUSED: 'pause',
     vm_states.SUSPENDED: 'suspend',
-    vm_states.RESCUED: 'rescue'
+    vm_states.RESCUED: 'rescue',
 }
 
 
@@ -104,10 +104,12 @@ def state_description_from_vm_state(vm_state):
 
 # TODO(yamahata): hypervisor dependent default device name
 _DEFAULT_ROOT_DEVICE_NAME = '/dev/sda1'
-_DEFAULT_MAPPINGS = {'ami': 'sda1',
-                     'ephemeral0': 'sda2',
-                     'root': _DEFAULT_ROOT_DEVICE_NAME,
-                     'swap': 'sda3'}
+_DEFAULT_MAPPINGS = {
+    'ami': 'sda1',
+    'ephemeral0': 'sda2',
+    'root': _DEFAULT_ROOT_DEVICE_NAME,
+    'swap': 'sda3',
+}
 
 
 def _parse_block_device_mapping(bdm):
@@ -1064,8 +1066,10 @@ class CloudController(object):
         def _format_attr_instance_initiated_shutdown_behavior(instance,
                                                                result):
             vm_state = instance['vm_state']
-            state_to_value = {vm_states.STOPPED: 'stop',
-                              vm_states.DELETED: 'terminate'}
+            state_to_value = {
+                vm_states.STOPPED: 'stop',
+                vm_states.DELETED: 'terminate',
+            }
             value = state_to_value.get(vm_state)
             if value:
                 result['instanceInitiatedShutdownBehavior'] = value
