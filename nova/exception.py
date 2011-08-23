@@ -197,6 +197,10 @@ class InvalidInstanceType(Invalid):
     message = _("Invalid instance type %(instance_type)s.")
 
 
+class InvalidVolumeType(Invalid):
+    message = _("Invalid volume type %(volume_type)s.")
+
+
 class InvalidPortRange(Invalid):
     message = _("Invalid port range %(from_port)s:%(to_port)s.")
 

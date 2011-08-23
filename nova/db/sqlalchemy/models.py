@@ -322,7 +322,7 @@ class VolumeMetadata(BASE, NovaBase):
     key = Column(String(255))
     value = Column(String(255))
     volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=False)
-    volume = relationship(Volume, backref="metadata",
+    volume = relationship(Volume, backref="volume_metadata",
                             foreign_keys=volume_id,
                             primaryjoin='and_('
                                 'VolumeMetadata.volume_id == Volume.id,'

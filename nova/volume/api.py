@@ -41,7 +41,8 @@ LOG = logging.getLogger('nova.volume')
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def create(self, context, size, snapshot_id, name, description):
+    def create(self, context, size, snapshot_id, name, description,
+                     volume_type=None, metadata=None):
         if snapshot_id != None:
             snapshot = self.get_snapshot(context, snapshot_id)
             if snapshot['status'] != "available":
@@ -66,7 +67,10 @@ class API(base.Base):
             'status': "creating",
             'attach_status': "detached",
             'display_name': name,
-            'display_description': description}
+            'display_description': description,
+            'volume_type_id': volume_type.get('id', None),
+            'metadata' metadata,
+            }
 
         volume = self.db.volume_create(context, options)
         rpc.cast(context,

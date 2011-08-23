@@ -2163,7 +2163,7 @@ def volume_get(context, volume_id, session=None):
     if is_admin_context(context):
         result = session.query(models.Volume).\
                          options(joinedload('instance')).\
-                         options(joinedload('metadata')).\
+                         options(joinedload('volume_metadata')).\
                          options(joinedload('volume_type')).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=can_read_deleted(context)).\
@@ -2171,7 +2171,7 @@ def volume_get(context, volume_id, session=None):
     elif is_user_context(context):
         result = session.query(models.Volume).\
                          options(joinedload('instance')).\
-                         options(joinedload('metadata')).\
+                         options(joinedload('volume_metadata')).\
                          options(joinedload('volume_type')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=volume_id).\
@@ -2188,7 +2188,7 @@ def volume_get_all(context):
     session = get_session()
     return session.query(models.Volume).\
                    options(joinedload('instance')).\
-                   options(joinedload('metadata')).\
+                   options(joinedload('volume_metadata')).\
                    options(joinedload('volume_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -2199,7 +2199,7 @@ def volume_get_all_by_host(context, host):
     session = get_session()
     return session.query(models.Volume).\
                    options(joinedload('instance')).\
-                   options(joinedload('metadata')).\
+                   options(joinedload('volume_metadata')).\
                    options(joinedload('volume_type')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -2210,7 +2210,7 @@ def volume_get_all_by_host(context, host):
 def volume_get_all_by_instance(context, instance_id):
     session = get_session()
     result = session.query(models.Volume).\
-                     options(joinedload('metadata')).\
+                     options(joinedload('volume_metadata')).\
                      options(joinedload('volume_type')).\
                      filter_by(instance_id=instance_id).\
                      filter_by(deleted=False).\
@@ -2227,7 +2227,7 @@ def volume_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Volume).\
                    options(joinedload('instance')).\
-                   options(joinedload('metadata')).\
+                   options(joinedload('volume_metadata')).\
                    options(joinedload('volume_type')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -2241,7 +2241,7 @@ def volume_get_instance(context, volume_id):
                      filter_by(id=volume_id).\
                      filter_by(deleted=can_read_deleted(context)).\
                      options(joinedload('instance')).\
-                     options(joinedload('metadata')).\
+                     options(joinedload('volume_metadata')).\
                      options(joinedload('volume_type')).\
                      first()
     if not result:
@@ -3634,7 +3634,7 @@ def volume_type_create(_context, values):
 
 
 @require_context
-def volume_type_get_all(context, inactive=False):
+def volume_type_get_all(context, inactive=False, filters={}):
     """
     Returns a dict describing all volume_types with name as key.
     """
