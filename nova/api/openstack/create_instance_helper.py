@@ -111,8 +111,16 @@ class CreateInstanceHelper(object):
         if personality:
             injected_files = self._get_injected_files(personality)
 
-        requested_networks = server_dict.get('networks')
+        sg_names = []
+        security_groups = server_dict.get('security_groups')
+        if security_groups is not None:
+            sg_names = [sg['name'] for sg in security_groups if sg.get('name')]
+        if not sg_names:
+            sg_names.append('default')
 
+        sg_names = list(set(sg_names))
+
+        requested_networks = server_dict.get('networks')
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
                                                     requested_networks)
@@ -164,6 +172,8 @@ class CreateInstanceHelper(object):
                                   key_name=key_name,
                                   key_data=key_data,
                                   metadata=server_dict.get('metadata', {}),
+                                  access_ip_v4=server_dict.get('accessIPv4'),
+                                  access_ip_v6=server_dict.get('accessIPv6'),
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,
@@ -171,6 +181,7 @@ class CreateInstanceHelper(object):
                                   min_count=min_count,
                                   max_count=max_count,
                                   requested_networks=requested_networks,
+                                  security_group=sg_names,
                                   user_data=user_data,
                                   availability_zone=availability_zone))
         except quota.QuotaError as error:
@@ -181,6 +192,8 @@ class CreateInstanceHelper(object):
         except exception.FlavorNotFound as error:
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.SecurityGroupNotFound as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
         except RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % \
                   {'err_type': err.exc_type, 'err_msg': err.value}
@@ -503,7 +516,8 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
         server = {}
         server_node = self.find_first_child_named(node, 'server')
 
-        attributes = ["name", "imageRef", "flavorRef", "adminPass"]
+        attributes = ["name", "imageRef", "flavorRef", "adminPass",
+                      "accessIPv4", "accessIPv6"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
@@ -519,6 +533,10 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
         networks = self._extract_networks(server_node)
         if networks is not None:
             server["networks"] = networks
+
+        security_groups = self._extract_security_groups(server_node)
+        if security_groups is not None:
+            server["security_groups"] = security_groups
 
         return server
 
@@ -551,5 +569,20 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
                     item["fixed_ip"] = network_node.getAttribute("fixed_ip")
                 networks.append(item)
             return networks
+        else:
+            return None
+
+    def _extract_security_groups(self, server_node):
+        """Marshal the security_groups attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "security_groups")
+        if node is not None:
+            security_groups = []
+            for sg_node in self.find_children_named(node, "security_group"):
+                item = {}
+                name_node = self.find_first_child_named(sg_node, "name")
+                if name_node:
+                    item["name"] = self.extract_text(name_node)
+                    security_groups.append(item)
+            return security_groups
         else:
             return None

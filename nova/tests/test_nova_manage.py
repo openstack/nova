@@ -31,6 +31,8 @@ sys.dont_write_bytecode = True
 import imp
 nova_manage = imp.load_source('nova_manage.py', NOVA_MANAGE_PATH)
 sys.dont_write_bytecode = False
+import mox
+import stubout
 
 import netaddr
 import StringIO
@@ -40,6 +42,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
+from nova.tests.db import fakes as db_fakes
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.nova_manage')
@@ -48,44 +51,24 @@ LOG = logging.getLogger('nova.tests.nova_manage')
 class FixedIpCommandsTestCase(test.TestCase):
     def setUp(self):
         super(FixedIpCommandsTestCase, self).setUp()
-        cidr = '10.0.0.0/24'
-        net = netaddr.IPNetwork(cidr)
-        net_info = {'bridge': 'fakebr',
-               'bridge_interface': 'fakeeth',
-               'dns': FLAGS.flat_network_dns,
-               'cidr': cidr,
-               'netmask': str(net.netmask),
-               'gateway': str(net[1]),
-               'broadcast': str(net.broadcast),
-               'dhcp_start': str(net[2])}
-        self.network = db.network_create_safe(context.get_admin_context(),
-                                              net_info)
-        num_ips = len(net)
-        for index in range(num_ips):
-            address = str(net[index])
-            reserved = (index == 1 or index == 2)
-            db.fixed_ip_create(context.get_admin_context(),
-                               {'network_id': self.network['id'],
-                                'address': address,
-                                'reserved': reserved})
+        self.stubs = stubout.StubOutForTesting()
+        db_fakes.stub_out_db_network_api(self.stubs)
         self.commands = nova_manage.FixedIpCommands()
 
     def tearDown(self):
-        db.network_delete_safe(context.get_admin_context(), self.network['id'])
         super(FixedIpCommandsTestCase, self).tearDown()
+        self.stubs.UnsetAll()
 
     def test_reserve(self):
-        self.commands.reserve('10.0.0.100')
+        self.commands.reserve('192.168.0.100')
         address = db.fixed_ip_get_by_address(context.get_admin_context(),
-                                             '10.0.0.100')
+                                             '192.168.0.100')
         self.assertEqual(address['reserved'], True)
 
     def test_unreserve(self):
-        db.fixed_ip_update(context.get_admin_context(), '10.0.0.100',
-                           {'reserved': True})
-        self.commands.unreserve('10.0.0.100')
+        self.commands.unreserve('192.168.0.100')
         address = db.fixed_ip_get_by_address(context.get_admin_context(),
-                                             '10.0.0.100')
+                                             '192.168.0.100')
         self.assertEqual(address['reserved'], False)
 
 

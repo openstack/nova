@@ -163,7 +163,7 @@ class Controller(object):
 
     @scheduler_api.redirect_handler
     def update(self, req, id, body):
-        """Update server name then pass on to version-specific controller"""
+        """Update server then pass on to version-specific controller"""
         if len(req.body) == 0:
             raise exc.HTTPUnprocessableEntity()
 
@@ -177,6 +177,14 @@ class Controller(object):
             name = body['server']['name']
             self.helper._validate_server_name(name)
             update_dict['display_name'] = name.strip()
+
+        if 'accessIPv4' in body['server']:
+            access_ipv4 = body['server']['accessIPv4']
+            update_dict['access_ip_v4'] = access_ipv4.strip()
+
+        if 'accessIPv6' in body['server']:
+            access_ipv6 = body['server']['accessIPv6']
+            update_dict['access_ip_v6'] = access_ipv6.strip()
 
         try:
             self.compute_api.update(ctxt, id, **update_dict)
@@ -642,14 +650,16 @@ class ControllerV11(Controller):
         return common.get_id_from_href(flavor_ref)
 
     def _build_view(self, req, instance, is_detail=False):
+        project_id = getattr(req.environ['nova.context'], 'project_id', '')
         base_url = req.application_url
         flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
-            base_url)
+            base_url, project_id)
         image_builder = nova.api.openstack.views.images.ViewBuilderV11(
-            base_url)
+            base_url, project_id)
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
         builder = nova.api.openstack.views.servers.ViewBuilderV11(
-            addresses_builder, flavor_builder, image_builder, base_url)
+            addresses_builder, flavor_builder, image_builder,
+            base_url, project_id)
 
         return builder.build(instance, is_detail=is_detail)
 
@@ -837,6 +847,10 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         node.setAttribute('created', str(server['created']))
         node.setAttribute('updated', str(server['updated']))
         node.setAttribute('status', server['status'])
+        if 'accessIPv4' in server:
+            node.setAttribute('accessIPv4', str(server['accessIPv4']))
+        if 'accessIPv6' in server:
+            node.setAttribute('accessIPv6', str(server['accessIPv6']))
         if 'progress' in server:
             node.setAttribute('progress', str(server['progress']))
 

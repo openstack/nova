@@ -384,3 +384,13 @@ class ToPrimitiveTestCase(test.TestCase):
     def test_typeerror(self):
         x = bytearray  # Class, not instance
         self.assertEquals(utils.to_primitive(x), u"<type 'bytearray'>")
+
+    def test_nasties(self):
+        def foo():
+            pass
+        x = [datetime, foo, dir]
+        ret = utils.to_primitive(x)
+        self.assertEquals(len(ret), 3)
+        self.assertTrue(ret[0].startswith(u"<module 'datetime' from "))
+        self.assertTrue(ret[1].startswith(u'<function foo at 0x'))
+        self.assertEquals(ret[2], u'<built-in function dir>')

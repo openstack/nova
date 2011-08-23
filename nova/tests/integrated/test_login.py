@@ -59,6 +59,12 @@ class LoginTest(integrated_helpers._IntegratedTestBase):
         self.assertRaises(client.OpenStackApiAuthenticationException,
                           bad_credentials_api.get_flavors)
 
+    def test_good_login_bad_project(self):
+        """Test that I get a 401 with valid user/pass but bad project"""
+        self.api.project_id = 'openstackBAD'
+
+        self.assertRaises(client.OpenStackApiAuthorizationException,
+                          self.api.get_flavors)
 
 if __name__ == "__main__":
     unittest.main()

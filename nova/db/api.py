@@ -569,6 +569,12 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                             security_group_id)
 
 
+def instance_remove_security_group(context, instance_id, security_group_id):
+    """Disassociate the given security group from the given instance."""
+    return IMPL.instance_remove_security_group(context, instance_id,
+                                            security_group_id)
+
+
 def instance_action_create(context, values):
     """Create an instance action from the values dictionary."""
     return IMPL.instance_action_create(context, values)
