@@ -42,7 +42,7 @@ class API(base.Base):
     """API for interacting with the volume manager."""
 
     def create(self, context, size, snapshot_id, name, description,
-                     volume_type=None, metadata=None):
+                     volume_type=None, metadata=None, availability_zone=None):
         if snapshot_id != None:
             snapshot = self.get_snapshot(context, snapshot_id)
             if snapshot['status'] != "available":
@@ -58,18 +58,21 @@ class API(base.Base):
             raise quota.QuotaError(_("Volume quota exceeded. You cannot "
                                      "create a volume of size %sG") % size)
 
+        if availability_zone is None:
+            availability_zone = FLAGS.storage_availability_zone
+
         options = {
             'size': size,
             'user_id': context.user_id,
             'project_id': context.project_id,
             'snapshot_id': snapshot_id,
-            'availability_zone': FLAGS.storage_availability_zone,
+            'availability_zone': availability_zone,
             'status': "creating",
             'attach_status': "detached",
             'display_name': name,
             'display_description': description,
             'volume_type_id': volume_type.get('id', None),
-            'metadata' metadata,
+            'metadata': metadata,
             }
 
         volume = self.db.volume_create(context, options)

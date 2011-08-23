@@ -4,7 +4,6 @@
 # Copyright (c) 2011 OpenStack LLC.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
 # Copyright (c) 2010 Citrix Systems, Inc.
 # Copyright 2011 Ken Pepple
 #
@@ -29,16 +28,15 @@ from nova import flags
 from nova import log as logging
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.volume_types')
+LOG = logging.getLogger('nova.volume.volume_types')
 
 
 def create(context, name, extra_specs={}):
     """Creates volume types."""
     try:
-        db.volume_type_create(
-                context,
-                dict(name=name,
-                     extra_specs=extra_specs))
+        db.volume_type_create(context,
+                              dict(name=name,
+                                   extra_specs=extra_specs))
     except exception.DBError, e:
         LOG.exception(_('DB error: %s') % e)
         raise exception.ApiError(_("Cannot create volume_type with "
@@ -82,7 +80,7 @@ def get_all_types(context, inactive=0):
 def get_volume_type(context, id):
     """Retrieves single volume type by id."""
     if id is None:
-        raise exception.ApiError(_("Invalid volume type: %s") % id)
+        raise exception.InvalidVolumeType(volume_type=id)
 
     try:
         return db.volume_type_get(context, id)
@@ -93,7 +91,7 @@ def get_volume_type(context, id):
 def get_volume_type_by_name(context, name):
     """Retrieves single volume type by name."""
     if name is None:
-        raise exception.ApiError(_("Invalid volume type name: %s") % name)
+        raise exception.InvalidVolumeType(volume_type=name)
 
     try:
         return db.volume_type_get_by_name(context, name)

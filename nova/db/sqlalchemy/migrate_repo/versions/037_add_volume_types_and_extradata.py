@@ -2,7 +2,6 @@
 
 # Copyright (c) 2011 Zadara Storage Inc.
 # Copyright (c) 2011 OpenStack LLC.
-# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -45,7 +44,8 @@ volume_types = Table('volume_types', meta,
        Column('id', Integer(), primary_key=True, nullable=False),
        Column('name',
               String(length=255, convert_unicode=False, assert_unicode=None,
-                     unicode_error=None, _warn_on_bytestring=False)))
+                     unicode_error=None, _warn_on_bytestring=False),
+              unique=True))
 
 volume_type_extra_specs_table = Table('volume_type_extra_specs', meta,
         Column('created_at', DateTime(timezone=False)),
