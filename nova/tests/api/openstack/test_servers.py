@@ -785,7 +785,7 @@ class ServersTest(test.TestCase):
         new_return_server = return_server_with_attributes(interfaces=ifaces)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
-        req = webob.Request.blank('/v1.1/servers/1')
+        req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
