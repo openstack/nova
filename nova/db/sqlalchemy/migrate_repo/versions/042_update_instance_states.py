@@ -33,35 +33,35 @@ c_task_state = Column('task_state',
 
 _upgrade_translations = {
     "stopping": {
-        "vm_state": vm_states.ACTIVE,
+        "state_description": vm_states.ACTIVE,
         "task_state": task_states.STOPPING,
     },
     "stopped": {
-        "vm_state": vm_states.STOPPED,
+        "state_description": vm_states.STOPPED,
         "task_state": None,
     },
     "terminated": {
-        "vm_state": vm_states.DELETED,
+        "state_description": vm_states.DELETED,
         "task_state": None,
     },
     "terminating": {
-        "vm_state": vm_states.ACTIVE,
+        "state_description": vm_states.ACTIVE,
         "task_state": task_states.DELETING,
     },
     "running": {
-        "vm_state": vm_states.ACTIVE,
+        "state_description": vm_states.ACTIVE,
         "task_state": None,
     },
     "scheduling": {
-        "vm_state": vm_states.BUILDING,
+        "state_description": vm_states.BUILDING,
         "task_state": task_states.SCHEDULING,
     },
     "migrating": {
-        "vm_state": vm_states.MIGRATING,
+        "state_description": vm_states.MIGRATING,
         "task_state": None,
     },
     "pending": {
-        "vm_state": vm_states.BUILDING,
+        "state_description": vm_states.BUILDING,
         "task_state": task_states.SCHEDULING,
     },
 }
@@ -107,19 +107,10 @@ def upgrade(migrate_engine):
     instance_table.create_column(c_task_state)
 
     for old_state, values in _upgrade_translations.iteritems():
-        new_values = {
-            "old_state": old_state,
-            "vm_state": values["vm_state"],
-            "task_state": values["task_state"],
-        }
-
-        update = sqlalchemy.text("UPDATE instances SET task_state=:task_state "
-                                 "WHERE vm_state=:old_state")
-        migrate_engine.execute(update, **new_values)
-
-        update = sqlalchemy.text("UPDATE instances SET vm_state=:vm_state "
-                                 "WHERE vm_state=:old_state")
-        migrate_engine.execute(update, **new_values)
+        instance_table.update().\
+            values(**values).\
+            where(c_vm_state == old_state).\
+            execute()
 
 
 def downgrade(migrate_engine):
@@ -128,24 +119,20 @@ def downgrade(migrate_engine):
     instance_table = Table('instances', meta, autoload=True,
                            autoload_with=migrate_engine)
 
-    for old_vm_state, old_task_states in _downgrade_translations.iteritems():
-        for old_task_state, new_state_desc in old_task_states.iteritems():
-            if old_task_state:
-                update = sqlalchemy.text("UPDATE instances "
-                                         "SET vm_state=:new_state_desc "
-                                         "WHERE task_state=:old_task_state "
-                                         "AND vm_state=:old_vm_state")
-                migrate_engine.execute(update, locals())
-            else:
-                update = sqlalchemy.text("UPDATE instances "
-                                         "SET vm_state=:new_state_desc "
-                                         "WHERE vm_state=:old_vm_state")
-                migrate_engine.execute(update, locals())
+    c_task_state = instance_table.c.task_state
 
     c_state = instance_table.c.power_state
     c_state.alter(name='state')
 
     c_vm_state = instance_table.c.vm_state
     c_vm_state.alter(name='state_description')
+
+    for old_vm_state, old_task_states in _downgrade_translations.iteritems():
+        for old_task_state, new_state_desc in old_task_states.iteritems():
+            instance_table.update().\
+                where(c_task_state == old_task_state).\
+                where(c_vm_state == old_vm_state).\
+                values(state_description=new_state_desc).\
+                execute()
 
     instance_table.drop_column('task_state')
