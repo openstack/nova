@@ -1,4 +1,5 @@
 # Copyright 2011 OpenStack LLC.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -106,6 +107,7 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         personality = server_dict.get('personality')
+        config_drive = server_dict.get('config_drive')
 
         injected_files = []
         if personality:
@@ -159,6 +161,7 @@ class CreateInstanceHelper(object):
             extra_values = {
                 'instance_type': inst_type,
                 'image_ref': image_href,
+                'config_drive': config_drive,
                 'password': password}
 
             return (extra_values,
@@ -184,7 +187,8 @@ class CreateInstanceHelper(object):
                                   requested_networks=requested_networks,
                                   security_group=sg_names,
                                   user_data=user_data,
-                                  availability_zone=availability_zone))
+                                  availability_zone=availability_zone,
+                                  config_drive=config_drive,))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:

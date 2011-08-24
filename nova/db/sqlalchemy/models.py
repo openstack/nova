@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -230,6 +231,7 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
+    config_drive = Column(String(255))
 
     # User editable field meant to represent what ip should be used
     # to connect to the instance

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2011 Justin Santa Barbara
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,18 +14,20 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+"""Example Module for testing utils.monkey_patch()."""
 
 
-from nova.log import logging
-from nova.tests.integrated import integrated_helpers
+CALLED_FUNCTION = []
 
 
-LOG = logging.getLogger('nova.tests.integrated')
+def example_decorator(name, function):
+    """ decorator for notify which is used from utils.monkey_patch()
 
-
-class LoginTest(integrated_helpers._IntegratedTestBase):
-    def test_login(self):
-        """Simple check - we list flavors - so we know we're logged in."""
-        flavors = self.api.get_flavors()
-        for flavor in flavors:
-            LOG.debug(_("flavor: %s") % flavor)
+        :param name: name of the function
+        :param function: - object of the function
+        :returns: function -- decorated function
+    """
+    def wrapped_func(*args, **kwarg):
+        CALLED_FUNCTION.append(name)
+        return function(*args, **kwarg)
+    return wrapped_func
