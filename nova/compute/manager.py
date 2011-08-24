@@ -547,8 +547,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         bd_mapping = self._setup_block_device_mapping(context, instance_id)
 
         # pull in new password here since the original password isn't in the db
-        new_pass = kwargs.get('new_pass')
-        instance_ref.admin_pass = new_pass
+        instance_ref.admin_pass = kwargs.get('new_pass',
+            utils.generate_password(FLAGS.password_length))
 
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
 

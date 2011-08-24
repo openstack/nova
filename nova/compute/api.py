@@ -1053,7 +1053,6 @@ class API(base.Base):
                                    context,
                                    instance_id,
                                    params=rebuild_params)
-        return rebuild_params
 
     @scheduler_api.reroute_compute("revert_resize")
     def revert_resize(self, context, instance_id):
