@@ -754,6 +754,9 @@ class ControllerV11(Controller):
             msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             raise exc.HTTPConflict(explanation=msg)
+        except exception.InstanceNotFound:
+            msg = _("Instance %s could not be found") % instance_id
+            raise exc.HTTPNotFound(explanation=msg)
 
         instance = self.compute_api.routing_get(context, instance_id)
         view = self._build_view(request, instance, is_detail=True)
@@ -949,6 +952,11 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
                                        server_dict['server'])
         node.setAttribute('adminPass', server_dict['server']['adminPass'])
         return self.to_xml_string(node, True)
+
+    def action(self, server_dict):
+        #NOTE(bcwaldon): We need a way to serialize actions individually. This
+        # assumes all actions return a server entity
+        return self.create(server_dict)
 
     def update(self, server_dict):
         xml_doc = minidom.Document()

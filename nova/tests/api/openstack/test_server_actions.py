@@ -7,6 +7,7 @@ import webob
 
 from nova import context
 from nova import utils
+from nova import exception
 from nova import flags
 from nova.api.openstack import create_instance_helper
 from nova.compute import instance_types
@@ -768,6 +769,25 @@ class ServerActionsTestV11(test.TestCase):
         body = json.loads(res.body)
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertEqual(body['server']['adminPass'], 'asdf')
+
+    def test_server_rebuild_server_not_found(self):
+        def server_not_found(self, instance_id):
+            raise exception.InstanceNotFound(instance_id=instance_id)
+        self.stubs.Set(nova.db.api, 'instance_get', server_not_found)
+
+        body = {
+            "rebuild": {
+                "imageRef": "http://localhost/images/2",
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
 
     def test_resize_server(self):
 
