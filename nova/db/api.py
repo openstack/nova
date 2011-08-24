@@ -1512,5 +1512,3 @@ def volume_type_extra_specs_update_or_create(context, volume_type_id,
     key/value pairs specified in the extra specs dict argument"""
     IMPL.volume_type_extra_specs_update_or_create(context, volume_type_id,
                                                     extra_specs)
-
-

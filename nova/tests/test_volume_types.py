@@ -152,5 +152,3 @@ class VolumeTypeTestCase(test.TestCase):
 
         new2 = volume_types.get_volume_type(self.ctxt, new['id'])
         self.assertEqual(new, new2)
-
-

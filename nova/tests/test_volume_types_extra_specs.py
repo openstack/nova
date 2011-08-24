@@ -44,7 +44,6 @@ class VolumeTypeExtraSpecsTestCase(test.TestCase):
         ref = db.api.volume_type_create(self.context, self.vol_type2_noextra)
         self.vol_type2_id = ref.id
 
-
     def tearDown(self):
         # Remove the instance type from the database
         db.api.volume_type_purge(context.get_admin_context(),

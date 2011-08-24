@@ -291,8 +291,9 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         # Create volume
         metadata = {'key1': 'value1',
                     'key2': 'value2'}
-        created_volume = self.api.post_volume({'volume': {'size': 1,
-                                                          'metadata': metadata}})
+        created_volume = self.api.post_volume(
+            {'volume': {'size': 1,
+                        'metadata': metadata}})
         LOG.debug("created_volume: %s" % created_volume)
         self.assertTrue(created_volume['id'])
         created_volume_id = created_volume['id']

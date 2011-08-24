@@ -83,7 +83,9 @@ volume_metadata_table = Table('volume_metadata', meta,
                       unicode_error=None, _warn_on_bytestring=False)))
 
 
-new_tables = (volume_types, volume_type_extra_specs_table, volume_metadata_table)
+new_tables = (volume_types,
+              volume_type_extra_specs_table,
+              volume_metadata_table)
 
 #
 # Tables to alter
@@ -102,6 +104,7 @@ def upgrade(migrate_engine):
             raise
 
     volumes.create_column(volume_type_id)
+
 
 def downgrade(migrate_engine):
     meta.bind = migrate_engine

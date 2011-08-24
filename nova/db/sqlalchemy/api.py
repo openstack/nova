@@ -2350,7 +2350,6 @@ def volume_update(context, volume_id, values):
         volume_ref.save(session=session)
 
 
-
 ####################
 
 
@@ -3682,8 +3681,7 @@ def volume_type_create(_context, values):
         specs = values.get('extra_specs')
 
         values['extra_specs'] = _metadata_refs(values.get('extra_specs'),
-                                                   models.VolumeTypeExtraSpecs)
-        
+                                                models.VolumeTypeExtraSpecs)
         volume_type_ref = models.VolumeTypes()
         volume_type_ref.update(values)
         volume_type_ref.save()
