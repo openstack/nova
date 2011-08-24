@@ -2,7 +2,6 @@
 
 # Copyright (c) 2011 Zadara Storage Inc.
 # Copyright (c) 2011 OpenStack LLC.
-# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -24,6 +23,7 @@ from webob import exc
 from nova import vsa
 from nova import volume
 from nova import compute
+from nova import network
 from nova import db
 from nova import quota
 from nova import exception
@@ -103,6 +103,7 @@ class VsaController(object):
     def __init__(self):
         self.vsa_api = vsa.API()
         self.compute_api = compute.API()
+        self.network_api = network.API()
         super(VsaController, self).__init__()
 
     def _items(self, req, details):
@@ -185,6 +186,48 @@ class VsaController(object):
             self.vsa_api.delete(context, vsa_id=id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+
+    def associate_address(self, req, id, body):
+        """ /zadr-vsa/{vsa_id}/associate_address
+        auto or manually associate an IP to VSA
+        """
+        context = req.environ['nova.context']
+
+        if body is None:
+            ip = 'auto'
+        else:
+            ip = body.get('ipAddress', 'auto')
+
+        LOG.audit(_("Associate address %(ip)s to VSA %(id)s"),
+                    locals(), context=context)
+
+        try:
+            instances = self.compute_api.get_all(context,
+                    search_opts={'metadata': dict(vsa_id=str(id))})
+
+            if instances is None or len(instances)==0:
+                return faults.Fault(exc.HTTPNotFound())
+
+            for instance in instances:
+                self.network_api.allocate_for_instance(context, instance, vpn=False)
+                return
+
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
+    def disassociate_address(self, req, id, body):
+        """ /zadr-vsa/{vsa_id}/disassociate_address
+        auto or manually associate an IP to VSA
+        """
+        context = req.environ['nova.context']
+
+        if body is None:
+            ip = 'auto'
+        else:
+            ip = body.get('ipAddress', 'auto')
+
+        LOG.audit(_("Disassociate address from VSA %(id)s"),
+                    locals(), context=context)
 
 
 class VsaVolumeDriveController(volumes.VolumeController):
@@ -515,7 +558,9 @@ class Virtual_storage_arrays(extensions.ExtensionDescriptor):
                             VsaController(),
                             collection_actions={'detail': 'GET'},
                             member_actions={'add_capacity': 'POST',
-                                            'remove_capacity': 'POST'})
+                                            'remove_capacity': 'POST',
+                                            'associate_address': 'POST',
+                                            'disassociate_address': 'POST'})
         resources.append(res)
 
         res = extensions.ResourceExtension('volumes',

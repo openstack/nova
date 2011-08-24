@@ -113,7 +113,7 @@ class VsaTestCase(test.TestCase):
         self.assertRaises(exception.ApiError,
                           self.vsa_api.create, self.context, **param)
         vsa_list2 = self.vsa_api.get_all(self.context)
-        self.assertEqual(len(vsa_list2), len(vsa_list1) + 1)
+        self.assertEqual(len(vsa_list2), len(vsa_list1))
 
         param = {'storage': [{'drive_name': 'wrong name'}]}
         self.assertRaises(exception.ApiError,

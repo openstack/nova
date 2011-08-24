@@ -2,7 +2,6 @@
 
 # Copyright (c) 2011 Zadara Storage Inc.
 # Copyright (c) 2011 OpenStack LLC.
-# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -194,9 +193,9 @@ class API(base.Base):
             volume_params = self._check_storage_parameters(context, vsa_name,
                                                            storage, shared)
         except exception.ApiError:
-            self.update_vsa_status(context, vsa_id,
-                        status=VsaState.FAILED)
-            raise
+            self.db.vsa_destroy(context, vsa_id)
+            raise exception.ApiError(_("Error in storage parameters: %s")
+                                        % storage)
 
         # after creating DB entry, re-check and set some defaults
         updates = {}

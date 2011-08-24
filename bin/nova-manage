@@ -64,9 +64,6 @@ import time
 
 from optparse import OptionParser
 
-
-import tempfile
-import zipfile
 import ast
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
@@ -91,7 +88,6 @@ from nova import rpc
 from nova import utils
 from nova import version
 from nova.api.ec2 import ec2utils
-from nova.api.ec2 import cloud
 from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.compute import instance_types

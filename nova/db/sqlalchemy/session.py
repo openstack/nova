@@ -30,10 +30,8 @@ import nova.exception
 import nova.flags
 import nova.log
 
-
 FLAGS = nova.flags.FLAGS
 LOG = nova.log.getLogger("nova.db.sqlalchemy")
-
 
 try:
     import MySQLdb

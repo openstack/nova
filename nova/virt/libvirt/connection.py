@@ -130,6 +130,9 @@ flags.DEFINE_string('libvirt_vif_type', 'bridge',
 flags.DEFINE_string('libvirt_vif_driver',
                     'nova.virt.libvirt.vif.LibvirtBridgeDriver',
                     'The libvirt VIF driver to configure the VIFs.')
+flags.DEFINE_bool('libvirt_use_virtio_for_bridges',
+                  False,
+                  'Use virtio for bridge interfaces')
 
 
 def get_connection(read_only):
@@ -1047,6 +1050,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     'ebs_root': ebs_root,
                     'local_device': local_device,
                     'volumes': block_device_mapping,
+                    'use_virtio_for_bridges': FLAGS.libvirt_use_virtio_for_bridges,
                     'ephemerals': ephemerals}
 
         root_device_name = driver.block_device_info_get_root(block_device_info)

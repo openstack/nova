@@ -508,6 +508,7 @@ def get_dhcp_hosts(context, network_ref):
         if network_ref['multi_host'] and FLAGS.host != host:
             continue
         hosts.append(_host_dhcp(fixed_ref))
+
     return '\n'.join(hosts)
 
 

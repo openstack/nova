@@ -2,7 +2,6 @@
 
 # Copyright (c) 2011 Zadara Storage Inc.
 # Copyright (c) 2011 OpenStack LLC.
-# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
