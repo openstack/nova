@@ -62,7 +62,7 @@ def generate_default_hostname(instance):
         c = chr(i)
         if ('a' <= c <= 'z') or ('0' <= c <= '9') or (c == '-'):
             table += c
-        elif (c == ' ') or (c == '_'):
+        elif c in " _":
             table += '-'
         elif ('A' <= c <= 'Z'):
             table += c.lower()
