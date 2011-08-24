@@ -755,7 +755,11 @@ class ControllerV11(Controller):
             LOG.debug(msg)
             raise exc.HTTPConflict(explanation=msg)
 
-        return webob.Response(status_int=202, headers={'x-nova-password':password})
+        instance = self.compute_api.routing_get(context, instance_id)
+        view = self._build_view(request, instance, is_detail=True)
+        view['server']['adminPass'] = password
+
+        return view
 
     @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
@@ -821,6 +825,9 @@ class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
     def delete(self, response, data):
         response.status_int = 204
+
+    def action(self, response, data):
+        response.status_int = 202
 
 
 class ServerXMLSerializer(wsgi.XMLDictSerializer):
