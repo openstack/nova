@@ -674,7 +674,6 @@ class ServerActionsTestV11(test.TestCase):
         req.body = json.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
-        print res.body
         self.assertEqual(res.status_int, 202)
         body = json.loads(res.body)
         self.assertEqual(body['server']['metadata'], metadata)
