@@ -89,6 +89,9 @@ class CreateserverextTest(test.TestCase):
                     self.networks = None
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'uuid': FAKE_UUID,
+                         'user_id': 'fake',
+                         'project_id': 'fake',
+                         'display_description': 'fakedescription',
                          'created_at': "",
                          'updated_at': ""}]
 
