@@ -76,8 +76,8 @@ class Client(object):
     attachment_path = "/networks/%s/ports/%s/attachment"
 
     def __init__(self, host="127.0.0.1", port=9696, use_ssl=False, tenant=None,
-                 format="xml", testing_stub=None, key_file=None, cert_file=None,
-                 logger=None):
+                 format="xml", testing_stub=None, key_file=None,
+                 cert_file=None, logger=None):
         """
         Creates a new client to some service.
 
