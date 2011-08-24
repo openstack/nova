@@ -23,11 +23,11 @@ import urllib
 
 
 class JSONSerializer(object):
-"""
-This is a simple json-only serializer to use until we can just grab
-the standard serializer from the quantum library.
-TODO(danwent): replace serializer with quantum implementation
-"""
+    """
+    This is a simple json-only serializer to use until we can just grab
+    the standard serializer from the quantum library.
+    TODO(danwent): replace serializer with quantum implementation
+    """
     def serialize(self, data, content_type):
         try:
             return json.dumps(data)
@@ -172,7 +172,7 @@ class Client(object):
                                httplib.CREATED,
                                httplib.ACCEPTED,
                                httplib.NO_CONTENT):
-                if not data:
+                if data is not None and len(data):
                     return self.deserialize(data, status_code)
             else:
                 raise Exception(_("Server returned error: %s" % res.read()))

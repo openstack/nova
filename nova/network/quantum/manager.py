@@ -86,7 +86,7 @@ class QuantumManager(manager.FlatManager):
         if num_networks != 1:
             raise Exception(_("QuantumManager requires that only one"
                               " network is created per call"))
-        q_tenant_id = kwargs.get("project_id", FLAGS.quantum_default_tenant_id)
+        q_tenant_id = kwargs["project_id"] or FLAGS.quantum_default_tenant_id
         quantum_net_id = uuid
         if quantum_net_id:
             if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
@@ -179,7 +179,7 @@ class QuantumManager(manager.FlatManager):
                                         vif_rec)
 
         return self.get_instance_nw_info(context, instance_id,
-                                            instance_type_id, host)
+                                         instance_type_id, host)
 
     def get_instance_nw_info(self, context, instance_id,
                                 instance_type_id, host):
