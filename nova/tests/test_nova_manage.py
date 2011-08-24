@@ -133,7 +133,7 @@ class NetworkCommandsTestCase(test.TestCase):
             self.assertEqual(kwargs['bridge_interface'], 'eth0')
             self.assertEqual(kwargs['dns1'], '8.8.8.8')
             self.assertEqual(kwargs['dns2'], '8.8.4.4')
-        FLAGS.network_manager = 'nova.network.manager.VlanManager'
+        self.flags(network_manager='nova.network.manager.VlanManager')
         from nova.network import manager as net_manager
         self.stubs.Set(net_manager.VlanManager, 'create_networks',
                        fake_create_networks)
