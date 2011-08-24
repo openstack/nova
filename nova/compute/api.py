@@ -55,15 +55,15 @@ def generate_default_hostname(instance):
     """Default function to generate a hostname given an instance reference."""
     display_name = instance['display_name']
     if display_name is None:
-        return 'server_%d' % (instance['id'],)
+        return 'server-%d' % (instance['id'],)
     table = ''
     deletions = ''
     for i in xrange(256):
         c = chr(i)
         if ('a' <= c <= 'z') or ('0' <= c <= '9') or (c == '-'):
             table += c
-        elif c == ' ':
-            table += '_'
+        elif c in " _":
+            table += '-'
         elif ('A' <= c <= 'Z'):
             table += c.lower()
         else:

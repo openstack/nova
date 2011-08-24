@@ -162,7 +162,7 @@ class VolumeTypeTestCase(test.TestCase):
         volume_types.create(self.ctxt, "type3", {"key3": "another_value",
                                                  "key4": "val4"})
 
-        vol_types = volume_types.get_all_types(self.ctxt, 
+        vol_types = volume_types.get_all_types(self.ctxt,
                         search_opts={'extra_specs': {"key1": "val1"}})
         LOG.info("vol_types: %s" % vol_types)
         self.assertEqual(len(vol_types), 1)
@@ -170,20 +170,18 @@ class VolumeTypeTestCase(test.TestCase):
         self.assertEqual(vol_types['type1']['extra_specs'],
                          {"key1": "val1", "key2": "val2"})
 
-        vol_types = volume_types.get_all_types(self.ctxt, 
+        vol_types = volume_types.get_all_types(self.ctxt,
                         search_opts={'extra_specs': {"key2": "val2"}})
         LOG.info("vol_types: %s" % vol_types)
         self.assertEqual(len(vol_types), 2)
         self.assertTrue("type1" in vol_types.keys())
         self.assertTrue("type2" in vol_types.keys())
 
-
-        vol_types = volume_types.get_all_types(self.ctxt, 
+        vol_types = volume_types.get_all_types(self.ctxt,
                         search_opts={'extra_specs': {"key3": "val3"}})
         LOG.info("vol_types: %s" % vol_types)
         self.assertEqual(len(vol_types), 1)
         self.assertTrue("type2" in vol_types.keys())
-
 
     def test_volume_type_search_by_extra_spec_multiple(self):
         """Ensure volume types get by extra spec returns correct type"""
@@ -196,7 +194,7 @@ class VolumeTypeTestCase(test.TestCase):
                                                  "key3": "val3",
                                                  "key4": "val4"})
 
-        vol_types = volume_types.get_all_types(self.ctxt, 
+        vol_types = volume_types.get_all_types(self.ctxt,
                         search_opts={'extra_specs': {"key1": "val1",
                                                      "key3": "val3"}})
         LOG.info("vol_types: %s" % vol_types)
