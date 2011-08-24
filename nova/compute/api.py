@@ -761,7 +761,6 @@ class API(base.Base):
 
         self.update(context,
                     instance_id,
-                    vm_state=vm_states.ACTIVE,
                     task_state=task_states.DELETING)
 
         host = instance['host']
