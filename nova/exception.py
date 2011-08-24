@@ -61,7 +61,7 @@ class ApiError(Error):
         super(ApiError, self).__init__(outstr)
 
 
-class BuildInProgress(Error):
+class RebuildRequiresActiveInstance(Error):
     pass
 
 

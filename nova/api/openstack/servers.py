@@ -604,9 +604,8 @@ class ControllerV10(Controller):
 
         try:
             self.compute_api.rebuild(context, instance_id, image_id)
-        except exception.BuildInProgress:
-            msg = _("Instance %s is currently being rebuilt.") % instance_id
-            LOG.debug(msg)
+        except exception.RebuildRequiresActiveInstance:
+            msg = _("Instance %s must be active to rebuild.") % instance_id
             raise exc.HTTPConflict(explanation=msg)
 
         return webob.Response(status_int=202)
@@ -742,9 +741,8 @@ class ControllerV11(Controller):
         try:
             self.compute_api.rebuild(context, instance_id, image_href, name,
                                      metadata, personalities)
-        except exception.BuildInProgress:
-            msg = _("Instance %s is currently being rebuilt.") % instance_id
-            LOG.debug(msg)
+        except exception.RebuildRequiresActiveInstance:
+            msg = _("Instance %s must be active to rebuild.") % instance_id
             raise exc.HTTPConflict(explanation=msg)
 
         return webob.Response(status_int=202)

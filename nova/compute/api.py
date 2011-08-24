@@ -1047,14 +1047,9 @@ class API(base.Base):
         instance = db.api.instance_get(context, instance_id)
         name = name or instance["display_name"]
 
-        invalid_rebuild_states = [
-            vm_states.BUILDING,
-            vm_states.REBUILDING,
-        ]
-
-        if instance["vm_state"] in invalid_rebuild_states:
-            msg = _("Instance already building")
-            raise exception.BuildInProgress(msg)
+        if instance["vm_state"] != vm_states.ACTIVE:
+            msg = _("Instance must be active to rebuild.")
+            raise exception.RebuildRequiresActiveInstance(msg)
 
         files_to_inject = files_to_inject or []
         metadata = metadata or {}
