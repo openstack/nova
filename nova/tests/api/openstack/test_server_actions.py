@@ -35,7 +35,7 @@ def return_server_with_attributes(**kwargs):
     return _return_server
 
 
-def return_server_with_state(vm_state, task_state=None)
+def return_server_with_state(vm_state, task_state=None):
     return return_server_with_attributes(vm_state=vm_state,
                                          task_state=task_state)
 

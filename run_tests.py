@@ -55,6 +55,7 @@ To run a single test module:
 
 """
 
+import eventlet
 import gettext
 import heapq
 import os
@@ -62,6 +63,7 @@ import unittest
 import sys
 import time
 
+eventlet.monkey_patch()
 gettext.install('nova', unicode=1)
 
 from nose import config
