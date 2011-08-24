@@ -12,8 +12,6 @@ from nova.api.openstack import create_instance_helper
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.db.api
-from nova.db.sqlalchemy.models import Instance
-from nova.db.sqlalchemy.models import InstanceMetadata
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
