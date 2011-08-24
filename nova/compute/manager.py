@@ -429,10 +429,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                 return
 
             current_power_state = self._get_power_state(context, instance)
+            if current_power_state == power_state.RUNNING:
+                vm_state = vm_states.ACTIVE
+            else:
+                vm_state = vm_states.BUILDING
+
             self._instance_update(context,
                                   instance_id,
                                   power_state=current_power_state,
-                                  vm_state=vm_states.ACTIVE,
+                                  vm_state=vm_state,
                                   task_state=None,
                                   launched_at=utils.utcnow())
 
