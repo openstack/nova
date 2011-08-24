@@ -3823,7 +3823,7 @@ def volume_type_extra_specs_get_item(context, volume_type_id, key,
 
 @require_context
 def volume_type_extra_specs_update_or_create(context, volume_type_id,
-                                               specs):
+                                             specs):
     session = get_session()
     spec_ref = None
     for key, value in specs.iteritems():
