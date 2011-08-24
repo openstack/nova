@@ -48,9 +48,9 @@ def stub_instance(id, power_state=0, metadata=None,
                   image_ref="10", flavor_id="1", name=None):
 
     if metadata is not None:
-         metadata_items = [{'key': k, 'value': v} for k, v in metadata.items()]
+        metadata_items = [{'key':k, 'value':v} for k, v in metadata.items()]
     else:
-         metadata_items = [{'key': 'seq', 'value':id}]
+        metadata_items = [{'key':'seq', 'value':id}]
 
     inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
 
