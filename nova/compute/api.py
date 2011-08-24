@@ -1045,6 +1045,8 @@ class API(base.Base):
             metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
+        name = name or instance["display_name"]
+
         invalid_rebuild_states = [
             vm_states.BUILDING,
             vm_states.REBUILDING,
