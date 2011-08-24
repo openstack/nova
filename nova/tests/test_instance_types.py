@@ -107,7 +107,7 @@ class InstanceTypeTestCase(test.TestCase):
                 exception.InvalidInput,
                 instance_types.create, self.name, 256, 1, "aa", self.flavorid)
 
-    def test_non_existant_inst_type_shouldnt_delete(self):
+    def test_non_existent_inst_type_shouldnt_delete(self):
         """Ensures that instance type creation fails with invalid args"""
         self.assertRaises(exception.ApiError,
                           instance_types.destroy,
