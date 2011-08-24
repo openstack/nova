@@ -68,13 +68,43 @@ def purge(context, name):
             raise exception.ApiError(_("Unknown volume type: %s") % name)
 
 
-def get_all_types(context, inactive=0):
+def get_all_types(context, inactive=0, search_opts={}):
     """Get all non-deleted volume_types.
 
     Pass true as argument if you want deleted volume types returned also.
 
     """
-    return db.volume_type_get_all(context, inactive)
+    vol_types = db.volume_type_get_all(context, inactive)
+
+    if search_opts:
+        LOG.debug(_("Searching by: %s") % str(search_opts))
+
+        def _check_extra_specs_match(vol_type, searchdict):
+            for k, v in searchdict.iteritems():
+                if k not in vol_type['extra_specs'].keys()\
+                   or vol_type['extra_specs'][k] != v:
+                    return False
+            return True
+
+        # search_option to filter_name mapping.
+        filter_mapping = {'extra_specs': _check_extra_specs_match}
+
+        result = {}
+        for type_name, type_args in vol_types.iteritems():
+            # go over all filters in the list
+            for opt, values in search_opts.iteritems():
+                try:
+                    filter_func = filter_mapping[opt]
+                except KeyError:
+                    # no such filter - ignore it, go to next filter
+                    continue
+                else:
+                    if filter_func(type_args, values):
+                        # if one of conditions didn't match - remove
+                        result[type_name] = type_args
+                        break
+        vol_types = result
+    return vol_types
 
 
 def get_volume_type(context, id):
