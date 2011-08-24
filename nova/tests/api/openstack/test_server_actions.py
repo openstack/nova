@@ -46,7 +46,8 @@ def return_server_with_uuid_and_state(vm_state, task_state=None):
     return _return_server
 
 
-def stub_instance(id, metadata=None, image_ref="10", flavor_id="1", name=None):
+def stub_instance(id, metadata=None, image_ref="10", flavor_id="1",
+                  name=None, vm_state=None, task_state=None):
     if metadata is not None:
         metadata_items = [{'key':k, 'value':v} for k, v in metadata.items()]
     else:
@@ -67,8 +68,8 @@ def stub_instance(id, metadata=None, image_ref="10", flavor_id="1", name=None):
         "launch_index": 0,
         "key_name": "",
         "key_data": "",
-        "vm_state": vm_states.ACTIVE,
-        "task_state": None,
+        "vm_state": vm_state or vm_states.ACTIVE,
+        "task_state": task_state,
         "memory_mb": 0,
         "vcpus": 0,
         "local_gb": 0,
