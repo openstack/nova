@@ -548,7 +548,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # pull in new password here since the original password isn't in the db
         instance_ref.admin_pass = kwargs.get('new_pass',
-            utils.generate_password(FLAGS.password_length))
+                utils.generate_password(FLAGS.password_length))
 
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
 
