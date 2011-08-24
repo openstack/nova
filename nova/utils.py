@@ -35,6 +35,7 @@ import sys
 import time
 import types
 import uuid
+import pyclbr
 from xml.sax import saxutils
 
 from eventlet import event
@@ -260,8 +261,9 @@ def default_flagfile(filename='nova.conf', args=None):
             filename = "./nova.conf"
             if not os.path.exists(filename):
                 filename = '/etc/nova/nova.conf'
-        flagfile = '--flagfile=%s' % filename
-        args.insert(1, flagfile)
+        if os.path.exists(filename):
+            flagfile = '--flagfile=%s' % filename
+            args.insert(1, flagfile)
 
 
 def debug(arg):
@@ -294,7 +296,7 @@ EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
 
 def usage_from_instance(instance_ref, **kw):
     usage_info = dict(
-          tenant_id=instance_ref['project_id'],
+          project_id=instance_ref['project_id'],
           user_id=instance_ref['user_id'],
           instance_id=instance_ref['id'],
           instance_type=instance_ref['instance_type']['name'],
@@ -546,11 +548,17 @@ def to_primitive(value, convert_instances=False, level=0):
     Therefore, convert_instances=True is lossy ... be aware.
 
     """
-    if inspect.isclass(value):
-        return unicode(value)
+    nasty = [inspect.ismodule, inspect.isclass, inspect.ismethod,
+             inspect.isfunction, inspect.isgeneratorfunction,
+             inspect.isgenerator, inspect.istraceback, inspect.isframe,
+             inspect.iscode, inspect.isbuiltin, inspect.isroutine,
+             inspect.isabstract]
+    for test in nasty:
+        if test(value):
+            return unicode(value)
 
     if level > 3:
-        return []
+        return '?'
 
     # The try block may not be necessary after the class check above,
     # but just in case ...
@@ -839,37 +847,57 @@ def bool_from_str(val):
         return val.lower() == 'true'
 
 
-class Bootstrapper(object):
-    """Provides environment bootstrapping capabilities for entry points."""
+def is_valid_ipv4(address):
+    """valid the address strictly as per format xxx.xxx.xxx.xxx.
+    where xxx is a value between 0 and 255.
+    """
+    parts = address.split(".")
+    if len(parts) != 4:
+        return False
+    for item in parts:
+        try:
+            if not 0 <= int(item) <= 255:
+                return False
+        except ValueError:
+            return False
+    return True
 
-    @staticmethod
-    def bootstrap_binary(argv):
-        """Initialize the Nova environment using command line arguments."""
-        Bootstrapper.setup_flags(argv)
-        Bootstrapper.setup_logging()
-        Bootstrapper.log_flags()
 
-    @staticmethod
-    def setup_logging():
-        """Initialize logging and log a message indicating the Nova version."""
-        logging.setup()
-        logging.audit(_("Nova Version (%s)") %
-                        version.version_string_with_vcs())
+def monkey_patch():
+    """  If the Flags.monkey_patch set as True,
+    this functuion patches a decorator
+    for all functions in specified modules.
+    You can set decorators for each modules
+    using FLAGS.monkey_patch_modules.
+    The format is "Module path:Decorator function".
+    Example: 'nova.api.ec2.cloud:nova.notifier.api.notify_decorator'
 
-    @staticmethod
-    def setup_flags(input_flags):
-        """Initialize flags, load flag file, and print help if needed."""
-        default_flagfile(args=input_flags)
-        FLAGS(input_flags or [])
-        flags.DEFINE_flag(flags.HelpFlag())
-        flags.DEFINE_flag(flags.HelpshortFlag())
-        flags.DEFINE_flag(flags.HelpXMLFlag())
-        FLAGS.ParseNewFlags()
+    Parameters of the decorator is as follows.
+    (See nova.notifier.api.notify_decorator)
 
-    @staticmethod
-    def log_flags():
-        """Log the list of all active flags being used."""
-        logging.audit(_("Currently active flags:"))
-        for key in FLAGS:
-            value = FLAGS.get(key, None)
-            logging.audit(_("%(key)s : %(value)s" % locals()))
+    name - name of the function
+    function - object of the function
+    """
+    # If FLAGS.monkey_patch is not True, this function do nothing.
+    if not FLAGS.monkey_patch:
+        return
+    # Get list of modules and decorators
+    for module_and_decorator in FLAGS.monkey_patch_modules:
+        module, decorator_name = module_and_decorator.split(':')
+        # import decorator function
+        decorator = import_class(decorator_name)
+        __import__(module)
+        # Retrieve module information using pyclbr
+        module_data = pyclbr.readmodule_ex(module)
+        for key in module_data.keys():
+            # set the decorator for the class methods
+            if isinstance(module_data[key], pyclbr.Class):
+                clz = import_class("%s.%s" % (module, key))
+                for method, func in inspect.getmembers(clz, inspect.ismethod):
+                    setattr(clz, method,\
+                        decorator("%s.%s.%s" % (module, key, method), func))
+            # set the decorator for the function
+            if isinstance(module_data[key], pyclbr.Function):
+                func = import_class("%s.%s" % (module, key))
+                setattr(sys.modules[module], key,\
+                    decorator("%s.%s" % (module, key), func))

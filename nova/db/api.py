@@ -324,13 +324,13 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 ####################
 
 
-def fixed_ip_associate(context, address, instance_id):
+def fixed_ip_associate(context, address, instance_id, network_id=None):
     """Associate fixed ip to instance.
 
     Raises if fixed ip is not available.
 
     """
-    return IMPL.fixed_ip_associate(context, address, instance_id)
+    return IMPL.fixed_ip_associate(context, address, instance_id, network_id)
 
 
 def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
@@ -396,7 +396,6 @@ def fixed_ip_get_network(context, address):
 def fixed_ip_update(context, address, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_update(context, address, values)
-
 
 ####################
 
@@ -571,6 +570,12 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                             security_group_id)
 
 
+def instance_remove_security_group(context, instance_id, security_group_id):
+    """Disassociate the given security group from the given instance."""
+    return IMPL.instance_remove_security_group(context, instance_id,
+                                            security_group_id)
+
+
 def instance_action_create(context, values):
     """Create an instance action from the values dictionary."""
     return IMPL.instance_action_create(context, values)
@@ -681,7 +686,14 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
+def network_get_all_by_uuids(context, network_uuids, project_id=None):
+    """Return networks by ids."""
+    return IMPL.network_get_all_by_uuids(context, network_uuids, project_id)
+
+
 # pylint: disable=C0103
+
+
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
     return IMPL.network_get_associated_fixed_ips(context, network_id)
@@ -1434,6 +1446,82 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
     """Create or update instance type extra specs. This adds or modifies the
     key/value pairs specified in the extra specs dict argument"""
     IMPL.instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                                    extra_specs)
+
+
+##################
+
+
+def volume_metadata_get(context, volume_id):
+    """Get all metadata for a volume."""
+    return IMPL.volume_metadata_get(context, volume_id)
+
+
+def volume_metadata_delete(context, volume_id, key):
+    """Delete the given metadata item."""
+    IMPL.volume_metadata_delete(context, volume_id, key)
+
+
+def volume_metadata_update(context, volume_id, metadata, delete):
+    """Update metadata if it exists, otherwise create it."""
+    IMPL.volume_metadata_update(context, volume_id, metadata, delete)
+
+
+##################
+
+
+def volume_type_create(context, values):
+    """Create a new volume type."""
+    return IMPL.volume_type_create(context, values)
+
+
+def volume_type_get_all(context, inactive=False):
+    """Get all volume types."""
+    return IMPL.volume_type_get_all(context, inactive)
+
+
+def volume_type_get(context, id):
+    """Get volume type by id."""
+    return IMPL.volume_type_get(context, id)
+
+
+def volume_type_get_by_name(context, name):
+    """Get volume type by name."""
+    return IMPL.volume_type_get_by_name(context, name)
+
+
+def volume_type_destroy(context, name):
+    """Delete a volume type."""
+    return IMPL.volume_type_destroy(context, name)
+
+
+def volume_type_purge(context, name):
+    """Purges (removes) a volume type from DB.
+
+    Use volume_type_destroy for most cases
+
+    """
+    return IMPL.volume_type_purge(context, name)
+
+
+####################
+
+
+def volume_type_extra_specs_get(context, volume_type_id):
+    """Get all extra specs for a volume type."""
+    return IMPL.volume_type_extra_specs_get(context, volume_type_id)
+
+
+def volume_type_extra_specs_delete(context, volume_type_id, key):
+    """Delete the given extra specs item."""
+    IMPL.volume_type_extra_specs_delete(context, volume_type_id, key)
+
+
+def volume_type_extra_specs_update_or_create(context, volume_type_id,
+                                               extra_specs):
+    """Create or update volume type extra specs. This adds or modifies the
+    key/value pairs specified in the extra specs dict argument"""
+    IMPL.volume_type_extra_specs_update_or_create(context, volume_type_id,
                                                     extra_specs)
 
 

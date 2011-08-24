@@ -1,4 +1,5 @@
 # Copyright 2011 OpenStack LLC.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,7 +30,7 @@ from nova import utils
 from nova.compute import instance_types
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
-
+from nova.rpc.common import RemoteError
 
 LOG = logging.getLogger('nova.api.openstack.create_instance_helper')
 FLAGS = flags.FLAGS
@@ -106,10 +107,25 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         personality = server_dict.get('personality')
+        config_drive = server_dict.get('config_drive')
 
         injected_files = []
         if personality:
             injected_files = self._get_injected_files(personality)
+
+        sg_names = []
+        security_groups = server_dict.get('security_groups')
+        if security_groups is not None:
+            sg_names = [sg['name'] for sg in security_groups if sg.get('name')]
+        if not sg_names:
+            sg_names.append('default')
+
+        sg_names = list(set(sg_names))
+
+        requested_networks = server_dict.get('networks')
+        if requested_networks is not None:
+            requested_networks = self._get_requested_networks(
+                                                    requested_networks)
 
         try:
             flavor_id = self.controller._flavor_id_from_req_data(body)
@@ -122,6 +138,7 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         zone_blob = server_dict.get('blob')
+        user_data = server_dict.get('user_data')
         availability_zone = server_dict.get('availability_zone')
         name = server_dict['name']
         self._validate_server_name(name)
@@ -144,6 +161,7 @@ class CreateInstanceHelper(object):
             extra_values = {
                 'instance_type': inst_type,
                 'image_ref': image_href,
+                'config_drive': config_drive,
                 'password': password}
 
             return (extra_values,
@@ -157,13 +175,19 @@ class CreateInstanceHelper(object):
                                   key_name=key_name,
                                   key_data=key_data,
                                   metadata=server_dict.get('metadata', {}),
+                                  access_ip_v4=server_dict.get('accessIPv4'),
+                                  access_ip_v6=server_dict.get('accessIPv6'),
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,
                                   reservation_id=reservation_id,
                                   min_count=min_count,
                                   max_count=max_count,
-                                  availability_zone=availability_zone))
+                                  requested_networks=requested_networks,
+                                  security_group=sg_names,
+                                  user_data=user_data,
+                                  availability_zone=availability_zone,
+                                  config_drive=config_drive,))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
@@ -171,6 +195,12 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.FlavorNotFound as error:
             msg = _("Invalid flavorRef provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.SecurityGroupNotFound as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
+        except RemoteError as err:
+            msg = "%(err_type)s: %(err_msg)s" % \
+                  {'err_type': err.exc_type, 'err_msg': err.value}
             raise exc.HTTPBadRequest(explanation=msg)
         # Let the caller deal with unhandled exceptions.
 
@@ -180,13 +210,20 @@ class CreateInstanceHelper(object):
         """
         if error.code == "OnsetFileLimitExceeded":
             expl = _("Personality file limit exceeded")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         if error.code == "OnsetFilePathLimitExceeded":
             expl = _("Personality file path too long")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         if error.code == "OnsetFileContentLimitExceeded":
             expl = _("Personality file content too long")
-            raise exc.HTTPBadRequest(explanation=expl)
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
+        if error.code == "InstanceLimitExceeded":
+            expl = _("Instance quotas have been exceeded")
+            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+                                                headers={'Retry-After': 0})
         # if the original error is okay, just reraise it
         raise error
 
@@ -292,6 +329,46 @@ class CreateInstanceHelper(object):
             msg = _("Invalid adminPass")
             raise exc.HTTPBadRequest(explanation=msg)
         return password
+
+    def _get_requested_networks(self, requested_networks):
+        """
+        Create a list of requested networks from the networks attribute
+        """
+        networks = []
+        for network in requested_networks:
+            try:
+                network_uuid = network['uuid']
+
+                if not utils.is_uuid_like(network_uuid):
+                    msg = _("Bad networks format: network uuid is not in"
+                         " proper format (%s)") % network_uuid
+                    raise exc.HTTPBadRequest(explanation=msg)
+
+                #fixed IP address is optional
+                #if the fixed IP address is not provided then
+                #it will use one of the available IP address from the network
+                address = network.get('fixed_ip', None)
+                if address is not None and not utils.is_valid_ipv4(address):
+                    msg = _("Invalid fixed IP address (%s)") % address
+                    raise exc.HTTPBadRequest(explanation=msg)
+                # check if the network id is already present in the list,
+                # we don't want duplicate networks to be passed
+                # at the boot time
+                for id, ip in networks:
+                    if id == network_uuid:
+                        expl = _("Duplicate networks (%s) are not allowed")\
+                                % network_uuid
+                        raise exc.HTTPBadRequest(explanation=expl)
+
+                networks.append((network_uuid, address))
+            except KeyError as key:
+                expl = _('Bad network format: missing %s') % key
+                raise exc.HTTPBadRequest(explanation=expl)
+            except TypeError:
+                expl = _('Bad networks format')
+                raise exc.HTTPBadRequest(explanation=expl)
+
+        return networks
 
 
 class ServerXMLDeserializer(wsgi.XMLDeserializer):
@@ -443,7 +520,8 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
         server = {}
         server_node = self.find_first_child_named(node, 'server')
 
-        attributes = ["name", "imageRef", "flavorRef", "adminPass"]
+        attributes = ["name", "imageRef", "flavorRef", "adminPass",
+                      "accessIPv4", "accessIPv6"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
@@ -455,6 +533,14 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
         personality = self._extract_personality(server_node)
         if personality is not None:
             server["personality"] = personality
+
+        networks = self._extract_networks(server_node)
+        if networks is not None:
+            server["networks"] = networks
+
+        security_groups = self._extract_security_groups(server_node)
+        if security_groups is not None:
+            server["security_groups"] = security_groups
 
         return server
 
@@ -470,5 +556,37 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
                 item["contents"] = self.extract_text(file_node)
                 personality.append(item)
             return personality
+        else:
+            return None
+
+    def _extract_networks(self, server_node):
+        """Marshal the networks attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "networks")
+        if node is not None:
+            networks = []
+            for network_node in self.find_children_named(node,
+                                                         "network"):
+                item = {}
+                if network_node.hasAttribute("uuid"):
+                    item["uuid"] = network_node.getAttribute("uuid")
+                if network_node.hasAttribute("fixed_ip"):
+                    item["fixed_ip"] = network_node.getAttribute("fixed_ip")
+                networks.append(item)
+            return networks
+        else:
+            return None
+
+    def _extract_security_groups(self, server_node):
+        """Marshal the security_groups attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "security_groups")
+        if node is not None:
+            security_groups = []
+            for sg_node in self.find_children_named(node, "security_group"):
+                item = {}
+                name_node = self.find_first_child_named(sg_node, "name")
+                if name_node:
+                    item["name"] = self.extract_text(name_node)
+                    security_groups.append(item)
+            return security_groups
         else:
             return None

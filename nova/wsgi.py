@@ -39,9 +39,6 @@ from nova import log as logging
 from nova import utils
 
 
-eventlet.patcher.monkey_patch(socket=True, time=True)
-
-
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.wsgi')
 
@@ -272,18 +269,6 @@ class Middleware(Application):
             return response
         response = req.get_response(self.application)
         return self.process_response(response)
-
-
-class InjectContext(Middleware):
-    """Add a 'nova.context' to WSGI environ."""
-    def __init__(self, context, *args, **kwargs):
-        self.context = context
-        super(InjectContext, self).__init__(*args, **kwargs)
-
-    @webob.dec.wsgify(RequestClass=Request)
-    def __call__(self, req):
-        req.environ['nova.context'] = self.context
-        return self.application
 
 
 class Debug(Middleware):

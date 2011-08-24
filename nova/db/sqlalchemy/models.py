@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -173,7 +174,6 @@ class Instance(BASE, NovaBase):
             base_name += "-rescue"
         return base_name
 
-    admin_pass = Column(String(255))
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -231,6 +231,12 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
+    config_drive = Column(String(255))
+
+    # User editable field meant to represent what ip should be used
+    # to connect to the instance
+    access_ip_v4 = Column(String(255))
+    access_ip_v6 = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -344,12 +350,56 @@ class Volume(BASE, NovaBase):
     provider_location = Column(String(255))
     provider_auth = Column(String(255))
 
+    volume_type_id = Column(Integer)
+
     to_vsa_id = Column(Integer,
                     ForeignKey('virtual_storage_arrays.id'), nullable=True)
     from_vsa_id = Column(Integer,
                     ForeignKey('virtual_storage_arrays.id'), nullable=True)
     drive_type_id = Column(Integer,
                     ForeignKey('drive_types.id'), nullable=True)
+
+
+class VolumeMetadata(BASE, NovaBase):
+    """Represents a metadata key/value pair for a volume"""
+    __tablename__ = 'volume_metadata'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=False)
+    volume = relationship(Volume, backref="volume_metadata",
+                            foreign_keys=volume_id,
+                            primaryjoin='and_('
+                                'VolumeMetadata.volume_id == Volume.id,'
+                                'VolumeMetadata.deleted == False)')
+
+
+class VolumeTypes(BASE, NovaBase):
+    """Represent possible volume_types of volumes offered"""
+    __tablename__ = "volume_types"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True)
+
+    volumes = relationship(Volume,
+                           backref=backref('volume_type', uselist=False),
+                           foreign_keys=id,
+                           primaryjoin='and_(Volume.volume_type_id == '
+                                       'VolumeTypes.id)')
+
+
+class VolumeTypeExtraSpecs(BASE, NovaBase):
+    """Represents additional specs as key/value pairs for a volume_type"""
+    __tablename__ = 'volume_type_extra_specs'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    volume_type_id = Column(Integer, ForeignKey('volume_types.id'),
+                              nullable=False)
+    volume_type = relationship(VolumeTypes, backref="extra_specs",
+                 foreign_keys=volume_type_id,
+                 primaryjoin='and_('
+                 'VolumeTypeExtraSpecs.volume_type_id == VolumeTypes.id,'
+                 'VolumeTypeExtraSpecs.deleted == False)')
 
 
 class DriveTypes(BASE, NovaBase):
@@ -628,6 +678,7 @@ class Network(BASE, NovaBase):
 
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+    uuid = Column(String(36))
 
 
 class VirtualInterface(BASE, NovaBase):
@@ -641,6 +692,8 @@ class VirtualInterface(BASE, NovaBase):
     # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
     instance = relationship(Instance, backref=backref('virtual_interfaces'))
+
+    uuid = Column(String(36))
 
     @property
     def fixed_ipv6(self):
@@ -865,7 +918,6 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              VirtualStorageArray, DriveTypes,
               AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:

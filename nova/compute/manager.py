@@ -382,6 +382,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
 
+        requested_networks = kwargs.get('requested_networks', None)
+
         if instance['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
 
@@ -392,12 +394,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         updates = {}
         updates['host'] = self.host
         updates['launched_on'] = self.host
-        # NOTE(vish): used by virt but not in database
-        updates['injected_files'] = kwargs.get('injected_files', [])
-        updates['admin_pass'] = kwargs.get('admin_password', None)
         instance = self.db.instance_update(context,
                                            instance_id,
                                            updates)
+        instance['injected_files'] = kwargs.get('injected_files', [])
+        instance['admin_pass'] = kwargs.get('admin_password', None)
+
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -411,7 +413,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             #             will eventually also need to save the address here.
             if not FLAGS.stub_network:
                 network_info = self.network_api.allocate_for_instance(context,
-                                                         instance, vpn=is_vpn)
+                                    instance, vpn=is_vpn,
+                                    requested_networks=requested_networks)
                 LOG.debug(_("instance network_info: |%s|"), network_info)
             else:
                 # TODO(tr3buchet) not really sure how this should be handled.
@@ -524,6 +527,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: `nova.RequestContext` object
         :param instance_id: Instance identifier (integer)
         :param image_ref: Image identifier (href or integer)
+        :param new_pass: password to set on rebuilt instance
         """
         context = context.elevated()
 
@@ -541,6 +545,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self.network_api.get_instance_nw_info(context,
                                                               instance_ref)
         bd_mapping = self._setup_block_device_mapping(context, instance_id)
+
+        # pull in new password here since the original password isn't in the db
+        instance_ref.admin_pass = kwargs.get('new_pass',
+                utils.generate_password(FLAGS.password_length))
+
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
 
         self._update_image_ref(context, instance_id, image_ref)
