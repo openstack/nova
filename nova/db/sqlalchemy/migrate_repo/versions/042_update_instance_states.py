@@ -33,35 +33,35 @@ c_task_state = Column('task_state',
 
 _upgrade_translations = {
     "stopping": {
-        "state_description": vm_states.ACTIVE,
+        "vm_state": vm_states.ACTIVE,
         "task_state": task_states.STOPPING,
     },
     "stopped": {
-        "state_description": vm_states.STOPPED,
+        "vm_state": vm_states.STOPPED,
         "task_state": None,
     },
     "terminated": {
-        "state_description": vm_states.DELETED,
+        "vm_state": vm_states.DELETED,
         "task_state": None,
     },
     "terminating": {
-        "state_description": vm_states.ACTIVE,
+        "vm_state": vm_states.ACTIVE,
         "task_state": task_states.DELETING,
     },
     "running": {
-        "state_description": vm_states.ACTIVE,
+        "vm_state": vm_states.ACTIVE,
         "task_state": None,
     },
     "scheduling": {
-        "state_description": vm_states.BUILDING,
+        "vm_state": vm_states.BUILDING,
         "task_state": task_states.SCHEDULING,
     },
     "migrating": {
-        "state_description": vm_states.MIGRATING,
+        "vm_state": vm_states.MIGRATING,
         "task_state": None,
     },
     "pending": {
-        "state_description": vm_states.BUILDING,
+        "vm_state": vm_states.BUILDING,
         "task_state": task_states.SCHEDULING,
     },
 }
@@ -105,6 +105,9 @@ def upgrade(migrate_engine):
     c_vm_state.alter(name='vm_state')
 
     instance_table.create_column(c_task_state)
+
+    instance_table = Table('instances', meta, autoload=True,
+                           autoload_with=migrate_engine)
 
     for old_state, values in _upgrade_translations.iteritems():
         instance_table.update().\
