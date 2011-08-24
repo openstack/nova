@@ -501,7 +501,7 @@ class ISCSIDriver(VolumeDriver):
         (out, err) = self._execute('iscsiadm', '-m', 'node', '-T',
                                    iscsi_properties['target_iqn'],
                                    '-p', iscsi_properties['target_portal'],
-                                   iscsi_command, run_as_root=True)
+                                   *iscsi_command, run_as_root=True)
         LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
                   (iscsi_command, out, err))
         return (out, err)
