@@ -88,11 +88,13 @@ def stub_instance(id, power_state=0, metadata=None,
         "access_ip_v4": "",
         "access_ip_v6": "",
         "uuid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-        "virtual_interfaces": []}
+        "virtual_interfaces": [],
+    }
 
     instance["fixed_ips"] = {
         "address": '192.168.0.1',
-        "floating_ips": []}
+        "floating_ips": [],
+    }
 
     return instance
 
