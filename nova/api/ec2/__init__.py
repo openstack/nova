@@ -405,7 +405,7 @@ class Executor(wsgi.Application):
             LOG.info(_('SnapshotNotFound raised: %s'), unicode(ex),
                      context=context)
             ec2_id = ec2utils.id_to_ec2_snap_id(ex.kwargs['snapshot_id'])
-            message = _('Snapshot %s not found') % ec2_id
+            message = ex.message % {'snapshot_id': ec2_id}
             return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:
             LOG.info(_('NotFound raised: %s'), unicode(ex), context=context)
