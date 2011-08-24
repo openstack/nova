@@ -57,15 +57,15 @@ def generate_default_hostname(instance):
     """Default function to generate a hostname given an instance reference."""
     display_name = instance['display_name']
     if display_name is None:
-        return 'server_%d' % (instance['id'],)
+        return 'server-%d' % (instance['id'],)
     table = ''
     deletions = ''
     for i in xrange(256):
         c = chr(i)
         if ('a' <= c <= 'z') or ('0' <= c <= '9') or (c == '-'):
             table += c
-        elif c == ' ':
-            table += '_'
+        elif c in " _":
+            table += '-'
         elif ('A' <= c <= 'Z'):
             table += c.lower()
         else:
@@ -1041,8 +1041,8 @@ class API(base.Base):
         self._cast_compute_message('reboot_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("rebuild")
-    def rebuild(self, context, instance_id, image_href, name=None,
-            metadata=None, files_to_inject=None):
+    def rebuild(self, context, instance_id, image_href, admin_password,
+                name=None, metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
         name = name or instance["display_name"]
@@ -1065,6 +1065,7 @@ class API(base.Base):
                     task_state=task_states.REBUILDING)
 
         rebuild_params = {
+            "new_pass": admin_password,
             "image_ref": image_href,
             "injected_files": files_to_inject,
         }

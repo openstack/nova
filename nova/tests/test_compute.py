@@ -176,8 +176,9 @@ class ComputeTestCase(test.TestCase):
             db.instance_destroy(self.context, instance_id)
 
     def test_default_hostname_generator(self):
-        cases = [(None, 'server_1'), ('Hello, Server!', 'hello_server'),
-                 ('<}\x1fh\x10e\x08l\x02l\x05o\x12!{>', 'hello')]
+        cases = [(None, 'server-1'), ('Hello, Server!', 'hello-server'),
+                 ('<}\x1fh\x10e\x08l\x02l\x05o\x12!{>', 'hello'),
+                 ('hello_server', 'hello-server')]
         for display_name, hostname in cases:
             ref = self.compute_api.create(self.context,
                 instance_types.get_default_instance_type(), None,

@@ -4594,3 +4594,138 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+
+    def test_action(self):
+        serializer = servers.ServerXMLSerializer()
+
+        fixture = {
+            "server": {
+                "id": 1,
+                "uuid": FAKE_UUID,
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "accessIPv4": "1.2.3.4",
+                "accessIPv6": "fead::1234",
+                "hostId": "e4d909c290d0fb1ca068ffaddf22cbd0",
+                "adminPass": "test_password",
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": self.IMAGE_BOOKMARK,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": self.FLAVOR_BOOKMARK,
+                        },
+                    ],
+                },
+                "addresses": {
+                    "network_one": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.138",
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.138",
+                        },
+                    ],
+                    "network_two": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.139",
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.139",
+                        },
+                    ],
+                },
+                "metadata": {
+                    "Open": "Stack",
+                    "Number": "1",
+                },
+                'links': [
+                    {
+                        'href': self.SERVER_HREF,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.SERVER_BOOKMARK,
+                        'rel': 'bookmark',
+                    },
+                ],
+            }
+        }
+
+        output = serializer.serialize(fixture, 'action')
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'server')
+
+        expected_server_href = self.SERVER_HREF
+        expected_server_bookmark = self.SERVER_BOOKMARK
+        expected_image_bookmark = self.IMAGE_BOOKMARK
+        expected_flavor_bookmark = self.FLAVOR_BOOKMARK
+        expected_now = self.TIMESTAMP
+        expected_uuid = FAKE_UUID
+        server_dict = fixture['server']
+
+        for key in ['name', 'id', 'uuid', 'created', 'accessIPv4',
+                    'updated', 'progress', 'status', 'hostId',
+                    'accessIPv6', 'adminPass']:
+            self.assertEqual(root.get(key), str(server_dict[key]))
+
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(server_dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        metadata_root = root.find('{0}metadata'.format(NS))
+        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
+        self.assertEqual(len(metadata_elems), 2)
+        for i, metadata_elem in enumerate(metadata_elems):
+            (meta_key, meta_value) = server_dict['metadata'].items()[i]
+            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
+            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
+
+        image_root = root.find('{0}image'.format(NS))
+        self.assertEqual(image_root.get('id'), server_dict['image']['id'])
+        link_nodes = image_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 1)
+        for i, link in enumerate(server_dict['image']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        flavor_root = root.find('{0}flavor'.format(NS))
+        self.assertEqual(flavor_root.get('id'), server_dict['flavor']['id'])
+        link_nodes = flavor_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 1)
+        for i, link in enumerate(server_dict['flavor']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        addresses_root = root.find('{0}addresses'.format(NS))
+        addresses_dict = server_dict['addresses']
+        network_elems = addresses_root.findall('{0}network'.format(NS))
+        self.assertEqual(len(network_elems), 2)
+        for i, network_elem in enumerate(network_elems):
+            network = addresses_dict.items()[i]
+            self.assertEqual(str(network_elem.get('id')), str(network[0]))
+            ip_elems = network_elem.findall('{0}ip'.format(NS))
+            for z, ip_elem in enumerate(ip_elems):
+                ip = network[1][z]
+                self.assertEqual(str(ip_elem.get('version')),
+                                 str(ip['version']))
+                self.assertEqual(str(ip_elem.get('addr')),
+                                 str(ip['addr']))
