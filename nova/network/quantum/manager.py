@@ -287,17 +287,21 @@ class QuantumManager(manager.FlatManager):
                 (net_id, port_id) = self.q_conn.get_port_by_attachment(
                                         q_tenant_id, interface_id)
             if not net_id:
-                LOG.error("Unable to find port with attachment: %s" % \
-                                                        (interface_id))
+                LOG.error("Unable to find port with attachment: %s" %
+                          (interface_id))
                 continue
             self.q_conn.detach_and_delete_port(q_tenant_id,
-                                                   net_id, port_id)
+                                               net_id, port_id)
 
             self.ipam.deallocate_ips_by_vif(context, ipam_tenant_id,
-                                                    net_id, vif_ref)
+                                            net_id, vif_ref)
 
-        db.virtual_interface_delete_by_instance(admin_context,
-                                                            instance_id)
+        try:
+            db.virtual_interface_delete_by_instance(admin_context,
+                                                    instance_id)
+        except exception.InstanceNotFound:
+            LOG.error(_("Attempted to deallocate non-existent instance: %s" %
+                        (instance_id)))
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
 
