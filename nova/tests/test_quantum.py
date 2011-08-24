@@ -155,9 +155,9 @@ class QuantumTestCaseBase(object):
         self.assertTrue(nw_info[1][0]['cidr_v6'].startswith("2001:1db8:"))
 
         # v6 address
-        self.assertTrue(\
+        self.assertTrue(
             nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1dba:"))
-        self.assertTrue(\
+        self.assertTrue(
             nw_info[1][1]['ip6s'][0]['ip'].startswith("2001:1db8:"))
 
         self.net_man.deallocate_for_instance(ctx,
@@ -233,24 +233,24 @@ class QuantumNovaIPAMTestCase(QuantumTestCaseBase, test.TestCase):
         self.net_man = quantum_manager.QuantumManager( \
                 ipam_lib="nova.network.quantum.nova_ipam_lib")
 
-        # tests seem to create some networks by default, which
-        # don't want.  So we delete them.
+        # Tests seem to create some networks by default, which
+        # we don't want.  So we delete them.
 
         ctx = context.RequestContext('user1', 'fake_project1').elevated()
         for n in db.network_get_all(ctx):
             db.network_delete_safe(ctx, n['id'])
 
-        # I've found that other unit tests have a nasty habit of
-        # of creating fixed IPs and not cleaning up, which can
-        # confuse these tests, so we clean them all.
+        # NOTE(danwent): I've found that other unit tests have a nasty
+        # habit of of creating fixed IPs and not cleaning up, which
+        # can confuse these tests, so we clean them all.
         session = get_session()
         result = session.query(models.FixedIp).all()
         with session.begin():
             for fip_ref in result:
                 session.delete(fip_ref)
 
-# Cannot run this unit tests auotmatically for now, as it requires
-# melange to be running locally.
+# FIXME(danwent): Cannot run this unit tests automatically for now, as
+# it requires melange to be running locally.
 #
 #class QuantumMelangeIPAMTestCase(QuantumTestCaseBase, test.TestCase):
 #

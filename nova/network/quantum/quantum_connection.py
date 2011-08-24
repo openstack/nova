@@ -37,7 +37,7 @@ flags.DEFINE_string('quantum_default_tenant_id',
                     'Default tenant id when creating quantum networks')
 
 
-class QuantumClientConnection:
+class QuantumClientConnection(object):
     """ Abstracts connection to Quantum service into higher level
         operations performed by the QuantumManager.
 
@@ -71,7 +71,7 @@ class QuantumClientConnection:
         try:
             self.client.show_network_details(net_id, tenant=tenant_id)
         except:
-            # FIXME: (danwent) client lib should expose granular exceptions
+            # FIXME(danwent): client lib should expose granular exceptions
             # so we can confirm we're getting a 404 and not some other error
             return False
         return True
@@ -81,8 +81,8 @@ class QuantumClientConnection:
             status to ACTIVE to enable traffic, and attaches the
             vNIC with the specified interface-id.
         """
-        LOG.debug("Connecting interface %s to net %s for %s" % \
-                    (interface_id, net_id, tenant_id))
+        LOG.debug(_("Connecting interface %s to net %s for %s" %
+                    (interface_id, net_id, tenant_id)))
         port_data = {'port': {'state': 'ACTIVE'}}
         resdict = self.client.create_port(net_id, port_data, tenant=tenant_id)
         port_id = resdict["port"]["id"]
@@ -103,7 +103,7 @@ class QuantumClientConnection:
         """ Given a tenant, search for the Quantum network and port
             UUID that has the specified interface-id attachment.
         """
-        # FIXME: (danwent) this will be inefficient until the Quantum
+        # FIXME(danwent): this will be inefficient until the Quantum
         # API implements querying a port by the interface-id
         net_list_resdict = self.client.list_networks(tenant=tenant_id)
         for n in net_list_resdict["networks"]:

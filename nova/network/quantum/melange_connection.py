@@ -73,10 +73,10 @@ class MelangeConnection(object):
             response_str = response.read()
             if response.status < 400:
                 return response_str
-            raise Exception("Server returned error: %s", response_str)
+            raise Exception(_("Server returned error: %s", response_str))
         except (socket.error, IOError), e:
-            raise Exception("Unable to connect to "
-                            "server. Got error: %s" % e)
+            raise Exception(_("Unable to connect to "
+                            "server. Got error: %s" % e))
 
     def allocate_ip(self, network_id, vif_id,
                     project_id=None, mac_address=None):
