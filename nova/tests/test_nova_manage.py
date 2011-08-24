@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import gettext
 import os
 import sys
 
@@ -24,8 +23,6 @@ TOPDIR = os.path.normpath(os.path.join(
                             os.pardir,
                             os.pardir))
 NOVA_MANAGE_PATH = os.path.join(TOPDIR, 'bin', 'nova-manage')
-
-gettext.install('nova', unicode=1)
 
 sys.dont_write_bytecode = True
 import imp
@@ -38,11 +35,8 @@ import StringIO
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova import test
 from nova.tests.db import fakes as db_fakes
-
-FLAGS = flags.FLAGS
 
 
 class FixedIpCommandsTestCase(test.TestCase):
