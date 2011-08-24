@@ -339,6 +339,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.stubs.UnsetAll()
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
+    def _get_fake_context(self):
+        class Context(object):
+            project_id = 'fake'
+        return Context()
+
     def _applicable_fixture(self, fixture, user_id):
         """Determine if this fixture is applicable for given user id."""
         is_public = fixture["is_public"]
@@ -386,13 +391,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected_image, actual_image)
 
     def test_get_image_v1_1(self):
-        request = webob.Request.blank('/v1.1/images/124')
+        request = webob.Request.blank('/v1.1/fake/images/124')
         response = request.get_response(fakes.wsgi_app())
 
         actual_image = json.loads(response.body)
 
-        href = "http://localhost/v1.1/images/124"
-        bookmark = "http://localhost/images/124"
+        href = "http://localhost/v1.1/fake/images/124"
+        bookmark = "http://localhost/fake/images/124"
         server_href = "http://localhost/v1.1/servers/42"
         server_bookmark = "http://localhost/servers/42"
 
@@ -508,7 +513,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_image_404_v1_1_json(self):
-        request = webob.Request.blank('/v1.1/images/NonExistantImage')
+        request = webob.Request.blank('/v1.1/fake/images/NonExistantImage')
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
@@ -524,7 +529,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected, actual)
 
     def test_get_image_404_v1_1_xml(self):
-        request = webob.Request.blank('/v1.1/images/NonExistantImage')
+        request = webob.Request.blank('/v1.1/fake/images/NonExistantImage')
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
@@ -545,7 +550,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_image_index_v1_1(self):
-        request = webob.Request.blank('/v1.1/images')
+        request = webob.Request.blank('/v1.1/fake/images')
         response = request.get_response(fakes.wsgi_app())
 
         response_dict = json.loads(response.body)
@@ -558,8 +563,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 fixtures.remove(image)
                 continue
 
-            href = "http://localhost/v1.1/images/%s" % image["id"]
-            bookmark = "http://localhost/images/%s" % image["id"]
+            href = "http://localhost/v1.1/fake/images/%s" % image["id"]
+            bookmark = "http://localhost/fake/images/%s" % image["id"]
             test_image = {
                 "id": image["id"],
                 "name": image["name"],
@@ -637,7 +642,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
     def test_get_image_details_v1_1(self):
-        request = webob.Request.blank('/v1.1/images/detail')
+        request = webob.Request.blank('/v1.1/fake/images/detail')
         response = request.get_response(fakes.wsgi_app())
 
         response_dict = json.loads(response.body)
@@ -655,11 +660,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'progress': 100,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/images/123",
+                "href": "http://localhost/v1.1/fake/images/123",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/images/123",
+                "href": "http://localhost/fake/images/123",
             }],
         },
         {
@@ -686,11 +691,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/images/124",
+                "href": "http://localhost/v1.1/fake/images/124",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/images/124",
+                "href": "http://localhost/fake/images/124",
             }],
         },
         {
@@ -717,11 +722,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/images/125",
+                "href": "http://localhost/v1.1/fake/images/125",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/images/125",
+                "href": "http://localhost/fake/images/125",
             }],
         },
         {
@@ -748,11 +753,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/images/126",
+                "href": "http://localhost/v1.1/fake/images/126",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/images/126",
+                "href": "http://localhost/fake/images/126",
             }],
         },
         {
@@ -779,11 +784,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/images/127",
+                "href": "http://localhost/v1.1/fake/images/127",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/images/127",
+                "href": "http://localhost/fake/images/127",
             }],
         },
         {
@@ -796,11 +801,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'progress': 100,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/images/129",
+                "href": "http://localhost/v1.1/fake/images/129",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/images/129",
+                "href": "http://localhost/fake/images/129",
             }],
         },
         ]
@@ -809,7 +814,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'name': 'testname'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -821,7 +826,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'status': 'ACTIVE'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -833,7 +838,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_filter_with_property(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'property-test': '3'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -845,7 +850,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_filter_server(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         # 'server' should be converted to 'property-instance_ref'
         filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
         image_service.index(context, filters=filters).AndReturn([])
@@ -859,7 +864,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_filter_changes_since(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'changes-since': '2011-01-24T17:08Z'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -872,7 +877,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_filter_with_type(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'property-image_type': 'BASE'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -884,7 +889,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'status': 'ACTIVE'}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -897,7 +902,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_no_filters(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {}
         image_service.index(
             context, filters=filters).AndReturn([])
@@ -911,11 +916,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_detail_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'name': 'testname'}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images/detail?name=testname')
+        request = webob.Request.blank('/v1.1/fake/images/detail?name=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -923,11 +928,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_detail_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'status': 'ACTIVE'}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images/detail?status=ACTIVE')
+        request = webob.Request.blank('/v1.1/fake/images/detail?status=ACTIVE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -935,11 +940,12 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_detail_filter_with_property(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'property-test': '3'}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images/detail?property-test=3')
+        request = webob.Request.blank(
+            '/v1.1/fake/images/detail?property-test=3')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -947,12 +953,12 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_detail_filter_server(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         # 'server' should be converted to 'property-instance_ref'
         filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images/detail?server='
+        request = webob.Request.blank('/v1.1/fake/images/detail?server='
                                       'http://localhost:8774/servers/12')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
@@ -961,11 +967,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_detail_filter_changes_since(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'changes-since': '2011-01-24T17:08Z'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images/detail?changes-since='
+        request = webob.Request.blank('/v1.1/fake/images/detail?changes-since='
                                       '2011-01-24T17:08Z')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
@@ -974,11 +980,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_detail_filter_with_type(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'property-image_type': 'BASE'}
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images/detail?type=BASE')
+        request = webob.Request.blank('/v1.1/fake/images/detail?type=BASE')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
@@ -986,11 +992,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_detail_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {'status': 'ACTIVE'}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images/detail?status=ACTIVE&'
+        request = webob.Request.blank('/v1.1/fake/images/detail?status=ACTIVE&'
                                       'UNSUPPORTEDFILTER=testname')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
@@ -999,11 +1005,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_image_detail_no_filters(self):
         image_service = self.mox.CreateMockAnything()
-        context = object()
+        context = self._get_fake_context()
         filters = {}
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images/detail')
+        request = webob.Request.blank('/v1.1/fake/images/detail')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.detail(request)
@@ -1123,8 +1129,8 @@ class ImageXMLSerializationTest(test.TestCase):
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_HREF = 'http://localhost/v1.1/servers/123'
     SERVER_BOOKMARK = 'http://localhost/servers/123'
-    IMAGE_HREF = 'http://localhost/v1.1/images/%s'
-    IMAGE_BOOKMARK = 'http://localhost/images/%s'
+    IMAGE_HREF = 'http://localhost/v1.1/fake/images/%s'
+    IMAGE_BOOKMARK = 'http://localhost/fake/images/%s'
 
     def test_show(self):
         serializer = images.ImageXMLSerializer()

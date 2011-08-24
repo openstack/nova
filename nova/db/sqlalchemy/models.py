@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -173,7 +174,6 @@ class Instance(BASE, NovaBase):
             base_name += "-rescue"
         return base_name
 
-    admin_pass = Column(String(255))
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -231,6 +231,12 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
+    config_drive = Column(String(255))
+
+    # User editable field meant to represent what ip should be used
+    # to connect to the instance
+    access_ip_v4 = Column(String(255))
+    access_ip_v6 = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -601,6 +607,7 @@ class Network(BASE, NovaBase):
 
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+    uuid = Column(String(36))
 
 
 class VirtualInterface(BASE, NovaBase):
@@ -614,6 +621,8 @@ class VirtualInterface(BASE, NovaBase):
     # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
     instance = relationship(Instance, backref=backref('virtual_interfaces'))
+
+    uuid = Column(String(36))
 
     @property
     def fixed_ipv6(self):
