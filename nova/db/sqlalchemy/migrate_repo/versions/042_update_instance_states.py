@@ -17,14 +17,12 @@
 import sqlalchemy
 from sqlalchemy import MetaData, Table, Column, String
 
-from nova import log
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova.db.sqlalchemy import models
 
 
-LOG = log.getLogger("farts")
 meta = MetaData()
+
 
 c_task_state = Column('task_state',
                       String(length=255, convert_unicode=False,
@@ -94,37 +92,12 @@ _downgrade_translations = {
 }
 
 
-def _insert_test_data(instance_table):
-    running_instance = models.Instance()
-    running_instance.state_description = "running"
-    stopped_instance = models.Instance()
-    stopped_instance.state_description = "stopped"
-    terminated_instance = models.Instance()
-    terminated_instance.state_description = "terminated"
-    migrating_instance = models.Instance()
-    migrating_instance.state_description = "migrating"
-    scheduling_instance = models.Instance()
-    scheduling_instance.state_description = "scheduling"
-    bad_instance = models.Instance()
-    bad_instance.state_description = "bad_state_description"
-
-    instance_table.insert(running_instance).execute()
-    instance_table.insert(stopped_instance).execute()
-    instance_table.insert(terminated_instance).execute()
-    instance_table.insert(migrating_instance).execute()
-    instance_table.insert(scheduling_instance).execute()
-    instance_table.insert(bad_instance).execute()
-
-
 def upgrade(migrate_engine):
-    #migrate_engine.echo = True
     meta.bind = migrate_engine
 
     instance_table = Table('instances', meta, autoload=True,
                            autoload_with=migrate_engine)
-    _insert_test_data(instance_table)
-    for instance in instance_table.select().execute():
-        LOG.info(instance)
+
     c_state = instance_table.c.state
     c_state.alter(name='power_state')
 
@@ -148,9 +121,8 @@ def upgrade(migrate_engine):
                                  "WHERE vm_state=:old_state")
         migrate_engine.execute(update, **new_values)
 
-    for instance in instance_table.select().execute():
-        LOG.info(instance)
 
+def downgrade(migrate_engine):
     meta.bind = migrate_engine
 
     instance_table = Table('instances', meta, autoload=True,
@@ -170,15 +142,10 @@ def upgrade(migrate_engine):
                                          "WHERE vm_state=:old_vm_state")
                 migrate_engine.execute(update, locals())
 
-    #c_state = instance_table.c.power_state
+    c_state = instance_table.c.power_state
     c_state.alter(name='state')
 
-    #c_vm_state = instance_table.c.vm_state
+    c_vm_state = instance_table.c.vm_state
     c_vm_state.alter(name='state_description')
 
     instance_table.drop_column('task_state')
-
-    for instance in instance_table.select().execute():
-        LOG.info(instance)
-
-    raise Exception()
