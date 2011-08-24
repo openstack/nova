@@ -1020,11 +1020,11 @@ def virtual_interface_delete_by_instance(context, instance_id):
 ###################
 
 
-def _metadata_refs(metadata_dict):
+def _metadata_refs(metadata_dict, meta_class):
     metadata_refs = []
     if metadata_dict:
         for k, v in metadata_dict.iteritems():
-            metadata_ref = models.InstanceMetadata()
+            metadata_ref = meta_class()
             metadata_ref['key'] = k
             metadata_ref['value'] = v
             metadata_refs.append(metadata_ref)
@@ -1038,8 +1038,8 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
-    values['metadata'] = _metadata_refs(values.get('metadata'))
-
+    values['metadata'] = _metadata_refs(values.get('metadata'),
+                                        models.InstanceMetadata)
     instance_ref = models.Instance()
     instance_ref['uuid'] = str(utils.gen_uuid())
 
@@ -2097,8 +2097,8 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 
 @require_context
 def volume_create(context, values):
-    values['metadata'] = _metadata_refs(values.get('metadata'))
-
+    values['volume_metadata'] = _metadata_refs(values.get('metadata'),
+                                               models.VolumeMetadata)
     volume_ref = models.Volume()
     volume_ref.update(values)
 
@@ -3617,14 +3617,10 @@ def volume_type_create(_context, values):
     """
     try:
         specs = values.get('extra_specs')
-        specs_refs = []
-        if specs:
-            for k, v in specs.iteritems():
-                specs_ref = models.VolumeTypeExtraSpecs()
-                specs_ref['key'] = k
-                specs_ref['value'] = v
-                specs_refs.append(specs_ref)
-        values['extra_specs'] = specs_refs
+
+        values['extra_specs'] = _metadata_refs(values.get('extra_specs'),
+                                                   models.VolumeTypeExtraSpecs)
+        
         volume_type_ref = models.VolumeTypes()
         volume_type_ref.update(values)
         volume_type_ref.save()

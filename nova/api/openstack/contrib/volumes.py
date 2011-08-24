@@ -24,6 +24,7 @@ from nova import flags
 from nova import log as logging
 from nova import quota
 from nova import volume
+from nova.volume import volume_types
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import faults
@@ -63,6 +64,22 @@ def _translate_volume_summary_view(context, vol):
 
     d['displayName'] = vol['display_name']
     d['displayDescription'] = vol['display_description']
+
+    if vol['volume_type_id'] and vol.get('volume_type'):
+        d['volumeType'] = vol['volume_type']['name']
+    else:
+        d['volumeType'] = vol['volume_type_id']
+
+    LOG.audit(_("vol=%s"), vol, context=context)
+
+    if vol.get('volume_metadata'):
+        meta_dict = {}
+        for i in vol['volume_metadata']:
+            meta_dict[i['key']] = i['value']
+        d['metadata'] = meta_dict
+    else:
+        d['metadata'] = {}
+
     return d
 
 
@@ -80,6 +97,8 @@ class VolumeController(object):
                     "createdAt",
                     "displayName",
                     "displayDescription",
+                    "volumeType",
+                    "metadata",
                     ]}}}
 
     def __init__(self):
@@ -136,12 +155,25 @@ class VolumeController(object):
         vol = body['volume']
         size = vol['size']
         LOG.audit(_("Create volume of %s GB"), size, context=context)
+
+        vol_type = vol.get('volume_type', None)
+        if vol_type:
+            try:
+                vol_type = volume_types.get_volume_type_by_name(context,
+                                                                vol_type)
+            except exception.NotFound:
+                return faults.Fault(exc.HTTPNotFound())
+
+        metadata = vol.get('metadata', None)
+
         new_volume = self.volume_api.create(context, size, None,
                                             vol.get('display_name'),
-                                            vol.get('display_description'))
+                                            vol.get('display_description'),
+                                            volume_type=vol_type,
+                                            metadata=metadata)
 
         # Work around problem that instance is lazy-loaded...
-        new_volume['instance'] = None
+        new_volume = self.volume_api.get(context, new_volume['id'])
 
         retval = _translate_volume_detail_view(context, new_volume)
 
