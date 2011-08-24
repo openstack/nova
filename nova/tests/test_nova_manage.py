@@ -165,25 +165,27 @@ class NetworkCommandsTestCase(test.TestCase):
         self.commands.list()
         sys.stdout = sys.__stdout__
         result = output.getvalue()
-        _fmt = "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"
-        head = _fmt % (_('id'),
-                          _('IPv4'),
-                          _('IPv6'),
-                          _('start address'),
-                          _('DNS1'),
-                          _('DNS2'),
-                          _('VlanID'),
-                          _('project'),
-                          _("uuid"))
-        body = _fmt % (self.net['id'],
-                       self.net['cidr'],
-                       self.net['cidr_v6'],
-                       self.net['dhcp_start'],
-                       self.net['dns1'],
-                       self.net['dns2'],
-                       self.net['vlan'],
-                       self.net['project_id'],
-                       self.net['uuid'])
+        _fmt = "%(id)-5s\t%(cidr)-18s\t%(cidr_v6)-15s\t%(dhcp_start)-15s\t" +\
+               "%(dns1)-15s\t%(dns2)-15s\t%(vlan)-15s\t%(project_id)-15s\t" +\
+               "%(uuid)-15s"
+        head = _fmt % {'id': _('id'),
+                       'cidr': _('IPv4'),
+                       'cidr_v6': _('IPv6'),
+                       'dhcp_start': _('start address'),
+                       'dns1': _('DNS1'),
+                       'dns2': _('DNS2'),
+                       'vlan': _('VlanID'),
+                       'project_id': _('project'),
+                       'uuid': _("uuid")}
+        body = _fmt % {'id': self.net['id'],
+                       'cidr': self.net['cidr'],
+                       'cidr_v6': self.net['cidr_v6'],
+                       'dhcp_start': self.net['dhcp_start'],
+                       'dns1': self.net['dns1'],
+                       'dns2': self.net['dns2'],
+                       'vlan': self.net['vlan'],
+                       'project_id': self.net['project_id'],
+                       'uuid': self.net['uuid']}
         answer = '%s\n%s\n' % (head, body)
         self.assertEqual(result, answer)
 
