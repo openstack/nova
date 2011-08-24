@@ -490,15 +490,15 @@ class ComputeManager(manager.SchedulerDependentManager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
-        self.db.instance_destroy(context, instance_id)
-
+        instance = self.db.instance_get(context.elevated(), instance_id)
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.DELETED,
                               task_state=None,
                               terminated_at=utils.utcnow())
 
-        instance = self.db.instance_get(context.elevated(), instance_id)
+        self.db.instance_destroy(context, instance_id)
+
         usage_info = utils.usage_from_instance(instance)
         notifier.notify('compute.%s' % self.host,
                         'compute.instance.delete',
