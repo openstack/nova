@@ -604,8 +604,10 @@ class ControllerV10(Controller):
             LOG.debug(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
+        password = utils.generate_password(16)
+
         try:
-            self.compute_api.rebuild(context, instance_id, image_id)
+            self.compute_api.rebuild(context, instance_id, image_id, password)
         except exception.BuildInProgress:
             msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
@@ -741,15 +743,26 @@ class ControllerV11(Controller):
             self._validate_metadata(metadata)
         self._decode_personalities(personalities)
 
+        password = info["rebuild"].get("adminPass",
+                                       utils.generate_password(16))
+
         try:
-            self.compute_api.rebuild(context, instance_id, image_href, name,
-                                     metadata, personalities)
+            self.compute_api.rebuild(context, instance_id, image_href,
+                                     password, name=name, metadata=metadata,
+                                     files_to_inject=personalities)
         except exception.BuildInProgress:
             msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             raise exc.HTTPConflict(explanation=msg)
+        except exception.InstanceNotFound:
+            msg = _("Instance %s could not be found") % instance_id
+            raise exc.HTTPNotFound(explanation=msg)
 
-        return webob.Response(status_int=202)
+        instance = self.compute_api.routing_get(context, instance_id)
+        view = self._build_view(request, instance, is_detail=True)
+        view['server']['adminPass'] = password
+
+        return view
 
     @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
@@ -815,6 +828,9 @@ class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
     def delete(self, response, data):
         response.status_int = 204
+
+    def action(self, response, data):
+        response.status_int = 202
 
 
 class ServerXMLSerializer(wsgi.XMLDictSerializer):
@@ -936,6 +952,11 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
                                        server_dict['server'])
         node.setAttribute('adminPass', server_dict['server']['adminPass'])
         return self.to_xml_string(node, True)
+
+    def action(self, server_dict):
+        #NOTE(bcwaldon): We need a way to serialize actions individually. This
+        # assumes all actions return a server entity
+        return self.create(server_dict)
 
     def update(self, server_dict):
         xml_doc = minidom.Document()
