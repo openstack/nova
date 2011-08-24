@@ -47,24 +47,24 @@ class InstanceTypeTestCase(test.TestCase):
         self.id = max_id["id"] + 1
         self.name = str(int(time.time()))
 
-    def _nonexistant_flavor_name(self):
+    def _nonexistent_flavor_name(self):
         """return an instance type name not in the DB"""
-        nonexistant_flavor = "sdfsfsdf"
+        nonexistent_flavor = "sdfsfsdf"
         flavors = instance_types.get_all_types()
-        while nonexistant_flavor in flavors:
-            nonexistant_flavor = nonexistant_flavor.join("z")
+        while nonexistent_flavor in flavors:
+            nonexistent_flavor += "z"
         else:
-            return nonexistant_flavor
+            return nonexistent_flavor
 
-    def _nonexistant_flavor_id(self):
+    def _nonexistent_flavor_id(self):
         """return an instance type ID not in the DB"""
-        nonexistant_flavor = 2700
+        nonexistent_flavor = 2700
         flavor_ids = [value["id"] for key, value in\
                     instance_types.get_all_types().iteritems()]
-        while nonexistant_flavor in flavor_ids:
-            nonexistant_flavor += 1
+        while nonexistent_flavor in flavor_ids:
+            nonexistent_flavor += 1
         else:
-            return nonexistant_flavor
+            return nonexistent_flavor
 
     def _existing_flavor(self):
         """return first instance type name"""
@@ -111,7 +111,7 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensures that instance type creation fails with invalid args"""
         self.assertRaises(exception.ApiError,
                           instance_types.destroy,
-                          self._nonexistant_flavor_name())
+                          self._nonexistent_flavor_name())
 
     def test_repeated_inst_types_should_raise_api_error(self):
         """Ensures that instance duplicates raises ApiError"""
@@ -126,7 +126,7 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensure destroy sad path of no name raises error"""
         self.assertRaises(exception.ApiError,
                           instance_types.destroy,
-                          self._nonexistant_flavor_name())
+                          self._nonexistent_flavor_name())
 
     def test_will_not_purge_without_name(self):
         """Ensure purge without a name raises error"""
@@ -137,11 +137,11 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensure purge without correct name raises error"""
         self.assertRaises(exception.ApiError,
                           instance_types.purge,
-                          self._nonexistant_flavor_name())
+                          self._nonexistent_flavor_name())
 
     def test_will_not_get_bad_default_instance_type(self):
         """ensures error raised on bad default instance type"""
-        FLAGS.default_instance_type = self._nonexistant_flavor_name()
+        FLAGS.default_instance_type = self._nonexistent_flavor_name()
         self.assertRaises(exception.InstanceTypeNotFoundByName,
                           instance_types.get_default_instance_type)
 
@@ -154,10 +154,10 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensure get by name returns default flavor with bad name"""
         self.assertRaises(exception.InstanceTypeNotFound,
                           instance_types.get_instance_type,
-                          self._nonexistant_flavor_name())
+                          self._nonexistent_flavor_name())
 
     def test_will_not_get_flavor_by_bad_flavor_id(self):
         """Ensure get by flavor raises error with wrong flavorid"""
         self.assertRaises(exception.InstanceTypeNotFound,
                           instance_types.get_instance_type_by_name,
-                          self._nonexistant_flavor_id())
+                          self._nonexistent_flavor_id())
