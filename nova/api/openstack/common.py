@@ -76,6 +76,9 @@ _STATE_MAP = {
     vm_states.ERROR: {
         'default': 'ERROR',
     },
+    vm_states.DELETED: {
+        'default': 'DELETED',
+    },
 }
 
 
