@@ -97,6 +97,7 @@ class ExtensionControllerTest(test.TestCase):
             "SecurityGroups",
             "VirtualInterfaces",
             "Volumes",
+            "VolumeTypes",
             ]
         self.ext_list.sort()
 
