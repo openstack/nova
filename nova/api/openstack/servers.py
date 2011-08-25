@@ -914,10 +914,6 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
             elem.set('href', link['href'])
         return server_elem
 
-    def _to_xml(self, root):
-        """Convert the xml object to an xml string."""
-        return etree.tostring(root, encoding='UTF-8')
-
     def index(self, servers_dict):
         servers = etree.Element('servers', nsmap=self.NSMAP)
         for server_dict in servers_dict['servers']:

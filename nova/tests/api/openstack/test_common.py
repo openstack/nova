@@ -320,6 +320,20 @@ class MetadataXMLDeserializationTest(test.TestCase):
 
 class MetadataXMLSerializationTest(test.TestCase):
 
+    def test_xml_declaration(self):
+        serializer = common.MetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                'one': 'two',
+                'three': 'four',
+            },
+        }
+
+        output = serializer.serialize(fixture, 'index')
+        print output
+        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
+        self.assertTrue(has_dec)
+
     def test_index(self):
         serializer = common.MetadataXMLSerializer()
         fixture = {

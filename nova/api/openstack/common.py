@@ -302,11 +302,6 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
         meta_elem.text = value
         return meta_elem
 
-    def _to_xml(self, root):
-        """Convert the xml object to an xml string."""
-
-        return etree.tostring(root, encoding='UTF-8')
-
     def index(self, metadata_dict):
         metadata = etree.Element('metadata', nsmap=self.NSMAP)
         self._populate_metadata(metadata, metadata_dict.get('metadata', {}))

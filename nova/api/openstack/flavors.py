@@ -99,11 +99,6 @@ class FlavorXMLSerializer(wsgi.XMLDictSerializer):
             elem.set('href', link['href'])
         return flavor_elem
 
-    def _to_xml(self, root):
-        """Convert the xml object to an xml string."""
-
-        return etree.tostring(root, encoding='UTF-8')
-
     def show(self, flavor_container):
         flavor = etree.Element('flavor', nsmap=self.NSMAP)
         self._populate_flavor(flavor, flavor_container['flavor'], True)

@@ -104,7 +104,7 @@ class ControllerV11(Controller):
 
 class IPXMLSerializer(wsgi.XMLDictSerializer):
 
-    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+    NSMAP = {None: xmlutil.XMLNS_V11}
 
     def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(IPXMLSerializer, self).__init__(xmlns=xmlns)
@@ -124,10 +124,6 @@ class IPXMLSerializer(wsgi.XMLDictSerializer):
             ip_elem.set('version', str(ip_dict['version']))
             ip_elem.set('addr', ip_dict['addr'])
         return network_elem
-
-    def _to_xml(self, root):
-        """Convert the xml object to an xml string."""
-        return etree.tostring(root, encoding='UTF-8')
 
     def show(self, network_dict):
         (network_id, ip_dicts) = network_dict.items()[0]

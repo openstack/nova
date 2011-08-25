@@ -267,6 +267,33 @@ class FlavorsTest(test.TestCase):
 
 class FlavorsXMLSerializationTest(test.TestCase):
 
+    def test_xml_declaration(self):
+        serializer = flavors.FlavorXMLSerializer()
+
+        fixture = {
+            "flavor": {
+                "id": "12",
+                "name": "asdf",
+                "ram": "256",
+                "disk": "10",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/flavors/12",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/flavors/12",
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        print output
+        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
+        self.assertTrue(has_dec)
+
     def test_show(self):
         serializer = flavors.FlavorXMLSerializer()
 

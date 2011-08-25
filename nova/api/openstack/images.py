@@ -254,11 +254,6 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
             elem.set('href', link['href'])
         return image_elem
 
-    def _to_xml(self, root):
-        """Convert the xml object to an xml string."""
-
-        return etree.tostring(root, encoding='UTF-8')
-
     def index(self, images_dict):
         images = etree.Element('images', nsmap=self.NSMAP)
         for image_dict in images_dict['images']:
