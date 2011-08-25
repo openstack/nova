@@ -16,11 +16,13 @@
 # under the License.
 
 from nova import db
+from nova import flags
 from nova import test
 from nova.network import manager as network_manager
 
 
 HOST = "testhost"
+FLAGS = flags.FLAGS
 
 
 class FakeModel(dict):
@@ -32,15 +34,14 @@ class FakeModel(dict):
             return self[name]
 
 
-def fake_network(n):
-    return {'id': n,
+def fake_network(n, ipv6=None):
+    if ipv6 = None:
+        ipv6 = Flags.use_ipv6
+    rval = {'id': n,
             'label': 'test%d' % n,
             'injected': False,
             'multi_host': False,
             'cidr': '192.168.%d.0/24' % n,
-            'cidr_v6': '2001:db8:0:%x::/64' % n,
-            'gateway_v6': '2001:db8:0:%x::1' % n,
-            'netmask_v6': '64',
             'netmask': '255.255.255.0',
             'bridge': 'fake_br%d' % n,
             'bridge_interface': 'fake_eth%d' % n,
@@ -52,6 +53,10 @@ def fake_network(n):
             'host': None,
             'project_id': 'fake_project',
             'vpn_public_address': '192.168.%d.2' % n}
+    if ipv6:
+        rval['cidr_v6'] = '2001:db8:0:%x::/64' % n
+        rval['gateway_v6'] = '2001:db8:0:%x::1' % n
+        rval['netmask_v6'] = '64'
 
 
 def fixed_ips(num_networks, num_ips, num_floating_ips=0):
@@ -91,7 +96,22 @@ def vifs(n):
                'instance_id': 0}
 
 
+def ipv4_like(ip, s):
+    ip = ip.split('.')
+    s = s.split('.')
+
+    for i, octet in enumerate(s):
+        if octet == '*':
+            continue
+        if octet != ip[i]:
+            return False
+    return True
+
+
 def fake_get_instance_nw_info(stubs, n=1, ips_per_vif=2):
+    # stubs is the self.stubs from the test
+    # ips_per_vif is the number of ips each vif will have
+    # num_floating_ips is number of float ips for each fixed ip
     network = network_manager.FlatManager(host=HOST)
     network.db = db
 

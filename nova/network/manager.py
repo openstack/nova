@@ -483,7 +483,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'bridge': network['bridge'],
                 'id': network['id'],
                 'cidr': network['cidr'],
-                'cidr_v6': network['cidr_v6'],
                 'injected': network['injected'],
                 'vlan': network['vlan'],
                 'bridge_interface': network['bridge_interface'],
@@ -509,6 +508,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
+                network_dict['cidr_v6'] = network['cidr_v6'],
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
                 info['gateway6'] = network['gateway_v6']
