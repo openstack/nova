@@ -244,19 +244,6 @@ class ServerActionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 500)
 
-    def test_resized_server_has_correct_status(self):
-        req = self.webreq('/1', 'GET')
-
-        def fake_migration_get(*args):
-            return {}
-
-        self.stubs.Set(nova.db, 'migration_get_by_instance_and_status',
-                fake_migration_get)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        body = json.loads(res.body)
-        self.assertEqual(body['server']['status'], 'RESIZE-CONFIRM')
-
     def test_confirm_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
 
