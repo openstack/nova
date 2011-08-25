@@ -984,6 +984,18 @@ class LimitsXMLSerializationTest(test.TestCase):
     def tearDown(self):
         pass
 
+    def test_xml_declaration(self):
+        serializer = limits.LimitsXMLSerializer()
+
+        fixture = {"limits": {
+                   "rate": [],
+                   "absolute": {}}}
+
+        output = serializer.serialize(fixture, 'index')
+        print output
+        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
+        self.assertTrue(has_dec)
+
     def test_index(self):
         serializer = limits.LimitsXMLSerializer()
         fixture = {"limits": {
