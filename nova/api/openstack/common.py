@@ -84,10 +84,11 @@ _STATE_MAP = {
 
 def status_from_state(vm_state, task_state='default'):
     """Given vm_state and task_state, return a status string."""
-    LOG.debug("Generating status for vm_state=%(vm_state)s "
-              "task_state=%(task_state)s." % locals())
     task_map = _STATE_MAP.get(vm_state, dict(default='UNKNOWN_STATE'))
-    return task_map.get(task_state, task_map['default'])
+    status = task_map.get(task_state, task_map['default'])
+    LOG.debug("Generated %(status)s from vm_state=%(vm_state)s "
+              "task_state=%(task_state)s." % locals())
+    return status
 
 
 def vm_state_from_status(status):

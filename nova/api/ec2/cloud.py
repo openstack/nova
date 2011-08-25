@@ -79,7 +79,9 @@ def _gen_key(context, user_id, key_name):
     return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
-# EC2 API: Valid Values:
+# EC2 API can return the following values as documented in the EC2 API
+# http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/
+#    ApiReference-ItemType-InstanceStateType.html
 # pending | running | shutting-down | terminated | stopping | stopped
 _STATE_DESCRIPTION_MAP = {
     None: 'pending',
@@ -1065,8 +1067,8 @@ class CloudController(object):
                                                                result):
             vm_state = instance['vm_state']
             state_to_value = {
-                vm_states.STOPPED: 'stop',
-                vm_states.DELETED: 'terminate',
+                vm_states.STOPPED: 'stopped',
+                vm_states.DELETED: 'terminated',
             }
             value = state_to_value.get(vm_state)
             if value:
