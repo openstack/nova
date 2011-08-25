@@ -1046,13 +1046,16 @@ class LimitsXMLSerializationTest(test.TestCase):
                    "absolute": {}}}
 
         output = serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'limits')
 
-        expected = minidom.parseString("""
-        <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <rates />
-            <absolute />
-        </limits>
-        """.replace("  ", ""))
+        #verify absolute limits
+        absolute = root.find('{0}absolute'.format(NS))
+        absolutes = absolute.findall('limit'.format(NS))
+        self.assertEqual(len(absolutes), 0)
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        #verify rate limits
+        rate_root = root.find('{0}rates'.format(NS))
+        rates = rate_root.findall('{0}rate'.format(NS))
+        self.assertEqual(len(rates), 0)
