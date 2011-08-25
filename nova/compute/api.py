@@ -1165,7 +1165,7 @@ class API(base.Base):
 
         self.update(context,
                     instance_id,
-                    vm_state=vm_states.ACTIVE,
+                    vm_state=vm_states.RESIZING,
                     task_state=task_states.RESIZE_PREP)
 
         instance_ref = self._get_instance(context, instance_id, 'resize')
