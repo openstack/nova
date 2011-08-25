@@ -92,7 +92,6 @@ _STATE_DESCRIPTION_MAP = {
     vm_states.STOPPED: 'stopped',
     vm_states.MIGRATING: 'migrate',
     vm_states.RESIZING: 'resize',
-    vm_states.VERIFY_RESIZE: 'verify_resize',
     vm_states.PAUSED: 'pause',
     vm_states.SUSPENDED: 'suspend',
     vm_states.RESCUED: 'rescue',
@@ -101,7 +100,7 @@ _STATE_DESCRIPTION_MAP = {
 
 def state_description_from_vm_state(vm_state):
     """Map the vm state to the server status string"""
-    return _STATE_DESCRIPTION_MAP[vm_state]
+    return _STATE_DESCRIPTION_MAP.get(vm_state, vm_state)
 
 
 # TODO(yamahata): hypervisor dependent default device name

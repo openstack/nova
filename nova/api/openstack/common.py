@@ -43,8 +43,8 @@ _STATE_MAP = {
     vm_states.ACTIVE: {
         'default': 'ACTIVE',
         task_states.REBOOTING: 'REBOOT',
-        task_states.HARD_REBOOTING: 'HARD_REBOOT',
-        task_states.PASSWORD: 'PASSWORD',
+        task_states.UPDATING_PASSWORD: 'PASSWORD',
+        task_states.RESIZE_VERIFY: 'VERIFY_RESIZE',
     },
     vm_states.BUILDING: {
         'default': 'BUILD',
@@ -60,9 +60,6 @@ _STATE_MAP = {
     },
     vm_states.RESIZING: {
         'default': 'RESIZE',
-    },
-    vm_states.VERIFY_RESIZE: {
-        'default': 'VERIFY_RESIZE',
     },
     vm_states.PAUSED: {
         'default': 'PAUSED',

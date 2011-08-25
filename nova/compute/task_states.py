@@ -15,16 +15,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Possible task states for instances"""
+"""Possible task states for instances.
+
+Compute instance task states represent what is happening to the instance at the
+current moment. These tasks can be generic, such as 'spawning', or specific,
+such as 'block_device_mapping'. These task states allow for a better view into
+what an instance is doing and should be displayed to users/administrators as
+necessary.
+
+"""
 
 SCHEDULING = 'scheduling'
 BLOCK_DEVICE_MAPPING = 'block_device_mapping'
 NETWORKING = 'networking'
-SPAWN = 'spawn'
+SPAWNING = 'spawning'
 
-SNAPSHOTTING = 'snapshotting'
-BACKING_UP = 'backing_up'
-PASSWORD = 'password'
+IMAGE_SNAPSHOT = 'image_snapshot'
+IMAGE_BACKUP = 'image_backup'
+
+UPDATING_PASSWORD = 'updating_password'
 
 RESIZE_PREP = 'resize_prep'
 RESIZE_MIGRATING = 'resize_migrating'
@@ -32,11 +41,11 @@ RESIZE_MIGRATED = 'resize_migrated'
 RESIZE_FINISH = 'resize_finish'
 RESIZE_REVERTING = 'resize_reverting'
 RESIZE_CONFIRMING = 'resize_confirming'
+RESIZE_VERIFY = 'resize_verify'
 
 REBUILDING = 'rebuilding'
 
 REBOOTING = 'rebooting'
-HARD_REBOOTING = 'hard_rebooting'
 PAUSING = 'pausing'
 UNPAUSING = 'unpausing'
 SUSPENDING = 'suspending'

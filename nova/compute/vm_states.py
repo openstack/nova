@@ -15,7 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Possible vm states for instances"""
+"""Possible vm states for instances.
+
+Compute instance vm states represent the state of an instance as it pertains to
+a user or administrator. When combined with task states (task_states.py), a
+better picture can be formed regarding the instance's health.
+
+"""
 
 ACTIVE = 'active'
 BUILDING = 'building'
@@ -29,6 +35,5 @@ STOPPED = 'stopped'
 
 MIGRATING = 'migrating'
 RESIZING = 'resizing'
-VERIFY_RESIZE = 'verify_resize'
 
 ERROR = 'error'

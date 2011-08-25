@@ -1484,46 +1484,6 @@ def instance_get_floating_address(context, instance_id):
     return fixed_ip_refs[0].floating_ips[0]['address']
 
 
-@require_admin_context
-def instance_set_power_state(context, instance_id, power_state):
-    session = get_session()
-    partial = session.query(models.Instance)
-
-    if utils.is_uuid_like(instance_id):
-        result = partial.filter_by(uuid=instance_id)
-    else:
-        result = partial.filter_by(id=instance_id)
-
-    result.update({'power_state': power_state})
-
-
-@require_admin_context
-def instance_set_vm_state(context, instance_id, vm_state):
-    # vm_state = running, halted, suspended, paused
-    session = get_session()
-    partial = session.query(models.Instance)
-
-    if utils.is_uuid_like(instance_id):
-        result = partial.filter_by(uuid=instance_id)
-    else:
-        result = partial.filter_by(id=instance_id)
-
-    result.update({'vm_state': vm_state})
-
-
-def instance_set_task_state(context, instance_id, task_state):
-    # task_state = running, halted, suspended, paused
-    session = get_session()
-    partial = session.query(models.Instance)
-
-    if utils.is_uuid_like(instance_id):
-        result = partial.filter_by(uuid=instance_id)
-    else:
-        result = partial.filter_by(id=instance_id)
-
-    result.update({'task_state': task_state})
-
-
 @require_context
 def instance_update(context, instance_id, values):
     session = get_session()

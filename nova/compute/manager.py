@@ -415,7 +415,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._instance_update(context,
                                   instance_id,
                                   vm_state=vm_states.BUILDING,
-                                  task_state=task_states.SPAWN)
+                                  task_state=task_states.SPAWNING)
 
             # TODO(vish) check to make sure the availability zone matches
             try:
@@ -557,7 +557,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.REBUILDING,
-                              task_state=task_states.SPAWN)
+                              task_state=task_states.SPAWNING)
 
         # pull in new password here since the original password isn't in the db
         instance_ref.admin_pass = kwargs.get('new_pass',
@@ -629,9 +629,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             None if rotation shouldn't be used (as in the case of snapshots)
         """
         if image_type == "snapshot":
-            task_state = task_states.SNAPSHOTTING
+            task_state = task_states.IMAGE_SNAPSHOT
         elif image_type == "backup":
-            task_state = task_states.BACKING_UP
+            task_state = task_states.IMAGE_BACKUP
         else:
             raise Exception(_('Image type not recognized %s') % image_type)
 
@@ -1027,8 +1027,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._instance_update(context,
                               instance_id,
-                              vm_state=vm_states.VERIFY_RESIZE,
-                              task_state=None)
+                              vm_state=vm_states.ACTIVE,
+                              task_state=task_states.RESIZE_VERIFY)
 
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })
