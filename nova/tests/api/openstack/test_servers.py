@@ -3171,17 +3171,17 @@ class TestAddressesXMLSerialization(test.TestCase):
             ],
         }
         output = self.serializer.serialize(fixture, 'show')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <network xmlns="http://docs.openstack.org/compute/api/v1.1"
-                     id="network_2">
-                <ip version="4" addr="192.168.0.1"/>
-                <ip version="6" addr="fe80::beef"/>
-            </network>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
+        print output
+        root = etree.XML(output)
+        network = fixture['network_2']
+        self.assertEqual(str(root.get('id')), 'network_2')
+        ip_elems = root.findall('{0}ip'.format(NS))
+        for z, ip_elem in enumerate(ip_elems):
+            ip = network[z]
+            self.assertEqual(str(ip_elem.get('version')),
+                             str(ip['version']))
+            self.assertEqual(str(ip_elem.get('addr')),
+                             str(ip['addr']))
 
     def test_index(self):
         fixture = {
@@ -3197,22 +3197,22 @@ class TestAddressesXMLSerialization(test.TestCase):
             },
         }
         output = self.serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <addresses xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <network id="network_2">
-                    <ip version="4" addr="192.168.0.1"/>
-                    <ip version="6" addr="fe80::beef"/>
-                </network>
-                <network id="network_1">
-                    <ip version="4" addr="192.168.0.3"/>
-                    <ip version="4" addr="192.168.0.5"/>
-                </network>
-            </addresses>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'addresses')
+        addresses_dict = fixture['addresses']
+        network_elems = root.findall('{0}network'.format(NS))
+        self.assertEqual(len(network_elems), 2)
+        for i, network_elem in enumerate(network_elems):
+            network = addresses_dict.items()[i]
+            self.assertEqual(str(network_elem.get('id')), str(network[0]))
+            ip_elems = network_elem.findall('{0}ip'.format(NS))
+            for z, ip_elem in enumerate(ip_elems):
+                ip = network[1][z]
+                self.assertEqual(str(ip_elem.get('version')),
+                                 str(ip['version']))
+                self.assertEqual(str(ip_elem.get('addr')),
+                                 str(ip['addr']))
 
 
 class TestServerInstanceCreation(test.TestCase):
