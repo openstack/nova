@@ -1028,14 +1028,15 @@ class LimitsXMLSerializationTest(test.TestCase):
         for i in range(len(rates)):
             rate = rates[i]
             for key in ['uri', 'regex']:
-                self.assertEqual(rate.get(key), str(fixture['limits']['rate'][i][key]))
+                self.assertEqual(rate.get(key),
+                                 str(fixture['limits']['rate'][i][key]))
             rate_limits = rate.findall('{0}limit'.format(NS))
             for z in range(len(rate_limits)):
                 limit = rate_limits[z]
                 for key in ['verb', 'value', 'remaining', 'unit',
                             'next-available']:
                     self.assertEqual(limit.get(key),
-                                     str(fixture['limits']['rate'][i]['limit'][z][key]))
+                         str(fixture['limits']['rate'][i]['limit'][z][key]))
 
     def test_index_no_limits(self):
         serializer = limits.LimitsXMLSerializer()
