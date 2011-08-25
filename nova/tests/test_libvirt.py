@@ -418,9 +418,9 @@ class LibvirtConnTestCase(test.TestCase):
         parameters = interfaces[0].findall('./filterref/parameter')
         self.assertEquals(interfaces[0].get('type'), 'bridge')
         self.assertEquals(parameters[0].get('name'), 'IP')
-        self.assertTrue(_ipv4_like(parameters[0].get('value'), '192.168')
+        self.assertTrue(_ipv4_like(parameters[0].get('value'), '192.168'))
         self.assertEquals(parameters[1].get('name'), 'DHCPSERVER')
-        self.assertTrue(_ipv4_like(parameters[1].get('value'), '192.168.*.1')
+        self.assertTrue(_ipv4_like(parameters[1].get('value'), '192.168.*.1'))
 
     def _check_xml_and_container(self, instance):
         user_context = context.RequestContext(self.user_id,
