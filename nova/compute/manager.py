@@ -547,8 +547,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.REBUILDING,
                               task_state=task_states.BLOCK_DEVICE_MAPPING)
 
-        bd_mapping = self._setup_block_device_mapping(context, instance_id)
-
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
         instance_ref.injected_files = kwargs.get('injected_files', [])

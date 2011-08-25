@@ -104,12 +104,10 @@ def state_description_from_vm_state(vm_state):
 
 # TODO(yamahata): hypervisor dependent default device name
 _DEFAULT_ROOT_DEVICE_NAME = '/dev/sda1'
-_DEFAULT_MAPPINGS = {
-    'ami': 'sda1',
-    'ephemeral0': 'sda2',
-    'root': _DEFAULT_ROOT_DEVICE_NAME,
-    'swap': 'sda3',
-}
+_DEFAULT_MAPPINGS = {'ami': 'sda1',
+                     'ephemeral0': 'sda2',
+                     'root': _DEFAULT_ROOT_DEVICE_NAME,
+                     'swap': 'sda3'}
 
 
 def _parse_block_device_mapping(bdm):
