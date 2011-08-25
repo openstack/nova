@@ -58,6 +58,8 @@ def fake_network(n, ipv6=None):
         rval['gateway_v6'] = '2001:db8:0:%x::1' % n
         rval['netmask_v6'] = '64'
 
+    return rval
+
 
 def fixed_ips(num_networks, num_ips, num_floating_ips=0):
     for network in xrange(num_networks):
