@@ -1027,6 +1027,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.finish_migration(context, instance_ref, disk_info,
                                      network_info, resize_instance)
 
+        self._instance_update(context,
+                              instance_id,
+                              vm_state=vm_states.VERIFY_RESIZE,
+                              task_state=None)
+
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })
 
