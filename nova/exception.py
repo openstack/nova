@@ -197,6 +197,10 @@ class InvalidInstanceType(Invalid):
     message = _("Invalid instance type %(instance_type)s.")
 
 
+class InvalidVolumeType(Invalid):
+    message = _("Invalid volume type %(volume_type)s.")
+
+
 class InvalidPortRange(Invalid):
     message = _("Invalid port range %(from_port)s:%(to_port)s.")
 
@@ -336,6 +340,29 @@ class VolumeNotFound(NotFound):
 
 class VolumeNotFoundForInstance(VolumeNotFound):
     message = _("Volume not found for instance %(instance_id)s.")
+
+
+class VolumeMetadataNotFound(NotFound):
+    message = _("Volume %(volume_id)s has no metadata with "
+                "key %(metadata_key)s.")
+
+
+class NoVolumeTypesFound(NotFound):
+    message = _("Zero volume types found.")
+
+
+class VolumeTypeNotFound(NotFound):
+    message = _("Volume type %(volume_type_id)s could not be found.")
+
+
+class VolumeTypeNotFoundByName(VolumeTypeNotFound):
+    message = _("Volume type with name %(volume_type_name)s "
+                "could not be found.")
+
+
+class VolumeTypeExtraSpecsNotFound(NotFound):
+    message = _("Volume Type %(volume_type_id)s has no extra specs with "
+                "key %(extra_specs_key)s.")
 
 
 class SnapshotNotFound(NotFound):
