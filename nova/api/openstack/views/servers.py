@@ -21,8 +21,6 @@ import hashlib
 import os
 
 from nova import exception
-import nova.compute
-import nova.context
 from nova.api.openstack import common
 from nova.api.openstack.views import addresses as addresses_view
 from nova.api.openstack.views import flavors as flavors_view
@@ -69,12 +67,6 @@ class ViewBuilder(object):
             'id': inst['id'],
             'name': inst['display_name'],
             'status': common.status_from_state(vm_state, task_state)}
-
-        ctxt = nova.context.get_admin_context()
-        compute_api = nova.compute.API()
-
-        if compute_api.has_finished_migration(ctxt, inst['uuid']):
-            inst_dict['status'] = 'RESIZE-CONFIRM'
 
         # Return the metadata as a dictionary
         metadata = {}
