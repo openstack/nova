@@ -32,9 +32,9 @@ import json
 import logging
 import logging.handlers
 import os
+import stat
 import sys
 import traceback
-import stat
 
 import nova
 from nova import flags
