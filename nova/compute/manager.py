@@ -929,8 +929,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get_by_uuid(context, instance_id)
 
         if instance_ref['host'] == FLAGS.host:
-            raise exception.Error(_(
-                    'Migration error: destination same as source!'))
+            self._instance_update(context,
+                                  instance_id,
+                                  vm_state=vm_states.ERROR)
+            msg = _('Migration error: destination same as source!')
+            raise exception.Error(msg)
 
         old_instance_type = self.db.instance_type_get(context,
                 instance_ref['instance_type_id'])
