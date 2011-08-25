@@ -2488,11 +2488,6 @@ class TestServerStatus(test.TestCase):
                                         task_states.REBOOTING)
         self.assertEqual(response['server']['status'], 'REBOOT')
 
-    def test_hard_reboot(self):
-        response = self._get_with_state(vm_states.ACTIVE,
-                                        task_states.HARD_REBOOTING)
-        self.assertEqual(response['server']['status'], 'HARD_REBOOT')
-
     def test_rebuild(self):
         response = self._get_with_state(vm_states.REBUILDING)
         self.assertEqual(response['server']['status'], 'REBUILD')
@@ -2506,11 +2501,13 @@ class TestServerStatus(test.TestCase):
         self.assertEqual(response['server']['status'], 'RESIZE')
 
     def test_verify_resize(self):
-        response = self._get_with_state(vm_states.VERIFY_RESIZE)
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.RESIZE_VERIFY)
         self.assertEqual(response['server']['status'], 'VERIFY_RESIZE')
 
     def test_password_update(self):
-        response = self._get_with_state(vm_states.ACTIVE, task_states.PASSWORD)
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.UPDATING_PASSWORD)
         self.assertEqual(response['server']['status'], 'PASSWORD')
 
     def test_stopped(self):

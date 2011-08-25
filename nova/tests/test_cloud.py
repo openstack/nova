@@ -1611,7 +1611,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(groupSet, expected_groupSet)
         self.assertEqual(get_attribute('instanceInitiatedShutdownBehavior'),
                          {'instance_id': 'i-12345678',
-                          'instanceInitiatedShutdownBehavior': 'stop'})
+                          'instanceInitiatedShutdownBehavior': 'stopped'})
         self.assertEqual(get_attribute('instanceType'),
                          {'instance_id': 'i-12345678',
                           'instanceType': 'fake_type'})

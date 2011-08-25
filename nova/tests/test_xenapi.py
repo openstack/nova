@@ -24,8 +24,6 @@ import re
 import stubout
 import ast
 
-eventlet.monkey_patch()
-
 from nova import db
 from nova import context
 from nova import flags
