@@ -286,6 +286,7 @@ class MetadataHeadersSerializer(wsgi.ResponseHeadersSerializer):
 class MetadataXMLSerializer(wsgi.XMLDictSerializer):
 
     NSMAP = {None: xmlutil.XMLNS_V11}
+
     def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(MetadataXMLSerializer, self).__init__(xmlns=xmlns)
 
