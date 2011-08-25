@@ -428,48 +428,10 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/fake/servers/1')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
-        actual = minidom.parseString(res.body.replace('  ', ''))
-        expected_uuid = FAKE_UUID
-        expected_updated = "2010-11-11T11:00:00Z"
-        expected_created = "2010-10-10T12:00:00Z"
-        expected = minidom.parseString("""
-        <server id="1"
-                uuid="%(expected_uuid)s"
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                name="server1"
-                updated="%(expected_updated)s"
-                created="%(expected_created)s"
-                hostId=""
-                status="BUILD"
-                accessIPv4=""
-                accessIPv6=""
-                progress="0">
-            <atom:link href="%(server_href)s" rel="self"/>
-            <atom:link href="%(server_bookmark)s" rel="bookmark"/>
-            <image id="10">
-                <atom:link rel="bookmark" href="%(image_bookmark)s"/>
-            </image>
-            <flavor id="1">
-                <atom:link rel="bookmark" href="%(flavor_bookmark)s"/>
-            </flavor>
-            <metadata>
-                <meta key="seq">
-                    1
-                </meta>
-            </metadata>
-            <addresses>
-                <network id="public">
-                    <ip version="4" addr="%(public_ip)s"/>
-                </network>
-                <network id="private">
-                    <ip version="4" addr="%(private_ip)s"/>
-                </network>
-            </addresses>
-        </server>
-        """.replace("  ", "") % (locals()))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
+        output = res.body
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'server')
 
     def test_get_server_with_active_status_by_id_v1_1(self):
         image_bookmark = "http://localhost/fake/images/10"

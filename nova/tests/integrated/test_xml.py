@@ -34,8 +34,8 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
         response = self.api.api_request('/limits', headers=headers)
         data = response.read()
         LOG.debug("data: %s" % data)
-
-        prefix = '<limits xmlns="%s"' % common.XML_NS_V11
+        declaration = "<?xml version='1.0' encoding='UTF-8'?>"
+        prefix = '%s<limits xmlns="%s"' % (declaration, common.XML_NS_V11)
         self.assertTrue(data.startswith(prefix))
 
     def test_namespace_servers(self):
@@ -47,5 +47,6 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
         data = response.read()
         LOG.debug("data: %s" % data)
 
-        prefix = '<servers xmlns="%s"' % common.XML_NS_V11
+        declaration = "<?xml version='1.0' encoding='UTF-8'?>"
+        prefix = '%s<servers xmlns="%s"' % (declaration, common.XML_NS_V11)
         self.assertTrue(data.startswith(prefix))
