@@ -36,7 +36,7 @@ class FakeModel(dict):
 
 def fake_network(n, ipv6=None):
     if ipv6 == None:
-        ipv6 = Flags.use_ipv6
+        ipv6 = FLAGS.use_ipv6
     rval = {'id': n,
             'label': 'test%d' % n,
             'injected': False,
