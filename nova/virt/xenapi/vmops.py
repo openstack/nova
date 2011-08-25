@@ -241,7 +241,7 @@ class VMOps(object):
 
         # Alter the image before VM start for, e.g. network injection also
         # alter the image if there's metadata.
-        if FLAGS.flat_injected or instance['metadata']:
+        if FLAGS.flat_injected:
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 
