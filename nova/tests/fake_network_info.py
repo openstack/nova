@@ -81,7 +81,8 @@ def fixed_ips(num_networks, num_ips, num_floating_ips=0):
 
 flavor = {'id': 0,
           'rxtx_cap': 3,
-          'memory_mb': 512}
+          'memory_mb': 512,
+          'vcpus': 2}
 
 def floating_ips(fixed_ip_id):
     for i in xrange(154):
