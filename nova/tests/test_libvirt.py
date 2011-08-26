@@ -1150,7 +1150,7 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEquals(ipv4_network_rules,
                   ipv4_rules_per_addr * ipv4_addr_per_network * networks_count)
         self.assertEquals(ipv6_network_rules,
-                  ipv6_rules_per_addr * ipv4_addr_per_network * networks_count)
+                  ipv6_rules_per_addr * ipv6_addr_per_network * networks_count)
 
     def test_do_refresh_security_group_rules(self):
         instance_ref = self._create_instance_ref()
