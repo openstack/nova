@@ -272,7 +272,7 @@ class VsaScheduler(simple.SimpleScheduler):
             self._consume_resource(qos_cap, vol['size'], -1)
 
     def schedule_create_volumes(self, context, request_spec,
-                                availability_zone, *_args, **_kwargs):
+                                availability_zone=None, *_args, **_kwargs):
         """Picks hosts for hosting multiple volumes."""
 
         num_volumes = request_spec.get('num_volumes')
@@ -285,6 +285,8 @@ class VsaScheduler(simple.SimpleScheduler):
         host = self._check_host_enforcement(context, availability_zone)
 
         try:
+            self._print_capabilities_info()
+
             self._assign_hosts_to_volumes(context, volume_params, host)
 
             for vol in volume_params:
@@ -323,6 +325,8 @@ class VsaScheduler(simple.SimpleScheduler):
             LOG.debug(_("Non-VSA volume %d"), volume_ref['id'])
             return super(VsaScheduler, self).schedule_create_volume(context,
                         volume_id, *_args, **_kwargs)
+
+        self._print_capabilities_info()
 
         drive_type = {
             'name': volume_type['extra_specs'].get('drive_name'),
@@ -397,6 +401,26 @@ class VsaScheduler(simple.SimpleScheduler):
             qos_values['AvailableCapacity'] += direction * GB_TO_BYTES(size)
             self._consume_partition(qos_values, GB_TO_BYTES(size), direction)
         return
+
+    def _print_capabilities_info(self):
+        host_list = self._get_service_states().iteritems()
+        for host, host_dict in host_list:
+            for service_name, service_dict in host_dict.iteritems():
+                if service_name != "volume":
+                    continue
+
+                LOG.info(_("Host %s:"), host)
+
+                gos_info = service_dict.get('drive_qos_info', {})
+                for qosgrp, qos_values in gos_info.iteritems():
+                    total = qos_values['TotalDrives']
+                    used = qos_values['FullDrive']['NumOccupiedDrives']
+                    free = qos_values['FullDrive']['NumFreeDrives']
+                    avail = BYTES_TO_GB(qos_values['AvailableCapacity'])
+
+                    LOG.info(_("\tDrive %(qosgrp)-25s: total %(total)2s, "\
+                               "used %(used)2s, free %(free)2s. Available "\
+                               "capacity %(avail)-5s"), locals())
 
 
 class VsaSchedulerLeastUsedHost(VsaScheduler):
