@@ -850,16 +850,17 @@ class ZadaraBEDriver(ISCSIDriver):
 
         # Set the qos-str to default type sas
         qosstr = 'SAS_1000'
-        LOG.debug(_("\tvolume_type_id=%s"), volume['volume_type_id'])
-
         volume_type = volume_types.get_volume_type(None,
                                             volume['volume_type_id'])
-
-        LOG.debug(_("\tvolume_type=%s"), volume_type)
-
         if volume_type is not None:
             qosstr = volume_type['extra_specs']['drive_type'] + \
                      ("_%s" % volume_type['extra_specs']['drive_size'])
+
+        vsa_id = None
+        for i in volume.get('volume_metadata'):
+            if i['key'] == 'to_vsa_id':
+                vsa_id = i['value']
+                break
 
         try:
             self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
@@ -867,6 +868,7 @@ class ZadaraBEDriver(ISCSIDriver):
                             '--qos', qosstr,
                             '--pname', volume['name'],
                             '--psize', sizestr,
+                            '--vsaid', vsa_id,
                             run_as_root=True,
                             check_exit_code=0)
         except exception.ProcessExecutionError:
