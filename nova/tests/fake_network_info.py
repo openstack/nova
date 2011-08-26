@@ -81,7 +81,7 @@ def fixed_ips(num_networks, num_ips, num_floating_ips=0):
 
 flavor = {'id': 0,
           'name': 'fake_flavor',
-          'memory_mb': 512,
+          'memory_mb': 2048,
           'vcpus': 2,
           'local_gb': 10,
           'flavor_id': 0,
