@@ -60,8 +60,6 @@ def fake_network(n, ipv6=None):
         rval['cidr_v6'] = '2001:db8:0:%x::/64' % n
         rval['gateway_v6'] = '2001:db8:0:%x::1' % n
         rval['netmask_v6'] = '64'
-    print 'asdf %s' % rval['cidr_v6']
-    print type(rval['cidr_v6'])
 
     return rval
 
