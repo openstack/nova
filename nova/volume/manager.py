@@ -93,10 +93,6 @@ class VolumeManager(manager.SchedulerDependentManager):
             else:
                 LOG.info(_("volume %s: skipping export"), volume['name'])
 
-    def create_volumes(self, context, request_spec, availability_zone):
-        LOG.info(_("create_volumes called with req=%(request_spec)s, "\
-                   "availability_zone=%(availability_zone)s"), locals())
-
     def create_volume(self, context, volume_id, snapshot_id=None):
         """Creates and exports the volume."""
         context = context.elevated()

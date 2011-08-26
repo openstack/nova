@@ -17,6 +17,10 @@
 
 """
 Handles all requests relating to Virtual Storage Arrays (VSAs).
+
+Experimental code. Requires special VSA image.
+For assistance and guidelines pls contact
+    Zadara Storage Inc & Openstack community
 """
 
 import sys
@@ -141,6 +145,8 @@ class API(base.Base):
         :param shared: Specifies if storage is dedicated or shared.
                        For shared storage disks split into partitions
         """
+
+        LOG.info(_("*** Experimental VSA code ***"))
 
         if vc_count > FLAGS.max_vcs_in_vsa:
             LOG.warning(_("Requested number of VCs (%d) is too high."\
