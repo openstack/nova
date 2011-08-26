@@ -1120,7 +1120,7 @@ class IptablesFirewallTestCase(test.TestCase):
         network_info = _fake_network_info(self.stubs, 1)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
-        self.assertEquals(len(rulesv6), 3)
+        self.assertEquals(len(rulesv6), 1)
 
     def test_filters_for_instance_without_ip_v6(self):
         self.flags(use_ipv6=False)
