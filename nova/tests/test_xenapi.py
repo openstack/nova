@@ -203,7 +203,6 @@ class XenAPIVMTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.conn = xenapi_conn.get_connection(False)
 
-    @test.skip_test("Skip this test meanwhile")
     def test_parallel_builds(self):
         stubs.stubout_loopingcall_delay(self.stubs)
 

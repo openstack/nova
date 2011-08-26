@@ -36,8 +36,6 @@ class VsaVolumesTestCase(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.vsa_api = vsa.API()
         self.volume_api = volume.API()
-
-        self.context_non_admin = context.RequestContext(None, None)
         self.context = context.get_admin_context()
 
         self.default_vol_type = self.vsa_api.get_vsa_volume_type(self.context)

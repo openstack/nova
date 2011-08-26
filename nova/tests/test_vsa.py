@@ -47,7 +47,6 @@ class VsaTestCase(test.TestCase):
         FLAGS.quota_volumes = 100
         FLAGS.quota_gigabytes = 10000
 
-        self.context_non_admin = context.RequestContext(None, None)
         self.context = context.get_admin_context()
 
         volume_types.create(self.context,

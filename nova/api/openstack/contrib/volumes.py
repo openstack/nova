@@ -37,17 +37,17 @@ LOG = logging.getLogger("nova.api.volumes")
 FLAGS = flags.FLAGS
 
 
-def translate_volume_detail_view(context, vol):
+def _translate_volume_detail_view(context, vol):
     """Maps keys for volumes details view."""
 
-    d = translate_volume_summary_view(context, vol)
+    d = _translate_volume_summary_view(context, vol)
 
     # No additional data / lookups at the moment
 
     return d
 
 
-def translate_volume_summary_view(context, vol):
+def _translate_volume_summary_view(context, vol):
     """Maps keys for volumes summary view."""
     d = {}
 
@@ -114,7 +114,7 @@ class VolumeController(object):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-        return {'volume': translate_volume_detail_view(context, vol)}
+        return {'volume': _translate_volume_detail_view(context, vol)}
 
     def delete(self, req, id):
         """Delete a volume."""
@@ -130,11 +130,11 @@ class VolumeController(object):
 
     def index(self, req):
         """Returns a summary list of volumes."""
-        return self._items(req, entity_maker=translate_volume_summary_view)
+        return self._items(req, entity_maker=_translate_volume_summary_view)
 
     def detail(self, req):
         """Returns a detailed list of volumes."""
-        return self._items(req, entity_maker=translate_volume_detail_view)
+        return self._items(req, entity_maker=_translate_volume_detail_view)
 
     def _items(self, req, entity_maker):
         """Returns a list of volumes, transformed through entity_maker."""
@@ -175,7 +175,7 @@ class VolumeController(object):
         # Work around problem that instance is lazy-loaded...
         new_volume = self.volume_api.get(context, new_volume['id'])
 
-        retval = translate_volume_detail_view(context, new_volume)
+        retval = _translate_volume_detail_view(context, new_volume)
 
         return {'volume': retval}
 

@@ -210,7 +210,6 @@ class VsaSchedulerTestCase(test.TestCase):
     def setUp(self, sched_class=None):
         super(VsaSchedulerTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        self.context_non_admin = context.RequestContext(None, None)
         self.context = context.get_admin_context()
 
         if sched_class is None:

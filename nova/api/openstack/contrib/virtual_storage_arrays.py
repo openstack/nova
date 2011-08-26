@@ -260,9 +260,9 @@ class VsaVolumeDriveController(volumes.VolumeController):
 
     def _translation(self, context, vol, vsa_id, details):
         if details:
-            translation = volumes.translate_volume_detail_view
+            translation = volumes._translate_volume_detail_view
         else:
-            translation = volumes.translate_volume_summary_view
+            translation = volumes._translate_volume_summary_view
 
         d = translation(context, vol)
         d['vsaId'] = vsa_id
@@ -559,7 +559,7 @@ class Virtual_storage_arrays(extensions.ExtensionDescriptor):
         return "http://docs.openstack.org/ext/vsa/api/v1.1"
 
     def get_updated(self):
-        return "2011-06-29T00:00:00+00:00"
+        return "2011-08-25T00:00:00+00:00"
 
     def get_resources(self):
         resources = []
