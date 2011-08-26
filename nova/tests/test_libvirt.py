@@ -1130,11 +1130,14 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEquals(len(rulesv6), 0)
 
     def test_multinic_iptables(self):
-        ipv4_rules_per_network = 2
-        ipv6_rules_per_network = 3
+        ipv4_rules_per_addr = 1
+        ipv4_addr_per_network = 2
+        ipv6_rules_per_addr = 1
+        ipv6_addr_per_network = 1
         networks_count = 5
         instance_ref = self._create_instance_ref()
-        network_info = _fake_network_info(self.stubs, networks_count)
+        network_info = _fake_network_info(self.stubs, networks_count,
+                                                      ipv4_addr_per_network)
         ipv4_len = len(self.fw.iptables.ipv4['filter'].rules)
         ipv6_len = len(self.fw.iptables.ipv6['filter'].rules)
         inst_ipv4, inst_ipv6 = self.fw.instance_rules(instance_ref,
@@ -1145,9 +1148,9 @@ class IptablesFirewallTestCase(test.TestCase):
         ipv4_network_rules = len(ipv4) - len(inst_ipv4) - ipv4_len
         ipv6_network_rules = len(ipv6) - len(inst_ipv6) - ipv6_len
         self.assertEquals(ipv4_network_rules,
-                          ipv4_rules_per_network * networks_count)
+                  ipv4_rules_per_addr * ipv4_addr_per_network * networks_count)
         self.assertEquals(ipv6_network_rules,
-                          ipv6_rules_per_network * networks_count)
+                  ipv6_rules_per_addr * ipv4_addr_per_network * networks_count)
 
     def test_do_refresh_security_group_rules(self):
         instance_ref = self._create_instance_ref()
