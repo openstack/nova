@@ -773,7 +773,7 @@ class NetworkCommands(object):
     def list(self):
         """List all created networks"""
         _fmt = "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"\
-                "\t%-15s\t%-15s\t-15s\t-15s"
+                "\t%-15s\t%-15s"
         print _fmt % (_('id'),
                           _('IPv4'),
                           _('IPv6'),
@@ -782,9 +782,7 @@ class NetworkCommands(object):
                           _('DNS2'),
                           _('VlanID'),
                           _('project'),
-                          _("uuid"),
-                          _('priority'),
-                          _('bridge'))
+                          _("uuid"))
         for network in db.network_get_all(context.get_admin_context()):
             print _fmt % (network.id,
                           network.cidr,
@@ -794,9 +792,22 @@ class NetworkCommands(object):
                           network.dns2,
                           network.vlan,
                           network.project_id,
-                          network.uuid,
+                          network.uuid)
+
+    def quantum_list(self):
+        """List all created networks with Quantum-relevant fields"""
+        _fmt = "%-32s\t%-10s\t%-10s\t%s , %s"
+        print _fmt % ( _('bridge / quantum-id'),
+                       _('project'),
+                       _('priority'),
+                       _('cidr_v4'),
+                       _('cidr_v6'))
+        for network in db.network_get_all(context.get_admin_context()):
+            print _fmt % (network.bridge,
+                          network.project_id,
                           network.priority,
-                          network.bridge)
+                          network.cidr,
+                          network.cidr_v6)
 
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to delete')

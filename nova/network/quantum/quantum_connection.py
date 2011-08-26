@@ -46,9 +46,9 @@ class QuantumClientConnection:
                              logger=LOG)
 
     def create_network(self, tenant_id, network_name):
-        data = {'network': {'net-name': network_name}}
+        data = {'network': {'name': network_name}}
         resdict = self.client.create_network(data, tenant=tenant_id)
-        return resdict["networks"]["network"]["id"]
+        return resdict["network"]["id"]
 
     def delete_network(self, tenant_id, net_id):
         self.client.delete_network(net_id, tenant=tenant_id)

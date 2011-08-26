@@ -63,7 +63,7 @@ class Client(object):
 
     """A base client class - derived from Glance.BaseClient"""
 
-    action_prefix = '/v0.1/tenants/{tenant_id}'
+    action_prefix = '/v1.0/tenants/{tenant_id}'
 
     """Action query strings"""
     networks_path = "/networks"
