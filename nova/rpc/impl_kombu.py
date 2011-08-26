@@ -15,7 +15,7 @@
 #    under the License.
 
 from nova import flags
-from nova import log as logging
+from nova.rpc.common import RemoteError, LOG
 
 import kombu
 import kombu.entity
@@ -28,7 +28,6 @@ import uuid
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.rpc')
 
 flags.DEFINE_integer('rpc_conn_pool_size', 30,
                      'Size of RPC connection pool')
@@ -559,7 +558,7 @@ class ProxyCallback(object):
             # This final None tells multicall that it is done.
             ctxt.reply(None, None)
         except Exception as e:
-            logging.exception('Exception during message handling')
+            LOG.exception('Exception during message handling')
             ctxt.reply(None, sys.exc_info())
         return
 
