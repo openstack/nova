@@ -1379,7 +1379,7 @@ class NWFilterTestCase(test.TestCase):
 
         def _ensure_all_called(mac):
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
-                                                       mac.translate(None, ':')
+                                                   mac.translate(None, ':'))
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',
