@@ -1307,20 +1307,25 @@ def instance_get_all_by_filters(context, filters):
 
 
 @require_admin_context
-def instance_get_active_by_window(context, begin, end=None):
+def instance_get_active_by_window(context, begin, end=None,
+                                  project_id=None, fast=False):
     """Return instances that were continuously active over the given window"""
     session = get_session()
-    query = session.query(models.Instance).\
-                   options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ips.network')).\
-                   options(joinedload('instance_type')).\
-                   filter(models.Instance.launched_at < begin)
+    query = session.query(models.Instance)
+    if not fast:
+        query = query.options(joinedload_all('fixed_ips.floating_ips')).\
+                      options(joinedload('security_groups')).\
+                      options(joinedload_all('fixed_ips.network')).\
+                      options(joinedload('instance_type'))
+
+    query = query.filter(models.Instance.launched_at < begin)
     if end:
         query = query.filter(or_(models.Instance.terminated_at == None,
                                  models.Instance.terminated_at > end))
     else:
         query = query.filter(models.Instance.terminated_at == None)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
     return query.all()
 
 

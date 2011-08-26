@@ -23,13 +23,8 @@ from nova import context
 from nova import db
 from nova import flags
 from nova import test
-from nova.compute import instance_types
-from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy import session
 from nova.tests.api.openstack import fakes
-from webob import exc
 
-from nova.api.openstack.contrib import simple_tenant_usage
 
 
 FLAGS = flags.FLAGS
@@ -44,27 +39,6 @@ STOP = datetime.datetime.utcnow()
 START = STOP - datetime.timedelta(hours=HOURS)
 
 
-def fake_get_session():
-    class FakeFetcher(object):
-        def fetchall(fetcher_self):
-            # return 10 rows, 2 tenants, 5 servers each, each run for 1 day
-            return [get_fake_db_row(START,
-                                    STOP,
-                                    x,
-                                    "faketenant_%s" % (x / SERVERS))
-                                    for x in xrange(TENANTS * SERVERS)]
-
-    class FakeConn(object):
-        def execute(self, query):
-            return FakeFetcher()
-
-    class FakeSession(object):
-        def connection(self):
-            return FakeConn()
-
-    return FakeSession()
-
-
 def fake_instance_type_get(context, instance_type_id):
     return {'id': 1,
             'vcpus': VCPUS,
@@ -74,25 +48,32 @@ def fake_instance_type_get(context, instance_type_id):
             'fakeflavor'}
 
 
-def get_fake_db_row(start, end, instance_id, tenant_id):
-    return  [instance_id,
-            '1',
-            tenant_id,
-            'fakeuser',
-            'name',
-            'state',
-            1,
-            start,
-            None]
+def get_fake_db_instance(start, end, instance_id, tenant_id):
+    return  {'id': instance_id,
+             'image_ref': '1',
+             'project_id': tenant_id,
+             'user_id': 'fakeuser',
+             'display_name': 'name',
+             'state_description': 'state',
+             'instance_type_id': 1,
+             'launched_at': start,
+             'terminated_at': end}
+
+def fake_instance_get_active_by_window(context, begin, end, project_id, fast):
+            return [get_fake_db_instance(START,
+                                         STOP,
+                                         x,
+                                         "faketenant_%s" % (x / SERVERS))
+                                         for x in xrange(TENANTS * SERVERS)]
 
 
 class SimpleTenantUsageTest(test.TestCase):
     def setUp(self):
         super(SimpleTenantUsageTest, self).setUp()
-        self.stubs.Set(session, "get_session",
-                       fake_get_session)
         self.stubs.Set(db, "instance_type_get",
                        fake_instance_type_get)
+        self.stubs.Set(db, "instance_get_active_by_window",
+                       fake_instance_get_active_by_window)
         self.admin_context = context.RequestContext('fakeadmin_0',
                                                     'faketenant_0',
                                                     is_admin=True)
@@ -104,13 +85,9 @@ class SimpleTenantUsageTest(test.TestCase):
                                                        is_admin=False)
         FLAGS.allow_admin_api = True
 
-    def test_verify_db_fields_exist_in_instance_model(self):
-        for field in simple_tenant_usage.INSTANCE_FIELDS:
-            self.assertTrue(field in models.Instance.__table__.columns)
-
     def test_verify_index(self):
         req = webob.Request.blank(
-                    '/v1.1/os-simple-tenant-usage?start=%s&end=%s' %
+                    '/v1.1/123/os-simple-tenant-usage?start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
@@ -121,6 +98,8 @@ class SimpleTenantUsageTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
         usages = res_dict['tenant_usages']
+        from nova import log as logging
+        logging.warn(usages)
         for i in xrange(TENANTS):
             self.assertEqual(int(usages[i]['total_hours']),
                              SERVERS * HOURS)
@@ -134,7 +113,8 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_detailed_index(self):
         req = webob.Request.blank(
-                    '/v1.1/os-simple-tenant-usage?detailed=1&start=%s&end=%s' %
+                    '/v1.1/123/os-simple-tenant-usage?'
+                    'detailed=1&start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
@@ -151,7 +131,8 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_index_fails_for_nonadmin(self):
         req = webob.Request.blank(
-                    '/v1.1/os-simple-tenant-usage?detailed=1&start=%s&end=%s' %
+                    '/v1.1/123/os-simple-tenant-usage?'
+                    'detailed=1&start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
@@ -161,7 +142,8 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_show(self):
         req = webob.Request.blank(
-                  '/v1.1/os-simple-tenant-usage/faketenant_0?start=%s&end=%s' %
+                  '/v1.1/faketenant_0/os-simple-tenant-usage/'
+                  'faketenant_0?start=%s&end=%s' %
                   (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
@@ -179,7 +161,8 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_show_cant_view_other_tenant(self):
         req = webob.Request.blank(
-                  '/v1.1/os-simple-tenant-usage/faketenant_0?start=%s&end=%s' %
+                  '/v1.1/faketenant_1/os-simple-tenant-usage/'
+                  'faketenant_0?start=%s&end=%s' %
                   (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"

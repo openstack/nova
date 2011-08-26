@@ -31,35 +31,7 @@ from webob import exc
 
 FLAGS = flags.FLAGS
 
-INSTANCE_FIELDS = ['id',
-                   'image_ref',
-                   'project_id',
-                   'user_id',
-                   'display_name',
-                   'state_description',
-                   'instance_type_id',
-                   'launched_at',
-                   'terminated_at']
-
-
 class SimpleTenantUsageController(object):
-    def _get_instances_for_time_period(self, period_start, period_stop,
-                                       tenant_id):
-        tenant_clause = ''
-        if tenant_id:
-            tenant_clause = " and project_id='%s'" % tenant_id
-
-        conn = get_session().connection()
-        rows = conn.execute("select %s from instances where \
-                            (terminated_at is NULL or terminated_at > '%s') \
-                            and (launched_at < '%s') %s" %\
-                            (','.join(INSTANCE_FIELDS),
-                            period_start.isoformat(' '),\
-                            period_stop.isoformat(' '),
-                            tenant_clause)).fetchall()
-
-        return rows
-
     def _hours_for(self, instance, period_start, period_stop):
         launched_at = instance['launched_at']
         terminated_at = instance['terminated_at']
@@ -99,62 +71,58 @@ class SimpleTenantUsageController(object):
     def _tenant_usages_for_period(self, context, period_start,
                                   period_stop, tenant_id=None, detailed=True):
 
-        rows = self._get_instances_for_time_period(period_start,
-                                                   period_stop,
-                                                   tenant_id)
+        instances = db.instance_get_active_by_window(context,
+                                                     period_start,
+                                                     period_stop,
+                                                     tenant_id,
+                                                     fast=True)
+        from nova import log as logging
+        logging.info(instances)
         rval = {}
         flavors = {}
 
-        for row in rows:
+        for instance in instances:
             info = {}
-            for i in range(len(INSTANCE_FIELDS)):
-                info[INSTANCE_FIELDS[i]] = row[i]
-            info['hours'] = self._hours_for(info, period_start, period_stop)
-            flavor_type = info['instance_type_id']
+            info['hours'] = self._hours_for(instance,
+                                            period_start,
+                                            period_stop)
+            flavor_type = instance['instance_type_id']
 
             if not flavors.get(flavor_type):
                 try:
                     flavors[flavor_type] = db.instance_type_get(context,
-                                                 info['instance_type_id'])
+                                                                flavor_type)
                 except exception.InstanceTypeNotFound:
                     # can't bill if there is no instance type
                     continue
 
             flavor = flavors[flavor_type]
 
-            info['name'] = info['display_name']
-            del(info['display_name'])
+            info['name'] = instance['display_name']
 
             info['memory_mb'] = flavor['memory_mb']
             info['local_gb'] = flavor['local_gb']
             info['vcpus'] = flavor['vcpus']
 
-            info['tenant_id'] = info['project_id']
-            del(info['project_id'])
+            info['tenant_id'] = instance['project_id']
 
             info['flavor'] = flavor['name']
-            del(info['instance_type_id'])
 
-            info['started_at'] = info['launched_at']
-            del(info['launched_at'])
+            info['started_at'] = instance['launched_at']
 
-            info['ended_at'] = info['terminated_at']
-            del(info['terminated_at'])
+            info['ended_at'] = instance['terminated_at']
 
             if info['ended_at']:
                 info['state'] = 'terminated'
             else:
-                info['state'] = info['state_description']
-
-            del(info['state_description'])
+                info['state'] = instance['state_description']
 
             now = datetime.utcnow()
 
             if info['state'] == 'terminated':
-                delta = self._parse_datetime(info['ended_at'])\
-                             - self._parse_datetime(info['started_at'])
+                delta = info['ended_at'] - info['started_at']
             else:
-                delta = now - self._parse_datetime(info['started_at'])
+                delta = now - info['started_at']
 
             info['uptime'] = delta.days * 24 * 60 + delta.seconds
 
