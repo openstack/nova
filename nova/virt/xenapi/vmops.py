@@ -239,9 +239,8 @@ class VMOps(object):
         self._attach_disks(instance, disk_image_type, vm_ref, first_vdi_ref,
             vdis)
 
-        # Alter the image before VM start for, e.g. network injection also
-        # alter the image if there's metadata.
-        if FLAGS.flat_injected or instance['metadata']:
+        # Alter the image before VM start for network injection.
+        if FLAGS.flat_injected:
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 

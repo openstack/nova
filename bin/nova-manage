@@ -801,6 +801,39 @@ class NetworkCommands(object):
                                ' before delete' % network.project_id))
         db.network_delete_safe(context.get_admin_context(), network.id)
 
+    @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
+            help='Network to modify')
+    @args('--project', dest="project", metavar='<project name>',
+            help='Project name to associate')
+    @args('--host', dest="host", metavar='<host>',
+            help='Host to associate')
+    @args('--disassociate-project', action="store_true", dest='dis_project',
+          default=False, help='Disassociate Network from Project')
+    @args('--disassociate-host', action="store_true", dest='dis_host',
+          default=False, help='Disassociate Host from Project')
+    def modify(self, fixed_range, project=None, host=None,
+               dis_project=None, dis_host=None):
+        """Associate/Disassociate Network with Project and/or Host
+        arguments: network project host
+        leave any field blank to ignore it
+        """
+        admin_context = context.get_admin_context()
+        network = db.network_get_by_cidr(admin_context, fixed_range)
+        net = {}
+        #User can choose the following actions each for project and host.
+        #1) Associate (set not None value given by project/host parameter)
+        #2) Disassociate (set None by disassociate parameter)
+        #3) Keep unchanged (project/host key is not added to 'net')
+        if project:
+            net['project_id'] = project
+        elif dis_project:
+            net['project_id'] = None
+        if host:
+            net['host'] = host
+        elif dis_host:
+            net['host'] = None
+        db.network_update(admin_context, network['id'], net)
+
 
 class VmCommands(object):
     """Class for mangaging VM instances."""
