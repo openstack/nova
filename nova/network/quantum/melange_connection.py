@@ -19,6 +19,7 @@ import httplib
 import socket
 import urllib
 import json
+
 from nova import flags
 
 

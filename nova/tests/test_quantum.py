@@ -19,8 +19,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import log as logging
-from nova import test
 from nova.network.quantum import manager as quantum_manager
+from nova import test
 
 LOG = logging.getLogger('nova.tests.quantum_network')
 

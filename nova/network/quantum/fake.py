@@ -15,12 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import math
+from netaddr import IPNetwork
+
 from nova import exception
 from nova import ipv6
 from nova import log as logging
 from nova import utils
-import math
-from netaddr import IPNetwork
 
 
 LOG = logging.getLogger("network.quantum.fake")

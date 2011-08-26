@@ -20,10 +20,10 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
-from nova import utils
 from nova.network import manager
 from nova.network.quantum import quantum_connection
 from nova.network.quantum import fake
+from nova import utils
 
 LOG = logging.getLogger("quantum_manager")
 

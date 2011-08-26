@@ -21,6 +21,7 @@ from nova import flags
 from nova import log as logging
 from nova.network.quantum import melange_connection
 
+
 LOG = logging.getLogger("quantum_melange_ipam")
 
 FLAGS = flags.FLAGS

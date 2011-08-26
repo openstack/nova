@@ -17,9 +17,9 @@
 
 from nova import flags
 from nova import log as logging
+from nova.network.quantum import client as quantum_client
 from nova import utils
 
-from nova.network.quantum.client import Client
 
 LOG = logging.getLogger("nova.network.quantum")
 FLAGS = flags.FLAGS
@@ -40,10 +40,10 @@ flags.DEFINE_string('quantum_default_tenant_id',
 class QuantumClientConnection:
 
     def __init__(self):
-        self.client = Client(FLAGS.quantum_connection_host,
-                             FLAGS.quantum_connection_port,
-                             format="json",
-                             logger=LOG)
+        self.client = quantum_client.Client(FLAGS.quantum_connection_host,
+                                            FLAGS.quantum_connection_port,
+                                            format="json",
+                                            logger=LOG)
 
     def create_network(self, tenant_id, network_name):
         data = {'network': {'name': network_name}}

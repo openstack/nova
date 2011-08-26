@@ -1,4 +1,4 @@
-# Copyright 2011 OpenStack LLC.
+# Copyright 2011 Nicira, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,13 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from sqlalchemy import *
 from migrate import *
 
 from nova import log as logging
 from nova import utils
+
 
 meta = MetaData()
 
