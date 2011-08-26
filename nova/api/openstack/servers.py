@@ -838,13 +838,14 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
     NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
+    def __init__(self):
+        self.metadata_serializer = common.MetadataXMLSerializer()
+        self.addresses_serializer = ips.IPXMLSerializer()
+
     def _create_metadata_node(self, metadata_dict):
         metadata_elem = etree.Element('metadata', nsmap=self.NSMAP)
-        for (key, value) in metadata_dict.items():
-            elem = etree.SubElement(metadata_elem, 'meta')
-            elem.set('key', key)
-            elem.text = value
-
+        self.metadata_serializer.populate_metadata(metadata_elem,
+                                                   metadata_dict)
         return metadata_elem
 
     def _create_image_node(self, image_dict):
@@ -869,13 +870,8 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
     def _create_addresses_node(self, addresses_dict):
         addresses_elem = etree.Element('addresses', nsmap=self.NSMAP)
-        for (network_id, ip_dicts) in addresses_dict.items():
-            network_node = etree.SubElement(addresses_elem, 'network')
-            network_node.set('id', str(network_id))
-            for ip_dict in ip_dicts:
-                ip_elem = etree.SubElement(network_node, 'ip')
-                ip_elem.set('version', str(ip_dict['version']))
-                ip_elem.set('addr', ip_dict['addr'])
+        self.addresses_serializer.populate_addresses_node(addresses_elem,
+                                                          addresses_dict)
         return addresses_elem
 
     def _populate_server(self, server_elem, server_dict, detailed=False):

@@ -109,12 +109,10 @@ class IPXMLSerializer(wsgi.XMLDictSerializer):
     def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(IPXMLSerializer, self).__init__(xmlns=xmlns)
 
-    def _create_addresses_node(self, addresses_dict):
-        addresses_elem = etree.Element('addresses', nsmap=self.NSMAP)
+    def populate_addresses_node(self, addresses_elem,  addresses_dict):
         for (network_id, ip_dicts) in addresses_dict.items():
             network_elem = self._create_network_node(network_id, ip_dicts)
             addresses_elem.append(network_elem)
-        return addresses_elem
 
     def _create_network_node(self, network_id, ip_dicts):
         network_elem = etree.Element('network', nsmap=self.NSMAP)
@@ -131,7 +129,9 @@ class IPXMLSerializer(wsgi.XMLDictSerializer):
         return self._to_xml(network)
 
     def index(self, addresses_dict):
-        addresses = self._create_addresses_node(addresses_dict['addresses'])
+        addresses = etree.Element('addresses', nsmap=self.NSMAP)
+        self.populate_addresses_node(addresses,
+                                     addresses_dict.get('addresses', {}))
         return self._to_xml(addresses)
 
 

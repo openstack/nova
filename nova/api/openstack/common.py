@@ -290,7 +290,7 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
     def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(MetadataXMLSerializer, self).__init__(xmlns=xmlns)
 
-    def _populate_metadata(self, metadata_elem, meta_dict):
+    def populate_metadata(self, metadata_elem, meta_dict):
         for (key, value) in meta_dict.items():
             elem = etree.SubElement(metadata_elem, 'meta')
             elem.set('key', str(key))
@@ -301,21 +301,20 @@ class MetadataXMLSerializer(wsgi.XMLDictSerializer):
         (key, value) = meta_item_dict.items()[0]
         meta_elem.set('key', str(key))
         meta_elem.text = value
-        return meta_elem
 
     def index(self, metadata_dict):
         metadata = etree.Element('metadata', nsmap=self.NSMAP)
-        self._populate_metadata(metadata, metadata_dict.get('metadata', {}))
+        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
         return self._to_xml(metadata)
 
     def create(self, metadata_dict):
         metadata = etree.Element('metadata', nsmap=self.NSMAP)
-        self._populate_metadata(metadata, metadata_dict.get('metadata', {}))
+        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
         return self._to_xml(metadata)
 
     def update_all(self, metadata_dict):
         metadata = etree.Element('metadata', nsmap=self.NSMAP)
-        self._populate_metadata(metadata, metadata_dict.get('metadata', {}))
+        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
         return self._to_xml(metadata)
 
     def show(self, meta_item_dict):

@@ -209,13 +209,13 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
 
     NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
+    def __init__(self):
+        self.metadata_serializer = common.MetadataXMLSerializer()
+
     def _create_metadata_node(self, metadata_dict):
         metadata_elem = etree.Element('metadata', nsmap=self.NSMAP)
-        for (key, value) in metadata_dict.items():
-            elem = etree.SubElement(metadata_elem, 'meta')
-            elem.set('key', key)
-            elem.text = value
-
+        self.metadata_serializer.populate_metadata(metadata_elem,
+                                                   metadata_dict)
         return metadata_elem
 
     def _create_server_node(self, server_dict):
