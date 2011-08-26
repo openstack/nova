@@ -1377,9 +1377,9 @@ class NWFilterTestCase(test.TestCase):
 
         _setup_networking(instance_ref['id'], self.test_ip)
 
-        def _ensure_all_called():
+        def _ensure_all_called(mac):
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
-                                                       'fake')
+                                                       mac.translate(None, ':')
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',
@@ -1396,10 +1396,15 @@ class NWFilterTestCase(test.TestCase):
         instance = db.instance_get(self.context, inst_id)
 
         network_info = _fake_network_info(self.stubs, 1)
+        # since there is one (network_info) there is one vif
+        # pass this vif's mac to _ensure_all_called()
+        # to set the instance_filter properly
+        mac = network_info[0][1]['mac']
+
         self.fw.setup_basic_filtering(instance, network_info)
         self.fw.prepare_instance_filter(instance, network_info)
         self.fw.apply_instance_filter(instance, network_info)
-        _ensure_all_called()
+        _ensure_all_called(mac)
         self.teardown_security_group()
         db.instance_destroy(context.get_admin_context(), instance_ref['id'])
 
