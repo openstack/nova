@@ -201,11 +201,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         data = {'launched_at': launched_at or utils.utcnow()}
         self.db.instance_update(context, instance_id, data)
 
-    def _update_image_ref(self, context, instance_id, image_ref):
-        """Update the image_id for the given instance."""
-        data = {'image_ref': image_ref}
-        self.db.instance_update(context, instance_id, data)
-
     def get_console_topic(self, context, **kwargs):
         """Retrieves the console host for a project on this host.
 
@@ -526,7 +521,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: `nova.RequestContext` object
         :param instance_id: Instance identifier (integer)
-        :param image_ref: Image identifier (href or integer)
+        :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
         """
         context = context.elevated()
@@ -539,8 +534,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._get_instance_nw_info(context, instance_ref)
 
         self.driver.destroy(instance_ref, network_info)
-        image_ref = kwargs.get('image_ref')
-        instance_ref.image_ref = image_ref
         instance_ref.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
                                                               instance_ref)
@@ -552,11 +545,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.driver.spawn(context, instance_ref, network_info, bd_mapping)
 
-        self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
-        usage_info = utils.usage_from_instance(instance_ref,
-                                               image_ref=image_ref)
+        usage_info = utils.usage_from_instance(instance_ref)
+
         notifier.notify('compute.%s' % self.host,
                             'compute.instance.rebuild',
                             notifier.INFO,
