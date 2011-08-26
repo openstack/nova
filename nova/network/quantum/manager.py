@@ -59,7 +59,7 @@ class QuantumManager(manager.FlatManager):
                             FLAGS.quantum_default_tenant_id
         quantum_net_id = bridge
         if quantum_net_id:
-            if not q_conn.network_exists(q_tenant_id, quantum_net_id):
+            if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
                     raise Exception("Unable to find existing quantum " \
                         " network for tenant '%s' with net-id '%s'" % \
                          (q_tenant_id, quantum_net_id))
@@ -68,8 +68,9 @@ class QuantumManager(manager.FlatManager):
             quantum_net_id = self.q_conn.create_network(q_tenant_id, label)
 
         ipam_tenant_id = kwargs.get("project_id", None)
+        priority = kwargs.get("priority", 0)
         self.ipam.create_subnet(context, label, ipam_tenant_id, quantum_net_id,
-                            cidr, gateway_v6, cidr_v6, dns1, dns2)
+                            priority, cidr, gateway_v6, cidr_v6, dns1, dns2)
 
     def delete_network(self, context, fixed_range):
             project_id = context.project_id
@@ -105,7 +106,7 @@ class QuantumManager(manager.FlatManager):
         # Create a port via quantum and attach the vif
         for (net_id, project_id) in net_proj_pairs:
             vif_rec = manager.FlatManager.add_virtual_interface(self,
-                                      context, instance, None)
+                                      context, instance_id, None)
 
             q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
             self.q_conn.create_and_attach_port(q_tenant_id, net_id,
@@ -212,7 +213,7 @@ class QuantumManager(manager.FlatManager):
             self.ipam.deallocate_ips_by_vif(context, ipam_tenant_id,
                                                     net_id, vif_ref)
 
-        self.net_manager.db.virtual_interface_delete_by_instance(admin_context,
+        db.virtual_interface_delete_by_instance(admin_context,
                                                             instance_id)
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)

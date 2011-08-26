@@ -102,8 +102,8 @@ class FakeQuantumIPAMLib():
         self.subnets = {}
 
     def create_subnet(self, context, label, tenant_id, quantum_net_id,
-                                cidr=None, gateway_v6=None, cidr_v6=None,
-                                dns1=None, dns2=None):
+                                priority, cidr=None, gateway_v6=None,
+                                cidr_v6=None, dns1=None, dns2=None):
             if int(cidr.split("/")[1]) != 24:
                 raise Exception("fake ipam_lib only supports /24s")
             v4_ips = []
@@ -116,6 +116,7 @@ class FakeQuantumIPAMLib():
                               "instance_id": None})
             self.subnets[quantum_net_id] = {\
                     "label": label,
+                    "priority": priority,
                     "gateway": net_start + "1",
                     "netmask": "255.255.255.0",
                     "broadcast": net_start + "255",
@@ -138,12 +139,14 @@ class FakeQuantumIPAMLib():
         del self.subnets[net_id]
 
     def get_project_and_global_net_ids(self, context, project_id):
-        net_ids = []
+        net_list = []
+        id_priority_map = {}
         for nid, s in self.subnets.items():
             if s['project_id'] == project_id or \
                s['project_id'] == None:
-                    net_ids.append((nid, s['project_id']))
-        return net_ids
+                    net_list.append((nid, s['project_id']))
+                    id_priority_map[nid] = s['priority']
+        return sorted(net_list, key=lambda x: id_priority_map[x[0]])
 
     def allocate_fixed_ip(self, context, tenant_id, quantum_net_id, vif_rec):
         subnet = self.subnets[quantum_net_id]

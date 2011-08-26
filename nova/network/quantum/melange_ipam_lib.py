@@ -36,7 +36,7 @@ class QuantumMelangeIPAMLib:
         self.m_conn = melange_connection.MelangeConnection()
 
     def create_subnet(self, context, label, project_id,
-                                quantum_net_id, cidr=None,
+                                quantum_net_id, priority, cidr=None,
                                 gateway_v6=None, cidr_v6=None,
                                 dns1=None, dns2=None):
             tenant_id = project_id or FLAGS.quantum_default_tenant_id
@@ -48,6 +48,13 @@ class QuantumMelangeIPAMLib:
                 self.m_conn.create_block(quantum_net_id, cidr_v6,
                                      project_id=tenant_id,
                                      dns1=dns1, dns2=dns2)
+
+            # create a entry in the network table just to store
+            # the priority order for this network
+            net = {"bridge": quantum_net_id,
+                   "project_id": project_id,
+                   "priority": priority}
+            network = self.db.network_create_safe(context, net)
 
     def allocate_fixed_ip(self, context, project_id, quantum_net_id, vif_ref):
         tenant_id = project_id or FLAGS.quantum_default_tenant_id
@@ -61,19 +68,26 @@ class QuantumMelangeIPAMLib:
         for b in all_blocks['ip_blocks']:
             if b['cidr'] == cidr:
                 return b['network_id']
+        raise Exception("No network found for cidr %s" % cidr)
 
     def delete_subnets_by_net_id(self, context, net_id, project_id):
+        admin_context = context.elevated()
         tenant_id = project_id or FLAGS.quantum_default_tenant_id
         all_blocks = self.m_conn.get_blocks(tenant_id)
         for b in all_blocks['ip_blocks']:
             if b['network_id'] == net_id:
                 self.m_conn.delete_block(b['id'], tenant_id)
 
+        network = db.network_get_by_bridge(admin_context, net_id)
+        if network is not None:
+            db.network_delete_safe(context, network['id'])
+
     # get all networks with this project_id, as well as all networks
     # where the project-id is not set (these are shared networks)
     def get_project_and_global_net_ids(self, context, project_id):
+        admin_context = context.elevated()
         id_proj_map = {}
-        if not project_id:
+        if project_id is None:
             raise Exception("get_project_and_global_net_ids must be called" \
                     " with a non-null project_id")
         tenant_id = project_id
@@ -84,7 +98,17 @@ class QuantumMelangeIPAMLib:
         all_provider_blocks = self.m_conn.get_blocks(tenant_id)
         for b in all_provider_blocks['ip_blocks']:
             id_proj_map[b['network_id']] = tenant_id
-        return id_proj_map.items()
+
+        id_priority_map = {}
+        network = db.network_get_by_bridge(admin_context, net_id)
+        for net_id, project_id in id_project_map.item():
+            network = db.network_get_by_bridge(admin_context, net_id)
+            if network is None:
+                del id_proj_map[net_id]
+            else:
+                id_priority_map[net_id] = network['priority']
+        return sorted(id_priority_map.items(),
+                        key=lambda x: id_priority_map[x[0]])
 
     # FIXME: there must be a more efficient way to do this,
     # talk to the melange folks

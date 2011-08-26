@@ -42,10 +42,9 @@ class QuantumNovaIPAMLib:
         self.net_manager = net_manager
 
     def create_subnet(self, context, label, tenant_id,
-                                quantum_net_id, cidr=None,
+                                quantum_net_id, priority, cidr=None,
                                 gateway_v6=None, cidr_v6=None,
                                 dns1=None, dns2=None):
-            print "creating subnet %s" % cidr
             admin_context = context.elevated()
             subnet_size = int(math.pow(2, (32 - int(cidr.split("/")[1]))))
             manager.FlatManager.create_networks(self.net_manager,
@@ -53,9 +52,10 @@ class QuantumNovaIPAMLib:
                     False, 1, subnet_size, cidr_v6,
                     gateway_v6, quantum_net_id, None, dns1, dns2)
 
-            # now grab the network and update project_id
+            # now grab the network and update project_id + priority
             network = db.network_get_by_bridge(admin_context, quantum_net_id)
-            net = {"project_id": tenant_id}
+            net = {"project_id": tenant_id,
+                   "priority": priority}
             db.network_update(admin_context, network['id'], net)
 
     def get_network_id_by_cidr(self, context, cidr, project_id):
@@ -82,7 +82,13 @@ class QuantumNovaIPAMLib:
         admin_context = context.elevated()
         networks = db.project_get_networks(admin_context, project_id, False)
         networks.extend(db.project_get_networks(admin_context, None, False))
-        return [(n['bridge'], n['project_id']) for n in networks]
+        id_priority_map = {}
+        net_list = []
+        for n in networks:
+            net_id = n['bridge']
+            net_list.append((net_id, n["project_id"]))
+            id_priority_map[net_id] = n['priority']
+        return sorted(net_list, key=lambda x: id_priority_map[x[0]])
 
     def allocate_fixed_ip(self, context, tenant_id, quantum_net_id, vif_rec):
         admin_context = context.elevated()
@@ -104,8 +110,7 @@ class QuantumNovaIPAMLib:
             'broadcast': n['broadcast'],
             'netmask': n['netmask'],
             'dns1': n['dns1'],
-            'dns2': n['dns2']
-        }
+            'dns2': n['dns2']}
         subnet_data_v6 = {
             'network_id': n['bridge'],
             'cidr': n['cidr_v6'],
@@ -113,8 +118,7 @@ class QuantumNovaIPAMLib:
             'broadcast': None,
             'netmask': None,
             'dns1': None,
-            'dns2': None
-        }
+            'dns2': None}
         return (subnet_data_v4, subnet_data_v6)
 
     def get_v4_ips_by_interface(self, context, net_id, vif_id, project_id):

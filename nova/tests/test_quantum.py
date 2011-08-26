@@ -41,7 +41,8 @@ networks = [{'label': 'project1-net1',
              'vlan': None,
              'host': None,
              'vpn_public_address': None,
-             'project_id': 'fake_project1'},
+             'project_id': 'fake_project1',
+             'priority': 1},
             {'label': 'project2-net1',
              'injected': False,
              'multi_host': False,
@@ -59,7 +60,7 @@ networks = [{'label': 'project1-net1',
              'vlan': None,
              'host': None,
              'project_id': 'fake_project2',
-             'vpn_public_address': '192.168.1.2'},
+             'priority': 1},
              {'label': "public",
              'injected': False,
              'multi_host': False,
@@ -76,8 +77,8 @@ networks = [{'label': 'project1-net1',
              'dns2': '10.0.0.2',
              'vlan': None,
              'host': None,
-             'vpn_public_address': None,
-             'project_id': None},
+             'project_id': None,
+             'priority': 0},
              {'label': "project2-net2",
              'injected': False,
              'multi_host': False,
@@ -94,8 +95,8 @@ networks = [{'label': 'project1-net1',
              'dns2': '9.0.0.2',
              'vlan': None,
              'host': None,
-             'vpn_public_address': None,
-             'project_id': "fake_project2"}]
+             'project_id': "fake_project2",
+             'priority': 2}]
 
 
 # this is a base class to be used by all other Quantum Test classes
@@ -114,7 +115,8 @@ class QuantumTestCaseBase(object):
                     num_networks=1, network_size=256, cidr_v6=n['cidr_v6'],
                     gateway_v6=n['gateway_v6'], bridge=None,
                     bridge_interface=None, dns1=n['dns1'],
-                    dns2=n['dns2'], project_id=n['project_id'])
+                    dns2=n['dns2'], project_id=n['project_id'],
+                    priority=n['priority'])
 
     def _delete_nets(self):
         for n in networks:
@@ -138,29 +140,21 @@ class QuantumTestCaseBase(object):
         # we don't know which order the NICs will be in until we
         # introduce the notion of priority
         # v4 cidr
-        self.assertTrue(nw_info[0][0]['cidr'].startswith("10.") or \
-                        nw_info[1][0]['cidr'].startswith("10."))
-        self.assertTrue(nw_info[0][0]['cidr'].startswith("192.") or \
-                        nw_info[1][0]['cidr'].startswith("192."))
+        self.assertTrue(nw_info[0][0]['cidr'].startswith("10."))
+        self.assertTrue(nw_info[1][0]['cidr'].startswith("192."))
 
         # v4 address
-        self.assertTrue(nw_info[0][1]['ips'][0]['ip'].startswith("10.") or \
-                        nw_info[1][1]['ips'][0]['ip'].startswith("10."))
-        self.assertTrue(nw_info[0][1]['ips'][0]['ip'].startswith("192.") or \
-                        nw_info[1][1]['ips'][0]['ip'].startswith("192."))
+        self.assertTrue(nw_info[0][1]['ips'][0]['ip'].startswith("10."))
+        self.assertTrue(nw_info[1][1]['ips'][0]['ip'].startswith("192."))
 
         # v6 cidr
-        self.assertTrue(nw_info[0][0]['cidr_v6'].startswith("2001:1dba:") or \
-                        nw_info[1][0]['cidr_v6'].startswith("2001:1dba:"))
-        self.assertTrue(nw_info[0][0]['cidr_v6'].startswith("2001:1db8:") or \
-                        nw_info[1][0]['cidr_v6'].startswith("2001:1db8:"))
+        self.assertTrue(nw_info[0][0]['cidr_v6'].startswith("2001:1dba:"))
+        self.assertTrue(nw_info[1][0]['cidr_v6'].startswith("2001:1db8:"))
 
         # v6 address
         self.assertTrue(\
-            nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1dba:") or \
-            nw_info[1][1]['ip6s'][0]['ip'].startswith("2001:1dba:"))
+            nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1dba:"))
         self.assertTrue(\
-            nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1db8:") or \
             nw_info[1][1]['ip6s'][0]['ip'].startswith("2001:1db8:"))
 
         self.net_man.deallocate_for_instance(ctx,
