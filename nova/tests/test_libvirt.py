@@ -1063,10 +1063,17 @@ class IptablesFirewallTestCase(test.TestCase):
                 return '', ''
             print cmd, kwargs
 
+        def get_fixed_ips(*args, **kwargs):
+            ips = []
+            for network, info in network_info:
+                ips.extend(info['ips'])
+            return [ip['ip'] for ip in ips]
+
         from nova.network import linux_net
         linux_net.iptables_manager.execute = fake_iptables_execute
 
         network_info = _fake_network_info(self.stubs, 1)
+        self.stubs.Set(self.db, 'instance_get_fixed_addresses', get_fixed_ips)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
 
