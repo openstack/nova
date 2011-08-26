@@ -193,7 +193,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # rebuild the server with metadata
         post = {}
         post['rebuild'] = {
-            "imageRef": "https://localhost/v1.1/32278/images/2",
+            "imageRef": "https://localhost/v1.1/32278/images/3",
             "name": "blah",
         }
 
@@ -205,6 +205,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual(created_server_id, found_server['id'])
         self.assertEqual({}, found_server.get('metadata'))
         self.assertEqual('blah', found_server.get('name'))
+        self.assertEqual('3', found_server.get('image')['id'])
 
         # Cleanup
         self._delete_server(created_server_id)
