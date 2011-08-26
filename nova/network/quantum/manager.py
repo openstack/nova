@@ -59,7 +59,7 @@ class QuantumManager(manager.FlatManager):
                             FLAGS.quantum_default_tenant_id
         quantum_net_id = bridge
         if quantum_net_id:
-            if not q_conn.network_exists(q_tenant_id, quantum_net_id):
+            if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
                     raise Exception("Unable to find existing quantum " \
                         " network for tenant '%s' with net-id '%s'" % \
                          (q_tenant_id, quantum_net_id))
@@ -105,7 +105,7 @@ class QuantumManager(manager.FlatManager):
         # Create a port via quantum and attach the vif
         for (net_id, project_id) in net_proj_pairs:
             vif_rec = manager.FlatManager.add_virtual_interface(self,
-                                      context, instance, None)
+                                      context, instance_id, None)
 
             q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
             self.q_conn.create_and_attach_port(q_tenant_id, net_id,
