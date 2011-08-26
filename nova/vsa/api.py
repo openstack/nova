@@ -20,22 +20,26 @@ Handles all requests relating to Virtual Storage Arrays (VSAs).
 """
 
 import sys
-import base64
 
-from xml.etree import ElementTree
-
+from nova import compute
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import quota
 from nova import rpc
-from nova.db import base
-
-from nova import compute
 from nova import volume
 from nova.compute import instance_types
-from nova.vsa import drive_types
+from nova.db import base
+from nova.volume import volume_types
+
+
+class VsaState:
+    CREATING = 'creating'       # VSA creating (not ready yet)
+    LAUNCHING = 'launching'     # Launching VCs (all BE volumes were created)
+    CREATED = 'created'         # VSA fully created and ready for use
+    PARTIAL = 'partial'         # Some BE drives were allocated
+    FAILED = 'failed'           # Some BE storage allocations failed
+    DELETING = 'deleting'       # VSA started the deletion procedure
 
 
 FLAGS = flags.FLAGS
@@ -43,20 +47,12 @@ flags.DEFINE_string('vsa_ec2_access_key', None,
                     'EC2 access key used by VSA for accessing nova')
 flags.DEFINE_string('vsa_ec2_user_id', None,
                     'User ID used by VSA for accessing nova')
-
 flags.DEFINE_boolean('vsa_multi_vol_creation', True,
                   'Ask scheduler to create multiple volumes in one call')
+flags.DEFINE_string('vsa_volume_type_name', 'VSA volume type',
+                    'Name of volume type associated with FE VSA volumes')
 
 LOG = logging.getLogger('nova.vsa')
-
-
-class VsaState:
-    CREATING = 'creating'       # VSA creating (not ready yet)
-    LAUNCHING = 'launching'     # Launching VCs (all BE volumes were created)
-    CREATED = 'created'         # VSA fully created and ready for use
-    PARTIAL = 'partial'         # Some BE storage allocations failed
-    FAILED = 'failed'           # Some BE storage allocations failed
-    DELETING = 'deleting'       # VSA started the deletion procedure
 
 
 class API(base.Base):
@@ -66,6 +62,15 @@ class API(base.Base):
         self.compute_api = compute_api or compute.API()
         self.volume_api = volume_api or volume.API()
         super(API, self).__init__(**kwargs)
+
+    def _check_volume_type_correctness(self, vol_type):
+        if vol_type.get('extra_specs') == None or\
+           vol_type['extra_specs'].get('type') != 'vsa_drive' or\
+           vol_type['extra_specs'].get('drive_type') == None or\
+           vol_type['extra_specs'].get('drive_size') == None:
+
+            raise exception.ApiError(_("Invalid drive type %s")
+                                        % vol_type['name'])
 
     def _get_default_vsa_instance_type(self):
         return instance_types.get_instance_type_by_name(
@@ -89,16 +94,17 @@ class API(base.Base):
             if name is None:
                 raise exception.ApiError(_("No drive_name param found in %s")
                                             % node)
-
-            # find DB record for this disk
             try:
-                drive_ref = drive_types.get_by_name(context, name)
+                vol_type = volume_types.get_volume_type_by_name(context, name)
             except exception.NotFound:
                 raise exception.ApiError(_("Invalid drive type name %s")
                                             % name)
 
+            self._check_volume_type_correctness(vol_type)
+
             # if size field present - override disk size specified in DB
-            size = node.get('size', drive_ref['size_gb'])
+            size = int(node.get('size',
+                                vol_type['extra_specs'].get('drive_size')))
 
             if shared:
                 part_size = FLAGS.vsa_part_size_gb
@@ -110,17 +116,15 @@ class API(base.Base):
                 size = 0    # special handling for full drives
 
             for i in range(num_volumes):
-                # volume_name = vsa_name + ("_%s_vol-%d" % (name, i))
                 volume_name = "drive-%03d" % first_index
                 first_index += 1
                 volume_desc = 'BE volume for VSA %s type %s' % \
                               (vsa_name, name)
                 volume = {
                     'size': size,
-                    'snapshot_id': None,
                     'name': volume_name,
                     'description': volume_desc,
-                    'drive_ref': drive_ref
+                    'volume_type_id': vol_type['id'],
                     }
                 volume_params.append(volume)
 
@@ -211,7 +215,7 @@ class API(base.Base):
             if len(volume_params) > 0:
                 request_spec = {
                     'num_volumes': len(volume_params),
-                    'vsa_id': vsa_id,
+                    'vsa_id': str(vsa_id),
                     'volumes': volume_params,
                 }
 
@@ -227,17 +231,21 @@ class API(base.Base):
                 try:
                     vol_name = vol['name']
                     vol_size = vol['size']
+                    vol_type_id = vol['volume_type_id']
                     LOG.debug(_("VSA ID %(vsa_id)d %(vsa_name)s: Create "\
-                                "volume %(vol_name)s, %(vol_size)d GB"),
-                                locals())
+                                "volume %(vol_name)s, %(vol_size)d GB, "\
+                                "type %(vol_type_id)s"), locals())
+
+                    vol_type = volume_types.get_volume_type(context,
+                                                vol['volume_type_id'])
 
                     vol_ref = self.volume_api.create(context,
                                     vol_size,
-                                    vol['snapshot_id'],
+                                    None,
                                     vol_name,
                                     vol['description'],
-                                    to_vsa_id=vsa_id,
-                                    drive_type_id=vol['drive_ref'].get('id'),
+                                    volume_type=vol_type,
+                                    metadata=dict(to_vsa_id=str(vsa_id)),
                                     availability_zone=availability_zone)
                 except:
                     self.update_vsa_status(context, vsa_id,
@@ -249,7 +257,7 @@ class API(base.Base):
             rpc.cast(context,
                      FLAGS.vsa_topic,
                      {"method": "create_vsa",
-                      "args": {"vsa_id": vsa_id}})
+                      "args": {"vsa_id": str(vsa_id)}})
 
         return vsa_ref
 
@@ -314,8 +322,7 @@ class API(base.Base):
     def _force_volume_delete(self, ctxt, volume):
         """Delete a volume, bypassing the check that it must be available."""
         host = volume['host']
-        if not host or volume['from_vsa_id']:
-            # Volume not yet assigned to host OR FE volume
+        if not host:
             # Deleting volume from database and skipping rpc.
             self.db.volume_destroy(ctxt, volume['id'])
             return
@@ -328,9 +335,9 @@ class API(base.Base):
     def delete_vsa_volumes(self, context, vsa_id, direction,
                            force_delete=True):
         if direction == "FE":
-            volumes = self.db.volume_get_all_assigned_from_vsa(context, vsa_id)
+            volumes = self.get_all_vsa_volumes(context, vsa_id)
         else:
-            volumes = self.db.volume_get_all_assigned_to_vsa(context, vsa_id)
+            volumes = self.get_all_vsa_drives(context, vsa_id)
 
         for volume in volumes:
             try:
@@ -374,58 +381,25 @@ class API(base.Base):
             return self.db.vsa_get_all(context)
         return self.db.vsa_get_all_by_project(context, context.project_id)
 
-    def generate_user_data(self, context, vsa, volumes):
-        SubElement = ElementTree.SubElement
+    def get_vsa_volume_type(self, context):
+        name = FLAGS.vsa_volume_type_name
+        try:
+            vol_type = volume_types.get_volume_type_by_name(context, name)
+        except exception.NotFound:
+            volume_types.create(context, name,
+                                extra_specs=dict(type='vsa_volume'))
+            vol_type = volume_types.get_volume_type_by_name(context, name)
 
-        e_vsa = ElementTree.Element("vsa")
+        return vol_type
 
-        e_vsa_detail = SubElement(e_vsa, "id")
-        e_vsa_detail.text = str(vsa['id'])
-        e_vsa_detail = SubElement(e_vsa, "name")
-        e_vsa_detail.text = vsa['display_name']
-        e_vsa_detail = SubElement(e_vsa, "description")
-        e_vsa_detail.text = vsa['display_description']
-        e_vsa_detail = SubElement(e_vsa, "vc_count")
-        e_vsa_detail.text = str(vsa['vc_count'])
+    def get_all_vsa_instances(self, context, vsa_id):
+        return self.compute_api.get_all(context,
+                search_opts={'metadata': dict(vsa_id=str(vsa_id))})
 
-        e_vsa_detail = SubElement(e_vsa, "auth_user")
-        e_vsa_detail.text = FLAGS.vsa_ec2_user_id
-        e_vsa_detail = SubElement(e_vsa, "auth_access_key")
-        e_vsa_detail.text = FLAGS.vsa_ec2_access_key
+    def get_all_vsa_volumes(self, context, vsa_id):
+        return self.volume_api.get_all(context,
+                search_opts={'metadata': dict(from_vsa_id=str(vsa_id))})
 
-        e_volumes = SubElement(e_vsa, "volumes")
-        for volume in volumes:
-
-            loc = volume['provider_location']
-            if loc is None:
-                ip = ''
-                iscsi_iqn = ''
-                iscsi_portal = ''
-            else:
-                (iscsi_target, _sep, iscsi_iqn) = loc.partition(" ")
-                (ip, iscsi_portal) = iscsi_target.split(":", 1)
-
-            e_vol = SubElement(e_volumes, "volume")
-            e_vol_detail = SubElement(e_vol, "id")
-            e_vol_detail.text = str(volume['id'])
-            e_vol_detail = SubElement(e_vol, "name")
-            e_vol_detail.text = volume['name']
-            e_vol_detail = SubElement(e_vol, "display_name")
-            e_vol_detail.text = volume['display_name']
-            e_vol_detail = SubElement(e_vol, "size_gb")
-            e_vol_detail.text = str(volume['size'])
-            e_vol_detail = SubElement(e_vol, "status")
-            e_vol_detail.text = volume['status']
-            e_vol_detail = SubElement(e_vol, "ip")
-            e_vol_detail.text = ip
-            e_vol_detail = SubElement(e_vol, "iscsi_iqn")
-            e_vol_detail.text = iscsi_iqn
-            e_vol_detail = SubElement(e_vol, "iscsi_portal")
-            e_vol_detail.text = iscsi_portal
-            e_vol_detail = SubElement(e_vol, "lun")
-            e_vol_detail.text = '0'
-            e_vol_detail = SubElement(e_vol, "sn_host")
-            e_vol_detail.text = volume['host']
-
-        _xml = ElementTree.tostring(e_vsa)
-        return base64.b64encode(_xml)
+    def get_all_vsa_drives(self, context, vsa_id):
+        return self.volume_api.get_all(context,
+                search_opts={'metadata': dict(to_vsa_id=str(vsa_id))})

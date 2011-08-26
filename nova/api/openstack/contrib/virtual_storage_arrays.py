@@ -106,6 +106,10 @@ class VsaController(object):
         self.network_api = network.API()
         super(VsaController, self).__init__()
 
+    def _get_instances_by_vsa_id(self, context, id):
+        return self.compute_api.get_all(context,
+                    search_opts={'metadata': dict(vsa_id=str(id))})
+
     def _items(self, req, details):
         """Return summary or detailed list of VSAs."""
         context = req.environ['nova.context']
@@ -114,8 +118,7 @@ class VsaController(object):
 
         vsa_list = []
         for vsa in limited_list:
-            instances = self.compute_api.get_all(context,
-                    search_opts={'metadata': dict(vsa_id=str(vsa.get('id')))})
+            instances = self._get_instances_by_vsa_id(context, vsa.get('id'))
             vsa_list.append(_vsa_view(context, vsa, details, instances))
         return {'vsaSet': vsa_list}
 
@@ -136,9 +139,7 @@ class VsaController(object):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-        instances = self.compute_api.get_all(context,
-                search_opts={'metadata': dict(vsa_id=str(vsa.get('id')))})
-
+        instances = self._get_instances_by_vsa_id(context, vsa.get('id'))
         return {'vsa': _vsa_view(context, vsa, True, instances)}
 
     def create(self, req, body):
@@ -171,9 +172,7 @@ class VsaController(object):
 
         vsa = self.vsa_api.create(context, **args)
 
-        instances = self.compute_api.get_all(context,
-                search_opts={'metadata': dict(vsa_id=str(vsa.get('id')))})
-
+        instances = self._get_instances_by_vsa_id(context, vsa.get('id'))
         return {'vsa': _vsa_view(context, vsa, True, instances)}
 
     def delete(self, req, id):
@@ -202,14 +201,14 @@ class VsaController(object):
                     locals(), context=context)
 
         try:
-            instances = self.compute_api.get_all(context,
-                    search_opts={'metadata': dict(vsa_id=str(id))})
-
-            if instances is None or len(instances)==0:
+            instances = self._get_instances_by_vsa_id(context, id)
+            if instances is None or len(instances) == 0:
                 return faults.Fault(exc.HTTPNotFound())
 
             for instance in instances:
-                self.network_api.allocate_for_instance(context, instance, vpn=False)
+                self.network_api.allocate_for_instance(context, instance,
+                                    vpn=False)
+                # Placeholder
                 return
 
         except exception.NotFound:
@@ -228,6 +227,7 @@ class VsaController(object):
 
         LOG.audit(_("Disassociate address from VSA %(id)s"),
                     locals(), context=context)
+        # Placeholder
 
 
 class VsaVolumeDriveController(volumes.VolumeController):
@@ -255,6 +255,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
 
     def __init__(self):
         self.volume_api = volume.API()
+        self.vsa_api = vsa.API()
         super(VsaVolumeDriveController, self).__init__()
 
     def _translation(self, context, vol, vsa_id, details):
@@ -264,7 +265,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
             translation = volumes.translate_volume_summary_view
 
         d = translation(context, vol)
-        d['vsaId'] = vol[self.direction]
+        d['vsaId'] = vsa_id
         d['name'] = vol['name']
         return d
 
@@ -276,8 +277,9 @@ class VsaVolumeDriveController(volumes.VolumeController):
             LOG.error(_("%(obj)s with ID %(id)s not found"), locals())
             raise
 
-        own_vsa_id = volume_ref[self.direction]
-        if  own_vsa_id != int(vsa_id):
+        own_vsa_id = self.volume_api.get_volume_metadata_value(volume_ref,
+                                                            self.direction)
+        if  own_vsa_id != vsa_id:
             LOG.error(_("%(obj)s with ID %(id)s belongs to VSA %(own_vsa_id)s"\
                         " and not to VSA %(vsa_id)s."), locals())
             raise exception.Invalid()
@@ -286,8 +288,8 @@ class VsaVolumeDriveController(volumes.VolumeController):
         """Return summary or detailed list of volumes for particular VSA."""
         context = req.environ['nova.context']
 
-        vols = self.volume_api.get_all_by_vsa(context, vsa_id,
-                            self.direction.split('_')[0])
+        vols = self.volume_api.get_all(context,
+                search_opts={'metadata': {self.direction: str(vsa_id)}})
         limited_list = common.limited(vols, req)
 
         res = [self._translation(context, vol, vsa_id, details) \
@@ -317,11 +319,19 @@ class VsaVolumeDriveController(volumes.VolumeController):
         size = vol['size']
         LOG.audit(_("Create volume of %(size)s GB from VSA ID %(vsa_id)s"),
                     locals(), context=context)
+        try:
+            # create is supported for volumes only (drives created through VSA)
+            volume_type = self.vsa_api.get_vsa_volume_type(context)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
 
-        new_volume = self.volume_api.create(context, size, None,
-                                            vol.get('displayName'),
-                                            vol.get('displayDescription'),
-                                            from_vsa_id=vsa_id)
+        new_volume = self.volume_api.create(context,
+                            size,
+                            None,
+                            vol.get('displayName'),
+                            vol.get('displayDescription'),
+                            volume_type=volume_type,
+                            metadata=dict(from_vsa_id=str(vsa_id)))
 
         return {self.object: self._translation(context, new_volume,
                                                vsa_id, True)}

@@ -2226,7 +2226,6 @@ def volume_get(context, volume_id, session=None):
                          options(joinedload('instance')).\
                          options(joinedload('volume_metadata')).\
                          options(joinedload('volume_type')).\
-                         options(joinedload('drive_type')).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -2235,7 +2234,6 @@ def volume_get(context, volume_id, session=None):
                          options(joinedload('instance')).\
                          options(joinedload('volume_metadata')).\
                          options(joinedload('volume_type')).\
-                         options(joinedload('drive_type')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=False).\
@@ -2253,7 +2251,6 @@ def volume_get_all(context):
                    options(joinedload('instance')).\
                    options(joinedload('volume_metadata')).\
                    options(joinedload('volume_type')).\
-                   options(joinedload('drive_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -2265,7 +2262,6 @@ def volume_get_all_by_host(context, host):
                    options(joinedload('instance')).\
                    options(joinedload('volume_metadata')).\
                    options(joinedload('volume_type')).\
-                   options(joinedload('drive_type')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -2277,34 +2273,11 @@ def volume_get_all_by_instance(context, instance_id):
     result = session.query(models.Volume).\
                      options(joinedload('volume_metadata')).\
                      options(joinedload('volume_type')).\
-                     options(joinedload('drive_type')).\
                      filter_by(instance_id=instance_id).\
                      filter_by(deleted=False).\
                      all()
     if not result:
         raise exception.VolumeNotFoundForInstance(instance_id=instance_id)
-    return result
-
-
-@require_admin_context
-def volume_get_all_assigned_to_vsa(context, vsa_id):
-    session = get_session()
-    result = session.query(models.Volume).\
-                     options(joinedload('drive_type')).\
-                     filter_by(to_vsa_id=vsa_id).\
-                     filter_by(deleted=False).\
-                     all()
-    return result
-
-
-@require_admin_context
-def volume_get_all_assigned_from_vsa(context, vsa_id):
-    session = get_session()
-    result = session.query(models.Volume).\
-                     options(joinedload('drive_type')).\
-                     filter_by(from_vsa_id=vsa_id).\
-                     filter_by(deleted=False).\
-                     all()
     return result
 
 
@@ -2317,7 +2290,6 @@ def volume_get_all_by_project(context, project_id):
                    options(joinedload('instance')).\
                    options(joinedload('volume_metadata')).\
                    options(joinedload('volume_type')).\
-                   options(joinedload('drive_type')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -2332,7 +2304,6 @@ def volume_get_instance(context, volume_id):
                      options(joinedload('instance')).\
                      options(joinedload('volume_metadata')).\
                      options(joinedload('volume_type')).\
-                     options(joinedload('drive_type')).\
                      first()
     if not result:
         raise exception.VolumeNotFound(volume_id=volume_id)
@@ -2377,7 +2348,7 @@ def volume_update(context, volume_id, values):
         volume_ref = volume_get(context, volume_id, session=session)
         volume_ref.update(values)
         volume_ref.save(session=session)
-        return volume_ref
+
 
 ####################
 
@@ -3872,106 +3843,6 @@ def volume_type_extra_specs_update_or_create(context, volume_type_id,
 
 
 @require_admin_context
-def drive_type_create(context, values):
-    """
-    Creates drive type record.
-    """
-    try:
-        drive_type_ref = models.DriveTypes()
-        drive_type_ref.update(values)
-        drive_type_ref.save()
-    except Exception, e:
-        raise exception.DBError(e)
-    return drive_type_ref
-
-
-@require_admin_context
-def drive_type_update(context, drive_type_id, values):
-    """
-    Updates drive type record.
-    """
-    session = get_session()
-    with session.begin():
-        drive_type_ref = drive_type_get(context, drive_type_id,
-                                        session=session)
-        drive_type_ref.update(values)
-        drive_type_ref.save(session=session)
-    return drive_type_ref
-
-
-@require_admin_context
-def drive_type_destroy(context, drive_type_id):
-    """
-    Deletes drive type record.
-    """
-    session = get_session()
-    drive_type_ref = session.query(models.DriveTypes).\
-                                  filter_by(id=drive_type_id)
-    records = drive_type_ref.delete()
-    if records == 0:
-        raise exception.VirtualDiskTypeNotFound(id=drive_type_id)
-
-
-@require_context
-def drive_type_get(context, drive_type_id, session=None):
-    """
-    Get drive type record by id.
-    """
-    if not session:
-        session = get_session()
-
-    result = session.query(models.DriveTypes).\
-                     filter_by(id=drive_type_id).\
-                     filter_by(deleted=can_read_deleted(context)).\
-                     first()
-    if not result:
-        raise exception.VirtualDiskTypeNotFound(id=drive_type_id)
-
-    return result
-
-
-@require_context
-def drive_type_get_by_name(context, name, session=None):
-    """
-    Get drive type record by name.
-    """
-    if not session:
-        session = get_session()
-
-    result = session.query(models.DriveTypes).\
-                     filter_by(name=name).\
-                     filter_by(deleted=can_read_deleted(context)).\
-                     first()
-    if not result:
-        raise exception.VirtualDiskTypeNotFoundByName(name=name)
-
-    return result
-
-
-@require_context
-def drive_type_get_all(context, visible):
-    """
-    Returns all (or only visible) drive types.
-    """
-    session = get_session()
-    if visible:
-        drive_types = session.query(models.DriveTypes).\
-                            filter_by(deleted=can_read_deleted(context)).\
-                            filter_by(visible=True).\
-                            order_by("name").\
-                            all()
-    else:
-        drive_types = session.query(models.DriveTypes).\
-                            filter_by(deleted=can_read_deleted(context)).\
-                            order_by("name").\
-                            all()
-    return drive_types
-
-
-    ####################
-
-
-@require_admin_context
 def vsa_create(context, values):
     """
     Creates Virtual Storage Array record.
@@ -4066,27 +3937,5 @@ def vsa_get_all_by_project(context, project_id):
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
-
-@require_context
-def vsa_get_vc_ips_list(context, vsa_id):
-    """
-    Retrieves IPs of instances associated with Virtual Storage Array.
-    """
-    result = []
-
-    vc_instances = instance_get_all_by_filters(context,
-            search_opts={'metadata': dict(vsa_id=str(vsa_id))})
-    for vc_instance in vc_instances:
-        if vc_instance['fixed_ips']:
-            for fixed in vc_instance['fixed_ips']:
-                # insert the [floating,fixed] (if exists) in the head,
-                # otherwise append the [none,fixed] in the tail
-                ip = {}
-                ip['fixed'] = fixed['address']
-                if fixed['floating_ips']:
-                    ip['floating'] = fixed['floating_ips'][0]['address']
-                result.append(ip)
-
-    return result
 
     ####################

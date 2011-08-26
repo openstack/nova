@@ -13,36 +13,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
 import base64
+import stubout
 
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement
 
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
+from nova import test
 from nova import vsa
 from nova import volume
-from nova import db
-from nova import context
-from nova import test
-from nova import log as logging
+from nova.volume import volume_types
+from nova.vsa import utils as vsa_utils
+
 import nova.image.fake
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.vsa')
-
-
-def fake_drive_type_get_by_name(context, name):
-    drive_type = {
-            'id': 1,
-            'name': name,
-            'type': name.split('_')[0],
-            'size_gb': int(name.split('_')[1]),
-            'rpm': name.split('_')[2],
-            'capabilities': '',
-            'visible': True}
-    return drive_type
 
 
 class VsaTestCase(test.TestCase):
@@ -53,8 +44,19 @@ class VsaTestCase(test.TestCase):
         self.vsa_api = vsa.API()
         self.volume_api = volume.API()
 
+        FLAGS.quota_volumes = 100
+        FLAGS.quota_gigabytes = 10000
+
         self.context_non_admin = context.RequestContext(None, None)
         self.context = context.get_admin_context()
+
+        volume_types.create(self.context,
+                            'SATA_500_7200',
+                            extra_specs={'type': 'vsa_drive',
+                                         'drive_name': 'SATA_500_7200',
+                                         'drive_type': 'SATA',
+                                         'drive_size': '500',
+                                         'drive_rpm': '7200'})
 
         def fake_show_by_name(meh, context, name):
             if name == 'wrong_image_name':
@@ -124,9 +126,6 @@ class VsaTestCase(test.TestCase):
 
         FLAGS.vsa_multi_vol_creation = multi_vol_creation
 
-        self.stubs.Set(nova.vsa.drive_types, 'get_by_name',
-                    fake_drive_type_get_by_name)
-
         param = {'storage': [{'drive_name': 'SATA_500_7200',
                               'num_drives': 3}]}
         vsa_ref = self.vsa_api.create(self.context, **param)
@@ -157,8 +156,6 @@ class VsaTestCase(test.TestCase):
         self.vsa_api.delete(self.context, vsa_ref['id'])
 
     def test_vsa_generate_user_data(self):
-        self.stubs.Set(nova.vsa.drive_types, 'get_by_name',
-                    fake_drive_type_get_by_name)
 
         FLAGS.vsa_multi_vol_creation = False
         param = {'display_name': 'VSA name test',
@@ -167,12 +164,10 @@ class VsaTestCase(test.TestCase):
                  'storage': [{'drive_name': 'SATA_500_7200',
                               'num_drives': 3}]}
         vsa_ref = self.vsa_api.create(self.context, **param)
-        volumes = db.volume_get_all_assigned_to_vsa(self.context,
-                                                    vsa_ref['id'])
+        volumes = self.vsa_api.get_all_vsa_drives(self.context,
+                                                  vsa_ref['id'])
 
-        user_data = self.vsa_api.generate_user_data(self.context,
-                                                    vsa_ref,
-                                                    volumes)
+        user_data = vsa_utils.generate_user_data(vsa_ref, volumes)
         user_data = base64.b64decode(user_data)
 
         LOG.debug(_("Test: user_data = %s"), user_data)

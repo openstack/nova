@@ -20,15 +20,15 @@ VSA Simple Scheduler
 """
 
 from nova import context
-from nova import rpc
 from nova import db
 from nova import flags
+from nova import log as logging
+from nova import rpc
 from nova import utils
-from nova.vsa.api import VsaState
-from nova.volume import api as volume_api
 from nova.scheduler import driver
 from nova.scheduler import simple
-from nova import log as logging
+from nova.vsa.api import VsaState
+from nova.volume import volume_types
 
 LOG = logging.getLogger('nova.scheduler.vsa')
 
@@ -67,21 +67,21 @@ class VsaScheduler(simple.SimpleScheduler):
         def _compare_names(str1, str2):
             return str1.lower() == str2.lower()
 
-        def _compare_sizes_approxim(cap_capacity, size_gb):
+        def _compare_sizes_approxim(cap_capacity, size):
             cap_capacity = BYTES_TO_GB(int(cap_capacity))
-            size_gb = int(size_gb)
-            size_perc = size_gb * \
+            size = int(size)
+            size_perc = size * \
                 FLAGS.drive_type_approx_capacity_percent / 100
 
-            return cap_capacity >= size_gb - size_perc and \
-                   cap_capacity <= size_gb + size_perc
+            return cap_capacity >= size - size_perc and \
+                   cap_capacity <= size + size_perc
 
         # Add more entries for additional comparisons
         compare_list = [{'cap1': 'DriveType',
                          'cap2': 'type',
                          'cmp_func': _compare_names},
                         {'cap1': 'DriveCapacity',
-                         'cap2': 'size_gb',
+                         'cap2': 'size',
                          'cmp_func': _compare_sizes_approxim}]
 
         for cap in compare_list:
@@ -193,8 +193,8 @@ class VsaScheduler(simple.SimpleScheduler):
             'attach_status': "detached",
             'display_name': vol['name'],
             'display_description': vol['description'],
-            'to_vsa_id': vsa_id,
-            'drive_type_id': vol['drive_ref']['id'],
+            'volume_type_id': vol['volume_type_id'],
+            'metadata': dict(to_vsa_id=vsa_id),
             'host': vol['host'],
             'scheduled_at': now
             }
@@ -228,7 +228,8 @@ class VsaScheduler(simple.SimpleScheduler):
 
     def _assign_hosts_to_volumes(self, context, volume_params, forced_host):
 
-        prev_drive_type_id = None
+        prev_volume_type_id = None
+        request_spec = {}
         selected_hosts = []
 
         LOG.debug(_("volume_params %(volume_params)s") % locals())
@@ -244,14 +245,25 @@ class VsaScheduler(simple.SimpleScheduler):
                 vol['capabilities'] = None
                 continue
 
-            drive_type = vol['drive_ref']
-            request_spec = {'size': vol['size'],
-                            'drive_type': dict(drive_type)}
+            volume_type_id = vol['volume_type_id']
+            request_spec['size'] = vol['size']
 
-            if prev_drive_type_id != drive_type['id']:
+            if prev_volume_type_id is None or\
+               prev_volume_type_id != volume_type_id:
                 # generate list of hosts for this drive type
+
+                volume_type = volume_types.get_volume_type(context,
+                                                volume_type_id)
+                drive_type = {
+                    'name': volume_type['extra_specs'].get('drive_name'),
+                    'type': volume_type['extra_specs'].get('drive_type'),
+                    'size': int(volume_type['extra_specs'].get('drive_size')),
+                    'rpm': volume_type['extra_specs'].get('drive_rpm'),
+                    }
+                request_spec['drive_type'] = drive_type
+
                 all_hosts = self._filter_hosts("volume", request_spec)
-                prev_drive_type_id = drive_type['id']
+                prev_volume_type_id = volume_type_id
 
             (host, qos_cap) = self._select_hosts(request_spec,
                                     all_hosts, selected_hosts)
@@ -279,8 +291,7 @@ class VsaScheduler(simple.SimpleScheduler):
                 self._provision_volume(context, vol, vsa_id, availability_zone)
         except:
             if vsa_id:
-                db.vsa_update(context, vsa_id,
-                    dict(status=VsaState.FAILED))
+                db.vsa_update(context, vsa_id, dict(status=VsaState.FAILED))
 
             for vol in volume_params:
                 if 'capabilities' in vol:
@@ -302,12 +313,23 @@ class VsaScheduler(simple.SimpleScheduler):
                                                   'scheduled_at': now})
             return host
 
-        drive_type = volume_ref['drive_type']
-        if drive_type is None:
+        volume_type_id = volume_ref['volume_type_id']
+        if volume_type_id:
+            volume_type = volume_types.get_volume_type(context, volume_type_id)
+
+        if volume_type_id is None or\
+           volume_types.is_vsa_volume(volume_type_id, volume_type):
+
             LOG.debug(_("Non-VSA volume %d"), volume_ref['id'])
             return super(VsaScheduler, self).schedule_create_volume(context,
                         volume_id, *_args, **_kwargs)
-        drive_type = dict(drive_type)
+
+        drive_type = {
+            'name': volume_type['extra_specs'].get('drive_name'),
+            'type': volume_type['extra_specs'].get('drive_type'),
+            'size': int(volume_type['extra_specs'].get('drive_size')),
+            'rpm': volume_type['extra_specs'].get('drive_rpm'),
+            }
 
         LOG.debug(_("Spawning volume %(volume_id)s with drive type "\
                     "%(drive_type)s"), locals())

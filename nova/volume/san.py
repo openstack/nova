@@ -64,14 +64,12 @@ class SanISCSIDriver(ISCSIDriver):
     # discover_volume is still OK
     # undiscover_volume is still OK
 
-    def _connect_to_ssh(self, san_ip=None):
-        if san_ip is None:
-            san_ip = FLAGS.san_ip
+    def _connect_to_ssh(self):
         ssh = paramiko.SSHClient()
         #TODO(justinsb): We need a better SSH key policy
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         if FLAGS.san_password:
-            ssh.connect(san_ip,
+            ssh.connect(FLAGS.san_ip,
                         port=FLAGS.san_ssh_port,
                         username=FLAGS.san_login,
                         password=FLAGS.san_password)
@@ -79,7 +77,7 @@ class SanISCSIDriver(ISCSIDriver):
             privatekeyfile = os.path.expanduser(FLAGS.san_privatekey)
             # It sucks that paramiko doesn't support DSA keys
             privatekey = paramiko.RSAKey.from_private_key_file(privatekeyfile)
-            ssh.connect(san_ip,
+            ssh.connect(FLAGS.san_ip,
                         port=FLAGS.san_ssh_port,
                         username=FLAGS.san_login,
                         pkey=privatekey)
@@ -87,9 +85,9 @@ class SanISCSIDriver(ISCSIDriver):
             raise exception.Error(_("Specify san_password or san_privatekey"))
         return ssh
 
-    def _run_ssh(self, command, check_exit_code=True, san_ip=None):
+    def _run_ssh(self, command, check_exit_code=True):
         #TODO(justinsb): SSH connection caching (?)
-        ssh = self._connect_to_ssh(san_ip)
+        ssh = self._connect_to_ssh()
 
         #TODO(justinsb): Reintroduce the retry hack
         ret = ssh_execute(ssh, command, check_exit_code=check_exit_code)

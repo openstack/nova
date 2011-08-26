@@ -918,16 +918,6 @@ def volume_get_all_by_project(context, project_id):
     return IMPL.volume_get_all_by_project(context, project_id)
 
 
-def volume_get_all_assigned_to_vsa(context, vsa_id):
-    """Get all volumes assigned to particular VSA."""
-    return IMPL.volume_get_all_assigned_to_vsa(context, vsa_id)
-
-
-def volume_get_all_assigned_from_vsa(context, vsa_id):
-    """Get all volumes created from particular VSA."""
-    return IMPL.volume_get_all_assigned_from_vsa(context, vsa_id)
-
-
 def volume_get_by_ec2_id(context, ec2_id):
     """Get a volume by ec2 id."""
     return IMPL.volume_get_by_ec2_id(context, ec2_id)
@@ -1528,36 +1518,6 @@ def volume_type_extra_specs_update_or_create(context, volume_type_id,
 ####################
 
 
-def drive_type_create(context, values):
-    """Creates drive type record."""
-    return IMPL.drive_type_create(context, values)
-
-
-def drive_type_update(context, drive_type_id, values):
-    """Updates drive type record."""
-    return IMPL.drive_type_update(context, drive_type_id, values)
-
-
-def drive_type_destroy(context, drive_type_id):
-    """Deletes drive type record."""
-    return IMPL.drive_type_destroy(context, drive_type_id)
-
-
-def drive_type_get(context, drive_type_id):
-    """Get drive type record by id."""
-    return IMPL.drive_type_get(context, drive_type_id)
-
-
-def drive_type_get_by_name(context, name):
-    """Get drive type record by name."""
-    return IMPL.drive_type_get_by_name(context, name)
-
-
-def drive_type_get_all(context, visible):
-    """Returns all (or only visible) drive types."""
-    return IMPL.drive_type_get_all(context, visible)
-
-
 def vsa_create(context, values):
     """Creates Virtual Storage Array record."""
     return IMPL.vsa_create(context, values)
@@ -1586,8 +1546,3 @@ def vsa_get_all(context):
 def vsa_get_all_by_project(context, project_id):
     """Get all Virtual Storage Array records by project ID."""
     return IMPL.vsa_get_all_by_project(context, project_id)
-
-
-def vsa_get_vc_ips_list(context, vsa_id):
-    """Retrieves IPs of instances associated with Virtual Storage Array."""
-    return IMPL.vsa_get_vc_ips_list(context, vsa_id)

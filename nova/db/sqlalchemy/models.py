@@ -352,13 +352,6 @@ class Volume(BASE, NovaBase):
 
     volume_type_id = Column(Integer)
 
-    to_vsa_id = Column(Integer,
-                    ForeignKey('virtual_storage_arrays.id'), nullable=True)
-    from_vsa_id = Column(Integer,
-                    ForeignKey('virtual_storage_arrays.id'), nullable=True)
-    drive_type_id = Column(Integer,
-                    ForeignKey('drive_types.id'), nullable=True)
-
 
 class VolumeMetadata(BASE, NovaBase):
     """Represents a metadata key/value pair for a volume"""
@@ -400,38 +393,6 @@ class VolumeTypeExtraSpecs(BASE, NovaBase):
                  primaryjoin='and_('
                  'VolumeTypeExtraSpecs.volume_type_id == VolumeTypes.id,'
                  'VolumeTypeExtraSpecs.deleted == False)')
-
-
-class DriveTypes(BASE, NovaBase):
-    """Represents the known drive types (storage media)."""
-    __tablename__ = 'drive_types'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    """
-    @property
-    def name(self):
-        if self.capabilities:
-            return FLAGS.drive_type_template_long % \
-                (self.type, str(self.size_gb), self.rpm, self.capabilities)
-        else:
-            return FLAGS.drive_type_template_short % \
-                (self.type, str(self.size_gb), self.rpm)
-    """
-
-    name = Column(String(255), unique=True)
-    type = Column(String(255))
-    size_gb = Column(Integer)
-    rpm = Column(String(255))
-    capabilities = Column(String(255))
-
-    visible = Column(Boolean, default=True)
-
-    volumes = relationship(Volume,
-                           backref=backref('drive_type', uselist=False),
-                           foreign_keys=id,
-                           primaryjoin='and_(Volume.drive_type_id == '
-                                       'DriveTypes.id)')
 
 
 class Quota(BASE, NovaBase):
@@ -918,7 +879,9 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
+              VolumeMetadata, VolumeTypes, VolumeTypeExtraSpecs,
+              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration,
+              VirtualStorageArray)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

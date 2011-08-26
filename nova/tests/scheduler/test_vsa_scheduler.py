@@ -16,13 +16,15 @@
 import stubout
 
 import nova
+
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
-from nova import db
-from nova import context
+from nova import log as logging
 from nova import test
 from nova import utils
-from nova import log as logging
+from nova.volume import volume_types
 
 from nova.scheduler import vsa as vsa_sched
 from nova.scheduler import driver
@@ -52,15 +54,26 @@ class VsaSchedulerTestCase(test.TestCase):
     def _get_vol_creation_request(self, num_vols, drive_ix, size=0):
         volume_params = []
         for i in range(num_vols):
-            drive_type = {'id': i,
-                          'name': 'name_' + str(drive_ix),
-                          'type': 'type_' + str(drive_ix),
-                          'size_gb': 1 + 100 * (drive_ix)}
+
+            name = 'name_' + str(i)
+            try:
+                volume_types.create(self.context, name,
+                            extra_specs={'type': 'vsa_drive',
+                                         'drive_name': name,
+                                         'drive_type': 'type_' + str(drive_ix),
+                                         'drive_size': 1 + 100 * (drive_ix)})
+                self.created_types_lst.append(name)
+            except exception.ApiError:
+                # type is already created
+                pass
+
+            volume_type = volume_types.get_volume_type_by_name(self.context,
+                                                                name)
             volume = {'size': size,
                       'snapshot_id': None,
                       'name': 'vol_' + str(i),
                       'description': None,
-                      'drive_ref': drive_type}
+                      'volume_type_id': volume_type['id']}
             volume_params.append(volume)
 
         return {'num_volumes': len(volume_params),
@@ -217,7 +230,12 @@ class VsaSchedulerTestCase(test.TestCase):
         self.stubs.Set(nova.db, 'volume_get', self._fake_volume_get)
         self.stubs.Set(nova.db, 'volume_update', self._fake_volume_update)
 
+        self.created_types_lst = []
+
     def tearDown(self):
+        for name in self.created_types_lst:
+            volume_types.purge(self.context, name)
+
         self.stubs.UnsetAll()
         super(VsaSchedulerTestCase, self).tearDown()
 
@@ -463,7 +481,7 @@ class VsaSchedulerTestCase(test.TestCase):
 
         global global_volume
         global_volume = {}
-        global_volume['drive_type'] = None
+        global_volume['volume_type_id'] = None
 
         self.assertRaises(driver.NoValidHost,
                           self.sched.schedule_create_volume,
@@ -485,12 +503,16 @@ class VsaSchedulerTestCase(test.TestCase):
         global_volume = {}
 
         drive_ix = 2
-        drive_type = {'id': drive_ix,
-                      'name': 'name_' + str(drive_ix),
-                      'type': 'type_' + str(drive_ix),
-                      'size_gb': 1 + 100 * (drive_ix)}
+        name = 'name_' + str(drive_ix)
+        volume_types.create(self.context, name,
+                    extra_specs={'type': 'vsa_drive',
+                                 'drive_name': name,
+                                 'drive_type': 'type_' + str(drive_ix),
+                                 'drive_size': 1 + 100 * (drive_ix)})
+        self.created_types_lst.append(name)
+        volume_type = volume_types.get_volume_type_by_name(self.context, name)
 
-        global_volume['drive_type'] = drive_type
+        global_volume['volume_type_id'] = volume_type['id']
         global_volume['size'] = 0
 
         host = self.sched.schedule_create_volume(self.context,
@@ -525,12 +547,16 @@ class VsaSchedulerTestCaseMostAvail(VsaSchedulerTestCase):
         global_volume = {}
 
         drive_ix = 2
-        drive_type = {'id': drive_ix,
-                      'name': 'name_' + str(drive_ix),
-                      'type': 'type_' + str(drive_ix),
-                      'size_gb': 1 + 100 * (drive_ix)}
+        name = 'name_' + str(drive_ix)
+        volume_types.create(self.context, name,
+                    extra_specs={'type': 'vsa_drive',
+                                 'drive_name': name,
+                                 'drive_type': 'type_' + str(drive_ix),
+                                 'drive_size': 1 + 100 * (drive_ix)})
+        self.created_types_lst.append(name)
+        volume_type = volume_types.get_volume_type_by_name(self.context, name)
 
-        global_volume['drive_type'] = drive_type
+        global_volume['volume_type_id'] = volume_type['id']
         global_volume['size'] = 0
 
         host = self.sched.schedule_create_volume(self.context,

@@ -42,9 +42,7 @@ class API(base.Base):
     """API for interacting with the volume manager."""
 
     def create(self, context, size, snapshot_id, name, description,
-                     volume_type=None, metadata=None,
-                     to_vsa_id=None, from_vsa_id=None, drive_type_id=None,
-                     availability_zone=None):
+                     volume_type=None, metadata=None, availability_zone=None):
         if snapshot_id != None:
             snapshot = self.get_snapshot(context, snapshot_id)
             if snapshot['status'] != "available":
@@ -53,13 +51,12 @@ class API(base.Base):
             if not size:
                 size = snapshot['volume_size']
 
-        if to_vsa_id is None:
-            if quota.allowed_volumes(context, 1, size) < 1:
-                pid = context.project_id
-                LOG.warn(_("Quota exceeded for %(pid)s, tried to create"
-                        " %(size)sG volume") % locals())
-                raise quota.QuotaError(_("Volume quota exceeded. You cannot "
-                                         "create a volume of size %sG") % size)
+        if quota.allowed_volumes(context, 1, size) < 1:
+            pid = context.project_id
+            LOG.warn(_("Quota exceeded for %(pid)s, tried to create"
+                    " %(size)sG volume") % locals())
+            raise quota.QuotaError(_("Volume quota exceeded. You cannot "
+                                     "create a volume of size %sG") % size)
 
         if availability_zone is None:
             availability_zone = FLAGS.storage_availability_zone
@@ -81,19 +78,9 @@ class API(base.Base):
             'display_description': description,
             'volume_type_id': volume_type_id,
             'metadata': metadata,
-            'to_vsa_id': to_vsa_id,
-            'from_vsa_id': from_vsa_id,
-            'drive_type_id': drive_type_id,
             }
 
         volume = self.db.volume_create(context, options)
-        if from_vsa_id is not None:  # for FE VSA volumes do nothing
-            now = utils.utcnow()
-            volume = self.db.volume_update(context,
-                                volume['id'], {'status': 'available',
-                                               'launched_at': now})
-            return volume
-
         rpc.cast(context,
                  FLAGS.scheduler_topic,
                  {"method": "create_volume",
@@ -112,15 +99,6 @@ class API(base.Base):
 
     def delete(self, context, volume_id):
         volume = self.get(context, volume_id)
-
-        if volume['from_vsa_id'] is not None:
-            if volume['status'] == "in-use":
-                raise exception.ApiError(_("Volume is in use. "\
-                                           "Detach it first"))
-            self.db.volume_destroy(context, volume['id'])
-            LOG.debug(_("volume %d: deleted successfully"), volume['id'])
-            return
-
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
         now = utils.utcnow()
@@ -154,7 +132,7 @@ class API(base.Base):
                 for i in volume.get('volume_metadata'):
                     volume_metadata[i['key']] = i['value']
 
-                for k, v in searchdict:
+                for k, v in searchdict.iteritems():
                     if k not in volume_metadata.keys()\
                        or volume_metadata[k] != v:
                         return False
@@ -163,6 +141,7 @@ class API(base.Base):
             # search_option to filter_name mapping.
             filter_mapping = {'metadata': _check_metadata_match}
 
+            result = []
             for volume in volumes:
                 # go over all filters in the list
                 for opt, values in search_opts.iteritems():
@@ -172,20 +151,11 @@ class API(base.Base):
                         # no such filter - ignore it, go to next filter
                         continue
                     else:
-                        if filter_func(volume, values) == False:
-                            # if one of conditions didn't match - remove
-                            volumes.remove(volume)
+                        if filter_func(volume, values):
+                            result.append(volume)
                             break
+            volumes = result
         return volumes
-
-    def get_all_by_vsa(self, context, vsa_id, direction):
-        if direction == "to":
-            return self.db.volume_get_all_assigned_to_vsa(context, vsa_id)
-        elif direction == "from":
-            return self.db.volume_get_all_assigned_from_vsa(context, vsa_id)
-        else:
-            raise exception.ApiError(_("Unsupported vol assignment type %s"),
-                                        direction)
 
     def get_snapshot(self, context, snapshot_id):
         rv = self.db.snapshot_get(context, snapshot_id)
@@ -286,3 +256,12 @@ class API(base.Base):
 
         self.db.volume_metadata_update(context, volume_id, _metadata, True)
         return _metadata
+
+    def get_volume_metadata_value(self, volume, key):
+        """Get value of particular metadata key."""
+        metadata = volume.get('volume_metadata')
+        if metadata:
+            for i in volume['volume_metadata']:
+                if i['key'] == key:
+                    return i['value']
+        return None

@@ -53,6 +53,7 @@
   CLI interface for nova management.
 """
 
+import ast
 import gettext
 import glob
 import json
@@ -63,8 +64,6 @@ import sys
 import time
 
 from optparse import OptionParser
-
-import ast
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -87,15 +86,13 @@ from nova import quota
 from nova import rpc
 from nova import utils
 from nova import version
+from nova import vsa
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.compute import instance_types
 from nova.db import migration
-from nova import compute
-from nova import volume
-from nova import vsa
-from nova.vsa import drive_types
+from nova.volume import volume_types
 
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
@@ -1076,14 +1073,12 @@ class VsaCommands(object):
     def __init__(self, *args, **kwargs):
         self.manager = manager.AuthManager()
         self.vsa_api = vsa.API()
-        self.compute_api = compute.API()
-        self.volume_api = volume.API()
         self.context = context.get_admin_context()
 
         self._format_str_vsa = "%-5s %-15s %-25s %-10s %-6s "\
                                "%-9s %-10s %-10s %10s"
         self._format_str_volume = "\t%-4s %-15s %-5s %-10s %-20s %s"
-        self._format_str_drive = "\t%-4s %-15s %-5s %-10s %-20s %s"
+        self._format_str_drive = "\t%-4s %-15s %-5s %-10s %-20s %-4s %-10s %s"
         self._format_str_instance = "\t%-4s %-10s %-20s %-12s %-10s "\
                                     "%-15s %-15s %-10s %-15s %s"
 
@@ -1124,7 +1119,7 @@ class VsaCommands(object):
     def _print_volume(self, vol):
         print self._format_str_volume %\
             (vol['id'],
-             vol['display_name'],
+             vol['display_name'] or vol['name'],
              vol['size'],
              vol['status'],
              vol['attach_status'],
@@ -1138,15 +1133,24 @@ class VsaCommands(object):
                 _('size'),
                 _('status'),
                 _('host'),
+                _('type'),
+                _('typeName'),
                 _('createTime'))
 
     def _print_drive(self, drive):
-        print self._format_str_volume %\
+        if drive['volume_type_id'] is not None and drive.get('volume_type'):
+            drive_type_name = drive['volume_type'].get('name')
+        else:
+            drive_type_name = ''
+
+        print self._format_str_drive %\
             (drive['id'],
              drive['display_name'],
              drive['size'],
              drive['status'],
              drive['host'],
+             drive['volume_type_id'],
+             drive_type_name,
              str(drive['created_at']))
 
     def _print_instance_header(self):
@@ -1196,9 +1200,7 @@ class VsaCommands(object):
             vsa_id = vsa.get('id')
 
             if print_instances:
-                instances = self.compute_api.get_all(context,
-                                    search_opts={'metadata':
-                                                 dict(vsa_id=str(vsa_id))})
+                instances = self.vsa_api.get_all_vsa_instances(context, vsa_id)
                 if instances:
                     print
                     self._print_instance_header()
@@ -1207,8 +1209,7 @@ class VsaCommands(object):
                     print
 
             if print_drives:
-                drives = self.volume_api.get_all_by_vsa(context,
-                                                        vsa_id, "to")
+                drives = self.vsa_api.get_all_vsa_drives(context, vsa_id)
                 if drives:
                     self._print_drive_header()
                     for drive in drives:
@@ -1216,8 +1217,7 @@ class VsaCommands(object):
                     print
 
             if print_volumes:
-                volumes = self.volume_api.get_all_by_vsa(context,
-                                                         vsa_id, "from")
+                volumes = self.vsa_api.get_all_vsa_volumes(context, vsa_id)
                 if volumes:
                     self._print_volume_header()
                     for volume in volumes:
@@ -1344,7 +1344,7 @@ class VsaCommands(object):
 
     @args('--id', dest='vsa_id', metavar="<vsa_id>",
         help='VSA ID (optional)')
-    @args('--all', dest='all', action="store_true",
+    @args('--all', dest='all', action="store_true", default=False,
         help='Show all available details')
     @args('--drives', dest='drives', action="store_true",
         help='Include drive-level details')
@@ -1384,6 +1384,7 @@ class VsaDriveTypeCommands(object):
     def __init__(self, *args, **kwargs):
         super(VsaDriveTypeCommands, self).__init__(*args, **kwargs)
         self.context = context.get_admin_context()
+        self._drive_type_template = '%s_%sGB_%sRPM'
 
     def _list(self, drives):
         format_str = "%-5s %-30s %-10s %-10s %-10s %-20s %-10s %s"
@@ -1398,75 +1399,94 @@ class VsaDriveTypeCommands(object):
                     _('visible'),
                     _('createTime'))
 
-        for drive in drives:
+        for name, vol_type in drives.iteritems():
+            drive = vol_type.get('extra_specs')
             print format_str %\
-                (str(drive['id']),
-                drive['name'],
-                drive['type'],
-                str(drive['size_gb']),
-                drive['rpm'],
-                drive['capabilities'],
-                str(drive['visible']),
-                str(drive['created_at']))
+                (str(vol_type['id']),
+                drive['drive_name'],
+                drive['drive_type'],
+                drive['drive_size'],
+                drive['drive_rpm'],
+                drive.get('capabilities', ''),
+                str(drive.get('visible', '')),
+                str(vol_type['created_at']))
 
     @args('--type', dest='type', metavar="<type>",
         help='Drive type (SATA, SAS, SSD, etc.)')
     @args('--size', dest='size_gb', metavar="<gb>", help='Drive size in GB')
     @args('--rpm', dest='rpm', metavar="<rpm>", help='RPM')
-    @args('--capabilities', dest='capabilities', metavar="<string>",
-        help='Different capabilities')
-    @args('--visible', dest='visible', metavar="<show|hide>",
+    @args('--capabilities', dest='capabilities', default=None,
+        metavar="<string>", help='Different capabilities')
+    @args('--hide', dest='hide', action="store_true", default=False,
         help='Show or hide drive')
     @args('--name', dest='name', metavar="<name>", help='Drive name')
-    def create(self, type, size_gb, rpm, capabilities='',
-                     visible=None, name=None):
+    def create(self, type, size_gb, rpm, capabilities=None,
+                     hide=False, name=None):
         """Create drive type."""
 
-        if visible in [None, "--show", "show"]:
-            visible = True
-        elif visible in ["--hide", "hide"]:
-            visible = False
+        hide = True if hide in [True, "True", "--hide", "hide"] else False
+
+        if name is None:
+            name = self._drive_type_template % (type, size_gb, rpm)
+
+        extra_specs = {'type': 'vsa_drive',
+                       'drive_name': name,
+                       'drive_type': type,
+                       'drive_size': size_gb,
+                       'drive_rpm': rpm,
+                       'visible': True,
+                       }
+        if hide:
+            extra_specs['visible'] = False
+
+        if capabilities is not None and capabilities != '':
+            extra_specs['capabilities'] = capabilities
+
+        volume_types.create(self.context, name, extra_specs)
+        result = volume_types.get_volume_type_by_name(self.context, name)
+        self._list({name: result})
+
+    @args('--name', dest='name', metavar="<name>", help='Drive name')
+    @args('--purge', action="store_true", dest='purge', default=False,
+            help='purge record from database')
+    def delete(self, name, purge):
+        """Marks instance types / flavors as deleted"""
+        try:
+            if purge:
+                volume_types.purge(self.context, name)
+                verb = "purged"
+            else:
+                volume_types.destroy(self.context, name)
+                verb = "deleted"
+        except exception.ApiError:
+            print "Valid volume type name is required"
+            sys.exit(1)
+        except exception.DBError, e:
+            print "DB Error: %s" % e
+            sys.exit(2)
+        except:
+            sys.exit(3)
         else:
-            raise ValueError(_('Visible parameter should be set to --show '\
-                               'or --hide'))
+            print "%s %s" % (name, verb)
 
-        result = drive_types.create(self.context,
-                                type, int(size_gb), rpm,
-                                capabilities, visible, name)
-        self._list([result])
-
-    @args('--name', dest='name', metavar="<name>", help='Drive name')
-    def delete(self, name):
-        """Delete drive type."""
-
-        dtype = drive_types.get_by_name(self.context, name)
-        drive_types.delete(self.context, dtype['id'])
-
-    @args('--name', dest='name', metavar="<name>", help='Drive name')
-    @args('--new_name', dest='new_name', metavar="<name>",
-        help='New Drive name (optional)')
-    def rename(self, name, new_name=None):
-        """Rename drive type."""
-
-        dtype = drive_types.rename(self.context,
-                                   name, new_name)
-        self._list([dtype])
-
-    @args('--all', dest='visible', action="store_false",
-        help='Show all drives')
+    @args('--all', dest='all', action="store_true", default=False,
+        help='Show all drives (including invisible)')
     @args('--name', dest='name', metavar="<name>",
         help='Show only specified drive')
-    def list(self, visible=None, name=None):
+    def list(self, all=False, name=None):
         """Describe all available VSA drive types (or particular one)."""
 
-        visible = False if visible in ["--all", False] else True
+        all = False if all in ["--all", False, "False"] else True
 
+        search_opts = {'extra_specs': {'type': 'vsa_drive'}}
         if name is not None:
-            drive = drive_types.get_by_name(self.context, name)
-            drives = [drive]
-        else:
-            drives = drive_types.get_all(self.context, visible)
+            search_opts['extra_specs']['name'] = name
 
+        if all == False:
+            search_opts['extra_specs']['visible'] = '1'
+
+        drives = volume_types.get_all_types(self.context,
+                                            search_opts=search_opts)
         self._list(drives)
 
     @args('--name', dest='name', metavar="<name>", help='Drive name')
@@ -1474,32 +1494,44 @@ class VsaDriveTypeCommands(object):
         help='Drive type (SATA, SAS, SSD, etc.)')
     @args('--size', dest='size_gb', metavar="<gb>", help='Drive size in GB')
     @args('--rpm', dest='rpm', metavar="<rpm>", help='RPM')
-    @args('--capabilities', dest='capabilities', metavar="<string>",
-        help='Different capabilities')
-    @args('--visible', dest='visible', metavar="<show|hide>",
-        help='Show or hide drive')
+    @args('--capabilities', dest='capabilities', default=None,
+        metavar="<string>", help='Different capabilities')
+    @args('--visible', dest='visible',
+        metavar="<show|hide>", help='Show or hide drive')
     def update(self, name, type=None, size_gb=None, rpm=None,
-                     capabilities='', visible=None):
+                     capabilities=None, visible=None):
         """Update drive type."""
 
-        values = {
-            'type': type,
-            'size_gb': size_gb,
-            'rpm': rpm,
-            'capabilities': capabilities,
-            }
-        if visible:
-            if visible in ["--show", "show"]:
-                values['visible'] = True
-            elif visible in ["--hide", "hide"]:
-                values['visible'] = False
-            else:
-                raise ValueError(_("Visible parameter should be set to "\
-                                   "--show or --hide"))
+        volume_type = volume_types.get_volume_type_by_name(self.context, name)
 
-        dtype = drive_types.get_by_name(self.context, name)
-        dtype = drive_types.update(self.context, dtype['id'], **values)
-        self._list([dtype])
+        extra_specs = {'type': 'vsa_drive'}
+
+        if type:
+            extra_specs['drive_type'] = type
+
+        if size_gb:
+            extra_specs['drive_size'] = size_gb
+
+        if rpm:
+            extra_specs['drive_rpm'] = rpm
+
+        if capabilities:
+            extra_specs['capabilities'] = capabilities
+
+        if visible is not None:
+            if visible in ["show", True, "True"]:
+                extra_specs['visible'] = True
+            elif visible in ["hide", False, "False"]:
+                extra_specs['visible'] = False
+            else:
+                raise ValueError(_('visible parameter should be set to '\
+                                   'show or hide'))
+
+        db.api.volume_type_extra_specs_update_or_create(self.context,
+                    volume_type['id'],
+                    extra_specs)
+        result = volume_types.get_volume_type_by_name(self.context, name)
+        self._list({name: result})
 
 
 class VolumeCommands(object):

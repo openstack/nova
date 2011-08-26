@@ -18,15 +18,14 @@ import stubout
 import unittest
 import webob
 
-
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
-from nova import vsa
-from nova import db
-from nova import volume
-from nova import context
-from nova import test
 from nova import log as logging
+from nova import test
+from nova import volume
+from nova import vsa
 from nova.api import openstack
 from nova.tests.api.openstack import fakes
 import nova.wsgi
@@ -120,7 +119,7 @@ class VSAApiTest(test.TestCase):
         vsa = {"displayName": "VSA Test Name",
                "displayDescription": "VSA Test Desc"}
         body = dict(vsa=vsa)
-        req = webob.Request.blank('/v1.1/zadr-vsa')
+        req = webob.Request.blank('/v1.1/777/zadr-vsa')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -139,7 +138,7 @@ class VSAApiTest(test.TestCase):
                          vsa['displayDescription'])
 
     def test_vsa_create_no_body(self):
-        req = webob.Request.blank('/v1.1/zadr-vsa')
+        req = webob.Request.blank('/v1.1/777/zadr-vsa')
         req.method = 'POST'
         req.body = json.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -152,7 +151,7 @@ class VSAApiTest(test.TestCase):
         last_param = {}
 
         vsa_id = 123
-        req = webob.Request.blank('/v1.1/zadr-vsa/%d' % vsa_id)
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/%d' % vsa_id)
         req.method = 'DELETE'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -164,7 +163,7 @@ class VSAApiTest(test.TestCase):
         last_param = {}
 
         vsa_id = 234
-        req = webob.Request.blank('/v1.1/zadr-vsa/%d' % vsa_id)
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/%d' % vsa_id)
         req.method = 'DELETE'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -176,7 +175,7 @@ class VSAApiTest(test.TestCase):
         last_param = {}
 
         vsa_id = 123
-        req = webob.Request.blank('/v1.1/zadr-vsa/%d' % vsa_id)
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/%d' % vsa_id)
         req.method = 'GET'
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
@@ -191,14 +190,14 @@ class VSAApiTest(test.TestCase):
         last_param = {}
 
         vsa_id = 234
-        req = webob.Request.blank('/v1.1/zadr-vsa/%d' % vsa_id)
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/%d' % vsa_id)
         req.method = 'GET'
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 404)
         self.assertEqual(str(last_param['vsa_id']), str(vsa_id))
 
     def test_vsa_index(self):
-        req = webob.Request.blank('/v1.1/zadr-vsa')
+        req = webob.Request.blank('/v1.1/777/zadr-vsa')
         req.method = 'GET'
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
@@ -213,7 +212,7 @@ class VSAApiTest(test.TestCase):
         self.assertEqual(resp_vsa['id'], 123)
 
     def test_vsa_detail(self):
-        req = webob.Request.blank('/v1.1/zadr-vsa/detail')
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/detail')
         req.method = 'GET'
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
@@ -239,17 +238,21 @@ def _get_default_volume_param():
         'name': 'vol name',
         'display_name': 'Default vol name',
         'display_description': 'Default vol description',
-        'from_vsa_id': None,
-        'to_vsa_id': None,
+        'volume_type_id': 1,
+        'volume_metadata': [],
         }
+
+
+def stub_get_vsa_volume_type(self, context):
+    return {'id': 1,
+            'name': 'VSA volume type',
+            'extra_specs': {'type': 'vsa_volume'}}
 
 
 def stub_volume_create(self, context, size, snapshot_id, name, description,
                        **param):
     LOG.debug(_("_create: param=%s"), size)
     vol = _get_default_volume_param()
-    for k, v in param.iteritems():
-        vol[k] = v
     vol['size'] = size
     vol['display_name'] = name
     vol['display_description'] = description
@@ -270,10 +273,10 @@ def stub_volume_get(self, context, volume_id):
     LOG.debug(_("_volume_get: volume_id=%s"), volume_id)
     vol = _get_default_volume_param()
     vol['id'] = volume_id
-    if volume_id == '234':
-        vol['from_vsa_id'] = 123
+    meta = {'key': 'from_vsa_id', 'value': '123'}
     if volume_id == '345':
-        vol['to_vsa_id'] = 123
+        meta = {'key': 'to_vsa_id', 'value': '123'}
+    vol['volume_metadata'].append(meta)
     return vol
 
 
@@ -281,9 +284,9 @@ def stub_volume_get_notfound(self, context, volume_id):
     raise exception.NotFound
 
 
-def stub_volume_get_all_by_vsa(self, context, vsa_id, direction):
+def stub_volume_get_all(self, context, search_opts):
     vol = stub_volume_get(self, context, '123')
-    vol['%s_vsa_id' % direction] = vsa_id
+    vol['metadata'] = search_opts['metadata']
     return [vol]
 
 
@@ -302,13 +305,13 @@ class VSAVolumeApiTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db.api, 'vsa_get', return_vsa)
+        self.stubs.Set(vsa.api.API, "get_vsa_volume_type",
+                        stub_get_vsa_volume_type)
 
-        self.stubs.Set(volume.api.API, "create", stub_volume_create)
         self.stubs.Set(volume.api.API, "update", stub_volume_update)
         self.stubs.Set(volume.api.API, "delete", stub_volume_delete)
-        self.stubs.Set(volume.api.API, "get_all_by_vsa",
-                                        stub_volume_get_all_by_vsa)
         self.stubs.Set(volume.api.API, "get", stub_volume_get)
+        self.stubs.Set(volume.api.API, "get_all", stub_volume_get_all)
 
         self.context = context.get_admin_context()
         self.test_obj = test_obj if test_obj else "volume"
@@ -319,11 +322,13 @@ class VSAVolumeApiTest(test.TestCase):
         super(VSAVolumeApiTest, self).tearDown()
 
     def test_vsa_volume_create(self):
+        self.stubs.Set(volume.api.API, "create", stub_volume_create)
+
         vol = {"size": 100,
                "displayName": "VSA Volume Test Name",
                "displayDescription": "VSA Volume Test Desc"}
         body = {self.test_obj: vol}
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s' % self.test_objs)
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s' % self.test_objs)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -344,7 +349,7 @@ class VSAVolumeApiTest(test.TestCase):
             self.assertEqual(resp.status_int, 400)
 
     def test_vsa_volume_create_no_body(self):
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s' % self.test_objs)
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s' % self.test_objs)
         req.method = 'POST'
         req.body = json.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -356,25 +361,25 @@ class VSAVolumeApiTest(test.TestCase):
             self.assertEqual(resp.status_int, 400)
 
     def test_vsa_volume_index(self):
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s' % self.test_objs)
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s' % self.test_objs)
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
 
     def test_vsa_volume_detail(self):
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/detail' % \
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s/detail' % \
                 self.test_objs)
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
 
     def test_vsa_volume_show(self):
         obj_num = 234 if self.test_objs == "volumes" else 345
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/%s' % \
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s/%s' % \
                 (self.test_objs, obj_num))
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
 
     def test_vsa_volume_show_no_vsa_assignment(self):
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/333' % \
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/4/%s/333' % \
                 (self.test_objs))
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 400)
@@ -382,7 +387,7 @@ class VSAVolumeApiTest(test.TestCase):
     def test_vsa_volume_show_no_volume(self):
         self.stubs.Set(volume.api.API, "get", stub_volume_get_notfound)
 
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/333' % \
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s/333' % \
                 (self.test_objs))
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 404)
@@ -392,7 +397,7 @@ class VSAVolumeApiTest(test.TestCase):
         update = {"status": "available",
                   "displayName": "Test Display name"}
         body = {self.test_obj: update}
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/%s' % \
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s/%s' % \
                 (self.test_objs, obj_num))
         req.method = 'PUT'
         req.body = json.dumps(body)
@@ -406,7 +411,7 @@ class VSAVolumeApiTest(test.TestCase):
 
     def test_vsa_volume_delete(self):
         obj_num = 234 if self.test_objs == "volumes" else 345
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/%s' % \
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s/%s' % \
                 (self.test_objs, obj_num))
         req.method = 'DELETE'
         resp = req.get_response(fakes.wsgi_app())
@@ -416,7 +421,7 @@ class VSAVolumeApiTest(test.TestCase):
             self.assertEqual(resp.status_int, 400)
 
     def test_vsa_volume_delete_no_vsa_assignment(self):
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/333' % \
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/4/%s/333' % \
                 (self.test_objs))
         req.method = 'DELETE'
         resp = req.get_response(fakes.wsgi_app())
@@ -425,7 +430,7 @@ class VSAVolumeApiTest(test.TestCase):
     def test_vsa_volume_delete_no_volume(self):
         self.stubs.Set(volume.api.API, "get", stub_volume_get_notfound)
 
-        req = webob.Request.blank('/v1.1/zadr-vsa/123/%s/333' % \
+        req = webob.Request.blank('/v1.1/777/zadr-vsa/123/%s/333' % \
                 (self.test_objs))
         req.method = 'DELETE'
         resp = req.get_response(fakes.wsgi_app())

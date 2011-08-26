@@ -22,17 +22,17 @@ Handles all processes relating to Virtual Storage Arrays (VSA).
 
 """
 
+from nova import compute
+from nova import exception
+from nova import flags
 from nova import log as logging
 from nova import manager
-from nova import flags
-from nova import utils
-from nova import exception
-from nova import compute
 from nova import volume
 from nova import vsa
-from nova.vsa.api import VsaState
+from nova import utils
 from nova.compute import instance_types
-
+from nova.vsa import utils as vsa_utils
+from nova.vsa.api import VsaState
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('vsa_driver', 'nova.vsa.connection.get_connection',
@@ -83,18 +83,18 @@ class VsaManager(manager.SchedulerDependentManager):
     @exception.wrap_exception()
     def vsa_volume_created(self, context, vol_id, vsa_id, status):
         """Callback for volume creations"""
-        LOG.debug(_("VSA ID %(vsa_id)s: Volume %(vol_id)s created. "\
+        LOG.debug(_("VSA ID %(vsa_id)s: Drive %(vol_id)s created. "\
                     "Status %(status)s"), locals())
         vsa_id = int(vsa_id)    # just in case
 
         # Get all volumes for this VSA
         # check if any of them still in creating phase
-        volumes = self.db.volume_get_all_assigned_to_vsa(context, vsa_id)
-        for volume in volumes:
-            if volume['status'] == 'creating':
-                vol_name = volume['name']
-                vol_disp_name = volume['display_name']
-                LOG.debug(_("Volume %(vol_name)s (%(vol_disp_name)s) still "\
+        drives = self.vsa_api.get_all_vsa_drives(context, vsa_id)
+        for drive in drives:
+            if drive['status'] == 'creating':
+                vol_name = drive['name']
+                vol_disp_name = drive['display_name']
+                LOG.debug(_("Drive %(vol_name)s (%(vol_disp_name)s) still "\
                             "in creating phase - wait"), locals())
                 return
 
@@ -105,17 +105,17 @@ class VsaManager(manager.SchedulerDependentManager):
             LOG.exception(msg)
             return
 
-        if len(volumes) != vsa['vol_count']:
-            cvol_real = len(volumes)
+        if len(drives) != vsa['vol_count']:
+            cvol_real = len(drives)
             cvol_exp = vsa['vol_count']
             LOG.debug(_("VSA ID %(vsa_id)d: Not all volumes are created "\
                         "(%(cvol_real)d of %(cvol_exp)d)"), locals())
             return
 
         # all volumes created (successfully or not)
-        return self._start_vcs(context, vsa, volumes)
+        return self._start_vcs(context, vsa, drives)
 
-    def _start_vcs(self, context, vsa, volumes=[]):
+    def _start_vcs(self, context, vsa, drives=[]):
         """Start VCs for VSA """
 
         vsa_id = vsa['id']
@@ -127,11 +127,11 @@ class VsaManager(manager.SchedulerDependentManager):
 
         # in _separate_ loop go over all volumes and mark as "attached"
         has_failed_volumes = False
-        for volume in volumes:
-            vol_name = volume['name']
-            vol_disp_name = volume['display_name']
-            status = volume['status']
-            LOG.info(_("VSA ID %(vsa_id)d: Volume %(vol_name)s "\
+        for drive in drives:
+            vol_name = drive['name']
+            vol_disp_name = drive['display_name']
+            status = drive['status']
+            LOG.info(_("VSA ID %(vsa_id)d: Drive %(vol_name)s "\
                         "(%(vol_disp_name)s) is in %(status)s state"),
                         locals())
             if status == 'available':
@@ -149,11 +149,12 @@ class VsaManager(manager.SchedulerDependentManager):
         if has_failed_volumes:
             LOG.info(_("VSA ID %(vsa_id)d: Delete all BE volumes"), locals())
             self.vsa_api.delete_vsa_volumes(context, vsa_id, "BE", True)
-            self.vsa_api.update_vsa_status(context, vsa_id, VsaState.FAILED)
+            self.vsa_api.update_vsa_status(context, vsa_id,
+                                           VsaState.FAILED)
             return
 
         # create user-data record for VC
-        storage_data = self.vsa_api.generate_user_data(context, vsa, volumes)
+        storage_data = vsa_utils.generate_user_data(vsa, drives)
 
         instance_type = instance_types.get_instance_type(
                                             vsa['instance_type_id'])
@@ -174,4 +175,5 @@ class VsaManager(manager.SchedulerDependentManager):
                 user_data=storage_data,
                 metadata=dict(vsa_id=str(vsa_id)))
 
-        self.vsa_api.update_vsa_status(context, vsa_id, VsaState.CREATED)
+        self.vsa_api.update_vsa_status(context, vsa_id,
+                                       VsaState.CREATED)

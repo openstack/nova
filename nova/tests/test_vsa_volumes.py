@@ -29,15 +29,6 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.vsa.volumes')
 
 
-def _default_volume_param():
-    return {
-        'size': 1,
-        'snapshot_id': None,
-        'name': 'Test volume name',
-        'description': 'Test volume desc name'
-        }
-
-
 class VsaVolumesTestCase(test.TestCase):
 
     def setUp(self):
@@ -48,6 +39,8 @@ class VsaVolumesTestCase(test.TestCase):
 
         self.context_non_admin = context.RequestContext(None, None)
         self.context = context.get_admin_context()
+
+        self.default_vol_type = self.vsa_api.get_vsa_volume_type(self.context)
 
         def fake_show_by_name(meh, context, name):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
@@ -66,12 +59,23 @@ class VsaVolumesTestCase(test.TestCase):
         self.stubs.UnsetAll()
         super(VsaVolumesTestCase, self).tearDown()
 
+    def _default_volume_param(self):
+        return {
+            'size': 1,
+            'snapshot_id': None,
+            'name': 'Test volume name',
+            'description': 'Test volume desc name',
+            'volume_type': self.default_vol_type,
+            'metadata': {'from_vsa_id': self.vsa_id}
+            }
+
+    def _get_all_volumes_by_vsa(self):
+        return self.volume_api.get_all(self.context,
+                search_opts={'metadata': {"from_vsa_id": str(self.vsa_id)}})
+
     def test_vsa_volume_create_delete(self):
         """ Check if volume properly created and deleted. """
-        vols1 = self.volume_api.get_all_by_vsa(self.context,
-                                                self.vsa_id, "from")
-        volume_param = _default_volume_param()
-        volume_param['from_vsa_id'] = self.vsa_id
+        volume_param = self._default_volume_param()
         volume_ref = self.volume_api.create(self.context, **volume_param)
 
         self.assertEqual(volume_ref['display_name'],
@@ -81,21 +85,34 @@ class VsaVolumesTestCase(test.TestCase):
         self.assertEqual(volume_ref['size'],
                          volume_param['size'])
         self.assertEqual(volume_ref['status'],
-                         'available')
+                         'creating')
 
-        vols2 = self.volume_api.get_all_by_vsa(self.context,
-                                                self.vsa_id, "from")
-        self.assertEqual(len(vols1) + 1, len(vols2))
+        vols2 = self._get_all_volumes_by_vsa()
+        self.assertEqual(1, len(vols2))
+        volume_ref = vols2[0]
 
+        self.assertEqual(volume_ref['display_name'],
+                         volume_param['name'])
+        self.assertEqual(volume_ref['display_description'],
+                         volume_param['description'])
+        self.assertEqual(volume_ref['size'],
+                         volume_param['size'])
+        self.assertEqual(volume_ref['status'],
+                         'creating')
+
+        self.volume_api.update(self.context,
+                    volume_ref['id'], {'status': 'available'})
         self.volume_api.delete(self.context, volume_ref['id'])
-        vols3 = self.volume_api.get_all_by_vsa(self.context,
-                                                self.vsa_id, "from")
-        self.assertEqual(len(vols3) + 1, len(vols2))
+
+        vols3 = self._get_all_volumes_by_vsa()
+        self.assertEqual(1, len(vols2))
+        volume_ref = vols3[0]
+        self.assertEqual(volume_ref['status'],
+                         'deleting')
 
     def test_vsa_volume_delete_nonavail_volume(self):
         """ Check volume deleton in different states. """
-        volume_param = _default_volume_param()
-        volume_param['from_vsa_id'] = self.vsa_id
+        volume_param = self._default_volume_param()
         volume_ref = self.volume_api.create(self.context, **volume_param)
 
         self.volume_api.update(self.context,
@@ -104,26 +121,18 @@ class VsaVolumesTestCase(test.TestCase):
                             self.volume_api.delete,
                             self.context, volume_ref['id'])
 
-        self.volume_api.update(self.context,
-                            volume_ref['id'], {'status': 'error'})
-        self.volume_api.delete(self.context, volume_ref['id'])
-
     def test_vsa_volume_delete_vsa_with_volumes(self):
         """ Check volume deleton in different states. """
 
-        vols1 = self.volume_api.get_all_by_vsa(self.context,
-                                                self.vsa_id, "from")
+        vols1 = self._get_all_volumes_by_vsa()
         for i in range(3):
-            volume_param = _default_volume_param()
-            volume_param['from_vsa_id'] = self.vsa_id
+            volume_param = self._default_volume_param()
             volume_ref = self.volume_api.create(self.context, **volume_param)
 
-        vols2 = self.volume_api.get_all_by_vsa(self.context,
-                                                self.vsa_id, "from")
+        vols2 = self._get_all_volumes_by_vsa()
         self.assertEqual(len(vols1) + 3, len(vols2))
 
         self.vsa_api.delete(self.context, self.vsa_id)
 
-        vols3 = self.volume_api.get_all_by_vsa(self.context,
-                                                self.vsa_id, "from")
+        vols3 = self._get_all_volumes_by_vsa()
         self.assertEqual(len(vols1), len(vols3))

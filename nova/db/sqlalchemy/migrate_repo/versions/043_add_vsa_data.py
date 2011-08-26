@@ -22,19 +22,7 @@ from nova import log as logging
 
 meta = MetaData()
 
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of tables .
 #
-
-volumes = Table('volumes', meta,
-       Column('id', Integer(),  primary_key=True, nullable=False),
-       )
-
-to_vsa_id = Column('to_vsa_id', Integer(), nullable=True)
-from_vsa_id = Column('from_vsa_id', Integer(), nullable=True)
-drive_type_id = Column('drive_type_id', Integer(), nullable=True)
-
-
 # New Tables
 #
 
@@ -67,67 +55,21 @@ virtual_storage_arrays = Table('virtual_storage_arrays', meta,
                      unicode_error=None, _warn_on_bytestring=False)),
        )
 
-drive_types = Table('drive_types', meta,
-       Column('created_at', DateTime(timezone=False)),
-       Column('updated_at', DateTime(timezone=False)),
-       Column('deleted_at', DateTime(timezone=False)),
-       Column('deleted', Boolean(create_constraint=True, name=None)),
-       Column('id', Integer(), primary_key=True, nullable=False),
-       Column('name',
-              String(length=255, convert_unicode=False, assert_unicode=None,
-                     unicode_error=None, _warn_on_bytestring=False),
-              unique=True),
-       Column('type',
-              String(length=255, convert_unicode=False, assert_unicode=None,
-                     unicode_error=None, _warn_on_bytestring=False)),
-       Column('size_gb', Integer(), nullable=False),
-       Column('rpm',
-              String(length=255, convert_unicode=False, assert_unicode=None,
-                     unicode_error=None, _warn_on_bytestring=False)),
-       Column('capabilities',
-              String(length=255, convert_unicode=False, assert_unicode=None,
-                     unicode_error=None, _warn_on_bytestring=False)),
-       Column('visible', Boolean(create_constraint=True, name=None)),
-       )
-
-new_tables = (virtual_storage_arrays, drive_types)
-
-#
-# Tables to alter
-#
-
 
 def upgrade(migrate_engine):
-
-    from nova import context
-    from nova import db
-    from nova import flags
-
-    FLAGS = flags.FLAGS
-
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
 
-    for table in new_tables:
-        try:
-            table.create()
-        except Exception:
-            logging.info(repr(table))
-            logging.exception('Exception while creating table')
-            raise
-
-    volumes.create_column(to_vsa_id)
-    volumes.create_column(from_vsa_id)
-    volumes.create_column(drive_type_id)
+    try:
+        virtual_storage_arrays.create()
+    except Exception:
+        logging.info(repr(table))
+        logging.exception('Exception while creating table')
+        raise
 
 
 def downgrade(migrate_engine):
     meta.bind = migrate_engine
 
-    volumes.drop_column(to_vsa_id)
-    volumes.drop_column(from_vsa_id)
-    volumes.drop_column(drive_type_id)
-
-    for table in new_tables:
-        table.drop()
+    virtual_storage_arrays.drop()

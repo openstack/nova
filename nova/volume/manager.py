@@ -45,11 +45,12 @@ intact.
 
 from nova import context
 from nova import exception
-from nova import rpc
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import rpc
 from nova import utils
+from nova.volume import volume_types
 
 
 LOG = logging.getLogger('nova.volume.manager')
@@ -144,13 +145,23 @@ class VolumeManager(manager.SchedulerDependentManager):
         return volume_id
 
     def _notify_vsa(self, context, volume_ref, status):
-        if volume_ref['to_vsa_id'] is not None:
-            rpc.cast(context,
-                     FLAGS.vsa_topic,
-                     {"method": "vsa_volume_created",
-                      "args": {"vol_id": volume_ref['id'],
-                               "vsa_id": volume_ref['to_vsa_id'],
-                               "status": status}})
+        if volume_ref['volume_type_id'] is None:
+            return
+
+        if volume_types.is_vsa_drive(volume_ref['volume_type_id']):
+            vsa_id = None
+            for i in volume_ref.get('volume_metadata'):
+                if i['key'] == 'to_vsa_id':
+                    vsa_id = int(i['value'])
+                    break
+
+            if vsa_id:
+                rpc.cast(context,
+                         FLAGS.vsa_topic,
+                         {"method": "vsa_volume_created",
+                          "args": {"vol_id": volume_ref['id'],
+                                   "vsa_id": vsa_id,
+                                   "status": status}})
 
     def delete_volume(self, context, volume_id):
         """Deletes and unexports volume."""

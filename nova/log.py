@@ -32,6 +32,7 @@ import json
 import logging
 import logging.handlers
 import os
+import stat
 import sys
 import traceback
 
@@ -258,7 +259,6 @@ class NovaRootLogger(NovaLogger):
                 self.addHandler(self.filelog)
                 self.logpath = logpath
 
-                import stat
                 st = os.stat(self.logpath)
                 if st.st_mode != (stat.S_IFREG | FLAGS.logfile_mode):
                     os.chmod(self.logpath, FLAGS.logfile_mode)

@@ -365,10 +365,6 @@ class VolumeTypeExtraSpecsNotFound(NotFound):
                 "key %(extra_specs_key)s.")
 
 
-class VolumeNotFoundForVsa(VolumeNotFound):
-    message = _("Volume not found for vsa %(vsa_id)s.")
-
-
 class SnapshotNotFound(NotFound):
     message = _("Snapshot %(snapshot_id)s could not be found.")
 
@@ -797,14 +793,6 @@ class VirtualStorageArrayNotFound(NotFound):
 
 class VirtualStorageArrayNotFoundByName(NotFound):
     message = _("Virtual Storage Array %(name)s could not be found.")
-
-
-class VirtualDiskTypeNotFound(NotFound):
-    message = _("Drive Type %(id)d could not be found.")
-
-
-class VirtualDiskTypeNotFoundByName(NotFound):
-    message = _("Drive Type %(name)s could not be found.")
 
 
 class CannotResizeToSameSize(NovaException):

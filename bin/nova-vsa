@@ -4,6 +4,7 @@
 # Copyright (c) 2011 Zadara Storage Inc.
 # Copyright (c) 2011 OpenStack LLC.
 #
+#
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -17,6 +18,10 @@
 #    under the License.
 
 """Starter script for Nova VSA."""
+
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import sys
 
@@ -28,6 +33,7 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+
 from nova import flags
 from nova import log as logging
 from nova import service
@@ -37,5 +43,7 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
-    service.serve()
+    utils.monkey_patch()
+    server = service.Service.create(binary='nova-vsa')
+    service.serve(server)
     service.wait()

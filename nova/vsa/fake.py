@@ -16,7 +16,7 @@
 #    under the License.
 
 
-class FakeVcConnection:
+class FakeVcConnection(object):
 
     def init_host(self, host):
         pass

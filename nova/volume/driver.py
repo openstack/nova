@@ -28,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.volume import volume_types
 
 
 LOG = logging.getLogger("nova.volume.driver")
@@ -516,7 +517,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
 
         if not iscsi_properties['target_discovered']:
-            self._run_iscsiadm(iscsi_properties, '--op=new')
+            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
 
         if iscsi_properties.get('auth_method'):
             self._iscsiadm_update(iscsi_properties,
@@ -568,7 +569,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
         self._run_iscsiadm(iscsi_properties, "--logout")
-        self._run_iscsiadm(iscsi_properties, '--op=delete')
+        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
 
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""
@@ -813,9 +814,15 @@ class LoggingVolumeDriver(VolumeDriver):
 class ZadaraBEDriver(ISCSIDriver):
     """Performs actions to configure Zadara BE module."""
 
-    def _not_vsa_be_volume(self, volume):
+    def _is_vsa_volume(self, volume):
+        return volume_types.is_vsa_volume(volume['volume_type_id'])
+
+    def _is_vsa_drive(self, volume):
+        return volume_types.is_vsa_drive(volume['volume_type_id'])
+
+    def _not_vsa_volume_or_drive(self, volume):
         """Returns True if volume is not VSA BE volume."""
-        if volume['to_vsa_id'] is None:
+        if not volume_types.is_vsa_object(volume['volume_type_id']):
             LOG.debug(_("\tVolume %s is NOT VSA volume"), volume['name'])
             return True
         else:
@@ -828,8 +835,13 @@ class ZadaraBEDriver(ISCSIDriver):
     """ Volume Driver methods """
     def create_volume(self, volume):
         """Creates BE volume."""
-        if self._not_vsa_be_volume(volume):
+        if self._not_vsa_volume_or_drive(volume):
             return super(ZadaraBEDriver, self).create_volume(volume)
+
+        if self._is_vsa_volume(volume):
+            LOG.debug(_("\tFE VSA Volume %s creation - do nothing"),
+                        volume['name'])
+            return
 
         if int(volume['size']) == 0:
             sizestr = '0'   # indicates full-partition
@@ -838,9 +850,16 @@ class ZadaraBEDriver(ISCSIDriver):
 
         # Set the qos-str to default type sas
         qosstr = 'SAS_1000'
-        drive_type = volume.get('drive_type')
-        if drive_type is not None:
-            qosstr = drive_type['type'] + ("_%s" % drive_type['size_gb'])
+        LOG.debug(_("\tvolume_type_id=%s"), volume['volume_type_id'])
+
+        volume_type = volume_types.get_volume_type(None,
+                                            volume['volume_type_id'])
+
+        LOG.debug(_("\tvolume_type=%s"), volume_type)
+
+        if volume_type is not None:
+            qosstr = volume_type['extra_specs']['drive_type'] + \
+                     ("_%s" % volume_type['extra_specs']['drive_size'])
 
         try:
             self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
@@ -858,8 +877,13 @@ class ZadaraBEDriver(ISCSIDriver):
 
     def delete_volume(self, volume):
         """Deletes BE volume."""
-        if self._not_vsa_be_volume(volume):
+        if self._not_vsa_volume_or_drive(volume):
             return super(ZadaraBEDriver, self).delete_volume(volume)
+
+        if self._is_vsa_volume(volume):
+            LOG.debug(_("\tFE VSA Volume %s deletion - do nothing"),
+                        volume['name'])
+            return
 
         try:
             self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
@@ -874,15 +898,25 @@ class ZadaraBEDriver(ISCSIDriver):
         LOG.debug(_("VSA BE delete_volume for %s suceeded"), volume['name'])
 
     def local_path(self, volume):
-        if self._not_vsa_be_volume(volume):
+        if self._not_vsa_volume_or_drive(volume):
             return super(ZadaraBEDriver, self).local_path(volume)
+
+        if self._is_vsa_volume(volume):
+            LOG.debug(_("\tFE VSA Volume %s local path call - call discover"),
+                        volume['name'])
+            return super(ZadaraBEDriver, self).discover_volume(None, volume)
 
         raise exception.Error(_("local_path not supported"))
 
     def ensure_export(self, context, volume):
         """ensure BE export for a volume"""
-        if self._not_vsa_be_volume(volume):
+        if self._not_vsa_volume_or_drive(volume):
             return super(ZadaraBEDriver, self).ensure_export(context, volume)
+
+        if self._is_vsa_volume(volume):
+            LOG.debug(_("\tFE VSA Volume %s ensure export - do nothing"),
+                        volume['name'])
+            return
 
         try:
             iscsi_target = self.db.volume_get_iscsi_target_num(context,
@@ -900,8 +934,13 @@ class ZadaraBEDriver(ISCSIDriver):
 
     def create_export(self, context, volume):
         """create BE export for a volume"""
-        if self._not_vsa_be_volume(volume):
+        if self._not_vsa_volume_or_drive(volume):
             return super(ZadaraBEDriver, self).create_export(context, volume)
+
+        if self._is_vsa_volume(volume):
+            LOG.debug(_("\tFE VSA Volume %s create export - do nothing"),
+                        volume['name'])
+            return
 
         self._ensure_iscsi_targets(context, volume['host'])
         iscsi_target = self.db.volume_allocate_iscsi_target(context,
@@ -915,8 +954,13 @@ class ZadaraBEDriver(ISCSIDriver):
 
     def remove_export(self, context, volume):
         """Removes BE export for a volume."""
-        if self._not_vsa_be_volume(volume):
+        if self._not_vsa_volume_or_drive(volume):
             return super(ZadaraBEDriver, self).remove_export(context, volume)
+
+        if self._is_vsa_volume(volume):
+            LOG.debug(_("\tFE VSA Volume %s remove export - do nothing"),
+                        volume['name'])
+            return
 
         try:
             iscsi_target = self.db.volume_get_iscsi_target_num(context,
@@ -939,14 +983,14 @@ class ZadaraBEDriver(ISCSIDriver):
 
     def create_snapshot(self, snapshot):
         """Nothing required for snapshot"""
-        if self._not_vsa_be_volume(volume):
+        if self._not_vsa_volume_or_drive(volume):
             return super(ZadaraBEDriver, self).create_snapshot(volume)
 
         pass
 
     def delete_snapshot(self, snapshot):
         """Nothing required to delete a snapshot"""
-        if self._not_vsa_be_volume(volume):
+        if self._not_vsa_volume_or_drive(volume):
             return super(ZadaraBEDriver, self).delete_snapshot(volume)
 
         pass
