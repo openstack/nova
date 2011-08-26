@@ -23,10 +23,18 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('rpc_backend',
-                    'nova.rpc.amqp',
-                    "The messaging module to use, defaults to AMQP.")
+                    'carrot',
+                    "The messaging module to use, defaults to carrot.")
 
-RPCIMPL = import_object(FLAGS.rpc_backend)
+impl_table = {'kombu': 'nova.rpc.impl_kombu',
+                'amqp': 'nova.rpc.impl_kombu'}
+                'carrot': 'nova.rpc.impl_carrot'}
+
+
+# rpc_backend can be a short name like 'kombu', or it can be the full
+# module name
+RPCIMPL = import_object(impl_table.get(FLAGS.rpc_backend,
+        FLAGS.rpc_backend))
 
 
 def create_connection(new=True):
@@ -34,16 +42,7 @@ def create_connection(new=True):
 
 
 def create_consumer(conn, topic, proxy, fanout=False):
-    if fanout:
-        return RPCIMPL.FanoutAdapterConsumer(
-                connection=conn,
-                topic=topic,
-                proxy=proxy)
-    else:
-        return RPCIMPL.TopicAdapterConsumer(
-                connection=conn,
-                topic=topic,
-                proxy=proxy)
+    return RPCIMPL.create_consumer(conn, topic, proxy, fanout)
 
 
 def create_consumer_set(conn, consumers):

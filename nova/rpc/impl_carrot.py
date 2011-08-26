@@ -520,6 +520,20 @@ class MulticallWaiter(object):
             yield result
 
 
+def create_consumer(conn, topic, proxy, fanout=False):
+    """Create a consumer that calls methods in the proxy"""
+    if fanout:
+        return FanoutAdapterConsumer(
+                connection=conn,
+                topic=topic,
+                proxy=proxy)
+    else:
+        return TopicAdapterConsumer(
+                connection=conn,
+                topic=topic,
+                proxy=proxy)
+
+
 def call(context, topic, msg):
     """Sends a message on a topic and wait for a response."""
     rv = multicall(context, topic, msg)
