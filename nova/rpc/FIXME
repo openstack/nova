@@ -1,0 +1,2 @@
+Move some code duplication between carrot/kombu into common.py
+The other FIXMEs in __init__.py and impl_kombu.py

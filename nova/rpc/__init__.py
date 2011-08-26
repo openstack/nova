@@ -27,7 +27,7 @@ flags.DEFINE_string('rpc_backend',
                     "The messaging module to use, defaults to carrot.")
 
 impl_table = {'kombu': 'nova.rpc.impl_kombu',
-                'amqp': 'nova.rpc.impl_kombu'}
+                'amqp': 'nova.rpc.impl_kombu',
                 'carrot': 'nova.rpc.impl_carrot'}
 
 
@@ -46,6 +46,7 @@ def create_consumer(conn, topic, proxy, fanout=False):
 
 
 def create_consumer_set(conn, consumers):
+    # FIXME(comstud): replace however necessary
     return RPCIMPL.ConsumerSet(connection=conn, consumer_list=consumers)
 
 
