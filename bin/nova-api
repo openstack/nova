@@ -19,12 +19,14 @@
 
 """Starter script for Nova API.
 
-Starts both the EC2 and OpenStack APIs in separate processes.
+Starts both the EC2 and OpenStack APIs in separate greenthreads.
 
 """
 
+import eventlet
+eventlet.monkey_patch()
+
 import os
-import signal
 import sys
 
 
@@ -33,32 +35,19 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(
 if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
     sys.path.insert(0, possible_topdir)
 
-import nova.service
-import nova.utils
 
 from nova import flags
-
-
-FLAGS = flags.FLAGS
-
-
-def main():
-    """Launch EC2 and OSAPI services."""
-    nova.utils.Bootstrapper.bootstrap_binary(sys.argv)
-
-    launcher = nova.service.Launcher()
-
-    for api in FLAGS.enabled_apis:
-        service = nova.service.WSGIService(api)
-        launcher.launch_service(service)
-
-    signal.signal(signal.SIGTERM, lambda *_: launcher.stop())
-
-    try:
-        launcher.wait()
-    except KeyboardInterrupt:
-        launcher.stop()
-
+from nova import log as logging
+from nova import service
+from nova import utils
 
 if __name__ == '__main__':
-    sys.exit(main())
+    utils.default_flagfile()
+    flags.FLAGS(sys.argv)
+    logging.setup()
+    utils.monkey_patch()
+    servers = []
+    for api in flags.FLAGS.enabled_apis:
+        servers.append(service.WSGIService(api))
+    service.serve(*servers)
+    service.wait()

@@ -31,9 +31,9 @@ This is the purpose of the Distributed Scheduler (DS). The DS utilizes the Capab
 
 So, how does this all work?
 
-This document will explain the strategy employed by the `ZoneAwareScheduler` and its derivations. You should read the :doc:`devguide/zones` documentation before reading this.
+This document will explain the strategy employed by the `BaseScheduler`, which is the base for all schedulers designed to work across zones, and its derivations. You should read the :doc:`devguide/zones` documentation before reading this.
 
-    .. image:: /images/zone_aware_scheduler.png 
+    .. image:: /images/base_scheduler.png 
 
 Costs & Weights
 ---------------
@@ -52,32 +52,32 @@ This Weight is computed for each Instance requested. If the customer asked for 1
 
     .. image:: /images/costs_weights.png 
     
-nova.scheduler.zone_aware_scheduler.ZoneAwareScheduler
+nova.scheduler.base_scheduler.BaseScheduler
 ------------------------------------------------------
-As we explained in the Zones documentation, each Scheduler has a `ZoneManager` object that collects "Capabilities" about child Zones and each of the services running in the current Zone. The `ZoneAwareScheduler` uses this information to make its decisions.
+As we explained in the Zones documentation, each Scheduler has a `ZoneManager` object that collects "Capabilities" about child Zones and each of the services running in the current Zone. The `BaseScheduler` uses this information to make its decisions.
 
 Here is how it works:
 
  1. The compute nodes are filtered and the nodes remaining are weighed.
- 2. Filtering the hosts is a simple matter of ensuring the compute node has ample resources (CPU, RAM, Disk, etc) to fulfil the request. 
+ 2. Filtering the hosts is a simple matter of ensuring the compute node has ample resources (CPU, RAM, Disk, etc) to fulfil the request.
  3. Weighing of the remaining compute nodes assigns a number based on their suitability for the request.
  4. The same request is sent to each child Zone and step #1 is done there too. The resulting weighted list is returned to the parent.
  5. The parent Zone sorts and aggregates all the weights and a final build plan is constructed.
  6. The build plan is executed upon. Concurrently, instance create requests are sent to each of the selected hosts, be they local or in a child zone. Child Zones may forward the requests to their child Zones as needed.
 
-    .. image:: /images/zone_aware_overview.png 
+    .. image:: /images/zone_overview.png 
 
-`ZoneAwareScheduler` by itself is not capable of handling all the provisioning itself. Derived classes are used to select which host filtering and weighing strategy will be used.
+`BaseScheduler` by itself is not capable of handling all the provisioning itself. You should also specify the filter classes and weighting classes to be used in determining which host is selected for new instance creation.
 
 Filtering and Weighing
 ----------------------
-The filtering (excluding compute nodes incapable of fulfilling the request) and weighing (computing the relative "fitness" of a compute node to fulfill the request) rules used are very subjective operations ... Service Providers will probably have a very different set of filtering and weighing rules than private cloud administrators. The filtering and weighing aspects of the `ZoneAwareScheduler` are flexible and extensible.
+The filtering (excluding compute nodes incapable of fulfilling the request) and weighing (computing the relative "fitness" of a compute node to fulfill the request) rules used are very subjective operations ... Service Providers will probably have a very different set of filtering and weighing rules than private cloud administrators. The filtering and weighing aspects of the `BaseScheduler` are flexible and extensible.
 
     .. image:: /images/filtering.png 
 
 Requesting a new instance
 -------------------------
-Prior to the `ZoneAwareScheduler`, to request a new instance, a call was made to `nova.compute.api.create()`. The type of instance created depended on the value of the `InstanceType` record being passed in. The `InstanceType` determined the amount of disk, CPU, RAM and network required for the instance. Administrators can add new `InstanceType` records to suit their needs. For more complicated instance requests we need to go beyond the default fields in the `InstanceType` table.
+Prior to the `BaseScheduler`, to request a new instance, a call was made to `nova.compute.api.create()`. The type of instance created depended on the value of the `InstanceType` record being passed in. The `InstanceType` determined the amount of disk, CPU, RAM and network required for the instance. Administrators can add new `InstanceType` records to suit their needs. For more complicated instance requests we need to go beyond the default fields in the `InstanceType` table.
 
 `nova.compute.api.create()` performed the following actions:
  1. it validated all the fields passed into it.
@@ -89,11 +89,11 @@ Prior to the `ZoneAwareScheduler`, to request a new instance, a call was made to
 
     .. image:: /images/nova.compute.api.create.png 
 
-Generally, the standard schedulers (like `ChanceScheduler` and `AvailabilityZoneScheduler`) only operate in the current Zone. They have no concept of child Zones.
+Generally, the simplest schedulers (like `ChanceScheduler` and `AvailabilityZoneScheduler`) only operate in the current Zone. They have no concept of child Zones.
 
 The problem with this approach is each request is scattered amongst each of the schedulers. If we are asking for 1000 instances, each scheduler gets the requests one-at-a-time. There is no possability of optimizing the requests to take into account all 1000 instances as a group. We call this Single-Shot vs. All-at-Once. 
 
-For the `ZoneAwareScheduler` we need to use the All-at-Once approach. We need to consider all the hosts across all the Zones before deciding where they should reside. In order to handle this we have a new method `nova.compute.api.create_all_at_once()`. This method does things a little differently:
+For the `BaseScheduler` we need to use the All-at-Once approach. We need to consider all the hosts across all the Zones before deciding where they should reside. In order to handle this we have a new method `nova.compute.api.create_all_at_once()`. This method does things a little differently:
  1. it validates all the fields passed into it.
  2. it creates a single `reservation_id` for all of instances created. This is a UUID.
  3. it creates a single `run_instance` request in the scheduler queue
@@ -109,20 +109,18 @@ For the `ZoneAwareScheduler` we need to use the All-at-Once approach. We need to
 
 The Catch
 ---------
-This all seems pretty straightforward but, like most things, there's a catch. Zones are expected to operate in complete isolation from each other. Each Zone has its own AMQP service, database and set of Nova services. But, for security reasons Zones should never leak information about the architectural layout internally. That means Zones cannot leak information about hostnames or service IP addresses outside of its world.
+This all seems pretty straightforward but, like most things, there's a catch. Zones are expected to operate in complete isolation from each other. Each Zone has its own AMQP service, database and set of Nova services. But for security reasons Zones should never leak information about the architectural layout internally. That means Zones cannot leak information about hostnames or service IP addresses outside of its world.
 
-When `POST /zones/select` is called to estimate which compute node to use, time passes until the `POST /servers` call is issued. If we only passed the weight back from the `select` we would have to re-compute the appropriate compute node for the create command ... and we could end up with a different host. Somehow we need to remember the results of our computations and pass them outside of the Zone. Now, we could store this information in the local database and return a reference to it, but remember that the vast majority of weights are going to be ignored. Storing them in the database would result in a flood of disk access and then we have to clean up all these entries periodically. Recall that there are going to be many many `select` calls issued to child Zones asking for estimates. 
+When `POST /zones/select` is called to estimate which compute node to use, time passes until the `POST /servers` call is issued. If we only passed the weight back from the `select` we would have to re-compute the appropriate compute node for the create command ... and we could end up with a different host. Somehow we need to remember the results of our computations and pass them outside of the Zone. Now, we could store this information in the local database and return a reference to it, but remember that the vast majority of weights are going to be ignored. Storing them in the database would result in a flood of disk access and then we have to clean up all these entries periodically. Recall that there are going to be many, many `select` calls issued to child Zones asking for estimates. 
 
-Instead, we take a rather innovative approach to the problem. We encrypt all the child zone internal details and pass them back the to parent Zone. If the parent zone decides to use a child Zone for the instance it simply passes the encrypted data back to the child during the `POST /servers` call as an extra parameter. The child Zone can then decrypt the hint and go directly to the Compute node previously selected. If the estimate isn't used, it is simply discarded by the parent. It's for this reason that it is so important that each Zone defines a unique encryption key via `--build_plan_encryption_key`
+Instead, we take a rather innovative approach to the problem. We encrypt all the child Zone internal details and pass them back the to parent Zone. In the case of a nested Zone layout, each nesting layer will encrypt the data from all of its children and pass that to its parent Zone. In the case of nested child Zones, each Zone re-encrypts the weighted list results and passes those values to the parent. Every Zone interface adds another layer of encryption, using its unique key.
 
-In the case of nested child Zones, each Zone re-encrypts the weighted list results and passes those values to the parent.
+Once a host is selected, it will either be local to the Zone that received the initial API call, or one of its child Zones. In the latter case, the parent Zone it simply passes the encrypted data for the selected host back to each of its child Zones during the `POST /servers` call as an extra parameter. If the child Zone can decrypt the data, then it is the correct Zone for the selected host; all other Zones will not be able to decrypt the data and will discard the request. This is why it is critical that each Zone has a unique value specified in its config in `--build_plan_encryption_key`: it controls the ability to locate the selected host without having to hard-code path information or other identifying information. The child Zone can then act on the decrypted data and either go directly to the Compute node previously selected if it is located in that Zone, or repeat the process with its child Zones until the target Zone containing the selected host is reached.
 
-Throughout the `nova.api.openstack.servers`, `nova.api.openstack.zones`, `nova.compute.api.create*` and `nova.scheduler.zone_aware_scheduler` code you'll see references to `blob` and `child_blob`. These are the encrypted hints about which Compute node to use.
+Throughout the `nova.api.openstack.servers`, `nova.api.openstack.zones`, `nova.compute.api.create*` and `nova.scheduler.base_scheduler` code you'll see references to `blob` and `child_blob`. These are the encrypted hints about which Compute node to use.
 
 Reservation IDs
 ---------------
-
-NOTE: The features described in this section are related to the up-coming 'merge-4' branch. 
 
 The OpenStack API allows a user to list all the instances they own via the `GET /servers/` command or the details on a particular instance via `GET /servers/###`. This mechanism is usually sufficient since OS API only allows for creating one instance at a time, unlike the EC2 API which allows you to specify a quantity of instances to be created.
 
@@ -137,23 +135,23 @@ Finally, we need to give the user a way to get information on each of the instan
 Host Filter
 -----------
 
-As we mentioned earlier, filtering hosts is a very deployment-specific process. Service Providers may have a different set of criteria for filtering Compute nodes than a University. To faciliate this the `nova.scheduler.host_filter` module supports a variety of filtering strategies as well as an easy means for plugging in your own algorithms.
+As we mentioned earlier, filtering hosts is a very deployment-specific process. Service Providers may have a different set of criteria for filtering Compute nodes than a University. To faciliate this the `nova.scheduler.filters` module supports a variety of filtering strategies as well as an easy means for plugging in your own algorithms.
 
-The filter used is determined by the `--default_host_filter` flag, which points to a Python Class. By default this flag is set to `nova.scheduler.host_filter.AllHostsFilter` which simply returns all available hosts. But there are others:
+The filter used is determined by the `--default_host_filters` flag, which points to a Python Class. By default this flag is set to `[AllHostsFilter]` which simply returns all available hosts. But there are others:
 
- * `nova.scheduler.host_filter.InstanceTypeFilter` provides host filtering based on the memory and disk size specified in the `InstanceType` record passed into `run_instance`. 
+ * `InstanceTypeFilter` provides host filtering based on the memory and disk size specified in the `InstanceType` record passed into `run_instance`. 
 
- * `nova.scheduler.host_filter.JSONFilter` filters hosts based on simple JSON expression grammar. Using a LISP-like JSON structure the caller can request instances based on criteria well beyond what `InstanceType` specifies. See `nova.tests.test_host_filter` for examples.
+ * `JSONFilter` filters hosts based on simple JSON expression grammar. Using a LISP-like JSON structure the caller can request instances based on criteria well beyond what `InstanceType` specifies. See `nova.tests.test_host_filter` for examples.
 
-To create your own `HostFilter` the user simply has to derive from `nova.scheduler.host_filter.HostFilter` and implement two methods: `instance_type_to_filter` and `filter_hosts`. Since Nova is currently dependent on the `InstanceType` structure, the `instance_type_to_filter` method should take an `InstanceType` and turn it into an internal data structure usable by your filter. This is for backward compatibility with existing OpenStack and EC2 API calls. If you decide to create your own call for creating instances not based on `Flavors` or `InstanceTypes` you can ignore this method. The real work is done in `filter_hosts` which must return a list of host tuples for each appropriate host. The set of all available hosts is in the `ZoneManager` object passed into the call as well as the filter query. The host tuple contains (`<hostname>`, `<additional data>`) where `<additional data>` is whatever you want it to be.
+To create your own `HostFilter` the user simply has to derive from `nova.scheduler.filters.AbstractHostFilter` and implement two methods: `instance_type_to_filter` and `filter_hosts`. Since Nova is currently dependent on the `InstanceType` structure, the `instance_type_to_filter` method should take an `InstanceType` and turn it into an internal data structure usable by your filter. This is for backward compatibility with existing OpenStack and EC2 API calls. If you decide to create your own call for creating instances not based on `Flavors` or `InstanceTypes` you can ignore this method. The real work is done in `filter_hosts` which must return a list of host tuples for each appropriate host. The set of available hosts is in the `host_list` parameter passed into the call as well as the filter query. The host tuple contains (`<hostname>`, `<additional data>`) where `<additional data>` is whatever you want it to be. By default, it is the capabilities reported by the host.
      
 Cost Scheduler Weighing
 -----------------------
-Every `ZoneAwareScheduler` derivation must also override the `weigh_hosts` method. This takes the list of filtered hosts (generated by the `filter_hosts` method) and returns a list of weight dicts. The weight dicts must contain two keys: `weight` and `hostname` where `weight` is simply an integer (lower is better) and `hostname` is the name of the host. The list does not need to be sorted, this will be done by the `ZoneAwareScheduler` base class when all the results have been assembled. 
+Every `BaseScheduler` subclass should also override the `weigh_hosts` method. This takes the list of filtered hosts (generated by the `filter_hosts` method) and returns a list of weight dicts. The weight dicts must contain two keys: `weight` and `hostname` where `weight` is simply an integer (lower is better) and `hostname` is the name of the host. The list does not need to be sorted, this will be done by the `BaseScheduler` when all the results have been assembled. 
 
-Simple Zone Aware Scheduling
+Simple Scheduling Across Zones
 ----------------------------
-The easiest way to get started with the `ZoneAwareScheduler` is to use the `nova.scheduler.host_filter.HostFilterScheduler`. This scheduler uses the default Host Filter and the `weight_hosts` method simply returns a weight of 1 for all hosts. But, from this, you can see calls being routed from Zone to Zone and follow the flow of things. 
+The `BaseScheduler` uses the default `filter_hosts` method, which will use either any filters specified in the request's `filter` parameter, or, if that is not specified, the filters specified in the `FLAGS.default_host_filters` setting. Its `weight_hosts` method simply returns a weight of 1 for all hosts. But, from this, you can see calls being routed from Zone to Zone and follow the flow of things. 
 
 The `--scheduler_driver` flag is how you specify the scheduler class name.
 
@@ -168,14 +166,14 @@ All this Zone and Distributed Scheduler stuff can seem a little daunting to conf
   --enable_zone_routing=true
   --zone_name=zone1
   --build_plan_encryption_key=c286696d887c9aa0611bbb3e2025a45b
-  --scheduler_driver=nova.scheduler.host_filter.HostFilterScheduler
-  --default_host_filter=nova.scheduler.host_filter.AllHostsFilter
+  --scheduler_driver=nova.scheduler.base_scheduler.BaseScheduler
+  --default_host_filter=nova.scheduler.filters.AllHostsFilter
 
 `--allow_admin_api` must be set for OS API to enable the new `/zones/*` commands.
 `--enable_zone_routing` must be set for OS API commands such as `create()`, `pause()` and `delete()` to get routed from Zone to Zone when looking for instances. 
 `--zone_name` is only required in child Zones. The default Zone name is `nova`, but you may want to name your child Zones something useful. Duplicate Zone names are not an issue.
 `build_plan_encryption_key` is the SHA-256 key for encrypting/decrypting the Host information when it leaves a Zone. Be sure to change this key for each Zone you create. Do not duplicate keys.
-`scheduler_driver` is the real workhorse of the operation. For Distributed Scheduler, you need to specify a class derived from `nova.scheduler.zone_aware_scheduler.ZoneAwareScheduler`.
+`scheduler_driver` is the real workhorse of the operation. For Distributed Scheduler, you need to specify a class derived from `nova.scheduler.base_scheduler.BaseScheduler`.
 `default_host_filter` is the host filter to be used for filtering candidate Compute nodes. 
 
 Some optional flags which are handy for debugging are:

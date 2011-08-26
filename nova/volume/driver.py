@@ -495,7 +495,7 @@ class ISCSIDriver(VolumeDriver):
         (out, err) = self._execute('iscsiadm', '-m', 'node', '-T',
                                    iscsi_properties['target_iqn'],
                                    '-p', iscsi_properties['target_portal'],
-                                   iscsi_command, run_as_root=True)
+                                   *iscsi_command, run_as_root=True)
         LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
                   (iscsi_command, out, err))
         return (out, err)
@@ -523,7 +523,7 @@ class ISCSIDriver(VolumeDriver):
                                   "node.session.auth.password",
                                   iscsi_properties['auth_password'])
 
-        self._run_iscsiadm(iscsi_properties, "--login")
+        self._run_iscsiadm(iscsi_properties, ("--login", ))
 
         self._iscsiadm_update(iscsi_properties, "node.startup", "automatic")
 
@@ -544,7 +544,7 @@ class ISCSIDriver(VolumeDriver):
                      locals())
 
             # The rescan isn't documented as being necessary(?), but it helps
-            self._run_iscsiadm(iscsi_properties, "--rescan")
+            self._run_iscsiadm(iscsi_properties, ("--rescan", ))
 
             tries = tries + 1
             if not os.path.exists(mount_device):
@@ -561,7 +561,7 @@ class ISCSIDriver(VolumeDriver):
         """Undiscover volume on a remote host."""
         iscsi_properties = self._get_iscsi_properties(volume)
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
-        self._run_iscsiadm(iscsi_properties, "--logout")
+        self._run_iscsiadm(iscsi_properties, ("--logout", ))
         self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
 
     def check_for_export(self, context, volume_id):

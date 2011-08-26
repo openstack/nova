@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010-2011 OpenStack LLC.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -130,11 +131,12 @@ class ViewBuilderV10(ViewBuilder):
 class ViewBuilderV11(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
     def __init__(self, addresses_builder, flavor_builder, image_builder,
-                 base_url):
+                 base_url, project_id=""):
         ViewBuilder.__init__(self, addresses_builder)
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
         self.base_url = base_url
+        self.project_id = project_id
 
     def _build_detail(self, inst):
         response = super(ViewBuilderV11, self)._build_detail(inst)
@@ -145,6 +147,10 @@ class ViewBuilderV11(ViewBuilder):
                 response['server']['progress'] = 100
             elif response['server']['status'] == "BUILD":
                 response['server']['progress'] = 0
+
+        response['server']['accessIPv4'] = inst.get('access_ip_v4') or ""
+        response['server']['accessIPv6'] = inst.get('access_ip_v6') or ""
+
         return response
 
     def _build_image(self, response, inst):
@@ -184,6 +190,7 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['uuid'] = inst['uuid']
+        self._build_config_drive(response, inst)
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
@@ -202,11 +209,15 @@ class ViewBuilderV11(ViewBuilder):
 
         response["links"] = links
 
+    def _build_config_drive(self, response, inst):
+        response['config_drive'] = inst.get('config_drive')
+
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""
-        return os.path.join(self.base_url, "servers", str(server_id))
+        return os.path.join(self.base_url, self.project_id,
+                            "servers", str(server_id))
 
     def generate_bookmark(self, server_id):
         """Create an url that refers to a specific flavor id."""
         return os.path.join(common.remove_version_from_href(self.base_url),
-            "servers", str(server_id))
+            self.project_id, "servers", str(server_id))

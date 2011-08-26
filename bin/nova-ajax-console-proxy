@@ -24,7 +24,6 @@ from eventlet import greenthread
 from eventlet.green import urllib2
 
 import exceptions
-import gettext
 import os
 import sys
 import time
@@ -38,11 +37,11 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
 from nova import rpc
+from nova import service
 from nova import utils
 from nova import wsgi
 
@@ -141,5 +140,5 @@ if __name__ == '__main__':
     acp = AjaxConsoleProxy()
     acp.register_listeners()
     server = wsgi.Server("AJAX Console Proxy", acp, port=acp_port)
-    server.start()
-    server.wait()
+    service.serve(server)
+    service.wait()

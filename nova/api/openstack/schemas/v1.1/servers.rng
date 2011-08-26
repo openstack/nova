@@ -1,0 +1,6 @@
+<element name="servers" xmlns="http://relaxng.org/ns/structure/1.0"
+         ns="http://docs.openstack.org/compute/api/v1.1">
+  <zeroOrMore>
+    <externalRef href="server.rng"/>
+  </zeroOrMore>
+</element>

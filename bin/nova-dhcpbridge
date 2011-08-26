@@ -52,7 +52,7 @@ flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
 LOG = logging.getLogger('nova.dhcpbridge')
 
 
-def add_lease(mac, ip_address, _interface):
+def add_lease(mac, ip_address):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
         LOG.debug(_("leasing ip"))
@@ -66,13 +66,13 @@ def add_lease(mac, ip_address, _interface):
                   "args": {"address": ip_address}})
 
 
-def old_lease(mac, ip_address, interface):
+def old_lease(mac, ip_address):
     """Update just as add lease."""
     LOG.debug(_("Adopted old lease or got a change of mac"))
-    add_lease(mac, ip_address, interface)
+    add_lease(mac, ip_address)
 
 
-def del_lease(mac, ip_address, _interface):
+def del_lease(mac, ip_address):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
         LOG.debug(_("releasing ip"))
@@ -99,8 +99,6 @@ def main():
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
     logging.setup()
-    # check ENV first so we don't break any older deploys
-    network_id = int(os.environ.get('NETWORK_ID'))
 
     if int(os.environ.get('TESTING', '0')):
         from nova.tests import fake_flags
@@ -115,11 +113,19 @@ def main():
     if action in ['add', 'del', 'old']:
         mac = argv[2]
         ip = argv[3]
-        msg = _("Called %(action)s for mac %(mac)s with ip %(ip)s"
-                " on interface %(interface)s") % locals()
+        msg = _("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'") % \
+                    {"action": action,
+                     "mac": mac,
+                     "ip": ip}
         LOG.debug(msg)
-        globals()[action + '_lease'](mac, ip, interface)
+        globals()[action + '_lease'](mac, ip)
     else:
+        try:
+            network_id = int(os.environ.get('NETWORK_ID'))
+        except TypeError:
+            LOG.error(_("Environment variable 'NETWORK_ID' must be set."))
+            sys.exit(1)
+
         print init_leases(network_id)
 
 if __name__ == "__main__":

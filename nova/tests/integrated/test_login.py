@@ -15,11 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
 
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
-from nova.tests.integrated.api import client
 
 
 LOG = logging.getLogger('nova.tests.integrated')
@@ -31,34 +29,3 @@ class LoginTest(integrated_helpers._IntegratedTestBase):
         flavors = self.api.get_flavors()
         for flavor in flavors:
             LOG.debug(_("flavor: %s") % flavor)
-
-    def test_bad_login_password(self):
-        """Test that I get a 401 with a bad username."""
-        bad_credentials_api = client.TestOpenStackClient(self.user.name,
-                                                         "notso_password",
-                                                         self.user.auth_url)
-
-        self.assertRaises(client.OpenStackApiAuthenticationException,
-                          bad_credentials_api.get_flavors)
-
-    def test_bad_login_username(self):
-        """Test that I get a 401 with a bad password."""
-        bad_credentials_api = client.TestOpenStackClient("notso_username",
-                                                         self.user.secret,
-                                                         self.user.auth_url)
-
-        self.assertRaises(client.OpenStackApiAuthenticationException,
-                          bad_credentials_api.get_flavors)
-
-    def test_bad_login_both_bad(self):
-        """Test that I get a 401 with both bad username and bad password."""
-        bad_credentials_api = client.TestOpenStackClient("notso_username",
-                                                         "notso_password",
-                                                         self.user.auth_url)
-
-        self.assertRaises(client.OpenStackApiAuthenticationException,
-                          bad_credentials_api.get_flavors)
-
-
-if __name__ == "__main__":
-    unittest.main()
