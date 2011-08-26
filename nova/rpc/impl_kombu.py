@@ -289,7 +289,7 @@ class Connection(object):
         self.queues = []
         self.max_retries = FLAGS.rabbit_max_retries
         self.interval_start = FLAGS.rabbit_retry_interval
-        self.interval_stepping = 0
+        self.interval_stepping = FLAGS.rabbit_interval_stepping
         self.interval_max = FLAGS.rabbit_retry_interval
 
         self.params = dict(hostname=FLAGS.rabbit_host,
