@@ -524,7 +524,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: `nova.RequestContext` object
         :param instance_id: Instance identifier (integer)
-        :param image_ref: Image identifier (href or integer)
+        :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
         """
         context = context.elevated()
@@ -549,6 +549,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         image_ref = kwargs.get('image_ref')
         instance_ref.image_ref = image_ref
+
         instance_ref.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
                                                               instance_ref)

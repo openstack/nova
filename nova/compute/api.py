@@ -1061,12 +1061,12 @@ class API(base.Base):
                     instance_id,
                     metadata=metadata,
                     display_name=name,
+                    image_ref=image_href,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.REBUILDING)
 
         rebuild_params = {
             "new_pass": admin_password,
-            "image_ref": image_href,
             "injected_files": files_to_inject,
         }
 
