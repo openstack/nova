@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-02-22 19:34+0000\n"
-"Last-Translator: Armando Migliaccio <Unknown>\n"
+"PO-Revision-Date: 2011-08-21 22:50+0000\n"
+"Last-Translator: Guido Davide Dall'Olio <Unknown>\n"
 "Language-Team: Italian <it@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-07-23 05:12+0000\n"
-"X-Generator: Launchpad (build 13405)\n"
+"X-Launchpad-Export-Date: 2011-08-22 04:48+0000\n"
+"X-Generator: Launchpad (build 13697)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
@@ -449,24 +449,24 @@ msgstr ""
 #: ../nova/scheduler/simple.py:53
 #, python-format
 msgid "Host %s is not alive"
-msgstr ""
+msgstr "L'host %s non è attivo"
 
 #: ../nova/scheduler/simple.py:65
 msgid "All hosts have too many cores"
-msgstr ""
+msgstr "Gli host hanno troppi core"
 
 #: ../nova/scheduler/simple.py:87
 #, python-format
 msgid "Host %s not available"
-msgstr ""
+msgstr "Host %s non disponibile"
 
 #: ../nova/scheduler/simple.py:99
 msgid "All hosts have too many gigabytes"
-msgstr ""
+msgstr "Gli Host hanno troppy gigabyte"
 
 #: ../nova/scheduler/simple.py:119
 msgid "All hosts have too many networks"
-msgstr ""
+msgstr "Gli host hanno troppe reti"
 
 #: ../nova/volume/manager.py:85
 #, python-format
@@ -496,7 +496,7 @@ msgstr ""
 #: ../nova/volume/manager.py:123
 #, python-format
 msgid "volume %s: created successfully"
-msgstr ""
+msgstr "volume %s: creato con successo"
 
 #: ../nova/volume/manager.py:131
 msgid "Volume is still attached"
@@ -514,12 +514,12 @@ msgstr ""
 #: ../nova/volume/manager.py:138
 #, python-format
 msgid "volume %s: deleting"
-msgstr ""
+msgstr "volume %s: rimuovendo"
 
 #: ../nova/volume/manager.py:147
 #, python-format
 msgid "volume %s: deleted successfully"
-msgstr ""
+msgstr "volume %s: rimosso con successo"
 
 #: ../nova/virt/xenapi/fake.py:74
 #, python-format
@@ -529,7 +529,7 @@ msgstr ""
 #: ../nova/virt/xenapi/fake.py:304 ../nova/virt/xenapi/fake.py:404
 #: ../nova/virt/xenapi/fake.py:422 ../nova/virt/xenapi/fake.py:478
 msgid "Raising NotImplemented"
-msgstr ""
+msgstr "Sollevando NotImplemented"
 
 #: ../nova/virt/xenapi/fake.py:306
 #, python-format
@@ -539,7 +539,7 @@ msgstr ""
 #: ../nova/virt/xenapi/fake.py:341
 #, python-format
 msgid "Calling %(localname)s %(impl)s"
-msgstr ""
+msgstr "Chiamando %(localname)s %(impl)s"
 
 #: ../nova/virt/xenapi/fake.py:346
 #, python-format
@@ -564,17 +564,17 @@ msgstr ""
 
 #: ../nova/virt/connection.py:73
 msgid "Failed to open connection to the hypervisor"
-msgstr ""
+msgstr "Fallita l'apertura della connessione verso l'hypervisor"
 
 #: ../nova/network/linux_net.py:187
 #, python-format
 msgid "Starting VLAN inteface %s"
-msgstr ""
+msgstr "Avviando l'interfaccia VLAN %s"
 
 #: ../nova/network/linux_net.py:208
 #, python-format
 msgid "Starting Bridge interface for %s"
-msgstr ""
+msgstr "Avviando l'interfaccia Bridge per %s"
 
 #. pylint: disable=W0703
 #: ../nova/network/linux_net.py:314
@@ -632,7 +632,7 @@ msgstr "Il risultato é %s"
 #: ../nova/utils.py:159
 #, python-format
 msgid "Running cmd (SSH): %s"
-msgstr ""
+msgstr "Eseguendo cmd (SSH): %s"
 
 #: ../nova/utils.py:217
 #, python-format
@@ -642,7 +642,7 @@ msgstr "debug in callback: %s"
 #: ../nova/utils.py:222
 #, python-format
 msgid "Running %s"
-msgstr ""
+msgstr "Eseguendo %s"
 
 #: ../nova/utils.py:262
 #, python-format
@@ -697,12 +697,12 @@ msgstr ""
 #: ../nova/virt/xenapi/vm_utils.py:135 ../nova/virt/hyperv.py:171
 #, python-format
 msgid "Created VM %s..."
-msgstr ""
+msgstr "Creata VM %s.."
 
 #: ../nova/virt/xenapi/vm_utils.py:138
 #, python-format
 msgid "Created VM %(instance_name)s as %(vm_ref)s."
-msgstr ""
+msgstr "Creata VM %(instance_name)s come %(vm_ref)s"
 
 #: ../nova/virt/xenapi/vm_utils.py:168
 #, python-format
@@ -771,7 +771,7 @@ msgstr ""
 #: ../nova/virt/xenapi/vm_utils.py:332
 #, python-format
 msgid "Glance image %s"
-msgstr ""
+msgstr "Immagine Glance %s"
 
 #. we need to invoke a plugin for copying VDI's
 #. content into proper path
@@ -783,7 +783,7 @@ msgstr ""
 #: ../nova/virt/xenapi/vm_utils.py:352
 #, python-format
 msgid "Kernel/Ramdisk VDI %s destroyed"
-msgstr ""
+msgstr "Kernel/Ramdisk VDI %s distrutti"
 
 #: ../nova/virt/xenapi/vm_utils.py:361
 #, python-format
@@ -793,7 +793,7 @@ msgstr ""
 #: ../nova/virt/xenapi/vm_utils.py:386 ../nova/virt/xenapi/vm_utils.py:402
 #, python-format
 msgid "Looking up vdi %s for PV kernel"
-msgstr ""
+msgstr "Cercando vdi %s per kernel PV"
 
 #: ../nova/virt/xenapi/vm_utils.py:397
 #, python-format
@@ -2802,37 +2802,24 @@ msgstr ""
 msgid "Removing user %(user)s from project %(project)s"
 msgstr ""
 
+#~ msgid "Full set of FLAGS:"
+#~ msgstr "Insieme di FLAGS:"
+
 #, python-format
-#~ msgid ""
-#~ "%s\n"
-#~ "Command: %s\n"
-#~ "Exit code: %s\n"
-#~ "Stdout: %r\n"
-#~ "Stderr: %r"
+#~ msgid "pidfile %s does not exist. Daemon not running?\n"
 #~ msgstr ""
-#~ "%s\n"
-#~ "Comando: %s\n"
-#~ "Exit code: %s\n"
-#~ "Stdout: %r\n"
-#~ "Stderr: %r"
+#~ "Il pidfile %s non esiste. Assicurarsi che il demone é in esecuzione.\n"
 
 #, python-format
-#~ msgid "(%s) publish (key: %s) %s"
-#~ msgstr "(%s) pubblica (chiave: %s) %s"
+#~ msgid "Starting %s"
+#~ msgstr "Avvio di %s"
 
 #, python-format
-#~ msgid "AMQP server on %s:%d is unreachable. Trying again in %d seconds."
-#~ msgstr ""
-#~ "Il server AMQP su %s:%d non é raggiungibile. Riprovare in %d secondi."
+#~ msgid "Serving %s"
+#~ msgstr "Servire %s"
 
-#, python-format
-#~ msgid "Binding %s to %s with key %s"
-#~ msgstr "Collegando %s a %s con la chiave %s"
+#~ msgid "Wrong number of arguments."
+#~ msgstr "Numero errato di argomenti"
 
-#, python-format
-#~ msgid "Starting %s node"
-#~ msgstr "Avviando il nodo %s"
-
-#, python-format
-#~ msgid "Data store %s is unreachable. Trying again in %d seconds."
-#~ msgstr "Datastore %s é irrangiungibile. Riprovare in %d seconds."
+#~ msgid "No such process"
+#~ msgstr "Nessun processo trovato"

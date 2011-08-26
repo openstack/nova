@@ -17,9 +17,11 @@
 
 from nova import flags
 from nova import utils
+from nova import log as logging
 from nova.api.openstack import common
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.api.openstack.views.addresses')
 
 
 class ViewBuilder(object):
@@ -48,7 +50,10 @@ class ViewBuilderV11(ViewBuilder):
     def build(self, interfaces):
         networks = {}
         for interface in interfaces:
-            network_label = interface['network']['label']
+            try:
+                network_label = self._extract_network_label(interface)
+            except TypeError:
+                continue
 
             if network_label not in networks:
                 networks[network_label] = []
@@ -64,15 +69,27 @@ class ViewBuilderV11(ViewBuilder):
 
         return networks
 
-    def build_network(self, interfaces, network_label):
+    def build_network(self, interfaces, requested_network):
         for interface in interfaces:
-            if interface['network']['label'] == network_label:
+            try:
+                network_label = self._extract_network_label(interface)
+            except TypeError:
+                continue
+
+            if network_label == requested_network:
                 ips = list(self._extract_ipv4_addresses(interface))
                 ipv6 = self._extract_ipv6_address(interface)
                 if ipv6 is not None:
                     ips.append(ipv6)
                 return {network_label: ips}
         return None
+
+    def _extract_network_label(self, interface):
+        try:
+            return interface['network']['label']
+        except (TypeError, KeyError) as exc:
+            LOG.exception(exc)
+            raise TypeError
 
     def _extract_ipv4_addresses(self, interface):
         for fixed_ip in interface['fixed_ips']:

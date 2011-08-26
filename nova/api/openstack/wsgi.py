@@ -486,6 +486,10 @@ class Resource(wsgi.Application):
             msg = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
+        project_id = args.pop("project_id", None)
+        if 'nova.context' in request.environ and project_id:
+            request.environ['nova.context'].project_id = project_id
+
         try:
             action_result = self.dispatch(request, action, args)
         except webob.exc.HTTPException as ex:
@@ -516,6 +520,6 @@ class Resource(wsgi.Application):
         controller_method = getattr(self.controller, action)
         try:
             return controller_method(req=request, **action_args)
-        except TypeError, exc:
-            LOG.debug(str(exc))
-            return webob.exc.HTTPBadRequest()
+        except TypeError as exc:
+            LOG.exception(exc)
+            return faults.Fault(webob.exc.HTTPBadRequest())

@@ -120,7 +120,7 @@ class FloatingIpTest(test.TestCase):
         self.assertTrue('floating_ip' in view)
 
     def test_floating_ips_list(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -135,7 +135,7 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_floating_ip_show(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips/1')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -144,7 +144,7 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict['floating_ip']['instance_id'], None)
 
     def test_floating_ip_allocate(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips')
         req.method = 'POST'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
@@ -159,14 +159,14 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(ip, expected)
 
     def test_floating_ip_release(self):
-        req = webob.Request.blank('/v1.1/os-floating-ips/1')
+        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
     def test_add_floating_ip_to_instance(self):
         body = dict(addFloatingIp=dict(address='11.0.0.1'))
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -176,7 +176,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_remove_floating_ip_from_instance(self):
         body = dict(removeFloatingIp=dict(address='11.0.0.1'))
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -186,7 +186,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_bad_address_param_in_remove_floating_ip(self):
         body = dict(removeFloatingIp=dict(badparam='11.0.0.1'))
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -196,7 +196,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_missing_dict_param_in_remove_floating_ip(self):
         body = dict(removeFloatingIp='11.0.0.1')
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -206,7 +206,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_bad_address_param_in_add_floating_ip(self):
         body = dict(addFloatingIp=dict(badparam='11.0.0.1'))
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -216,7 +216,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_missing_dict_param_in_add_floating_ip(self):
         body = dict(addFloatingIp='11.0.0.1')
-        req = webob.Request.blank('/v1.1/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
