@@ -41,56 +41,13 @@ from nova.tests import fake_network_info
 libvirt = None
 FLAGS = flags.FLAGS
 
+_fake_network_info = fake_network_info.fake_get_instance_nw_info
+_ipv4_like = fake_network_info.ipv4_like
+
 
 def _concurrency(wait, done, target):
     wait.wait()
     done.send()
-
-_fake_network_info = fake_network_info.fake_get_instance_nw_info
-_ipv4_like = fake_network_info.ipv4_like
-def _create_network_info(count=1, ipv6=None):
-    if ipv6 is None:
-        ipv6 = FLAGS.use_ipv6
-    fake = 'fake'
-    fake_ip = '10.11.12.13'
-    fake_ip_2 = '0.0.0.1'
-    fake_ip_3 = '0.0.0.1'
-    fake_vlan = 100
-    fake_bridge_interface = 'eth0'
-    network = {'bridge': fake,
-               'cidr': fake_ip,
-               'cidr_v6': fake_ip,
-               'gateway_v6': fake,
-               'vlan': fake_vlan,
-               'bridge_interface': fake_bridge_interface}
-    mapping = {'mac': fake,
-               'dhcp_server': '10.0.0.1',
-               'gateway': fake,
-               'gateway6': fake,
-               'ips': [{'ip': fake_ip}, {'ip': fake_ip}]}
-    if ipv6:
-        mapping['ip6s'] = [{'ip': fake_ip},
-                           {'ip': fake_ip_2},
-                           {'ip': fake_ip_3}]
-    return [(network, mapping) for x in xrange(0, count)]
-
-
-def _setup_networking(instance_id, ip='1.2.3.4', mac='56:12:12:12:12:12'):
-    ctxt = context.get_admin_context()
-    network_ref = db.project_get_networks(ctxt,
-                                           'fake',
-                                           associate=True)[0]
-    vif = {'address': mac,
-           'network_id': network_ref['id'],
-           'instance_id': instance_id}
-    vif_ref = db.virtual_interface_create(ctxt, vif)
-
-    fixed_ip = {'address': ip,
-                'network_id': network_ref['id'],
-                'virtual_interface_id': vif_ref['id']}
-    db.fixed_ip_create(ctxt, fixed_ip)
-    db.fixed_ip_update(ctxt, ip, {'allocated': True,
-                                  'instance_id': instance_id})
 
 
 class CacheConcurrencyTestCase(test.TestCase):
@@ -164,7 +121,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.context = context.get_admin_context()
         self.flags(instances_path='')
         self.call_libvirt_dependant_setup = False
-        self.test_ip = '10.11.12.13'
 
     test_instance = {'memory_kb':     '1024000',
                      'basepath':      '/some/path',
@@ -426,7 +382,6 @@ class LibvirtConnTestCase(test.TestCase):
         user_context = context.RequestContext(self.user_id,
                                               self.project_id)
         instance_ref = db.instance_create(user_context, instance)
-        _setup_networking(instance_ref['id'], self.test_ip)
 
         self.flags(libvirt_type='lxc')
         conn = connection.LibvirtConnection(True)
@@ -457,8 +412,6 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(user_context, instance)
         network_ref = db.project_get_networks(context.get_admin_context(),
                                              self.project_id)[0]
-
-        _setup_networking(instance_ref['id'], self.test_ip)
 
         type_uri_map = {'qemu': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'qemu'),
@@ -925,7 +878,6 @@ class IptablesFirewallTestCase(test.TestCase):
                 """setup_basic_rules in nwfilter calls this."""
                 pass
         self.fake_libvirt_connection = FakeLibvirtConnection()
-        self.test_ip = '10.11.12.13'
         self.fw = firewall.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
 
@@ -989,10 +941,6 @@ class IptablesFirewallTestCase(test.TestCase):
     def test_static_filters(self):
         instance_ref = self._create_instance_ref()
         src_instance_ref = self._create_instance_ref()
-        src_ip = '10.11.12.14'
-        src_mac = '56:12:12:12:12:13'
-        _setup_networking(instance_ref['id'], self.test_ip, src_mac)
-        _setup_networking(src_instance_ref['id'], src_ip)
 
         admin_ctxt = context.get_admin_context()
         secgroup = db.security_group_create(admin_ctxt,
@@ -1184,7 +1132,6 @@ class IptablesFirewallTestCase(test.TestCase):
                                fakefilter.nwfilterLookupByName
         instance_ref = self._create_instance_ref()
 
-        _setup_networking(instance_ref['id'], self.test_ip)
         network_info = _fake_network_info(self.stubs, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.fw.prepare_instance_filter(instance_ref, network_info)
@@ -1200,7 +1147,6 @@ class IptablesFirewallTestCase(test.TestCase):
     def test_provider_firewall_rules(self):
         # setup basic instance data
         instance_ref = self._create_instance_ref()
-        _setup_networking(instance_ref['id'], self.test_ip)
         # FRAGILE: peeks at how the firewall names chains
         chain_name = 'inst-%s' % instance_ref['id']
 
@@ -1270,7 +1216,6 @@ class NWFilterTestCase(test.TestCase):
 
         self.fake_libvirt_connection = Mock()
 
-        self.test_ip = '10.11.12.13'
         self.fw = firewall.NWFilterFirewall(
                                          lambda: self.fake_libvirt_connection)
 
@@ -1386,8 +1331,6 @@ class NWFilterTestCase(test.TestCase):
         instance_ref = self._create_instance()
         inst_id = instance_ref['id']
 
-        _setup_networking(instance_ref['id'], self.test_ip)
-
         def _ensure_all_called(mac):
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
                                                    mac.translate(None, ':'))
@@ -1444,7 +1387,6 @@ class NWFilterTestCase(test.TestCase):
 
         instance = db.instance_get(self.context, inst_id)
 
-        _setup_networking(instance_ref['id'], self.test_ip)
         network_info = _fake_network_info(self.stubs, 1)
         self.fw.setup_basic_filtering(instance, network_info)
         self.fw.prepare_instance_filter(instance, network_info)
