@@ -1073,7 +1073,7 @@ class IptablesFirewallTestCase(test.TestCase):
         linux_net.iptables_manager.execute = fake_iptables_execute
 
         network_info = _fake_network_info(self.stubs, 1)
-        self.stubs.Set(self.db, 'instance_get_fixed_addresses', get_fixed_ips)
+        self.stubs.Set(db, 'instance_get_fixed_addresses', get_fixed_ips)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
 
@@ -1111,10 +1111,11 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "ICMP Echo Request acceptance rule wasn't added")
 
-        regex = re.compile('-A .* -j ACCEPT -p tcp -m multiport '
-                           '--dports 80:81 -s %s' % (src_ip,))
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "TCP port 80/81 acceptance rule wasn't added")
+        for ip in get_fixed_ips():
+            regex = re.compile('-A .* -j ACCEPT -p tcp -m multiport '
+                               '--dports 80:81 -s %s' % ip)
+            self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
+                            "TCP port 80/81 acceptance rule wasn't added")
 
         regex = re.compile('-A .* -j ACCEPT -p tcp '
                            '-m multiport --dports 80:81 -s 192.168.10.0/24')
