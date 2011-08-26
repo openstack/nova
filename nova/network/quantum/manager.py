@@ -119,7 +119,8 @@ class QuantumManager(manager.FlatManager):
     def get_instance_nw_info(self, context, instance_id,
                                 instance_type_id, host):
         network_info = []
-        project_id = context.project_id
+        instance = db.instance_get(context, instance_id)
+        project_id = instance.project_id
 
         admin_context = context.elevated()
         vifs = db.virtual_interface_get_by_instance(admin_context,

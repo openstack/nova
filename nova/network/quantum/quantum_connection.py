@@ -67,9 +67,9 @@ class QuantumClientConnection:
                     (interface_id, net_id, tenant_id))
         port_data = {'port': {'port-state': 'ACTIVE'}}
         resdict = self.client.create_port(net_id, port_data, tenant=tenant_id)
-        port_id = resdict["ports"]["port"]["id"]
+        port_id = resdict["port"]["id"]
 
-        attach_data = {'port': {'attachment-id': interface_id}}
+        attach_data = {'attachment': {'id': interface_id}}
         self.client.attach_resource(net_id, port_id, attach_data,
                                     tenant=tenant_id)
 
@@ -92,6 +92,6 @@ class QuantumClientConnection:
                 port_id = p["id"]
                 port_get_resdict = self.client.show_port_attachment(net_id,
                                 port_id, tenant=tenant_id)
-                if attachment_id == port_get_resdict["attachment"]:
+                if attachment_id == port_get_resdict["attachment"]["id"]:
                     return (net_id, port_id)
         return (None, None)

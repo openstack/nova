@@ -169,7 +169,8 @@ class Client(object):
                                httplib.CREATED,
                                httplib.ACCEPTED,
                                httplib.NO_CONTENT):
-                return self.deserialize(data, status_code)
+                if data is not None and len(data):
+                    return self.deserialize(data, status_code)
             else:
                 raise Exception("Server returned error: %s" % res.read())
 
