@@ -119,25 +119,34 @@ class Consumer(messaging.Consumer):
     """
 
     def __init__(self, *args, **kwargs):
-        for i in xrange(FLAGS.rabbit_max_retries):
-            if i > 0:
-                time.sleep(FLAGS.rabbit_retry_interval)
+        max_retries = FALGS.rabbit_max_retries
+        sleep_time = FLAGS.rabbit_retry_interval
+        tries = 0
+        while True:
+            tries += 1
+            if tries > 1:
+                time.sleep(sleep_time)
+                # backoff for next retry attempt.. if there is one
+                sleep_time += FLAGS.rabbit_retry_backoff
+                if sleep_time > 30:
+                    sleep_time = 30
             try:
                 super(Consumer, self).__init__(*args, **kwargs)
                 self.failed_connection = False
                 break
             except Exception as e:  # Catching all because carrot sucks
+                self.failed_connection = True
+                if max_retries > 0 and tries == max_retries:
+                    break
                 fl_host = FLAGS.rabbit_host
                 fl_port = FLAGS.rabbit_port
-                fl_intv = FLAGS.rabbit_retry_interval
+                fl_intv = sleep_time
                 LOG.error(_('AMQP server on %(fl_host)s:%(fl_port)d is'
                             ' unreachable: %(e)s. Trying again in %(fl_intv)d'
                             ' seconds.') % locals())
-                self.failed_connection = True
         if self.failed_connection:
             LOG.error(_('Unable to connect to AMQP server '
-                        'after %d tries. Shutting down.'),
-                      FLAGS.rabbit_max_retries)
+                        'after %(tries)d tries. Shutting down.') % locals())
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
@@ -518,6 +527,11 @@ class MulticallWaiter(object):
                 self.close()
                 raise StopIteration
             yield result
+
+
+def create_connection(new=True):
+    """Create a connection"""
+    return Connection.instance(new=new)
 
 
 def create_consumer(conn, topic, proxy, fanout=False):

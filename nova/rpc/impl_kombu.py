@@ -288,9 +288,13 @@ class Connection(object):
     def __init__(self):
         self.queues = []
         self.max_retries = FLAGS.rabbit_max_retries
+        # Try forever?
+        if self.max_retries <= 0:
+            self.max_retries = None
         self.interval_start = FLAGS.rabbit_retry_interval
-        self.interval_stepping = FLAGS.rabbit_interval_stepping
-        self.interval_max = FLAGS.rabbit_retry_interval
+        self.interval_stepping = FLAGS.rabbit_retry_backoff
+        # max retry-interval = 30 seconds
+        self.interval_max = 30
 
         self.params = dict(hostname=FLAGS.rabbit_host,
                           port=FLAGS.rabbit_port,
@@ -301,16 +305,6 @@ class Connection(object):
             self.params['transport'] = 'memory'
         self.connection = None
         self.reconnect()
-
-    @classmethod
-    def instance(cls, new=True):
-        """Returns the instance."""
-        if new or not hasattr(cls, '_instance'):
-            if new:
-                return cls()
-            else:
-                cls._instance = cls()
-        return cls._instance
 
     def reconnect(self):
         """Handles reconnecting and re-estblishing queues"""
@@ -330,12 +324,12 @@ class Connection(object):
                     interval_step=self.interval_stepping,
                     interval_max=self.interval_max)
         except self.connection.connection_errors, e:
+            # We should only get here if max_retries is set.  We'll go
+            # ahead and exit in this case.
             err_str = str(e)
-            max_retries = FLAGS.rabbit_max_retries
+            max_retries = self.max_retries
             LOG.error(_('Unable to connect to AMQP server '
                     'after %(max_retries)d tries: %(err_str)s') % locals())
-            # NOTE(comstud): Original carrot code exits after so many
-            # attempts, but I wonder if we should re-try indefinitely
             sys.exit(1)
         LOG.info(_('Connected to AMQP server on %(hostname)s:%(port)d' %
                 self.params))
@@ -448,7 +442,7 @@ class Pool(pools.Pool):
     # TODO(comstud): Timeout connections not used in a while
     def create(self):
         LOG.debug('Creating new connection')
-        return RPCIMPL.Connection()
+        return Connection()
 
 # Create a ConnectionPool to use for RPC calls.  We'll order the
 # pool as a stack (LIFO), so that we can potentially loop through and
@@ -464,7 +458,7 @@ class ConnectionContext(object):
         if pooled:
             self.connection = ConnectionPool.get()
         else:
-            self.connection = RPCIMPL.Connection()
+            self.connection = Connection()
         self.pooled = pooled
 
     def __enter__(self):
@@ -636,6 +630,11 @@ class MulticallWaiter(object):
             yield result
 
 
+def create_connection(new=True):
+    """Create a connection"""
+    return ConnectionContext(pooled=not new)
+
+
 def create_consumer(conn, topic, proxy, fanout=False):
     """Create a consumer that calls a method in a proxy object"""
     if fanout:
@@ -649,7 +648,7 @@ def create_consumer_set(conn, consumers):
     # Returns an object that you can call .wait() on to consume
     # all queues?
     # Needs to have a .close() which will stop consuming?
-    # Needs to also have an attach_to_eventlet method for tests?
+    # Needs to also have an  method for tests?
     raise NotImplemented
 
 

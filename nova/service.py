@@ -242,6 +242,12 @@ class Service(object):
             self.consumer_set_thread.wait()
         except greenlet.GreenletExit:
             pass
+        # Try to shut the connection down, but if we get any sort of
+        # errors, go ahead and ignore them.. as we're shutting down anyway
+        try:
+            self.conn.close()
+        except Exception:
+            pass
         for x in self.timers:
             try:
                 x.stop()
