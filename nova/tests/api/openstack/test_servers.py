@@ -1761,7 +1761,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             key_name='nonexistentkey'))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1781,7 +1781,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             key_name='mykey'))
-        req = webob.Request.blank('/v1.1/servers')
+        req = webob.Request.blank('/v1.1/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -3793,6 +3793,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
+                "key_name": "",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {
@@ -3848,6 +3849,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
+                "key_name": "",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {

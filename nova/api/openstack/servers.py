@@ -22,6 +22,7 @@ from xml.dom import minidom
 import webob
 
 from nova import compute
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -562,6 +563,18 @@ class ControllerV10(Controller):
         except exception.NotFound:
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
+
+    def create(self, req, body):
+        """ Creates a new server for a given user """
+        # note(ja): v1.0 injects the first keypair for the project for testing
+        if 'server' in body and not 'key_name' in body['server']:
+            context = req.environ["nova.context"]
+            keypairs = db.key_pair_get_all_by_user(context.elevated(),
+                                                   context.user_id)
+            if keypairs:
+                body['server']['key_name'] = keypairs[0]['name']
+
+        return super(ControllerV10, self).create(req, body)
 
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']

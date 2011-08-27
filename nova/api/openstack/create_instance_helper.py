@@ -19,7 +19,6 @@ import base64
 from webob import exc
 from xml.dom import minidom
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
