@@ -26,7 +26,6 @@ import re
 import time
 import urllib
 import webob.exc
-from xml.dom import minidom
 
 from collections import defaultdict
 

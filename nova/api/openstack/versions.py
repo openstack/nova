@@ -16,12 +16,14 @@
 #    under the License.
 
 from datetime import datetime
+from lxml import etree
 import webob
 import webob.dec
 from xml.dom import minidom
 
 import nova.api.openstack.views.versions
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 
 
 VERSIONS = {
@@ -159,22 +161,6 @@ class VersionsRequestDeserializer(wsgi.RequestDeserializer):
 
 
 class VersionsXMLSerializer(wsgi.XMLDictSerializer):
-    #TODO(wwolf): this is temporary until we get rid of toprettyxml
-    # in the base class (XMLDictSerializer), which I plan to do in
-    # another branch
-    def to_xml_string(self, node, has_atom=False):
-        self._add_xmlns(node, has_atom)
-        return node.toxml(encoding='UTF-8')
-
-    def _versions_to_xml(self, versions, name="versions", xmlns=None):
-        root = self._xml_doc.createElement(name)
-        root.setAttribute("xmlns", wsgi.XMLNS_V11)
-        root.setAttribute("xmlns:atom", wsgi.XMLNS_ATOM)
-
-        for version in versions:
-            root.appendChild(self._create_version_node(version))
-
-        return root
 
     def _create_media_types(self, media_types):
         base = self._xml_doc.createElement('media-types')
@@ -209,24 +195,45 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
         return version_node
 
-    def index(self, data):
-        self._xml_doc = minidom.Document()
-        node = self._versions_to_xml(data['versions'])
+    def _populate_version(self, version_node, version):
+        version_node.set('id', version['id'])
+        version_node.set('status', version['status'])
+        if 'updated' in version:
+            version_node.set('updated', version['updated'])
+        if 'media-types' in version:
+            media_types = etree.SubElement(version_node, 'media-types')
+            for mtype in version['media-types']:
+                elem = etree.SubElement(media_types, 'media-type')
+                elem.set('base', mtype['base'])
+                elem.set('type', mtype['type'])
+        for link in version.get('links', []):
+            elem = etree.SubElement(version_node,
+                                    '{%s}link' % xmlutil.XMLNS_ATOM)
+            elem.set('rel', link['rel'])
+            elem.set('href', link['href'])
+            if 'type' in link:
+                elem.set('type', link['type'])
 
-        return self.to_xml_string(node)
+    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+
+    def index(self, data):
+        root = etree.Element('versions', nsmap=self.NSMAP)
+        for version in data['versions']:
+            version_elem = etree.SubElement(root, 'version')
+            self._populate_version(version_elem, version)
+        return etree.tostring(root, encoding='UTF-8')
 
     def show(self, data):
-        self._xml_doc = minidom.Document()
-        node = self._create_version_node(data['version'], True)
-
-        return self.to_xml_string(node)
+        root = etree.Element('version', nsmap=self.NSMAP)
+        self._populate_version(root, data['version'])
+        return etree.tostring(root, encoding='UTF-8')
 
     def multi(self, data):
-        self._xml_doc = minidom.Document()
-        node = self._versions_to_xml(data['choices'], 'choices',
-                         xmlns=wsgi.XMLNS_V11)
-
-        return self.to_xml_string(node)
+        root = etree.Element('choices', nsmap=self.NSMAP)
+        for version in data['choices']:
+            version_elem = etree.SubElement(root, 'version')
+            self._populate_version(version_elem, version)
+        return etree.tostring(root, encoding='UTF-8')
 
 
 class VersionsAtomSerializer(wsgi.XMLDictSerializer):

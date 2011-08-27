@@ -18,8 +18,7 @@
 import json
 import stubout
 import webob
-import xml.etree.ElementTree
-
+from lxml import etree
 
 from nova import context
 from nova import test
@@ -28,6 +27,10 @@ from nova.api.openstack import versions
 from nova.api.openstack import views
 from nova.api.openstack import wsgi
 
+NS = {
+    'atom': 'http://www.w3.org/2005/Atom',
+    'ns': 'http://docs.openstack.org/compute/api/v1.1'
+}
 VERSIONS = {
     "v1.0": {
         "id": "v1.0",
@@ -113,16 +116,6 @@ class VersionsTest(test.TestCase):
         versions = json.loads(res.body)["versions"]
         expected = [
             {
-                "id": "v1.1",
-                "status": "CURRENT",
-                "updated": "2011-01-21T11:33:21Z",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v1.1/",
-                    }],
-            },
-            {
                 "id": "v1.0",
                 "status": "DEPRECATED",
                 "updated": "2011-01-21T11:33:21Z",
@@ -130,6 +123,16 @@ class VersionsTest(test.TestCase):
                     {
                         "rel": "self",
                         "href": "http://localhost/v1.0/",
+                    }],
+            },
+            {
+                "id": "v1.1",
+                "status": "CURRENT",
+                "updated": "2011-01-21T11:33:21Z",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/",
                     }],
             },
         ]
@@ -233,48 +236,19 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/xml")
-        root = xml.etree.ElementTree.XML(res.body)
-        self.assertEqual(root.tag.split('}')[1], "version")
-        self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
 
-        children = list(root)
-        media_types = children[0]
-        media_type_nodes = list(media_types)
-        links = (children[1], children[2], children[3])
-
-        self.assertEqual(media_types.tag.split('}')[1], 'media-types')
-        for media_node in media_type_nodes:
-            self.assertEqual(media_node.tag.split('}')[1], 'media-type')
-
-        expected = """
-        <version id="v1.0" status="DEPRECATED"
-             updated="2011-01-21T11:33:21Z"
-             xmlns="%s"
-             xmlns:atom="http://www.w3.org/2005/Atom">
-
-            <media-types>
-                <media-type base="application/xml"
-                     type="application/vnd.openstack.compute-v1.0+xml"/>
-                <media-type base="application/json"
-                     type="application/vnd.openstack.compute-v1.0+json"/>
-            </media-types>
-
-            <atom:link href="http://localhost/v1.0/"
-                 rel="self"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.0/cs-devguide-20110125.pdf"
-                 rel="describedby"
-                 type="application/pdf"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.0/application.wadl"
-                 rel="describedby"
-                 type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "") % wsgi.XMLNS_V11
-
-        actual = res.body.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, actual)
+        version = etree.XML(res.body)
+        expected = VERSIONS['v1.0']
+        self.assertTrue(version.xpath('/ns:version', namespaces=NS))
+        media_types = version.xpath('ns:media-types/ns:media-type',
+                                    namespaces=NS)
+        self._compare_media_types(media_types, expected['media-types'])
+        for key in ['id', 'status', 'updated']:
+            self.assertEqual(version.get(key), expected[key])
+        links = version.xpath('atom:link', namespaces=NS)
+        self._compare_links(links,
+            [{'rel': 'self', 'href': 'http://localhost/v1.0/'}]
+            + expected['links'])
 
     def test_get_version_1_1_detail_xml(self):
         req = webob.Request.blank('/v1.1/')
@@ -282,35 +256,19 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/xml")
-        expected = """
-        <version id="v1.1" status="CURRENT"
-             updated="2011-01-21T11:33:21Z"
-             xmlns="%s"
-             xmlns:atom="http://www.w3.org/2005/Atom">
 
-            <media-types>
-                <media-type base="application/xml"
-                     type="application/vnd.openstack.compute-v1.1+xml"/>
-                <media-type base="application/json"
-                     type="application/vnd.openstack.compute-v1.1+json"/>
-            </media-types>
-
-            <atom:link href="http://localhost/v1.1/"
-                 rel="self"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.1/cs-devguide-20110125.pdf"
-                 rel="describedby"
-                 type="application/pdf"/>
-
-            <atom:link href="http://docs.rackspacecloud.com/servers/
-                api/v1.1/application.wadl"
-                 rel="describedby"
-                 type="application/vnd.sun.wadl+xml"/>
-        </version>""".replace("  ", "").replace("\n", "") % wsgi.XMLNS_V11
-
-        actual = res.body.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, actual)
+        version = etree.XML(res.body)
+        expected = VERSIONS['v1.1']
+        self.assertTrue(version.xpath('/ns:version', namespaces=NS))
+        media_types = version.xpath('ns:media-types/ns:media-type',
+                                    namespaces=NS)
+        self._compare_media_types(media_types, expected['media-types'])
+        for key in ['id', 'status', 'updated']:
+            self.assertEqual(version.get(key), expected[key])
+        links = version.xpath('atom:link', namespaces=NS)
+        self._compare_links(links,
+            [{'rel': 'self', 'href': 'http://localhost/v1.1/'}]
+            + expected['links'])
 
     def test_get_version_list_xml(self):
         req = webob.Request.blank('/')
@@ -319,21 +277,19 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/xml")
 
-        expected = """
-        <versions xmlns="%s" xmlns:atom="%s">
-            <version id="v1.1" status="CURRENT" updated="2011-01-21T11:33:21Z">
-                <atom:link href="http://localhost/v1.1/" rel="self"/>
-            </version>
-            <version id="v1.0" status="DEPRECATED"
-                 updated="2011-01-21T11:33:21Z">
-                <atom:link href="http://localhost/v1.0/" rel="self"/>
-            </version>
-        </versions>""".replace("  ", "").replace("\n", "") % (wsgi.XMLNS_V11,
-                                                              wsgi.XMLNS_ATOM)
+        root = etree.XML(res.body)
+        self.assertTrue(root.xpath('/ns:versions', namespaces=NS))
+        versions = root.xpath('ns:version', namespaces=NS)
+        self.assertEqual(len(versions), 2)
 
-        actual = res.body.replace("  ", "").replace("\n", "")
-
-        self.assertEqual(expected, actual)
+        for (i, v) in ((0, 'v1.0'), (1, 'v1.1')):
+            version = versions[i]
+            expected = VERSIONS[v]
+            for key in ['id', 'status', 'updated']:
+                self.assertEqual(version.get(key), expected[key])
+            (link,) = version.xpath('atom:link', namespaces=NS)
+            self._compare_links(link,
+                [{'rel': 'self', 'href': 'http://localhost/%s/' % v}])
 
     def test_get_version_1_0_detail_atom(self):
         req = webob.Request.blank('/v1.0/')
@@ -427,21 +383,21 @@ class VersionsTest(test.TestCase):
             </author>
             <link href="http://localhost/" rel="self"/>
             <entry>
-                <id>http://localhost/v1.1/</id>
-                <title type="text">Version v1.1</title>
-                <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://localhost/v1.1/" rel="self"/>
-                <content type="text">
-                    Version v1.1 CURRENT (2011-01-21T11:33:21Z)
-                </content>
-            </entry>
-            <entry>
                 <id>http://localhost/v1.0/</id>
                 <title type="text">Version v1.0</title>
                 <updated>2011-01-21T11:33:21Z</updated>
                 <link href="http://localhost/v1.0/" rel="self"/>
                 <content type="text">
                     Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)
+                </content>
+            </entry>
+            <entry>
+                <id>http://localhost/v1.1/</id>
+                <title type="text">Version v1.1</title>
+                <updated>2011-01-21T11:33:21Z</updated>
+                <link href="http://localhost/v1.1/" rel="self"/>
+                <content type="text">
+                    Version v1.1 CURRENT (2011-01-21T11:33:21Z)
                 </content>
             </entry>
         </feed>
@@ -598,6 +554,18 @@ class VersionsTest(test.TestCase):
 
         self.assertDictMatch(expected, json.loads(res.body))
 
+    def _compare_media_types(self, actual, expected):
+        for elem, data in zip(actual, expected):
+            self.assertEqual(elem.get('base'), data['base'])
+            self.assertEqual(elem.get('type'), data['type'])
+
+    def _compare_links(self, actual, expected):
+        for elem, data in zip(actual, expected):
+            self.assertEqual(elem.get('rel'), data['rel'])
+            self.assertEqual(elem.get('href'), data['href'])
+            if 'type' in data:
+                self.assertEqual(elem.get('type'), data['type'])
+
 
 class VersionsViewBuilderTests(test.TestCase):
     def test_view_builder(self):
@@ -665,7 +633,7 @@ class VersionsSerializerTests(test.TestCase):
         serializer = versions.VersionsXMLSerializer()
         response = serializer.index(versions_data)
 
-        root = xml.etree.ElementTree.XML(response)
+        root = etree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "versions")
         self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
         version = list(root)[0]
@@ -703,7 +671,7 @@ class VersionsSerializerTests(test.TestCase):
         serializer = versions.VersionsXMLSerializer()
         response = serializer.multi(versions_data)
 
-        root = xml.etree.ElementTree.XML(response)
+        root = etree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "choices")
         self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
         version = list(root)[0]
@@ -770,7 +738,7 @@ class VersionsSerializerTests(test.TestCase):
         serializer = versions.VersionsXMLSerializer()
         response = serializer.show(version_data)
 
-        root = xml.etree.ElementTree.XML(response)
+        root = etree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "version")
         self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
 
@@ -812,7 +780,7 @@ class VersionsSerializerTests(test.TestCase):
         serializer = versions.VersionsAtomSerializer()
         response = serializer.index(versions_data)
 
-        root = xml.etree.ElementTree.XML(response)
+        root = etree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "feed")
         self.assertEqual(root.tag.split('}')[0].strip('{'),
                          "http://www.w3.org/2005/Atom")
@@ -905,7 +873,7 @@ class VersionsSerializerTests(test.TestCase):
         serializer = versions.VersionsAtomSerializer()
         response = serializer.show(versions_data)
 
-        root = xml.etree.ElementTree.XML(response)
+        root = etree.XML(response)
         self.assertEqual(root.tag.split('}')[1], "feed")
         self.assertEqual(root.tag.split('}')[0].strip('{'),
                          "http://www.w3.org/2005/Atom")
