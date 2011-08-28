@@ -100,20 +100,22 @@ def get_all_types(context, inactive=0, search_opts={}):
                     continue
                 else:
                     if filter_func(type_args, values):
-                        # if one of conditions didn't match - remove
                         result[type_name] = type_args
                         break
         vol_types = result
     return vol_types
 
 
-def get_volume_type(context, id):
+def get_volume_type(ctxt, id):
     """Retrieves single volume type by id."""
     if id is None:
         raise exception.InvalidVolumeType(volume_type=id)
 
+    if ctxt is None:
+        ctxt = context.get_admin_context()
+
     try:
-        return db.volume_type_get(context, id)
+        return db.volume_type_get(ctxt, id)
     except exception.DBError:
         raise exception.ApiError(_("Unknown volume type: %s") % id)
 
@@ -127,3 +129,38 @@ def get_volume_type_by_name(context, name):
         return db.volume_type_get_by_name(context, name)
     except exception.DBError:
         raise exception.ApiError(_("Unknown volume type: %s") % name)
+
+
+def is_key_value_present(volume_type_id, key, value, volume_type=None):
+    if volume_type_id is None:
+        return False
+
+    if volume_type is None:
+        volume_type = get_volume_type(context.get_admin_context(),
+                                      volume_type_id)
+    if volume_type.get('extra_specs') is None or\
+       volume_type['extra_specs'].get(key) != value:
+        return False
+    else:
+        return True
+
+
+def is_vsa_drive(volume_type_id, volume_type=None):
+    return is_key_value_present(volume_type_id,
+                'type', 'vsa_drive', volume_type)
+
+
+def is_vsa_volume(volume_type_id, volume_type=None):
+    return is_key_value_present(volume_type_id,
+                'type', 'vsa_volume', volume_type)
+
+
+def is_vsa_object(volume_type_id):
+    if volume_type_id is None:
+        return False
+
+    volume_type = get_volume_type(context.get_admin_context(),
+                                  volume_type_id)
+
+    return is_vsa_drive(volume_type_id, volume_type) or\
+           is_vsa_volume(volume_type_id, volume_type)

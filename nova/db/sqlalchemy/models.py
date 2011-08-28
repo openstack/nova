@@ -250,6 +250,32 @@ class Instance(BASE, NovaBase):
     #                     'shutdown', 'shutoff', 'crashed'])
 
 
+class VirtualStorageArray(BASE, NovaBase):
+    """
+    Represents a virtual storage array supplying block storage to instances.
+    """
+    __tablename__ = 'virtual_storage_arrays'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return FLAGS.vsa_name_template % self.id
+
+    # User editable field for display in user-facing UIs
+    display_name = Column(String(255))
+    display_description = Column(String(255))
+
+    project_id = Column(String(255))
+    availability_zone = Column(String(255))
+
+    instance_type_id = Column(Integer, ForeignKey('instance_types.id'))
+    image_ref = Column(String(255))
+    vc_count = Column(Integer, default=0)   # number of requested VC instances
+    vol_count = Column(Integer, default=0)  # total number of BE volumes
+    status = Column(String(255))
+
+
 class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
     __tablename__ = "instance_actions"
@@ -278,6 +304,12 @@ class InstanceTypes(BASE, NovaBase):
                            foreign_keys=id,
                            primaryjoin='and_(Instance.instance_type_id == '
                                        'InstanceTypes.id)')
+
+    vsas = relationship(VirtualStorageArray,
+                       backref=backref('vsa_instance_type', uselist=False),
+                       foreign_keys=id,
+                       primaryjoin='and_(VirtualStorageArray.instance_type_id'
+                                   ' == InstanceTypes.id)')
 
 
 class Volume(BASE, NovaBase):
@@ -848,7 +880,8 @@ def register_models():
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
               VolumeMetadata, VolumeTypes, VolumeTypeExtraSpecs,
-              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
+              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration,
+              VirtualStorageArray)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
