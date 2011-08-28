@@ -52,7 +52,7 @@ class QuantumMelangeIPAMLib:
 
             # create a entry in the network table just to store
             # the priority order for this network
-            net = {"bridge": quantum_net_id,
+            net = {"uuid": quantum_net_id,
                    "project_id": project_id,
                    "priority": priority}
             network = self.db.network_create_safe(context, net)
@@ -79,7 +79,7 @@ class QuantumMelangeIPAMLib:
             if b['network_id'] == net_id:
                 self.m_conn.delete_block(b['id'], tenant_id)
 
-        network = db.network_get_by_bridge(admin_context, net_id)
+        network = db.network_get_by_uuid(admin_context, net_id)
         if network is not None:
             db.network_delete_safe(context, network['id'])
 
@@ -101,9 +101,8 @@ class QuantumMelangeIPAMLib:
             id_proj_map[b['network_id']] = tenant_id
 
         id_priority_map = {}
-        network = db.network_get_by_bridge(admin_context, net_id)
         for net_id, project_id in id_project_map.item():
-            network = db.network_get_by_bridge(admin_context, net_id)
+            network = db.network_get_by_uuid(admin_context, net_id)
             if network is None:
                 del id_proj_map[net_id]
             else:
@@ -111,8 +110,11 @@ class QuantumMelangeIPAMLib:
         return sorted(id_priority_map.items(),
                         key=lambda x: id_priority_map[x[0]])
 
-    # FIXME: there must be a more efficient way to do this,
-    # talk to the melange folks
+    # FIXME: (danwent) Melange actually returns the subnet info
+    # when we query for a particular interface.  we may want to
+    # reworks the ipam_manager python API to let us take advantage of
+    # this, as right now we have to get all blocks and cycle through
+    # them.
     def get_subnets_by_net_id(self, context, project_id, net_id):
         subnet_v4 = None
         subnet_v6 = None
