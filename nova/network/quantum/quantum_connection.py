@@ -65,7 +65,7 @@ class QuantumClientConnection:
     def create_and_attach_port(self, tenant_id, net_id, interface_id):
         LOG.debug("Connecting interface %s to net %s for %s" % \
                     (interface_id, net_id, tenant_id))
-        port_data = {'port': {'port-state': 'ACTIVE'}}
+        port_data = {'port': {'state': 'ACTIVE'}}
         resdict = self.client.create_port(net_id, port_data, tenant=tenant_id)
         port_id = resdict["port"]["id"]
 
@@ -74,13 +74,13 @@ class QuantumClientConnection:
                                     tenant=tenant_id)
 
     def detach_and_delete_port(self, tenant_id, net_id, port_id):
-        LOG.debug("Deleteing port %s on net %s for %s" % \
+        LOG.debug("Deleting port %s on net %s for %s" % \
                     (port_id, net_id, tenant_id))
 
         self.client.detach_resource(net_id, port_id, tenant=tenant_id)
         self.client.delete_port(net_id, port_id, tenant=tenant_id)
 
-    # FIXME: this will be inefficient until API implements querying
+    # FIXME: (danwent) this will be inefficient until API implements querying
     def get_port_by_attachment(self, tenant_id, attachment_id):
 
         net_list_resdict = self.client.list_networks(tenant=tenant_id)
