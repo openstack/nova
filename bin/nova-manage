@@ -681,6 +681,8 @@ class NetworkCommands(object):
             help='Multi host')
     @args('--dns1', dest="dns1", metavar="<DNS Address>", help='First DNS')
     @args('--dns2', dest="dns2", metavar="<DNS Address>", help='Second DNS')
+    @args('--uuid', dest="net_uuid", metavar="<network uuid>",
+      help='Network UUID')
     @args('--project_id', dest="project_id", metavar="<project id>",
       help='Project id')
     @args('--priority', dest="priority", metavar="<number>",
@@ -689,7 +691,7 @@ class NetworkCommands(object):
                network_size=None, multi_host=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, gateway_v6=None,
                bridge=None, bridge_interface=None, dns1=None, dns2=None,
-               project_id=None, priority=None):
+               project_id=None, priority=None, uuid=None):
         """Creates fixed ips for host by range"""
 
         # check for certain required inputs
@@ -768,7 +770,8 @@ class NetworkCommands(object):
                                     dns1=dns1,
                                     dns2=dns2,
                                     project_id=project_id,
-                                    priority=priority)
+                                    priority=priority,
+                                    uuid=uuid)
 
     def list(self):
         """List all created networks"""
@@ -797,13 +800,13 @@ class NetworkCommands(object):
     def quantum_list(self):
         """List all created networks with Quantum-relevant fields"""
         _fmt = "%-32s\t%-10s\t%-10s\t%s , %s"
-        print _fmt % ( _('bridge / quantum-id'),
+        print _fmt % ( _('uuid'),
                        _('project'),
                        _('priority'),
                        _('cidr_v4'),
                        _('cidr_v6'))
         for network in db.network_get_all(context.get_admin_context()):
-            print _fmt % (network.bridge,
+            print _fmt % (network.uuid,
                           network.project_id,
                           network.priority,
                           network.cidr,
@@ -811,12 +814,15 @@ class NetworkCommands(object):
 
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to delete')
+    @args('--uuid', dest="uuid", metavar='<network uuid>',
+            help='UUID of network to delete')
     def delete(self, fixed_range):
         """Deletes a network"""
 
         # delete the network
         net_manager = utils.import_object(FLAGS.network_manager)
-        net_manager.delete_network(context.get_admin_context(), fixed_range)
+        net_manager.delete_network(context.get_admin_context(), fixed_range,
+                                                        uuid=None)
 
 
 

@@ -47,15 +47,19 @@ class QuantumNovaIPAMLib:
                                 dns1=None, dns2=None):
             admin_context = context.elevated()
             subnet_size = int(math.pow(2, (32 - int(cidr.split("/")[1]))))
-            manager.FlatManager.create_networks(self.net_manager,
+            networks = manager.FlatManager.create_networks(self.net_manager,
                     admin_context, label, cidr,
                     False, 1, subnet_size, cidr_v6,
                     gateway_v6, quantum_net_id, None, dns1, dns2)
 
-            # now grab the network and update project_id + priority
-            network = db.network_get_by_bridge(admin_context, quantum_net_id)
+            if len(networks) != 1:
+                raise Exception("Error creating network entry")
+
+            # now grab the network and update uuid, project_id, priority
+            network = networks[0]
             net = {"project_id": tenant_id,
-                   "priority": priority}
+                   "priority": priority,
+                   "uuid": quantum_net_id}
             db.network_update(admin_context, network['id'], net)
 
     def get_network_id_by_cidr(self, context, cidr, project_id):
@@ -64,11 +68,11 @@ class QuantumNovaIPAMLib:
             if not network:
                 raise Exception("No network with fixed_range = %s" \
                                 % fixed_range)
-            return network['bridge']
+            return network['uuid']
 
     def delete_subnets_by_net_id(self, context, net_id, project_id):
             admin_context = context.elevated()
-            network = db.network_get_by_bridge(admin_context, net_id)
+            network = db.network_get_by_uuid(admin_context, net_id)
             if not network:
                 raise Exception("No network with net_id = %s" % net_id)
             manager.FlatManager.delete_network(self.net_manager,
@@ -85,14 +89,14 @@ class QuantumNovaIPAMLib:
         id_priority_map = {}
         net_list = []
         for n in networks:
-            net_id = n['bridge']
+            net_id = n['uuid']
             net_list.append((net_id, n["project_id"]))
             id_priority_map[net_id] = n['priority']
         return sorted(net_list, key=lambda x: id_priority_map[x[0]])
 
     def allocate_fixed_ip(self, context, tenant_id, quantum_net_id, vif_rec):
         admin_context = context.elevated()
-        network = db.network_get_by_bridge(admin_context, quantum_net_id)
+        network = db.network_get_by_uuid(admin_context, quantum_net_id)
         if network['cidr']:
             address = db.fixed_ip_associate_pool(admin_context,
                                                       network['id'],
@@ -102,9 +106,9 @@ class QuantumNovaIPAMLib:
             db.fixed_ip_update(admin_context, address, values)
 
     def get_subnets_by_net_id(self, context, tenant_id, net_id):
-        n = db.network_get_by_bridge(context.elevated(), net_id)
+        n = db.network_get_by_uuid(context.elevated(), net_id)
         subnet_data_v4 = {
-            'network_id': n['bridge'],
+            'network_id': n['uuid'],
             'cidr': n['cidr'],
             'gateway': n['gateway'],
             'broadcast': n['broadcast'],
@@ -112,7 +116,7 @@ class QuantumNovaIPAMLib:
             'dns1': n['dns1'],
             'dns2': n['dns2']}
         subnet_data_v6 = {
-            'network_id': n['bridge'],
+            'network_id': n['uuid'],
             'cidr': n['cidr_v6'],
             'gateway': n['gateway_v6'],
             'broadcast': None,
@@ -129,7 +133,7 @@ class QuantumNovaIPAMLib:
 
     def get_v6_ips_by_interface(self, context, net_id, vif_id, project_id):
         admin_context = context.elevated()
-        network = db.network_get_by_bridge(admin_context, net_id)
+        network = db.network_get_by_uuid(admin_context, net_id)
         vif_rec = db.virtual_interface_get_by_uuid(context, vif_id)
         if network['cidr_v6']:
             ip = ipv6.to_global(network['cidr_v6'],
@@ -140,7 +144,7 @@ class QuantumNovaIPAMLib:
 
     def verify_subnet_exists(self, context, tenant_id, quantum_net_id):
         admin_context = context.elevated()
-        network = db.network_get_by_bridge(admin_context, quantum_net_id)
+        network = db.network_get_by_uuid(admin_context, quantum_net_id)
 
     def deallocate_ips_by_vif(self, context, tenant_id, net_id, vif_ref):
         try:

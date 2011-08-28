@@ -1847,6 +1847,19 @@ def network_get_by_bridge(context, bridge):
 
 
 @require_admin_context
+def network_get_by_uuid(context, uuid):
+    session = get_session()
+    result = session.query(models.Network).\
+                 filter_by(uuid=uuid).\
+                 filter_by(deleted=False).\
+                 first()
+
+    if not result:
+        raise exception.NetworkNotFoundForUUID(uuid=uuid)
+    return result
+
+
+@require_admin_context
 def network_get_by_cidr(context, cidr):
     session = get_session()
     result = session.query(models.Network).\

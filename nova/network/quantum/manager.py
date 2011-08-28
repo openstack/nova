@@ -51,13 +51,14 @@ class QuantumManager(manager.FlatManager):
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
-                        bridge_interface, dns1=None, dns2=None, **kwargs):
+                        bridge_interface, dns1=None, dns2=None, uuid=None,
+                        **kwargs):
         if num_networks != 1:
             raise Exception("QuantumManager requires that only one"
                             " network is created per call")
         q_tenant_id = kwargs["project_id"] or \
                             FLAGS.quantum_default_tenant_id
-        quantum_net_id = bridge
+        quantum_net_id = uuid
         if quantum_net_id:
             if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
                     raise Exception("Unable to find existing quantum " \
