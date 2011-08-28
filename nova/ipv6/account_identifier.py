@@ -39,7 +39,8 @@ def to_global(prefix, mac, project_id):
     except TypeError:
         raise TypeError(_('Bad prefix for to_global_ipv6: %s') % prefix)
     except NameError:
-        raise TypeError(_('Bad project_id for to_global_ipv6: %s') % project_id)
+        raise TypeError(_('Bad project_id for to_global_ipv6: %s') %
+                        project_id)
 
 
 def to_mac(ipv6_address):
