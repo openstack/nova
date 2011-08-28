@@ -119,7 +119,7 @@ class Consumer(messaging.Consumer):
     """
 
     def __init__(self, *args, **kwargs):
-        max_retries = FALGS.rabbit_max_retries
+        max_retries = FLAGS.rabbit_max_retries
         sleep_time = FLAGS.rabbit_retry_interval
         tries = 0
         while True:
