@@ -118,13 +118,13 @@ class Connection(carrot_connection.BrokerConnection):
                 consumer_set.wait()
             except greenlet.GreenletExit:
                 return
-        if not self._rpc_consumer_thread:
+        if self._rpc_consumer_thread is None:
             self._rpc_consumer_thread = eventlet.spawn(_consumer_thread)
         return self._rpc_consumer_thread
 
     def cancel_consumer_thread(self):
         """Cancel a consumer thread"""
-        if self._rpc_consumer_thread:
+        if self._rpc_consumer_thread is not None:
             self._rpc_consumer_thread.kill()
             try:
                 self._rpc_consumer_thread.wait()
