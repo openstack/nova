@@ -49,10 +49,6 @@ from nova.rpc.common import RemoteError, LOG
 eventlet.monkey_patch()
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('rpc_thread_pool_size', 1024,
-                     'Size of RPC thread pool')
-flags.DEFINE_integer('rpc_conn_pool_size', 30,
-                     'Size of RPC connection pool')
 
 
 class Connection(carrot_connection.BrokerConnection):

@@ -40,11 +40,6 @@ eventlet.monkey_patch()
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('rpc_conn_pool_size', 30,
-                     'Size of RPC connection pool')
-flags.DEFINE_integer('rpc_thread_pool_size', 1024,
-                     'Size of RPC thread pool')
-
 
 class ConsumerBase(object):
     """Consumer base class."""
@@ -328,6 +323,9 @@ class Connection(object):
                 pass
             time.sleep(1)
         self.connection = kombu.connection.Connection(**self.params)
+        if FLAGS.fake_rabbit:
+            # Kludge to speed up tests.
+            self.connection.transport.polling_interval = 0.0
         self.consumer_num = itertools.count(1)
 
         try:
@@ -422,13 +420,13 @@ class Connection(object):
                 self.consume()
             except greenlet.GreenletExit:
                 return
-        if not self.consumer_thread:
+        if self.consumer_thread is None:
             self.consumer_thread = eventlet.spawn(_consumer_thread)
         return self.consumer_thread
 
     def cancel_consumer_thread(self):
         """Cancel a consumer thread"""
-        if self.consumer_thread:
+        if self.consumer_thread is not None:
             self.consumer_thread.kill()
             try:
                 self.consumer_thread.wait()
