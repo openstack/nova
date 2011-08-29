@@ -38,16 +38,11 @@ RPCIMPL = import_object(impl_table.get(FLAGS.rpc_backend,
 
 
 def create_connection(new=True):
-    return RPCIMPL.Connection.instance(new=True)
+    return RPCIMPL.create_connection(new=new)
 
 
 def create_consumer(conn, topic, proxy, fanout=False):
     return RPCIMPL.create_consumer(conn, topic, proxy, fanout)
-
-
-def create_consumer_set(conn, consumers):
-    # FIXME(comstud): replace however necessary
-    return RPCIMPL.ConsumerSet(connection=conn, consumer_list=consumers)
 
 
 def call(context, topic, msg):

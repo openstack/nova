@@ -33,6 +33,7 @@ import uuid
 
 from carrot import connection as carrot_connection
 from carrot import messaging
+import eventlet
 from eventlet import greenpool
 from eventlet import pools
 from eventlet import queue
@@ -42,10 +43,10 @@ from nova import context
 from nova import exception
 from nova import fakerabbit
 from nova import flags
-from nova import log as logging
-from nova import utils
 from nova.rpc.common import RemoteError, LOG
 
+# Needed for tests
+eventlet.monkey_patch()
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('rpc_thread_pool_size', 1024,
@@ -56,6 +57,11 @@ flags.DEFINE_integer('rpc_conn_pool_size', 30,
 
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object."""
+
+    def __init__(self, *args, **kwargs):
+        super(Connection, self).__init__(*args, **kwargs)
+        self._rpc_consumers = []
+        self._rpc_consumer_thread = None
 
     @classmethod
     def instance(cls, new=True):
@@ -94,6 +100,42 @@ class Connection(carrot_connection.BrokerConnection):
             pass
         return cls.instance()
 
+    def close(self):
+        self.cancel_consumer_thread()
+        for consumer in self._rpc_consumers:
+            try:
+                consumer.close()
+            except Exception:
+                # ignore all errors
+                pass
+        self._rpc_consumers = []
+        super(Connection, self).close()
+
+    def consume_in_thread(self):
+        """Consumer from all queues/consumers in a greenthread"""
+
+        consumer_set = ConsumerSet(connection=self,
+                consumer_list=self._rpc_consumers)
+
+        def _consumer_thread():
+            try:
+                consumer_set.wait()
+            except greenlet.GreenletExit:
+                return
+        if not self._rpc_consumer_thread:
+            self._rpc_consumer_thread = eventlet.spawn(_consumer_thread)
+        return self._rpc_consumer_thread
+
+    def cancel_consumer_thread(self):
+        """Cancel a consumer thread"""
+        if self._rpc_consumer_thread:
+            self._rpc_consumer_thread.kill()
+            try:
+                self._rpc_consumer_thread.wait()
+            except greenlet.GreenletExit:
+                pass
+            self._rpc_consumer_thread = None
+
 
 class Pool(pools.Pool):
     """Class that implements a Pool of Connections."""
@@ -119,6 +161,7 @@ class Consumer(messaging.Consumer):
     """
 
     def __init__(self, *args, **kwargs):
+        connection = kwargs.get('connection')
         max_retries = FLAGS.rabbit_max_retries
         sleep_time = FLAGS.rabbit_retry_interval
         tries = 0
@@ -148,6 +191,7 @@ class Consumer(messaging.Consumer):
             LOG.error(_('Unable to connect to AMQP server '
                         'after %(tries)d tries. Shutting down.') % locals())
             sys.exit(1)
+        connection._rpc_consumers.append(self)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connection."""
@@ -174,12 +218,6 @@ class Consumer(messaging.Consumer):
             if not self.failed_connection:
                 LOG.exception(_('Failed to fetch message from queue: %s' % e))
                 self.failed_connection = True
-
-    def attach_to_eventlet(self):
-        """Only needed for unit tests!"""
-        timer = utils.LoopingCall(self.fetch, enable_callbacks=True)
-        timer.start(0.1)
-        return timer
 
 
 class AdapterConsumer(Consumer):
@@ -251,7 +289,7 @@ class AdapterConsumer(Consumer):
                 # NOTE(vish): this iterates through the generator
                 list(rval)
         except Exception as e:
-            logging.exception('Exception during message handling')
+            LOG.exception('Exception during message handling')
             if msg_id:
                 msg_reply(msg_id, None, sys.exc_info())
         return

@@ -14,9 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import flags
-from nova.rpc.common import RemoteError, LOG
-
 import kombu
 import kombu.entity
 import kombu.messaging
@@ -24,8 +21,22 @@ import kombu.connection
 import itertools
 import sys
 import time
+import traceback
+import types
 import uuid
 
+import eventlet
+from eventlet import greenpool
+from eventlet import pools
+import greenlet
+
+from nova import context
+from nova import exception
+from nova import flags
+from nova.rpc.common import RemoteError, LOG
+
+# Needed for tests
+eventlet.monkey_patch()
 
 FLAGS = flags.FLAGS
 
@@ -317,7 +328,7 @@ class Connection(object):
                 pass
             time.sleep(1)
         self.connection = kombu.connection.Connection(**self.params)
-        self.queue_num = itertools.count(1)
+        self.consumer_num = itertools.count(1)
 
         try:
             self.connection.ensure_connection(errback=self.connect_error,
@@ -634,7 +645,7 @@ class RpcContext(context.RequestContext):
 class MulticallWaiter(object):
     def __init__(self, connection):
         self._connection = connection
-        self._iterator = connection.consume()
+        self._iterator = connection.iterconsume()
         self._result = None
         self._done = False
 
