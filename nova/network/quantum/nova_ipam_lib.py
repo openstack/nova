@@ -55,7 +55,7 @@ class QuantumNovaIPAMLib:
             if len(networks) != 1:
                 raise Exception("Error creating network entry")
 
-            # now grab the network and update uuid, project_id, priority
+            # now grab the network and update additional fields
             network = networks[0]
             net = {"project_id": tenant_id,
                    "priority": priority,

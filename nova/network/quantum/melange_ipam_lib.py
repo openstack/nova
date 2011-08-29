@@ -50,11 +50,16 @@ class QuantumMelangeIPAMLib:
                                      project_id=tenant_id,
                                      dns1=dns1, dns2=dns2)
 
-            # create a entry in the network table just to store
-            # the priority order for this network
+            # create a entry in the network table, even though
+            # most data is stored in melange.  This is used to
+            # store data not kept by melange (e.g., priority)
+            # and to 'fake' other parts of nova (e.g., the API)
+            # until we get get all accesses to be via the
+            # network manager API.
             net = {"uuid": quantum_net_id,
                    "project_id": project_id,
-                   "priority": priority}
+                   "priority": priority,
+                   "label": label}
             network = self.db.network_create_safe(context, net)
 
     def allocate_fixed_ip(self, context, project_id, quantum_net_id, vif_ref):

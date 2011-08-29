@@ -105,14 +105,28 @@ class QuantumManager(manager.FlatManager):
                                                                 project_id)
 
         # Create a port via quantum and attach the vif
-        for (net_id, project_id) in net_proj_pairs:
-            vif_rec = manager.FlatManager.add_virtual_interface(self,
-                                      context, instance_id, None)
+        for (quantum_net_id, project_id) in net_proj_pairs:
 
+            # FIXME: (danwent). We'd like to have the manager be completely
+            # decoupled from the nova networks table.
+            # However, other parts of nova sometimes go behind
+            # our back and access network data directly from the DB.  So
+            # for now, the quantum manager knows that there is a nova
+            # networks DB table and accesses it here.
+            # updating the virtual_interfaces table to use UUIDs would
+            # be one solution, but this would require significant work
+            # elsewhere.
+            network_ref = db.network_get_by_uuid(context, quantum_net_id)
+
+            vif_rec = manager.FlatManager.add_virtual_interface(self,
+                                      context, instance_id, network_ref['id'])
+
+            # talk to Quantum API to create and attach port.
             q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
-            self.q_conn.create_and_attach_port(q_tenant_id, net_id,
+            self.q_conn.create_and_attach_port(q_tenant_id, quantum_net_id,
                                                vif_rec['uuid'])
-            self.ipam.allocate_fixed_ip(context, project_id, net_id, vif_rec)
+            self.ipam.allocate_fixed_ip(context, project_id, quantum_net_id,
+                                                                    vif_rec)
 
         return self.get_instance_nw_info(context, instance_id,
                                             instance_type_id, host)
@@ -173,7 +187,7 @@ class QuantumManager(manager.FlatManager):
             if v6_subnet['cidr']:
                 network_dict['cidr_v6'] = v6_subnet['cidr']
                 info['ip6s'] = [ip_dict(ip, v6_subnet) for ip in v6_ips]
-            # TODO(tr3buchet): handle ip6 routes here as well
+
             if v6_subnet['gateway']:
                 info['gateway6'] = v6_subnet['gateway']
 
