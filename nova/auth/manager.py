@@ -17,6 +17,9 @@
 #    under the License.
 
 """
+WARNING: This code is deprecated and will be removed.
+Keystone is the recommended solution for auth management.
+
 Nova authentication management
 """
 
@@ -38,10 +41,13 @@ from nova.auth import signer
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_bool('use_deprecated_auth',
+                  False,
+                  'This flag must be set to use old style auth')
+
 flags.DEFINE_list('allowed_roles',
                   ['cloudadmin', 'itsec', 'sysadmin', 'netadmin', 'developer'],
                   'Allowed roles for project')
-
 # NOTE(vish): a user with one of these roles will be a superuser and
 #             have access to all api commands
 flags.DEFINE_list('superuser_roles', ['cloudadmin'],
@@ -811,7 +817,13 @@ class AuthManager(object):
             s3_host = host
             ec2_host = host
         rc = open(FLAGS.credentials_template).read()
-        rc = rc % {'access': user.access,
+        # NOTE(vish): Deprecated auth uses an access key, no auth uses a
+        #             the user_id in place of it.
+        if FLAGS.use_deprecated_auth:
+            access = user.access
+        else:
+            access = user.id
+        rc = rc % {'access': access,
                    'project': pid,
                    'secret': user.secret,
                    'ec2': '%s://%s:%s%s' % (FLAGS.ec2_scheme,

@@ -22,10 +22,8 @@ Provides common functionality for integrated unit tests
 import random
 import string
 
-from nova import exception
 from nova import service
 from nova import test  # For the flags
-from nova.auth import manager
 import nova.image.glance
 from nova.log import logging
 from nova.tests.integrated.api import client
@@ -58,90 +56,6 @@ def generate_new_element(items, prefix, numeric=False):
         LOG.debug("Random collision on %s" % candidate)
 
 
-class TestUser(object):
-    def __init__(self, name, secret, auth_url):
-        self.name = name
-        self.secret = secret
-        self.auth_url = auth_url
-
-        if not auth_url:
-            raise exception.Error("auth_url is required")
-        self.openstack_api = client.TestOpenStackClient(self.name,
-                                                        self.secret,
-                                                        self.auth_url)
-
-    def get_unused_server_name(self):
-        servers = self.openstack_api.get_servers()
-        server_names = [server['name'] for server in servers]
-        return generate_new_element(server_names, 'server')
-
-    def get_invalid_image(self):
-        images = self.openstack_api.get_images()
-        image_ids = [image['id'] for image in images]
-        return generate_new_element(image_ids, '', numeric=True)
-
-    def get_valid_image(self, create=False):
-        images = self.openstack_api.get_images()
-        if create and not images:
-            # TODO(justinsb): No way currently to create an image through API
-            #created_image = self.openstack_api.post_image(image)
-            #images.append(created_image)
-            raise exception.Error("No way to create an image through API")
-
-        if images:
-            return images[0]
-        return None
-
-
-class IntegratedUnitTestContext(object):
-    def __init__(self, auth_url):
-        self.auth_manager = manager.AuthManager()
-
-        self.auth_url = auth_url
-        self.project_name = None
-
-        self.test_user = None
-
-        self.setup()
-
-    def setup(self):
-        self._create_test_user()
-
-    def _create_test_user(self):
-        self.test_user = self._create_unittest_user()
-
-        # No way to currently pass this through the OpenStack API
-        self.project_name = 'openstack'
-        self._configure_project(self.project_name, self.test_user)
-
-    def cleanup(self):
-        self.test_user = None
-
-    def _create_unittest_user(self):
-        users = self.auth_manager.get_users()
-        user_names = [user.name for user in users]
-        auth_name = generate_new_element(user_names, 'unittest_user_')
-        auth_key = generate_random_alphanumeric(16)
-
-        # Right now there's a bug where auth_name and auth_key are reversed
-        # bug732907
-        auth_key = auth_name
-
-        self.auth_manager.create_user(auth_name, auth_name, auth_key, False)
-        return TestUser(auth_name, auth_key, self.auth_url)
-
-    def _configure_project(self, project_name, user):
-        projects = self.auth_manager.get_projects()
-        project_names = [project.name for project in projects]
-        if not project_name in project_names:
-            project = self.auth_manager.create_project(project_name,
-                                                       user.name,
-                                                       description=None,
-                                                       member_users=None)
-        else:
-            self.auth_manager.add_to_project(user.name, project_name)
-
-
 class _IntegratedTestBase(test.TestCase):
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
@@ -163,20 +77,13 @@ class _IntegratedTestBase(test.TestCase):
 
         self._start_api_service()
 
-        self.context = IntegratedUnitTestContext(self.auth_url)
-
-        self.user = self.context.test_user
-        self.api = self.user.openstack_api
+        self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url)
 
     def _start_api_service(self):
         osapi = service.WSGIService("osapi")
         osapi.start()
         self.auth_url = 'http://%s:%s/v1.1' % (osapi.host, osapi.port)
         LOG.warn(self.auth_url)
-
-    def tearDown(self):
-        self.context.cleanup()
-        super(_IntegratedTestBase, self).tearDown()
 
     def _get_flags(self):
         """An opportunity to setup flags, before the services are started."""
@@ -190,10 +97,20 @@ class _IntegratedTestBase(test.TestCase):
         f['fake_network'] = True
         return f
 
+    def get_unused_server_name(self):
+        servers = self.api.get_servers()
+        server_names = [server['name'] for server in servers]
+        return generate_new_element(server_names, 'server')
+
+    def get_invalid_image(self):
+        images = self.api.get_images()
+        image_ids = [image['id'] for image in images]
+        return generate_new_element(image_ids, '', numeric=True)
+
     def _build_minimal_create_server_request(self):
         server = {}
 
-        image = self.user.get_valid_image(create=True)
+        image = self.api.get_images()[0]
         LOG.debug("Image: %s" % image)
 
         if 'imageRef' in image:
@@ -211,7 +128,7 @@ class _IntegratedTestBase(test.TestCase):
         server['flavorRef'] = 'http://fake.server/%s' % flavor['id']
 
         # Set a valid server name
-        server_name = self.user.get_unused_server_name()
+        server_name = self.get_unused_server_name()
         server['name'] = server_name
 
         return server

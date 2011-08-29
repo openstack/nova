@@ -45,6 +45,7 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
+    utils.monkey_patch()
     servers = []
     for api in flags.FLAGS.enabled_apis:
         servers.append(service.WSGIService(api))

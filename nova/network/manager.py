@@ -106,8 +106,6 @@ flags.DEFINE_integer('create_unique_mac_address_attempts', 5,
                      'Number of attempts to create unique mac address')
 flags.DEFINE_bool('auto_assign_floating_ip', False,
                   'Autoassigning floating ip to VM')
-flags.DEFINE_bool('use_ipv6', False,
-                  'use the ipv6')
 flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
 flags.DEFINE_bool('fake_call', False,
@@ -486,17 +484,17 @@ class NetworkManager(manager.SchedulerDependentManager):
             # TODO(tr3buchet) eventually "enabled" should be determined
             def ip_dict(ip):
                 return {
-                    "ip": ip,
-                    "netmask": network["netmask"],
-                    "enabled": "1"}
+                    'ip': ip,
+                    'netmask': network['netmask'],
+                    'enabled': '1'}
 
             def ip6_dict():
                 return {
-                    "ip": ipv6.to_global(network['cidr_v6'],
+                    'ip': ipv6.to_global(network['cidr_v6'],
                                          vif['address'],
                                          network['project_id']),
-                    "netmask": network['netmask_v6'],
-                    "enabled": "1"}
+                    'netmask': network['netmask_v6'],
+                    'enabled': '1'}
             network_dict = {
                 'bridge': network['bridge'],
                 'id': network['id'],

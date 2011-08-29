@@ -49,7 +49,8 @@ flags.DEFINE_string('volume_name_template', 'volume-%08x',
                     'Template string to be used to generate instance names')
 flags.DEFINE_string('snapshot_name_template', 'snapshot-%08x',
                     'Template string to be used to generate snapshot names')
-
+flags.DEFINE_string('vsa_name_template', 'vsa-%08x',
+                    'Template string to be used to generate VSA names')
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')
@@ -1446,3 +1447,112 @@ def instance_type_extra_specs_update_or_create(context, instance_type_id,
     key/value pairs specified in the extra specs dict argument"""
     IMPL.instance_type_extra_specs_update_or_create(context, instance_type_id,
                                                     extra_specs)
+
+
+##################
+
+
+def volume_metadata_get(context, volume_id):
+    """Get all metadata for a volume."""
+    return IMPL.volume_metadata_get(context, volume_id)
+
+
+def volume_metadata_delete(context, volume_id, key):
+    """Delete the given metadata item."""
+    IMPL.volume_metadata_delete(context, volume_id, key)
+
+
+def volume_metadata_update(context, volume_id, metadata, delete):
+    """Update metadata if it exists, otherwise create it."""
+    IMPL.volume_metadata_update(context, volume_id, metadata, delete)
+
+
+##################
+
+
+def volume_type_create(context, values):
+    """Create a new volume type."""
+    return IMPL.volume_type_create(context, values)
+
+
+def volume_type_get_all(context, inactive=False):
+    """Get all volume types."""
+    return IMPL.volume_type_get_all(context, inactive)
+
+
+def volume_type_get(context, id):
+    """Get volume type by id."""
+    return IMPL.volume_type_get(context, id)
+
+
+def volume_type_get_by_name(context, name):
+    """Get volume type by name."""
+    return IMPL.volume_type_get_by_name(context, name)
+
+
+def volume_type_destroy(context, name):
+    """Delete a volume type."""
+    return IMPL.volume_type_destroy(context, name)
+
+
+def volume_type_purge(context, name):
+    """Purges (removes) a volume type from DB.
+
+    Use volume_type_destroy for most cases
+
+    """
+    return IMPL.volume_type_purge(context, name)
+
+
+####################
+
+
+def volume_type_extra_specs_get(context, volume_type_id):
+    """Get all extra specs for a volume type."""
+    return IMPL.volume_type_extra_specs_get(context, volume_type_id)
+
+
+def volume_type_extra_specs_delete(context, volume_type_id, key):
+    """Delete the given extra specs item."""
+    IMPL.volume_type_extra_specs_delete(context, volume_type_id, key)
+
+
+def volume_type_extra_specs_update_or_create(context, volume_type_id,
+                                               extra_specs):
+    """Create or update volume type extra specs. This adds or modifies the
+    key/value pairs specified in the extra specs dict argument"""
+    IMPL.volume_type_extra_specs_update_or_create(context, volume_type_id,
+                                                    extra_specs)
+
+
+####################
+
+
+def vsa_create(context, values):
+    """Creates Virtual Storage Array record."""
+    return IMPL.vsa_create(context, values)
+
+
+def vsa_update(context, vsa_id, values):
+    """Updates Virtual Storage Array record."""
+    return IMPL.vsa_update(context, vsa_id, values)
+
+
+def vsa_destroy(context, vsa_id):
+    """Deletes Virtual Storage Array record."""
+    return IMPL.vsa_destroy(context, vsa_id)
+
+
+def vsa_get(context, vsa_id):
+    """Get Virtual Storage Array record by ID."""
+    return IMPL.vsa_get(context, vsa_id)
+
+
+def vsa_get_all(context):
+    """Get all Virtual Storage Array records."""
+    return IMPL.vsa_get_all(context)
+
+
+def vsa_get_all_by_project(context, project_id):
+    """Get all Virtual Storage Array records by project ID."""
+    return IMPL.vsa_get_all_by_project(context, project_id)

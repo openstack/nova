@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Piston Cloud Computing, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -159,9 +160,24 @@ class ComputeTestCase(test.TestCase):
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
 
+    def test_create_instance_associates_config_drive(self):
+        """Make sure create associates a config drive."""
+
+        instance_id = self._create_instance(params={'config_drive': True, })
+
+        try:
+            self.compute.run_instance(self.context, instance_id)
+            instances = db.instance_get_all(context.get_admin_context())
+            instance = instances[0]
+
+            self.assertTrue(instance.config_drive)
+        finally:
+            db.instance_destroy(self.context, instance_id)
+
     def test_default_hostname_generator(self):
-        cases = [(None, 'server_1'), ('Hello, Server!', 'hello_server'),
-                 ('<}\x1fh\x10e\x08l\x02l\x05o\x12!{>', 'hello')]
+        cases = [(None, 'server-1'), ('Hello, Server!', 'hello-server'),
+                 ('<}\x1fh\x10e\x08l\x02l\x05o\x12!{>', 'hello'),
+                 ('hello_server', 'hello-server')]
         for display_name, hostname in cases:
             ref = self.compute_api.create(self.context,
                 instance_types.get_default_instance_type(), None,

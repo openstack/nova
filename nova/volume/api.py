@@ -41,7 +41,8 @@ LOG = logging.getLogger('nova.volume')
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def create(self, context, size, snapshot_id, name, description):
+    def create(self, context, size, snapshot_id, name, description,
+                     volume_type=None, metadata=None, availability_zone=None):
         if snapshot_id != None:
             snapshot = self.get_snapshot(context, snapshot_id)
             if snapshot['status'] != "available":
@@ -57,16 +58,27 @@ class API(base.Base):
             raise quota.QuotaError(_("Volume quota exceeded. You cannot "
                                      "create a volume of size %sG") % size)
 
+        if availability_zone is None:
+            availability_zone = FLAGS.storage_availability_zone
+
+        if volume_type is None:
+            volume_type_id = None
+        else:
+            volume_type_id = volume_type.get('id', None)
+
         options = {
             'size': size,
             'user_id': context.user_id,
             'project_id': context.project_id,
             'snapshot_id': snapshot_id,
-            'availability_zone': FLAGS.storage_availability_zone,
+            'availability_zone': availability_zone,
             'status': "creating",
             'attach_status': "detached",
             'display_name': name,
-            'display_description': description}
+            'display_description': description,
+            'volume_type_id': volume_type_id,
+            'metadata': metadata,
+            }
 
         volume = self.db.volume_create(context, options)
         rpc.cast(context,
@@ -105,10 +117,45 @@ class API(base.Base):
         rv = self.db.volume_get(context, volume_id)
         return dict(rv.iteritems())
 
-    def get_all(self, context):
+    def get_all(self, context, search_opts={}):
         if context.is_admin:
-            return self.db.volume_get_all(context)
-        return self.db.volume_get_all_by_project(context, context.project_id)
+            volumes = self.db.volume_get_all(context)
+        else:
+            volumes = self.db.volume_get_all_by_project(context,
+                                    context.project_id)
+
+        if search_opts:
+            LOG.debug(_("Searching by: %s") % str(search_opts))
+
+            def _check_metadata_match(volume, searchdict):
+                volume_metadata = {}
+                for i in volume.get('volume_metadata'):
+                    volume_metadata[i['key']] = i['value']
+
+                for k, v in searchdict.iteritems():
+                    if k not in volume_metadata.keys()\
+                       or volume_metadata[k] != v:
+                        return False
+                return True
+
+            # search_option to filter_name mapping.
+            filter_mapping = {'metadata': _check_metadata_match}
+
+            result = []
+            for volume in volumes:
+                # go over all filters in the list
+                for opt, values in search_opts.iteritems():
+                    try:
+                        filter_func = filter_mapping[opt]
+                    except KeyError:
+                        # no such filter - ignore it, go to next filter
+                        continue
+                    else:
+                        if filter_func(volume, values):
+                            result.append(volume)
+                            break
+            volumes = result
+        return volumes
 
     def get_snapshot(self, context, snapshot_id):
         rv = self.db.snapshot_get(context, snapshot_id)
@@ -183,3 +230,38 @@ class API(base.Base):
                  {"method": "delete_snapshot",
                   "args": {"topic": FLAGS.volume_topic,
                            "snapshot_id": snapshot_id}})
+
+    def get_volume_metadata(self, context, volume_id):
+        """Get all metadata associated with a volume."""
+        rv = self.db.volume_metadata_get(context, volume_id)
+        return dict(rv.iteritems())
+
+    def delete_volume_metadata(self, context, volume_id, key):
+        """Delete the given metadata item from an volume."""
+        self.db.volume_metadata_delete(context, volume_id, key)
+
+    def update_volume_metadata(self, context, volume_id,
+                                 metadata, delete=False):
+        """Updates or creates volume metadata.
+
+        If delete is True, metadata items that are not specified in the
+        `metadata` argument will be deleted.
+
+        """
+        if delete:
+            _metadata = metadata
+        else:
+            _metadata = self.get_volume_metadata(context, volume_id)
+            _metadata.update(metadata)
+
+        self.db.volume_metadata_update(context, volume_id, _metadata, True)
+        return _metadata
+
+    def get_volume_metadata_value(self, volume, key):
+        """Get value of particular metadata key."""
+        metadata = volume.get('volume_metadata')
+        if metadata:
+            for i in volume['volume_metadata']:
+                if i['key'] == key:
+                    return i['value']
+        return None

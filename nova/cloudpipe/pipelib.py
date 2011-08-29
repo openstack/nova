@@ -34,7 +34,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.auth import manager
 # TODO(eday): Eventually changes these to something not ec2-specific
 from nova.api.ec2 import cloud
 
@@ -57,7 +56,6 @@ LOG = logging.getLogger('nova.cloudpipe')
 class CloudPipe(object):
     def __init__(self):
         self.controller = cloud.CloudController()
-        self.manager = manager.AuthManager()
 
     def get_encoded_zip(self, project_id):
         # Make a payload.zip
@@ -93,11 +91,10 @@ class CloudPipe(object):
         zippy.close()
         return encoded
 
-    def launch_vpn_instance(self, project_id):
+    def launch_vpn_instance(self, project_id, user_id):
         LOG.debug(_("Launching VPN for %s") % (project_id))
-        project = self.manager.get_project(project_id)
-        ctxt = context.RequestContext(user=project.project_manager_id,
-                                      project=project.id)
+        ctxt = context.RequestContext(user_id=user_id,
+                                      project_id=project_id)
         key_name = self.setup_key_pair(ctxt)
         group_name = self.setup_security_group(ctxt)
 
