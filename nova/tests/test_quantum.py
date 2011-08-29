@@ -224,14 +224,6 @@ class QuantumTestCaseBase(object):
                         self.net_man.validate_networks, ctx, [("", None)])
 
 
-class QuantumFakeIPAMTestCase(QuantumTestCaseBase, test.TestCase):
-
-    def setUp(self):
-        super(QuantumFakeIPAMTestCase, self).setUp()
-        self.net_man = quantum_manager.QuantumManager( \
-                ipam_lib="nova.network.quantum.fake")
-
-
 class QuantumNovaIPAMTestCase(QuantumTestCaseBase, test.TestCase):
 
     def setUp(self):
