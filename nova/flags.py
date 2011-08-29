@@ -292,6 +292,7 @@ DEFINE_string('ajax_console_proxy_url',
                in the form "http://127.0.0.1:8000"')
 DEFINE_string('ajax_console_proxy_port',
                8000, 'port that ajax_console_proxy binds')
+DEFINE_string('vsa_topic', 'vsa', 'the topic that nova-vsa service listens on')
 DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_boolean('fake_rabbit', False, 'use a fake rabbit')
 DEFINE_bool('fake_network', False,
@@ -371,6 +372,17 @@ DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
               'Manager for volume')
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
+DEFINE_string('vsa_manager', 'nova.vsa.manager.VsaManager',
+              'Manager for vsa')
+DEFINE_string('vc_image_name', 'vc_image',
+              'the VC image ID (for a VC image that exists in DB Glance)')
+# VSA constants and enums
+DEFINE_string('default_vsa_instance_type', 'm1.small',
+              'default instance type for VSA instances')
+DEFINE_integer('max_vcs_in_vsa', 32,
+               'maxinum VCs in a VSA')
+DEFINE_integer('vsa_part_size_gb', 100,
+               'default partition size for shared capacity')
 
 # The service to use for image search and retrieval
 DEFINE_string('image_service', 'nova.image.glance.GlanceImageService',

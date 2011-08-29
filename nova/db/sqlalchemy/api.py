@@ -3825,3 +3825,105 @@ def volume_type_extra_specs_update_or_create(context, volume_type_id,
                          "deleted": 0})
         spec_ref.save(session=session)
     return specs
+
+
+    ####################
+
+
+@require_admin_context
+def vsa_create(context, values):
+    """
+    Creates Virtual Storage Array record.
+    """
+    try:
+        vsa_ref = models.VirtualStorageArray()
+        vsa_ref.update(values)
+        vsa_ref.save()
+    except Exception, e:
+        raise exception.DBError(e)
+    return vsa_ref
+
+
+@require_admin_context
+def vsa_update(context, vsa_id, values):
+    """
+    Updates Virtual Storage Array record.
+    """
+    session = get_session()
+    with session.begin():
+        vsa_ref = vsa_get(context, vsa_id, session=session)
+        vsa_ref.update(values)
+        vsa_ref.save(session=session)
+    return vsa_ref
+
+
+@require_admin_context
+def vsa_destroy(context, vsa_id):
+    """
+    Deletes Virtual Storage Array record.
+    """
+    session = get_session()
+    with session.begin():
+        session.query(models.VirtualStorageArray).\
+                filter_by(id=vsa_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def vsa_get(context, vsa_id, session=None):
+    """
+    Get Virtual Storage Array record by ID.
+    """
+    if not session:
+        session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.VirtualStorageArray).\
+                         options(joinedload('vsa_instance_type')).\
+                         filter_by(id=vsa_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.VirtualStorageArray).\
+                         options(joinedload('vsa_instance_type')).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=vsa_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.VirtualStorageArrayNotFound(id=vsa_id)
+
+    return result
+
+
+@require_admin_context
+def vsa_get_all(context):
+    """
+    Get all Virtual Storage Array records.
+    """
+    session = get_session()
+    return session.query(models.VirtualStorageArray).\
+                   options(joinedload('vsa_instance_type')).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_context
+def vsa_get_all_by_project(context, project_id):
+    """
+    Get all Virtual Storage Array records by project ID.
+    """
+    authorize_project_context(context, project_id)
+
+    session = get_session()
+    return session.query(models.VirtualStorageArray).\
+                   options(joinedload('vsa_instance_type')).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+    ####################

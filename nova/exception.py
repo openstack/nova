@@ -783,6 +783,18 @@ class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
 
 
+class VSANovaAccessParamNotFound(Invalid):
+    message = _("Nova access parameters were not specified.")
+
+
+class VirtualStorageArrayNotFound(NotFound):
+    message = _("Virtual Storage Array %(id)d could not be found.")
+
+
+class VirtualStorageArrayNotFoundByName(NotFound):
+    message = _("Virtual Storage Array %(name)s could not be found.")
+
+
 class CannotResizeToSameSize(NovaException):
     message = _("When resizing, instances must change size!")
 
