@@ -49,8 +49,9 @@ class _BaseRpcTestCase(test.TestCase):
 
     def test_call_succeed_despite_multiple_returns(self):
         value = 42
-        result = self.rpc.call(self.context, 'test', {"method": "echo_three_times",
-                                                 "args": {"value": value}})
+        result = self.rpc.call(self.context, 'test',
+                {"method": "echo_three_times",
+                 "args": {"value": value}})
         self.assertEqual(value + 2, result)
 
     def test_call_succeed_despite_multiple_returns_yield(self):
