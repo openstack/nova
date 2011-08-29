@@ -688,8 +688,10 @@ def fixed_ip_associate(context, address, instance_id, network_id=None):
 def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
     session = get_session()
     with session.begin():
+        network_or_none = or_(models.FixedIp.network_id == network_id,
+                              models.FixedIp.network_id == None)
         fixed_ip_ref = session.query(models.FixedIp).\
-                               filter_by(network_id=network_id).\
+                               filter(network_or_none).\
                                filter_by(reserved=False).\
                                filter_by(deleted=False).\
                                filter_by(instance=None).\

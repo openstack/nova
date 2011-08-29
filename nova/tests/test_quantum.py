@@ -17,6 +17,8 @@
 
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import models
+from nova.db.sqlalchemy.session import get_session
 from nova import exception
 from nova import log as logging
 from nova.network.quantum import manager as quantum_manager
@@ -237,6 +239,15 @@ class QuantumNovaIPAMTestCase(QuantumTestCaseBase, test.TestCase):
         ctx = context.RequestContext('user1', 'fake_project1').elevated()
         for n in db.network_get_all(ctx):
             db.network_delete_safe(ctx, n['id'])
+
+        # I've found that other unit tests have a nasty habit of
+        # of creating fixed IPs and not cleaning up, which can
+        # confuse these tests, so we clean them all.
+        session = get_session()
+        result = session.query(models.FixedIp).all()
+        with session.begin():
+            for fip_ref in result:
+                session.delete(fip_ref)
 
 # Cannot run this unit tests auotmatically for now, as it requires
 # melange to be running locally.
