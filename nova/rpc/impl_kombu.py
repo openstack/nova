@@ -404,26 +404,6 @@ class Connection(object):
                         '%s' % str(e)))
                 self.reconnect()
 
-    def consume(self, limit=None):
-        """Consume from all queues/consumers"""
-        it = self.iterconsume(limit=limit)
-        while True:
-            try:
-                it.next()
-            except StopIteration:
-                return
-
-    def consume_in_thread(self):
-        """Consumer from all queues/consumers in a greenthread"""
-        def _consumer_thread():
-            try:
-                self.consume()
-            except greenlet.GreenletExit:
-                return
-        if self.consumer_thread is None:
-            self.consumer_thread = eventlet.spawn(_consumer_thread)
-        return self.consumer_thread
-
     def cancel_consumer_thread(self):
         """Cancel a consumer thread"""
         if self.consumer_thread is not None:
@@ -477,6 +457,33 @@ class Connection(object):
     def fanout_send(self, topic, msg):
         """Send a 'fanout' message"""
         self.publisher_send(FanoutPublisher, topic, msg)
+
+    def consume(self, limit=None):
+        """Consume from all queues/consumers"""
+        it = self.iterconsume(limit=limit)
+        while True:
+            try:
+                it.next()
+            except StopIteration:
+                return
+
+    def consume_in_thread(self):
+        """Consumer from all queues/consumers in a greenthread"""
+        def _consumer_thread():
+            try:
+                self.consume()
+            except greenlet.GreenletExit:
+                return
+        if self.consumer_thread is None:
+            self.consumer_thread = eventlet.spawn(_consumer_thread)
+        return self.consumer_thread
+
+    def create_consumer(self, topic, proxy, fanout=False):
+        """Create a consumer that calls a method in a proxy object"""
+        if fanout:
+            self.declare_fanout_consumer(topic, ProxyCallback(proxy))
+        else:
+            self.declare_topic_consumer(topic, ProxyCallback(proxy))
 
 
 class Pool(pools.Pool):
@@ -676,14 +683,6 @@ class MulticallWaiter(object):
 def create_connection(new=True):
     """Create a connection"""
     return ConnectionContext(pooled=not new)
-
-
-def create_consumer(conn, topic, proxy, fanout=False):
-    """Create a consumer that calls a method in a proxy object"""
-    if fanout:
-        conn.declare_fanout_consumer(topic, ProxyCallback(proxy))
-    else:
-        conn.declare_topic_consumer(topic, ProxyCallback(proxy))
 
 
 def multicall(context, topic, msg):

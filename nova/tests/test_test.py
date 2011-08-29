@@ -40,6 +40,5 @@ class IsolationTestCase(test.TestCase):
 
         connection = rpc.create_connection(new=True)
         proxy = NeverCalled()
-        rpc.create_consumer(connection, 'compute',
-                proxy, fanout=False)
+        connection.create_consumer('compute', proxy, fanout=False)
         connection.consume_in_thread()

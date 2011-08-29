@@ -24,7 +24,7 @@ from nova import flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('rpc_backend',
                     'kombu',
-                    "The messaging module to use, defaults to carrot.")
+                    "The messaging module to use, defaults to kombu.")
 
 impl_table = {'kombu': 'nova.rpc.impl_kombu',
                 'amqp': 'nova.rpc.impl_kombu',
@@ -39,10 +39,6 @@ RPCIMPL = import_object(impl_table.get(FLAGS.rpc_backend,
 
 def create_connection(new=True):
     return RPCIMPL.create_connection(new=new)
-
-
-def create_consumer(conn, topic, proxy, fanout=False):
-    RPCIMPL.create_consumer(conn, topic, proxy, fanout)
 
 
 def call(context, topic, msg):

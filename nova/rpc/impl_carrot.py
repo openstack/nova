@@ -132,6 +132,20 @@ class Connection(carrot_connection.BrokerConnection):
                 pass
             self._rpc_consumer_thread = None
 
+    def create_consumer(self, topic, proxy, fanout=False):
+        """Create a consumer that calls methods in the proxy"""
+        if fanout:
+            consumer = FanoutAdapterConsumer(
+                    connection=self,
+                    topic=topic,
+                    proxy=proxy)
+        else:
+            consumer = TopicAdapterConsumer(
+                    connection=self,
+                    topic=topic,
+                    proxy=proxy)
+        self._rpc_consumers.append(consumer)
+
 
 class Pool(pools.Pool):
     """Class that implements a Pool of Connections."""
@@ -187,7 +201,6 @@ class Consumer(messaging.Consumer):
             LOG.error(_('Unable to connect to AMQP server '
                         'after %(tries)d tries. Shutting down.') % locals())
             sys.exit(1)
-        connection._rpc_consumers.append(self)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connection."""
@@ -566,20 +579,6 @@ class MulticallWaiter(object):
 def create_connection(new=True):
     """Create a connection"""
     return Connection.instance(new=new)
-
-
-def create_consumer(conn, topic, proxy, fanout=False):
-    """Create a consumer that calls methods in the proxy"""
-    if fanout:
-        return FanoutAdapterConsumer(
-                connection=conn,
-                topic=topic,
-                proxy=proxy)
-    else:
-        return TopicAdapterConsumer(
-                connection=conn,
-                topic=topic,
-                proxy=proxy)
 
 
 def call(context, topic, msg):

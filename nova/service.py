@@ -153,14 +153,12 @@ class Service(object):
                       self.topic)
 
         # Share this same connection for these Consumers
-        rpc.create_consumer(self.conn, self.topic, self,
-                                           fanout=False)
+        self.conn.create_consumer(self.topic, self, fanout=False)
 
         node_topic = '%s.%s' % (self.topic, self.host)
-        rpc.create_consumer(self.conn, node_topic, self,
-                                            fanout=False)
+        self.conn.create_consumer(node_topic, self, fanout=False)
 
-        rpc.create_consumer(self.conn, self.topic, self, fanout=True)
+        self.conn.create_consumer(self.topic, self, fanout=True)
 
         # Consume from all consumers in a thread
         self.conn.consume_in_thread()

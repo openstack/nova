@@ -33,10 +33,7 @@ class RpcTestCase(test.TestCase):
         super(RpcTestCase, self).setUp()
         self.conn = rpc.create_connection(True)
         self.receiver = TestReceiver()
-        rpc.create_consumer(self.conn,
-                'test',
-                self.receiver,
-                False)
+        self.conn.create_consumer('test', self.receiver, False)
         self.conn.consume_in_thread()
         self.context = context.get_admin_context()
 
@@ -143,10 +140,7 @@ class RpcTestCase(test.TestCase):
 
         nested = Nested()
         conn = rpc.create_connection(True)
-        rpc.create_consumer(conn,
-                'nested',
-                nested,
-                False)
+        conn.create_consumer('nested', nested, False)
         conn.consume_in_thread()
         value = 42
         result = rpc.call(self.context,
