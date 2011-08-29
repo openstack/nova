@@ -153,26 +153,17 @@ class Service(object):
                       self.topic)
 
         # Share this same connection for these Consumers
-        consumer_all = rpc.create_consumer(self.conn, self.topic, self,
+        rpc.create_consumer(self.conn, self.topic, self,
                                            fanout=False)
 
         node_topic = '%s.%s' % (self.topic, self.host)
-        consumer_node = rpc.create_consumer(self.conn, node_topic, self,
+        rpc.create_consumer(self.conn, node_topic, self,
                                             fanout=False)
 
-        fanout = rpc.create_consumer(self.conn, self.topic, self, fanout=True)
+        rpc.create_consumer(self.conn, self.topic, self, fanout=True)
 
-        consumers = [consumer_all, consumer_node, fanout]
-        consumer_set = rpc.create_consumer_set(self.conn, consumers)
-
-        # Wait forever, processing these consumers
-        def _wait():
-            try:
-                consumer_set.wait()
-            finally:
-                consumer_set.close()
-
-        self.consumer_set_thread = eventlet.spawn(_wait)
+        # Consume from all consumers in a thread
+        self.conn.consume_in_thread()
 
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
@@ -237,11 +228,6 @@ class Service(object):
             logging.warn(_('Service killed that has no database entry'))
 
     def stop(self):
-        self.consumer_set_thread.kill()
-        try:
-            self.consumer_set_thread.wait()
-        except greenlet.GreenletExit:
-            pass
         # Try to shut the connection down, but if we get any sort of
         # errors, go ahead and ignore them.. as we're shutting down anyway
         try:
