@@ -114,8 +114,7 @@ class AjaxConsoleProxy(object):
                     {'args': kwargs, 'last_activity': time.time()}
 
         self.conn = rpc.create_connection(new=True)
-        rpc.create_consumer(
-                self.conn,
+        self.conn.create_consumer(
                 FLAGS.ajax_console_proxy_topic,
                 TopicProxy)
 
