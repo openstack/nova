@@ -48,7 +48,9 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import rpc
 from nova import utils
+from nova.volume import volume_types
 
 
 LOG = logging.getLogger('nova.volume.manager')
@@ -60,6 +62,8 @@ flags.DEFINE_string('volume_driver', 'nova.volume.driver.ISCSIDriver',
                     'Driver to use for volume creation')
 flags.DEFINE_boolean('use_local_volumes', True,
                      'if True, will not discover local volumes')
+flags.DEFINE_boolean('volume_force_update_capabilities', False,
+                     'if True will force update capabilities on each check')
 
 
 class VolumeManager(manager.SchedulerDependentManager):
@@ -74,6 +78,7 @@ class VolumeManager(manager.SchedulerDependentManager):
         # NOTE(vish): Implementation specific db handling is done
         #             by the driver.
         self.driver.db = self.db
+        self._last_volume_stats = []
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
@@ -123,6 +128,7 @@ class VolumeManager(manager.SchedulerDependentManager):
         except Exception:
             self.db.volume_update(context,
                                   volume_ref['id'], {'status': 'error'})
+            self._notify_vsa(context, volume_ref, 'error')
             raise
 
         now = utils.utcnow()
@@ -130,7 +136,28 @@ class VolumeManager(manager.SchedulerDependentManager):
                               volume_ref['id'], {'status': 'available',
                                                  'launched_at': now})
         LOG.debug(_("volume %s: created successfully"), volume_ref['name'])
+        self._notify_vsa(context, volume_ref, 'available')
+        self._reset_stats()
         return volume_id
+
+    def _notify_vsa(self, context, volume_ref, status):
+        if volume_ref['volume_type_id'] is None:
+            return
+
+        if volume_types.is_vsa_drive(volume_ref['volume_type_id']):
+            vsa_id = None
+            for i in volume_ref.get('volume_metadata'):
+                if i['key'] == 'to_vsa_id':
+                    vsa_id = int(i['value'])
+                    break
+
+            if vsa_id:
+                rpc.cast(context,
+                         FLAGS.vsa_topic,
+                         {"method": "vsa_volume_created",
+                          "args": {"vol_id": volume_ref['id'],
+                                   "vsa_id": vsa_id,
+                                   "status": status}})
 
     def delete_volume(self, context, volume_id):
         """Deletes and unexports volume."""
@@ -141,6 +168,7 @@ class VolumeManager(manager.SchedulerDependentManager):
         if volume_ref['host'] != self.host:
             raise exception.Error(_("Volume is not local to this node"))
 
+        self._reset_stats()
         try:
             LOG.debug(_("volume %s: removing export"), volume_ref['name'])
             self.driver.remove_export(context, volume_ref)
@@ -231,3 +259,53 @@ class VolumeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         for volume in instance_ref['volumes']:
             self.driver.check_for_export(context, volume['id'])
+
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval."""
+
+        error_list = []
+        try:
+            self._report_driver_status()
+        except Exception as ex:
+            LOG.warning(_("Error during report_driver_status(): %s"),
+                        unicode(ex))
+            error_list.append(ex)
+
+        super(VolumeManager, self).periodic_tasks(context)
+
+        return error_list
+
+    def _volume_stats_changed(self, stat1, stat2):
+        if FLAGS.volume_force_update_capabilities:
+            return True
+        if len(stat1) != len(stat2):
+            return True
+        for (k, v) in stat1.iteritems():
+            if (k, v) not in stat2.iteritems():
+                return True
+        return False
+
+    def _report_driver_status(self):
+        volume_stats = self.driver.get_volume_stats(refresh=True)
+        if volume_stats:
+            LOG.info(_("Checking volume capabilities"))
+
+            if self._volume_stats_changed(self._last_volume_stats,
+                                          volume_stats):
+                LOG.info(_("New capabilities found: %s"), volume_stats)
+                self._last_volume_stats = volume_stats
+
+                # This will grab info about the host and queue it
+                # to be sent to the Schedulers.
+                self.update_service_capabilities(self._last_volume_stats)
+            else:
+                # avoid repeating fanouts
+                self.update_service_capabilities(None)
+
+    def _reset_stats(self):
+        LOG.info(_("Clear capabilities"))
+        self._last_volume_stats = []
+
+    def notification(self, context, event):
+        LOG.info(_("Notification {%s} received"), event)
+        self._reset_stats()

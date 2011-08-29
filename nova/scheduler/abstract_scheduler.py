@@ -180,7 +180,6 @@ class AbstractScheduler(driver.Scheduler):
         for zone_id, result in child_results:
             if not result:
                 continue
-            assert isinstance(zone_id, int)
 
             for zone_rec in zones:
                 if zone_rec['id'] != zone_id:

@@ -64,6 +64,7 @@ def db_version():
                           'users', 'user_project_association',
                           'user_project_role_association',
                           'user_role_association',
+                          'virtual_storage_arrays',
                           'volumes', 'volume_metadata',
                           'volume_types', 'volume_type_extra_specs'):
                 assert table in meta.tables
