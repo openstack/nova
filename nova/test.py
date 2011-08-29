@@ -278,20 +278,20 @@ class TestCase(unittest.TestCase):
             else:
                 self.assertEqual(sub_value, super_value)
 
-    def assertIn(self, a, b):
+    def assertIn(self, a, b, *args, **kwargs):
         """Python < v2.7 compatibility.  Assert 'a' in 'b'"""
         try:
             f = super(TestCase, self).assertIn
         except AttributeError:
-            self.assertTrue(a in b)
+            self.assertTrue(a in b, *args, **kwargs)
         else:
-            f(a, b)
+            f(a, b, *args, **kwargs)
 
-    def assertNotIn(self, a, b):
+    def assertNotIn(self, a, b, *args, **kwargs):
         """Python < v2.7 compatibility.  Assert 'a' NOT in 'b'"""
         try:
             f = super(TestCase, self).assertNotIn
         except AttributeError:
-            self.assertFalse(a in b)
+            self.assertFalse(a in b, *args, **kwargs)
         else:
-            f(a, b)
+            f(a, b, *args, **kwargs)
