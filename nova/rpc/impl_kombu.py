@@ -290,7 +290,7 @@ class FanoutPublisher(Publisher):
 
 
 class Connection(object):
-    """Connection instance object."""
+    """Connection object."""
 
     def __init__(self):
         self.consumers = []
@@ -503,7 +503,18 @@ ConnectionPool = Pool(
 
 
 class ConnectionContext(object):
+    """The class that is actually returned to the caller of
+    create_connection().  This is a essentially a wrapper around
+    Connection that supports 'with' and can return a new Connection or
+    one from a pool.  It will also catch when an instance of this class
+    is to be deleted so that we can return Connections to the pool on
+    exceptions and so forth without making the caller be responsible for
+    catching all exceptions and making sure to return a connection to
+    the pool.
+    """
+
     def __init__(self, pooled=True):
+        """Create a new connection, or get one from the pool"""
         self.connection = None
         if pooled:
             self.connection = ConnectionPool.get()
@@ -512,9 +523,13 @@ class ConnectionContext(object):
         self.pooled = pooled
 
     def __enter__(self):
+        """with ConnectionContext() should return self"""
         return self
 
     def _done(self):
+        """If the connection came from a pool, clean it up and put it back.
+        If it did not come from a pool, close it.
+        """
         if self.connection:
             if self.pooled:
                 # Reset the connection so it's ready for the next caller
@@ -533,19 +548,19 @@ class ConnectionContext(object):
             self.connection = None
 
     def __exit__(self, t, v, tb):
-        """end if 'with' statement.  We're done here."""
+        """end of 'with' statement.  We're done here."""
         self._done()
 
     def __del__(self):
-        """Put Connection back into the pool if this ConnectionContext
-        is being deleted
-        """
+        """Caller is done with this connection.  Make sure we cleaned up."""
         self._done()
 
     def close(self):
+        """Caller is done with this connection."""
         self._done()
 
     def __getattr__(self, key):
+        """Proxy all other calls to the Connection instance"""
         if self.connection:
             return getattr(self.connection, key)
         else:
@@ -637,6 +652,7 @@ def _pack_context(msg, context):
 
 
 class RpcContext(context.RequestContext):
+    """Context that supports replying to a rpc.call"""
     def __init__(self, *args, **kwargs):
         msg_id = kwargs.pop('msg_id', None)
         self.msg_id = msg_id
@@ -656,7 +672,7 @@ class MulticallWaiter(object):
 
     def done(self):
         self._done = True
-        self._connection = None
+        self._connection.close()
 
     def __call__(self, data):
         """The consume() callback will call this.  Store the result."""
@@ -666,6 +682,7 @@ class MulticallWaiter(object):
             self._result = data['result']
 
     def __iter__(self):
+        """Return a result until we get a 'None' response from consumer"""
         if self._done:
             raise StopIteration
         while True:
