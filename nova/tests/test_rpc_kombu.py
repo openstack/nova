@@ -16,37 +16,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Unit Tests for remote procedure calls using queue
+Unit Tests for remote procedure calls using kombu
 """
 
 from nova import context
 from nova import log as logging
-from nova.rpc import impl_kombu as rpc
 from nova import test
+from nova.rpc import impl_kombu
+from nova.tests import test_rpc_common
 
 
 LOG = logging.getLogger('nova.tests.rpc')
 
 
-class RpcKombuTestCase(test.TestCase):
+class RpcKombuTestCase(test_rpc_common._BaseRpcTestCase):
     def setUp(self):
+        self.rpc = impl_kombu
         super(RpcKombuTestCase, self).setUp()
-        self.conn = rpc.create_connection()
-        self.receiver = TestReceiver()
-        self.conn.create_consumer('test', self.receiver, False)
-        self.conn.consume_in_thread()
-        self.context = context.get_admin_context()
 
     def tearDown(self):
-        self.conn.close()
         super(RpcKombuTestCase, self).tearDown()
 
     def test_reusing_connection(self):
         """Test that reusing a connection returns same one."""
-        conn_context = rpc.create_connection(new=False)
+        conn_context = self.rpc.create_connection(new=False)
         conn1 = conn_context.connection
         conn_context.close()
-        conn_context = rpc.create_connection(new=False)
+        conn_context = self.rpc.create_connection(new=False)
         conn2 = conn_context.connection
         conn_context.close()
         self.assertEqual(conn1, conn2)
@@ -54,7 +50,7 @@ class RpcKombuTestCase(test.TestCase):
     def test_topic_send_receive(self):
         """Test sending to a topic exchange/queue"""
 
-        conn = rpc.create_connection()
+        conn = self.rpc.create_connection()
         message = 'topic test message'
 
         self.received_message = None
@@ -71,7 +67,7 @@ class RpcKombuTestCase(test.TestCase):
 
     def test_direct_send_receive(self):
         """Test sending to a direct exchange/queue"""
-        conn = rpc.create_connection()
+        conn = self.rpc.create_connection()
         message = 'direct test message'
 
         self.received_message = None
@@ -91,8 +87,8 @@ class RpcKombuTestCase(test.TestCase):
     def test_fanout_send_receive(self):
         """Test sending to a fanout exchange and consuming from 2 queues"""
 
-        conn = rpc.create_connection()
-        conn2 = rpc.create_connection()
+        conn = self.rpc.create_connection()
+        conn2 = self.rpc.create_connection()
         message = 'fanout test message'
 
         self.received_message = None
@@ -112,149 +108,3 @@ class RpcKombuTestCase(test.TestCase):
         conn2.consume(limit=1)
         conn2.close()
         self.assertEqual(self.received_message, message)
-
-    def test_call_succeed(self):
-        value = 42
-        result = rpc.call(self.context, 'test', {"method": "echo",
-                                                 "args": {"value": value}})
-        self.assertEqual(value, result)
-
-    def test_call_succeed_despite_multiple_returns(self):
-        value = 42
-        result = rpc.call(self.context, 'test', {"method": "echo_three_times",
-                                                 "args": {"value": value}})
-        self.assertEqual(value + 2, result)
-
-    def test_call_succeed_despite_multiple_returns_yield(self):
-        value = 42
-        result = rpc.call(self.context, 'test',
-                          {"method": "echo_three_times_yield",
-                           "args": {"value": value}})
-        self.assertEqual(value + 2, result)
-
-    def test_multicall_succeed_once(self):
-        value = 42
-        result = rpc.multicall(self.context,
-                              'test',
-                              {"method": "echo",
-                               "args": {"value": value}})
-        for i, x in enumerate(result):
-            if i > 0:
-                self.fail('should only receive one response')
-            self.assertEqual(value + i, x)
-
-    def test_multicall_succeed_three_times(self):
-        value = 42
-        result = rpc.multicall(self.context,
-                              'test',
-                              {"method": "echo_three_times",
-                               "args": {"value": value}})
-        for i, x in enumerate(result):
-            self.assertEqual(value + i, x)
-
-    def test_multicall_succeed_three_times_yield(self):
-        value = 42
-        result = rpc.multicall(self.context,
-                              'test',
-                              {"method": "echo_three_times_yield",
-                               "args": {"value": value}})
-        for i, x in enumerate(result):
-            self.assertEqual(value + i, x)
-
-    def test_context_passed(self):
-        """Makes sure a context is passed through rpc call."""
-        value = 42
-        result = rpc.call(self.context,
-                          'test', {"method": "context",
-                                   "args": {"value": value}})
-        self.assertEqual(self.context.to_dict(), result)
-
-    def test_call_exception(self):
-        """Test that exception gets passed back properly.
-
-        rpc.call returns a RemoteError object.  The value of the
-        exception is converted to a string, so we convert it back
-        to an int in the test.
-
-        """
-        value = 42
-        self.assertRaises(rpc.RemoteError,
-                          rpc.call,
-                          self.context,
-                          'test',
-                          {"method": "fail",
-                           "args": {"value": value}})
-        try:
-            rpc.call(self.context,
-                     'test',
-                     {"method": "fail",
-                      "args": {"value": value}})
-            self.fail("should have thrown rpc.RemoteError")
-        except rpc.RemoteError as exc:
-            self.assertEqual(int(exc.value), value)
-
-    def test_nested_calls(self):
-        """Test that we can do an rpc.call inside another call."""
-        class Nested(object):
-            @staticmethod
-            def echo(context, queue, value):
-                """Calls echo in the passed queue"""
-                LOG.debug(_("Nested received %(queue)s, %(value)s")
-                        % locals())
-                # TODO: so, it will replay the context and use the same REQID?
-                # that's bizarre.
-                ret = rpc.call(context,
-                               queue,
-                               {"method": "echo",
-                                "args": {"value": value}})
-                LOG.debug(_("Nested return %s"), ret)
-                return value
-
-        nested = Nested()
-        conn = rpc.create_connection(True)
-        conn.create_consumer('nested', nested, False)
-        conn.consume_in_thread()
-        value = 42
-        result = rpc.call(self.context,
-                          'nested', {"method": "echo",
-                                     "args": {"queue": "test",
-                                              "value": value}})
-        conn.close()
-        self.assertEqual(value, result)
-
-
-class TestReceiver(object):
-    """Simple Proxy class so the consumer has methods to call.
-
-    Uses static methods because we aren't actually storing any state.
-
-    """
-
-    @staticmethod
-    def echo(context, value):
-        """Simply returns whatever value is sent in."""
-        LOG.debug(_("Received %s"), value)
-        return value
-
-    @staticmethod
-    def context(context, value):
-        """Returns dictionary version of context."""
-        LOG.debug(_("Received %s"), context)
-        return context.to_dict()
-
-    @staticmethod
-    def echo_three_times(context, value):
-        context.reply(value)
-        context.reply(value + 1)
-        context.reply(value + 2)
-
-    @staticmethod
-    def echo_three_times_yield(context, value):
-        yield value
-        yield value + 1
-        yield value + 2
-
-    @staticmethod
-    def fail(context, value):
-        """Raises an exception with the value sent in."""
-        raise Exception(value)
