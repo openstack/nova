@@ -818,15 +818,12 @@ class NetworkCommands(object):
 
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to delete')
-    @args('--uuid', dest="uuid", metavar='<network uuid>',
-            help='UUID of network to delete')
     def delete(self, fixed_range):
         """Deletes a network"""
 
         # delete the network
         net_manager = utils.import_object(FLAGS.network_manager)
-        net_manager.delete_network(context.get_admin_context(), fixed_range,
-                                                        uuid=None)
+        net_manager.delete_network(context.get_admin_context(), fixed_range)
 
 
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
