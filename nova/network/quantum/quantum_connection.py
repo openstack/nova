@@ -38,31 +38,49 @@ flags.DEFINE_string('quantum_default_tenant_id',
 
 
 class QuantumClientConnection:
+    """ Abstracts connection to Quantum service into higher level
+        operations performed by the QuantumManager.
+
+        Separating this out as a class also let's us create a 'fake'
+        version of this class for unit tests.
+    """
 
     def __init__(self):
+        """ Initialize Quantum client class based on flags. """
         self.client = quantum_client.Client(FLAGS.quantum_connection_host,
                                             FLAGS.quantum_connection_port,
                                             format="json",
                                             logger=LOG)
 
     def create_network(self, tenant_id, network_name):
+        """ Create network using specified name, return Quantum
+            network UUID.
+        """
         data = {'network': {'name': network_name}}
         resdict = self.client.create_network(data, tenant=tenant_id)
         return resdict["network"]["id"]
 
     def delete_network(self, tenant_id, net_id):
+        """ Deletes Quantum network with specified UUID. """
         self.client.delete_network(net_id, tenant=tenant_id)
 
     def network_exists(self, tenant_id, net_id):
+        """ Determine if a Quantum network exists for the
+            specified tenant.
+        """
         try:
             self.client.show_network_details(net_id, tenant=tenant_id)
         except:
-            # FIXME: client lib should expose more granular exceptions
+            # FIXME: (danwent) client lib should expose granular exceptions
             # so we can confirm we're getting a 404 and not some other error
             return False
         return True
 
     def create_and_attach_port(self, tenant_id, net_id, interface_id):
+        """ Creates a Quantum port on the specified network, sets
+            status to ACTIVE to enable traffic, and attaches the
+            vNIC with the specified interface-id.
+        """
         LOG.debug("Connecting interface %s to net %s for %s" % \
                     (interface_id, net_id, tenant_id))
         port_data = {'port': {'state': 'ACTIVE'}}
@@ -74,15 +92,19 @@ class QuantumClientConnection:
                                     tenant=tenant_id)
 
     def detach_and_delete_port(self, tenant_id, net_id, port_id):
+        """ Detach and delete the specified Quantum port. """
         LOG.debug("Deleting port %s on net %s for %s" % \
                     (port_id, net_id, tenant_id))
 
         self.client.detach_resource(net_id, port_id, tenant=tenant_id)
         self.client.delete_port(net_id, port_id, tenant=tenant_id)
 
-    # FIXME: (danwent) this will be inefficient until API implements querying
     def get_port_by_attachment(self, tenant_id, attachment_id):
-
+        """ Given a tenant, search for the Quantum network and port
+            UUID that has the specified interface-id attachment.
+        """
+        # FIXME: (danwent) this will be inefficient until the Quantum
+        # API implements querying a port by the interface-id
         net_list_resdict = self.client.list_networks(tenant=tenant_id)
         for n in net_list_resdict["networks"]:
             net_id = n['id']

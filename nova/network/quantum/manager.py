@@ -35,8 +35,27 @@ flags.DEFINE_string('quantum_ipam_lib',
 
 
 class QuantumManager(manager.FlatManager):
+    """ NetworkManager class that communicates with a Quantum service
+        via a web services API to provision VM network connectivity.
+
+        For IP Address management, QuantumManager can be configured to
+        use either Nova's local DB or the Melange IPAM service.
+
+        Currently, the QuantumManager does NOT support any of the 'gateway'
+        functionality implemented by the Nova VlanManager, including:
+            * floating IPs
+            * DHCP
+            * NAT gateway
+
+        Support for these capabilities are targted for future releases.
+    """
 
     def __init__(self, ipam_lib=None, *args, **kwargs):
+        """ Initialize two key libraries, the connection to a
+            Quantum service, and the library for implementing IPAM.
+
+            Calls inherited FlatManager constructor.
+        """
 
         if FLAGS.fake_network:
             self.q_conn = fake.FakeQuantumClientConnection()
@@ -53,6 +72,17 @@ class QuantumManager(manager.FlatManager):
                         network_size, cidr_v6, gateway_v6, bridge,
                         bridge_interface, dns1=None, dns2=None, uuid=None,
                         **kwargs):
+        """ Unlike other NetworkManagers, with QuantumManager, each
+            create_networks calls should create only a single network.
+
+            Two scenarios exist:
+                - no 'uuid' is specified, in which case we contact
+                  Quantum and create a new network.
+                - an existing 'uuid' is specified, corresponding to
+                  a Quantum network created out of band.
+
+            In both cases, we initialize a subnet using the IPAM lib.
+        """
         if num_networks != 1:
             raise Exception("QuantumManager requires that only one"
                             " network is created per call")
@@ -74,27 +104,46 @@ class QuantumManager(manager.FlatManager):
                             priority, cidr, gateway_v6, cidr_v6, dns1, dns2)
 
     def delete_network(self, context, fixed_range):
+            """ Lookup network by IPv4 cidr, delete both the IPAM
+                subnet and the corresponding Quantum network.
+            """
             project_id = context.project_id
             quantum_net_id = self.ipam.get_network_id_by_cidr(
                                     context, fixed_range, project_id)
             self.ipam.delete_subnets_by_net_id(context, quantum_net_id,
                                                             project_id)
-            try:
-                q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
-                self.q_conn.delete_network(q_tenant_id, quantum_net_id)
-            except Exception, e:
-                raise Exception("Unable to delete Quantum Network with "
-                    "fixed_range = %s (ports still in use?)." % fixed_range)
+            q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
+            self.q_conn.delete_network(q_tenant_id, quantum_net_id)
 
     def allocate_for_instance(self, context, **kwargs):
+        """ Called by compute when it is creating a new VM.
+
+            There are three key tasks:
+                - Determine the number and order of vNICs to create
+                - Allocate IP addresses
+                - Create ports on a Quantum network and attach vNICs.
+
+            We support two approaches to determining vNICs:
+                - By default, a VM gets a vNIC for any network belonging
+                  to the VM's project, and a vNIC for any "global" network
+                  that has a NULL project_id.  vNIC order is determined
+                  by the network's 'priority' field.
+                - If the 'os-create-server-ext' was used to create the VM,
+                  only the networks in 'requested_networks' are used to
+                  create vNICs, and the vNIC order is determiend by the
+                  order in the requested_networks array.
+
+            For each vNIC, use the FlatManager to create the entries
+            in the virtual_interfaces table, contact Quantum to
+            create a port and attachment the vNIC, and use the IPAM
+            lib to allocate IP addresses.
+        """
         instance_id = kwargs.pop('instance_id')
         instance_type_id = kwargs['instance_type_id']
         host = kwargs.pop('host')
         project_id = kwargs.pop('project_id')
         LOG.debug(_("network allocations for instance %s"), instance_id)
 
-        # if using the create-server-networks extension, 'requested_networks'
-        # will be defined, otherwise, just grab relevant nets from IPAM
         requested_networks = kwargs.get('requested_networks')
 
         if requested_networks:
@@ -116,10 +165,12 @@ class QuantumManager(manager.FlatManager):
             # updating the virtual_interfaces table to use UUIDs would
             # be one solution, but this would require significant work
             # elsewhere.
-            network_ref = db.network_get_by_uuid(context, quantum_net_id)
+            admin_context = context.elevated()
+            network_ref = db.network_get_by_uuid(admin_context,
+                                                quantum_net_id)
 
             vif_rec = manager.FlatManager.add_virtual_interface(self,
-                                      context, instance_id, network_ref['id'])
+                                  context, instance_id, network_ref['id'])
 
             # talk to Quantum API to create and attach port.
             q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
@@ -133,6 +184,18 @@ class QuantumManager(manager.FlatManager):
 
     def get_instance_nw_info(self, context, instance_id,
                                 instance_type_id, host):
+        """ This method is used by compute to fetch all network data
+            that should be used when creating the VM.
+
+            The method simply loops through all virtual interfaces
+            stored in the nova DB and queries the IPAM lib to get
+            the associated IP data.
+
+            The format of returned data is 'defined' by the initial
+            set of NetworkManagers found in nova/network/manager.py .
+            Ideally this 'interface' will be more formally defined
+            in the future.
+        """
         network_info = []
         instance = db.instance_get(context, instance_id)
         project_id = instance.project_id
@@ -202,6 +265,11 @@ class QuantumManager(manager.FlatManager):
         return network_info
 
     def deallocate_for_instance(self, context, **kwargs):
+        """ Called when a VM is terminated.  Loop through each virtual
+            interface in the Nova DB and remove the Quantum port and
+            clear the IP allocation using the IPAM.  Finally, remove
+            the virtual interfaces from the Nova DB.
+        """
         instance_id = kwargs.get('instance_id')
         project_id = kwargs.pop('project_id', None)
 
@@ -234,11 +302,12 @@ class QuantumManager(manager.FlatManager):
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
 
-    # validates that this tenant has quantum networks with the associated
-    # UUIDs.  This is called by the 'os-create-server-ext' API extension
-    # code so that we can return an API error code to the caller if they
-    # request an invalid network.
     def validate_networks(self, context, networks):
+        """ Validates that this tenant has quantum networks with the associated
+           UUIDs.  This is called by the 'os-create-server-ext' API extension
+           code so that we can return an API error code to the caller if they
+           request an invalid network.
+        """
         if networks is None:
             return
 
