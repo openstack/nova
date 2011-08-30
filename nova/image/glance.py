@@ -141,11 +141,12 @@ class GlanceImageService(service.BaseImageService):
         """Paginate through results from glance server"""
         images = fetch_func(**kwargs)
 
-        for image in images:
-            yield image
-        else:
+        if not images:
             # break out of recursive loop to end pagination
             return
+
+        for image in images:
+            yield image
 
         try:
             # attempt to advance the marker in order to fetch next page
