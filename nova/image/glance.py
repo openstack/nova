@@ -153,7 +153,8 @@ class GlanceImageService(service.BaseImageService):
         except KeyError:
             raise exception.ImagePaginationFailed()
 
-        self._fetch_images(fetch_func, **kwargs)
+        for image in self._fetch_images(fetch_func, **kwargs):
+            yield image
 
     def show(self, context, image_id):
         """Returns a dict with image data for the given opaque image id."""
