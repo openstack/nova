@@ -23,18 +23,10 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('rpc_backend',
-                    'kombu',
+                    'nova.rpc.impl_kombu',
                     "The messaging module to use, defaults to kombu.")
 
-impl_table = {'kombu': 'nova.rpc.impl_kombu',
-                'amqp': 'nova.rpc.impl_kombu',
-                'carrot': 'nova.rpc.impl_carrot'}
-
-
-# rpc_backend can be a short name like 'kombu', or it can be the full
-# module name
-RPCIMPL = import_object(impl_table.get(FLAGS.rpc_backend,
-        FLAGS.rpc_backend))
+RPCIMPL = import_object(FLAGS.rpc_backend)
 
 
 def create_connection(new=True):
