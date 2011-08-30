@@ -37,8 +37,7 @@ import nova.image.fake
 import nova.rpc
 from nova.tests.api.openstack import fakes
 
-from nova import log as logging
-LOG = logging.getLogger('nova.api.openstack.test')
+
 FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
@@ -209,7 +208,6 @@ class CreateserverextTest(test.TestCase):
     def test_create_instance_with_no_networks(self):
         request, response, networks = \
                 self._create_instance_with_networks_json(networks=None)
-        LOG.debug(response)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, None)
 
