@@ -30,6 +30,7 @@ from webob import exc
 
 FLAGS = flags.FLAGS
 
+
 class SimpleTenantUsageController(object):
     def _hours_for(self, instance, period_start, period_stop):
         launched_at = instance['launched_at']

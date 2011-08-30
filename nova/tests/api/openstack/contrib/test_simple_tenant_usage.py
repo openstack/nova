@@ -26,7 +26,6 @@ from nova.compute import api
 from nova.tests.api.openstack import fakes
 
 
-
 FLAGS = flags.FLAGS
 
 SERVERS = 5
@@ -58,6 +57,7 @@ def get_fake_db_instance(start, end, instance_id, tenant_id):
              'instance_type_id': 1,
              'launched_at': start,
              'terminated_at': end}
+
 
 def fake_instance_get_active_by_window(self, context, begin, end, project_id):
             return [get_fake_db_instance(START,

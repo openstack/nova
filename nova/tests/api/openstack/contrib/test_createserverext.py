@@ -23,6 +23,7 @@ from xml.dom import minidom
 import stubout
 import webob
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import test
@@ -76,6 +77,7 @@ class CreateserverextTest(test.TestCase):
             def __init__(self):
                 self.injected_files = None
                 self.networks = None
+                self.db = db
 
             def create(self, *args, **kwargs):
                 if 'injected_files' in kwargs:

@@ -388,8 +388,8 @@ class API(base.Base):
         security_groups = []
         for security_group_name in security_group:
             group = self.db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       security_group_name)
+                    context.project_id,
+                    security_group_name)
             security_groups.append(group['id'])
 
         for security_group_id in security_groups:
@@ -667,8 +667,8 @@ class API(base.Base):
     def add_security_group(self, context, instance_id, security_group_name):
         """Add security group to the instance"""
         security_group = self.db.security_group_get_by_name(context,
-                                                            context.project_id,
-                                                            security_group_name)
+                context.project_id,
+                security_group_name)
         # check if the server exists
         inst = self.db.instance_get(context, instance_id)
         #check if the security group is associated with the server
@@ -693,8 +693,8 @@ class API(base.Base):
     def remove_security_group(self, context, instance_id, security_group_name):
         """Remove the security group associated with the instance"""
         security_group = self.db.security_group_get_by_name(context,
-                                                            context.project_id,
-                                                            security_group_name)
+                context.project_id,
+                security_group_name)
         # check if the server exists
         inst = self.db.instance_get(context, instance_id)
         #check if the security group is associated with the server
