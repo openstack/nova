@@ -402,10 +402,6 @@ class KernelNotFoundForImage(ImageNotFound):
     message = _("Kernel not found for image %(image_id)s.")
 
 
-class RamdiskNotFoundForImage(ImageNotFound):
-    message = _("Ramdisk not found for image %(image_id)s.")
-
-
 class UserNotFound(NotFound):
     message = _("User %(user_id)s could not be found.")
 
