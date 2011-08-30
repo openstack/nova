@@ -28,7 +28,9 @@ flags.DEFINE_string('rpc_backend',
 
 _RPCIMPL = None
 
+
 def get_impl():
+    """Delay import of rpc_backend until FLAGS are loaded."""
     global _RPCIMPL
     if _RPCIMPL is None:
         _RPCIMPL = import_object(FLAGS.rpc_backend)
