@@ -1010,7 +1010,7 @@ class API(base.Base):
         :param extra_properties: dict of extra image properties to include
 
         """
-        instance = self.db.api.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
                       'image_state': 'creating',

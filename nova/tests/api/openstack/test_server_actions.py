@@ -248,7 +248,7 @@ class ServerActionsTest(test.TestCase):
         def fake_migration_get(*args):
             return {}
 
-        self.stubs.Set(nova.db, 'migration_get_by_instance_and_status',
+        self.stubs.Set(nova.db.api, 'migration_get_by_instance_and_status',
                 fake_migration_get)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)

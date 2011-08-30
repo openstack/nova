@@ -212,7 +212,7 @@ class SimpleTenantUsageController(object):
 
 class Simple_tenant_usage(extensions.ExtensionDescriptor):
     def get_name(self):
-        return "Simple_tenant_usage"
+        return "SimpleTenantUsage"
 
     def get_alias(self):
         return "os-simple-tenant-usage"
