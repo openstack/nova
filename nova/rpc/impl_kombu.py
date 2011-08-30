@@ -491,7 +491,7 @@ class Pool(pools.Pool):
 
     # TODO(comstud): Timeout connections not used in a while
     def create(self):
-        LOG.debug('Creating new connection')
+        LOG.debug('Pool creating new connection')
         return Connection()
 
 # Create a ConnectionPool to use for RPC calls.  We'll order the
