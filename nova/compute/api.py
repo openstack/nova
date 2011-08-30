@@ -387,9 +387,9 @@ class API(base.Base):
 
         security_groups = []
         for security_group_name in security_group:
-            group = db.security_group_get_by_name(context,
-                                                  context.project_id,
-                                                  security_group_name)
+            group = self.db.security_group_get_by_name(context,
+                                                       context.project_id,
+                                                       security_group_name)
             security_groups.append(group['id'])
 
         for security_group_id in security_groups:
@@ -549,8 +549,9 @@ class API(base.Base):
     def has_finished_migration(self, context, instance_uuid):
         """Returns true if an instance has a finished migration."""
         try:
-            db.migration_get_by_instance_and_status(context, instance_uuid,
-                    'finished')
+            self.db.migration_get_by_instance_and_status(context,
+                                                         instance_uuid,
+                                                         'finished')
             return True
         except exception.NotFound:
             return False
@@ -564,14 +565,15 @@ class API(base.Base):
         :param context: the security context
         """
         try:
-            db.security_group_get_by_name(context, context.project_id,
-                                          'default')
+            self.db.security_group_get_by_name(context,
+                                               context.project_id,
+                                               'default')
         except exception.NotFound:
             values = {'name': 'default',
                       'description': 'default',
                       'user_id': context.user_id,
                       'project_id': context.project_id}
-            db.security_group_create(context, values)
+            self.db.security_group_create(context, values)
 
     def trigger_security_group_rules_refresh(self, context, security_group_id):
         """Called when a rule is added to or removed from a security_group."""
@@ -636,7 +638,7 @@ class API(base.Base):
         """Called when a rule is added to or removed from a security_group"""
 
         hosts = [x['host'] for (x, idx)
-                           in db.service_get_all_compute_sorted(context)]
+                           in self.db.service_get_all_compute_sorted(context)]
         for host in hosts:
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -664,11 +666,11 @@ class API(base.Base):
 
     def add_security_group(self, context, instance_id, security_group_name):
         """Add security group to the instance"""
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       security_group_name)
+        security_group = self.db.security_group_get_by_name(context,
+                                                            context.project_id,
+                                                            security_group_name)
         # check if the server exists
-        inst = db.instance_get(context, instance_id)
+        inst = self.db.instance_get(context, instance_id)
         #check if the security group is associated with the server
         if self._is_security_group_associated_with_server(security_group,
                                                         instance_id):
@@ -680,21 +682,21 @@ class API(base.Base):
         if inst['state'] != power_state.RUNNING:
             raise exception.InstanceNotRunning(instance_id=instance_id)
 
-        db.instance_add_security_group(context.elevated(),
-                                       instance_id,
-                                       security_group['id'])
+        self.db.instance_add_security_group(context.elevated(),
+                                            instance_id,
+                                            security_group['id'])
         rpc.cast(context,
-             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             self.db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
              {"method": "refresh_security_group_rules",
               "args": {"security_group_id": security_group['id']}})
 
     def remove_security_group(self, context, instance_id, security_group_name):
         """Remove the security group associated with the instance"""
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       security_group_name)
+        security_group = self.db.security_group_get_by_name(context,
+                                                            context.project_id,
+                                                            security_group_name)
         # check if the server exists
-        inst = db.instance_get(context, instance_id)
+        inst = self.db.instance_get(context, instance_id)
         #check if the security group is associated with the server
         if not self._is_security_group_associated_with_server(security_group,
                                                         instance_id):
@@ -706,11 +708,11 @@ class API(base.Base):
         if inst['state'] != power_state.RUNNING:
             raise exception.InstanceNotRunning(instance_id=instance_id)
 
-        db.instance_remove_security_group(context.elevated(),
-                                       instance_id,
-                                       security_group['id'])
+        self.db.instance_remove_security_group(context.elevated(),
+                                               instance_id,
+                                               security_group['id'])
         rpc.cast(context,
-             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             self.db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
              {"method": "refresh_security_group_rules",
               "args": {"security_group_id": security_group['id']}})
 
