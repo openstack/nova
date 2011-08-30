@@ -68,6 +68,8 @@ flags.DEFINE_string('linuxnet_interface_driver',
                     'Driver used to create ethernet devices.')
 flags.DEFINE_string('linuxnet_ovs_integration_bridge',
                     'br-int', 'Name of Open vSwitch bridge used with linuxnet')
+flags.DEFINE_bool('send_arp_for_ha', False,
+                  'send gratuitous ARPs for HA setup')
 binary_name = os.path.basename(inspect.stack()[-1][1])
 
 
@@ -404,6 +406,10 @@ def bind_floating_ip(floating_ip, check_exit_code=True):
     _execute('ip', 'addr', 'add', floating_ip,
              'dev', FLAGS.public_interface,
              run_as_root=True, check_exit_code=check_exit_code)
+    if FLAGS.send_arp_for_ha:
+        _execute('sudo', 'arping', '-U', floating_ip,
+                 '-A', '-I', FLAGS.public_interface,
+                 '-c', 1, check_exit_code=False)
 
 
 def unbind_floating_ip(floating_ip):
@@ -853,6 +859,10 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             if gateway:
                 _execute('route', 'add', 'default', 'gw', gateway,
                             run_as_root=True)
+                if FLAGS.send_arp_for_ha:
+                    _execute('sudo', 'arping', '-U', gateway,
+                             '-A', '-I', bridge,
+                             '-c', 1, check_exit_code=False)
 
             if (err and err != "device %s is already a member of a bridge;"
                      "can't enslave it to bridge %s.\n" % (interface, bridge)):
