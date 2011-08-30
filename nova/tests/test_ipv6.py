@@ -48,7 +48,7 @@ class IPv6RFC2462TestCase(test.TestCase):
     def test_to_global_with_bad_prefix(self):
         bad_prefix = '82'
         self.assertRaises(TypeError, ipv6.to_global,
-                                    bad_prefix, 
+                                    bad_prefix,
                                     '2001:db8::216:3eff:fe33:4455',
                                     'test')
 

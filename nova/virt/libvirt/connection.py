@@ -135,6 +135,9 @@ flags.DEFINE_string('default_local_format',
                     None,
                     'The default format a local_volume will be formatted with '
                     'on creation.')
+flags.DEFINE_bool('libvirt_use_virtio_for_bridges',
+                  False,
+                  'Use virtio for bridge interfaces')
 
 
 def get_connection(read_only):
@@ -1083,6 +1086,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     'ebs_root': ebs_root,
                     'local_device': local_device,
                     'volumes': block_device_mapping,
+                    'use_virtio_for_bridges':
+                            FLAGS.libvirt_use_virtio_for_bridges,
                     'ephemerals': ephemerals}
 
         root_device_name = driver.block_device_info_get_root(block_device_info)

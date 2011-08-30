@@ -1035,7 +1035,7 @@ class API(base.Base):
         files_to_inject = files_to_inject or []
         self._check_injected_file_quota(context, files_to_inject)
 
-        values = {}
+        values = {"image_ref": image_href}
         if metadata is not None:
             self._check_metadata_properties_quota(context, metadata)
             values['metadata'] = metadata
@@ -1045,7 +1045,6 @@ class API(base.Base):
 
         rebuild_params = {
             "new_pass": admin_password,
-            "image_ref": image_href,
             "injected_files": files_to_inject,
         }
 
