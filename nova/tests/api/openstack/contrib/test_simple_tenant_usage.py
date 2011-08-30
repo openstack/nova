@@ -20,9 +20,9 @@ import json
 import webob
 
 from nova import context
-from nova import db
 from nova import flags
 from nova import test
+from nova.compute import api
 from nova.tests.api.openstack import fakes
 
 
@@ -39,7 +39,7 @@ STOP = datetime.datetime.utcnow()
 START = STOP - datetime.timedelta(hours=HOURS)
 
 
-def fake_instance_type_get(context, instance_type_id):
+def fake_instance_type_get(self, context, instance_type_id):
     return {'id': 1,
             'vcpus': VCPUS,
             'local_gb': LOCAL_GB,
@@ -59,7 +59,7 @@ def get_fake_db_instance(start, end, instance_id, tenant_id):
              'launched_at': start,
              'terminated_at': end}
 
-def fake_instance_get_active_by_window(context, begin, end, project_id, fast):
+def fake_instance_get_active_by_window(self, context, begin, end, project_id):
             return [get_fake_db_instance(START,
                                          STOP,
                                          x,
@@ -70,9 +70,9 @@ def fake_instance_get_active_by_window(context, begin, end, project_id, fast):
 class SimpleTenantUsageTest(test.TestCase):
     def setUp(self):
         super(SimpleTenantUsageTest, self).setUp()
-        self.stubs.Set(db, "instance_type_get",
+        self.stubs.Set(api.API, "get_instance_type",
                        fake_instance_type_get)
-        self.stubs.Set(db, "instance_get_active_by_window",
+        self.stubs.Set(api.API, "get_active_by_window",
                        fake_instance_get_active_by_window)
         self.admin_context = context.RequestContext('fakeadmin_0',
                                                     'faketenant_0',

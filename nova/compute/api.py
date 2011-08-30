@@ -19,13 +19,11 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
-import eventlet
 import novaclient
 import re
 import time
 
 from nova import block_device
-from nova import db
 from nova import exception
 from nova import flags
 import nova.image
@@ -237,7 +235,7 @@ class API(base.Base):
         self.ensure_default_security_group(context)
 
         if key_data is None and key_name:
-            key_pair = db.key_pair_get(context, context.user_id, key_name)
+            key_pair = self.db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
 
         if reservation_id is None:
@@ -802,6 +800,15 @@ class API(base.Base):
                   "args": {"topic": FLAGS.compute_topic,
                            "instance_id": instance_id}})
 
+    def get_active_by_window(self, context, begin, end=None, project_id=None):
+        """Get instances that were continuously active over a window."""
+        return self.db.instance_get_active_by_window(context, begin, end,
+                                                     project_id)
+
+    def get_instance_type(self, context, instance_type_id):
+        """Get an instance type by instance type id."""
+        return self.db.instance_type_get(context, instance_type_id)
+
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
         # NOTE(sirp): id used to be exclusively integer IDs; now we're
@@ -1001,7 +1008,7 @@ class API(base.Base):
         :param extra_properties: dict of extra image properties to include
 
         """
-        instance = db.api.instance_get(context, instance_id)
+        instance = self.db.api.instance_get(context, instance_id)
         properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
                       'image_state': 'creating',
@@ -1026,7 +1033,7 @@ class API(base.Base):
     def rebuild(self, context, instance_id, image_href, admin_password,
                 name=None, metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
-        instance = db.api.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
 
         if instance["state"] == power_state.BUILDING:
             msg = _("Instance already building")

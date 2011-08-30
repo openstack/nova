@@ -19,10 +19,9 @@ import urlparse
 import webob
 
 from datetime import datetime
-from nova import db
 from nova import exception
 from nova import flags
-from nova.compute import instance_types
+from nova.compute import api
 from nova.api.openstack import extensions
 from nova.api.openstack import views
 from nova.db.sqlalchemy.session import get_session
@@ -71,11 +70,11 @@ class SimpleTenantUsageController(object):
     def _tenant_usages_for_period(self, context, period_start,
                                   period_stop, tenant_id=None, detailed=True):
 
-        instances = db.instance_get_active_by_window(context,
+        compute_api = api.API()
+        instances = compute_api.get_active_by_window(context,
                                                      period_start,
                                                      period_stop,
-                                                     tenant_id,
-                                                     fast=True)
+                                                     tenant_id)
         from nova import log as logging
         logging.info(instances)
         rval = {}
@@ -90,8 +89,9 @@ class SimpleTenantUsageController(object):
 
             if not flavors.get(flavor_type):
                 try:
-                    flavors[flavor_type] = db.instance_type_get(context,
-                                                                flavor_type)
+                    it_ref = compute_api.get_instance_type(context,
+                                                           flavor_type)
+                    flavors[flavor_type] = it_ref
                 except exception.InstanceTypeNotFound:
                     # can't bill if there is no instance type
                     continue
