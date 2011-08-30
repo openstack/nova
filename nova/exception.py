@@ -533,6 +533,10 @@ class NoMoreFloatingIps(FloatingIpNotFound):
     message = _("Zero floating ips available.")
 
 
+class FloatingIpAlreadyInUse(NovaException):
+    message = _("Floating ip %(address) already in use by %(fixed_ip).")
+
+
 class NoFloatingIpsDefined(NotFound):
     message = _("Zero floating ips exist.")
 

@@ -23,6 +23,7 @@ from nova import db
 from nova import test
 from nova import network
 from nova.tests.api.openstack import fakes
+from nova.tests.api.openstack import test_servers
 
 
 from nova.api.openstack.contrib.floating_ips import FloatingIPController
@@ -60,8 +61,36 @@ def compute_api_associate(self, context, instance_id, floating_ip):
     pass
 
 
+def network_api_associate(self, context, floating_ip, fixed_ip):
+    pass
+
+
 def network_api_disassociate(self, context, floating_address):
     pass
+
+
+def network_get_instance_nw_info(self, context, instance):
+    info = {
+        'label': 'fake',
+        'gateway': 'fake',
+        'dhcp_server': 'fake',
+        'broadcast': 'fake',
+        'mac': 'fake',
+        'vif_uuid': 'fake',
+        'rxtx_cap': 'fake',
+        'dns': [],
+        'ips': [{'ip': '10.0.0.1'}],
+        'should_create_bridge': False,
+        'should_create_vlan': False}
+
+    return [['ignore', info]]
+
+
+def fake_instance_get(context, instance_id):
+        return {
+        "id": 1,
+        "user_id": 'fakeuser',
+        "project_id": '123'}
 
 
 class FloatingIpTest(test.TestCase):
@@ -79,9 +108,6 @@ class FloatingIpTest(test.TestCase):
 
     def setUp(self):
         super(FloatingIpTest, self).setUp()
-        self.controller = FloatingIPController()
-        fakes.stub_out_networking(self.stubs)
-        fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(network.api.API, "get_floating_ip",
                        network_api_get_floating_ip)
         self.stubs.Set(network.api.API, "get_floating_ip_by_ip",
@@ -92,10 +118,13 @@ class FloatingIpTest(test.TestCase):
                        network_api_allocate)
         self.stubs.Set(network.api.API, "release_floating_ip",
                        network_api_release)
-        self.stubs.Set(compute.api.API, "associate_floating_ip",
-                       compute_api_associate)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        network_api_disassociate)
+        self.stubs.Set(network.api.API, "get_instance_nw_info",
+                       network_get_instance_nw_info)
+        self.stubs.Set(db.api, 'instance_get',
+                       fake_instance_get)
+
         self.context = context.get_admin_context()
         self._create_floating_ip()
 
@@ -165,6 +194,8 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_add_floating_ip_to_instance(self):
+        self.stubs.Set(network.api.API, "associate_floating_ip",
+                       network_api_associate)
         body = dict(addFloatingIp=dict(address='11.0.0.1'))
         req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
@@ -173,6 +204,33 @@ class FloatingIpTest(test.TestCase):
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
+
+    def test_add_associated_floating_ip_to_instance(self):
+        def fake_fixed_ip_get_by_address(ctx, address, session=None):
+            return {'address': address, 'network': {'multi_host': None,
+                                                    'host': 'fake'}}
+
+        self.disassociated = False
+
+        def fake_network_api_disassociate(local_self, ctx, floating_address):
+            self.disassociated = True
+
+        db.floating_ip_update(self.context, self.address, {'project_id': '123',
+                                                           'fixed_ip_id': 1})
+        self.stubs.Set(network.api.API, "disassociate_floating_ip",
+                       fake_network_api_disassociate)
+        self.stubs.Set(db.api, "fixed_ip_get_by_address",
+                       fake_fixed_ip_get_by_address)
+
+        body = dict(addFloatingIp=dict(address=self.address))
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 202)
+        self.assertTrue(self.disassociated)
 
     def test_remove_floating_ip_from_instance(self):
         body = dict(removeFloatingIp=dict(address='11.0.0.1'))
