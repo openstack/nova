@@ -1263,6 +1263,7 @@ class ServersTest(test.TestCase):
             self.assertTrue('changes-since' in search_opts)
             changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1)
             self.assertEqual(search_opts['changes-since'], changes_since)
+            self.assertTrue('deleted' not in search_opts)
             return [stub_instance(100)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
