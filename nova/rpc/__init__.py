@@ -23,27 +23,33 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('rpc_backend',
-                    'nova.rpc.impl_kombu',
-                    "The messaging module to use, defaults to kombu.")
+                    'nova.rpc.impl_carrot',
+                    "The messaging module to use, defaults to carrot.")
 
-RPCIMPL = import_object(FLAGS.rpc_backend)
+_RPCIMPL = None
+
+def get_impl():
+    global _RPCIMPL
+    if _RPCIMPL is None:
+        _RPCIMPL = import_object(FLAGS.rpc_backend)
+    return _RPCIMPL
 
 
 def create_connection(new=True):
-    return RPCIMPL.create_connection(new=new)
+    return get_impl().create_connection(new=new)
 
 
 def call(context, topic, msg):
-    return RPCIMPL.call(context, topic, msg)
+    return get_impl().call(context, topic, msg)
 
 
 def cast(context, topic, msg):
-    return RPCIMPL.cast(context, topic, msg)
+    return get_impl().cast(context, topic, msg)
 
 
 def fanout_cast(context, topic, msg):
-    return RPCIMPL.fanout_cast(context, topic, msg)
+    return get_impl().fanout_cast(context, topic, msg)
 
 
 def multicall(context, topic, msg):
-    return RPCIMPL.multicall(context, topic, msg)
+    return get_impl().multicall(context, topic, msg)
