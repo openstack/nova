@@ -547,9 +547,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.REBUILDING,
                               task_state=task_states.BLOCK_DEVICE_MAPPING)
 
-        image_ref = kwargs.get('image_ref')
-        instance_ref.image_ref = image_ref
-
         instance_ref.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
                                                               instance_ref)
@@ -572,11 +569,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None,
-                              image_ref=image_ref,
                               launched_at=utils.utcnow())
 
-        usage_info = utils.usage_from_instance(instance_ref,
-                                               image_ref=image_ref)
+        usage_info = utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host,
                             'compute.instance.rebuild',
                             notifier.INFO,
