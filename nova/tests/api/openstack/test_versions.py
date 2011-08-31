@@ -483,28 +483,32 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.status_int, 300)
         self.assertEqual(res.content_type, "application/xml")
 
-        expected = """
-        <choices xmlns="%s" xmlns:atom="%s">
-          <version id="v1.1" status="CURRENT">
-            <media-types>
-              <media-type base="application/xml"
-                 type="application/vnd.openstack.compute-v1.1+xml"/>
-              <media-type base="application/json"
-                 type="application/vnd.openstack.compute-v1.1+json"/>
-            </media-types>
-            <atom:link href="http://localhost/v1.1/images/1" rel="self"/>
-          </version>
-          <version id="v1.0" status="DEPRECATED">
-            <media-types>
-              <media-type base="application/xml"
-                 type="application/vnd.openstack.compute-v1.0+xml"/>
-              <media-type base="application/json"
-                 type="application/vnd.openstack.compute-v1.0+json"/>
-            </media-types>
-            <atom:link href="http://localhost/v1.0/images/1" rel="self"/>
-          </version>
-        </choices>""".replace("  ", "").replace("\n", "") % (wsgi.XMLNS_V11,
-                                                            wsgi.XMLNS_ATOM)
+        root = etree.XML(res.body)
+        self.assertTrue(root.xpath('/ns:choices', namespaces=NS))
+        versions = root.xpath('ns:version', namespaces=NS)
+        self.assertEqual(len(versions), 2)
+
+        version = versions[0]
+        self.assertEqual(version.get('id'), 'v1.1');
+        self.assertEqual(version.get('status'), 'CURRENT')
+        media_types = version.xpath('ns:media-types/ns:media-type',
+                                    namespaces=NS)
+        self.assertTrue(_compare_media_types(media_types,
+                                             VERSIONS['v1.1']['media-types']))
+        links = version.xpath('atom:link', namespaces=NS)
+        self.assertTrue(_compare_links(links,
+            [{'rel': 'self', 'href': 'http://localhost/v1.1/images/1'}]))
+
+        version = versions[1]
+        self.assertEqual(version.get('id'), 'v1.0');
+        self.assertEqual(version.get('status'), 'DEPRECATED')
+        media_types = version.xpath('ns:media-types/ns:media-type',
+                                    namespaces=NS)
+        self.assertTrue(_compare_media_types(media_types,
+                                             VERSIONS['v1.0']['media-types']))
+        links = version.xpath('atom:link', namespaces=NS)
+        self.assertTrue(_compare_links(links,
+            [{'rel': 'self', 'href': 'http://localhost/v1.0/images/1'}]))
 
     def test_multi_choice_server_atom(self):
         """
@@ -876,17 +880,16 @@ class VersionsSerializerTests(test.TestCase):
 
 
 def _compare_links(actual, expected):
-    for elem, data in zip(actual, expected):
-        for key in ('rel', 'href', 'type'):
-            if elem.get(key) != data.get(key):
-                return False
-    return True
+    return _compare_tree_to_dict(actual, expected, ('rel', 'href', 'type'))
 
 
 def _compare_media_types(actual, expected):
+    return _compare_tree_to_dict(actual, expected, ('base', 'type'))
+
+
+def _compare_tree_to_dict(actual, expected, keys):
     for elem, data in zip(actual, expected):
-        for key in ('base', 'type'):
+        for key in keys:
             if elem.get(key) != data.get(key):
                 return False
     return True
-
