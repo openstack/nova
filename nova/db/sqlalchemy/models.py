@@ -847,6 +847,7 @@ class Zone(BASE, NovaBase):
     """Represents a child zone of this zone."""
     __tablename__ = 'zones'
     id = Column(Integer, primary_key=True)
+    name = Column(String(255))
     api_url = Column(String(255))
     username = Column(String(255))
     password = Column(String(255))
