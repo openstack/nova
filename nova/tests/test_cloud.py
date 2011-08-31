@@ -38,6 +38,7 @@ from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
+from nova.compute import vm_states
 from nova.image import fake
 
 
@@ -1161,7 +1162,7 @@ class CloudTestCase(test.TestCase):
             self.compute = self.start_service('compute')
 
     def _wait_for_state(self, ctxt, instance_id, predicate):
-        """Wait for an stopping instance to be a given state"""
+        """Wait for a stopped instance to be a given state"""
         id = ec2utils.ec2_id_to_id(instance_id)
         while True:
             info = self.cloud.compute_api.get(context=ctxt, instance_id=id)
@@ -1172,12 +1173,16 @@ class CloudTestCase(test.TestCase):
 
     def _wait_for_running(self, instance_id):
         def is_running(info):
-            return info['state_description'] == 'running'
+            vm_state = info["vm_state"]
+            task_state = info["task_state"]
+            return vm_state == vm_states.ACTIVE and task_state == None
         self._wait_for_state(self.context, instance_id, is_running)
 
     def _wait_for_stopped(self, instance_id):
         def is_stopped(info):
-            return info['state_description'] == 'stopped'
+            vm_state = info["vm_state"]
+            task_state = info["task_state"]
+            return vm_state == vm_states.STOPPED and task_state == None
         self._wait_for_state(self.context, instance_id, is_stopped)
 
     def _wait_for_terminate(self, instance_id):
@@ -1560,7 +1565,7 @@ class CloudTestCase(test.TestCase):
                 'id': 0,
                 'root_device_name': '/dev/sdh',
                 'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
-                'state_description': 'stopping',
+                'vm_state': vm_states.STOPPED,
                 'instance_type': {'name': 'fake_type'},
                 'kernel_id': 1,
                 'ramdisk_id': 2,
@@ -1604,7 +1609,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(groupSet, expected_groupSet)
         self.assertEqual(get_attribute('instanceInitiatedShutdownBehavior'),
                          {'instance_id': 'i-12345678',
-                          'instanceInitiatedShutdownBehavior': 'stop'})
+                          'instanceInitiatedShutdownBehavior': 'stopped'})
         self.assertEqual(get_attribute('instanceType'),
                          {'instance_id': 'i-12345678',
                           'instanceType': 'fake_type'})
