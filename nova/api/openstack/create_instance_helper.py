@@ -189,6 +189,7 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.KeypairNotFound as error:
             msg = _("Invalid key_name provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.SecurityGroupNotFound as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
         except RemoteError as err:
