@@ -23,8 +23,8 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('rpc_backend',
-                    'nova.rpc.impl_carrot',
-                    "The messaging module to use, defaults to carrot.")
+                    'nova.rpc.impl_kombu',
+                    "The messaging module to use, defaults to kombu.")
 
 _RPCIMPL = None
 
