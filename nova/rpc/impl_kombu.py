@@ -322,7 +322,7 @@ class Connection(object):
             except self.connection.connection_errors:
                 pass
             time.sleep(1)
-        self.connection = kombu.connection.Connection(**self.params)
+        self.connection = kombu.connection.BrokerConnection(**self.params)
         if FLAGS.fake_rabbit:
             # Kludge to speed up tests.
             self.connection.transport.polling_interval = 0.0
