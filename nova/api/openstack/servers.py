@@ -107,11 +107,6 @@ class Controller(object):
                 LOG.error(reason)
                 raise exception.InvalidInput(reason=reason)
 
-        # translate tenant_id filter to internal project_id
-        if 'tenant_id' in search_opts:
-            search_opts['project_id'] = search_opts['tenant_id']
-            del search_opts['tenant_id']
-
         # By default, compute's get_all() will return deleted instances.
         # If an admin hasn't specified a 'deleted' search option, we need
         # to filter out deleted instances by setting the filter ourselves.

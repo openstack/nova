@@ -1200,13 +1200,14 @@ class ServersTest(test.TestCase):
         self.assertEqual(servers[0]['id'], 100)
 
     def test_tenant_id_filter_converts_to_project_id_for_admin(self):
-        def fake_get_all(compute_self, context, search_opts=None):
-            self.assertNotEqual(search_opts, None)
-            self.assertEqual(search_opts['project_id'], 'faketenant')
-            self.assertFalse(search_opts.get('tenant_id'))
+        def fake_get_all(context, filters=None):
+            self.assertNotEqual(filters, None)
+            self.assertEqual(filters['project_id'], 'faketenant')
+            self.assertFalse(filters.get('tenant_id'))
             return [stub_instance(100)]
 
-        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
+                       fake_get_all)
         self.flags(allow_admin_api=True)
 
         req = webob.Request.blank('/v1.1/fake/servers?tenant_id=faketenant')

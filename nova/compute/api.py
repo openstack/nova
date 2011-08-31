@@ -854,6 +854,7 @@ class API(base.Base):
                 'image': 'image_ref',
                 'name': 'display_name',
                 'instance_name': 'name',
+                'tenant_id': 'project_id',
                 'recurse_zones': None,
                 'flavor': _remap_flavor_filter,
                 'fixed_ip': _remap_fixed_ip_filter}
