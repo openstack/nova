@@ -3630,6 +3630,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
+                "key_name": '',
                 "links": [
                     {
                         "rel": "self",
@@ -3653,6 +3654,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
+                "key_name": '',
                 "config_drive": None,
                 "links": [
                     {
