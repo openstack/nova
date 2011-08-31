@@ -96,7 +96,8 @@ class FloatingIPController(object):
         except rpc.RemoteError as ex:
             # NOTE(tr3buchet) - why does this block exist?
             if ex.exc_type == 'NoMoreFloatingIps':
-                raise exception.NoMoreFloatingIps()
+                msg = _("No more floating ips available.")
+                raise webob.exc.HTTPBadRequest(explanation=msg)
             else:
                 raise
 
@@ -138,7 +139,11 @@ class Floating_ips(extensions.ExtensionDescriptor):
             msg = _("Address not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        self.compute_api.associate_floating_ip(context, instance_id, address)
+        try:
+            self.compute_api.associate_floating_ip(context, instance_id,
+                                                   address)
+        except exception.ApiError, e:
+            raise webob.exc.HTTPBadRequest(explanation=e.message)
 
         return webob.Response(status_int=202)
 
