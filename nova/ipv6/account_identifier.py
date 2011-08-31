@@ -34,8 +34,13 @@ def to_global(prefix, mac, project_id):
         mac_addr = netaddr.IPAddress(int_addr)
         maskIP = netaddr.IPNetwork(prefix).ip
         return (project_hash ^ static_num ^ mac_addr | maskIP).format()
-    except TypeError:
+    except netaddr.AddrFormatError:
         raise TypeError(_('Bad mac for to_global_ipv6: %s') % mac)
+    except TypeError:
+        raise TypeError(_('Bad prefix for to_global_ipv6: %s') % prefix)
+    except NameError:
+        raise TypeError(_('Bad project_id for to_global_ipv6: %s') %
+                        project_id)
 
 
 def to_mac(ipv6_address):

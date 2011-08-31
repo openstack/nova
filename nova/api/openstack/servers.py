@@ -163,7 +163,7 @@ class Controller(object):
 
     @scheduler_api.redirect_handler
     def update(self, req, id, body):
-        """Update server name then pass on to version-specific controller"""
+        """Update server then pass on to version-specific controller"""
         if len(req.body) == 0:
             raise exc.HTTPUnprocessableEntity()
 
@@ -177,6 +177,14 @@ class Controller(object):
             name = body['server']['name']
             self.helper._validate_server_name(name)
             update_dict['display_name'] = name.strip()
+
+        if 'accessIPv4' in body['server']:
+            access_ipv4 = body['server']['accessIPv4']
+            update_dict['access_ip_v4'] = access_ipv4.strip()
+
+        if 'accessIPv6' in body['server']:
+            access_ipv6 = body['server']['accessIPv6']
+            update_dict['access_ip_v6'] = access_ipv6.strip()
 
         try:
             self.compute_api.update(ctxt, id, **update_dict)
@@ -596,8 +604,10 @@ class ControllerV10(Controller):
             LOG.debug(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
+        password = utils.generate_password(16)
+
         try:
-            self.compute_api.rebuild(context, instance_id, image_id)
+            self.compute_api.rebuild(context, instance_id, image_id, password)
         except exception.BuildInProgress:
             msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
@@ -642,14 +652,16 @@ class ControllerV11(Controller):
         return common.get_id_from_href(flavor_ref)
 
     def _build_view(self, req, instance, is_detail=False):
+        project_id = getattr(req.environ['nova.context'], 'project_id', '')
         base_url = req.application_url
         flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
-            base_url)
+            base_url, project_id)
         image_builder = nova.api.openstack.views.images.ViewBuilderV11(
-            base_url)
+            base_url, project_id)
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
         builder = nova.api.openstack.views.servers.ViewBuilderV11(
-            addresses_builder, flavor_builder, image_builder, base_url)
+            addresses_builder, flavor_builder, image_builder,
+            base_url, project_id)
 
         return builder.build(instance, is_detail=is_detail)
 
@@ -731,15 +743,26 @@ class ControllerV11(Controller):
             self._validate_metadata(metadata)
         self._decode_personalities(personalities)
 
+        password = info["rebuild"].get("adminPass",
+                                       utils.generate_password(16))
+
         try:
-            self.compute_api.rebuild(context, instance_id, image_href, name,
-                                     metadata, personalities)
+            self.compute_api.rebuild(context, instance_id, image_href,
+                                     password, name=name, metadata=metadata,
+                                     files_to_inject=personalities)
         except exception.BuildInProgress:
             msg = _("Instance %s is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             raise exc.HTTPConflict(explanation=msg)
+        except exception.InstanceNotFound:
+            msg = _("Instance %s could not be found") % instance_id
+            raise exc.HTTPNotFound(explanation=msg)
 
-        return webob.Response(status_int=202)
+        instance = self.compute_api.routing_get(context, instance_id)
+        view = self._build_view(request, instance, is_detail=True)
+        view['server']['adminPass'] = password
+
+        return view
 
     @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
@@ -806,6 +829,9 @@ class HeadersSerializer(wsgi.ResponseHeadersSerializer):
     def delete(self, response, data):
         response.status_int = 204
 
+    def action(self, response, data):
+        response.status_int = 202
+
 
 class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
@@ -837,6 +863,10 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         node.setAttribute('created', str(server['created']))
         node.setAttribute('updated', str(server['updated']))
         node.setAttribute('status', server['status'])
+        if 'accessIPv4' in server:
+            node.setAttribute('accessIPv4', str(server['accessIPv4']))
+        if 'accessIPv6' in server:
+            node.setAttribute('accessIPv6', str(server['accessIPv6']))
         if 'progress' in server:
             node.setAttribute('progress', str(server['progress']))
 
@@ -922,6 +952,11 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
                                        server_dict['server'])
         node.setAttribute('adminPass', server_dict['server']['adminPass'])
         return self.to_xml_string(node, True)
+
+    def action(self, server_dict):
+        #NOTE(bcwaldon): We need a way to serialize actions individually. This
+        # assumes all actions return a server entity
+        return self.create(server_dict)
 
     def update(self, server_dict):
         xml_doc = minidom.Document()

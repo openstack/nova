@@ -20,6 +20,10 @@ Starting point for routing EC2 requests.
 
 """
 
+from urlparse import urlparse
+
+import eventlet
+from eventlet.green import httplib
 import webob
 import webob.dec
 import webob.exc
@@ -34,18 +38,18 @@ from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 
-
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api")
-flags.DEFINE_boolean('use_forwarded_for', False,
-                     'Treat X-Forwarded-For as the canonical remote address. '
-                     'Only enable this if you have a sanitizing proxy.')
 flags.DEFINE_integer('lockout_attempts', 5,
                      'Number of failed auths before lockout.')
 flags.DEFINE_integer('lockout_minutes', 15,
                      'Number of minutes to lockout if triggered.')
 flags.DEFINE_integer('lockout_window', 15,
                      'Number of minutes for lockout window.')
+flags.DEFINE_string('keystone_ec2_url',
+                    'http://localhost:5000/v2.0/ec2tokens',
+                    'URL to get token from ec2 request.')
+flags.DECLARE('use_forwarded_for', 'nova.api.auth')
 
 
 class RequestLogging(wsgi.Middleware):
@@ -138,6 +142,75 @@ class Lockout(wsgi.Middleware):
         return res
 
 
+class ToToken(wsgi.Middleware):
+    """Authenticate an EC2 request with keystone and convert to token."""
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        # Read request signature and access id.
+        try:
+            signature = req.params['Signature']
+            access = req.params['AWSAccessKeyId']
+        except KeyError:
+            raise webob.exc.HTTPBadRequest()
+
+        # Make a copy of args for authentication and signature verification.
+        auth_params = dict(req.params)
+        # Not part of authentication args
+        auth_params.pop('Signature')
+
+        # Authenticate the request.
+        creds = {'ec2Credentials': {'access': access,
+                                    'signature': signature,
+                                    'host': req.host,
+                                    'verb': req.method,
+                                    'path': req.path,
+                                    'params': auth_params,
+                                   }}
+        creds_json = utils.dumps(creds)
+        headers = {'Content-Type': 'application/json'}
+        o = urlparse(FLAGS.keystone_ec2_url)
+        if o.scheme == "http":
+            conn = httplib.HTTPConnection(o.netloc)
+        else:
+            conn = httplib.HTTPSConnection(o.netloc)
+        conn.request('POST', o.path, body=creds_json, headers=headers)
+        response = conn.getresponse().read()
+        conn.close()
+
+        # NOTE(vish): We could save a call to keystone by
+        #             having keystone return token, tenant,
+        #             user, and roles from this call.
+        result = utils.loads(response)
+        # TODO(vish): check for errors
+
+        token_id = result['auth']['token']['id']
+        # Authenticated!
+        req.headers['X-Auth-Token'] = token_id
+        return self.application
+
+
+class NoAuth(wsgi.Middleware):
+    """Add user:project as 'nova.context' to WSGI environ."""
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        if 'AWSAccessKeyId' not in req.params:
+            raise webob.exc.HTTPBadRequest()
+        user_id, _sep, project_id = req.params['AWSAccessKeyId'].partition(':')
+        project_id = project_id or user_id
+        remote_address = getattr(req, 'remote_address', '127.0.0.1')
+        if FLAGS.use_forwarded_for:
+            remote_address = req.headers.get('X-Forwarded-For', remote_address)
+        ctx = context.RequestContext(user_id,
+                                     project_id,
+                                     is_admin=True,
+                                     remote_address=remote_address)
+
+        req.environ['nova.context'] = ctx
+        return self.application
+
+
 class Authenticate(wsgi.Middleware):
     """Authenticate an EC2 request and add 'nova.context' to WSGI environ."""
 
@@ -147,7 +220,7 @@ class Authenticate(wsgi.Middleware):
         try:
             signature = req.params['Signature']
             access = req.params['AWSAccessKeyId']
-        except KeyError, e:
+        except KeyError:
             raise webob.exc.HTTPBadRequest()
 
         # Make a copy of args for authentication and signature verification.

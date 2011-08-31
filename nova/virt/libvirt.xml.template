@@ -106,6 +106,13 @@
             </disk>
         #end for
     #end if
+    #if $getVar('config_drive', False)
+        <disk type='file'>
+            <driver type='raw' />
+            <source file='${basepath}/disk.config' />
+            <target dev='${disk_prefix}z' bus='${disk_bus}' />
+        </disk>
+    #end if
 #end if
 
 #for $nic in $nics
@@ -128,7 +135,9 @@
         <interface type='bridge'>
             <source bridge='${nic.bridge_name}'/>
             <mac address='${nic.mac_address}'/>
-            <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
+#if $getVar('use_virtio_for_bridges', True)
+            <model type='virtio'/>
+#end if
             <filterref filter="nova-instance-${name}-${nic.id}">
                 <parameter name="IP" value="${nic.ip_address}" />
                 <parameter name="DHCPSERVER" value="${nic.dhcp_server}" />

@@ -40,6 +40,25 @@ class IPv6RFC2462TestCase(test.TestCase):
         mac = ipv6.to_mac('2001:db8::216:3eff:fe33:4455')
         self.assertEquals(mac, '00:16:3e:33:44:55')
 
+    def test_to_global_with_bad_mac(self):
+        bad_mac = '02:16:3e:33:44:5Z'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    '2001:db8::', bad_mac, 'test')
+
+    def test_to_global_with_bad_prefix(self):
+        bad_prefix = '82'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    bad_prefix,
+                                    '2001:db8::216:3eff:fe33:4455',
+                                    'test')
+
+    def test_to_global_with_bad_project(self):
+        bad_project = 'non-existent-project-name'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    '2001:db8::',
+                                    '2001:db8::a94a:8fe5:ff33:4455',
+                                    bad_project)
+
 
 class IPv6AccountIdentiferTestCase(test.TestCase):
     """Unit tests for IPv6 account_identifier backend operations."""
@@ -55,3 +74,22 @@ class IPv6AccountIdentiferTestCase(test.TestCase):
     def test_to_mac(self):
         mac = ipv6.to_mac('2001:db8::a94a:8fe5:ff33:4455')
         self.assertEquals(mac, '02:16:3e:33:44:55')
+
+    def test_to_global_with_bad_mac(self):
+        bad_mac = '02:16:3e:33:44:5X'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    '2001:db8::', bad_mac, 'test')
+
+    def test_to_global_with_bad_prefix(self):
+        bad_prefix = '78'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    bad_prefix,
+                                    '2001:db8::a94a:8fe5:ff33:4455',
+                                    'test')
+
+    def test_to_global_with_bad_project(self):
+        bad_project = 'non-existent-project-name'
+        self.assertRaises(TypeError, ipv6.to_global,
+                                    '2001:db8::',
+                                    '2001:db8::a94a:8fe5:ff33:4455',
+                                    bad_project)

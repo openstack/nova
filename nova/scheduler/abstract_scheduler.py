@@ -62,12 +62,13 @@ class AbstractScheduler(driver.Scheduler):
         host = build_plan_item['hostname']
         base_options = request_spec['instance_properties']
         image = request_spec['image']
+        instance_type = request_spec.get('instance_type')
 
         # TODO(sandy): I guess someone needs to add block_device_mapping
         # support at some point? Also, OS API has no concept of security
         # groups.
         instance = compute_api.API().create_db_entry_for_new_instance(context,
-                image, base_options, None, [])
+                instance_type, image, base_options, None, [])
 
         instance_id = instance['id']
         kwargs['instance_id'] = instance_id
@@ -179,7 +180,6 @@ class AbstractScheduler(driver.Scheduler):
         for zone_id, result in child_results:
             if not result:
                 continue
-            assert isinstance(zone_id, int)
 
             for zone_rec in zones:
                 if zone_rec['id'] != zone_id:

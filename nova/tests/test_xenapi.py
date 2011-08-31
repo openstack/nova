@@ -16,7 +16,6 @@
 
 """Test suite for XenAPI."""
 
-import eventlet
 import functools
 import json
 import os
@@ -202,42 +201,6 @@ class XenAPIVMTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.conn = xenapi_conn.get_connection(False)
-
-    def test_parallel_builds(self):
-        stubs.stubout_loopingcall_delay(self.stubs)
-
-        def _do_build(id, proj, user, *args):
-            values = {
-                'id': id,
-                'project_id': proj,
-                'user_id': user,
-                'image_ref': 1,
-                'kernel_id': 2,
-                'ramdisk_id': 3,
-                'instance_type_id': '3',  # m1.large
-                'os_type': 'linux',
-                'architecture': 'x86-64'}
-            network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
-                              {'broadcast': '192.168.0.255',
-                               'dns': ['192.168.0.1'],
-                               'gateway': '192.168.0.1',
-                               'gateway6': 'dead:beef::1',
-                               'ip6s': [{'enabled': '1',
-                                         'ip': 'dead:beef::dcad:beff:feef:0',
-                                               'netmask': '64'}],
-                               'ips': [{'enabled': '1',
-                                        'ip': '192.168.0.100',
-                                        'netmask': '255.255.255.0'}],
-                               'label': 'fake',
-                               'mac': 'DE:AD:BE:EF:00:00',
-                               'rxtx_cap': 3})]
-            instance = db.instance_create(self.context, values)
-            self.conn.spawn(self.context, instance, network_info)
-
-        gt1 = eventlet.spawn(_do_build, 1, self.project_id, self.user_id)
-        gt2 = eventlet.spawn(_do_build, 2, self.project_id, self.user_id)
-        gt1.wait()
-        gt2.wait()
 
     def test_list_instances_0(self):
         instances = self.conn.list_instances()

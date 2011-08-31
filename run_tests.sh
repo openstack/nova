@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 function usage {
   echo "Usage: $0 [OPTION]..."
   echo "Run Nova's test suite(s)"
@@ -24,13 +26,13 @@ function usage {
 function process_option {
   case "$1" in
     -h|--help) usage;;
-    -V|--virtual-env) let always_venv=1; let never_venv=0;;
-    -N|--no-virtual-env) let always_venv=0; let never_venv=1;;
-    -r|--recreate-db) let recreate_db=1;;
-    -n|--no-recreate-db) let recreate_db=0;;
-    -f|--force) let force=1;;
-    -p|--pep8) let just_pep8=1;;
-    -c|--coverage) let coverage=1;;
+    -V|--virtual-env) always_venv=1; never_venv=0;;
+    -N|--no-virtual-env) always_venv=0; never_venv=1;;
+    -r|--recreate-db) recreate_db=1;;
+    -n|--no-recreate-db) recreate_db=0;;
+    -f|--force) force=1;;
+    -p|--pep8) just_pep8=1;;
+    -c|--coverage) coverage=1;;
     -*) noseopts="$noseopts $1";;
     *) noseargs="$noseargs $1"
   esac
@@ -67,7 +69,7 @@ function run_tests {
     ERRSIZE=`wc -l run_tests.log | awk '{print \$1}'`
     if [ "$ERRSIZE" -lt "40" ];
     then
-      cat run_tests.log
+        cat run_tests.log
     fi
   fi
   return $RESULT
@@ -130,7 +132,7 @@ if [ $recreate_db -eq 1 ]; then
     rm -f tests.sqlite
 fi
 
-run_tests || exit
+run_tests
 
 # NOTE(sirp): we only want to run pep8 when we're running the full-test suite,
 # not when we're running tests individually. To handle this, we need to
