@@ -162,39 +162,6 @@ class VersionsRequestDeserializer(wsgi.RequestDeserializer):
 
 class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
-    def _create_media_types(self, media_types):
-        base = self._xml_doc.createElement('media-types')
-        for type in media_types:
-            node = self._xml_doc.createElement('media-type')
-            node.setAttribute('base', type['base'])
-            node.setAttribute('type', type['type'])
-            base.appendChild(node)
-
-        return base
-
-    def _create_version_node(self, version, create_ns=False):
-        version_node = self._xml_doc.createElement('version')
-        if create_ns:
-            xmlns = wsgi.XMLNS_V11
-            xmlns_atom = wsgi.XMLNS_ATOM
-            version_node.setAttribute('xmlns', xmlns)
-            version_node.setAttribute('xmlns:atom', xmlns_atom)
-
-        version_node.setAttribute('id', version['id'])
-        version_node.setAttribute('status', version['status'])
-        if 'updated' in version:
-            version_node.setAttribute('updated', version['updated'])
-
-        if 'media-types' in version:
-            media_types = self._create_media_types(version['media-types'])
-            version_node.appendChild(media_types)
-
-        link_nodes = self._create_link_nodes(self._xml_doc, version['links'])
-        for link in link_nodes:
-            version_node.appendChild(link)
-
-        return version_node
-
     def _populate_version(self, version_node, version):
         version_node.set('id', version['id'])
         version_node.set('status', version['status'])
@@ -237,6 +204,9 @@ class VersionsXMLSerializer(wsgi.XMLDictSerializer):
 
 
 class VersionsAtomSerializer(wsgi.XMLDictSerializer):
+
+    NSMAP = {None: xmlutil.XMLNS_ATOM}
+
     #TODO(wwolf): this is temporary until we get rid of toprettyxml
     # in the base class (XMLDictSerializer), which I plan to do in
     # another branch
@@ -301,31 +271,53 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
         root.appendChild(author)
         root.appendChild(link)
 
-    def _create_list_meta(self, root, versions):
-        title = self._create_text_elem('title', "Available API Versions",
-                                       type='text')
+    def _create_feed(self, versions):
+        feed = etree.Element('feed', nsmap=self.NSMAP)
+        title = etree.SubElement(feed, 'title')
+        title.set('type', 'text')
+        title.text = 'Available API Versions'
+
         # Set this updated to the most recently updated version
         recent = self._get_most_recent_update(versions)
-        updated = self._create_text_elem('updated', recent)
+        etree.SubElement(feed, 'updated').text = recent
 
         base_url = self._get_base_url(versions[0]['links'][0]['href'])
-        id = self._create_text_elem('id', base_url)
+        etree.SubElement(feed, 'id').text = base_url
 
-        link = self._xml_doc.createElement('link')
-        link.setAttribute('rel', 'self')
-        link.setAttribute('href', base_url)
+        link = etree.SubElement(feed, 'link')
+        link.set('rel', 'self')
+        link.set('href', base_url)
 
-        author = self._xml_doc.createElement('author')
-        author_name = self._create_text_elem('name', 'Rackspace')
-        author_uri = self._create_text_elem('uri', 'http://www.rackspace.com/')
-        author.appendChild(author_name)
-        author.appendChild(author_uri)
+        author = etree.SubElement(feed, 'author')
+        etree.SubElement(author, 'name').text = 'Rackspace'
+        etree.SubElement(author, 'uri').text = 'http://www.rackspace.com/'
 
-        root.appendChild(title)
-        root.appendChild(updated)
-        root.appendChild(id)
-        root.appendChild(author)
-        root.appendChild(link)
+        for version in versions:
+            feed.append(self._create_version_entry(version))
+
+        return feed
+
+    def _create_version_entry(self, version):
+        entry = etree.Element('entry')
+        etree.SubElement(entry, 'id').text = version['links'][0]['href']
+        title = etree.SubElement(entry, 'title')
+        title.set('type', 'text')
+        title.text = 'Version %s' % version['id']
+        etree.SubElement(entry, 'updated').text = version['updated']
+
+        for link in version['links']:
+            link_elem = etree.SubElement(entry, 'link')
+            link_elem.set('rel', link['rel'])
+            link_elem.set('href', link['href'])
+            if 'type' in link:
+                link_elem.set('type', link['type'])
+
+        content = etree.SubElement(entry, 'content')
+        content.set('type', 'text')
+        content.text = 'Version %s %s (%s)' % (version['id'],
+                                               version['status'],
+                                               version['updated'])
+        return entry
 
     def _create_version_entries(self, root, versions):
         for version in versions:
@@ -361,12 +353,8 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
             root.appendChild(entry)
 
     def index(self, data):
-        self._xml_doc = minidom.Document()
-        node = self._xml_doc.createElementNS(self.xmlns, 'feed')
-        self._create_list_meta(node, data['versions'])
-        self._create_version_entries(node, data['versions'])
-
-        return self.to_xml_string(node)
+        feed = self._create_feed(data['versions'])
+        return etree.tostring(feed, encoding='UTF-8')
 
     def show(self, data):
         self._xml_doc = minidom.Document()
