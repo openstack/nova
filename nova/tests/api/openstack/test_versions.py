@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import feedparser
 import json
 import stubout
 import webob
@@ -297,36 +298,43 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual("application/atom+xml", res.content_type)
-        expected = """
-        <feed xmlns="http://www.w3.org/2005/Atom">
-            <title type="text">About This Version</title>
-            <updated>2011-01-21T11:33:21Z</updated>
-            <id>http://localhost/v1.0/</id>
-            <author>
-                <name>Rackspace</name>
-                <uri>http://www.rackspace.com/</uri>
-            </author>
-            <link href="http://localhost/v1.0/" rel="self"/>
-            <entry>
-                <id>http://localhost/v1.0/</id>
-                <title type="text">Version v1.0</title>
-                <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://localhost/v1.0/"
-                     rel="self"/>
-                <link href="http://docs.rackspacecloud.com/servers/
-                    api/v1.0/cs-devguide-20110125.pdf"
-                     rel="describedby" type="application/pdf"/>
-                <link href="http://docs.rackspacecloud.com/servers/
-                    api/v1.0/application.wadl"
-                     rel="describedby" type="application/vnd.sun.wadl+xml"/>
-                <content type="text">
-                    Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)
-                </content>
-            </entry>
-        </feed>""".replace("  ", "").replace("\n", "")
 
-        actual = res.body.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, actual)
+        f = feedparser.parse(res.body)
+        self.assertEqual(f.feed.title, 'About This Version')
+        self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(f.feed.id, 'http://localhost/v1.0/')
+        self.assertEqual(f.feed.author, 'Rackspace')
+        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.0/',
+                                         'type': 'application/atom+xml',
+                                         'rel': 'self'}])
+
+        self.assertEqual(len(f.entries), 1)
+        entry = f.entries[0]
+        self.assertEqual(entry.id, 'http://localhost/v1.0/')
+        self.assertEqual(entry.title, 'Version v1.0')
+        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(len(entry.content), 1)
+        self.assertEqual(entry.content[0].value,
+            'Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)')
+        self.assertEqual(entry.links, [
+            {
+                'href': 'http://localhost/v1.0/',
+                'type': 'application/atom+xml',
+                'rel': 'self'
+            },
+            {
+                'href': 'http://docs.rackspacecloud.com/servers/api/v1.0/'\
+                        'cs-devguide-20110125.pdf',
+                'type': 'application/pdf',
+                'rel': 'describedby'
+            },
+            {
+                'href': 'http://docs.rackspacecloud.com/servers/api/v1.0/'\
+                        'application.wadl',
+                'type': 'application/vnd.sun.wadl+xml',
+                'rel': 'describedby'
+            }])
 
     def test_get_version_1_1_detail_atom(self):
         req = webob.Request.blank('/v1.1/')
@@ -334,36 +342,43 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual("application/atom+xml", res.content_type)
-        expected = """
-        <feed xmlns="http://www.w3.org/2005/Atom">
-            <title type="text">About This Version</title>
-            <updated>2011-01-21T11:33:21Z</updated>
-            <id>http://localhost/v1.1/</id>
-            <author>
-                <name>Rackspace</name>
-                <uri>http://www.rackspace.com/</uri>
-            </author>
-            <link href="http://localhost/v1.1/" rel="self"/>
-            <entry>
-                <id>http://localhost/v1.1/</id>
-                <title type="text">Version v1.1</title>
-                <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://localhost/v1.1/"
-                     rel="self"/>
-                <link href="http://docs.rackspacecloud.com/servers/
-                    api/v1.1/cs-devguide-20110125.pdf"
-                     rel="describedby" type="application/pdf"/>
-                <link href="http://docs.rackspacecloud.com/servers/
-                    api/v1.1/application.wadl"
-                     rel="describedby" type="application/vnd.sun.wadl+xml"/>
-                <content type="text">
-                    Version v1.1 CURRENT (2011-01-21T11:33:21Z)
-                </content>
-            </entry>
-        </feed>""".replace("  ", "").replace("\n", "")
 
-        actual = res.body.replace("  ", "").replace("\n", "")
-        self.assertEqual(expected, actual)
+        f = feedparser.parse(res.body)
+        self.assertEqual(f.feed.title, 'About This Version')
+        self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(f.feed.id, 'http://localhost/v1.1/')
+        self.assertEqual(f.feed.author, 'Rackspace')
+        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.1/',
+                                         'type': 'application/atom+xml',
+                                         'rel': 'self'}])
+
+        self.assertEqual(len(f.entries), 1)
+        entry = f.entries[0]
+        self.assertEqual(entry.id, 'http://localhost/v1.1/')
+        self.assertEqual(entry.title, 'Version v1.1')
+        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(len(entry.content), 1)
+        self.assertEqual(entry.content[0].value,
+            'Version v1.1 CURRENT (2011-01-21T11:33:21Z)')
+        self.assertEqual(entry.links, [
+            {
+                'href': 'http://localhost/v1.1/',
+                'type': 'application/atom+xml',
+                'rel': 'self'
+            },
+            {
+                'href': 'http://docs.rackspacecloud.com/servers/api/v1.1/'\
+                        'cs-devguide-20110125.pdf',
+                'type': 'application/pdf',
+                'rel': 'describedby'
+            },
+            {
+                'href': 'http://docs.rackspacecloud.com/servers/api/v1.1/'\
+                        'application.wadl',
+                'type': 'application/vnd.sun.wadl+xml',
+                'rel': 'describedby'
+            }])
 
     def test_get_version_list_atom(self):
         req = webob.Request.blank('/')
@@ -372,40 +387,39 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/atom+xml")
 
-        expected = """
-        <feed xmlns="http://www.w3.org/2005/Atom">
-            <title type="text">Available API Versions</title>
-            <updated>2011-01-21T11:33:21Z</updated>
-            <id>http://localhost/</id>
-            <author>
-                <name>Rackspace</name>
-                <uri>http://www.rackspace.com/</uri>
-            </author>
-            <link href="http://localhost/" rel="self"/>
-            <entry>
-                <id>http://localhost/v1.0/</id>
-                <title type="text">Version v1.0</title>
-                <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://localhost/v1.0/" rel="self"/>
-                <content type="text">
-                    Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)
-                </content>
-            </entry>
-            <entry>
-                <id>http://localhost/v1.1/</id>
-                <title type="text">Version v1.1</title>
-                <updated>2011-01-21T11:33:21Z</updated>
-                <link href="http://localhost/v1.1/" rel="self"/>
-                <content type="text">
-                    Version v1.1 CURRENT (2011-01-21T11:33:21Z)
-                </content>
-            </entry>
-        </feed>
-        """.replace("  ", "").replace("\n", "")
+        f = feedparser.parse(res.body)
+        self.assertEqual(f.feed.title, 'Available API Versions')
+        self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(f.feed.id, 'http://localhost/')
+        self.assertEqual(f.feed.author, 'Rackspace')
+        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.links, [{'href': 'http://localhost/',
+                                         'type': 'application/atom+xml',
+                                         'rel': 'self'}])
 
-        actual = res.body.replace("  ", "").replace("\n", "")
-
-        self.assertEqual(expected, actual)
+        self.assertEqual(len(f.entries), 2)
+        entry = f.entries[0]
+        self.assertEqual(entry.id, 'http://localhost/v1.0/')
+        self.assertEqual(entry.title, 'Version v1.0')
+        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(len(entry.content), 1)
+        self.assertEqual(entry.content[0].value,
+            'Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)')
+        self.assertEqual(entry.links, [{
+            'href': 'http://localhost/v1.0/',
+            'type': 'application/atom+xml',
+            'rel': 'self'}])
+        entry = f.entries[1]
+        self.assertEqual(entry.id, 'http://localhost/v1.1/')
+        self.assertEqual(entry.title, 'Version v1.1')
+        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(len(entry.content), 1)
+        self.assertEqual(entry.content[0].value,
+            'Version v1.1 CURRENT (2011-01-21T11:33:21Z)')
+        self.assertEqual(entry.links, [{
+            'href': 'http://localhost/v1.1/',
+            'type': 'application/atom+xml',
+            'rel': 'self'}])
 
     def test_multi_choice_image(self):
         req = webob.Request.blank('/images/1')
@@ -779,59 +793,28 @@ class VersionsSerializerTests(test.TestCase):
 
         serializer = versions.VersionsAtomSerializer()
         response = serializer.index(versions_data)
+        f = feedparser.parse(response)
 
-        root = etree.XML(response)
-        self.assertEqual(root.tag.split('}')[1], "feed")
-        self.assertEqual(root.tag.split('}')[0].strip('{'),
-                         "http://www.w3.org/2005/Atom")
-
-        children = list(root)
-        title = children[0]
-        updated = children[1]
-        id = children[2]
-        author = children[3]
-        link = children[4]
-        entry = children[5]
-
-        self.assertEqual(title.tag.split('}')[1], 'title')
-        self.assertEqual(title.text, 'Available API Versions')
-        self.assertEqual(updated.tag.split('}')[1], 'updated')
-        self.assertEqual(updated.text, '2011-07-20T11:40:00Z')
-        self.assertEqual(id.tag.split('}')[1], 'id')
-        self.assertEqual(id.text, 'http://test/')
-
-        self.assertEqual(author.tag.split('}')[1], 'author')
-        author_name = list(author)[0]
-        author_uri = list(author)[1]
-        self.assertEqual(author_name.tag.split('}')[1], 'name')
-        self.assertEqual(author_name.text, 'Rackspace')
-        self.assertEqual(author_uri.tag.split('}')[1], 'uri')
-        self.assertEqual(author_uri.text, 'http://www.rackspace.com/')
-
-        self.assertEqual(link.get('href'), 'http://test/')
-        self.assertEqual(link.get('rel'), 'self')
-
-        self.assertEqual(entry.tag.split('}')[1], 'entry')
-        entry_children = list(entry)
-        entry_id = entry_children[0]
-        entry_title = entry_children[1]
-        entry_updated = entry_children[2]
-        entry_link = entry_children[3]
-        entry_content = entry_children[4]
-        self.assertEqual(entry_id.tag.split('}')[1], "id")
-        self.assertEqual(entry_id.text, "http://test/2.9.8")
-        self.assertEqual(entry_title.tag.split('}')[1], "title")
-        self.assertEqual(entry_title.get('type'), "text")
-        self.assertEqual(entry_title.text, "Version 2.9.8")
-        self.assertEqual(entry_updated.tag.split('}')[1], "updated")
-        self.assertEqual(entry_updated.text, "2011-07-20T11:40:00Z")
-        self.assertEqual(entry_link.tag.split('}')[1], "link")
-        self.assertEqual(entry_link.get('href'), "http://test/2.9.8")
-        self.assertEqual(entry_link.get('rel'), "self")
-        self.assertEqual(entry_content.tag.split('}')[1], "content")
-        self.assertEqual(entry_content.get('type'), "text")
-        self.assertEqual(entry_content.text,
-                         "Version 2.9.8 CURRENT (2011-07-20T11:40:00Z)")
+        self.assertEqual(f.feed.title, 'Available API Versions')
+        self.assertEqual(f.feed.updated, '2011-07-20T11:40:00Z')
+        self.assertEqual(f.feed.id, 'http://test/')
+        self.assertEqual(f.feed.author, 'Rackspace')
+        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.links, [{'href': 'http://test/',
+                                         'type': 'application/atom+xml',
+                                         'rel': 'self'}])
+        self.assertEqual(len(f.entries), 1)
+        entry = f.entries[0]
+        self.assertEqual(entry.id, 'http://test/2.9.8')
+        self.assertEqual(entry.title, 'Version 2.9.8')
+        self.assertEqual(entry.updated, '2011-07-20T11:40:00Z')
+        self.assertEqual(len(entry.content), 1)
+        self.assertEqual(entry.content[0].value,
+            'Version 2.9.8 CURRENT (2011-07-20T11:40:00Z)')
+        self.assertEqual(entry.links, [{
+            'href': 'http://test/2.9.8',
+            'type': 'application/atom+xml',
+            'rel': 'self'}])
 
     def test_version_detail_atom_serializer(self):
         versions_data = {
@@ -872,63 +855,40 @@ class VersionsSerializerTests(test.TestCase):
 
         serializer = versions.VersionsAtomSerializer()
         response = serializer.show(versions_data)
+        f = feedparser.parse(response)
 
-        root = etree.XML(response)
-        self.assertEqual(root.tag.split('}')[1], "feed")
-        self.assertEqual(root.tag.split('}')[0].strip('{'),
-                         "http://www.w3.org/2005/Atom")
-
-        children = list(root)
-        title = children[0]
-        updated = children[1]
-        id = children[2]
-        author = children[3]
-        link = children[4]
-        entry = children[5]
-
-        self.assertEqual(root.tag.split('}')[1], 'feed')
-        self.assertEqual(title.tag.split('}')[1], 'title')
-        self.assertEqual(title.text, 'About This Version')
-        self.assertEqual(updated.tag.split('}')[1], 'updated')
-        self.assertEqual(updated.text, '2011-01-21T11:33:21Z')
-        self.assertEqual(id.tag.split('}')[1], 'id')
-        self.assertEqual(id.text, 'http://localhost/v1.1/')
-
-        self.assertEqual(author.tag.split('}')[1], 'author')
-        author_name = list(author)[0]
-        author_uri = list(author)[1]
-        self.assertEqual(author_name.tag.split('}')[1], 'name')
-        self.assertEqual(author_name.text, 'Rackspace')
-        self.assertEqual(author_uri.tag.split('}')[1], 'uri')
-        self.assertEqual(author_uri.text, 'http://www.rackspace.com/')
-
-        self.assertEqual(link.get('href'),
-                         'http://localhost/v1.1/')
-        self.assertEqual(link.get('rel'), 'self')
-
-        self.assertEqual(entry.tag.split('}')[1], 'entry')
-        entry_children = list(entry)
-        entry_id = entry_children[0]
-        entry_title = entry_children[1]
-        entry_updated = entry_children[2]
-        entry_links = (entry_children[3], entry_children[4], entry_children[5])
-        entry_content = entry_children[6]
-
-        self.assertEqual(entry_id.tag.split('}')[1], "id")
-        self.assertEqual(entry_id.text,
-                         "http://localhost/v1.1/")
-        self.assertEqual(entry_title.tag.split('}')[1], "title")
-        self.assertEqual(entry_title.get('type'), "text")
-        self.assertEqual(entry_title.text, "Version v1.1")
-        self.assertEqual(entry_updated.tag.split('}')[1], "updated")
-        self.assertEqual(entry_updated.text, "2011-01-21T11:33:21Z")
-
-        for i, link in enumerate(versions_data["version"]["links"]):
-            self.assertEqual(entry_links[i].tag.split('}')[1], "link")
-            for key, val in versions_data["version"]["links"][i].items():
-                self.assertEqual(entry_links[i].get(key), val)
-
-        self.assertEqual(entry_content.tag.split('}')[1], "content")
-        self.assertEqual(entry_content.get('type'), "text")
-        self.assertEqual(entry_content.text,
-                         "Version v1.1 CURRENT (2011-01-21T11:33:21Z)")
+        self.assertEqual(f.feed.title, 'About This Version')
+        self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(f.feed.id, 'http://localhost/v1.1/')
+        self.assertEqual(f.feed.author, 'Rackspace')
+        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.1/',
+                                         'type': 'application/atom+xml',
+                                         'rel': 'self'}])
+        self.assertEqual(len(f.entries), 1)
+        entry = f.entries[0]
+        self.assertEqual(entry.id, 'http://localhost/v1.1/')
+        self.assertEqual(entry.title, 'Version v1.1')
+        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
+        self.assertEqual(len(entry.content), 1)
+        self.assertEqual(entry.content[0].value,
+             'Version v1.1 CURRENT (2011-01-21T11:33:21Z)')
+        self.assertEqual(entry.links, [
+            {
+                'rel': 'self',
+                'type': 'application/atom+xml',
+                'href': 'http://localhost/v1.1/',
+            },
+            {
+                'rel': 'describedby',
+                'type': 'application/pdf',
+                'href': 'http://docs.rackspacecloud.com/'
+                        'servers/api/v1.1/cs-devguide-20110125.pdf',
+            },
+            {
+                'rel': 'describedby',
+                'type': 'application/vnd.sun.wadl+xml',
+                'href': 'http://docs.rackspacecloud.com/'
+                        'servers/api/v1.1/application.wadl',
+            },
+        ])
