@@ -481,6 +481,10 @@ def initialize_gateway_device(dev, network_ref):
                             check_exit_code=False)
     if err and err != 'RTNETLINK answers: File exists\n':
         raise exception.Error('Failed to add ip: %s' % err)
+    if FLAGS.send_arp_for_ha:
+        _execute('sudo', 'arping', '-U', network_ref['gateway'],
+                  '-A', '-I', dev,
+                  '-c', 1, check_exit_code=False)
     if(FLAGS.use_ipv6):
         _execute('ip', '-f', 'inet6', 'addr',
                      'change', network_ref['cidr_v6'],
@@ -859,10 +863,6 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             if gateway:
                 _execute('route', 'add', 'default', 'gw', gateway,
                             run_as_root=True)
-                if FLAGS.send_arp_for_ha:
-                    _execute('sudo', 'arping', '-U', gateway,
-                             '-A', '-I', bridge,
-                             '-c', 1, check_exit_code=False)
 
             if (err and err != "device %s is already a member of a bridge;"
                      "can't enslave it to bridge %s.\n" % (interface, bridge)):
