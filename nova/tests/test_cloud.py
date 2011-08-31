@@ -51,8 +51,6 @@ class CloudTestCase(test.TestCase):
         self.flags(connection_type='fake',
                    stub_network=True)
 
-        self.conn = rpc.create_connection()
-
         # set up our cloud
         self.cloud = cloud.CloudController()
 
