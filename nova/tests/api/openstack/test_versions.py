@@ -243,13 +243,14 @@ class VersionsTest(test.TestCase):
         self.assertTrue(version.xpath('/ns:version', namespaces=NS))
         media_types = version.xpath('ns:media-types/ns:media-type',
                                     namespaces=NS)
-        self._compare_media_types(media_types, expected['media-types'])
+        self.assertTrue(_compare_media_types(media_types,
+                                             expected['media-types']))
         for key in ['id', 'status', 'updated']:
             self.assertEqual(version.get(key), expected[key])
         links = version.xpath('atom:link', namespaces=NS)
-        self._compare_links(links,
+        self.assertTrue(_compare_links(links,
             [{'rel': 'self', 'href': 'http://localhost/v1.0/'}]
-            + expected['links'])
+            + expected['links']))
 
     def test_get_version_1_1_detail_xml(self):
         req = webob.Request.blank('/v1.1/')
@@ -263,13 +264,14 @@ class VersionsTest(test.TestCase):
         self.assertTrue(version.xpath('/ns:version', namespaces=NS))
         media_types = version.xpath('ns:media-types/ns:media-type',
                                     namespaces=NS)
-        self._compare_media_types(media_types, expected['media-types'])
+        self.assertTrue(_compare_media_types(media_types,
+                                             expected['media-types']))
         for key in ['id', 'status', 'updated']:
             self.assertEqual(version.get(key), expected[key])
         links = version.xpath('atom:link', namespaces=NS)
-        self._compare_links(links,
+        self.assertTrue(_compare_links(links,
             [{'rel': 'self', 'href': 'http://localhost/v1.1/'}]
-            + expected['links'])
+            + expected['links']))
 
     def test_get_version_list_xml(self):
         req = webob.Request.blank('/')
@@ -289,8 +291,8 @@ class VersionsTest(test.TestCase):
             for key in ['id', 'status', 'updated']:
                 self.assertEqual(version.get(key), expected[key])
             (link,) = version.xpath('atom:link', namespaces=NS)
-            self._compare_links(link,
-                [{'rel': 'self', 'href': 'http://localhost/%s/' % v}])
+            self.assertTrue(_compare_links(link,
+                [{'rel': 'self', 'href': 'http://localhost/%s/' % v}]))
 
     def test_get_version_1_0_detail_atom(self):
         req = webob.Request.blank('/v1.0/')
@@ -568,18 +570,6 @@ class VersionsTest(test.TestCase):
 
         self.assertDictMatch(expected, json.loads(res.body))
 
-    def _compare_media_types(self, actual, expected):
-        for elem, data in zip(actual, expected):
-            self.assertEqual(elem.get('base'), data['base'])
-            self.assertEqual(elem.get('type'), data['type'])
-
-    def _compare_links(self, actual, expected):
-        for elem, data in zip(actual, expected):
-            self.assertEqual(elem.get('rel'), data['rel'])
-            self.assertEqual(elem.get('href'), data['href'])
-            if 'type' in data:
-                self.assertEqual(elem.get('type'), data['type'])
-
 
 class VersionsViewBuilderTests(test.TestCase):
     def test_view_builder(self):
@@ -648,21 +638,19 @@ class VersionsSerializerTests(test.TestCase):
         response = serializer.index(versions_data)
 
         root = etree.XML(response)
-        self.assertEqual(root.tag.split('}')[1], "versions")
-        self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
-        version = list(root)[0]
-        self.assertEqual(version.tag.split('}')[1], "version")
-        self.assertEqual(version.get('id'),
-                         versions_data['versions'][0]['id'])
+        self.assertTrue(root.xpath('/ns:versions', namespaces=NS))
+        version_elems = root.xpath('ns:version', namespaces=NS)
+        self.assertEqual(len(version_elems), 1)
+        version = version_elems[0]
+        self.assertEqual(version.get('id'), versions_data['versions'][0]['id'])
         self.assertEqual(version.get('status'),
                          versions_data['versions'][0]['status'])
 
-        link = list(version)[0]
-
-        self.assertEqual(link.tag.split('}')[1], "link")
-        self.assertEqual(link.tag.split('}')[0].strip('{'), wsgi.XMLNS_ATOM)
-        for key, val in versions_data['versions'][0]['links'][0].items():
-            self.assertEqual(link.get(key), val)
+        (link,) = version.xpath('atom:link', namespaces=NS)
+        self.assertTrue(_compare_links(link, [{
+            'rel': 'self',
+            'href': 'http://test/2.7.1',
+            'type': 'application/atom+xml'}]))
 
     def test_versions_multi_xml_serializer(self):
         versions_data = {
@@ -686,10 +674,8 @@ class VersionsSerializerTests(test.TestCase):
         response = serializer.multi(versions_data)
 
         root = etree.XML(response)
-        self.assertEqual(root.tag.split('}')[1], "choices")
-        self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
-        version = list(root)[0]
-        self.assertEqual(version.tag.split('}')[1], "version")
+        self.assertTrue(root.xpath('/ns:choices', namespaces=NS))
+        (version,) = root.xpath('ns:version', namespaces=NS)
         self.assertEqual(version.get('id'), versions_data['choices'][0]['id'])
         self.assertEqual(version.get('status'),
                          versions_data['choices'][0]['status'])
@@ -698,19 +684,14 @@ class VersionsSerializerTests(test.TestCase):
         media_type_nodes = list(media_types)
         self.assertEqual(media_types.tag.split('}')[1], "media-types")
 
-        set_types = versions_data['choices'][0]['media-types']
-        for i, type in enumerate(set_types):
-            node = media_type_nodes[i]
-            self.assertEqual(node.tag.split('}')[1], "media-type")
-            for key, val in set_types[i].items():
-                self.assertEqual(node.get(key), val)
+        media_types = version.xpath('ns:media-types/ns:media-type',
+                                    namespaces=NS)
+        self.assertTrue(_compare_media_types(media_types,
+            versions_data['choices'][0]['media-types']))
 
-        link = list(version)[1]
-
-        self.assertEqual(link.tag.split('}')[1], "link")
-        self.assertEqual(link.tag.split('}')[0].strip('{'), wsgi.XMLNS_ATOM)
-        for key, val in versions_data['choices'][0]['links'][0].items():
-            self.assertEqual(link.get(key), val)
+        (link,) = version.xpath('atom:link', namespaces=NS)
+        self.assertTrue(_compare_links(link,
+                                       versions_data['choices'][0]['links']))
 
     def test_version_detail_xml_serializer(self):
         version_data = {
@@ -892,3 +873,20 @@ class VersionsSerializerTests(test.TestCase):
                         'servers/api/v1.1/application.wadl',
             },
         ])
+
+
+def _compare_links(actual, expected):
+    for elem, data in zip(actual, expected):
+        for key in ('rel', 'href', 'type'):
+            if elem.get(key) != data.get(key):
+                return False
+    return True
+
+
+def _compare_media_types(actual, expected):
+    for elem, data in zip(actual, expected):
+        for key in ('base', 'type'):
+            if elem.get(key) != data.get(key):
+                return False
+    return True
+
