@@ -28,6 +28,7 @@ from nova import flags
 from nova import ipv6
 from nova import utils
 from nova import log as logging
+from nova.compute import vm_states
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
@@ -1102,12 +1103,11 @@ def instance_destroy(context, instance_id):
 def instance_stop(context, instance_id):
     session = get_session()
     with session.begin():
-        from nova.compute import power_state
         session.query(models.Instance).\
                 filter_by(id=instance_id).\
                 update({'host': None,
-                        'state': power_state.SHUTOFF,
-                        'state_description': 'stopped',
+                        'vm_state': vm_states.STOPPED,
+                        'task_state': None,
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(instance_id=instance_id).\
@@ -1266,7 +1266,7 @@ def instance_get_all_by_filters(context, filters):
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
-            'state', 'instance_type_id', 'deleted']
+            'vm_state', 'instance_type_id', 'deleted']
 
     query_filters = [key for key in filters.iterkeys()
             if key in exact_match_filter_names]
@@ -1501,18 +1501,6 @@ def instance_get_floating_address(context, instance_id):
         return None
     # NOTE(vish): this just returns the first floating ip
     return fixed_ip_refs[0].floating_ips[0]['address']
-
-
-@require_admin_context
-def instance_set_state(context, instance_id, state, description=None):
-    # TODO(devcamcar): Move this out of models and into driver
-    from nova.compute import power_state
-    if not description:
-        description = power_state.name(state)
-    db.instance_update(context,
-                       instance_id,
-                       {'state': state,
-                        'state_description': description})
 
 
 @require_context
