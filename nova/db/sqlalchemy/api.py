@@ -28,6 +28,7 @@ from nova import flags
 from nova import ipv6
 from nova import utils
 from nova import log as logging
+from nova.compute import vm_states
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
@@ -1102,11 +1103,10 @@ def instance_destroy(context, instance_id):
 def instance_stop(context, instance_id):
     session = get_session()
     with session.begin():
-        from nova.compute import power_state
         session.query(models.Instance).\
                 filter_by(id=instance_id).\
                 update({'host': None,
-                        'vm_state': vm_state.STOP,
+                        'vm_state': vm_states.STOPPED,
                         'task_state': None,
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
