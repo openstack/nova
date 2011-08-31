@@ -79,8 +79,6 @@ class ViewBuilder(object):
             metadata[item['key']] = str(item['value'])
         inst_dict['metadata'] = metadata
 
-        inst_dict['key_name'] = inst.get('key_name', '')
-
         inst_dict['hostId'] = ''
         if inst.get('host'):
             inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
@@ -190,6 +188,7 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['uuid'] = inst['uuid']
+        response['key_name'] = inst.get('key_name', '')
         self._build_config_drive(response, inst)
 
     def _build_links(self, response, inst):
