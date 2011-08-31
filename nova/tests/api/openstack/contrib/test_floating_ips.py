@@ -205,6 +205,38 @@ class FloatingIpTest(test.TestCase):
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
 
+    def test_associate_floating_ip_to_instance_wrong_project_id(self):
+        def fake_fixed_ip_get_by_address(ctx, address, session=None):
+            return {'address': address, 'network': {'multi_host': None,
+                                                    'host': 'fake'}}
+        self.stubs.Set(db.api, "fixed_ip_get_by_address",
+                       fake_fixed_ip_get_by_address)
+        db.floating_ip_update(self.context, self.address, {'project_id': 'bad',
+                                                           'fixed_ip_id': 1})
+        body = dict(addFloatingIp=dict(address=self.address))
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 400)
+
+    def test_associate_floating_ip_to_instance_no_project_id(self):
+        def fake_fixed_ip_get_by_address(ctx, address, session=None):
+            return {'address': address, 'network': {'multi_host': None,
+                                                    'host': 'fake'}}
+        self.stubs.Set(db.api, "fixed_ip_get_by_address",
+                       fake_fixed_ip_get_by_address)
+        db.floating_ip_update(self.context, self.address, {'project_id': None,
+                                                           'fixed_ip_id': 1})
+        body = dict(addFloatingIp=dict(address=self.address))
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 400)
+
     def test_add_associated_floating_ip_to_instance(self):
         def fake_fixed_ip_get_by_address(ctx, address, session=None):
             return {'address': address, 'network': {'multi_host': None,

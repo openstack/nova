@@ -534,7 +534,7 @@ class NoMoreFloatingIps(FloatingIpNotFound):
 
 
 class FloatingIpAlreadyInUse(NovaException):
-    message = _("Floating ip %(address) already in use by %(fixed_ip).")
+    message = _("Floating ip %(address)s already in use by %(fixed_ip)s.")
 
 
 class NoFloatingIpsDefined(NotFound):

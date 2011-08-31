@@ -138,7 +138,11 @@ class Floating_ips(extensions.ExtensionDescriptor):
             msg = _("Address not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        self.compute_api.associate_floating_ip(context, instance_id, address)
+        try:
+            self.compute_api.associate_floating_ip(context, instance_id,
+                                                   address)
+        except exception.ApiError, e:
+            raise webob.exc.HTTPBadRequest(explanation=e.message)
 
         return webob.Response(status_int=202)
 
