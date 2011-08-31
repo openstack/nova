@@ -154,6 +154,15 @@ class GlanceImageService(service.BaseImageService):
         except KeyError:
             raise exception.ImagePaginationFailed()
 
+        try:
+            kwargs['limit'] = kwargs['limit'] - len(images)
+            # break if we have reached a provided limit
+            if kwargs['limit'] <= 0:
+                return
+        except KeyError:
+            # ignore missing limit, just proceed without it
+            pass
+
         for image in self._fetch_images(fetch_func, **kwargs):
             yield image
 
