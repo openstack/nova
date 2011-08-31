@@ -144,8 +144,15 @@ class Controller(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
+    def _get_key_name(self, req, body):
+        """ Get default keypair if not set """
+        raise NotImplementedError()
+
     def create(self, req, body):
         """ Creates a new server for a given user """
+        if 'server' in body:
+            body['server']['key_name'] = self._get_key_name(req, body)
+
         extra_values = None
         extra_values, instances = self.helper.create_instance(
                 req, body, self.compute_api.create)
@@ -564,17 +571,12 @@ class ControllerV10(Controller):
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
-    def create(self, req, body):
-        """ Creates a new server for a given user """
-        # note(ja): v1.0 injects the first keypair for the project for testing
-        if 'server' in body and not 'key_name' in body['server']:
-            context = req.environ["nova.context"]
-            keypairs = db.key_pair_get_all_by_user(context.elevated(),
-                                                   context.user_id)
-            if keypairs:
-                body['server']['key_name'] = keypairs[0]['name']
-
-        return super(ControllerV10, self).create(req, body)
+    def _get_key_name(self, req, body):
+        context = req.environ["nova.context"]
+        keypairs = db.key_pair_get_all_by_user(context,
+                                               context.user_id)
+        if keypairs:
+            return keypairs[0]['name']
 
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
@@ -646,6 +648,10 @@ class ControllerV11(Controller):
             self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
+
+    def _get_key_name(self, req, body):
+        if 'server' in body:
+            return body['server'].get('key_name')
 
     def _image_ref_from_req_data(self, data):
         try:
