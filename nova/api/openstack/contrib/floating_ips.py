@@ -96,7 +96,7 @@ class FloatingIPController(object):
         except rpc.RemoteError as ex:
             # NOTE(tr3buchet) - why does this block exist?
             if ex.exc_type == 'NoMoreFloatingIps':
-                raise exception.NoMoreFloatingIps()
+                raise webob.exc.HTTPBadRequest(explanation=ex.message)
             else:
                 raise
 

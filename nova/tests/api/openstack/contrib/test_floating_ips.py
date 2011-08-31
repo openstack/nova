@@ -20,8 +20,9 @@ import webob
 from nova import compute
 from nova import context
 from nova import db
-from nova import test
 from nova import network
+from nova import rpc
+from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.api.openstack import test_servers
 
@@ -114,8 +115,6 @@ class FloatingIpTest(test.TestCase):
                        network_api_get_floating_ip)
         self.stubs.Set(network.api.API, "list_floating_ips",
                        network_api_list_floating_ips)
-        self.stubs.Set(network.api.API, "allocate_floating_ip",
-                       network_api_allocate)
         self.stubs.Set(network.api.API, "release_floating_ip",
                        network_api_release)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
@@ -172,7 +171,20 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
         self.assertEqual(res_dict['floating_ip']['instance_id'], None)
 
+    def test_floating_ip_allocate_no_free_ips(self):
+        def fake_call(*args, **kwargs):
+            raise(rpc.RemoteError('NoMoreFloatingIps', '', ''))
+
+        self.stubs.Set(rpc, "call", fake_call)
+        req = webob.Request.blank('/v1.1/123/os-floating-ips')
+        req.method = 'POST'
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_floating_ip_allocate(self):
+        self.stubs.Set(network.api.API, "allocate_floating_ip",
+                       network_api_allocate)
         req = webob.Request.blank('/v1.1/123/os-floating-ips')
         req.method = 'POST'
         req.headers['Content-Type'] = 'application/json'
