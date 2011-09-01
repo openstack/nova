@@ -213,6 +213,12 @@ class QuantumManager(manager.FlatManager):
                 net_id, port_id = self.q_conn.get_port_by_attachment(
                                              q_tenant_id, vif['uuid'])
             if not net_id:
+                # TODO(bgh): We need to figure out a way to tell if we
+                # should actually be raising this exception or not.
+                # In the case that a VM spawn failed it may not have
+                # attached the vif and raising the exception here
+                # prevents deltion of the VM.  In that case we should
+                # probably just log, continue, and move on.
                 raise Exception(_("No network for for virtual interface %s") %
                                 vif['uuid'])
             (v4_subnet, v6_subnet) = self.ipam.get_subnets_by_net_id(context,
