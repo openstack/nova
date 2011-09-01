@@ -107,13 +107,20 @@ def stub_out_key_pair_funcs(stubs, have_key_pair=True):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
 
+    def one_key_pair(context, user_id, name):
+        if name == 'key':
+            return dict(name='key', public_key='public_key')
+        else:
+            raise exc.KeypairNotFound(user_id=user_id, name=name)
+
     def no_key_pair(context, user_id):
         return []
 
     if have_key_pair:
-        stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+        stubs.Set(nova.db.api, 'key_pair_get_all_by_user', key_pair)
+        stubs.Set(nova.db.api, 'key_pair_get', one_key_pair)
     else:
-        stubs.Set(nova.db, 'key_pair_get_all_by_user', no_key_pair)
+        stubs.Set(nova.db.api, 'key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_image_service(stubs):

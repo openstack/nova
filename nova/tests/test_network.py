@@ -360,6 +360,22 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.network.validate_networks(self.context, requested_networks)
 
+    def test_cant_associate_associated_floating_ip(self):
+        ctxt = context.RequestContext('testuser', 'testproject',
+                                      is_admin=False)
+
+        def fake_floating_ip_get_by_address(context, address):
+            return {'address': '10.10.10.10',
+                    'fixed_ip': {'address': '10.0.0.1'}}
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address',
+                                fake_floating_ip_get_by_address)
+
+        self.assertRaises(exception.FloatingIpAlreadyInUse,
+                          self.network.associate_floating_ip,
+                          ctxt,
+                          mox.IgnoreArg(),
+                          mox.IgnoreArg())
+
 
 class CommonNetworkTestCase(test.TestCase):
 
