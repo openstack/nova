@@ -85,13 +85,6 @@ class CloudTestCase(test.TestCase):
 
         self.stubs.Set(rpc, 'cast', finish_cast)
 
-    def tearDown(self):
-        networks = db.project_get_networks(self.context, self.project_id,
-                                           associate=False)
-        for network in networks:
-            db.network_disassociate(self.context, network['id'])
-        super(CloudTestCase, self).tearDown()
-
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
         return cloud._gen_key(self.context, self.context.user_id, name)
