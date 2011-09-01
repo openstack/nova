@@ -102,9 +102,8 @@ if __name__ == '__main__':
     logging.setup()
     begin, end = time_period(FLAGS.instance_usage_audit_period)
     print "Creating usages for %s until %s" % (str(begin), str(end))
-    instances = db.instance_get_active_by_window(context.get_admin_context(),
-                                                 begin,
-                                                 end)
+    ctxt = context.get_admin_context()
+    instances = db.instance_get_active_by_window_joined(ctxt, begin, end)
     print "%s instances" % len(instances)
     for instance_ref in instances:
         usage_info = utils.usage_from_instance(instance_ref,

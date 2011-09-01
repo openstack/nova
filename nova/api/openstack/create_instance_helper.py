@@ -130,11 +130,16 @@ class CreateInstanceHelper(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
         zone_blob = server_dict.get('blob')
-        availability_zone = server_dict.get('availability_zone')
 
         # optional openstack extensions:
         key_name = server_dict.get('key_name')
         user_data = server_dict.get('user_data')
+        self._validate_user_data(user_data)
+
+        availability_zone = server_dict.get('availability_zone')
+        name = server_dict['name']
+        self._validate_server_name(name)
+        name = name.strip()
 
         reservation_id = server_dict.get('reservation_id')
         min_count = server_dict.get('min_count')
@@ -363,6 +368,16 @@ class CreateInstanceHelper(object):
                 raise exc.HTTPBadRequest(explanation=expl)
 
         return networks
+
+    def _validate_user_data(self, user_data):
+        """Check if the user_data is encoded properly"""
+        if not user_data:
+            return
+        try:
+            user_data = base64.b64decode(user_data)
+        except TypeError:
+            expl = _('Userdata content cannot be decoded')
+            raise exc.HTTPBadRequest(explanation=expl)
 
 
 class ServerXMLDeserializer(wsgi.XMLDeserializer):
