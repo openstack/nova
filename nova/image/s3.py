@@ -48,7 +48,7 @@ flags.DEFINE_string('s3_secret_key', 'notchecked',
                     'secret key to use for s3 server for images')
 
 
-class S3ImageService(service.BaseImageService):
+class S3ImageService(object):
     """Wraps an existing image service to support s3 based register."""
 
     def __init__(self, service=None, *args, **kwargs):

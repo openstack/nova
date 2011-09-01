@@ -24,7 +24,6 @@ import random
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.image import service
 
 
 LOG = logging.getLogger('nova.image.fake')
@@ -33,7 +32,7 @@ LOG = logging.getLogger('nova.image.fake')
 FLAGS = flags.FLAGS
 
 
-class _FakeImageService(service.BaseImageService):
+class _FakeImageService(object):
     """Mock (fake) image service for unit testing."""
 
     def __init__(self):
