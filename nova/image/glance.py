@@ -57,16 +57,8 @@ def pick_glance_api_server():
     return host, port
 
 
-class GlanceImageService(service.BaseImageService):
+class GlanceImageService(object):
     """Provides storage and retrieval of disk image objects within Glance."""
-
-    GLANCE_ONLY_ATTRS = ['size', 'location', 'disk_format',
-                         'container_format', 'checksum']
-
-    # NOTE(sirp): Overriding to use _translate_to_service provided by
-    # BaseImageService
-    SERVICE_IMAGE_ATTRS = service.BaseImageService.BASE_IMAGE_ATTRS +\
-                          GLANCE_ONLY_ATTRS
 
     def __init__(self, client=None):
         self._client = client
@@ -266,19 +258,45 @@ class GlanceImageService(service.BaseImageService):
 
     @classmethod
     def _translate_to_service(cls, image_meta):
-        image_meta = super(GlanceImageService,
-                           cls)._translate_to_service(image_meta)
         image_meta = _convert_to_string(image_meta)
         return image_meta
 
     @classmethod
     def _translate_to_base(cls, image_meta):
         """Override translation to handle conversion to datetime objects."""
-        image_meta = service.BaseImageService._propertify_metadata(
-                        image_meta, cls.SERVICE_IMAGE_ATTRS)
+        image_meta = _limit_attributes(image_meta)
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         image_meta = _convert_from_string(image_meta)
         return image_meta
+
+    @staticmethod
+    def _is_image_available(context, image_meta):
+        """Check image availability.
+
+        Images are always available if they are public or if the user is an
+        admin.
+
+        Otherwise, we filter by project_id (if present) and then fall-back to
+        images owned by user.
+
+        """
+        # FIXME(sirp): We should be filtering by user_id on the Glance side
+        # for security; however, we can't do that until we get authn/authz
+        # sorted out. Until then, filtering in Nova.
+        if image_meta['is_public'] or context.is_admin:
+            return True
+
+        properties = image_meta['properties']
+
+        if context.project_id and ('project_id' in properties):
+            return str(properties['project_id']) == str(context.project_id)
+
+        try:
+            user_id = properties['user_id']
+        except KeyError:
+            return False
+
+        return str(user_id) == str(context.user_id)
 
 
 # utility functions
@@ -338,3 +356,19 @@ def _convert_from_string(metadata):
 
 def _convert_to_string(metadata):
     return _convert(_json_dumps, metadata)
+
+
+
+def _limit_attributes(image_meta):
+    IMAGE_ATTRIBUTES = ['size', 'location', 'disk_format',
+                        'container_format', 'checksum', 'id',
+                        'name', 'created_at', 'updated_at',
+                        'deleted_at', 'deleted', 'status',
+                        'is_public']
+    output = {}
+    for attr in IMAGE_ATTRIBUTES:
+        output[attr] = image_meta.get(attr)
+
+    output['properties'] = image_meta.get('properties', {})
+
+    return output
