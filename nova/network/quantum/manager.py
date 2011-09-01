@@ -84,16 +84,15 @@ class QuantumManager(manager.FlatManager):
             In both cases, we initialize a subnet using the IPAM lib.
         """
         if num_networks != 1:
-            raise Exception("QuantumManager requires that only one"
-                            " network is created per call")
-        q_tenant_id = kwargs["project_id"] or \
-                            FLAGS.quantum_default_tenant_id
+            raise Exception(_("QuantumManager requires that only one"
+                              " network is created per call"))
+        q_tenant_id = kwargs["project_id"] or FLAGS.quantum_default_tenant_id
         quantum_net_id = uuid
         if quantum_net_id:
             if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
-                    raise Exception("Unable to find existing quantum " \
-                        " network for tenant '%s' with net-id '%s'" % \
-                         (q_tenant_id, quantum_net_id))
+                    raise Exception(_("Unable to find existing quantum " \
+                                " network for tenant '%s' with net-id '%s'" % \
+                                (q_tenant_id, quantum_net_id)))
         else:
             # otherwise, create network from default quantum pool
             quantum_net_id = self.q_conn.create_network(q_tenant_id, label)
@@ -156,18 +155,18 @@ class QuantumManager(manager.FlatManager):
         # Create a port via quantum and attach the vif
         for (quantum_net_id, project_id) in net_proj_pairs:
 
-            # FIXME: (danwent). We'd like to have the manager be completely
-            # decoupled from the nova networks table.
-            # However, other parts of nova sometimes go behind
-            # our back and access network data directly from the DB.  So
+            # FIXME(danwent): We'd like to have the manager be
+            # completely decoupled from the nova networks table.
+            # However, other parts of nova sometimes go behind our
+            # back and access network data directly from the DB.  So
             # for now, the quantum manager knows that there is a nova
-            # networks DB table and accesses it here.
-            # updating the virtual_interfaces table to use UUIDs would
-            # be one solution, but this would require significant work
+            # networks DB table and accesses it here.  updating the
+            # virtual_interfaces table to use UUIDs would be one
+            # solution, but this would require significant work
             # elsewhere.
             admin_context = context.elevated()
             network_ref = db.network_get_by_uuid(admin_context,
-                                                quantum_net_id)
+                                                 quantum_net_id)
 
             vif_rec = manager.FlatManager.add_virtual_interface(self,
                                   context, instance_id, network_ref['id'])
@@ -177,10 +176,10 @@ class QuantumManager(manager.FlatManager):
             self.q_conn.create_and_attach_port(q_tenant_id, quantum_net_id,
                                                vif_rec['uuid'])
             self.ipam.allocate_fixed_ip(context, project_id, quantum_net_id,
-                                                                    vif_rec)
+                                        vif_rec)
 
         return self.get_instance_nw_info(context, instance_id,
-                                            instance_type_id, host)
+                                         instance_type_id, host)
 
     def get_instance_nw_info(self, context, instance_id,
                                 instance_type_id, host):
@@ -214,8 +213,8 @@ class QuantumManager(manager.FlatManager):
                 net_id, port_id = self.q_conn.get_port_by_attachment(
                                              q_tenant_id, vif['uuid'])
             if not net_id:
-                raise Exception(_("No network for for virtual interface %s") %\
-                                        vif['uuid'])
+                raise Exception(_("No network for for virtual interface %s") %
+                                vif['uuid'])
             (v4_subnet, v6_subnet) = self.ipam.get_subnets_by_net_id(context,
                                         ipam_tenant_id, net_id)
             v4_ips = self.ipam.get_v4_ips_by_interface(context,
@@ -288,17 +287,21 @@ class QuantumManager(manager.FlatManager):
                 (net_id, port_id) = self.q_conn.get_port_by_attachment(
                                         q_tenant_id, interface_id)
             if not net_id:
-                LOG.error("Unable to find port with attachment: %s" % \
-                                                        (interface_id))
+                LOG.error("Unable to find port with attachment: %s" %
+                          (interface_id))
                 continue
             self.q_conn.detach_and_delete_port(q_tenant_id,
-                                                   net_id, port_id)
+                                               net_id, port_id)
 
             self.ipam.deallocate_ips_by_vif(context, ipam_tenant_id,
-                                                    net_id, vif_ref)
+                                            net_id, vif_ref)
 
-        db.virtual_interface_delete_by_instance(admin_context,
-                                                            instance_id)
+        try:
+            db.virtual_interface_delete_by_instance(admin_context,
+                                                    instance_id)
+        except exception.InstanceNotFound:
+            LOG.error(_("Attempted to deallocate non-existent instance: %s" %
+                        (instance_id)))
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
 

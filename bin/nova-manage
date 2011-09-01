@@ -804,11 +804,11 @@ class NetworkCommands(object):
     def quantum_list(self):
         """List all created networks with Quantum-relevant fields"""
         _fmt = "%-32s\t%-10s\t%-10s\t%s , %s"
-        print _fmt % ( _('uuid'),
-                       _('project'),
-                       _('priority'),
-                       _('cidr_v4'),
-                       _('cidr_v6'))
+        print _fmt % (_('uuid'),
+                      _('project'),
+                      _('priority'),
+                      _('cidr_v4'),
+                      _('cidr_v6'))
         for network in db.network_get_all(context.get_admin_context()):
             print _fmt % (network.uuid,
                           network.project_id,
@@ -824,7 +824,6 @@ class NetworkCommands(object):
         # delete the network
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.delete_network(context.get_admin_context(), fixed_range)
-
 
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to modify')

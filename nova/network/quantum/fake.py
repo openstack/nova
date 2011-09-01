@@ -15,9 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import math
-from netaddr import IPNetwork
-
 from nova import exception
 from nova import ipv6
 from nova import log as logging
@@ -29,7 +26,7 @@ LOG = logging.getLogger("network.quantum.fake")
 
 # this class can be used for unit functional/testing on nova,
 # as it does not actually make remote calls to the Quantum service
-class FakeQuantumClientConnection:
+class FakeQuantumClientConnection(object):
 
     def __init__(self):
         self.nets = {}
@@ -56,20 +53,20 @@ class FakeQuantumClientConnection:
     def network_exists(self, tenant_id, net_id):
         try:
             return self.nets[net_id]['tenant-id'] == tenant_id
-        except:
+        except KeyError:
             return False
 
     def _confirm_not_attached(self, interface_id):
         for n in self.nets.values():
             for p in n['ports'].values():
                 if p['attachment-id'] == interface_id:
-                    raise Exception("interface '%s' is already attached" %\
-                                        interface_id)
+                    raise Exception(_("interface '%s' is already attached" %
+                                          interface_id))
 
     def create_and_attach_port(self, tenant_id, net_id, interface_id):
         if not self.network_exists(tenant_id, net_id):
-            raise Exception("network %s does not exist for tenant %s" %\
-                                (net_id, tenant_id))
+            raise Exception(_("network %s does not exist for tenant %s" %
+                              (net_id, tenant_id)))
 
         self._confirm_not_attached(interface_id)
         uuid = str(utils.gen_uuid())
@@ -79,8 +76,8 @@ class FakeQuantumClientConnection:
 
     def detach_and_delete_port(self, tenant_id, net_id, port_id):
         if not self.network_exists(tenant_id, net_id):
-            raise Exception("network %s does not exist for tenant %s" %\
-                                (net_id, tenant_id))
+            raise Exception(_("network %s does not exist for tenant %s" %\
+                                  (net_id, tenant_id)))
         del self.nets[net_id]['ports'][port_id]
 
     def get_port_by_attachment(self, tenant_id, attachment_id):

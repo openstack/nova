@@ -22,11 +22,12 @@ import socket
 import urllib
 
 
-# this is a simple json-only serializer to use until
-# we can just grab the standard serializer
-# from the quantum library
-class Serializer:
-
+class JSONSerializer(object):
+    """
+    This is a simple json-only serializer to use until we can just grab
+    the standard serializer from the quantum library.
+    TODO(danwent): replace serializer with quantum implementation
+    """
     def serialize(self, data, content_type):
         try:
             return json.dumps(data)
@@ -40,12 +41,12 @@ class Serializer:
 
 class api_call(object):
     """A Decorator to add support for format and tenant overriding"""
-    def __init__(self, f):
-        self.f = f
+    def __init__(self, func):
+        self.func = func
 
     def __get__(self, instance, owner):
         def with_params(*args, **kwargs):
-            # Temporarily set format and tenant for this request
+            """Temporarily set format and tenant for this request"""
             (format, tenant) = (instance.format, instance.tenant)
 
             if 'format' in kwargs:
@@ -53,14 +54,16 @@ class api_call(object):
             if 'tenant' in kwargs:
                 instance.tenant = kwargs['tenant']
 
-            ret = self.f(instance, *args)
-            (instance.format, instance.tenant) = (format, tenant)
+            ret = None
+            try:
+                ret = self.func(instance, *args)
+            finally:
+                (instance.format, instance.tenant) = (format, tenant)
             return ret
         return with_params
 
 
 class Client(object):
-
     """A base client class - derived from Glance.BaseClient"""
 
     action_prefix = '/v1.0/tenants/{tenant_id}'
@@ -73,8 +76,8 @@ class Client(object):
     attachment_path = "/networks/%s/ports/%s/attachment"
 
     def __init__(self, host="127.0.0.1", port=9696, use_ssl=False, tenant=None,
-                format="xml", testingStub=None, key_file=None, cert_file=None,
-                logger=None):
+                 format="xml", testing_stub=None, key_file=None,
+                 cert_file=None, logger=None):
         """
         Creates a new client to some service.
 
@@ -83,7 +86,7 @@ class Client(object):
         :param use_ssl: True to use SSL, False to use HTTP
         :param tenant: The tenant ID to make requests with
         :param format: The format to query the server with
-        :param testingStub: A class that stubs basic server methods for tests
+        :param testing_stub: A class that stubs basic server methods for tests
         :param key_file: The SSL key file to use if use_ssl is true
         :param cert_file: The SSL cert file to use if use_ssl is true
         """
@@ -93,7 +96,7 @@ class Client(object):
         self.tenant = tenant
         self.format = format
         self.connection = None
-        self.testingStub = testingStub
+        self.testing_stub = testing_stub
         self.key_file = key_file
         self.cert_file = cert_file
         self.logger = logger
@@ -102,9 +105,9 @@ class Client(object):
         """
         Returns the proper connection type
         """
-        if self.testingStub:
-            return self.testingStub
-        if self.use_ssl:
+        if self.testing_stub:
+            return self.testing_stub
+        elif self.use_ssl:
             return httplib.HTTPSConnection
         else:
             return httplib.HTTPConnection
@@ -126,7 +129,7 @@ class Client(object):
 
         # Ensure we have a tenant id
         if not self.tenant:
-            raise Exception("Tenant ID not set")
+            raise Exception(_("Tenant ID not set"))
 
         # Add format and tenant_id
         action += ".%s" % self.format
@@ -151,8 +154,8 @@ class Client(object):
                 c = connection_type(self.host, self.port)
 
             if self.logger:
-                self.logger.debug("Quantum Client Request:\n" \
-                        + method + " " + action + "\n")
+                self.logger.debug(_("Quantum Client Request:\n%s %s\n" %
+                                    (method, action)))
                 if body:
                     self.logger.debug(body)
 
@@ -172,11 +175,11 @@ class Client(object):
                 if data is not None and len(data):
                     return self.deserialize(data, status_code)
             else:
-                raise Exception("Server returned error: %s" % res.read())
+                raise Exception(_("Server returned error: %s" % res.read()))
 
         except (socket.error, IOError), e:
-            raise Exception("Unable to connect to "
-                            "server. Got error: %s" % e)
+            raise Exception(_("Unable to connect to "
+                              "server. Got error: %s" % e))
 
     def get_status_code(self, response):
         """
@@ -189,18 +192,18 @@ class Client(object):
             return response.status
 
     def serialize(self, data):
-        if data is None:
+        if not data:
             return None
         elif type(data) is dict:
-            return Serializer().serialize(data, self.content_type())
+            return JSONSerializer().serialize(data, self.content_type())
         else:
-            raise Exception("unable to deserialize object of type = '%s'" \
-                                % type(data))
+            raise Exception(_("unable to deserialize object of type = '%s'" %
+                              type(data)))
 
     def deserialize(self, data, status_code):
         if status_code == 202:
             return data
-        return Serializer().deserialize(data, self.content_type())
+        return JSONSerializer().deserialize(data, self.content_type())
 
     def content_type(self, format=None):
         if not format:
