@@ -901,3 +901,12 @@ def monkey_patch():
                 func = import_class("%s.%s" % (module, key))
                 setattr(sys.modules[module], key,\
                     decorator("%s.%s" % (module, key), func))
+
+
+def convert_to_set(lst, label):
+    """Convert a value or list into a set"""
+    if lst is None or lst == []:
+        return None
+    if not isinstance(lst, list):
+        lst = [lst]
+    return [{label: x} for x in lst]
