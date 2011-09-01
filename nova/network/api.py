@@ -111,6 +111,12 @@ class API(base.Base):
                                        '(%(project)s)') %
                                         {'address': floating_ip['address'],
                                         'project': context.project_id})
+
+        # If this address has been previously associated to a
+        # different instance, disassociate the floating_ip
+        if floating_ip['fixed_ip'] and floating_ip['fixed_ip'] is not fixed_ip:
+            self.disassociate_floating_ip(context, floating_ip['address'])
+
         # NOTE(vish): if we are multi_host, send to the instances host
         if fixed_ip['network']['multi_host']:
             host = fixed_ip['instance']['host']

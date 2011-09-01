@@ -10,8 +10,8 @@ from nova import utils
 from nova import exception
 from nova import flags
 from nova.api.openstack import create_instance_helper
+from nova.compute import vm_states
 from nova.compute import instance_types
-from nova.compute import power_state
 import nova.db.api
 from nova import test
 from nova.tests.api.openstack import common
@@ -35,17 +35,19 @@ def return_server_with_attributes(**kwargs):
     return _return_server
 
 
-def return_server_with_power_state(power_state):
-    return return_server_with_attributes(power_state=power_state)
+def return_server_with_state(vm_state, task_state=None):
+    return return_server_with_attributes(vm_state=vm_state,
+                                         task_state=task_state)
 
 
-def return_server_with_uuid_and_power_state(power_state):
-    return return_server_with_power_state(power_state)
+def return_server_with_uuid_and_state(vm_state, task_state=None):
+    def _return_server(context, id):
+        return return_server_with_state(vm_state, task_state)
+    return _return_server
 
 
-def stub_instance(id, power_state=0, metadata=None,
-                  image_ref="10", flavor_id="1", name=None):
-
+def stub_instance(id, metadata=None, image_ref="10", flavor_id="1",
+                  name=None, vm_state=None, task_state=None):
     if metadata is not None:
         metadata_items = [{'key':k, 'value':v} for k, v in metadata.items()]
     else:
@@ -66,8 +68,8 @@ def stub_instance(id, power_state=0, metadata=None,
         "launch_index": 0,
         "key_name": "",
         "key_data": "",
-        "state": power_state,
-        "state_description": "",
+        "vm_state": vm_state or vm_states.ACTIVE,
+        "task_state": task_state,
         "memory_mb": 0,
         "vcpus": 0,
         "local_gb": 0,
@@ -175,11 +177,11 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        state = power_state.BUILDING
-        new_return_server = return_server_with_power_state(state)
+        state = vm_states.BUILDING
+        new_return_server = return_server_with_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_with_uuid_and_power_state(state))
+                       return_server_with_uuid_and_state(state))
 
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
@@ -241,19 +243,6 @@ class ServerActionsTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 500)
-
-    def test_resized_server_has_correct_status(self):
-        req = self.webreq('/1', 'GET')
-
-        def fake_migration_get(*args):
-            return {}
-
-        self.stubs.Set(nova.db, 'migration_get_by_instance_and_status',
-                fake_migration_get)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        body = json.loads(res.body)
-        self.assertEqual(body['server']['status'], 'RESIZE-CONFIRM')
 
     def test_confirm_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
@@ -642,11 +631,11 @@ class ServerActionsTestV11(test.TestCase):
             },
         }
 
-        state = power_state.BUILDING
-        new_return_server = return_server_with_power_state(state)
+        state = vm_states.BUILDING
+        new_return_server = return_server_with_state(state)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_with_uuid_and_power_state(state))
+                       return_server_with_uuid_and_state(state))
 
         req = webob.Request.blank('/v1.1/fake/servers/1/action')
         req.method = 'POST'

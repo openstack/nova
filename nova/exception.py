@@ -61,7 +61,7 @@ class ApiError(Error):
         super(ApiError, self).__init__(outstr)
 
 
-class BuildInProgress(Error):
+class RebuildRequiresActiveInstance(Error):
     pass
 
 
@@ -195,6 +195,10 @@ class InvalidInput(Invalid):
 
 class InvalidInstanceType(Invalid):
     message = _("Invalid instance type %(instance_type)s.")
+
+
+class InvalidVolumeType(Invalid):
+    message = _("Invalid volume type %(volume_type)s.")
 
 
 class InvalidPortRange(Invalid):
@@ -336,6 +340,29 @@ class VolumeNotFound(NotFound):
 
 class VolumeNotFoundForInstance(VolumeNotFound):
     message = _("Volume not found for instance %(instance_id)s.")
+
+
+class VolumeMetadataNotFound(NotFound):
+    message = _("Volume %(volume_id)s has no metadata with "
+                "key %(metadata_key)s.")
+
+
+class NoVolumeTypesFound(NotFound):
+    message = _("Zero volume types found.")
+
+
+class VolumeTypeNotFound(NotFound):
+    message = _("Volume type %(volume_type_id)s could not be found.")
+
+
+class VolumeTypeNotFoundByName(VolumeTypeNotFound):
+    message = _("Volume type with name %(volume_type_name)s "
+                "could not be found.")
+
+
+class VolumeTypeExtraSpecsNotFound(NotFound):
+    message = _("Volume Type %(volume_type_id)s has no extra specs with "
+                "key %(extra_specs_key)s.")
 
 
 class SnapshotNotFound(NotFound):
@@ -504,6 +531,10 @@ class FloatingIpNotFoundForHost(FloatingIpNotFound):
 
 class NoMoreFloatingIps(FloatingIpNotFound):
     message = _("Zero floating ips available.")
+
+
+class FloatingIpAlreadyInUse(NovaException):
+    message = _("Floating ip %(address)s already in use by %(fixed_ip)s.")
 
 
 class NoFloatingIpsDefined(NotFound):
@@ -754,6 +785,18 @@ class PasteConfigNotFound(NotFound):
 
 class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
+
+
+class VSANovaAccessParamNotFound(Invalid):
+    message = _("Nova access parameters were not specified.")
+
+
+class VirtualStorageArrayNotFound(NotFound):
+    message = _("Virtual Storage Array %(id)d could not be found.")
+
+
+class VirtualStorageArrayNotFoundByName(NotFound):
+    message = _("Virtual Storage Array %(name)s could not be found.")
 
 
 class CannotResizeToSameSize(NovaException):

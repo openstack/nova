@@ -193,8 +193,9 @@ class Instance(BASE, NovaBase):
     key_name = Column(String(255))
     key_data = Column(Text)
 
-    state = Column(Integer)
-    state_description = Column(String(255))
+    power_state = Column(Integer)
+    vm_state = Column(String(255))
+    task_state = Column(String(255))
 
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
@@ -238,16 +239,31 @@ class Instance(BASE, NovaBase):
     access_ip_v4 = Column(String(255))
     access_ip_v6 = Column(String(255))
 
-    # TODO(vish): see Ewan's email about state improvements, probably
-    #             should be in a driver base class or some such
-    # vmstate_state = running, halted, suspended, paused
-    # power_state = what we have
-    # task_state = transitory and may trigger power state transition
 
-    #@validates('state')
-    #def validate_state(self, key, state):
-    #    assert(state in ['nostate', 'running', 'blocked', 'paused',
-    #                     'shutdown', 'shutoff', 'crashed'])
+class VirtualStorageArray(BASE, NovaBase):
+    """
+    Represents a virtual storage array supplying block storage to instances.
+    """
+    __tablename__ = 'virtual_storage_arrays'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return FLAGS.vsa_name_template % self.id
+
+    # User editable field for display in user-facing UIs
+    display_name = Column(String(255))
+    display_description = Column(String(255))
+
+    project_id = Column(String(255))
+    availability_zone = Column(String(255))
+
+    instance_type_id = Column(Integer, ForeignKey('instance_types.id'))
+    image_ref = Column(String(255))
+    vc_count = Column(Integer, default=0)   # number of requested VC instances
+    vol_count = Column(Integer, default=0)  # total number of BE volumes
+    status = Column(String(255))
 
 
 class InstanceActions(BASE, NovaBase):
@@ -278,6 +294,12 @@ class InstanceTypes(BASE, NovaBase):
                            foreign_keys=id,
                            primaryjoin='and_(Instance.instance_type_id == '
                                        'InstanceTypes.id)')
+
+    vsas = relationship(VirtualStorageArray,
+                       backref=backref('vsa_instance_type', uselist=False),
+                       foreign_keys=id,
+                       primaryjoin='and_(VirtualStorageArray.instance_type_id'
+                                   ' == InstanceTypes.id)')
 
 
 class Volume(BASE, NovaBase):
@@ -317,6 +339,50 @@ class Volume(BASE, NovaBase):
 
     provider_location = Column(String(255))
     provider_auth = Column(String(255))
+
+    volume_type_id = Column(Integer)
+
+
+class VolumeMetadata(BASE, NovaBase):
+    """Represents a metadata key/value pair for a volume"""
+    __tablename__ = 'volume_metadata'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=False)
+    volume = relationship(Volume, backref="volume_metadata",
+                            foreign_keys=volume_id,
+                            primaryjoin='and_('
+                                'VolumeMetadata.volume_id == Volume.id,'
+                                'VolumeMetadata.deleted == False)')
+
+
+class VolumeTypes(BASE, NovaBase):
+    """Represent possible volume_types of volumes offered"""
+    __tablename__ = "volume_types"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True)
+
+    volumes = relationship(Volume,
+                           backref=backref('volume_type', uselist=False),
+                           foreign_keys=id,
+                           primaryjoin='and_(Volume.volume_type_id == '
+                                       'VolumeTypes.id)')
+
+
+class VolumeTypeExtraSpecs(BASE, NovaBase):
+    """Represents additional specs as key/value pairs for a volume_type"""
+    __tablename__ = 'volume_type_extra_specs'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    volume_type_id = Column(Integer, ForeignKey('volume_types.id'),
+                              nullable=False)
+    volume_type = relationship(VolumeTypes, backref="extra_specs",
+                 foreign_keys=volume_type_id,
+                 primaryjoin='and_('
+                 'VolumeTypeExtraSpecs.volume_type_id == VolumeTypes.id,'
+                 'VolumeTypeExtraSpecs.deleted == False)')
 
 
 class Quota(BASE, NovaBase):
@@ -803,7 +869,9 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration)
+              VolumeMetadata, VolumeTypes, VolumeTypeExtraSpecs,
+              AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration,
+              VirtualStorageArray)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

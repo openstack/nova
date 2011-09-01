@@ -280,6 +280,13 @@ class FloatingIP(object):
 
     def associate_floating_ip(self, context, floating_address, fixed_address):
         """Associates an floating ip to a fixed ip."""
+        floating_ip = self.db.floating_ip_get_by_address(context,
+                                                         floating_address)
+        if floating_ip['fixed_ip']:
+            raise exception.FloatingIpAlreadyInUse(
+                            address=floating_ip['address'],
+                            fixed_ip=floating_ip['fixed_ip']['address'])
+
         self.db.floating_ip_fixed_ip_associate(context,
                                                floating_address,
                                                fixed_address)
@@ -484,17 +491,17 @@ class NetworkManager(manager.SchedulerDependentManager):
             # TODO(tr3buchet) eventually "enabled" should be determined
             def ip_dict(ip):
                 return {
-                    "ip": ip,
-                    "netmask": network["netmask"],
-                    "enabled": "1"}
+                    'ip': ip,
+                    'netmask': network['netmask'],
+                    'enabled': '1'}
 
             def ip6_dict():
                 return {
-                    "ip": ipv6.to_global(network['cidr_v6'],
+                    'ip': ipv6.to_global(network['cidr_v6'],
                                          vif['address'],
                                          network['project_id']),
-                    "netmask": network['netmask_v6'],
-                    "enabled": "1"}
+                    'netmask': network['netmask_v6'],
+                    'enabled': '1'}
             network_dict = {
                 'bridge': network['bridge'],
                 'id': network['id'],

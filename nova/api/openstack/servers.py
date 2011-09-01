@@ -95,17 +95,15 @@ class Controller(object):
         search_opts['recurse_zones'] = utils.bool_from_str(
                 search_opts.get('recurse_zones', False))
 
-        # If search by 'status', we need to convert it to 'state'
-        # If the status is unknown, bail.
-        # Leave 'state' in search_opts so compute can pass it on to
-        # child zones..
+        # If search by 'status', we need to convert it to 'vm_state'
+        # to pass on to child zones.
         if 'status' in search_opts:
             status = search_opts['status']
-            search_opts['state'] = common.power_states_from_status(status)
-            if len(search_opts['state']) == 0:
+            state = common.vm_state_from_status(status)
+            if state is None:
                 reason = _('Invalid server status: %(status)s') % locals()
-                LOG.error(reason)
                 raise exception.InvalidInput(reason=reason)
+            search_opts['vm_state'] = state
 
         # By default, compute's get_all() will return deleted instances.
         # If an admin hasn't specified a 'deleted' search option, we need
@@ -611,9 +609,8 @@ class ControllerV10(Controller):
 
         try:
             self.compute_api.rebuild(context, instance_id, image_id, password)
-        except exception.BuildInProgress:
-            msg = _("Instance %s is currently being rebuilt.") % instance_id
-            LOG.debug(msg)
+        except exception.RebuildRequiresActiveInstance:
+            msg = _("Instance %s must be active to rebuild.") % instance_id
             raise exc.HTTPConflict(explanation=msg)
 
         return webob.Response(status_int=202)
@@ -753,9 +750,8 @@ class ControllerV11(Controller):
             self.compute_api.rebuild(context, instance_id, image_href,
                                      password, name=name, metadata=metadata,
                                      files_to_inject=personalities)
-        except exception.BuildInProgress:
-            msg = _("Instance %s is currently being rebuilt.") % instance_id
-            LOG.debug(msg)
+        except exception.RebuildRequiresActiveInstance:
+            msg = _("Instance %s must be active to rebuild.") % instance_id
             raise exc.HTTPConflict(explanation=msg)
         except exception.InstanceNotFound:
             msg = _("Instance %s could not be found") % instance_id

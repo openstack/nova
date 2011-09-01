@@ -37,7 +37,8 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.compute.api
 from nova.compute import instance_types
-from nova.compute import power_state
+from nova.compute import task_states
+from nova.compute import vm_states
 import nova.db.api
 import nova.scheduler.api
 from nova.db.sqlalchemy.models import Instance
@@ -91,15 +92,18 @@ def return_server_with_addresses(private, public):
     return _return_server
 
 
-def return_server_with_power_state(power_state):
+def return_server_with_state(vm_state, task_state=None):
     def _return_server(context, id):
-        return stub_instance(id, power_state=power_state)
+        return stub_instance(id, vm_state=vm_state, task_state=task_state)
     return _return_server
 
 
-def return_server_with_uuid_and_power_state(power_state):
+def return_server_with_uuid_and_state(vm_state, task_state):
     def _return_server(context, id):
-        return stub_instance(id, uuid=FAKE_UUID, power_state=power_state)
+        return stub_instance(id,
+                             uuid=FAKE_UUID,
+                             vm_state=vm_state,
+                             task_state=task_state)
     return _return_server
 
 
@@ -148,7 +152,8 @@ def instance_addresses(context, instance_id):
 
 
 def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
-                  public_addresses=None, host=None, power_state=0,
+                  public_addresses=None, host=None,
+                  vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
                   flavor_id="1", interfaces=None, name=None,
                   description='fakedescription',
@@ -185,8 +190,8 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "launch_index": 0,
         "key_name": "",
         "key_data": "",
-        "state": power_state,
-        "state_description": "",
+        "vm_state": vm_state or vm_states.BUILDING,
+        "task_state": task_state,
         "memory_mb": 0,
         "vcpus": 0,
         "local_gb": 0,
@@ -501,7 +506,7 @@ class ServersTest(test.TestCase):
             },
         ]
         new_return_server = return_server_with_attributes(
-            interfaces=interfaces, power_state=1)
+            interfaces=interfaces, vm_state=vm_states.ACTIVE)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
@@ -597,8 +602,8 @@ class ServersTest(test.TestCase):
             },
         ]
         new_return_server = return_server_with_attributes(
-            interfaces=interfaces, power_state=1, image_ref=image_ref,
-            flavor_id=flavor_id)
+            interfaces=interfaces, vm_state=vm_states.ACTIVE,
+            image_ref=image_ref, flavor_id=flavor_id)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
@@ -1242,9 +1247,8 @@ class ServersTest(test.TestCase):
     def test_get_servers_allows_status_v1_1(self):
         def fake_get_all(compute_self, context, search_opts=None):
             self.assertNotEqual(search_opts, None)
-            self.assertTrue('state' in search_opts)
-            self.assertEqual(set(search_opts['state']),
-                    set([power_state.RUNNING, power_state.BLOCKED]))
+            self.assertTrue('vm_state' in search_opts)
+            self.assertEqual(search_opts['vm_state'], vm_states.ACTIVE)
             return [stub_instance(100)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
@@ -1261,13 +1265,9 @@ class ServersTest(test.TestCase):
 
     def test_get_servers_invalid_status_v1_1(self):
         """Test getting servers by invalid status"""
-
         self.flags(allow_admin_api=False)
-
         req = webob.Request.blank('/v1.1/fake/servers?status=running')
         res = req.get_response(fakes.wsgi_app())
-        # The following assert will fail if either of the asserts in
-        # fake_get_all() fail
         self.assertEqual(res.status_int, 400)
         self.assertTrue(res.body.find('Invalid server status') > -1)
 
@@ -1774,6 +1774,7 @@ class ServersTest(test.TestCase):
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual(1, server['id'])
+        self.assertEqual("BUILD", server["status"])
         self.assertEqual(0, server['progress'])
         self.assertEqual('server_test', server['name'])
         self.assertEqual(expected_flavor, server['flavor'])
@@ -2531,23 +2532,51 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 204)
         self.assertEqual(self.server_delete_called, True)
 
-    def test_shutdown_status(self):
-        new_server = return_server_with_power_state(power_state.SHUTDOWN)
-        self.stubs.Set(nova.db.api, 'instance_get', new_server)
-        req = webob.Request.blank('/v1.0/servers/1')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['status'], 'SHUTDOWN')
 
-    def test_shutoff_status(self):
-        new_server = return_server_with_power_state(power_state.SHUTOFF)
+class TestServerStatus(test.TestCase):
+
+    def _get_with_state(self, vm_state, task_state=None):
+        new_server = return_server_with_state(vm_state, task_state)
         self.stubs.Set(nova.db.api, 'instance_get', new_server)
-        req = webob.Request.blank('/v1.0/servers/1')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
+        request = webob.Request.blank('/v1.0/servers/1')
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(response.status_int, 200)
+        return json.loads(response.body)
+
+    def test_active(self):
+        response = self._get_with_state(vm_states.ACTIVE)
+        self.assertEqual(response['server']['status'], 'ACTIVE')
+
+    def test_reboot(self):
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.REBOOTING)
+        self.assertEqual(response['server']['status'], 'REBOOT')
+
+    def test_rebuild(self):
+        response = self._get_with_state(vm_states.REBUILDING)
+        self.assertEqual(response['server']['status'], 'REBUILD')
+
+    def test_rebuild_error(self):
+        response = self._get_with_state(vm_states.ERROR)
+        self.assertEqual(response['server']['status'], 'ERROR')
+
+    def test_resize(self):
+        response = self._get_with_state(vm_states.RESIZING)
+        self.assertEqual(response['server']['status'], 'RESIZE')
+
+    def test_verify_resize(self):
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.RESIZE_VERIFY)
+        self.assertEqual(response['server']['status'], 'VERIFY_RESIZE')
+
+    def test_password_update(self):
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.UPDATING_PASSWORD)
+        self.assertEqual(response['server']['status'], 'PASSWORD')
+
+    def test_stopped(self):
+        response = self._get_with_state(vm_states.STOPPED)
+        self.assertEqual(response['server']['status'], 'STOPPED')
 
 
 class TestServerCreateRequestXMLDeserializerV10(unittest.TestCase):
@@ -3293,6 +3322,7 @@ class TestServerInstanceCreation(test.TestCase):
             def __init__(self):
                 self.injected_files = None
                 self.networks = None
+                self.db = db
 
             def create(self, *args, **kwargs):
                 if 'injected_files' in kwargs:
@@ -3603,8 +3633,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "launch_index": 0,
             "key_name": "",
             "key_data": "",
-            "state": 0,
-            "state_description": "",
+            "vm_state": vm_states.BUILDING,
+            "task_state": None,
             "memory_mb": 0,
             "vcpus": 0,
             "local_gb": 0,
@@ -3752,7 +3782,7 @@ class ServersViewBuilderV11Test(test.TestCase):
 
     def test_build_server_detail_active_status(self):
         #set the power state of the instance to running
-        self.instance['state'] = 1
+        self.instance['vm_state'] = vm_states.ACTIVE
         image_bookmark = "http://localhost/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
