@@ -38,7 +38,16 @@ class StubGlanceClient(object):
         return self.images[image_id]
 
     def get_images_detailed(self, filters=None, marker=None, limit=None):
-        return self.images.itervalues()
+        images = self.images.values()
+        if marker is None:
+            index = 0
+        else:
+            for index, image in enumerate(images):
+                if image['id'] == marker:
+                    index += 1
+                    break
+        # default to a page size of 3 to ensure we flex the pagination code
+        return images[index:index + 3]
 
     def get_image(self, image_id):
         return self.images[image_id], []
@@ -86,23 +95,23 @@ class TestGlanceImageServiceProperties(BaseGlanceTest):
         """Ensure attributes which aren't BASE_IMAGE_ATTRS are stored in the
         properties dict
         """
-        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+        fixtures = {'image1': {'id': '1', 'name': 'image1', 'is_public': True,
                                'foo': 'bar',
                                'properties': {'prop1': 'propvalue1'}}}
         self.client.images = fixtures
         image_meta = self.service.show(self.context, 'image1')
 
-        expected = {'name': 'image1', 'is_public': True,
+        expected = {'id': '1', 'name': 'image1', 'is_public': True,
                     'properties': {'prop1': 'propvalue1', 'foo': 'bar'}}
         self.assertEqual(image_meta, expected)
 
     def test_detail_passes_through_to_client(self):
-        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+        fixtures = {'image1': {'id': '1', 'name': 'image1', 'is_public': True,
                                'foo': 'bar',
                                'properties': {'prop1': 'propvalue1'}}}
         self.client.images = fixtures
         image_meta = self.service.detail(self.context)
-        expected = [{'name': 'image1', 'is_public': True,
+        expected = [{'id': '1', 'name': 'image1', 'is_public': True,
                     'properties': {'prop1': 'propvalue1', 'foo': 'bar'}}]
         self.assertEqual(image_meta, expected)
 
@@ -166,6 +175,7 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
     def _make_datetime_fixtures(self):
         fixtures = {
             'image1': {
+                'id': '1',
                 'name': 'image1',
                 'is_public': True,
                 'created_at': self.NOW_GLANCE_FORMAT,
@@ -173,6 +183,7 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
                 'deleted_at': self.NOW_GLANCE_FORMAT,
             },
             'image2': {
+                'id': '2',
                 'name': 'image2',
                 'is_public': True,
                 'created_at': self.NOW_GLANCE_OLD_FORMAT,
@@ -183,13 +194,17 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
         return fixtures
 
     def _make_none_datetime_fixtures(self):
-        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+        fixtures = {'image1': {'id': '1',
+                               'name': 'image1',
+                               'is_public': True,
                                'updated_at': None,
                                'deleted_at': None}}
         return fixtures
 
     def _make_blank_datetime_fixtures(self):
-        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+        fixtures = {'image1': {'id': '1',
+                               'name': 'image1',
+                               'is_public': True,
                                'updated_at': '',
                                'deleted_at': ''}}
         return fixtures

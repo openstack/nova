@@ -23,6 +23,7 @@ from xml.dom import minidom
 import stubout
 import webob
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import test
@@ -76,6 +77,8 @@ class CreateserverextTest(test.TestCase):
             def __init__(self):
                 self.injected_files = None
                 self.networks = None
+                self.user_data = None
+                self.db = db
 
             def create(self, *args, **kwargs):
                 if 'injected_files' in kwargs:
@@ -87,6 +90,10 @@ class CreateserverextTest(test.TestCase):
                     self.networks = kwargs['requested_networks']
                 else:
                     self.networks = None
+
+                if 'user_data' in kwargs:
+                    self.user_data = kwargs['user_data']
+
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'uuid': FAKE_UUID,
                          'created_at': "",
@@ -117,6 +124,14 @@ class CreateserverextTest(test.TestCase):
             for uuid, fixed_ip in networks:
                 network_list.append({'uuid': uuid, 'fixed_ip': fixed_ip})
             server['networks'] = network_list
+        return {'server': server}
+
+    def _create_user_data_request_dict(self, user_data):
+        server = {}
+        server['name'] = 'new-server-test'
+        server['imageRef'] = 1
+        server['flavorRef'] = 1
+        server['user_data'] = user_data
         return {'server': server}
 
     def _get_create_request_json(self, body_dict):
@@ -177,6 +192,13 @@ class CreateserverextTest(test.TestCase):
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         return request, response, compute_api.networks
+
+    def _create_instance_with_user_data_json(self, networks):
+        body_dict = self._create_user_data_request_dict(networks)
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        return request, response, compute_api.user_data
 
     def _create_instance_with_networks_xml(self, networks):
         body_dict = self._create_networks_request_dict(networks)
@@ -304,3 +326,25 @@ class CreateserverextTest(test.TestCase):
         self.assertEquals(response.status_int, 202)
         self.assertEquals(compute_api.networks,
                           [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
+
+    def test_create_instance_with_userdata(self):
+        user_data_contents = '#!/bin/bash\necho "Oh no!"\n'
+        user_data_contents = base64.b64encode(user_data_contents)
+        request, response, user_data = \
+                self._create_instance_with_user_data_json(user_data_contents)
+        self.assertEquals(response.status_int, 202)
+        self.assertEquals(user_data, user_data_contents)
+
+    def test_create_instance_with_userdata_none(self):
+        user_data_contents = None
+        request, response, user_data = \
+                self._create_instance_with_user_data_json(user_data_contents)
+        self.assertEquals(response.status_int, 202)
+        self.assertEquals(user_data, user_data_contents)
+
+    def test_create_instance_with_userdata_with_non_b64_content(self):
+        user_data_contents = '#!/bin/bash\necho "Oh no!"\n'
+        request, response, user_data = \
+                self._create_instance_with_user_data_json(user_data_contents)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(user_data, None)

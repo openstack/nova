@@ -280,6 +280,13 @@ class FloatingIP(object):
 
     def associate_floating_ip(self, context, floating_address, fixed_address):
         """Associates an floating ip to a fixed ip."""
+        floating_ip = self.db.floating_ip_get_by_address(context,
+                                                         floating_address)
+        if floating_ip['fixed_ip']:
+            raise exception.FloatingIpAlreadyInUse(
+                            address=floating_ip['address'],
+                            fixed_ip=floating_ip['fixed_ip']['address'])
+
         self.db.floating_ip_fixed_ip_associate(context,
                                                floating_address,
                                                fixed_address)
