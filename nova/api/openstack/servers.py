@@ -22,6 +22,7 @@ from xml.dom import minidom
 import webob
 
 from nova import compute
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -141,10 +142,16 @@ class Controller(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
+    def _get_key_name(self, req, body):
+        """ Get default keypair if not set """
+        raise NotImplementedError()
+
     def create(self, req, body):
         """ Creates a new server for a given user """
+        if 'server' in body:
+            body['server']['key_name'] = self._get_key_name(req, body)
+
         extra_values = None
-        result = None
         extra_values, instances = self.helper.create_instance(
                 req, body, self.compute_api.create)
 
@@ -562,6 +569,13 @@ class ControllerV10(Controller):
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
+    def _get_key_name(self, req, body):
+        context = req.environ["nova.context"]
+        keypairs = db.key_pair_get_all_by_user(context,
+                                               context.user_id)
+        if keypairs:
+            return keypairs[0]['name']
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
@@ -631,6 +645,10 @@ class ControllerV11(Controller):
             self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
+
+    def _get_key_name(self, req, body):
+        if 'server' in body:
+            return body['server'].get('key_name')
 
     def _image_ref_from_req_data(self, data):
         try:
