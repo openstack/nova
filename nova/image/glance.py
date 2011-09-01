@@ -358,7 +358,6 @@ def _convert_to_string(metadata):
     return _convert(_json_dumps, metadata)
 
 
-
 def _limit_attributes(image_meta):
     IMAGE_ATTRIBUTES = ['size', 'location', 'disk_format',
                         'container_format', 'checksum', 'id',

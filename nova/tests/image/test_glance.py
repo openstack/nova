@@ -557,7 +557,6 @@ class GlanceImageServiceTest(test.TestCase):
             self.assertDictMatch(meta, expected)
             i = i + 1
 
-
     def test_update(self):
         fixture = self._make_fixture('test image')
         image_id = self.service.create(self.context, fixture)['id']
@@ -588,7 +587,3 @@ class GlanceImageServiceTest(test.TestCase):
 
         num_images = len(self.service.index(self.context))
         self.assertEquals(1, num_images)
-
-
-
-
