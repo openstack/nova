@@ -19,13 +19,11 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
-import eventlet
 import novaclient
 import re
 import time
 
 from nova import block_device
-from nova import db
 from nova import exception
 from nova import flags
 import nova.image
@@ -245,7 +243,7 @@ class API(base.Base):
         self.ensure_default_security_group(context)
 
         if key_data is None and key_name:
-            key_pair = db.key_pair_get(context, context.user_id, key_name)
+            key_pair = self.db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
 
         if reservation_id is None:
@@ -397,9 +395,9 @@ class API(base.Base):
 
         security_groups = []
         for security_group_name in security_group:
-            group = db.security_group_get_by_name(context,
-                                                  context.project_id,
-                                                  security_group_name)
+            group = self.db.security_group_get_by_name(context,
+                    context.project_id,
+                    security_group_name)
             security_groups.append(group['id'])
 
         for security_group_id in security_groups:
@@ -561,8 +559,9 @@ class API(base.Base):
     def has_finished_migration(self, context, instance_uuid):
         """Returns true if an instance has a finished migration."""
         try:
-            db.migration_get_by_instance_and_status(context, instance_uuid,
-                    'finished')
+            self.db.migration_get_by_instance_and_status(context,
+                                                         instance_uuid,
+                                                         'finished')
             return True
         except exception.NotFound:
             return False
@@ -576,14 +575,15 @@ class API(base.Base):
         :param context: the security context
         """
         try:
-            db.security_group_get_by_name(context, context.project_id,
-                                          'default')
+            self.db.security_group_get_by_name(context,
+                                               context.project_id,
+                                               'default')
         except exception.NotFound:
             values = {'name': 'default',
                       'description': 'default',
                       'user_id': context.user_id,
                       'project_id': context.project_id}
-            db.security_group_create(context, values)
+            self.db.security_group_create(context, values)
 
     def trigger_security_group_rules_refresh(self, context, security_group_id):
         """Called when a rule is added to or removed from a security_group."""
@@ -648,7 +648,7 @@ class API(base.Base):
         """Called when a rule is added to or removed from a security_group"""
 
         hosts = [x['host'] for (x, idx)
-                           in db.service_get_all_compute_sorted(context)]
+                           in self.db.service_get_all_compute_sorted(context)]
         for host in hosts:
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -676,11 +676,11 @@ class API(base.Base):
 
     def add_security_group(self, context, instance_id, security_group_name):
         """Add security group to the instance"""
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       security_group_name)
+        security_group = self.db.security_group_get_by_name(context,
+                context.project_id,
+                security_group_name)
         # check if the server exists
-        inst = db.instance_get(context, instance_id)
+        inst = self.db.instance_get(context, instance_id)
         #check if the security group is associated with the server
         if self._is_security_group_associated_with_server(security_group,
                                                         instance_id):
@@ -692,21 +692,21 @@ class API(base.Base):
         if inst['state'] != power_state.RUNNING:
             raise exception.InstanceNotRunning(instance_id=instance_id)
 
-        db.instance_add_security_group(context.elevated(),
-                                       instance_id,
-                                       security_group['id'])
+        self.db.instance_add_security_group(context.elevated(),
+                                            instance_id,
+                                            security_group['id'])
         rpc.cast(context,
-             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             self.db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
              {"method": "refresh_security_group_rules",
               "args": {"security_group_id": security_group['id']}})
 
     def remove_security_group(self, context, instance_id, security_group_name):
         """Remove the security group associated with the instance"""
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       security_group_name)
+        security_group = self.db.security_group_get_by_name(context,
+                context.project_id,
+                security_group_name)
         # check if the server exists
-        inst = db.instance_get(context, instance_id)
+        inst = self.db.instance_get(context, instance_id)
         #check if the security group is associated with the server
         if not self._is_security_group_associated_with_server(security_group,
                                                         instance_id):
@@ -718,11 +718,11 @@ class API(base.Base):
         if inst['state'] != power_state.RUNNING:
             raise exception.InstanceNotRunning(instance_id=instance_id)
 
-        db.instance_remove_security_group(context.elevated(),
-                                       instance_id,
-                                       security_group['id'])
+        self.db.instance_remove_security_group(context.elevated(),
+                                               instance_id,
+                                               security_group['id'])
         rpc.cast(context,
-             db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             self.db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
              {"method": "refresh_security_group_rules",
               "args": {"security_group_id": security_group['id']}})
 
@@ -815,6 +815,15 @@ class API(base.Base):
                  {"method": "start_instance",
                   "args": {"topic": FLAGS.compute_topic,
                            "instance_id": instance_id}})
+
+    def get_active_by_window(self, context, begin, end=None, project_id=None):
+        """Get instances that were continuously active over a window."""
+        return self.db.instance_get_active_by_window(context, begin, end,
+                                                     project_id)
+
+    def get_instance_type(self, context, instance_type_id):
+        """Get an instance type by instance type id."""
+        return self.db.instance_type_get(context, instance_type_id)
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
@@ -1015,7 +1024,7 @@ class API(base.Base):
         :param extra_properties: dict of extra image properties to include
 
         """
-        instance = db.api.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
                       'image_state': 'creating',
@@ -1044,7 +1053,7 @@ class API(base.Base):
     def rebuild(self, context, instance_id, image_href, admin_password,
                 name=None, metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
-        instance = db.api.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         name = name or instance["display_name"]
 
         if instance["vm_state"] != vm_states.ACTIVE:

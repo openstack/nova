@@ -3258,6 +3258,7 @@ class TestServerInstanceCreation(test.TestCase):
             def __init__(self):
                 self.injected_files = None
                 self.networks = None
+                self.db = db
 
             def create(self, *args, **kwargs):
                 if 'injected_files' in kwargs:

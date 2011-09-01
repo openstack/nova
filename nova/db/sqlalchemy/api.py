@@ -1306,21 +1306,40 @@ def instance_get_all_by_filters(context, filters):
     return instances
 
 
-@require_admin_context
-def instance_get_active_by_window(context, begin, end=None):
-    """Return instances that were continuously active over the given window"""
+@require_context
+def instance_get_active_by_window(context, begin, end=None, project_id=None):
+    """Return instances that were continuously active over window."""
     session = get_session()
     query = session.query(models.Instance).\
-                   options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ips.network')).\
-                   options(joinedload('instance_type')).\
-                   filter(models.Instance.launched_at < begin)
+                    filter(models.Instance.launched_at < begin)
     if end:
         query = query.filter(or_(models.Instance.terminated_at == None,
                                  models.Instance.terminated_at > end))
     else:
         query = query.filter(models.Instance.terminated_at == None)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
+    return query.all()
+
+
+@require_admin_context
+def instance_get_active_by_window_joined(context, begin, end=None,
+                                         project_id=None):
+    """Return instances and joins that were continuously active over window."""
+    session = get_session()
+    query = session.query(models.Instance).\
+                    options(joinedload_all('fixed_ips.floating_ips')).\
+                    options(joinedload('security_groups')).\
+                    options(joinedload_all('fixed_ips.network')).\
+                    options(joinedload('instance_type')).\
+                    filter(models.Instance.launched_at < begin)
+    if end:
+        query = query.filter(or_(models.Instance.terminated_at == None,
+                                 models.Instance.terminated_at > end))
+    else:
+        query = query.filter(models.Instance.terminated_at == None)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
     return query.all()
 
 
