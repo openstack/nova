@@ -22,20 +22,14 @@ and as a WSGI layer
 
 import copy
 import json
-import os
-import shutil
-import tempfile
 import xml.dom.minidom as minidom
 
 import mox
 import stubout
 import webob
 
-from glance import client as glance_client
 from nova import context
-from nova import exception
 from nova import test
-from nova import utils
 import nova.api.openstack
 from nova.api.openstack import images
 from nova.tests.api.openstack import fakes
