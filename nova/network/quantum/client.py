@@ -22,11 +22,15 @@ import socket
 import urllib
 
 
+#FIXME(danwent): All content in this file should be removed once the
+# packaging work for the quantum client libraries is complete.
+# At that point, we will be able to just install the libraries as a
+# dependency and import from quantum.client.* and quantum.common.*
+# Until then, we have simplified versions of these classes in this file.
+
 class JSONSerializer(object):
-    """
-    This is a simple json-only serializer to use until we can just grab
+    """ This is a simple json-only serializer to use until we can just grab
     the standard serializer from the quantum library.
-    TODO(danwent): replace serializer with quantum implementation
     """
     def serialize(self, data, content_type):
         try:
@@ -39,7 +43,7 @@ class JSONSerializer(object):
         return json.loads(data)
 
 
-# FIXME: (danwent) the full client lib will expose more
+# The full client lib will expose more
 # granular exceptions, for now, just try to distinguish
 # between the cases we care about.
 class QuantumNotFoundException(Exception):

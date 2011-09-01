@@ -80,8 +80,8 @@ class QuantumClientConnection(object):
             status to ACTIVE to enable traffic, and attaches the
             vNIC with the specified interface-id.
         """
-        LOG.debug(_("Connecting interface %s to net %s for %s" %
-                    (interface_id, net_id, tenant_id)))
+        LOG.debug(_("Connecting interface %(interface_id)s to "
+                    "net %(net_id)s for %(tenant_id)s" % locals()))
         port_data = {'port': {'state': 'ACTIVE'}}
         resdict = self.client.create_port(net_id, port_data, tenant=tenant_id)
         port_id = resdict["port"]["id"]
@@ -92,8 +92,8 @@ class QuantumClientConnection(object):
 
     def detach_and_delete_port(self, tenant_id, net_id, port_id):
         """ Detach and delete the specified Quantum port. """
-        LOG.debug("Deleting port %s on net %s for %s" % \
-                    (port_id, net_id, tenant_id))
+        LOG.debug(_("Deleting port %(port_id)s on net %(net_id)s"
+                    " for %(tenant_id)s" % locals()))
 
         self.client.detach_resource(net_id, port_id, tenant=tenant_id)
         self.client.delete_port(net_id, port_id, tenant=tenant_id)

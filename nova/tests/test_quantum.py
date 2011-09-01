@@ -189,29 +189,29 @@ class QuantumTestCaseBase(object):
         # we don't know which order the NICs will be in until we
         # introduce the notion of priority
         # v4 cidr
-        self.assertTrue(nw_info[0][0]['cidr'].startswith("9.") or \
+        self.assertTrue(nw_info[0][0]['cidr'].startswith("9.") or
                         nw_info[1][0]['cidr'].startswith("9."))
-        self.assertTrue(nw_info[0][0]['cidr'].startswith("192.") or \
+        self.assertTrue(nw_info[0][0]['cidr'].startswith("192.") or
                         nw_info[1][0]['cidr'].startswith("192."))
 
         # v4 address
-        self.assertTrue(nw_info[0][1]['ips'][0]['ip'].startswith("9.") or \
+        self.assertTrue(nw_info[0][1]['ips'][0]['ip'].startswith("9.") or
                         nw_info[1][1]['ips'][0]['ip'].startswith("9."))
-        self.assertTrue(nw_info[0][1]['ips'][0]['ip'].startswith("192.") or \
+        self.assertTrue(nw_info[0][1]['ips'][0]['ip'].startswith("192.") or
                         nw_info[1][1]['ips'][0]['ip'].startswith("192."))
 
         # v6 cidr
-        self.assertTrue(nw_info[0][0]['cidr_v6'].startswith("2001:1dbb:") or \
+        self.assertTrue(nw_info[0][0]['cidr_v6'].startswith("2001:1dbb:") or
                         nw_info[1][0]['cidr_v6'].startswith("2001:1dbb:"))
-        self.assertTrue(nw_info[0][0]['cidr_v6'].startswith("2001:1db9:") or \
+        self.assertTrue(nw_info[0][0]['cidr_v6'].startswith("2001:1db9:") or
                         nw_info[1][0]['cidr_v6'].startswith("2001:1db9:"))
 
         # v6 address
         self.assertTrue(\
-            nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1dbb:") or \
+            nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1dbb:") or
             nw_info[1][1]['ip6s'][0]['ip'].startswith("2001:1dbb:"))
         self.assertTrue(\
-            nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1db9:") or \
+            nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1db9:") or
             nw_info[1][1]['ip6s'][0]['ip'].startswith("2001:1db9:"))
 
         self.net_man.deallocate_for_instance(ctx,
@@ -240,9 +240,10 @@ class QuantumNovaIPAMTestCase(QuantumTestCaseBase, test.TestCase):
         for n in db.network_get_all(ctx):
             db.network_delete_safe(ctx, n['id'])
 
-        # NOTE(danwent): I've found that other unit tests have a nasty
+        # Other unit tests (e.g., test_compute.py) have a nasty
         # habit of of creating fixed IPs and not cleaning up, which
-        # can confuse these tests, so we clean them all.
+        # can confuse these tests, so we remove all existing fixed
+        # ips before starting.
         session = get_session()
         result = session.query(models.FixedIp).all()
         with session.begin():

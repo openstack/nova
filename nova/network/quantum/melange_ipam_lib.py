@@ -17,6 +17,7 @@
 
 from netaddr import IPNetwork
 
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.network.quantum import melange_connection
@@ -85,7 +86,7 @@ class QuantumMelangeIPAMLib(object):
         for b in all_blocks['ip_blocks']:
             if b['cidr'] == cidr:
                 return b['network_id']
-        raise Exception(_("No network found for cidr %s" % cidr))
+        raise exception.NotFound(_("No network found for cidr %s" % cidr))
 
     def delete_subnets_by_net_id(self, context, net_id, project_id):
         """ Find Melange block associated with the Quantum UUID,
