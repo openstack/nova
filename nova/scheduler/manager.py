@@ -93,12 +93,14 @@ class SchedulerManager(manager.Manager):
         driver_method = 'schedule_%s' % method
         elevated = context.elevated()
         try:
-            host = getattr(self.driver, driver_method)(elevated, *args,
-                                                       **kwargs)
+            real_meth = getattr(self.driver, driver_method)
+            args = (elevated,) + args
         except AttributeError, e:
             LOG.warning(_("Driver Method %(driver_method)s missing: %(e)s."
-                            "Reverting to schedule()") % locals())
-            host = self.driver.schedule(elevated, topic, *args, **kwargs)
+                          "Reverting to schedule()") % locals())
+            real_meth = self.driver.schedule
+            args = (elevated, topic) + args
+        real_meth(*args, **kwargs)
 
         if not host:
             LOG.debug(_("%(topic)s %(method)s handled in Scheduler")

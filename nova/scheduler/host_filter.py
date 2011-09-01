@@ -31,6 +31,7 @@ import types
 from nova import exception
 from nova import flags
 import nova.scheduler
+from nova.scheduler import filters
 
 
 FLAGS = flags.FLAGS
