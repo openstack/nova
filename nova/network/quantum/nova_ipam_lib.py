@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import math
+import netaddr
 
 from nova import db
 from nova import exception
@@ -60,8 +60,7 @@ class QuantumNovaIPAMLib(object):
             are needed by Quantum but not the FlatManager.
         """
         admin_context = context.elevated()
-        # FIXME(danwent): Use the netaddr library here
-        subnet_size = int(math.pow(2, (32 - int(cidr.split("/")[1]))))
+        subnet_size = len(netaddr.IPNetwork(cidr))
         networks = manager.FlatManager.create_networks(self.net_manager,
                     admin_context, label, cidr,
                     False, 1, subnet_size, cidr_v6,
@@ -114,8 +113,7 @@ class QuantumNovaIPAMLib(object):
         return sorted(net_list, key=lambda x: id_priority_map[x[0]])
 
     def allocate_fixed_ip(self, context, tenant_id, quantum_net_id, vif_rec):
-        """ Allocates a single fixed IPv4 address for a virtual interface.
-        """
+        """ Allocates a single fixed IPv4 address for a virtual interface."""
         admin_context = context.elevated()
         network = db.network_get_by_uuid(admin_context, quantum_net_id)
         if network['cidr']:

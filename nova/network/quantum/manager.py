@@ -103,16 +103,16 @@ class QuantumManager(manager.FlatManager):
                             priority, cidr, gateway_v6, cidr_v6, dns1, dns2)
 
     def delete_network(self, context, fixed_range):
-            """ Lookup network by IPv4 cidr, delete both the IPAM
-                subnet and the corresponding Quantum network.
-            """
-            project_id = context.project_id
-            quantum_net_id = self.ipam.get_network_id_by_cidr(
+        """ Lookup network by IPv4 cidr, delete both the IPAM
+            subnet and the corresponding Quantum network.
+        """
+        project_id = context.project_id
+        quantum_net_id = self.ipam.get_network_id_by_cidr(
                                     context, fixed_range, project_id)
-            self.ipam.delete_subnets_by_net_id(context, quantum_net_id,
+        self.ipam.delete_subnets_by_net_id(context, quantum_net_id,
                                                             project_id)
-            q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
-            self.q_conn.delete_network(q_tenant_id, quantum_net_id)
+        q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
+        self.q_conn.delete_network(q_tenant_id, quantum_net_id)
 
     def allocate_for_instance(self, context, **kwargs):
         """ Called by compute when it is creating a new VM.
