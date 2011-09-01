@@ -22,7 +22,7 @@ from nova import exception
 from nova import log as logging
 from nova import test
 from nova.network import manager as network_manager
-from nova.tests import fake_network_info
+from nova.tests import fake_network
 
 
 LOG = logging.getLogger('nova.tests.network')
@@ -132,7 +132,7 @@ class FlatNetworkTestCase(test.TestCase):
                                               is_admin=False)
 
     def test_get_instance_nw_info(self):
-        fake_get_instance_nw_info = fake_network_info.fake_get_instance_nw_info
+        fake_get_instance_nw_info = fake_network.fake_get_instance_nw_info
 
         nw_info = fake_get_instance_nw_info(self.stubs, 0, 2)
         self.assertFalse(nw_info)

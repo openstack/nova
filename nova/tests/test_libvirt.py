@@ -36,13 +36,13 @@ from nova.api.ec2 import cloud
 from nova.compute import power_state
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
-from nova.tests import fake_network_info
+from nova.tests import fake_network
 
 libvirt = None
 FLAGS = flags.FLAGS
 
-_fake_network_info = fake_network_info.fake_get_instance_nw_info
-_ipv4_like = fake_network_info.ipv4_like
+_fake_network_info = fake_network.fake_get_instance_nw_info
+_ipv4_like = fake_network.ipv4_like
 
 
 def _concurrency(wait, done, target):
