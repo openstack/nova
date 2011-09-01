@@ -448,7 +448,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         try:
             fixed_ips = kwargs.get('fixed_ips') or \
                   self.db.fixed_ip_get_by_instance(context, instance_id)
-        except exceptions.FixedIpNotFoundForInstance:
+        except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
         LOG.debug(_("network deallocation for instance |%s|"), instance_id,
                                                                context=context)
@@ -483,6 +483,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         # it is also joined to the instance and network given by those IDs
         for vif in vifs:
             network = vif['network']
+
+            if network is None:
+                continue
 
             # determine which of the instance's IPs belong to this network
             network_IPs = [fixed_ip['address'] for fixed_ip in fixed_ips if
