@@ -61,7 +61,7 @@ class ApiError(Error):
         super(ApiError, self).__init__(outstr)
 
 
-class BuildInProgress(Error):
+class RebuildRequiresActiveInstance(Error):
     pass
 
 
@@ -146,6 +146,7 @@ class NovaException(Exception):
     message = _("An unknown exception occurred.")
 
     def __init__(self, **kwargs):
+        self.kwargs = kwargs
         try:
             self._error_string = self.message % kwargs
 
@@ -533,6 +534,10 @@ class NoMoreFloatingIps(FloatingIpNotFound):
     message = _("Zero floating ips available.")
 
 
+class FloatingIpAlreadyInUse(NovaException):
+    message = _("Floating ip %(address)s already in use by %(fixed_ip)s.")
+
+
 class NoFloatingIpsDefined(NotFound):
     message = _("Zero floating ips exist.")
 
@@ -781,6 +786,18 @@ class PasteConfigNotFound(NotFound):
 
 class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
+
+
+class VSANovaAccessParamNotFound(Invalid):
+    message = _("Nova access parameters were not specified.")
+
+
+class VirtualStorageArrayNotFound(NotFound):
+    message = _("Virtual Storage Array %(id)d could not be found.")
+
+
+class VirtualStorageArrayNotFoundByName(NotFound):
+    message = _("Virtual Storage Array %(name)s could not be found.")
 
 
 class CannotResizeToSameSize(NovaException):

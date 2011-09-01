@@ -49,7 +49,8 @@ flags.DEFINE_string('volume_name_template', 'volume-%08x',
                     'Template string to be used to generate instance names')
 flags.DEFINE_string('snapshot_name_template', 'snapshot-%08x',
                     'Template string to be used to generate snapshot names')
-
+flags.DEFINE_string('vsa_name_template', 'vsa-%08x',
+                    'Template string to be used to generate VSA names')
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')
@@ -495,9 +496,20 @@ def instance_get_all_by_filters(context, filters):
     return IMPL.instance_get_all_by_filters(context, filters)
 
 
-def instance_get_active_by_window(context, begin, end=None):
-    """Get instances active during a certain time window."""
-    return IMPL.instance_get_active_by_window(context, begin, end)
+def instance_get_active_by_window(context, begin, end=None, project_id=None):
+    """Get instances active during a certain time window.
+
+    Specifying a project_id will filter for a certain project."""
+    return IMPL.instance_get_active_by_window(context, begin, end, project_id)
+
+
+def instance_get_active_by_window_joined(context, begin, end=None,
+                                         project_id=None):
+    """Get instances and joins active during a certain time window.
+
+    Specifying a project_id will filter for a certain project."""
+    return IMPL.instance_get_active_by_window_joined(context, begin, end,
+                                              project_id)
 
 
 def instance_get_all_by_user(context, user_id):
@@ -1512,3 +1524,36 @@ def volume_type_extra_specs_update_or_create(context, volume_type_id,
     key/value pairs specified in the extra specs dict argument"""
     IMPL.volume_type_extra_specs_update_or_create(context, volume_type_id,
                                                     extra_specs)
+
+
+####################
+
+
+def vsa_create(context, values):
+    """Creates Virtual Storage Array record."""
+    return IMPL.vsa_create(context, values)
+
+
+def vsa_update(context, vsa_id, values):
+    """Updates Virtual Storage Array record."""
+    return IMPL.vsa_update(context, vsa_id, values)
+
+
+def vsa_destroy(context, vsa_id):
+    """Deletes Virtual Storage Array record."""
+    return IMPL.vsa_destroy(context, vsa_id)
+
+
+def vsa_get(context, vsa_id):
+    """Get Virtual Storage Array record by ID."""
+    return IMPL.vsa_get(context, vsa_id)
+
+
+def vsa_get_all(context):
+    """Get all Virtual Storage Array records."""
+    return IMPL.vsa_get_all(context)
+
+
+def vsa_get_all_by_project(context, project_id):
+    """Get all Virtual Storage Array records by project ID."""
+    return IMPL.vsa_get_all_by_project(context, project_id)

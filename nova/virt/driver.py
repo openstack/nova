@@ -140,7 +140,7 @@ class ComputeDriver(object):
         that it was before this call began.
 
         :param context: security context
-        :param instance: Instance of {nova.compute.service.Instance}.
+        :param instance: Instance object as returned by DB layer.
                          This function should use the data there to guide
                          the creation of the new instance.
         :param network_info:
@@ -152,14 +152,11 @@ class ComputeDriver(object):
     def destroy(self, instance, network_info, cleanup=True):
         """Destroy (shutdown and delete) the specified instance.
 
-        The given parameter is an instance of nova.compute.service.Instance,
-
         If the instance is not found (for example if networking failed), this
         function should still succeed.  It's probably a good idea to log a
         warning in that case.
 
-        :param instance: Instance of {nova.compute.service.Instance} and so
-                         the instance is being specified as instance.name.
+        :param instance: Instance object as returned by DB layer.
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         :param cleanup:
@@ -171,8 +168,7 @@ class ComputeDriver(object):
     def reboot(self, instance, network_info):
         """Reboot the specified instance.
 
-        :param instance: Instance of {nova.compute.service.Instance} and so
-                         the instance is being specified as instance.name.
+        :param instance: Instance object as returned by DB layer.
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         """
@@ -240,10 +236,10 @@ class ComputeDriver(object):
         """
         Snapshots the specified instance.
 
-        The given parameter is an instance of nova.compute.service.Instance,
-        and so the instance is being specified as instance.name.
-
-        The second parameter is the name of the snapshot.
+        :param context: security context
+        :param instance: Instance object as returned by DB layer.
+        :param image_id: Reference to a pre-created image that will
+                         hold the snapshot.
         """
         raise NotImplementedError()
 
