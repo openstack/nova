@@ -249,13 +249,3 @@ class QuantumNovaIPAMTestCase(QuantumTestCaseBase, test.TestCase):
         with session.begin():
             for fip_ref in result:
                 session.delete(fip_ref)
-
-# FIXME(danwent): Cannot run this unit tests automatically for now, as
-# it requires melange to be running locally.
-#
-#class QuantumMelangeIPAMTestCase(QuantumTestCaseBase, test.TestCase):
-#
-#    def setUp(self):
-#        super(QuantumMelangeIPAMTestCase, self).setUp()
-#        self.net_man = quantum_manager.QuantumManager( \
-#                ipam_lib="nova.network.quantum.melange_ipam_lib")
