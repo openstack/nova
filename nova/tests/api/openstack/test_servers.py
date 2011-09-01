@@ -1265,6 +1265,31 @@ class ServersTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], 100)
 
+    def test_get_servers_allows_changes_since_v1_1(self):
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('changes-since' in search_opts)
+            changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1)
+            self.assertEqual(search_opts['changes-since'], changes_since)
+            self.assertTrue('deleted' not in search_opts)
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        params = 'changes-since=2011-01-24T17:08:01Z'
+        req = webob.Request.blank('/v1.1/fake/servers?%s' % params)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_allows_changes_since_bad_value_v1_1(self):
+        params = 'changes-since=asdf'
+        req = webob.Request.blank('/v1.1/fake/servers?%s' % params)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_get_servers_unknown_or_admin_options1(self):
         """Test getting servers by admin-only or unknown options.
         This tests when admin_api is off.  Make sure the admin and
