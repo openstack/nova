@@ -50,17 +50,16 @@ class QuantumManager(manager.FlatManager):
         Support for these capabilities are targted for future releases.
     """
 
-    def __init__(self, ipam_lib=None, *args, **kwargs):
+    def __init__(self, q_conn=None, ipam_lib=None, *args, **kwargs):
         """ Initialize two key libraries, the connection to a
             Quantum service, and the library for implementing IPAM.
 
             Calls inherited FlatManager constructor.
         """
 
-        if FLAGS.fake_network:
-            self.q_conn = fake.FakeQuantumClientConnection()
-        else:
-            self.q_conn = quantum_connection.QuantumClientConnection()
+        if not q_conn:
+            q_conn = quantum_connection.QuantumClientConnection()
+        self.q_conn = q_conn
 
         if not ipam_lib:
             ipam_lib = FLAGS.quantum_ipam_lib
