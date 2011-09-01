@@ -32,8 +32,6 @@ import nova.api.openstack
 from nova.tests.api.openstack import fakes
 
 
-from nova import log as logging
-LOG = logging.getLogger("api.nova.openstack.etere")
 FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
@@ -388,7 +386,6 @@ class CreateserverextTest(test.TestCase):
         body_dict = self._create_security_group_request_dict(security_groups)
         request = self._get_create_request_json(body_dict)
         response = request.get_response(fakes.wsgi_app())
-        LOG.debug(response)
         self.assertEquals(response.status_int, 202)
 
     def test_get_server_by_id_verify_security_groups_json(self):
