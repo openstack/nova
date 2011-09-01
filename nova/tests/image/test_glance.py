@@ -96,8 +96,9 @@ class BaseGlanceTest(unittest.TestCase):
 
 class TestGlanceImageServiceProperties(BaseGlanceTest):
     """
-    Ensure attributes which aren't base attributes are ignored. Missing
-    attributes should be added as None
+    Ensure attributes which aren't base attributes are ignored.
+
+    Missingattributes should be added as None
 
     """
 
@@ -304,9 +305,8 @@ class TestGlanceSerializer(unittest.TestCase):
 
 
 class GlanceImageServiceTest(test.TestCase):
-
-    """Tests the Glance image service, in particular that metadata translation
-    works properly.
+    """
+    Tests the Glance image service.
 
     At a high level, the translations involved are:
 
@@ -315,6 +315,7 @@ class GlanceImageServiceTest(test.TestCase):
 
         2. ImageService -> API - This is needed so we can support multple
            APIs (OpenStack, EC2)
+
     """
     def __init__(self, *args, **kwargs):
         super(GlanceImageServiceTest, self).__init__(*args, **kwargs)
