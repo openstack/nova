@@ -42,7 +42,7 @@ class JSONSerializer(object):
 # FIXME: (danwent) the full client lib will expose more
 # granular exceptions, for now, just try to distinguish
 # between the cases we care about.
-class QuantumNotFoundException(Exception);
+class QuantumNotFoundException(Exception):
     """ Indicates that Quantum Server returned 404"""
     pass
 
