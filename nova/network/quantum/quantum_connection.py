@@ -70,11 +70,10 @@ class QuantumClientConnection(object):
         """
         try:
             self.client.show_network_details(net_id, tenant=tenant_id)
-        except:
-            # FIXME(danwent): client lib should expose granular exceptions
-            # so we can confirm we're getting a 404 and not some other error
+            return True
+        except client.QuantumNotFoundException:
+            # Not really an error.  Real errors will be propogated to caller
             return False
-        return True
 
     def create_and_attach_port(self, tenant_id, net_id, interface_id):
         """ Creates a Quantum port on the specified network, sets
