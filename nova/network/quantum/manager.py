@@ -91,8 +91,8 @@ class QuantumManager(manager.FlatManager):
         if quantum_net_id:
             if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
                     raise Exception(_("Unable to find existing quantum " \
-                                " network for tenant '%s' with net-id '%s'" % \
-                                (q_tenant_id, quantum_net_id)))
+                        " network for tenant '%(q_tenant_id)s' with "
+                        "net-id '%(quantum_net_id)s'" % locals()))
         else:
             # otherwise, create network from default quantum pool
             quantum_net_id = self.q_conn.create_network(q_tenant_id, label)
@@ -252,17 +252,18 @@ class QuantumManager(manager.FlatManager):
                 'dns': [],
                 'ips': [ip_dict(ip, v4_subnet) for ip in v4_ips]}
 
-            if v6_subnet['cidr']:
-                network_dict['cidr_v6'] = v6_subnet['cidr']
-                info['ip6s'] = [ip_dict(ip, v6_subnet) for ip in v6_ips]
+            if v6_subnet:
+                if v6_subnet['cidr']:
+                    network_dict['cidr_v6'] = v6_subnet['cidr']
+                    info['ip6s'] = [ip_dict(ip, v6_subnet) for ip in v6_ips]
 
-            if v6_subnet['gateway']:
-                info['gateway6'] = v6_subnet['gateway']
+                if v6_subnet['gateway']:
+                    info['gateway6'] = v6_subnet['gateway']
 
             dns_dict = {}
             for s in [v4_subnet, v6_subnet]:
                 for k in ['dns1', 'dns2']:
-                    if s[k]:
+                    if s and s[k]:
                         dns_dict[s[k]] = None
             info['dns'] = [d for d in dns_dict.keys()]
 
@@ -308,8 +309,6 @@ class QuantumManager(manager.FlatManager):
         except exception.InstanceNotFound:
             LOG.error(_("Attempted to deallocate non-existent instance: %s" %
                         (instance_id)))
-        self._do_trigger_security_group_members_refresh_for_instance(
-                                                                   instance_id)
 
     def validate_networks(self, context, networks):
         """ Validates that this tenant has quantum networks with the associated

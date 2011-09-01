@@ -172,8 +172,9 @@ class Client(object):
                 c = connection_type(self.host, self.port)
 
             if self.logger:
-                self.logger.debug(_("Quantum Client Request:\n%s %s\n" %
-                                    (method, action)))
+                self.logger.debug(
+                    _("Quantum Client Request:\n%(method)s %(action)s\n" %
+                                    locals()))
                 if body:
                     self.logger.debug(body)
 

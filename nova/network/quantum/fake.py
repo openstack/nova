@@ -78,8 +78,8 @@ class FakeQuantumClientConnection(object):
     def detach_and_delete_port(self, tenant_id, net_id, port_id):
         if not self.network_exists(tenant_id, net_id):
             raise exception.NotFound(
-                    _("network %s does not exist for tenant %s" %
-                       (net_id, tenant_id)))
+                    _("network %(net_id)s does not exist "
+                        "for tenant %(tenant_id)s" % locals()))
         del self.nets[net_id]['ports'][port_id]
 
     def get_port_by_attachment(self, tenant_id, attachment_id):

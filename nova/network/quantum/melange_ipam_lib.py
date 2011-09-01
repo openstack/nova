@@ -17,6 +17,7 @@
 
 from netaddr import IPNetwork
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -68,7 +69,8 @@ class QuantumMelangeIPAMLib(object):
                "project_id": project_id,
                "priority": priority,
                "label": label}
-        network = self.db.network_create_safe(context, net)
+        admin_context = context.elevated()
+        network = db.network_create_safe(admin_context, net)
 
     def allocate_fixed_ip(self, context, project_id, quantum_net_id, vif_ref):
         """ Pass call to allocate fixed IP on to Melange"""
@@ -100,8 +102,7 @@ class QuantumMelangeIPAMLib(object):
                 self.m_conn.delete_block(b['id'], tenant_id)
 
         network = db.network_get_by_uuid(admin_context, net_id)
-        if network is not None:
-            db.network_delete_safe(context, network['id'])
+        db.network_delete_safe(context, network['id'])
 
     def get_project_and_global_net_ids(self, context, project_id):
         """ Fetches all networks associated with this project, or
