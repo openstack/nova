@@ -27,7 +27,7 @@ from nova.network.quantum import melange_connection as melange
 from nova import utils
 
 
-LOG = logging.getLogger("quantum_nova_ipam_lib")
+LOG = logging.getLogger("nova.network.quantum.nova_ipam_lib")
 
 FLAGS = flags.FLAGS
 
@@ -37,15 +37,15 @@ def get_ipam_lib(net_man):
 
 
 class QuantumNovaIPAMLib(object):
-    """ Implements Quantum IP Address Management (IPAM) interface
-        using the local Nova database.  This implementation is inline
-        with how IPAM is used by other NetworkManagers.
+    """Implements Quantum IP Address Management (IPAM) interface
+       using the local Nova database.  This implementation is inline
+       with how IPAM is used by other NetworkManagers.
     """
 
     def __init__(self, net_manager):
-        """ Holds a reference to the "parent" network manager, used
-            to take advantage of various FlatManager methods to avoid
-            code duplication.
+        """Holds a reference to the "parent" network manager, used
+           to take advantage of various FlatManager methods to avoid
+           code duplication.
         """
         self.net_manager = net_manager
 
@@ -53,11 +53,11 @@ class QuantumNovaIPAMLib(object):
                       quantum_net_id, priority, cidr=None,
                       gateway_v6=None, cidr_v6=None,
                       dns1=None, dns2=None):
-        """ Re-use the basic FlatManager create_networks method to
-            initialize the networks and fixed_ips tables in Nova DB.
+        """Re-use the basic FlatManager create_networks method to
+           initialize the networks and fixed_ips tables in Nova DB.
 
-            Also stores a few more fields in the networks table that
-            are needed by Quantum but not the FlatManager.
+           Also stores a few more fields in the networks table that
+           are needed by Quantum but not the FlatManager.
         """
         admin_context = context.elevated()
         subnet_size = len(netaddr.IPNetwork(cidr))
@@ -85,8 +85,8 @@ class QuantumNovaIPAMLib(object):
         return network['uuid']
 
     def delete_subnets_by_net_id(self, context, net_id, project_id):
-        """ Deletes a network based on Quantum UUID.  Uses FlatManager
-            delete_network to avoid duplication.
+        """Deletes a network based on Quantum UUID.  Uses FlatManager
+           delete_network to avoid duplication.
         """
         admin_context = context.elevated()
         network = db.network_get_by_uuid(admin_context, net_id)
@@ -97,9 +97,9 @@ class QuantumNovaIPAMLib(object):
                                            require_disassociated=False)
 
     def get_project_and_global_net_ids(self, context, project_id):
-        """ Fetches all networks associated with this project, or
-            that are "global" (i.e., have no project set).
-            Returns list sorted by 'priority'.
+        """Fetches all networks associated with this project, or
+           that are "global" (i.e., have no project set).
+           Returns list sorted by 'priority'.
         """
         admin_context = context.elevated()
         networks = db.project_get_networks(admin_context, project_id, False)
@@ -113,7 +113,7 @@ class QuantumNovaIPAMLib(object):
         return sorted(net_list, key=lambda x: id_priority_map[x[0]])
 
     def allocate_fixed_ip(self, context, tenant_id, quantum_net_id, vif_rec):
-        """ Allocates a single fixed IPv4 address for a virtual interface."""
+        """Allocates a single fixed IPv4 address for a virtual interface."""
         admin_context = context.elevated()
         network = db.network_get_by_uuid(admin_context, quantum_net_id)
         if network['cidr']:
@@ -125,8 +125,8 @@ class QuantumNovaIPAMLib(object):
             db.fixed_ip_update(admin_context, address, values)
 
     def get_subnets_by_net_id(self, context, tenant_id, net_id):
-        """ Returns information about the IPv4 and IPv6 subnets
-            associated with a Quantum Network UUID.
+        """Returns information about the IPv4 and IPv6 subnets
+           associated with a Quantum Network UUID.
         """
         n = db.network_get_by_uuid(context.elevated(), net_id)
         subnet_data_v4 = {
@@ -148,8 +148,8 @@ class QuantumNovaIPAMLib(object):
         return (subnet_data_v4, subnet_data_v6)
 
     def get_v4_ips_by_interface(self, context, net_id, vif_id, project_id):
-        """ Returns a list of IPv4 address strings associated with
-            the specified virtual interface, based on the fixed_ips table.
+        """Returns a list of IPv4 address strings associated with
+           the specified virtual interface, based on the fixed_ips table.
         """
         vif_rec = db.virtual_interface_get_by_uuid(context, vif_id)
         fixed_ips = db.fixed_ip_get_by_virtual_interface(context,
@@ -157,8 +157,8 @@ class QuantumNovaIPAMLib(object):
         return [fixed_ip['address'] for fixed_ip in fixed_ips]
 
     def get_v6_ips_by_interface(self, context, net_id, vif_id, project_id):
-        """ Returns a list containing a single IPv6 address strings
-            associated with the specified virtual interface.
+        """Returns a list containing a single IPv6 address strings
+           associated with the specified virtual interface.
         """
         admin_context = context.elevated()
         network = db.network_get_by_uuid(admin_context, net_id)
@@ -171,16 +171,16 @@ class QuantumNovaIPAMLib(object):
         return []
 
     def verify_subnet_exists(self, context, tenant_id, quantum_net_id):
-        """ Confirms that a subnet exists that is associated with the
-            specified Quantum Network UUID.  Raises an exception if no
-            such subnet exists.
+        """Confirms that a subnet exists that is associated with the
+           specified Quantum Network UUID.  Raises an exception if no
+           such subnet exists.
         """
         admin_context = context.elevated()
         db.network_get_by_uuid(admin_context, quantum_net_id)
 
     def deallocate_ips_by_vif(self, context, tenant_id, net_id, vif_ref):
-        """ Deallocate all fixed IPs associated with the specified
-            virtual interface.
+        """Deallocate all fixed IPs associated with the specified
+           virtual interface.
         """
         try:
             admin_context = context.elevated()

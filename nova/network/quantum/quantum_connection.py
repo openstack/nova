@@ -21,7 +21,7 @@ from nova.network.quantum import client as quantum_client
 from nova import utils
 
 
-LOG = logging.getLogger("nova.network.quantum")
+LOG = logging.getLogger("nova.network.quantum.quantum_connection")
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('quantum_connection_host',
@@ -38,35 +38,35 @@ flags.DEFINE_string('quantum_default_tenant_id',
 
 
 class QuantumClientConnection(object):
-    """ Abstracts connection to Quantum service into higher level
-        operations performed by the QuantumManager.
+    """Abstracts connection to Quantum service into higher level
+       operations performed by the QuantumManager.
 
-        Separating this out as a class also let's us create a 'fake'
-        version of this class for unit tests.
+       Separating this out as a class also let's us create a 'fake'
+       version of this class for unit tests.
     """
 
     def __init__(self):
-        """ Initialize Quantum client class based on flags. """
+        """Initialize Quantum client class based on flags."""
         self.client = quantum_client.Client(FLAGS.quantum_connection_host,
                                             FLAGS.quantum_connection_port,
                                             format="json",
                                             logger=LOG)
 
     def create_network(self, tenant_id, network_name):
-        """ Create network using specified name, return Quantum
-            network UUID.
+        """Create network using specified name, return Quantum
+           network UUID.
         """
         data = {'network': {'name': network_name}}
         resdict = self.client.create_network(data, tenant=tenant_id)
         return resdict["network"]["id"]
 
     def delete_network(self, tenant_id, net_id):
-        """ Deletes Quantum network with specified UUID. """
+        """Deletes Quantum network with specified UUID."""
         self.client.delete_network(net_id, tenant=tenant_id)
 
     def network_exists(self, tenant_id, net_id):
-        """ Determine if a Quantum network exists for the
-            specified tenant.
+        """Determine if a Quantum network exists for the
+           specified tenant.
         """
         try:
             self.client.show_network_details(net_id, tenant=tenant_id)
@@ -76,9 +76,9 @@ class QuantumClientConnection(object):
             return False
 
     def create_and_attach_port(self, tenant_id, net_id, interface_id):
-        """ Creates a Quantum port on the specified network, sets
-            status to ACTIVE to enable traffic, and attaches the
-            vNIC with the specified interface-id.
+        """Creates a Quantum port on the specified network, sets
+           status to ACTIVE to enable traffic, and attaches the
+           vNIC with the specified interface-id.
         """
         LOG.debug(_("Connecting interface %(interface_id)s to "
                     "net %(net_id)s for %(tenant_id)s" % locals()))
@@ -91,7 +91,7 @@ class QuantumClientConnection(object):
                                     tenant=tenant_id)
 
     def detach_and_delete_port(self, tenant_id, net_id, port_id):
-        """ Detach and delete the specified Quantum port. """
+        """Detach and delete the specified Quantum port."""
         LOG.debug(_("Deleting port %(port_id)s on net %(net_id)s"
                     " for %(tenant_id)s" % locals()))
 
@@ -99,8 +99,8 @@ class QuantumClientConnection(object):
         self.client.delete_port(net_id, port_id, tenant=tenant_id)
 
     def get_port_by_attachment(self, tenant_id, attachment_id):
-        """ Given a tenant, search for the Quantum network and port
-            UUID that has the specified interface-id attachment.
+        """Given a tenant, search for the Quantum network and port
+           UUID that has the specified interface-id attachment.
         """
         # FIXME(danwent): this will be inefficient until the Quantum
         # API implements querying a port by the interface-id

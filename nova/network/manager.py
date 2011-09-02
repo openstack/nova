@@ -547,7 +547,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                    'network_id': network_id,
                    'uuid': str(utils.gen_uuid())}
         # try FLAG times to create a vif record with a unique mac_address
-        for i in xrange(FLAGS.create_unique_mac_address_attempts):
+        for _ in xrange(FLAGS.create_unique_mac_address_attempts):
             try:
                 return self.db.virtual_interface_create(context, vif)
             except exception.VirtualInterfaceCreateException:

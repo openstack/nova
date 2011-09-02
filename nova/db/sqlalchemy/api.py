@@ -946,7 +946,7 @@ def virtual_interface_get_by_address(context, address):
 def virtual_interface_get_by_uuid(context, vif_uuid):
     """Gets a virtual interface from the table.
 
-    :param vif_uuid: = the uuid of the interface you're looking to get
+    :param vif_uuid: the uuid of the interface you're looking to get
     """
     session = get_session()
     vif_ref = session.query(models.VirtualInterface).\

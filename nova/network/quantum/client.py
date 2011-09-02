@@ -22,14 +22,14 @@ import socket
 import urllib
 
 
-#FIXME(danwent): All content in this file should be removed once the
+# FIXME(danwent): All content in this file should be removed once the
 # packaging work for the quantum client libraries is complete.
 # At that point, we will be able to just install the libraries as a
 # dependency and import from quantum.client.* and quantum.common.*
 # Until then, we have simplified versions of these classes in this file.
 
 class JSONSerializer(object):
-    """ This is a simple json-only serializer to use until we can just grab
+    """This is a simple json-only serializer to use until we can just grab
     the standard serializer from the quantum library.
     """
     def serialize(self, data, content_type):
@@ -47,17 +47,17 @@ class JSONSerializer(object):
 # granular exceptions, for now, just try to distinguish
 # between the cases we care about.
 class QuantumNotFoundException(Exception):
-    """ Indicates that Quantum Server returned 404"""
+    """Indicates that Quantum Server returned 404"""
     pass
 
 
 class QuantumServerException(Exception):
-    """ Indicates any non-404 error from Quantum Server"""
+    """Indicates any non-404 error from Quantum Server"""
     pass
 
 
 class QuantumIOException(Exception):
-    """ Indicates network IO trouble reaching Quantum Server"""
+    """Indicates network IO trouble reaching Quantum Server"""
     pass
 
 
@@ -100,7 +100,7 @@ class Client(object):
     def __init__(self, host="127.0.0.1", port=9696, use_ssl=False, tenant=None,
                  format="xml", testing_stub=None, key_file=None,
                  cert_file=None, logger=None):
-        """ Creates a new client to some service.
+        """Creates a new client to some service.
 
         :param host: The host where service resides
         :param port: The port where service resides
@@ -123,7 +123,7 @@ class Client(object):
         self.logger = logger
 
     def get_connection_type(self):
-        """ Returns the proper connection type """
+        """Returns the proper connection type"""
         if self.testing_stub:
             return self.testing_stub
         elif self.use_ssl:
@@ -133,7 +133,7 @@ class Client(object):
 
     def do_request(self, method, action, body=None,
                    headers=None, params=None):
-        """ Connects to the server and issues a request.
+        """Connects to the server and issues a request.
         Returns the result data, or raises an appropriate exception if
         HTTP status code is not 2xx
 
@@ -142,7 +142,6 @@ class Client(object):
         :param headers: mapping of key/value pairs to add as headers
         :param params: dictionary of key/value pairs to add to append
                              to action
-
         """
 
         # Ensure we have a tenant id
@@ -207,7 +206,7 @@ class Client(object):
                               "server. Got error: %s" % e))
 
     def get_status_code(self, response):
-        """ Returns the integer status code from the response, which
+        """Returns the integer status code from the response, which
         can be either a Webob.Response (used in testing) or httplib.Response
         """
         if hasattr(response, 'status_int'):
@@ -236,73 +235,73 @@ class Client(object):
 
     @api_call
     def list_networks(self):
-        """ Fetches a list of all networks for a tenant """
+        """Fetches a list of all networks for a tenant"""
         return self.do_request("GET", self.networks_path)
 
     @api_call
     def show_network_details(self, network):
-        """ Fetches the details of a certain network """
+        """Fetches the details of a certain network"""
         return self.do_request("GET", self.network_path % (network))
 
     @api_call
     def create_network(self, body=None):
-        """ Creates a new network """
+        """Creates a new network"""
         body = self.serialize(body)
         return self.do_request("POST", self.networks_path, body=body)
 
     @api_call
     def update_network(self, network, body=None):
-        """ Updates a network """
+        """Updates a network"""
         body = self.serialize(body)
         return self.do_request("PUT", self.network_path % (network), body=body)
 
     @api_call
     def delete_network(self, network):
-        """ Deletes the specified network """
+        """Deletes the specified network"""
         return self.do_request("DELETE", self.network_path % (network))
 
     @api_call
     def list_ports(self, network):
-        """ Fetches a list of ports on a given network """
+        """Fetches a list of ports on a given network"""
         return self.do_request("GET", self.ports_path % (network))
 
     @api_call
     def show_port_details(self, network, port):
-        """ Fetches the details of a certain port """
+        """Fetches the details of a certain port"""
         return self.do_request("GET", self.port_path % (network, port))
 
     @api_call
     def create_port(self, network, body=None):
-        """ Creates a new port on a given network """
+        """Creates a new port on a given network"""
         body = self.serialize(body)
         return self.do_request("POST", self.ports_path % (network), body=body)
 
     @api_call
     def delete_port(self, network, port):
-        """ Deletes the specified port from a network """
+        """Deletes the specified port from a network"""
         return self.do_request("DELETE", self.port_path % (network, port))
 
     @api_call
     def set_port_state(self, network, port, body=None):
-        """ Sets the state of the specified port """
+        """Sets the state of the specified port"""
         body = self.serialize(body)
         return self.do_request("PUT",
             self.port_path % (network, port), body=body)
 
     @api_call
     def show_port_attachment(self, network, port):
-        """ Fetches the attachment-id associated with the specified port """
+        """Fetches the attachment-id associated with the specified port"""
         return self.do_request("GET", self.attachment_path % (network, port))
 
     @api_call
     def attach_resource(self, network, port, body=None):
-        """ Sets the attachment-id of the specified port """
+        """Sets the attachment-id of the specified port"""
         body = self.serialize(body)
         return self.do_request("PUT",
             self.attachment_path % (network, port), body=body)
 
     @api_call
     def detach_resource(self, network, port):
-        """ Removes the attachment-id of the specified port """
+        """Removes the attachment-id of the specified port"""
         return self.do_request("DELETE",
                                self.attachment_path % (network, port))
