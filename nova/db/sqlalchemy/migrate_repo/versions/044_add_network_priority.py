@@ -25,11 +25,11 @@ meta = MetaData()
 # Add priority column to networks table
 priority = Column('priority', Integer())
 
-networks = Table('networks', meta, autoload=True)
 
 def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
+    networks = Table('networks', meta, autoload=True)
     try:
         networks.create_column(priority)
     except Exception:
@@ -39,4 +39,6 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     meta.bind = migrate_engine
+
+    networks = Table('networks', meta, autoload=True)
     networks.drop_column(priority)
