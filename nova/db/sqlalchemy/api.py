@@ -669,14 +669,15 @@ def floating_ip_update(context, address, values):
 
 
 @require_admin_context
-def fixed_ip_associate(context, address, instance_id, network_id=None):
+def fixed_ip_associate(context, address, instance_id, network_id=None,
+                       reserved=False):
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
                               models.FixedIp.network_id == None)
         fixed_ip_ref = session.query(models.FixedIp).\
                                filter(network_or_none).\
-                               filter_by(reserved=False).\
+                               filter_by(reserved=reserved).\
                                filter_by(deleted=False).\
                                filter_by(address=address).\
                                with_lockmode('update').\
