@@ -1,7 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright 2010 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,23 +14,26 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+"""Possible vm states for instances.
+
+Compute instance vm states represent the state of an instance as it pertains to
+a user or administrator. When combined with task states (task_states.py), a
+better picture can be formed regarding the instance's health.
+
 """
-Unit Tests for remote procedure calls using queue
-"""
 
-from nova import context
-from nova import log as logging
-from nova import rpc
-from nova.tests import test_rpc_common
+ACTIVE = 'active'
+BUILDING = 'building'
+REBUILDING = 'rebuilding'
 
+PAUSED = 'paused'
+SUSPENDED = 'suspended'
+RESCUED = 'rescued'
+DELETED = 'deleted'
+STOPPED = 'stopped'
 
-LOG = logging.getLogger('nova.tests.rpc')
+MIGRATING = 'migrating'
+RESIZING = 'resizing'
 
-
-class RpcTestCase(test_rpc_common._BaseRpcTestCase):
-    def setUp(self):
-        self.rpc = rpc
-        super(RpcTestCase, self).setUp()
-
-    def tearDown(self):
-        super(RpcTestCase, self).tearDown()
+ERROR = 'error'

@@ -23,44 +23,35 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('rpc_backend',
-                    'nova.rpc.amqp',
-                    "The messaging module to use, defaults to AMQP.")
+                    'nova.rpc.impl_kombu',
+                    "The messaging module to use, defaults to kombu.")
 
-RPCIMPL = import_object(FLAGS.rpc_backend)
+_RPCIMPL = None
+
+
+def get_impl():
+    """Delay import of rpc_backend until FLAGS are loaded."""
+    global _RPCIMPL
+    if _RPCIMPL is None:
+        _RPCIMPL = import_object(FLAGS.rpc_backend)
+    return _RPCIMPL
 
 
 def create_connection(new=True):
-    return RPCIMPL.Connection.instance(new=True)
-
-
-def create_consumer(conn, topic, proxy, fanout=False):
-    if fanout:
-        return RPCIMPL.FanoutAdapterConsumer(
-                connection=conn,
-                topic=topic,
-                proxy=proxy)
-    else:
-        return RPCIMPL.TopicAdapterConsumer(
-                connection=conn,
-                topic=topic,
-                proxy=proxy)
-
-
-def create_consumer_set(conn, consumers):
-    return RPCIMPL.ConsumerSet(connection=conn, consumer_list=consumers)
+    return get_impl().create_connection(new=new)
 
 
 def call(context, topic, msg):
-    return RPCIMPL.call(context, topic, msg)
+    return get_impl().call(context, topic, msg)
 
 
 def cast(context, topic, msg):
-    return RPCIMPL.cast(context, topic, msg)
+    return get_impl().cast(context, topic, msg)
 
 
 def fanout_cast(context, topic, msg):
-    return RPCIMPL.fanout_cast(context, topic, msg)
+    return get_impl().fanout_cast(context, topic, msg)
 
 
 def multicall(context, topic, msg):
-    return RPCIMPL.multicall(context, topic, msg)
+    return get_impl().multicall(context, topic, msg)
