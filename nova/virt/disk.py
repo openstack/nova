@@ -58,7 +58,7 @@ def extend(image, size):
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
-    utils.execute('truncate', '-s', size, image)
+    utils.execute('qemu-img', 'resize', image, size)
     # NOTE(vish): attempts to resize filesystem
     utils.execute('e2fsck', '-fp', image, check_exit_code=False)
     utils.execute('resize2fs', image, check_exit_code=False)
