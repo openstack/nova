@@ -34,31 +34,31 @@ class FakeModel(dict):
             return self[name]
 
 
-def fake_network(n, ipv6=None):
+def fake_network(network_id, ipv6=None):
     if ipv6 == None:
         ipv6 = FLAGS.use_ipv6
-    rval = {'id': n,
-            'label': 'test%d' % n,
+    rval = {'id': network_id,
+            'label': 'test%d' % network_id,
             'injected': False,
             'multi_host': False,
-            'cidr': '192.168.%d.0/24' % n,
+            'cidr': '192.168.%d.0/24' % network_id,
             'cidr_v6': None,
             'netmask': '255.255.255.0',
             'netmask_v6': None,
-            'bridge': 'fake_br%d' % n,
-            'bridge_interface': 'fake_eth%d' % n,
-            'gateway': '192.168.%d.1' % n,
+            'bridge': 'fake_br%d' % network_id,
+            'bridge_interface': 'fake_eth%d' % network_id,
+            'gateway': '192.168.%d.1' % network_id,
             'gateway_v6': None,
-            'broadcast': '192.168.%d.255' % n,
-            'dns1': '192.168.%d.3' % n,
-            'dns2': '192.168.%d.4' % n,
+            'broadcast': '192.168.%d.255' % network_id,
+            'dns1': '192.168.%d.3' % network_id,
+            'dns2': '192.168.%d.4' % network_id,
             'vlan': None,
             'host': None,
             'project_id': 'fake_project',
-            'vpn_public_address': '192.168.%d.2' % n}
+            'vpn_public_address': '192.168.%d.2' % network_id}
     if ipv6:
-        rval['cidr_v6'] = '2001:db8:0:%x::/64' % n
-        rval['gateway_v6'] = '2001:db8:0:%x::1' % n
+        rval['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
+        rval['gateway_v6'] = '2001:db8:0:%x::1' % network_id
         rval['netmask_v6'] = '64'
 
     return rval
@@ -109,11 +109,11 @@ def vifs(n):
                'instance_id': 0}
 
 
-def ipv4_like(ip, s):
+def ipv4_like(ip, match_string):
     ip = ip.split('.')
-    s = s.split('.')
+    match_octets = match_string.split('.')
 
-    for i, octet in enumerate(s):
+    for i, octet in enumerate(match_octets):
         if octet == '*':
             continue
         if octet != ip[i]:
@@ -121,7 +121,7 @@ def ipv4_like(ip, s):
     return True
 
 
-def fake_get_instance_nw_info(stubs, n=1, ips_per_vif=2):
+def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2):
     # stubs is the self.stubs from the test
     # ips_per_vif is the number of ips each vif will have
     # num_floating_ips is number of float ips for each fixed ip
@@ -129,10 +129,10 @@ def fake_get_instance_nw_info(stubs, n=1, ips_per_vif=2):
     network.db = db
 
     def fixed_ips_fake(*args, **kwargs):
-        return list(fixed_ips(n, ips_per_vif))
+        return list(fixed_ips(num_networks, ips_per_vif))
 
     def virtual_interfaces_fake(*args, **kwargs):
-        return [vif for vif in vifs(n)]
+        return [vif for vif in vifs(num_networks)]
 
     def instance_type_fake(*args, **kwargs):
         return flavor
