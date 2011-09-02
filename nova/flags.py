@@ -292,6 +292,7 @@ DEFINE_string('ajax_console_proxy_url',
                in the form "http://127.0.0.1:8000"')
 DEFINE_string('ajax_console_proxy_port',
                8000, 'port that ajax_console_proxy binds')
+DEFINE_string('vsa_topic', 'vsa', 'the topic that nova-vsa service listens on')
 DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_boolean('fake_rabbit', False, 'use a fake rabbit')
 DEFINE_bool('fake_network', False,
@@ -302,8 +303,12 @@ DEFINE_bool('rabbit_use_ssl', False, 'connect over SSL')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
-DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
-DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
+DEFINE_integer('rabbit_retry_interval', 1,
+        'rabbit connection retry interval to start')
+DEFINE_integer('rabbit_retry_backoff', 2,
+        'rabbit connection retry backoff in seconds')
+DEFINE_integer('rabbit_max_retries', 0,
+        'maximum rabbit connection attempts (0=try forever)')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
 DEFINE_boolean('rabbit_durable_queues', False, 'use durable queues')
 DEFINE_list('enabled_apis', ['ec2', 'osapi'],
@@ -371,6 +376,17 @@ DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
               'Manager for volume')
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
+DEFINE_string('vsa_manager', 'nova.vsa.manager.VsaManager',
+              'Manager for vsa')
+DEFINE_string('vc_image_name', 'vc_image',
+              'the VC image ID (for a VC image that exists in DB Glance)')
+# VSA constants and enums
+DEFINE_string('default_vsa_instance_type', 'm1.small',
+              'default instance type for VSA instances')
+DEFINE_integer('max_vcs_in_vsa', 32,
+               'maxinum VCs in a VSA')
+DEFINE_integer('vsa_part_size_gb', 100,
+               'default partition size for shared capacity')
 
 # The service to use for image search and retrieval
 DEFINE_string('image_service', 'nova.image.glance.GlanceImageService',

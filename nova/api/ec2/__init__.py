@@ -20,7 +20,10 @@ Starting point for routing EC2 requests.
 
 """
 
-import httplib2
+from urlparse import urlparse
+
+import eventlet
+from eventlet.green import httplib
 import webob
 import webob.dec
 import webob.exc
@@ -34,7 +37,6 @@ from nova import wsgi
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
-
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api")
@@ -158,7 +160,6 @@ class ToToken(wsgi.Middleware):
         auth_params.pop('Signature')
 
         # Authenticate the request.
-        client = httplib2.Http()
         creds = {'ec2Credentials': {'access': access,
                                     'signature': signature,
                                     'host': req.host,
@@ -166,18 +167,24 @@ class ToToken(wsgi.Middleware):
                                     'path': req.path,
                                     'params': auth_params,
                                    }}
-        headers = {'Content-Type': 'application/json'},
-        resp, content = client.request(FLAGS.keystone_ec2_url,
-                                       'POST',
-                                       headers=headers,
-                                       body=utils.dumps(creds))
+        creds_json = utils.dumps(creds)
+        headers = {'Content-Type': 'application/json'}
+        o = urlparse(FLAGS.keystone_ec2_url)
+        if o.scheme == "http":
+            conn = httplib.HTTPConnection(o.netloc)
+        else:
+            conn = httplib.HTTPSConnection(o.netloc)
+        conn.request('POST', o.path, body=creds_json, headers=headers)
+        response = conn.getresponse().read()
+        conn.close()
+
         # NOTE(vish): We could save a call to keystone by
         #             having keystone return token, tenant,
         #             user, and roles from this call.
-        result = utils.loads(content)
+        result = utils.loads(response)
         # TODO(vish): check for errors
-        token_id = result['auth']['token']['id']
 
+        token_id = result['auth']['token']['id']
         # Authenticated!
         req.headers['X-Auth-Token'] = token_id
         return self.application
@@ -392,18 +399,20 @@ class Executor(wsgi.Application):
         except exception.InstanceNotFound as ex:
             LOG.info(_('InstanceNotFound raised: %s'), unicode(ex),
                      context=context)
-            return self._error(req, context, type(ex).__name__, ex.message)
+            ec2_id = ec2utils.id_to_ec2_id(ex.kwargs['instance_id'])
+            message = ex.message % {'instance_id': ec2_id}
+            return self._error(req, context, type(ex).__name__, message)
         except exception.VolumeNotFound as ex:
             LOG.info(_('VolumeNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = ec2utils.id_to_ec2_vol_id(ex.volume_id)
-            message = _('Volume %s not found') % ec2_id
+            ec2_id = ec2utils.id_to_ec2_vol_id(ex.kwargs['volume_id'])
+            message = ex.message % {'volume_id': ec2_id}
             return self._error(req, context, type(ex).__name__, message)
         except exception.SnapshotNotFound as ex:
             LOG.info(_('SnapshotNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = ec2utils.id_to_ec2_snap_id(ex.snapshot_id)
-            message = _('Snapshot %s not found') % ec2_id
+            ec2_id = ec2utils.id_to_ec2_snap_id(ex.kwargs['snapshot_id'])
+            message = ex.message % {'snapshot_id': ec2_id}
             return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:
             LOG.info(_('NotFound raised: %s'), unicode(ex), context=context)

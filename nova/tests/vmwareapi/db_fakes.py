@@ -23,6 +23,8 @@ import time
 
 from nova import db
 from nova import utils
+from nova.compute import task_states
+from nova.compute import vm_states
 
 
 def stub_out_db_instance_api(stubs):
@@ -64,7 +66,8 @@ def stub_out_db_instance_api(stubs):
             'image_ref': values['image_ref'],
             'kernel_id': values['kernel_id'],
             'ramdisk_id': values['ramdisk_id'],
-            'state_description': 'scheduling',
+            'vm_state': vm_states.BUILDING,
+            'task_state': task_states.SCHEDULING,
             'user_id': values['user_id'],
             'project_id': values['project_id'],
             'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),

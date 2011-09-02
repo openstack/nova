@@ -28,6 +28,7 @@ from nova import flags
 from nova import ipv6
 from nova import utils
 from nova import log as logging
+from nova.compute import vm_states
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
@@ -35,6 +36,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
 
 FLAGS = flags.FLAGS
@@ -1102,12 +1104,11 @@ def instance_destroy(context, instance_id):
 def instance_stop(context, instance_id):
     session = get_session()
     with session.begin():
-        from nova.compute import power_state
         session.query(models.Instance).\
                 filter_by(id=instance_id).\
                 update({'host': None,
-                        'state': power_state.SHUTOFF,
-                        'state_description': 'stopped',
+                        'vm_state': vm_states.STOPPED,
+                        'task_state': None,
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(instance_id=instance_id).\
@@ -1250,11 +1251,16 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
-                   filter_by(deleted=can_read_deleted(context))
+                   order_by(desc(models.Instance.created_at))
 
     # Make a copy of the filters dictionary to use going forward, as we'll
     # be modifying it and we shouldn't affect the caller's use of it.
     filters = filters.copy()
+
+    if 'changes-since' in filters:
+        changes_since = filters['changes-since']
+        query_prefix = query_prefix.\
+                            filter(models.Instance.updated_at > changes_since)
 
     if not context.is_admin:
         # If we're not admin context, add appropriate filter..
@@ -1266,7 +1272,7 @@ def instance_get_all_by_filters(context, filters):
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
-            'state', 'instance_type_id', 'deleted']
+            'vm_state', 'instance_type_id', 'deleted']
 
     query_filters = [key for key in filters.iterkeys()
             if key in exact_match_filter_names]
@@ -1277,9 +1283,7 @@ def instance_get_all_by_filters(context, filters):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    instances = query_prefix.\
-                    filter_by(deleted=can_read_deleted(context)).\
-                    all()
+    instances = query_prefix.all()
 
     if not instances:
         return []
@@ -1306,21 +1310,40 @@ def instance_get_all_by_filters(context, filters):
     return instances
 
 
-@require_admin_context
-def instance_get_active_by_window(context, begin, end=None):
-    """Return instances that were continuously active over the given window"""
+@require_context
+def instance_get_active_by_window(context, begin, end=None, project_id=None):
+    """Return instances that were continuously active over window."""
     session = get_session()
     query = session.query(models.Instance).\
-                   options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ips.network')).\
-                   options(joinedload('instance_type')).\
-                   filter(models.Instance.launched_at < begin)
+                    filter(models.Instance.launched_at < begin)
     if end:
         query = query.filter(or_(models.Instance.terminated_at == None,
                                  models.Instance.terminated_at > end))
     else:
         query = query.filter(models.Instance.terminated_at == None)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
+    return query.all()
+
+
+@require_admin_context
+def instance_get_active_by_window_joined(context, begin, end=None,
+                                         project_id=None):
+    """Return instances and joins that were continuously active over window."""
+    session = get_session()
+    query = session.query(models.Instance).\
+                    options(joinedload_all('fixed_ips.floating_ips')).\
+                    options(joinedload('security_groups')).\
+                    options(joinedload_all('fixed_ips.network')).\
+                    options(joinedload('instance_type')).\
+                    filter(models.Instance.launched_at < begin)
+    if end:
+        query = query.filter(or_(models.Instance.terminated_at == None,
+                                 models.Instance.terminated_at > end))
+    else:
+        query = query.filter(models.Instance.terminated_at == None)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
     return query.all()
 
 
@@ -1482,18 +1505,6 @@ def instance_get_floating_address(context, instance_id):
         return None
     # NOTE(vish): this just returns the first floating ip
     return fixed_ip_refs[0].floating_ips[0]['address']
-
-
-@require_admin_context
-def instance_set_state(context, instance_id, state, description=None):
-    # TODO(devcamcar): Move this out of models and into driver
-    from nova.compute import power_state
-    if not description:
-        description = power_state.name(state)
-    db.instance_update(context,
-                       instance_id,
-                       {'state': state,
-                        'state_description': description})
 
 
 @require_context
@@ -3837,3 +3848,105 @@ def volume_type_extra_specs_update_or_create(context, volume_type_id,
                          "deleted": 0})
         spec_ref.save(session=session)
     return specs
+
+
+    ####################
+
+
+@require_admin_context
+def vsa_create(context, values):
+    """
+    Creates Virtual Storage Array record.
+    """
+    try:
+        vsa_ref = models.VirtualStorageArray()
+        vsa_ref.update(values)
+        vsa_ref.save()
+    except Exception, e:
+        raise exception.DBError(e)
+    return vsa_ref
+
+
+@require_admin_context
+def vsa_update(context, vsa_id, values):
+    """
+    Updates Virtual Storage Array record.
+    """
+    session = get_session()
+    with session.begin():
+        vsa_ref = vsa_get(context, vsa_id, session=session)
+        vsa_ref.update(values)
+        vsa_ref.save(session=session)
+    return vsa_ref
+
+
+@require_admin_context
+def vsa_destroy(context, vsa_id):
+    """
+    Deletes Virtual Storage Array record.
+    """
+    session = get_session()
+    with session.begin():
+        session.query(models.VirtualStorageArray).\
+                filter_by(id=vsa_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def vsa_get(context, vsa_id, session=None):
+    """
+    Get Virtual Storage Array record by ID.
+    """
+    if not session:
+        session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.VirtualStorageArray).\
+                         options(joinedload('vsa_instance_type')).\
+                         filter_by(id=vsa_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.VirtualStorageArray).\
+                         options(joinedload('vsa_instance_type')).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=vsa_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.VirtualStorageArrayNotFound(id=vsa_id)
+
+    return result
+
+
+@require_admin_context
+def vsa_get_all(context):
+    """
+    Get all Virtual Storage Array records.
+    """
+    session = get_session()
+    return session.query(models.VirtualStorageArray).\
+                   options(joinedload('vsa_instance_type')).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_context
+def vsa_get_all_by_project(context, project_id):
+    """
+    Get all Virtual Storage Array records by project ID.
+    """
+    authorize_project_context(context, project_id)
+
+    session = get_session()
+    return session.query(models.VirtualStorageArray).\
+                   options(joinedload('vsa_instance_type')).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+    ####################

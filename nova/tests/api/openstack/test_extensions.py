@@ -95,6 +95,8 @@ class ExtensionControllerTest(test.TestCase):
             "Quotas",
             "Rescue",
             "SecurityGroups",
+            "SimpleTenantUsage",
+            "VSAs",
             "VirtualInterfaces",
             "Volumes",
             "VolumeTypes",

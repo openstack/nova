@@ -8,6 +8,7 @@ anyjson==0.2.4
 boto==1.9b
 carrot==0.10.5
 eventlet
+kombu
 lockfile==0.8
 lxml==2.3
 python-novaclient==2.6.0

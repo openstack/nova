@@ -141,11 +141,12 @@ class GlanceImageService(service.BaseImageService):
         """Paginate through results from glance server"""
         images = fetch_func(**kwargs)
 
-        for image in images:
-            yield image
-        else:
+        if not images:
             # break out of recursive loop to end pagination
             return
+
+        for image in images:
+            yield image
 
         try:
             # attempt to advance the marker in order to fetch next page
@@ -153,7 +154,17 @@ class GlanceImageService(service.BaseImageService):
         except KeyError:
             raise exception.ImagePaginationFailed()
 
-        self._fetch_images(fetch_func, **kwargs)
+        try:
+            kwargs['limit'] = kwargs['limit'] - len(images)
+            # break if we have reached a provided limit
+            if kwargs['limit'] <= 0:
+                return
+        except KeyError:
+            # ignore missing limit, just proceed without it
+            pass
+
+        for image in self._fetch_images(fetch_func, **kwargs):
+            yield image
 
     def show(self, context, image_id):
         """Returns a dict with image data for the given opaque image id."""
@@ -268,6 +279,20 @@ class GlanceImageService(service.BaseImageService):
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         image_meta = _convert_from_string(image_meta)
         return image_meta
+
+    @staticmethod
+    def _is_image_available(context, image_meta):
+        """Check image availability.
+
+        Under Glance, images are always available if the context has
+        an auth_token.  Otherwise, we fall back to the superclass
+        method.
+
+        """
+        if hasattr(context, 'auth_token') and context.auth_token:
+            return True
+        return service.BaseImageService._is_image_available(context,
+                                                            image_meta)
 
 
 # utility functions

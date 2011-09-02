@@ -113,11 +113,10 @@ class AjaxConsoleProxy(object):
                 AjaxConsoleProxy.tokens[kwargs['token']] =  \
                     {'args': kwargs, 'last_activity': time.time()}
 
-        conn = rpc.create_connection(new=True)
-        consumer = rpc.create_consumer(
-                       conn,
-                       FLAGS.ajax_console_proxy_topic,
-                       TopicProxy)
+        self.conn = rpc.create_connection(new=True)
+        self.conn.create_consumer(
+                FLAGS.ajax_console_proxy_topic,
+                TopicProxy)
 
         def delete_expired_tokens():
             now = time.time()
@@ -129,7 +128,7 @@ class AjaxConsoleProxy(object):
             for k in to_delete:
                 del AjaxConsoleProxy.tokens[k]
 
-        utils.LoopingCall(consumer.fetch, enable_callbacks=True).start(0.1)
+        self.conn.consume_in_thread()
         utils.LoopingCall(delete_expired_tokens).start(1)
 
 if __name__ == '__main__':
@@ -142,3 +141,4 @@ if __name__ == '__main__':
     server = wsgi.Server("AJAX Console Proxy", acp, port=acp_port)
     service.serve(server)
     service.wait()
+    self.conn.close()

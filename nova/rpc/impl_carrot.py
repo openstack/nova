@@ -33,6 +33,7 @@ import uuid
 
 from carrot import connection as carrot_connection
 from carrot import messaging
+import eventlet
 from eventlet import greenpool
 from eventlet import pools
 from eventlet import queue
@@ -42,20 +43,21 @@ from nova import context
 from nova import exception
 from nova import fakerabbit
 from nova import flags
-from nova import log as logging
-from nova import utils
 from nova.rpc.common import RemoteError, LOG
 
+# Needed for tests
+eventlet.monkey_patch()
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('rpc_thread_pool_size', 1024,
-                     'Size of RPC thread pool')
-flags.DEFINE_integer('rpc_conn_pool_size', 30,
-                     'Size of RPC connection pool')
 
 
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object."""
+
+    def __init__(self, *args, **kwargs):
+        super(Connection, self).__init__(*args, **kwargs)
+        self._rpc_consumers = []
+        self._rpc_consumer_thread = None
 
     @classmethod
     def instance(cls, new=True):
@@ -94,13 +96,63 @@ class Connection(carrot_connection.BrokerConnection):
             pass
         return cls.instance()
 
+    def close(self):
+        self.cancel_consumer_thread()
+        for consumer in self._rpc_consumers:
+            try:
+                consumer.close()
+            except Exception:
+                # ignore all errors
+                pass
+        self._rpc_consumers = []
+        super(Connection, self).close()
+
+    def consume_in_thread(self):
+        """Consumer from all queues/consumers in a greenthread"""
+
+        consumer_set = ConsumerSet(connection=self,
+                consumer_list=self._rpc_consumers)
+
+        def _consumer_thread():
+            try:
+                consumer_set.wait()
+            except greenlet.GreenletExit:
+                return
+        if self._rpc_consumer_thread is None:
+            self._rpc_consumer_thread = eventlet.spawn(_consumer_thread)
+        return self._rpc_consumer_thread
+
+    def cancel_consumer_thread(self):
+        """Cancel a consumer thread"""
+        if self._rpc_consumer_thread is not None:
+            self._rpc_consumer_thread.kill()
+            try:
+                self._rpc_consumer_thread.wait()
+            except greenlet.GreenletExit:
+                pass
+            self._rpc_consumer_thread = None
+
+    def create_consumer(self, topic, proxy, fanout=False):
+        """Create a consumer that calls methods in the proxy"""
+        if fanout:
+            consumer = FanoutAdapterConsumer(
+                    connection=self,
+                    topic=topic,
+                    proxy=proxy)
+        else:
+            consumer = TopicAdapterConsumer(
+                    connection=self,
+                    topic=topic,
+                    proxy=proxy)
+        self._rpc_consumers.append(consumer)
+
 
 class Pool(pools.Pool):
     """Class that implements a Pool of Connections."""
 
     # TODO(comstud): Timeout connections not used in a while
     def create(self):
-        LOG.debug('Creating new connection')
+        LOG.debug('Pool creating new connection')
         return Connection.instance(new=True)
 
 # Create a ConnectionPool to use for RPC calls.  We'll order the
@@ -119,25 +171,34 @@ class Consumer(messaging.Consumer):
     """
 
     def __init__(self, *args, **kwargs):
-        for i in xrange(FLAGS.rabbit_max_retries):
-            if i > 0:
-                time.sleep(FLAGS.rabbit_retry_interval)
+        max_retries = FLAGS.rabbit_max_retries
+        sleep_time = FLAGS.rabbit_retry_interval
+        tries = 0
+        while True:
+            tries += 1
+            if tries > 1:
+                time.sleep(sleep_time)
+                # backoff for next retry attempt.. if there is one
+                sleep_time += FLAGS.rabbit_retry_backoff
+                if sleep_time > 30:
+                    sleep_time = 30
             try:
                 super(Consumer, self).__init__(*args, **kwargs)
                 self.failed_connection = False
                 break
             except Exception as e:  # Catching all because carrot sucks
+                self.failed_connection = True
+                if max_retries > 0 and tries == max_retries:
+                    break
                 fl_host = FLAGS.rabbit_host
                 fl_port = FLAGS.rabbit_port
-                fl_intv = FLAGS.rabbit_retry_interval
+                fl_intv = sleep_time
                 LOG.error(_('AMQP server on %(fl_host)s:%(fl_port)d is'
                             ' unreachable: %(e)s. Trying again in %(fl_intv)d'
                             ' seconds.') % locals())
-                self.failed_connection = True
         if self.failed_connection:
             LOG.error(_('Unable to connect to AMQP server '
-                        'after %d tries. Shutting down.'),
-                      FLAGS.rabbit_max_retries)
+                        'after %(tries)d tries. Shutting down.') % locals())
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
@@ -165,12 +226,6 @@ class Consumer(messaging.Consumer):
             if not self.failed_connection:
                 LOG.exception(_('Failed to fetch message from queue: %s' % e))
                 self.failed_connection = True
-
-    def attach_to_eventlet(self):
-        """Only needed for unit tests!"""
-        timer = utils.LoopingCall(self.fetch, enable_callbacks=True)
-        timer.start(0.1)
-        return timer
 
 
 class AdapterConsumer(Consumer):
@@ -242,7 +297,7 @@ class AdapterConsumer(Consumer):
                 # NOTE(vish): this iterates through the generator
                 list(rval)
         except Exception as e:
-            logging.exception('Exception during message handling')
+            LOG.exception('Exception during message handling')
             if msg_id:
                 msg_reply(msg_id, None, sys.exc_info())
         return
@@ -518,6 +573,11 @@ class MulticallWaiter(object):
                 self.close()
                 raise StopIteration
             yield result
+
+
+def create_connection(new=True):
+    """Create a connection"""
+    return Connection.instance(new=new)
 
 
 def call(context, topic, msg):
