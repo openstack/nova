@@ -38,14 +38,13 @@ def network_api_get_floating_ip(self, context, id):
 
 def network_api_get_floating_ip_by_ip(self, context, address):
     return {'id': 1, 'address': '10.10.10.10',
-            'fixed_ip': {'address': '11.0.0.1'}}
+            'fixed_ip': {'address': '10.0.0.1', 'instance_id': 1}},
 
 
 def network_api_list_floating_ips(self, context):
     return [{'id': 1,
              'address': '10.10.10.10',
-             'instance': {'id': 11},
-             'fixed_ip': {'address': '10.0.0.1'}},
+             'fixed_ip': {'address': '10.0.0.1', 'instance_id': 1}},
             {'id': 2,
              'address': '10.10.10.11'}]
 
@@ -152,7 +151,7 @@ class FloatingIpTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
-        response = {'floating_ips': [{'instance_id': 11,
+        response = {'floating_ips': [{'instance_id': 1,
                                       'ip': '10.10.10.10',
                                       'fixed_ip': '10.0.0.1',
                                       'id': 1},
@@ -170,6 +169,20 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict['floating_ip']['id'], 1)
         self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
         self.assertEqual(res_dict['floating_ip']['instance_id'], None)
+
+    def test_show_associated_floating_ip(self):
+        def get_floating_ip(self, context, id):
+            return {'id': 1, 'address': '10.10.10.10',
+                    'fixed_ip': {'address': '10.0.0.1', 'instance_id': 1}}
+        self.stubs.Set(network.api.API, "get_floating_ip", get_floating_ip)
+
+        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['floating_ip']['id'], 1)
+        self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
+        self.assertEqual(res_dict['floating_ip']['instance_id'], 1)
 
     def test_floating_ip_allocate_no_free_ips(self):
         def fake_call(*args, **kwargs):
