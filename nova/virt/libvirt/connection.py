@@ -126,6 +126,10 @@ flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
 flags.DEFINE_string('qemu_img', 'qemu-img',
                     'binary to use for qemu-img commands')
+flags.DEFINE_string('snapshot_image_format', 'raw',
+                    'Snapshot image format (valide option are : '
+                    'all format supported by qemu-img binary')
+                        FLAGS.snapshot_disk_format,
 flags.DEFINE_string('libvirt_vif_type', 'bridge',
                     'Type of VIF to create.')
 flags.DEFINE_string('libvirt_vif_driver',
@@ -448,7 +452,7 @@ class LibvirtConnection(driver.ComputeDriver):
                         '-f',
                         'qcow2',
                         '-O',
-                        'raw',
+                        FLAGS.snapshot_image_format,
                         '-s',
                         snapshot_name,
                         disk_path,
