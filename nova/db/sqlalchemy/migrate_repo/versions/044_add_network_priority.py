@@ -22,6 +22,9 @@ from nova import utils
 
 meta = MetaData()
 
+networks = Table('networks', meta,
+    Column("id", Integer(), primary_key=True, nullable=False))
+
 # Add priority column to networks table
 priority = Column('priority', Integer())
 
@@ -29,7 +32,6 @@ priority = Column('priority', Integer())
 def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
-    networks = Table('networks', meta, autoload=True)
     try:
         networks.create_column(priority)
     except Exception:
@@ -39,6 +41,4 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     meta.bind = migrate_engine
-
-    networks = Table('networks', meta, autoload=True)
     networks.drop_column(priority)
