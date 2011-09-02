@@ -31,6 +31,11 @@ import types
 from nova import exception
 from nova import flags
 import nova.scheduler
+
+# NOTE(Vek): Even though we don't use filters in here anywhere, we
+#            depend on default_host_filter being available in FLAGS,
+#            and that happens only when filters/abstract_filter.py is
+#            imported.
 from nova.scheduler import filters
 
 
