@@ -128,7 +128,8 @@ flags.DEFINE_string('qemu_img', 'qemu-img',
                     'binary to use for qemu-img commands')
 flags.DEFINE_string('snapshot_image_format', 'raw',
                     'Snapshot image format (valide option are : '
-                    'all format supported by qemu-img binary')
+                    'raw, qcow2, vmdk, vdi.'
+                    'If the binary qemu_img supports it)')
                         FLAGS.snapshot_disk_format,
 flags.DEFINE_string('libvirt_vif_type', 'bridge',
                     'Type of VIF to create.')
@@ -424,7 +425,7 @@ class LibvirtConnection(driver.ComputeDriver):
             metadata['properties']['architecture'] = arch
 
         if 'disk_format' in base:
-            metadata['disk_format'] = base['disk_format']
+            metadata['disk_format'] = FLAGS.snapshot_image_format
 
         if 'container_format' in base:
             metadata['container_format'] = base['container_format']
