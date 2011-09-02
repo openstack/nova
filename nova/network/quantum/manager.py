@@ -22,7 +22,6 @@ from nova import log as logging
 from nova import manager
 from nova.network import manager
 from nova.network.quantum import quantum_connection
-from nova.network.quantum import fake
 from nova import utils
 
 LOG = logging.getLogger("quantum_manager")
