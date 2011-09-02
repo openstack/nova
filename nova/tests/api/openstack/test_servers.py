@@ -156,7 +156,6 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
                   vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
                   flavor_id="1", interfaces=None, name=None, key_name='',
-                  description='fakedescription',
                   access_ipv4=None, access_ipv6=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
@@ -211,7 +210,7 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "terminated_at": utils.utcnow(),
         "availability_zone": "",
         "display_name": server_name,
-        "display_description": description,
+        "display_description": "",
         "locked": False,
         "metadata": metadata,
         "access_ip_v4": access_ipv4,
@@ -354,7 +353,6 @@ class ServersTest(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "server1",
-                "description": "fakedescription",
                 "status": "BUILD",
                 "accessIPv4": "",
                 "accessIPv6": "",
@@ -455,7 +453,6 @@ class ServersTest(test.TestCase):
                 xmlns="http://docs.openstack.org/compute/api/v1.1"
                 xmlns:atom="http://www.w3.org/2005/Atom"
                 name="server1"
-                description="fakedescription"
                 updated="%(expected_updated)s"
                 created="%(expected_created)s"
                 hostId=""
@@ -528,7 +525,6 @@ class ServersTest(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
                 "name": "server1",
-                "description": "fakedescription",
                 "status": "ACTIVE",
                 "accessIPv4": "",
                 "accessIPv6": "",
@@ -626,7 +622,6 @@ class ServersTest(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
                 "name": "server1",
-                "description": "fakedescription",
                 "status": "ACTIVE",
                 "accessIPv4": "",
                 "accessIPv6": "",
@@ -1488,7 +1483,6 @@ class ServersTest(test.TestCase):
                     'access_ip_v4': '1.2.3.4',
                     'access_ip_v6': 'fead::1234',
                     'image_ref': image_ref,
-                    'display_description': 'fakedescription',
                     'user_id': 'fake',
                     'project_id': 'fake',
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
@@ -3368,7 +3362,6 @@ class TestServerInstanceCreation(test.TestCase):
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'user_id': 'fake',
                          'project_id': 'fake',
-                         'display_description': 'fakedescription',
                          'uuid': FAKE_UUID}]
 
             def set_admin_password(self, *args, **kwargs):
@@ -3686,7 +3679,6 @@ class ServersViewBuilderV11Test(test.TestCase):
             "terminated_at": utils.utcnow(),
             "availability_zone": "",
             "display_name": "test_server",
-            "display_description": "fakedescription",
             "locked": False,
             "metadata": [],
             "accessIPv4": "1.2.3.4",
@@ -3775,7 +3767,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
-                "description": "fakedescription",
                 "status": "BUILD",
                 "accessIPv4": "",
                 "accessIPv6": "",
@@ -3833,7 +3824,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
                 "name": "test_server",
-                "description": "fakedescription",
                 "status": "ACTIVE",
                 "accessIPv4": "",
                 "accessIPv6": "",
@@ -4011,7 +4001,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
-                "description": "fakedescription",
                 "status": "BUILD",
                 "accessIPv4": "",
                 "accessIPv6": "",
@@ -4083,7 +4072,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
-                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
                 "key_name": '',
@@ -4222,7 +4210,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
-                "description": "fakedescription",
                 "status": "BUILD",
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "fead::1234",
@@ -4425,7 +4412,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
-                "description": "fakedescription",
                 "status": "BUILD",
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "fead::1234",
@@ -4483,7 +4469,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 "progress": 100,
                 "name": "test_server_2",
-                "description": "fakedescription",
                 "status": "ACTIVE",
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "fead::1234",
@@ -4606,7 +4591,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
-                "description": "fakedescription",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
                 "accessIPv4": "1.2.3.4",
@@ -4744,7 +4728,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 "progress": 0,
                 "name": "test_server",
-                "description": "fakedescription",
                 "status": "BUILD",
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "fead::1234",

@@ -98,7 +98,6 @@ class CreateserverextTest(test.TestCase):
                          'uuid': FAKE_UUID,
                          'user_id': 'fake',
                          'project_id': 'fake',
-                         'display_description': 'fakedescription',
                          'created_at': "",
                          'updated_at': ""}]
 
