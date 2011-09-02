@@ -164,7 +164,7 @@ class CreateInstanceHelper(object):
             # NOTE(vish): This is solely for compatibility with anything
             #             that is using the display description field.
             metadata = server_dict.get('metadata') or {}
-            display_description = metadata.get('description') or ''
+            display_description = metadata.get('description') or name
             return (extra_values,
                     create_method(context,
                                   inst_type,
