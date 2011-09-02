@@ -106,6 +106,14 @@ class Controller(object):
                 raise exception.InvalidInput(reason=reason)
             search_opts['vm_state'] = state
 
+        if 'changes-since' in search_opts:
+            try:
+                parsed = utils.parse_isotime(search_opts['changes-since'])
+            except ValueError:
+                msg = _('Invalid changes-since value')
+                raise exc.HTTPBadRequest(explanation=msg)
+            search_opts['changes-since'] = parsed
+
         # By default, compute's get_all() will return deleted instances.
         # If an admin hasn't specified a 'deleted' search option, we need
         # to filter out deleted instances by setting the filter ourselves.
@@ -113,23 +121,17 @@ class Controller(object):
         # should return recently deleted images according to the API spec.
 
         if 'deleted' not in search_opts:
-            # Admin hasn't specified deleted filter
             if 'changes-since' not in search_opts:
-                # No 'changes-since', so we need to find non-deleted servers
+                # No 'changes-since', so we only want non-deleted servers
                 search_opts['deleted'] = False
-            else:
-                # This is the default, but just in case..
-                search_opts['deleted'] = True
 
-        instance_list = self.compute_api.get_all(
-                context, search_opts=search_opts)
-
-        # FIXME(comstud): 'changes-since' is not fully implemented.  Where
-        # should this be filtered?
+        instance_list = self.compute_api.get_all(context,
+                                                 search_opts=search_opts)
 
         limited_list = self._limit_items(instance_list, req)
         servers = [self._build_view(req, inst, is_detail)['server']
-                for inst in limited_list]
+                    for inst in limited_list]
+
         return dict(servers=servers)
 
     @scheduler_api.redirect_handler
