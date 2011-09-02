@@ -306,7 +306,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
         self.assertEqual(f.feed.id, 'http://localhost/v1.0/')
         self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.author_detail.href,
+                         'http://www.rackspace.com/')
         self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.0/',
                                          'type': 'application/atom+xml',
                                          'rel': 'self'}])
@@ -350,7 +351,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
         self.assertEqual(f.feed.id, 'http://localhost/v1.1/')
         self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.author_detail.href,
+                         'http://www.rackspace.com/')
         self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.1/',
                                          'type': 'application/atom+xml',
                                          'rel': 'self'}])
@@ -394,7 +396,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
         self.assertEqual(f.feed.id, 'http://localhost/')
         self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.author_detail.href,
+                         'http://www.rackspace.com/')
         self.assertEqual(f.feed.links, [{'href': 'http://localhost/',
                                          'type': 'application/atom+xml',
                                          'rel': 'self'}])
@@ -489,7 +492,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(len(versions), 2)
 
         version = versions[0]
-        self.assertEqual(version.get('id'), 'v1.1');
+        self.assertEqual(version.get('id'), 'v1.1')
         self.assertEqual(version.get('status'), 'CURRENT')
         media_types = version.xpath('ns:media-types/ns:media-type',
                                     namespaces=NS)
@@ -500,7 +503,7 @@ class VersionsTest(test.TestCase):
             [{'rel': 'self', 'href': 'http://localhost/v1.1/images/1'}]))
 
         version = versions[1]
-        self.assertEqual(version.get('id'), 'v1.0');
+        self.assertEqual(version.get('id'), 'v1.0')
         self.assertEqual(version.get('status'), 'DEPRECATED')
         media_types = version.xpath('ns:media-types/ns:media-type',
                                     namespaces=NS)
@@ -784,7 +787,8 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(f.feed.updated, '2011-07-20T11:40:00Z')
         self.assertEqual(f.feed.id, 'http://test/')
         self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.author_detail.href,
+                         'http://www.rackspace.com/')
         self.assertEqual(f.feed.links, [{'href': 'http://test/',
                                          'type': 'application/atom+xml',
                                          'rel': 'self'}])
@@ -846,7 +850,8 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
         self.assertEqual(f.feed.id, 'http://localhost/v1.1/')
         self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href, 'http://www.rackspace.com/')
+        self.assertEqual(f.feed.author_detail.href,
+                         'http://www.rackspace.com/')
         self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.1/',
                                          'type': 'application/atom+xml',
                                          'rel': 'self'}])
