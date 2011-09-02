@@ -14,6 +14,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import itertools
 
 from nova import db
 from nova import flags
@@ -35,48 +36,49 @@ class FakeModel(dict):
 
 
 def fake_network(network_id, ipv6=None):
-    if ipv6 == None:
+    if ipv6 is None:
         ipv6 = FLAGS.use_ipv6
-    rval = {'id': network_id,
-            'label': 'test%d' % network_id,
-            'injected': False,
-            'multi_host': False,
-            'cidr': '192.168.%d.0/24' % network_id,
-            'cidr_v6': None,
-            'netmask': '255.255.255.0',
-            'netmask_v6': None,
-            'bridge': 'fake_br%d' % network_id,
-            'bridge_interface': 'fake_eth%d' % network_id,
-            'gateway': '192.168.%d.1' % network_id,
-            'gateway_v6': None,
-            'broadcast': '192.168.%d.255' % network_id,
-            'dns1': '192.168.%d.3' % network_id,
-            'dns2': '192.168.%d.4' % network_id,
-            'vlan': None,
-            'host': None,
-            'project_id': 'fake_project',
-            'vpn_public_address': '192.168.%d.2' % network_id}
+    fake_network = {'id': network_id,
+                    'label': 'test%d' % network_id,
+                    'injected': False,
+                    'multi_host': False,
+                    'cidr': '192.168.%d.0/24' % network_id,
+                    'cidr_v6': None,
+                    'netmask': '255.255.255.0',
+                    'netmask_v6': None,
+                    'bridge': 'fake_br%d' % network_id,
+                    'bridge_interface': 'fake_eth%d' % network_id,
+                    'gateway': '192.168.%d.1' % network_id,
+                    'gateway_v6': None,
+                    'broadcast': '192.168.%d.255' % network_id,
+                    'dns1': '192.168.%d.3' % network_id,
+                    'dns2': '192.168.%d.4' % network_id,
+                    'vlan': None,
+                    'host': None,
+                    'project_id': 'fake_project',
+                    'vpn_public_address': '192.168.%d.2' % network_id}
     if ipv6:
-        rval['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
-        rval['gateway_v6'] = '2001:db8:0:%x::1' % network_id
-        rval['netmask_v6'] = '64'
+        fake_network['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
+        fake_network['gateway_v6'] = '2001:db8:0:%x::1' % network_id
+        fake_network['netmask_v6'] = '64'
 
-    return rval
+    return fake_network
 
 
 def fixed_ips(num_networks, num_ips, num_floating_ips=0):
-    for network in xrange(num_networks):
-        for ip in xrange(num_ips):
-            id = network * num_ips + ip
-            f_ips = [floating_ips(id).next() for i in xrange(num_floating_ips)]
-            yield {'id': id,
-                   'network_id': network,
-                   'address': '192.168.%d.1%02d' % (network, ip),
+    for network_index in xrange(num_networks):
+        for ip_index in xrange(num_ips):
+            fixed_ip_id = network_index * num_ips + ip_index
+            f_ips = [FakeModel(**floating_ips(fixed_ip_id).next())
+                     for i in xrange(num_floating_ips)]
+            yield {'id': fixed_ip_id,
+                   'network_id': network_index,
+                   'address': '192.168.%d.1%02d' % (network_index, ip_index),
                    'instance_id': 0,
                    'allocated': False,
                    # and since network_id and vif_id happen to be equivalent
-                   'virtual_interface_id': network,
-                   'floating_ips': [FakeModel(**ip) for ip in f_ips]}
+                   'virtual_interface_id': network_index,
+                   'floating_ips': f_ips}
 
 
 flavor = {'id': 0,
