@@ -100,7 +100,7 @@ class SchedulerManager(manager.Manager):
                           "Reverting to schedule()") % locals())
             real_meth = self.driver.schedule
             args = (elevated, topic) + args
-        real_meth(*args, **kwargs)
+        host = real_meth(*args, **kwargs)
 
         if not host:
             LOG.debug(_("%(topic)s %(method)s handled in Scheduler")
