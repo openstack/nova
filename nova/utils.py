@@ -903,9 +903,9 @@ def monkey_patch():
                     decorator("%s.%s" % (module, key), func))
 
 
-def convert_to_set(lst, label):
-    """Convert a value or list into a set"""
-    if lst is None or lst == []:
+def convert_to_list_dict(lst, label):
+    """Convert a value or list into a list of dicts"""
+    if not lst:
         return None
     if not isinstance(lst, list):
         lst = [lst]

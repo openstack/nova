@@ -32,10 +32,12 @@ class CreateServerController(servers.ControllerV11):
 
     def _build_security_groups(self, response, inst):
         sg_names = []
-        if inst.get('security_groups'):
-            sg_names = [security_group['name'] for security_group in \
-                                                  inst['security_groups']]
-        response['security_groups'] = utils.convert_to_set(sg_names, 'name')
+        sec_groups = inst.get('security_groups')
+        if sec_groups:
+            sg_names = [sec_group['name'] for sec_group in sec_groups]
+
+        response['security_groups'] = utils.convert_to_list_dict(sg_names,
+                                                                 'name')
 
 
 class Createserverext(extensions.ExtensionDescriptor):

@@ -280,6 +280,20 @@ class GlanceImageService(service.BaseImageService):
         image_meta = _convert_from_string(image_meta)
         return image_meta
 
+    @staticmethod
+    def _is_image_available(context, image_meta):
+        """Check image availability.
+
+        Under Glance, images are always available if the context has
+        an auth_token.  Otherwise, we fall back to the superclass
+        method.
+
+        """
+        if hasattr(context, 'auth_token') and context.auth_token:
+            return True
+        return service.BaseImageService._is_image_available(context,
+                                                            image_meta)
+
 
 # utility functions
 def _convert_timestamps_to_datetimes(image_meta):

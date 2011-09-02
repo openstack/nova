@@ -1178,7 +1178,7 @@ class CloudController(object):
         if instance.get('security_groups'):
             for security_group in instance['security_groups']:
                 security_group_names.append(security_group['name'])
-        result['groupSet'] = utils.convert_to_set(
+        result['groupSet'] = utils.convert_to_list_dict(
             security_group_names, 'groupId')
 
     def _format_instances(self, context, instance_id=None, use_v6=False,
@@ -1242,7 +1242,8 @@ class CloudController(object):
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],
                     instance['host'])
-            i['productCodesSet'] = utils.convert_to_set([], 'product_codes')
+            i['productCodesSet'] = utils.convert_to_list_dict([],
+                                                              'product_codes')
             self._format_instance_type(instance, i)
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']

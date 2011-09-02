@@ -20,6 +20,7 @@ import datetime
 import unittest
 
 from nova import context
+from nova import exception
 from nova import test
 from nova.image import glance
 
@@ -103,6 +104,31 @@ class TestGlanceImageServiceProperties(BaseGlanceTest):
 
         expected = {'id': '1', 'name': 'image1', 'is_public': True,
                     'properties': {'prop1': 'propvalue1', 'foo': 'bar'}}
+        self.assertEqual(image_meta, expected)
+
+    def test_show_raises_when_no_authtoken_in_the_context(self):
+        fixtures = {'image1': {'name': 'image1', 'is_public': False,
+                               'foo': 'bar',
+                               'properties': {'prop1': 'propvalue1'}}}
+        self.client.images = fixtures
+        self.context.auth_token = False
+
+        expected = {'name': 'image1', 'is_public': True,
+                    'properties': {'prop1': 'propvalue1', 'foo': 'bar'}}
+        self.assertRaises(exception.ImageNotFound,
+                          self.service.show, self.context, 'image1')
+
+    def test_show_passes_through_to_client_with_authtoken_in_context(self):
+        fixtures = {'image1': {'name': 'image1', 'is_public': False,
+                               'foo': 'bar',
+                               'properties': {'prop1': 'propvalue1'}}}
+        self.client.images = fixtures
+        self.context.auth_token = True
+
+        expected = {'name': 'image1', 'is_public': False,
+                    'properties': {'prop1': 'propvalue1', 'foo': 'bar'}}
+
+        image_meta = self.service.show(self.context, 'image1')
         self.assertEqual(image_meta, expected)
 
     def test_detail_passes_through_to_client(self):
