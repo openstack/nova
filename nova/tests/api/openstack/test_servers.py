@@ -2268,34 +2268,6 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server_test')
 
-    def test_update_server_description_v1_1(self):
-        DESC = 'updated_desc'
-
-        def server_update(context, id, params):
-            # assert that parameter conversion from description
-            # to display_description worked correctly
-            self.assertEqual(params.get('display_description'), DESC)
-            return stub_instance(1,
-                                 name='server_test',
-                                 description=params['display_description'])
-
-        self.stubs.Set(nova.db.api, 'instance_get',
-                return_server_with_attributes(name='server_test',
-                                              description=DESC))
-
-        self.stubs.Set(nova.db.api, 'instance_update',
-                server_update)
-
-        req = webob.Request.blank('/v1.1/fake/servers/1')
-        req.method = 'PUT'
-        req.content_type = 'application/json'
-        req.body = json.dumps({'server': {'description': DESC}})
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], 1)
-        self.assertEqual(res_dict['server']['description'], DESC)
-
     def test_update_server_access_ipv4_v1_1(self):
         self.stubs.Set(nova.db.api, 'instance_get',
                 return_server_with_attributes(access_ipv4='0.0.0.0'))

@@ -3,7 +3,6 @@
   <attribute name="name">      <text/> </attribute>
   <attribute name="userId">      <text/> </attribute>
   <attribute name="tenantId">      <text/> </attribute>
-  <attribute name="description">      <text/> </attribute>
   <attribute name="id">      <text/> </attribute>
   <attribute name="uuid"> <text/> </attribute>
   <attribute name="updated">   <text/> </attribute>

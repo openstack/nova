@@ -185,9 +185,6 @@ class Controller(object):
             self.helper._validate_server_name(name)
             update_dict['display_name'] = name.strip()
 
-        if 'description' in body['server']:
-            description = body['server']['description']
-            update_dict['display_description'] = description.strip()
         if 'accessIPv4' in body['server']:
             access_ipv4 = body['server']['accessIPv4']
             update_dict['access_ip_v4'] = access_ipv4.strip()
@@ -881,7 +878,6 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         node.setAttribute('uuid', str(server['uuid']))
         node.setAttribute('hostId', str(server['hostId']))
         node.setAttribute('name', server['name'])
-        node.setAttribute('description', server['description'])
         node.setAttribute('created', str(server['created']))
         node.setAttribute('updated', str(server['updated']))
         node.setAttribute('status', server['status'])
@@ -997,7 +993,7 @@ def create_resource(version='1.0'):
         "attributes": {
             "server": ["id", "imageId", "name", "flavorId", "hostId",
                        "status", "progress", "adminPass", "flavorRef",
-                       "imageRef", "userId", "tenantId", "description"],
+                       "imageRef", "userId", "tenantId"],
             "link": ["rel", "type", "href"],
         },
         "dict_collections": {
