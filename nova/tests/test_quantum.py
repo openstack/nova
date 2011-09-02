@@ -277,10 +277,10 @@ class QuantumTestCaseBase(object):
                         nw_info[1][0]['cidr_v6'].startswith("2001:1db9:"))
 
         # v6 address
-        self.assertTrue(\
+        self.assertTrue(
             nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1dbb:") or
             nw_info[1][1]['ip6s'][0]['ip'].startswith("2001:1dbb:"))
-        self.assertTrue(\
+        self.assertTrue(
             nw_info[0][1]['ip6s'][0]['ip'].startswith("2001:1db9:") or
             nw_info[1][1]['ip6s'][0]['ip'].startswith("2001:1db9:"))
 

@@ -50,13 +50,13 @@ class MelangeConnection(object):
         self.use_ssl = use_ssl
         self.version = "v0.1"
 
-    def get(self, path, params={}, headers={}):
+    def get(self, path, params=None, headers=None):
         return self.do_request("GET", path, params=params, headers=headers)
 
-    def post(self, path, body=None, headers={}):
+    def post(self, path, body=None, headers=None):
         return self.do_request("POST", path, body=body, headers=headers)
 
-    def delete(self, path, headers={}):
+    def delete(self, path, headers=None):
         return self.do_request("DELETE", path, headers=headers)
 
     def _get_connection(self):
@@ -65,12 +65,13 @@ class MelangeConnection(object):
         else:
             return httplib.HTTPConnection(self.host, self.port)
 
-    def do_request(self, method, path, body=None, headers={}, params={}):
+    def do_request(self, method, path, body=None, headers=None, params=None):
+        headers = headers or {}
+        params = params or {}
 
-        url = "/%s/%s.json?%s" % (self.version,
-                                  path,
-                                  urllib.urlencode(params))
-
+        url = "/%s/%s.json" % (self.version, path)
+        if params:
+            url += "?%s" % urllib.urlencode(params)
         try:
             connection = self._get_connection()
             connection.request(method, url, body, headers)
