@@ -928,6 +928,11 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
                                                      server['addresses'])
         server_node.appendChild(addresses_node)
 
+        if 'security_groups' in server:
+            security_groups_node = self._create_security_groups_node(xml_doc,
+                                                    server['security_groups'])
+            server_node.appendChild(security_groups_node)
+
         return server_node
 
     def _server_list_to_xml(self, xml_doc, servers, detailed):
@@ -979,6 +984,19 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         node = self._server_to_xml_detailed(xml_doc,
                                        server_dict['server'])
         return self.to_xml_string(node, True)
+
+    def _security_group_to_xml(self, doc, security_group):
+        node = doc.createElement('security_group')
+        node.setAttribute('name', str(security_group.get('name')))
+        return node
+
+    def _create_security_groups_node(self, xml_doc, security_groups):
+        security_groups_node = xml_doc.createElement('security_groups')
+        if security_groups:
+            for security_group in security_groups:
+                node = self._security_group_to_xml(xml_doc, security_group)
+                security_groups_node.appendChild(node)
+        return security_groups_node
 
 
 def create_resource(version='1.0'):
