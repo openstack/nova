@@ -1039,9 +1039,6 @@ class IptablesFirewallTestCase(test.TestCase):
 
         db.instance_add_security_group(admin_ctxt, instance_ref['id'],
                                        secgroup['id'])
-
-        db.instance_add_security_group(admin_ctxt, instance_ref['id'],
-                                       secgroup['id'])
         db.instance_add_security_group(admin_ctxt, src_instance_ref['id'],
                                        src_secgroup['id'])
         instance_ref = db.instance_get(admin_ctxt, instance_ref['id'])
