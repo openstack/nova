@@ -93,7 +93,7 @@ flavor = {'id': 0,
 
 def floating_ips(fixed_ip_id):
     for i in xrange(154):
-        yield {'id': 0,
+        yield {'id': i,
                'address': '10.10.10.%d' % (i + 100),
                'fixed_ip_id': fixed_ip_id,
                'project_id': None,
