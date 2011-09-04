@@ -41,8 +41,10 @@ TEST_LIMITS = [
     limits.Limit("PUT", "*", "", 10, limits.PER_MINUTE),
     limits.Limit("PUT", "/servers", "^/servers", 5, limits.PER_MINUTE),
 ]
-NS = "{http://docs.openstack.org/compute/api/v1.1}"
-ATOMNS = "{http://www.w3.org/2005/Atom}"
+NS = {
+    'atom': 'http://www.w3.org/2005/Atom',
+    'ns': 'http://docs.openstack.org/compute/api/v1.1'
+}
 
 
 class BaseLimitTestSuite(unittest.TestCase):
@@ -998,7 +1000,8 @@ class LimitsXMLSerializationTest(test.TestCase):
 
     def test_index(self):
         serializer = limits.LimitsXMLSerializer()
-        fixture = {"limits": {
+        fixture = {
+            "limits": {
                    "rate": [{
                          "uri": "*",
                          "regex": ".*",
@@ -1027,28 +1030,27 @@ class LimitsXMLSerializationTest(test.TestCase):
         xmlutil.validate_schema(root, 'limits')
 
         #verify absolute limits
-        absolute = root.find('{0}absolute'.format(NS))
-        absolutes = absolute.findall('limit'.format(NS))
+        absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
+        self.assertEqual(len(absolutes), 4)
         for limit in absolutes:
             name = limit.get('name')
             value = limit.get('value')
             self.assertEqual(value, str(fixture['limits']['absolute'][name]))
 
         #verify rate limits
-        rate_root = root.find('{0}rates'.format(NS))
-        rates = rate_root.findall('{0}rate'.format(NS))
-        for i in range(len(rates)):
-            rate = rates[i]
+        rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
+        self.assertEqual(len(rates), 2)
+        for i, rate in enumerate(rates):
             for key in ['uri', 'regex']:
                 self.assertEqual(rate.get(key),
                                  str(fixture['limits']['rate'][i][key]))
-            rate_limits = rate.findall('{0}limit'.format(NS))
-            for z in range(len(rate_limits)):
-                limit = rate_limits[z]
+            rate_limits = rate.xpath('ns:limit', namespaces=NS)
+            self.assertEqual(len(rate_limits), 1)
+            for j, limit in enumerate(rate_limits):
                 for key in ['verb', 'value', 'remaining', 'unit',
                             'next-available']:
                     self.assertEqual(limit.get(key),
-                         str(fixture['limits']['rate'][i]['limit'][z][key]))
+                         str(fixture['limits']['rate'][i]['limit'][j][key]))
 
     def test_index_no_limits(self):
         serializer = limits.LimitsXMLSerializer()
@@ -1063,11 +1065,9 @@ class LimitsXMLSerializationTest(test.TestCase):
         xmlutil.validate_schema(root, 'limits')
 
         #verify absolute limits
-        absolute = root.find('{0}absolute'.format(NS))
-        absolutes = absolute.findall('limit'.format(NS))
+        absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
         self.assertEqual(len(absolutes), 0)
 
         #verify rate limits
-        rate_root = root.find('{0}rates'.format(NS))
-        rates = rate_root.findall('{0}rate'.format(NS))
+        rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
         self.assertEqual(len(rates), 0)

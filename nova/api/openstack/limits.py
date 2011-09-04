@@ -87,25 +87,25 @@ class LimitsXMLSerializer(wsgi.XMLDictSerializer):
     def __init__(self):
         pass
 
-    def _create_rates_node(self, rates_dict):
+    def _create_rates_node(self, rates):
         rates_elem = etree.Element('rates', nsmap=self.NSMAP)
-        for rate in rates_dict.items():
+        for rate in rates:
             rate_node = etree.SubElement(rates_elem, 'rate')
             rate_node.set('uri', rate['uri'])
             rate_node.set('regex', rate['regex'])
-            for limit in rate['limits']:
+            for limit in rate['limit']:
                 limit_elem = etree.SubElement(rate_node, 'limit')
-                limit_elem.set('value', str(rate['value']))
-                limit_elem.set('verb', str(rate['verb']))
-                limit_elem.set('remaining', str(rate['remaining']))
-                limit_elem.set('unit', str(rate['unit']))
-                limit_elem.set('next-available', str(rate['next-available']))
+                limit_elem.set('value', str(limit['value']))
+                limit_elem.set('verb', str(limit['verb']))
+                limit_elem.set('remaining', str(limit['remaining']))
+                limit_elem.set('unit', str(limit['unit']))
+                limit_elem.set('next-available', str(limit['next-available']))
         return rates_elem
 
     def _create_absolute_node(self, absolute_dict):
         absolute_elem = etree.Element('absolute', nsmap=self.NSMAP)
         for key, value in absolute_dict.items():
-            limit_elem = etree.SubElement(rate_node, 'limit')
+            limit_elem = etree.SubElement(absolute_elem, 'limit')
             limit_elem.set('name', str(key))
             limit_elem.set('value', str(value))
         return absolute_elem
@@ -114,16 +114,16 @@ class LimitsXMLSerializer(wsgi.XMLDictSerializer):
         """Populate a limits xml element from a dict."""
 
         rates_elem = self._create_rates_node(
-                        limits_dict.get('rates', {}))
+                        limits_dict.get('rate', []))
         limits_elem.append(rates_elem)
 
         absolutes_elem = self._create_absolute_node(
-                        limits_dict.get('absolutes', {}))
+                        limits_dict.get('absolute', {}))
         limits_elem.append(absolutes_elem)
 
     def index(self, limits_dict):
         limits = etree.Element('limits', nsmap=self.NSMAP)
-        self._populate_limits(limits, limits_dict)
+        self._populate_limits(limits, limits_dict['limits'])
         return self._to_xml(limits)
 
 
