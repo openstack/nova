@@ -285,7 +285,7 @@ class VersionsTest(test.TestCase):
         versions = root.xpath('ns:version', namespaces=NS)
         self.assertEqual(len(versions), 2)
 
-        for (i, v) in ((0, 'v1.0'), (1, 'v1.1')):
+        for i, v in enumerate(['v1.0', 'v1.1']):
             version = versions[i]
             expected = VERSIONS[v]
             for key in ['id', 'status', 'updated']:
