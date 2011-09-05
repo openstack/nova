@@ -97,8 +97,6 @@ flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
 flags.DEFINE_string('gateway_v6', None, 'Default IPv6 gateway')
 flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
-flags.DEFINE_string('network_driver', 'nova.network.linux_net',
-                    'Driver to use for network creation')
 flags.DEFINE_bool('update_dhcp_on_disassociate', False,
                   'Whether to update dhcp when fixed_ip is disassociated')
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,

@@ -45,9 +45,13 @@ flags.DEFINE_integer('report_interval', 10,
 flags.DEFINE_integer('periodic_interval', 60,
                      'seconds between running periodic tasks',
                      lower_bound=1)
+flags.DEFINE_string('ec2_manager', 'nova.api.manager.EC2Manager',
+                    'EC2 API service manager')
 flags.DEFINE_string('ec2_listen', "0.0.0.0",
                     'IP address for EC2 API to listen')
 flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
+flags.DEFINE_string('osapi_manager', None,
+                    'OpenStack API service manager')
 flags.DEFINE_string('osapi_listen', "0.0.0.0",
                     'IP address for OpenStack API to listen')
 flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
@@ -290,6 +294,7 @@ class WSGIService(object):
 
         """
         self.name = name
+        self.manager = self._get_manager()
         self.loader = loader or wsgi.Loader()
         self.app = self.loader.load_app(name)
         self.host = getattr(FLAGS, '%s_listen' % name, "0.0.0.0")
@@ -298,6 +303,27 @@ class WSGIService(object):
                                   self.app,
                                   host=self.host,
                                   port=self.port)
+
+    def _get_manager(self):
+        """Initialize a Manager object appropriate for this service.
+
+        Use the service name to look up a Manager subclass from the
+        configuration and initialize an instance. If no class name
+        is configured, just return None.
+
+        :returns: a Manager instance, or None.
+
+        """
+        fl = '%s_manager' % self.name
+        if not fl in FLAGS:
+            return None
+
+        manager_class_name = FLAGS.get(fl, None)
+        if not manager_class_name:
+            return None
+
+        manager_class = utils.import_class(manager_class_name)
+        return manager_class()
 
     def start(self):
         """Start serving this service using loaded configuration.
@@ -308,6 +334,8 @@ class WSGIService(object):
         :returns: None
 
         """
+        if self.manager:
+            self.manager.init_host()
         self.server.start()
         self.port = self.server.port
 

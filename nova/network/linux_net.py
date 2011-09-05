@@ -381,6 +381,17 @@ def metadata_forward():
     iptables_manager.apply()
 
 
+def metadata_accept():
+    """Create the filter accept rule for metadata."""
+    iptables_manager.ipv4['filter'].add_rule('INPUT',
+                                             '-s 0.0.0.0/0 -d %s '
+                                             '-p tcp -m tcp --dport %s '
+                                             '-j ACCEPT' % \
+                                             (FLAGS.ec2_dmz_host,
+                                              FLAGS.ec2_port))
+    iptables_manager.apply()
+
+
 def init_host():
     """Basic networking setup goes here."""
     # NOTE(devcamcar): Cloud public SNAT entries and the default
