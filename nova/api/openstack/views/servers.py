@@ -183,6 +183,7 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['uuid'] = inst['uuid']
+        response['key_name'] = inst.get('key_name', '')
         self._build_config_drive(response, inst)
 
     def _build_links(self, response, inst):

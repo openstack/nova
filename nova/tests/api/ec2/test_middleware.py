@@ -21,10 +21,13 @@ import webob.dec
 import webob.exc
 
 from nova.api import ec2
+from nova import context
+from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
 
+from xml.etree.ElementTree import fromstring as xml_to_tree
 
 FLAGS = flags.FLAGS
 
@@ -83,3 +86,45 @@ class LockoutTestCase(test.TestCase):
         utils.advance_time_seconds(FLAGS.lockout_window * 60)
         self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))
+
+
+class ExecutorTestCase(test.TestCase):
+    def setUp(self):
+        super(ExecutorTestCase, self).setUp()
+        self.executor = ec2.Executor()
+
+    def _execute(self, invoke):
+        class Fake(object):
+            pass
+        fake_ec2_request = Fake()
+        fake_ec2_request.invoke = invoke
+
+        fake_wsgi_request = Fake()
+
+        fake_wsgi_request.environ = {
+                'nova.context': context.get_admin_context(),
+                'ec2.request': fake_ec2_request,
+        }
+        return self.executor(fake_wsgi_request)
+
+    def _extract_message(self, result):
+        tree = xml_to_tree(result.body)
+        return tree.findall('./Errors')[0].find('Error/Message').text
+
+    def test_instance_not_found(self):
+        def not_found(context):
+            raise exception.InstanceNotFound(instance_id=5)
+        result = self._execute(not_found)
+        self.assertIn('i-00000005', self._extract_message(result))
+
+    def test_snapshot_not_found(self):
+        def not_found(context):
+            raise exception.SnapshotNotFound(snapshot_id=5)
+        result = self._execute(not_found)
+        self.assertIn('snap-00000005', self._extract_message(result))
+
+    def test_volume_not_found(self):
+        def not_found(context):
+            raise exception.VolumeNotFound(volume_id=5)
+        result = self._execute(not_found)
+        self.assertIn('vol-00000005', self._extract_message(result))

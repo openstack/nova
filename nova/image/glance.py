@@ -273,17 +273,11 @@ class GlanceImageService(object):
     def _is_image_available(context, image_meta):
         """Check image availability.
 
-        Images are always available if they are public or if the user is an
-        admin.
-
-        Otherwise, we filter by project_id (if present) and then fall-back to
-        images owned by user.
+        Under Glance, images are always available if the context has
+        an auth_token.
 
         """
-        # FIXME(sirp): We should be filtering by user_id on the Glance side
-        # for security; however, we can't do that until we get authn/authz
-        # sorted out. Until then, filtering in Nova.
-        if image_meta['is_public'] or context.is_admin:
+        if hasattr(context, 'auth_token') and context.auth_token:
             return True
 
         properties = image_meta['properties']

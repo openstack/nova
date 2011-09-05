@@ -36,6 +36,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
 
 FLAGS = flags.FLAGS
@@ -1250,11 +1251,16 @@ def instance_get_all_by_filters(context, filters):
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
-                   filter_by(deleted=can_read_deleted(context))
+                   order_by(desc(models.Instance.created_at))
 
     # Make a copy of the filters dictionary to use going forward, as we'll
     # be modifying it and we shouldn't affect the caller's use of it.
     filters = filters.copy()
+
+    if 'changes-since' in filters:
+        changes_since = filters['changes-since']
+        query_prefix = query_prefix.\
+                            filter(models.Instance.updated_at > changes_since)
 
     if not context.is_admin:
         # If we're not admin context, add appropriate filter..
@@ -1277,9 +1283,7 @@ def instance_get_all_by_filters(context, filters):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    instances = query_prefix.\
-                    filter_by(deleted=can_read_deleted(context)).\
-                    all()
+    instances = query_prefix.all()
 
     if not instances:
         return []

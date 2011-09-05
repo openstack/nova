@@ -155,7 +155,7 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
                   public_addresses=None, host=None,
                   vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
-                  flavor_id="1", interfaces=None, name=None,
+                  flavor_id="1", interfaces=None, name=None, key_name='',
                   access_ipv4=None, access_ipv6=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
@@ -170,6 +170,11 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
 
     if host is not None:
         host = str(host)
+
+    if key_name:
+        key_data = 'FAKE'
+    else:
+        key_data = ''
 
     # ReservationID isn't sent back, hack it in there.
     server_name = name or "server%s" % id
@@ -187,8 +192,8 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "kernel_id": "",
         "ramdisk_id": "",
         "launch_index": 0,
-        "key_name": "",
-        "key_data": "",
+        "key_name": key_name,
+        "key_data": key_data,
         "vm_state": vm_state or vm_states.BUILDING,
         "task_state": task_state,
         "memory_mb": 0,
@@ -350,6 +355,7 @@ class ServersTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
+                "key_name": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -517,6 +523,7 @@ class ServersTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
+                "key_name": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -611,6 +618,7 @@ class ServersTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
+                "key_name": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -1257,6 +1265,31 @@ class ServersTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], 100)
 
+    def test_get_servers_allows_changes_since_v1_1(self):
+        def fake_get_all(compute_self, context, search_opts=None):
+            self.assertNotEqual(search_opts, None)
+            self.assertTrue('changes-since' in search_opts)
+            changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1)
+            self.assertEqual(search_opts['changes-since'], changes_since)
+            self.assertTrue('deleted' not in search_opts)
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        params = 'changes-since=2011-01-24T17:08:01Z'
+        req = webob.Request.blank('/v1.1/fake/servers?%s' % params)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        servers = json.loads(res.body)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], 100)
+
+    def test_get_servers_allows_changes_since_bad_value_v1_1(self):
+        params = 'changes-since=asdf'
+        req = webob.Request.blank('/v1.1/fake/servers?%s' % params)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_get_servers_unknown_or_admin_options1(self):
         """Test getting servers by admin-only or unknown options.
         This tests when admin_api is off.  Make sure the admin and
@@ -1745,6 +1778,36 @@ class ServersTest(test.TestCase):
         self.assertEqual(expected_image, server['image'])
         self.assertEqual('1.2.3.4', server['accessIPv4'])
         self.assertEqual('fead::1234', server['accessIPv6'])
+
+    def test_create_instance_v1_1_invalid_key_name(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/flavors/3'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            key_name='nonexistentkey'))
+        req = webob.Request.blank('/v1.1/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_valid_key_name(self):
+        self._setup_for_create_instance()
+
+        image_href = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/flavors/3'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
+            key_name='key'))
+        req = webob.Request.blank('/v1.1/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
 
     def test_create_instance_v1_1_invalid_flavor_href(self):
         self._setup_for_create_instance()
@@ -3617,6 +3680,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
+                "key_name": '',
                 "links": [
                     {
                         "rel": "self",
@@ -3640,6 +3704,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
+                "key_name": '',
                 "config_drive": None,
                 "links": [
                     {
@@ -3673,6 +3738,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
+                "key_name": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3727,6 +3793,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
+                "key_name": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3778,6 +3845,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
+                "key_name": "",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {
@@ -3833,6 +3901,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
+                "key_name": "",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {
@@ -3895,6 +3964,7 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
+                "key_name": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3961,6 +4031,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 "name": "test_server",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
+                "key_name": '',
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "fead::1234",
                 "image": {

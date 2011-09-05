@@ -85,13 +85,6 @@ class CloudTestCase(test.TestCase):
 
         self.stubs.Set(rpc, 'cast', finish_cast)
 
-    def tearDown(self):
-        networks = db.project_get_networks(self.context, self.project_id,
-                                           associate=False)
-        for network in networks:
-            db.network_disassociate(self.context, network['id'])
-        super(CloudTestCase, self).tearDown()
-
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
         return cloud._gen_key(self.context, self.context.user_id, name)
@@ -493,8 +486,11 @@ class CloudTestCase(test.TestCase):
         inst2 = db.instance_create(self.context, args2)
         db.instance_destroy(self.context, inst1.id)
         result = self.cloud.describe_instances(self.context)
-        result = result['reservationSet'][0]['instancesSet']
-        self.assertEqual(result[0]['instanceId'],
+        result1 = result['reservationSet'][0]['instancesSet']
+        self.assertEqual(result1[0]['instanceId'],
+                         ec2utils.id_to_ec2_id(inst1.id))
+        result2 = result['reservationSet'][1]['instancesSet']
+        self.assertEqual(result2[0]['instanceId'],
                          ec2utils.id_to_ec2_id(inst2.id))
 
     def _block_device_mapping_create(self, instance_id, mappings):

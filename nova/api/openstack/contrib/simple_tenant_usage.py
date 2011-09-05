@@ -116,7 +116,7 @@ class SimpleTenantUsageController(object):
             if info['ended_at']:
                 info['state'] = 'terminated'
             else:
-                info['state'] = instance['state_description']
+                info['state'] = instance['vm_state']
 
             now = datetime.utcnow()
 
