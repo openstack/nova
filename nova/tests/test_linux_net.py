@@ -316,7 +316,6 @@ class LinuxNetworkTestCase(test.TestCase):
         actual = self.driver._host_dhcp_opts(fixed_ips[0], True)
         self.assertEquals(actual, expected)
 
-
     def test_dhcp_opts_not_default_gateway_network(self):
         expected = "NW-i00000000-0,3"
         actual = self.driver._host_dhcp_opts(fixed_ips[0], False)
