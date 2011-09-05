@@ -1415,8 +1415,8 @@ def instance_get_all_by_reservation(context, reservation_id):
                 filter_by(project_id=context.project_id).\
                 filter_by(deleted=False).\
                 all()
-                
-@require_admin_context
+
+
 def instance_get_all_by_network(context, network_id):
     session = get_session()
     return session.query(models.Instance).\
@@ -1429,7 +1429,6 @@ def instance_get_all_by_network(context, network_id):
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(network_id=network_id).\
                    all()
-
 
 
 @require_context

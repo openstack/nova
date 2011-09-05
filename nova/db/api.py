@@ -535,8 +535,8 @@ def instance_get_all_by_reservation(context, reservation_id):
 def instance_get_all_by_network(context, network_id):
     """Get all instances belonging to a network."""
     return IMPL.instance_get_all_by_network(context, network_id)
-    
-    
+
+
 def instance_get_by_fixed_ip(context, address):
     """Get an instance for a fixed ip by address."""
     return IMPL.instance_get_by_fixed_ip(context, address)

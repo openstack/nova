@@ -41,10 +41,10 @@ instances = [{'id': 0,
               'hostname': 'fake_instance01'}]
 
 
-addresses = [{"address" : "10.0.0.1" },
-             {"address" : "10.0.0.2" },
-             {"address" : "10.0.0.3" },
-             {"address" : "10.0.0.4" }]
+addresses = [{"address": "10.0.0.1"},
+             {"address": "10.0.0.2"},
+             {"address": "10.0.0.3"},
+             {"address": "10.0.0.4"}]
 
 
 networks = [{'id': 0,
@@ -63,8 +63,8 @@ networks = [{'id': 0,
              'broadcast': '192.168.0.255',
              'dns1': '192.168.0.1',
              'dns2': '192.168.0.2',
-             'dhcp_server' : '0.0.0.0',
-             'dhcp_start' : '192.168.100.1',             
+             'dhcp_server': '0.0.0.0',
+             'dhcp_start': '192.168.100.1',
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
@@ -85,8 +85,8 @@ networks = [{'id': 0,
              'broadcast': '192.168.1.255',
              'dns1': '192.168.0.1',
              'dns2': '192.168.0.2',
-             'dhcp_server' : '0.0.0.0',
-             'dhcp_start' : '192.168.100.1',             
+             'dhcp_server': '0.0.0.0',
+             'dhcp_start': '192.168.100.1',
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
@@ -99,7 +99,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 0,
               'allocated': True,
               'virtual_interface_id': 0,
-              'virtual_interface' : addresses[0],
+              'virtual_interface': addresses[0],
               'instance': instances[0],
               'floating_ips': []},
              {'id': 1,
@@ -108,7 +108,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 0,
               'allocated': True,
               'virtual_interface_id': 1,
-              'virtual_interface' : addresses[1],
+              'virtual_interface': addresses[1],
               'instance': instances[0],
               'floating_ips': []},
              {'id': 2,
@@ -117,7 +117,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 1,
               'allocated': True,
               'virtual_interface_id': 2,
-              'virtual_interface' : addresses[2],
+              'virtual_interface': addresses[2],
               'instance': instances[1],
               'floating_ips': []},
              {'id': 3,
@@ -126,11 +126,9 @@ fixed_ips = [{'id': 0,
               'instance_id': 1,
               'allocated': True,
               'virtual_interface_id': 3,
-              'virtual_interface' : addresses[3],
+              'virtual_interface': addresses[3],
               'instance': instances[1],
               'floating_ips': []}]
-
-
 
 
 vifs = [{'id': 0,
@@ -167,66 +165,159 @@ class LinuxNetworkTestCase(test.TestCase):
         self.driver = utils.import_object(network_driver)
         self.driver.db = db
 
-    def test_update_dhcp(self):
+    def test_update_dhcp_for_nw00(self):
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_network')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
 
-        fixed_ips[1]['instance'] = instances[0] 
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
-                                            mox.IgnoreArg()).AndReturn(fixed_ips)
+                                            mox.IgnoreArg())\
+                                            .AndReturn([fixed_ips[0],
+                                                        fixed_ips[3]])
 
         db.instance_get_all_by_network(mox.IgnoreArg(),
-                                       mox.IgnoreArg()).AndReturn(instances)
+                                       mox.IgnoreArg())\
+                                       .AndReturn(instances)
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
-                                            mox.IgnoreArg()).AndReturn(fixed_ips)
+                                            mox.IgnoreArg())\
+                                            .AndReturn([fixed_ips[0],
+                                                        fixed_ips[3]])
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
-                                             mox.IgnoreArg()).AndReturn([vifs[0],vifs[1]])
+                                             mox.IgnoreArg())\
+                                             .AndReturn([vifs[0], vifs[1]])
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
-                                             mox.IgnoreArg()).AndReturn([vifs[2],vifs[3]])
-
+                                             mox.IgnoreArg())\
+                                             .AndReturn([vifs[2], vifs[3]])
         self.mox.ReplayAll()
+
         self.driver.update_dhcp(None, "eth0", networks[0])
 
-
-    def test_get_dhcp_hosts(self):
-        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-
-        fixed_ips[1]['instance'] = instances[0] 
-        db.network_get_associated_fixed_ips(mox.IgnoreArg(),
-                                            mox.IgnoreArg()).AndReturn(fixed_ips)
-
-        self.mox.ReplayAll()
-
-        hosts = self.driver.get_dhcp_hosts(None, networks[0])
-        
-        self.assertEquals(hosts,
-                          "10.0.0.1,fake_instance00.novalocal,192.168.0.100,net:NW-i00000000-0\n" \
-                          "10.0.0.2,fake_instance00.novalocal,192.168.1.100,net:NW-i00000000-1\n" \
-                          "10.0.0.3,fake_instance01.novalocal,192.168.0.101,net:NW-i00000001-0\n" \
-                          "10.0.0.4,fake_instance01.novalocal,192.168.1.101,net:NW-i00000001-1")
-
-        
-    def test_get_dhcp_opts(self):
+    def test_update_dhcp_for_nw01(self):
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_network')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
 
-        fixed_ips[1]['instance'] = instances[0] 
+        db.network_get_associated_fixed_ips(mox.IgnoreArg(),
+                                            mox.IgnoreArg())\
+                                            .AndReturn([fixed_ips[1],
+                                                        fixed_ips[2]])
 
         db.instance_get_all_by_network(mox.IgnoreArg(),
-                                       mox.IgnoreArg()).AndReturn(instances)
+                                       mox.IgnoreArg())\
+                                       .AndReturn(instances)
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
-                                            mox.IgnoreArg()).AndReturn(fixed_ips)
+                                            mox.IgnoreArg())\
+                                            .AndReturn([fixed_ips[1],
+                                                        fixed_ips[2]])
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
-                                             mox.IgnoreArg()).AndReturn([vifs[0],vifs[1]])
+                                             mox.IgnoreArg())\
+                                             .AndReturn([vifs[0], vifs[1]])
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
-                                             mox.IgnoreArg()).AndReturn([vifs[2],vifs[3]])
-
+                                             mox.IgnoreArg())\
+                                             .AndReturn([vifs[2], vifs[3]])
         self.mox.ReplayAll()
 
-        opts = self.driver.get_dhcp_opts(None, networks[0])
-        self.assertEquals(opts, '\nNW-i00000000-1,3\nNW-i00000001-0,3\n')
+        self.driver.update_dhcp(None, "eth0", networks[0])
 
-        
+    def test_get_dhcp_hosts_for_nw00(self):
+        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
 
+        db.network_get_associated_fixed_ips(mox.IgnoreArg(),
+                                            mox.IgnoreArg())\
+                                            .AndReturn([fixed_ips[0],
+                                                        fixed_ips[3]])
+        self.mox.ReplayAll()
+
+        expected = \
+        "10.0.0.1,fake_instance00.novalocal,"\
+            "192.168.0.100,net:NW-i00000000-0\n"\
+        "10.0.0.4,fake_instance01.novalocal,"\
+            "192.168.1.101,net:NW-i00000001-1"
+        actual_hosts = self.driver.get_dhcp_hosts(None, networks[1])
+
+        self.assertEquals(actual_hosts, expected)
+
+    def test_get_dhcp_hosts_for_nw01(self):
+        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
+
+        db.network_get_associated_fixed_ips(mox.IgnoreArg(),
+                                            mox.IgnoreArg())\
+                                            .AndReturn([fixed_ips[1],
+                                                        fixed_ips[2]])
+        self.mox.ReplayAll()
+
+        expected = \
+        "10.0.0.2,fake_instance00.novalocal,"\
+            "192.168.1.100,net:NW-i00000000-1\n"\
+        "10.0.0.3,fake_instance01.novalocal,"\
+            "192.168.0.101,net:NW-i00000001-0"
+        actual_hosts = self.driver.get_dhcp_hosts(None, networks[0])
+
+        self.assertEquals(actual_hosts, expected)
+
+    def test_get_dhcp_opts_for_nw00(self):
+        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_network')
+        self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
+
+        db.instance_get_all_by_network(mox.IgnoreArg(),
+                                       mox.IgnoreArg())\
+                                       .AndReturn(instances)
+        db.network_get_associated_fixed_ips(mox.IgnoreArg(),
+                                            mox.IgnoreArg())\
+                                            .AndReturn([fixed_ips[0],
+                                                        fixed_ips[3]])
+        db.virtual_interface_get_by_instance(mox.IgnoreArg(),
+                                             mox.IgnoreArg())\
+                                             .AndReturn([vifs[0],
+                                                         vifs[1]])
+        db.virtual_interface_get_by_instance(mox.IgnoreArg(),
+                                             mox.IgnoreArg())\
+                                             .AndReturn([vifs[2],
+                                                         vifs[3]])
+        self.mox.ReplayAll()
+
+        expected_opts = '\n'\
+                        ''
+        actual_opts = self.driver.get_dhcp_opts(None, networks[0])
+
+        self.assertEquals(actual_opts, expected_opts)
+
+    def test_get_dhcp_opts_for_nw01(self):
+        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_network')
+        self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
+
+        db.instance_get_all_by_network(mox.IgnoreArg(),
+                                       mox.IgnoreArg())\
+                                       .AndReturn(instances)
+        db.network_get_associated_fixed_ips(mox.IgnoreArg(),
+                                            mox.IgnoreArg())\
+                                            .AndReturn([fixed_ips[1],
+                                                        fixed_ips[2]])
+        db.virtual_interface_get_by_instance(mox.IgnoreArg(),
+                                             mox.IgnoreArg())\
+                                             .AndReturn([vifs[0],
+                                                         vifs[1]])
+        db.virtual_interface_get_by_instance(mox.IgnoreArg(),
+                                             mox.IgnoreArg())\
+                                             .AndReturn([vifs[2],
+                                                         vifs[3]])
+        self.mox.ReplayAll()
+
+        expected_opts = 'NW-i00000000-1,3\n'\
+                        'NW-i00000001-0,3'
+        actual_opts = self.driver.get_dhcp_opts(None, networks[1])
+
+        self.assertEquals(actual_opts, expected_opts)
+
+    def test_dhcp_opts_default_gateway_network(self):
+        expected = ""
+        actual = self.driver._host_dhcp_opts(fixed_ips[0], True)
+        self.assertEquals(actual, expected)
+
+
+    def test_dhcp_opts_not_default_gateway_network(self):
+        expected = "NW-i00000000-0,3"
+        actual = self.driver._host_dhcp_opts(fixed_ips[0], False)
+        self.assertEquals(actual, expected)

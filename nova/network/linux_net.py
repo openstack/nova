@@ -438,7 +438,7 @@ def ensure_vpn_forward(public_ip, port, private_ip):
 
 def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule."""
-    for chain, rule in floating_forward_rules(floating_ip, fixed_ip):
+    for chain, rule in floating_forward_rules(floaing_ip, fixed_ip):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()
 
@@ -518,7 +518,7 @@ def get_dhcp_opts(context, network_ref):
     default_gateway_network_node = dict()
     network_id = network_ref['id']
     instance_refs = db.instance_get_all_by_network(context, network_id)
-    ips_ref = db.network_get_associated_fixed_ips(context, network_id)    
+    ips_ref = db.network_get_associated_fixed_ips(context, network_id)
 
     for instance_ref in instance_refs:
         instance_id = instance_ref['id']
@@ -533,7 +533,7 @@ def get_dhcp_opts(context, network_ref):
 
     for fixed_ip_ref in ips_ref:
         instance_id = fixed_ip_ref['instance_id']
-        if default_gateway_network_node.has_key(instance_id):
+        if instance_id in default_gateway_network_node:
             target_network_id = default_gateway_network_node[instance_id]
             if target_network_id == fixed_ip_ref['network_id']:
                 hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=True))
