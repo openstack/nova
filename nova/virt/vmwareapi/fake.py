@@ -409,7 +409,7 @@ def fake_plug_vifs(*args, **kwargs):
 
 def fake_get_network(*args, **kwargs):
     """Fake get network."""
-    return [{'type': 'fake'}]
+    return {'type': 'fake'}
 
 
 def fake_fetch_image(image, instance, **kwargs):
