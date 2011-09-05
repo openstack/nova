@@ -305,6 +305,36 @@ class CloudTestCase(test.TestCase):
                   'ip_protocol': u'tcp'}]}
         self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
 
+    def test_describe_security_group_ingress_groups(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec = db.security_group_create(self.context,
+                                       {'project_id': 'someuser',
+                                        'name': 'somegroup1'})
+        sec = db.security_group_create(self.context,
+                                       {'project_id': 'someuser',
+                                        'name': 'othergroup2'})
+        sec = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'ip_permissions': [{
+                  'groups': {'1': {'user_id': u'someuser',
+                                   'group_name': u'somegroup1'},
+                             '2': {'user_id': u'someuser',
+                                   'group_name': u'othergroup2'}}}]}
+        self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
+        describe = self.cloud.describe_security_groups
+        groups = describe(self.context, group_name=['test'])
+        self.assertEquals(len(groups['securityGroupInfo']), 1)
+        for proto, min_port, max_port in (('icmp', -1, -1),
+                                          ('udp', 1, 65536),
+                                          ('tcp', 1, 65535)):
+            rules = filter(lambda g:g['ipProtocol'] == proto,
+                           groups['securityGroupInfo'][0]['ipPermissions'])
+            self.assertEquals(len(rules), 2,
+                              "Expected 2 rules for protocol %s" % proto)
+            for rule in rules:
+                self.assertEquals(rule['fromPort'], min_port)
+                self.assertEquals(rule['toPort'], max_port)
+
     def test_revoke_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
         sec = db.security_group_create(self.context, kwargs)
