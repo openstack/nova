@@ -514,6 +514,7 @@ def get_dhcp_hosts(context, network_ref):
 def get_dhcp_opts(context, network_ref):
     """Get network's hosts config in dhcp-opts format."""
     # create a decision dictionary for default gateway for eache instance
+    hosts = []
     default_gateway_network_node = dict()
     network_id = network_ref['id']
     instance_refs = db.instance_get_all_by_network(context, network_id)
@@ -521,9 +522,10 @@ def get_dhcp_opts(context, network_ref):
 
     for instance_ref in instance_refs:
         instance_id = instance_ref['id']
-        # nic number is decided by èáî‘ from this function in xxx function
+        # nic number is decided by xxx from this function in xxx function
         vifs = db.virtual_interface_get_by_instance(context, instance_id)
-        if not vifs:
+        if vifs == None:
+            default_gateway_network_node[instance_id] = None
             continue
         # offer a default gateway to the first virtual interface of instance
         first_vif = vifs[0]
@@ -531,11 +533,12 @@ def get_dhcp_opts(context, network_ref):
 
     for fixed_ip_ref in ips_ref:
         instance_id = fixed_ip_ref['instance_id']
-        target_network_id = default_gateway_network_node[instance_id]
-        if target_network_id == fixed_ip_ref['network_id']:
-            hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=True))
-        else:
-            hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=None))
+        if default_gateway_network_node.has_key(instance_id):
+            target_network_id = default_gateway_network_node[instance_id]
+            if target_network_id == fixed_ip_ref['network_id']:
+                hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=True))
+            else:
+                hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=None))
 
     return '\n'.join(hosts)
 
