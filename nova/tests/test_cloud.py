@@ -307,20 +307,20 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_security_group_ingress_groups(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
-        sec = db.security_group_create(self.context,
+        sec1 = db.security_group_create(self.context, kwargs)
+        sec2 = db.security_group_create(self.context,
                                        {'project_id': 'someuser',
                                         'name': 'somegroup1'})
-        sec = db.security_group_create(self.context,
+        sec3 = db.security_group_create(self.context,
                                        {'project_id': 'someuser',
                                         'name': 'othergroup2'})
-        sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'ip_permissions': [{
                   'groups': {'1': {'user_id': u'someuser',
                                    'group_name': u'somegroup1'},
                              '2': {'user_id': u'someuser',
                                    'group_name': u'othergroup2'}}}]}
-        self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
+        self.assertTrue(authz(self.context, group_name=sec1['name'], **kwargs))
         describe = self.cloud.describe_security_groups
         groups = describe(self.context, group_name=['test'])
         self.assertEquals(len(groups['securityGroupInfo']), 1)
@@ -334,6 +334,9 @@ class CloudTestCase(test.TestCase):
             for rule in rules:
                 self.assertEquals(rule['fromPort'], min_port)
                 self.assertEquals(rule['toPort'], max_port)
+        db.security_group_destroy(self.context, sec3['id'])
+        db.security_group_destroy(self.context, sec2['id'])
+        db.security_group_destroy(self.context, sec1['id'])
 
     def test_revoke_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
