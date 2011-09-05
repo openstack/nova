@@ -511,6 +511,35 @@ def get_dhcp_hosts(context, network_ref):
     return '\n'.join(hosts)
 
 
+def get_dhcp_opts(context, network_ref):
+    """Get network's hosts config in dhcp-opts format."""
+    # create a decision dictionary for default gateway for eache instance
+    default_gateway_network_node = dict()
+    network_id = network_ref['id']
+    instance_refs = db.instance_get_all_by_network(context, network_id)
+    ips_ref = db.network_get_associated_fixed_ips(context, network_id)    
+
+    for instance_ref in instance_refs:
+        instance_id = instance_ref['id']
+        # nic number is decided by èáî‘ from this function in xxx function
+        vifs = db.virtual_interface_get_by_instance(context, instance_id)
+        if not vifs:
+            continue
+        # offer a default gateway to the first virtual interface of instance
+        first_vif = vifs[0]
+        default_gateway_network_node[instance_id] = first_vif['network_id']
+
+    for fixed_ip_ref in ips_ref:
+        instance_id = fixed_ip_ref['instance_id']
+        target_network_id = default_gateway_network_node[instance_id]
+        if target_network_id == fixed_ip_ref['network_id']:
+            hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=True))
+        else:
+            hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=None))
+
+    return '\n'.join(hosts)
+
+
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
@@ -526,8 +555,13 @@ def update_dhcp(context, dev, network_ref):
     with open(conffile, 'w') as f:
         f.write(get_dhcp_hosts(context, network_ref))
 
+    optsfile = _dhcp_file(dev, 'opts')
+    with open(optsfile, 'w') as f:
+        f.write(get_dhcp_opts(context, network_ref))
+
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
+    os.chmod(optsfile, 0644)
 
     pid = _dnsmasq_pid_for(dev)
 
@@ -559,6 +593,7 @@ def update_dhcp(context, dev, network_ref):
            '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(network_ref['cidr'])),
            '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
            '--dhcp-script=%s' % FLAGS.dhcpbridge,
+           '--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts'),
            '--leasefile-ro']
     if FLAGS.dns_server:
         cmd += ['-h', '-R', '--server=%s' % FLAGS.dns_server]
@@ -625,13 +660,29 @@ def _host_lease(fixed_ip_ref):
                               instance_ref['hostname'] or '*')
 
 
+def _host_dhcp_network(fixed_ip_ref):
+    instance_ref = fixed_ip_ref['instance']
+    return 'NW-i%08d-%s' % (instance_ref['id'],
+                            fixed_ip_ref['network_id'])
+
+
 def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address in dhcp-host format."""
     instance_ref = fixed_ip_ref['instance']
-    return '%s,%s.%s,%s' % (fixed_ip_ref['virtual_interface']['address'],
+    return '%s,%s.%s,%s,%s' % (fixed_ip_ref['virtual_interface']['address'],
                                    instance_ref['hostname'],
                                    FLAGS.dhcp_domain,
-                                   fixed_ip_ref['address'])
+                                   fixed_ip_ref['address'],
+                                   "net:" + _host_dhcp_network(fixed_ip_ref))
+
+
+def _host_dhcp_opts(fixed_ip_ref, gw):
+    """Return a host string for an address in dhcp-host format."""
+    if not gw:
+        return '%s,%s' % (_host_dhcp_network(fixed_ip_ref),
+                           3)
+    else:
+        return ''
 
 
 def _execute(*cmd, **kwargs):
