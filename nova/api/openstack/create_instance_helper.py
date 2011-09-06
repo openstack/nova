@@ -161,10 +161,6 @@ class CreateInstanceHelper(object):
                 'config_drive': config_drive,
                 'password': password}
 
-            # NOTE(vish): This is solely for compatibility with anything
-            #             that is using the display description field.
-            metadata = server_dict.get('metadata') or {}
-            display_description = metadata.get('description') or name
             return (extra_values,
                     create_method(context,
                                   inst_type,
@@ -172,9 +168,9 @@ class CreateInstanceHelper(object):
                                   kernel_id=kernel_id,
                                   ramdisk_id=ramdisk_id,
                                   display_name=name,
-                                  display_description=display_description,
+                                  display_description=name,
                                   key_name=key_name,
-                                  metadata=metadata,
+                                  metadata=server_dict.get('metadata', {}),
                                   access_ip_v4=server_dict.get('accessIPv4'),
                                   access_ip_v6=server_dict.get('accessIPv6'),
                                   injected_files=injected_files,
