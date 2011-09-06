@@ -24,64 +24,7 @@ from nova import context
 from nova import exception
 from nova.image import glance
 from nova import test
-
-
-class StubGlanceClient(object):
-
-    def __init__(self, images=None, add_response=None, update_response=None):
-        self.images = images or []
-        self.add_response = add_response
-        self.update_response = update_response
-
-    def set_auth_token(self, auth_tok):
-        pass
-
-    def get_image_meta(self, image_id):
-        for image in self.images:
-            if image['id'] == image_id:
-                return image
-        raise exception.ImageNotFound(image_id=image_id)
-
-    #TODO(bcwaldon): implement filters
-    def get_images_detailed(self, filters=None, marker=None, limit=3):
-        if marker is None:
-            index = 0
-        else:
-            for index, image in enumerate(self.images):
-                if image['id'] == marker:
-                    index += 1
-                    break
-
-        return self.images[index:index + limit]
-
-    def get_image(self, image_id):
-        return self.get_image_meta(image_id), []
-
-    def add_image(self, metadata, data):
-        self.images.append(metadata)
-
-        try:
-            image_id = int(metadata['id'])
-        except KeyError:
-            # auto-generate an id if one wasn't provided
-            image_id = len(self.images)
-            metadata['id'] = image_id
-
-        return metadata
-
-    def update_image(self, image_id, metadata, data):
-        for i, image in enumerate(self.images):
-            if image['id'] == image_id:
-                self.images[i].update(metadata)
-                return self.images[i]
-        raise exception.ImageNotFound(image_id=image_id)
-
-    def delete_image(self, image_id):
-        for i, image in enumerate(self.images):
-            if image['id'] == image_id:
-                del self.images[i]
-                return
-        raise exception.ImageNotFound(image_id=image_id)
+from nova.tests.glance import stubs as glance_stubs
 
 
 class NullWriter(object):
@@ -147,17 +90,15 @@ class TestGlanceImageService(test.TestCase):
     def setUp(self):
         super(TestGlanceImageService, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.stub_out_glance(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
-        self.client = StubGlanceClient()
-        self.service = glance.GlanceImageService(client=self.client)
+        client = glance_stubs.StubGlanceClient()
+        self.service = glance.GlanceImageService(client=client)
         self.context = context.RequestContext('fake', 'fake', auth_token=True)
         self.service.delete_all()
 
     def tearDown(self):
         self.stubs.UnsetAll()
         super(TestGlanceImageService, self).tearDown()
-
 
     @staticmethod
     def _make_fixture(**kwargs):
@@ -168,46 +109,10 @@ class TestGlanceImageService(test.TestCase):
         fixture.update(kwargs)
         return fixture
 
-    def _make_datetime_fixtures(self):
-        return [
-            {
-                'id': '1',
-                'name': 'image1',
-                'is_public': True,
-                'created_at': self.NOW_GLANCE_FORMAT,
-                'updated_at': self.NOW_GLANCE_FORMAT,
-                'deleted_at': self.NOW_GLANCE_FORMAT,
-            },
-            {
-                'id': '2',
-                'name': 'image2',
-                'is_public': True,
-                'created_at': self.NOW_GLANCE_OLD_FORMAT,
-                'updated_at': self.NOW_GLANCE_OLD_FORMAT,
-                'deleted_at': self.NOW_GLANCE_OLD_FORMAT,
-            },
-        ]
-
     def _make_datetime_fixture(self):
         return self._make_fixture(created_at=self.NOW_GLANCE_FORMAT,
                                   updated_at=self.NOW_GLANCE_FORMAT,
                                   deleted_at=self.NOW_GLANCE_FORMAT)
-
-    def _make_none_datetime_fixture(self):
-        return self._make_fixture(updated_at=None, deleted_at=None)
-
-    def assertDateTimesFilled(self, image_meta):
-        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
-        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
-        self.assertEqual(image_meta['deleted_at'], self.NOW_DATETIME)
-
-    def assertDateTimesEmpty(self, image_meta):
-        self.assertEqual(image_meta['updated_at'], None)
-        self.assertEqual(image_meta['deleted_at'], None)
-
-    def assertDateTimesBlank(self, image_meta):
-        self.assertEqual(image_meta['updated_at'], '')
-        self.assertEqual(image_meta['deleted_at'], '')
 
     def test_create_with_instance_id(self):
         """Ensure instance_id is persisted as an image-property"""
@@ -216,14 +121,23 @@ class TestGlanceImageService(test.TestCase):
                    'properties': {'instance_id': '42', 'user_id': 'fake'}}
 
         image_id = self.service.create(self.context, fixture)['id']
-
         image_meta = self.service.show(self.context, image_id)
-        expected = {'id': image_id, 'name': 'test image', 'is_public': False,
-                    'size': None, 'location': None, 'disk_format': None,
-                    'container_format': None, 'checksum': None,
-                    'created_at': None, 'updated_at': None,
-                    'deleted_at': None, 'deleted': None, 'status': None,
-                    'properties': {'instance_id': '42', 'user_id': 'fake'}}
+        expected = {
+            'id': image_id,
+            'name': 'test image',
+            'is_public': False,
+            'size': None,
+            'location': None,
+            'disk_format': None,
+            'container_format': None,
+            'checksum': None,
+            'created_at': self.NOW_DATETIME,
+            'updated_at': self.NOW_DATETIME,
+            'deleted_at': None,
+            'deleted': None,
+            'status': None,
+            'properties': {'instance_id': '42', 'user_id': 'fake'},
+        }
         self.assertDictMatch(image_meta, expected)
 
         image_metas = self.service.detail(self.context)
@@ -238,12 +152,22 @@ class TestGlanceImageService(test.TestCase):
         fixture = {'name': 'test image', 'is_public': False}
         image_id = self.service.create(self.context, fixture)['id']
 
-        expected = {'id': image_id, 'name': 'test image', 'is_public': False,
-                    'size': None, 'location': None, 'disk_format': None,
-                    'container_format': None, 'checksum': None,
-                    'created_at': None, 'updated_at': None,
-                    'deleted_at': None, 'deleted': None, 'status': None,
-                    'properties': {}}
+        expected = {
+            'id': image_id,
+            'name': 'test image',
+            'is_public': False,
+            'size': None,
+            'location': None,
+            'disk_format': None,
+            'container_format': None,
+            'checksum': None,
+            'created_at': self.NOW_DATETIME,
+            'updated_at': self.NOW_DATETIME,
+            'deleted_at': None,
+            'deleted': None,
+            'status': None,
+            'properties': {},
+        }
         actual = self.service.show(self.context, image_id)
         self.assertDictMatch(actual, expected)
 
@@ -367,8 +291,8 @@ class TestGlanceImageService(test.TestCase):
                 'disk_format': None,
                 'container_format': None,
                 'checksum': None,
-                'created_at': None,
-                'updated_at': None,
+                'created_at': self.NOW_DATETIME,
+                'updated_at': self.NOW_DATETIME,
                 'deleted_at': None,
                 'deleted': None
             }
@@ -410,8 +334,8 @@ class TestGlanceImageService(test.TestCase):
                 'disk_format': None,
                 'container_format': None,
                 'checksum': None,
-                'created_at': None,
-                'updated_at': None,
+                'created_at': self.NOW_DATETIME,
+                'updated_at': self.NOW_DATETIME,
                 'deleted_at': None,
                 'deleted': None
             }
@@ -453,12 +377,22 @@ class TestGlanceImageService(test.TestCase):
         image_id = self.service.create(self.context, fixture)['id']
 
         image_meta = self.service.show(self.context, image_id)
-        expected = {'id': image_id, 'name': 'image1', 'is_public': True,
-                    'size': None, 'location': None, 'disk_format': None,
-                    'container_format': None, 'checksum': None,
-                    'created_at': None, 'updated_at': None,
-                    'deleted_at': None, 'deleted': None, 'status': None,
-                    'properties': {}}
+        expected = {
+            'id': image_id,
+            'name': 'image1',
+            'is_public': True,
+            'size': None,
+            'location': None,
+            'disk_format': None,
+            'container_format': None,
+            'checksum': None,
+            'created_at': self.NOW_DATETIME,
+            'updated_at': self.NOW_DATETIME,
+            'deleted_at': None,
+            'deleted': None,
+            'status': None,
+            'properties': {},
+        }
         self.assertEqual(image_meta, expected)
 
     def test_show_raises_when_no_authtoken_in_the_context(self):
@@ -476,89 +410,44 @@ class TestGlanceImageService(test.TestCase):
         fixture = self._make_fixture(name='image10', is_public=True)
         image_id = self.service.create(self.context, fixture)['id']
         image_metas = self.service.detail(self.context)
-        expected = [{'id': image_id, 'name': 'image10', 'is_public': True,
-                     'size': None, 'location': None, 'disk_format': None,
-                     'container_format': None, 'checksum': None,
-                     'created_at': None, 'updated_at': None,
-                     'deleted_at': None, 'deleted': None, 'status': None,
-                     'properties': {}}]
+        expected = [
+            {
+                'id': image_id,
+                'name': 'image10',
+                'is_public': True,
+                'size': None,
+                'location': None,
+                'disk_format': None,
+                'container_format': None,
+                'checksum': None,
+                'created_at': self.NOW_DATETIME,
+                'updated_at': self.NOW_DATETIME,
+                'deleted_at': None,
+                'deleted': None,
+                'status': None,
+                'properties': {},
+            },
+        ]
         self.assertEqual(image_metas, expected)
-
-    def test_show_handles_none_datetimes(self):
-        fixture = self._make_fixture(updated_at=None, deleted_at=None)
-        image_id = self.service.create(self.context, fixture)['id']
-        image_meta = self.service.show(self.context, image_id)
-        self.assertDateTimesEmpty(image_meta)
-
-    def test_show_handles_blank_datetimes(self):
-        fixture = self._make_fixture(updated_at='', deleted_at='')
-        image_id = self.service.create(self.context, fixture)['id']
-        image_meta = self.service.show(self.context, image_id)
-        self.assertDateTimesBlank(image_meta)
-
-    def test_detail_handles_none_datetimes(self):
-        fixture = self._make_fixture(updated_at=None, deleted_at=None)
-        self.service.create(self.context, fixture)
-        image_meta = self.service.detail(self.context)[0]
-        self.assertDateTimesEmpty(image_meta)
-
-    def test_detail_handles_blank_datetimes(self):
-        fixture = self._make_fixture(updated_at='', deleted_at='')
-        self.service.create(self.context, fixture)
-        image_meta = self.service.detail(self.context)[0]
-        self.assertDateTimesBlank(image_meta)
-
-    def test_get_handles_none_datetimes(self):
-        fixture = self._make_fixture(updated_at=None, deleted_at=None)
-        image_id = self.service.create(self.context, fixture)['id']
-        writer = NullWriter()
-        image_meta = self.service.get(self.context, image_id, writer)
-        self.assertDateTimesEmpty(image_meta)
-
-    def test_get_handles_blank_datetimes(self):
-        fixture = self._make_fixture(updated_at='', deleted_at='')
-        image_id = self.service.create(self.context, fixture)['id']
-        writer = NullWriter()
-        image_meta = self.service.get(self.context, image_id, writer)
-        self.assertDateTimesBlank(image_meta)
 
     def test_show_makes_datetimes(self):
         fixture = self._make_datetime_fixture()
         image_id = self.service.create(self.context, fixture)['id']
         image_meta = self.service.show(self.context, image_id)
-        self.assertDateTimesFilled(image_meta)
+        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
+        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
 
     def test_detail_makes_datetimes(self):
         fixture = self._make_datetime_fixture()
         self.service.create(self.context, fixture)
         image_meta = self.service.detail(self.context)[0]
-        self.assertDateTimesFilled(image_meta)
+        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
+        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
 
     def test_get_makes_datetimes(self):
         fixture = self._make_datetime_fixture()
         image_id = self.service.create(self.context, fixture)['id']
         writer = NullWriter()
         image_meta = self.service.get(self.context, image_id, writer)
-        self.assertDateTimesFilled(image_meta)
-
-    def test_create_handles_datetimes(self):
-        fixture = self._make_datetime_fixture()
-        image_meta = self.service.create(self.context, fixture)
-        self.assertDateTimesFilled(image_meta)
-
-    def test_create_handles_none_datetimes(self):
-        fixture = self._make_none_datetime_fixture()
-        image_meta = self.service.create(self.context, fixture)
-        self.assertDateTimesEmpty(image_meta)
-
-    def test_update_handles_datetimes(self):
-        fixture = self._make_datetime_fixture()
-        image_id = self.service.create(self.context, fixture)['id']
-        image_meta = self.service.update(self.context, image_id, {})
-        self.assertDateTimesFilled(image_meta)
-
-    def test_update_handles_none_datetimes(self):
-        fixture = self._make_none_datetime_fixture()
-        image_id = self.service.create(self.context, fixture)['id']
-        image_meta = self.service.update(self.context, image_id, {})
-        self.assertDateTimesEmpty(image_meta)
+        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
+        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)

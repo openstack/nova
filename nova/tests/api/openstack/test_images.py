@@ -29,31 +29,30 @@ import stubout
 import webob
 
 from nova import context
-from nova import test
 import nova.api.openstack
 from nova.api.openstack import images
+from nova import test
 from nova.tests.api.openstack import fakes
+
+
+NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
 
 class ImagesTest(test.TestCase):
     """
     Test of the OpenStack API /images application controller w/Glance.
     """
-    NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
-    NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
     def setUp(self):
         """Run before each test."""
         super(ImagesTest, self).setUp()
-        self.flags(image_service='nova.image.glance.GlanceImageService')
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        self.fixtures = self._make_image_fixtures()
-        fakes.stub_out_glance(self.stubs, initial_fixtures=self.fixtures)
         fakes.stub_out_compute_api_snapshot(self.stubs)
         fakes.stub_out_compute_api_backup(self.stubs)
+        fakes.stub_out_glance(self.stubs)
 
     def tearDown(self):
         """Run after each test."""
@@ -63,36 +62,30 @@ class ImagesTest(test.TestCase):
     def _get_fake_context(self):
         class Context(object):
             project_id = 'fake'
+            auth_token = True
         return Context()
-
-    def _applicable_fixture(self, fixture, user_id):
-        """Determine if this fixture is applicable for given user id."""
-        is_public = fixture["is_public"]
-        try:
-            uid = fixture["properties"]["user_id"]
-        except KeyError:
-            uid = None
-        return uid == user_id or is_public
 
     def test_get_image_index(self):
         request = webob.Request.blank('/v1.0/images')
-        response = request.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
 
         response_dict = json.loads(response.body)
         response_list = response_dict["images"]
 
-        expected = [{'id': 123, 'name': 'public image'},
-                    {'id': 124, 'name': 'queued snapshot'},
-                    {'id': 125, 'name': 'saving snapshot'},
-                    {'id': 126, 'name': 'active snapshot'},
-                    {'id': 127, 'name': 'killed snapshot'},
-                    {'id': 129, 'name': None}]
+        expected = [{'id': '123', 'name': 'public image'},
+                    {'id': '124', 'name': 'queued snapshot'},
+                    {'id': '125', 'name': 'saving snapshot'},
+                    {'id': '126', 'name': 'active snapshot'},
+                    {'id': '127', 'name': 'killed snapshot'},
+                    {'id': '128', 'name': None}]
 
         self.assertDictListMatch(response_list, expected)
 
     def test_get_image(self):
         request = webob.Request.blank('/v1.0/images/123')
-        response = request.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
 
         self.assertEqual(200, response.status_int)
 
@@ -100,20 +93,21 @@ class ImagesTest(test.TestCase):
 
         expected_image = {
             "image": {
-                "id": 123,
+                "id": "123",
                 "name": "public image",
-                "updated": self.NOW_API_FORMAT,
-                "created": self.NOW_API_FORMAT,
+                "updated": NOW_API_FORMAT,
+                "created": NOW_API_FORMAT,
                 "status": "ACTIVE",
                 "progress": 100,
             },
         }
 
-        self.assertEqual(expected_image, actual_image)
+        self.assertDictMatch(expected_image, actual_image)
 
     def test_get_image_v1_1(self):
         request = webob.Request.blank('/v1.1/fake/images/124')
-        response = request.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
 
         actual_image = json.loads(response.body)
 
@@ -124,10 +118,10 @@ class ImagesTest(test.TestCase):
 
         expected_image = {
             "image": {
-                "id": 124,
+                "id": "124",
                 "name": "queued snapshot",
-                "updated": self.NOW_API_FORMAT,
-                "created": self.NOW_API_FORMAT,
+                "updated": NOW_API_FORMAT,
+                "created": NOW_API_FORMAT,
                 "status": "QUEUED",
                 "progress": 0,
                 'server': {
@@ -161,11 +155,12 @@ class ImagesTest(test.TestCase):
     def test_get_image_xml(self):
         request = webob.Request.blank('/v1.0/images/123')
         request.accept = "application/xml"
-        response = request.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
 
         actual_image = minidom.parseString(response.body.replace("  ", ""))
 
-        expected_now = self.NOW_API_FORMAT
+        expected_now = NOW_API_FORMAT
         expected_image = minidom.parseString("""
             <image id="123"
                     name="public image"
@@ -179,15 +174,16 @@ class ImagesTest(test.TestCase):
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
 
     def test_get_image_xml_no_name(self):
-        request = webob.Request.blank('/v1.0/images/129')
+        request = webob.Request.blank('/v1.0/images/128')
         request.accept = "application/xml"
-        response = request.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
 
         actual_image = minidom.parseString(response.body.replace("  ", ""))
 
-        expected_now = self.NOW_API_FORMAT
+        expected_now = NOW_API_FORMAT
         expected_image = minidom.parseString("""
-            <image id="129"
+            <image id="128"
                     name="None"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
@@ -272,90 +268,154 @@ class ImagesTest(test.TestCase):
 
     def test_get_image_index_v1_1(self):
         request = webob.Request.blank('/v1.1/fake/images')
-        response = request.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
 
         response_dict = json.loads(response.body)
         response_list = response_dict["images"]
 
-        fixtures = copy.copy(self.fixtures)
-
-        for image in fixtures:
-            if not self._applicable_fixture(image, "fake"):
-                fixtures.remove(image)
-                continue
-
-            href = "http://localhost/v1.1/fake/images/%s" % image["id"]
-            bookmark = "http://localhost/fake/images/%s" % image["id"]
-            test_image = {
-                "id": image["id"],
-                "name": image["name"],
+        expected = [
+            {
+                "id": "123",
+                "name": "public image",
                 "links": [
                     {
                         "rel": "self",
-                        "href": href,
+                        "href": "http://localhost/v1.1/fake/images/123",
                     },
                     {
                         "rel": "bookmark",
-                        "href": bookmark,
+                        "href": "http://localhost/fake/images/123",
                     },
                 ],
-            }
-            self.assertTrue(test_image in response_list)
+            },
+            {
+                "id": "124",
+                "name": "queued snapshot",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/images/124",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/images/124",
+                    },
+                ],
+            },
+            {
+                "id": "125",
+                "name": "saving snapshot",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/images/125",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/images/125",
+                    },
+                ],
+            },
+            {
+                "id": "126",
+                "name": "active snapshot",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/images/126",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/images/126",
+                    },
+                ],
+            },
+            {
+                "id": "127",
+                "name": "killed snapshot",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/images/127",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/images/127",
+                    },
+                ],
+            },
+            {
+                "id": "128",
+                "name": None,
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/images/128",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/images/128",
+                    },
+                ],
+            },
+        ]
 
-        self.assertEqual(len(response_list), len(fixtures))
+        self.assertDictListMatch(response_list, expected)
 
     def test_get_image_details(self):
         request = webob.Request.blank('/v1.0/images/detail')
-        response = request.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
 
         response_dict = json.loads(response.body)
         response_list = response_dict["images"]
 
         expected = [{
-            'id': 123,
+            'id': '123',
             'name': 'public image',
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
         },
         {
-            'id': 124,
+            'id': '124',
             'name': 'queued snapshot',
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'QUEUED',
             'progress': 0,
         },
         {
-            'id': 125,
+            'id': '125',
             'name': 'saving snapshot',
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'SAVING',
             'progress': 0,
         },
         {
-            'id': 126,
+            'id': '126',
             'name': 'active snapshot',
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
         },
         {
-            'id': 127,
+            'id': '127',
             'name': 'killed snapshot',
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'FAILED',
             'progress': 0,
         },
         {
-            'id': 129,
+            'id': '128',
             'name': None,
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
         }]
@@ -364,7 +424,8 @@ class ImagesTest(test.TestCase):
 
     def test_get_image_details_v1_1(self):
         request = webob.Request.blank('/v1.1/fake/images/detail')
-        response = request.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
 
         response_dict = json.loads(response.body)
         response_list = response_dict["images"]
@@ -372,11 +433,11 @@ class ImagesTest(test.TestCase):
         server_bookmark = "http://localhost/servers/42"
 
         expected = [{
-            'id': 123,
+            'id': '123',
             'name': 'public image',
-            'metadata': {},
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'metadata': {'key1': 'value1'},
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
             "links": [{
@@ -389,14 +450,14 @@ class ImagesTest(test.TestCase):
             }],
         },
         {
-            'id': 124,
+            'id': '124',
             'name': 'queued snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
                 u'user_id': u'fake',
             },
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'QUEUED',
             'progress': 0,
             'server': {
@@ -420,14 +481,14 @@ class ImagesTest(test.TestCase):
             }],
         },
         {
-            'id': 125,
+            'id': '125',
             'name': 'saving snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
                 u'user_id': u'fake',
             },
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'SAVING',
             'progress': 0,
             'server': {
@@ -451,14 +512,14 @@ class ImagesTest(test.TestCase):
             }],
         },
         {
-            'id': 126,
+            'id': '126',
             'name': 'active snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
                 u'user_id': u'fake',
             },
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
             'server': {
@@ -482,14 +543,14 @@ class ImagesTest(test.TestCase):
             }],
         },
         {
-            'id': 127,
+            'id': '127',
             'name': 'killed snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
                 u'user_id': u'fake',
             },
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'FAILED',
             'progress': 0,
             'server': {
@@ -513,20 +574,20 @@ class ImagesTest(test.TestCase):
             }],
         },
         {
-            'id': 129,
+            'id': '128',
             'name': None,
             'metadata': {},
-            'updated': self.NOW_API_FORMAT,
-            'created': self.NOW_API_FORMAT,
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/129",
+                "href": "http://localhost/v1.1/fake/images/128",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/129",
+                "href": "http://localhost/fake/images/128",
             }],
         },
         ]
@@ -738,24 +799,17 @@ class ImagesTest(test.TestCase):
 
     def test_get_image_found(self):
         req = webob.Request.blank('/v1.0/images/123')
-        res = req.get_response(fakes.wsgi_app())
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        res = req.get_response(app)
         image_meta = json.loads(res.body)['image']
-        expected = {'id': 123, 'name': 'public image',
-                    'updated': self.NOW_API_FORMAT,
-                    'created': self.NOW_API_FORMAT, 'status': 'ACTIVE',
+        expected = {'id': '123', 'name': 'public image',
+                    'updated': NOW_API_FORMAT,
+                    'created': NOW_API_FORMAT, 'status': 'ACTIVE',
                     'progress': 100}
         self.assertDictMatch(image_meta, expected)
 
     def test_get_image_non_existent(self):
         req = webob.Request.blank('/v1.0/images/4242')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 404)
-
-    def test_get_image_not_owned(self):
-        """We should return a 404 if we request an image that doesn't belong
-        to us
-        """
-        req = webob.Request.blank('/v1.0/images/128')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -800,49 +854,6 @@ class ImagesTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
-
-    @classmethod
-    def _make_image_fixtures(cls):
-        image_id = 123
-        base_attrs = {'created_at': cls.NOW_GLANCE_FORMAT,
-                      'updated_at': cls.NOW_GLANCE_FORMAT,
-                      'deleted_at': None,
-                      'deleted': False}
-
-        fixtures = []
-
-        def add_fixture(**kwargs):
-            kwargs.update(base_attrs)
-            fixtures.append(kwargs)
-
-        # Public image
-        add_fixture(id=image_id, name='public image', is_public=True,
-                    status='active', properties={})
-        image_id += 1
-
-        # Snapshot for User 1
-        server_ref = 'http://localhost/v1.1/servers/42'
-        snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
-        for status in ('queued', 'saving', 'active', 'killed'):
-            add_fixture(id=image_id, name='%s snapshot' % status,
-                        is_public=False, status=status,
-                        properties=snapshot_properties)
-            image_id += 1
-
-        # Snapshot for User 2
-        other_snapshot_properties = {'instance_id': '43', 'user_id': 'other'}
-        add_fixture(id=image_id, name='someone elses snapshot',
-                    is_public=False, status='active',
-                    properties=other_snapshot_properties)
-
-        image_id += 1
-
-        # Image without a name
-        add_fixture(id=image_id, is_public=True, status='active',
-                    properties={})
-        image_id += 1
-
-        return fixtures
 
 
 class ImageXMLSerializationTest(test.TestCase):

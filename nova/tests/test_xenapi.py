@@ -745,7 +745,7 @@ class XenAPIMigrateInstance(test.TestCase):
         fake_utils.stub_out_utils_execute(self.stubs)
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
-        glance_stubs.stubout_glance_client(self.stubs)
+        #glance_stubs.stubout_glance_client(self.stubs)
 
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.values)

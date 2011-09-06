@@ -104,7 +104,7 @@ class GlanceImageService(object):
         images = []
         for image_meta in image_metas:
             if self._is_image_available(context, image_meta):
-                base_image_meta = self._translate_to_base(image_meta)
+                base_image_meta = self._translate_from_glance(image_meta)
                 images.append(base_image_meta)
         return images
 
@@ -169,7 +169,7 @@ class GlanceImageService(object):
         if not self._is_image_available(context, image_meta):
             raise exception.ImageNotFound(image_id=image_id)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def show_by_name(self, context, name):
@@ -193,7 +193,7 @@ class GlanceImageService(object):
         for chunk in image_chunks:
             data.write(chunk)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def create(self, context, image_meta, data=None):
@@ -206,7 +206,7 @@ class GlanceImageService(object):
         # Translate Base -> Service
         LOG.debug(_('Creating image in Glance. Metadata passed in %s'),
                   image_meta)
-        sent_service_image_meta = self._translate_to_service(image_meta)
+        sent_service_image_meta = self._translate_to_glance(image_meta)
         LOG.debug(_('Metadata after formatting for Glance %s'),
                   sent_service_image_meta)
 
@@ -214,7 +214,7 @@ class GlanceImageService(object):
             sent_service_image_meta, data)
 
         # Translate Service -> Base
-        base_image_meta = self._translate_to_base(recv_service_image_meta)
+        base_image_meta = self._translate_from_glance(recv_service_image_meta)
         LOG.debug(_('Metadata returned from Glance formatted for Base %s'),
                   base_image_meta)
         return base_image_meta
@@ -228,13 +228,13 @@ class GlanceImageService(object):
         self._set_client_context(context)
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
-        image_meta = _convert_to_string(image_meta)
+        image_meta = self._translate_to_glance(image_meta)
         try:
             image_meta = self.client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def delete(self, context, image_id):
@@ -257,13 +257,13 @@ class GlanceImageService(object):
         pass
 
     @classmethod
-    def _translate_to_service(cls, image_meta):
+    def _translate_to_glance(cls, image_meta):
         image_meta = _convert_to_string(image_meta)
+        image_meta = _remove_read_only(image_meta)
         return image_meta
 
     @classmethod
-    def _translate_to_base(cls, image_meta):
-        """Override translation to handle conversion to datetime objects."""
+    def _translate_from_glance(cls, image_meta):
         image_meta = _limit_attributes(image_meta)
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         image_meta = _convert_from_string(image_meta)
@@ -277,20 +277,7 @@ class GlanceImageService(object):
         an auth_token.
 
         """
-        if hasattr(context, 'auth_token') and context.auth_token:
-            return True
-
-        properties = image_meta.get('properties', {})
-
-        if context.project_id and ('project_id' in properties):
-            return str(properties['project_id']) == str(context.project_id)
-
-        try:
-            user_id = properties['user_id']
-        except KeyError:
-            return False
-
-        return str(user_id) == str(context.user_id)
+        return hasattr(context, 'auth_token') and context.auth_token
 
 
 # utility functions
@@ -364,4 +351,13 @@ def _limit_attributes(image_meta):
 
     output['properties'] = image_meta.get('properties', {})
 
+    return output
+
+
+def _remove_read_only(image_meta):
+    IMAGE_ATTRIBUTES = ['updated_at', 'created_at', 'deleted_at']
+    output = copy.deepcopy(image_meta)
+    for attr in IMAGE_ATTRIBUTES:
+        if attr in output:
+            del output[attr]
     return output
