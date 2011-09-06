@@ -60,7 +60,6 @@ class ZoneState(object):
            child zone."""
         self.last_seen = utils.utcnow()
         self.attempt = 0
-        self.name = zone_metadata.get("name", "n/a")
         self.capabilities = ", ".join(["%s=%s" % (k, v)
                         for k, v in zone_metadata.iteritems() if k != 'name'])
         self.is_active = True
@@ -91,7 +90,7 @@ class ZoneState(object):
 def _call_novaclient(zone):
     """Call novaclient. Broken out for testing purposes."""
     client = novaclient.Client(zone.username, zone.password, None,
-                               zone.api_url)
+                               zone.api_url, service_name = zone.name)
     return client.zones.info()._info
 
 
