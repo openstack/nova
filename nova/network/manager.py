@@ -448,7 +448,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         try:
             fixed_ips = kwargs.get('fixed_ips') or \
                   self.db.fixed_ip_get_by_instance(context, instance_id)
-        except exceptions.FixedIpNotFoundForInstance:
+        except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
         LOG.debug(_("network deallocation for instance |%s|"), instance_id,
                                                                context=context)
