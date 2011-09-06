@@ -365,7 +365,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     {'id': 125, 'name': 'saving snapshot'},
                     {'id': 126, 'name': 'active snapshot'},
                     {'id': 127, 'name': 'killed snapshot'},
-                    {'id': 129, 'name': None}]
+                    {'id': 128, 'name': 'active UUID snapshot'},
+                    {'id': 130, 'name': None}]
 
         self.assertDictListMatch(response_list, expected)
 
@@ -403,14 +404,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         expected_image = {
             "image": {
-                "id": 124,
+                "id": '124',
                 "name": "queued snapshot",
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "QUEUED",
                 "progress": 0,
                 'server': {
-                    'id': 42,
+                    'id': '42',
                     "links": [{
                         "rel": "self",
                         "href": server_href,
@@ -458,7 +459,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
 
     def test_get_image_xml_no_name(self):
-        request = webob.Request.blank('/v1.0/images/129')
+        request = webob.Request.blank('/v1.0/images/130')
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
 
@@ -466,7 +467,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         expected_now = self.NOW_API_FORMAT
         expected_image = minidom.parseString("""
-            <image id="129"
+            <image id="130"
                     name="None"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
@@ -566,7 +567,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             href = "http://localhost/v1.1/fake/images/%s" % image["id"]
             bookmark = "http://localhost/fake/images/%s" % image["id"]
             test_image = {
-                "id": image["id"],
+                "id": "%s" % image["id"],
                 "name": image["name"],
                 "links": [
                     {
@@ -631,7 +632,15 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'progress': 0,
         },
         {
-            'id': 129,
+            'id': 128,
+            'name': 'active UUID snapshot',
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
+            'progress': 100,
+        },
+        {
+            'id': 130,
             'name': None,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -649,9 +658,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response_list = response_dict["images"]
         server_href = "http://localhost/v1.1/servers/42"
         server_bookmark = "http://localhost/servers/42"
+        server_uuid_href = "http://localhost/v1.1/servers/cb8360cb"
+        server_uuid_bookmark = "http://localhost/servers/cb8360cb"
 
         expected = [{
-            'id': 123,
+            'id': '123',
             'name': 'public image',
             'metadata': {},
             'updated': self.NOW_API_FORMAT,
@@ -668,7 +679,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 124,
+            'id': '124',
             'name': 'queued snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -679,7 +690,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'QUEUED',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -699,7 +710,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 125,
+            'id': '125',
             'name': 'saving snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -710,7 +721,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'SAVING',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -730,7 +741,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 126,
+            'id': '126',
             'name': 'active snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -741,7 +752,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'ACTIVE',
             'progress': 100,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -761,7 +772,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 127,
+            'id': '127',
             'name': 'killed snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -772,7 +783,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'FAILED',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -792,7 +803,38 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 129,
+            'id': '128',
+            'name': 'active UUID snapshot',
+            'metadata': {
+                u'instance_ref': u'http://localhost/v1.1/servers/cb8360cb',
+                u'user_id': u'fake',
+            },
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
+            'progress': 100,
+            'server': {
+                'id': 'cb8360cb',
+                "links": [{
+                    "rel": "self",
+                    "href": server_uuid_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_uuid_bookmark,
+                }],
+            },
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/fake/images/128",
+            },
+            {
+                "rel": "bookmark",
+                "href": "http://localhost/fake/images/128",
+            }],
+        },
+        {
+            'id': '130',
             'name': None,
             'metadata': {},
             'updated': self.NOW_API_FORMAT,
@@ -801,11 +843,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'progress': 100,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/129",
+                "href": "http://localhost/v1.1/fake/images/130",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/129",
+                "href": "http://localhost/fake/images/130",
             }],
         },
         ]
@@ -1034,7 +1076,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         """We should return a 404 if we request an image that doesn't belong
         to us
         """
-        req = webob.Request.blank('/v1.0/images/128')
+        req = webob.Request.blank('/v1.0/images/129')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -1099,7 +1141,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     status='active', properties={})
         image_id += 1
 
-        # Snapshot for User 1
+        # Snapshots for User 1
         server_ref = 'http://localhost/v1.1/servers/42'
         snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
         for status in ('queued', 'saving', 'active', 'killed'):
@@ -1108,7 +1150,16 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                         properties=snapshot_properties)
             image_id += 1
 
-        # Snapshot for User 2
+        # Snapshot for User 1 with uuid (128)
+        server_ref = 'http://localhost/v1.1/servers/cb8360cb'
+        snapshot_props = {'instance_ref': server_ref, 'user_id': 'fake'}
+        add_fixture(id=image_id, name='active UUID snapshot',
+                    is_public=False, status='active',
+                    properties=snapshot_props)
+
+        image_id += 1
+
+        # Snapshot for User 2 (129)
         other_snapshot_properties = {'instance_id': '43', 'user_id': 'other'}
         add_fixture(id=image_id, name='someone elses snapshot',
                     is_public=False, status='active',
