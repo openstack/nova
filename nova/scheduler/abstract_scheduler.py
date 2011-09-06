@@ -110,7 +110,6 @@ class AbstractScheduler(driver.Scheduler):
         flavor_id = instance_type['flavorid']
         reservation_id = instance_properties['reservation_id']
         files = kwargs['injected_files']
-        ipgroup = None  # Not supported in OS API ... yet
         child_zone = zone_info['child_zone']
         child_blob = zone_info['child_blob']
         zone = db.zone_get(context, child_zone)
@@ -124,8 +123,9 @@ class AbstractScheduler(driver.Scheduler):
         except novaclient_exceptions.BadRequest, e:
             raise exception.NotAuthorized(_("Bad credentials attempting "
                     "to talk to zone at %(url)s.") % locals())
-        nova.servers.create(name, image_ref, flavor_id, ipgroup, meta, files,
-                child_blob, reservation_id=reservation_id)
+        nova.servers.create(name, image_ref, flavor_id,
+                            meta=meta, files=files, zone_blob=child_blob,
+                            reservation_id=reservation_id)
 
     def _provision_resource_from_blob(self, context, build_plan_item,
             instance_id, request_spec, kwargs):
