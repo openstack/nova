@@ -49,7 +49,7 @@ FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
 flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
-flags.DEFINE_integer('delete_instance_interval', 43200,
+flags.DEFINE_integer('delete_instance_interval', 0,
                      'Time in seconds to wait to scrub deleted instances.')
 
 
