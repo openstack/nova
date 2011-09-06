@@ -34,7 +34,6 @@ from nova import flags
 from nova import image
 from nova import log as logging
 from nova import utils
-from nova.image import service
 from nova.api.ec2 import ec2utils
 
 

@@ -30,7 +30,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.image import service
 
 
 LOG = logging.getLogger('nova.image.glance')
