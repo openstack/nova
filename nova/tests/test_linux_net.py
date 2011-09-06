@@ -114,7 +114,7 @@ fixed_ips = [{'id': 0,
               'instance': instances[0],
               'floating_ips': []},
              {'id': 2,
-              'network_id': 0,
+              'network_id': 1,
               'address': '192.168.0.101',
               'instance_id': 1,
               'allocated': True,
@@ -123,7 +123,7 @@ fixed_ips = [{'id': 0,
               'instance': instances[1],
               'floating_ips': []},
              {'id': 3,
-              'network_id': 1,
+              'network_id': 0,
               'address': '192.168.1.101',
               'instance_id': 1,
               'allocated': True,
@@ -256,7 +256,7 @@ class LinuxNetworkTestCase(test.TestCase):
         "10.0.0.1,fake_instance00.novalocal,"\
             "192.168.0.100,net:NW-i00000000-0\n"\
         "10.0.0.4,fake_instance01.novalocal,"\
-            "192.168.1.101,net:NW-i00000001-1"
+            "192.168.1.101,net:NW-i00000001-0"
         actual_hosts = self.driver.get_dhcp_hosts(None, networks[1])
 
         self.assertEquals(actual_hosts, expected)
@@ -274,7 +274,7 @@ class LinuxNetworkTestCase(test.TestCase):
         "10.0.0.2,fake_instance00.novalocal,"\
             "192.168.1.100,net:NW-i00000000-1\n"\
         "10.0.0.3,fake_instance01.novalocal,"\
-            "192.168.0.101,net:NW-i00000001-0"
+            "192.168.0.101,net:NW-i00000001-1"
         actual_hosts = self.driver.get_dhcp_hosts(None, networks[0])
 
         self.assertEquals(actual_hosts, expected)
@@ -301,7 +301,7 @@ class LinuxNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         expected_opts = '\n'\
-                        '\n'\
+                        'NW-i00000001-0,3\n'\
                         ''
         actual_opts = self.driver.get_dhcp_opts(None, networks[0])
 
@@ -329,8 +329,8 @@ class LinuxNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         expected_opts = 'NW-i00000000-1,3\n'\
-                        'NW-i00000001-0,3\n'\
-                        'NW-i00000002-1,3'
+                        '\n'\
+                        ''
         actual_opts = self.driver.get_dhcp_opts(None, networks[1])
 
         self.assertEquals(actual_opts, expected_opts)
