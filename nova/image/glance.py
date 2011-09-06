@@ -280,7 +280,7 @@ class GlanceImageService(object):
         if hasattr(context, 'auth_token') and context.auth_token:
             return True
 
-        properties = image_meta['properties']
+        properties = image_meta.get('properties', {})
 
         if context.project_id and ('project_id' in properties):
             return str(properties['project_id']) == str(context.project_id)
