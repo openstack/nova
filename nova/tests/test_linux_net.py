@@ -18,10 +18,10 @@
 from nova import context
 from nova import db
 from nova import exception
+from nova import flags
 from nova import log as logging
 from nova import test
 from nova import utils
-from nova import flags
 from nova.network import manager as network_manager
 
 import mox
@@ -44,7 +44,9 @@ instances = [{'id': 0,
 addresses = [{"address": "10.0.0.1"},
              {"address": "10.0.0.2"},
              {"address": "10.0.0.3"},
-             {"address": "10.0.0.4"}]
+             {"address": "10.0.0.4"},
+             {"address": "10.0.0.5"},
+             {"address": "10.0.0.6"}]
 
 
 networks = [{'id': 0,
@@ -128,6 +130,24 @@ fixed_ips = [{'id': 0,
               'virtual_interface_id': 3,
               'virtual_interface': addresses[3],
               'instance': instances[1],
+              'floating_ips': []},
+             {'id': 4,
+              'network_id': 0,
+              'address': '192.168.0.102',
+              'instance_id': 0,
+              'allocated': True,
+              'virtual_interface_id': 4,
+              'virtual_interface': addresses[4],
+              'instance': instances[0],
+              'floating_ips': []},
+             {'id': 5,
+              'network_id': 1,
+              'address': '192.168.1.102',
+              'instance_id': 1,
+              'allocated': True,
+              'virtual_interface_id': 5,
+              'virtual_interface': addresses[5],
+              'instance': instances[1],
               'floating_ips': []}]
 
 
@@ -154,6 +174,18 @@ vifs = [{'id': 0,
          'uuid': '00000000-0000-0000-0000-0000000000000003',
          'network_id': 0,
          'network': networks[0],
+         'instance_id': 1},
+        {'id': 4,
+         'address': 'DE:AD:BE:EF:00:04',
+         'uuid': '00000000-0000-0000-0000-0000000000000004',
+         'network_id': 0,
+         'network': networks[0],
+         'instance_id': 0},
+        {'id': 5,
+         'address': 'DE:AD:BE:EF:00:05',
+         'uuid': '00000000-0000-0000-0000-0000000000000005',
+         'network_id': 1,
+         'network': networks[1],
          'instance_id': 1}]
 
 
@@ -167,7 +199,6 @@ class LinuxNetworkTestCase(test.TestCase):
 
     def test_update_dhcp_for_nw00(self):
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_network')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
 
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
@@ -175,9 +206,6 @@ class LinuxNetworkTestCase(test.TestCase):
                                             .AndReturn([fixed_ips[0],
                                                         fixed_ips[3]])
 
-        db.instance_get_all_by_network(mox.IgnoreArg(),
-                                       mox.IgnoreArg())\
-                                       .AndReturn(instances)
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
                                             mox.IgnoreArg())\
                                             .AndReturn([fixed_ips[0],
@@ -194,7 +222,6 @@ class LinuxNetworkTestCase(test.TestCase):
 
     def test_update_dhcp_for_nw01(self):
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_network')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
 
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
@@ -202,9 +229,6 @@ class LinuxNetworkTestCase(test.TestCase):
                                             .AndReturn([fixed_ips[1],
                                                         fixed_ips[2]])
 
-        db.instance_get_all_by_network(mox.IgnoreArg(),
-                                       mox.IgnoreArg())\
-                                       .AndReturn(instances)
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
                                             mox.IgnoreArg())\
                                             .AndReturn([fixed_ips[1],
@@ -257,27 +281,27 @@ class LinuxNetworkTestCase(test.TestCase):
 
     def test_get_dhcp_opts_for_nw00(self):
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_network')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
 
-        db.instance_get_all_by_network(mox.IgnoreArg(),
-                                       mox.IgnoreArg())\
-                                       .AndReturn(instances)
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
                                             mox.IgnoreArg())\
                                             .AndReturn([fixed_ips[0],
-                                                        fixed_ips[3]])
+                                                        fixed_ips[3],
+                                                        fixed_ips[4]])
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
                                              mox.IgnoreArg())\
                                              .AndReturn([vifs[0],
-                                                         vifs[1]])
+                                                         vifs[1],
+                                                         vifs[4]])
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
                                              mox.IgnoreArg())\
                                              .AndReturn([vifs[2],
-                                                         vifs[3]])
+                                                         vifs[3],
+                                                         vifs[5]])
         self.mox.ReplayAll()
 
         expected_opts = '\n'\
+                        '\n'\
                         ''
         actual_opts = self.driver.get_dhcp_opts(None, networks[0])
 
@@ -285,28 +309,28 @@ class LinuxNetworkTestCase(test.TestCase):
 
     def test_get_dhcp_opts_for_nw01(self):
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_network')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
 
-        db.instance_get_all_by_network(mox.IgnoreArg(),
-                                       mox.IgnoreArg())\
-                                       .AndReturn(instances)
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
                                             mox.IgnoreArg())\
                                             .AndReturn([fixed_ips[1],
-                                                        fixed_ips[2]])
+                                                        fixed_ips[2],
+                                                        fixed_ips[5]])
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
                                              mox.IgnoreArg())\
                                              .AndReturn([vifs[0],
-                                                         vifs[1]])
+                                                         vifs[1],
+                                                         vifs[4]])
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
                                              mox.IgnoreArg())\
                                              .AndReturn([vifs[2],
-                                                         vifs[3]])
+                                                         vifs[3],
+                                                         vifs[5]])
         self.mox.ReplayAll()
 
         expected_opts = 'NW-i00000000-1,3\n'\
-                        'NW-i00000001-0,3'
+                        'NW-i00000001-0,3\n'\
+                        'NW-i00000002-1,3'
         actual_opts = self.driver.get_dhcp_opts(None, networks[1])
 
         self.assertEquals(actual_opts, expected_opts)

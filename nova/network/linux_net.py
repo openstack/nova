@@ -517,11 +517,13 @@ def get_dhcp_opts(context, network_ref):
     hosts = []
     default_gateway_network_node = dict()
     network_id = network_ref['id']
-    instance_refs = db.instance_get_all_by_network(context, network_id)
+    instance_set = set()
     ips_ref = db.network_get_associated_fixed_ips(context, network_id)
 
-    for instance_ref in instance_refs:
-        instance_id = instance_ref['id']
+    for fixed_ip_ref in ips_ref:
+        instance_set.add(fixed_ip_ref['instance_id'])
+
+    for instance_id in instance_set:
         # nic number is decided by xxx from this function in xxx function
         vifs = db.virtual_interface_get_by_instance(context, instance_id)
         if vifs == None:

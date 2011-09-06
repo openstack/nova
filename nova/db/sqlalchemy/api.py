@@ -1417,20 +1417,6 @@ def instance_get_all_by_reservation(context, reservation_id):
                 all()
 
 
-def instance_get_all_by_network(context, network_id):
-    session = get_session()
-    return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('virtual_interfaces')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ips.network')).\
-                   options(joinedload('metadata')).\
-                   options(joinedload('instance_type')).\
-                   filter_by(deleted=can_read_deleted(context)).\
-                   filter_by(network_id=network_id).\
-                   all()
-
-
 @require_context
 def instance_get_by_fixed_ip(context, address):
     """Return instance ref by exact match of FixedIP"""
