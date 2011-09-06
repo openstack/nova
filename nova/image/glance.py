@@ -276,7 +276,23 @@ class GlanceImageService(object):
         an auth_token.
 
         """
-        return hasattr(context, 'auth_token') and context.auth_token
+        if hasattr(context, 'auth_token') and context.auth_token:
+            return True
+
+        if image_meta['is_public'] or context.is_admin:
+            return True
+
+        properties = image_meta['properties']
+
+        if context.project_id and ('project_id' in properties):
+            return str(properties['project_id']) == str(context.project_id)
+
+        try:
+            user_id = properties['user_id']
+        except KeyError:
+            return False
+
+        return str(user_id) == str(context.user_id)
 
 
 # utility functions
