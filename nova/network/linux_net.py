@@ -438,7 +438,7 @@ def ensure_vpn_forward(public_ip, port, private_ip):
 
 def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule."""
-    for chain, rule in floating_forward_rules(floaing_ip, fixed_ip):
+    for chain, rule in floating_forward_rules(floating_ip, fixed_ip):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()
 
