@@ -16,6 +16,7 @@
 #    under the License.
 
 import base64
+import datetime
 import json
 import unittest
 from xml.dom import minidom
@@ -23,18 +24,11 @@ from xml.dom import minidom
 import stubout
 import webob
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import test
-from nova import utils
 import nova.api.openstack
-from nova.api.openstack import servers
-from nova.api.openstack.contrib import createserverext
-import nova.compute.api
-
-import nova.scheduler.api
-import nova.image.fake
-import nova.rpc
 from nova.tests.api.openstack import fakes
 
 
@@ -51,22 +45,45 @@ DUPLICATE_NETWORKS = [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10.0.1.12'),
 
 INVALID_NETWORKS = [('invalid', 'invalid-ip-address')]
 
+INSTANCE = {
+             "id": 1,
+             "display_name": "test_server",
+             "uuid": FAKE_UUID,
+             "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
+             "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
+             "security_groups": [{"id": 1, "name": "test"}]
+        }
+
+
+def return_server_by_id(context, id, session=None):
+    INSTANCE['id'] = id
+    return INSTANCE
+
+
+def return_security_group_non_existing(context, project_id, group_name):
+    raise exception.SecurityGroupNotFoundForProject(project_id=project_id,
+                                                 security_group_id=group_name)
+
+
+def return_security_group_get_by_name(context, project_id, group_name):
+    return {'id': 1, 'name': group_name}
+
+
+def return_security_group_get(context, security_group_id, session):
+    return {'id': security_group_id}
+
+
+def return_instance_add_security_group(context, instance_id,
+                                       security_group_id):
+    pass
+
 
 class CreateserverextTest(test.TestCase):
 
     def setUp(self):
         super(CreateserverextTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
-        fakes.stub_out_image_service(self.stubs)
-        fakes.stub_out_key_pair_funcs(self.stubs)
-        self.allow_admin = FLAGS.allow_admin_api
 
     def tearDown(self):
-        self.stubs.UnsetAll()
-        FLAGS.allow_admin_api = self.allow_admin
         super(CreateserverextTest, self).tearDown()
 
     def _setup_mock_compute_api(self):
@@ -76,6 +93,8 @@ class CreateserverextTest(test.TestCase):
             def __init__(self):
                 self.injected_files = None
                 self.networks = None
+                self.user_data = None
+                self.db = db
 
             def create(self, *args, **kwargs):
                 if 'injected_files' in kwargs:
@@ -87,6 +106,10 @@ class CreateserverextTest(test.TestCase):
                     self.networks = kwargs['requested_networks']
                 else:
                     self.networks = None
+
+                if 'user_data' in kwargs:
+                    self.user_data = kwargs['user_data']
+
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'uuid': FAKE_UUID,
                          'created_at': "",
@@ -107,6 +130,18 @@ class CreateserverextTest(test.TestCase):
             '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
         return compute_api
 
+    def _create_security_group_request_dict(self, security_groups):
+        server = {}
+        server['name'] = 'new-server-test'
+        server['imageRef'] = 1
+        server['flavorRef'] = 1
+        if security_groups is not None:
+            sg_list = []
+            for name in security_groups:
+                sg_list.append({'name': name})
+            server['security_groups'] = sg_list
+        return {'server': server}
+
     def _create_networks_request_dict(self, networks):
         server = {}
         server['name'] = 'new-server-test'
@@ -117,6 +152,14 @@ class CreateserverextTest(test.TestCase):
             for uuid, fixed_ip in networks:
                 network_list.append({'uuid': uuid, 'fixed_ip': fixed_ip})
             server['networks'] = network_list
+        return {'server': server}
+
+    def _create_user_data_request_dict(self, user_data):
+        server = {}
+        server['name'] = 'new-server-test'
+        server['imageRef'] = 1
+        server['flavorRef'] = 1
+        server['user_data'] = user_data
         return {'server': server}
 
     def _get_create_request_json(self, body_dict):
@@ -177,6 +220,13 @@ class CreateserverextTest(test.TestCase):
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         return request, response, compute_api.networks
+
+    def _create_instance_with_user_data_json(self, networks):
+        body_dict = self._create_user_data_request_dict(networks)
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        return request, response, compute_api.user_data
 
     def _create_instance_with_networks_xml(self, networks):
         body_dict = self._create_networks_request_dict(networks)
@@ -304,3 +354,60 @@ class CreateserverextTest(test.TestCase):
         self.assertEquals(response.status_int, 202)
         self.assertEquals(compute_api.networks,
                           [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
+
+    def test_create_instance_with_userdata(self):
+        user_data_contents = '#!/bin/bash\necho "Oh no!"\n'
+        user_data_contents = base64.b64encode(user_data_contents)
+        request, response, user_data = \
+                self._create_instance_with_user_data_json(user_data_contents)
+        self.assertEquals(response.status_int, 202)
+        self.assertEquals(user_data, user_data_contents)
+
+    def test_create_instance_with_userdata_none(self):
+        user_data_contents = None
+        request, response, user_data = \
+                self._create_instance_with_user_data_json(user_data_contents)
+        self.assertEquals(response.status_int, 202)
+        self.assertEquals(user_data, user_data_contents)
+
+    def test_create_instance_with_userdata_with_non_b64_content(self):
+        user_data_contents = '#!/bin/bash\necho "Oh no!"\n'
+        request, response, user_data = \
+                self._create_instance_with_user_data_json(user_data_contents)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(user_data, None)
+
+    def test_create_instance_with_security_group_json(self):
+        security_groups = ['test', 'test1']
+        self.stubs.Set(nova.db.api, 'security_group_get_by_name',
+                       return_security_group_get_by_name)
+        self.stubs.Set(nova.db.api, 'instance_add_security_group',
+                       return_instance_add_security_group)
+        body_dict = self._create_security_group_request_dict(security_groups)
+        request = self._get_create_request_json(body_dict)
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEquals(response.status_int, 202)
+
+    def test_get_server_by_id_verify_security_groups_json(self):
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        req = webob.Request.blank('/v1.1/123/os-create-server-ext/1')
+        req.headers['Content-Type'] = 'application/json'
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEquals(response.status_int, 200)
+        res_dict = json.loads(response.body)
+        expected_security_group = [{"name": "test"}]
+        self.assertEquals(res_dict['server']['security_groups'],
+                          expected_security_group)
+
+    def test_get_server_by_id_verify_security_groups_xml(self):
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        req = webob.Request.blank('/v1.1/123/os-create-server-ext/1')
+        req.headers['Accept'] = 'application/xml'
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEquals(response.status_int, 200)
+        dom = minidom.parseString(response.body)
+        server = dom.childNodes[0]
+        sec_groups = server.getElementsByTagName('security_groups')[0]
+        sec_group = sec_groups.getElementsByTagName('security_group')[0]
+        self.assertEqual(INSTANCE['security_groups'][0]['name'],
+                         sec_group.getAttribute("name"))

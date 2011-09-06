@@ -193,8 +193,9 @@ class Instance(BASE, NovaBase):
     key_name = Column(String(255))
     key_data = Column(Text)
 
-    state = Column(Integer)
-    state_description = Column(String(255))
+    power_state = Column(Integer)
+    vm_state = Column(String(255))
+    task_state = Column(String(255))
 
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
@@ -237,17 +238,6 @@ class Instance(BASE, NovaBase):
     # to connect to the instance
     access_ip_v4 = Column(String(255))
     access_ip_v6 = Column(String(255))
-
-    # TODO(vish): see Ewan's email about state improvements, probably
-    #             should be in a driver base class or some such
-    # vmstate_state = running, halted, suspended, paused
-    # power_state = what we have
-    # task_state = transitory and may trigger power state transition
-
-    #@validates('state')
-    #def validate_state(self, key, state):
-    #    assert(state in ['nostate', 'running', 'blocked', 'paused',
-    #                     'shutdown', 'shutoff', 'crashed'])
 
 
 class VirtualStorageArray(BASE, NovaBase):

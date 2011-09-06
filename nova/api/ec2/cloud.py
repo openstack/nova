@@ -47,6 +47,7 @@ from nova import utils
 from nova import volume
 from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
+from nova.compute import vm_states
 from nova.image import s3
 
 
@@ -76,6 +77,30 @@ def _gen_key(context, user_id, key_name):
     key['fingerprint'] = fingerprint
     db.key_pair_create(context, key)
     return {'private_key': private_key, 'fingerprint': fingerprint}
+
+
+# EC2 API can return the following values as documented in the EC2 API
+# http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/
+#    ApiReference-ItemType-InstanceStateType.html
+# pending | running | shutting-down | terminated | stopping | stopped
+_STATE_DESCRIPTION_MAP = {
+    None: 'pending',
+    vm_states.ACTIVE: 'running',
+    vm_states.BUILDING: 'pending',
+    vm_states.REBUILDING: 'pending',
+    vm_states.DELETED: 'terminated',
+    vm_states.STOPPED: 'stopped',
+    vm_states.MIGRATING: 'migrate',
+    vm_states.RESIZING: 'resize',
+    vm_states.PAUSED: 'pause',
+    vm_states.SUSPENDED: 'suspend',
+    vm_states.RESCUED: 'rescue',
+}
+
+
+def state_description_from_vm_state(vm_state):
+    """Map the vm state to the server status string"""
+    return _STATE_DESCRIPTION_MAP.get(vm_state, vm_state)
 
 
 # TODO(yamahata): hypervisor dependent default device name
@@ -995,14 +1020,6 @@ class CloudController(object):
                 'status': volume['attach_status'],
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
-    @staticmethod
-    def _convert_to_set(lst, label):
-        if lst is None or lst == []:
-            return None
-        if not isinstance(lst, list):
-            lst = [lst]
-        return [{label: x} for x in lst]
-
     def _format_kernel_id(self, instance_ref, result, key):
         kernel_id = instance_ref['kernel_id']
         if kernel_id is None:
@@ -1039,11 +1056,12 @@ class CloudController(object):
 
         def _format_attr_instance_initiated_shutdown_behavior(instance,
                                                                result):
-            state_description = instance['state_description']
-            state_to_value = {'stopping': 'stop',
-                              'stopped': 'stop',
-                              'terminating': 'terminate'}
-            value = state_to_value.get(state_description)
+            vm_state = instance['vm_state']
+            state_to_value = {
+                vm_states.STOPPED: 'stopped',
+                vm_states.DELETED: 'terminated',
+            }
+            value = state_to_value.get(vm_state)
             if value:
                 result['instanceInitiatedShutdownBehavior'] = value
 
@@ -1160,7 +1178,7 @@ class CloudController(object):
         if instance.get('security_groups'):
             for security_group in instance['security_groups']:
                 security_group_names.append(security_group['name'])
-        result['groupSet'] = CloudController._convert_to_set(
+        result['groupSet'] = utils.convert_to_list_dict(
             security_group_names, 'groupId')
 
     def _format_instances(self, context, instance_id=None, use_v6=False,
@@ -1198,8 +1216,8 @@ class CloudController(object):
             self._format_kernel_id(instance, i, 'kernelId')
             self._format_ramdisk_id(instance, i, 'ramdiskId')
             i['instanceState'] = {
-                'code': instance['state'],
-                'name': instance['state_description']}
+                'code': instance['power_state'],
+                'name': state_description_from_vm_state(instance['vm_state'])}
             fixed_addr = None
             floating_addr = None
             if instance['fixed_ips']:
@@ -1224,7 +1242,8 @@ class CloudController(object):
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],
                     instance['host'])
-            i['productCodesSet'] = self._convert_to_set([], 'product_codes')
+            i['productCodesSet'] = utils.convert_to_list_dict([],
+                                                              'product_codes')
             self._format_instance_type(instance, i)
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
@@ -1618,22 +1637,22 @@ class CloudController(object):
         # stop the instance if necessary
         restart_instance = False
         if not no_reboot:
-            state_description = instance['state_description']
+            vm_state = instance['vm_state']
 
             # if the instance is in subtle state, refuse to proceed.
-            if state_description not in ('running', 'stopping', 'stopped'):
+            if vm_state not in (vm_states.ACTIVE, vm_states.STOPPED):
                 raise exception.InstanceNotRunning(instance_id=ec2_instance_id)
 
-            if state_description == 'running':
+            if vm_state == vm_states.ACTIVE:
                 restart_instance = True
                 self.compute_api.stop(context, instance_id=instance_id)
 
             # wait instance for really stopped
             start_time = time.time()
-            while state_description != 'stopped':
+            while vm_state != vm_states.STOPPED:
                 time.sleep(1)
                 instance = self.compute_api.get(context, instance_id)
-                state_description = instance['state_description']
+                vm_state = instance['vm_state']
                 # NOTE(yamahata): timeout and error. 1 hour for now for safety.
                 #                 Is it too short/long?
                 #                 Or is there any better way?

@@ -21,13 +21,12 @@ import hashlib
 import os
 
 from nova import exception
-import nova.compute
-import nova.context
 from nova.api.openstack import common
 from nova.api.openstack.views import addresses as addresses_view
 from nova.api.openstack.views import flavors as flavors_view
 from nova.api.openstack.views import images as images_view
 from nova import utils
+from nova.compute import vm_states
 
 
 class ViewBuilder(object):
@@ -61,17 +60,13 @@ class ViewBuilder(object):
 
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
+        vm_state = inst.get('vm_state', vm_states.BUILDING)
+        task_state = inst.get('task_state')
 
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
-            'status': common.status_from_power_state(inst.get('state'))}
-
-        ctxt = nova.context.get_admin_context()
-        compute_api = nova.compute.API()
-
-        if compute_api.has_finished_migration(ctxt, inst['uuid']):
-            inst_dict['status'] = 'RESIZE-CONFIRM'
+            'status': common.status_from_state(vm_state, task_state)}
 
         # Return the metadata as a dictionary
         metadata = {}
@@ -188,6 +183,7 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['uuid'] = inst['uuid']
+        response['key_name'] = inst.get('key_name', '')
         self._build_config_drive(response, inst)
 
     def _build_links(self, response, inst):

@@ -16,22 +16,30 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Unit Tests for remote procedure calls using queue
+Unit Tests for remote procedure calls using carrot
 """
 
 from nova import context
 from nova import log as logging
-from nova import rpc
+from nova.rpc import impl_carrot
 from nova.tests import test_rpc_common
 
 
 LOG = logging.getLogger('nova.tests.rpc')
 
 
-class RpcTestCase(test_rpc_common._BaseRpcTestCase):
+class RpcCarrotTestCase(test_rpc_common._BaseRpcTestCase):
     def setUp(self):
-        self.rpc = rpc
-        super(RpcTestCase, self).setUp()
+        self.rpc = impl_carrot
+        super(RpcCarrotTestCase, self).setUp()
 
     def tearDown(self):
-        super(RpcTestCase, self).tearDown()
+        super(RpcCarrotTestCase, self).tearDown()
+
+    def test_connectionpool_single(self):
+        """Test that ConnectionPool recycles a single connection."""
+        conn1 = self.rpc.ConnectionPool.get()
+        self.rpc.ConnectionPool.put(conn1)
+        conn2 = self.rpc.ConnectionPool.get()
+        self.rpc.ConnectionPool.put(conn2)
+        self.assertEqual(conn1, conn2)
