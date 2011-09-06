@@ -1744,14 +1744,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   power_state=vm_power_state)
 
     def _reclaim_queued_deletes(self, context):
-        # Find all instances that are queued for deletion
+        "Reclaim instances that are queued for deletion."
+
         instances = self.db.instance_get_all_by_host(context, self.host)
 
+        queue_time = datetime.timedelta(seconds=FLAGS.delete_instance_interval)
         curtime = utils.utcnow()
         for instance in instances:
-            LOG.info('name: %r, state: %r, deleted_at: %r' % (instance['name'], instance['task_state'], instance['deleted_at']))
             if instance['task_state'] == task_states.QUEUED_DELETE and \
-               (curtime - instance['deleted_at'] >= 
-                datetime.timedelta(seconds=FLAGS.delete_instance_interval)):
+               (curtime - instance['deleted_at']) >= queue_time:
                 LOG.info('Deleting %s' % instance['name'])
                 self._delete_instance(context, instance['id'])
