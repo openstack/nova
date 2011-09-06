@@ -49,6 +49,8 @@ FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
 flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
+flags.DEFINE_integer('delete_instance_interval', 43200,
+                     'Time in seconds to wait to scrub deleted instances.')
 
 
 def generate_default_hostname(instance):
@@ -759,17 +761,59 @@ class API(base.Base):
         if not _is_able_to_shutdown(instance, instance_id):
             return
 
+        host = instance['host']
+        if FLAGS.delete_instance_interval and host:
+            self.update(context,
+                        instance_id,
+                        vm_state=vm_states.DELETED,
+                        task_state=task_states.QUEUED_DELETE,
+                        deleted_at=utils.utcnow())
+
+            self._cast_compute_message('power_off_instance', context,
+                        instance_id, host)
+        else:
+            self.update(context,
+                        instance_id,
+                        task_state=task_states.DELETING)
+
+            if host:
+                self._cast_compute_message('terminate_instance', context,
+                        instance_id, host)
+            else:
+                terminate_volumes(self.db, context, instance_id)
+                self.db.instance_destroy(context, instance_id)
+
+    @scheduler_api.reroute_compute("restore")
+    def restore(self, context, instance_id):
+        """Restore a previously deleted (but not reclaimed) instance."""
+        instance = self._get_instance(context, instance_id, 'restore')
+
+        self.update(context,
+                    instance_id,
+                    vm_state=vm_states.ACTIVE,
+                    task_state=None,
+                    deleted_at=None)
+
+        # FIXME: How to handle no host?
+        host = instance['host']
+        if host:
+            self._cast_compute_message('power_on_instance', context,
+                    instance_id, host)
+
+    @scheduler_api.reroute_compute("force_delete")
+    def force_delete(self, context, instance_id):
+        """Force delete a previously deleted (but not reclaimed) instance."""
+        instance = self._get_instance(context, instance_id, 'force delete')
+
         self.update(context,
                     instance_id,
                     task_state=task_states.DELETING)
 
+        # FIXME: How to handle no host?
         host = instance['host']
         if host:
             self._cast_compute_message('terminate_instance', context,
                     instance_id, host)
-        else:
-            terminate_volumes(self.db, context, instance_id)
-            self.db.instance_destroy(context, instance_id)
 
     @scheduler_api.reroute_compute("stop")
     def stop(self, context, instance_id):

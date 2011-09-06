@@ -54,6 +54,8 @@ RESUMING = 'resuming'
 RESCUING = 'rescuing'
 UNRESCUING = 'unrescuing'
 
+QUEUED_DELETE = 'queued_delete'
+
 DELETING = 'deleting'
 STOPPING = 'stopping'
 STARTING = 'starting'

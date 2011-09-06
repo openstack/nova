@@ -250,6 +250,14 @@ class XenAPIConnection(driver.ComputeDriver):
         """Unrescue the specified instance"""
         self._vmops.unrescue(instance, _callback)
 
+    def power_off(self, instance):
+        """Power off the specified instance"""
+        self._vmops.power_off(instance)
+
+    def power_on(self, instance):
+        """Power on the specified instance"""
+        self._vmops.power_on(instance)
+
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
         self._vmops.poll_rescued_instances(timeout)
