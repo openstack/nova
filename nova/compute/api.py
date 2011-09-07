@@ -383,10 +383,6 @@ class API(base.Base):
         If you are changing this method, be sure to update both
         call paths.
         """
-        instance = dict(launch_index=num, **base_options)
-        instance = self.db.instance_create(context, instance)
-        instance_id = instance['id']
-
         elevated = context.elevated()
         if security_group is None:
             security_group = ['default']
@@ -399,6 +395,10 @@ class API(base.Base):
                     context.project_id,
                     security_group_name)
             security_groups.append(group['id'])
+
+        instance = dict(launch_index=num, **base_options)
+        instance = self.db.instance_create(context, instance)
+        instance_id = instance['id']
 
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
