@@ -85,21 +85,6 @@ def vifs(n):
                'instance_id': 0}
 
 
-#def fixed_ips(num_networks, num_ips, num_floating_ips=0):
-#    for network_index in xrange(num_networks):
-#        for ip_index in xrange(num_ips):
-#            fixed_ip_id = network_index * num_ips + ip_index
-#            islice = itertools.islice
-#            yield {'id': fixed_ip_id,
-#                   'network_id': network_index,
-#                   'address': '192.168.%d.1%02d' % (network_index, ip_index),
-#                   'instance_id': 0,
-#                   'allocated': False,
-#                   # and since network_id and vif_id happen to be equivalent
-#                   'virtual_interface_id': network_index,
-#                   'floating_ips': f_ips}
-
-
 def floating_ip_ids():
     for i in xrange(99):
         yield i
