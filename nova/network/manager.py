@@ -74,7 +74,7 @@ flags.DEFINE_string('flat_network_bridge', None,
                     'Bridge for simple network instances')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
-flags.DEFINE_bool('flat_injected', True,
+flags.DEFINE_bool('flat_injected', False,
                   'Whether to attempt to inject network setup into guest')
 flags.DEFINE_string('flat_interface', None,
                     'FlatDhcp will bridge into this interface if set')
@@ -483,6 +483,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         # it is also joined to the instance and network given by those IDs
         for vif in vifs:
             network = vif['network']
+
+            if network is None:
+                continue
 
             # determine which of the instance's IPs belong to this network
             network_IPs = [fixed_ip['address'] for fixed_ip in fixed_ips if
