@@ -282,7 +282,7 @@ class CreateInstanceHelper(object):
         try:
             ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
-            raise exception.RamdiskNotFoundForImage(image_id=image_id)
+            ramdisk_id = None
 
         return kernel_id, ramdisk_id
 
