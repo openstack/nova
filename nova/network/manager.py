@@ -484,6 +484,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         for vif in vifs:
             network = vif['network']
 
+            if network is None:
+                continue
+
             # determine which of the instance's IPs belong to this network
             network_IPs = [fixed_ip['address'] for fixed_ip in fixed_ips if
                            fixed_ip['network_id'] == network['id']]
