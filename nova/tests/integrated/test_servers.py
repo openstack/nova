@@ -124,7 +124,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_deferred_delete(self):
         """Creates and deletes a server."""
-        self.flags(stub_network=True, delete_instance_interval=1)
+        self.flags(stub_network=True, reclaim_instance_interval=1)
 
         # enforce periodic tasks run in short time to avoid wait for 60s.
         self._restart_compute_service(periodic_interval=0.3)
@@ -156,7 +156,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_deferred_delete_restore(self):
         """Creates, deletes and restores a server."""
-        self.flags(stub_network=True, delete_instance_interval=1)
+        self.flags(stub_network=True, reclaim_instance_interval=1)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -189,7 +189,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_deferred_delete_force(self):
         """Creates, deletes and force deletes a server."""
-        self.flags(stub_network=True, delete_instance_interval=1)
+        self.flags(stub_network=True, reclaim_instance_interval=1)
 
         # Create server
         server = self._build_minimal_create_server_request()

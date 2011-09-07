@@ -84,6 +84,8 @@ flags.DEFINE_integer("rescue_timeout", 0,
                      " Set to 0 to disable.")
 flags.DEFINE_integer('host_state_interval', 120,
                      'Interval in seconds for querying the host status')
+flags.DEFINE_integer('reclaim_instance_interval', 0,
+                     'Interval in seconds for reclaiming deleted instances')
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -1748,7 +1750,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         instances = self.db.instance_get_all_by_host(context, self.host)
 
-        queue_time = datetime.timedelta(seconds=FLAGS.delete_instance_interval)
+        queue_time = datetime.timedelta(
+                         seconds=FLAGS.reclaim_instance_interval)
         curtime = utils.utcnow()
         for instance in instances:
             if instance['task_state'] == task_states.QUEUED_DELETE and \

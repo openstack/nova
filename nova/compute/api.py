@@ -49,8 +49,6 @@ FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
 flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
-flags.DEFINE_integer('delete_instance_interval', 0,
-                     'Time in seconds to wait to scrub deleted instances.')
 
 
 def generate_default_hostname(instance):
@@ -762,7 +760,7 @@ class API(base.Base):
             return
 
         host = instance['host']
-        if FLAGS.delete_instance_interval and host:
+        if FLAGS.reclaim_instance_interval and host:
             self.update(context,
                         instance_id,
                         vm_state=vm_states.DELETED,
