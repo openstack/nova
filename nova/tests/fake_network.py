@@ -116,7 +116,7 @@ fixed_ip_id = fixed_ip_ids()
 
 def next_fixed_ip(network_id, num_floating_ips=0):
     next_id = fixed_ip_id.next()
-    f_ips = [FakeModel(**next_floating_ip(fixed_ip_id))
+    f_ips = [FakeModel(**next_floating_ip(next_id))
              for i in xrange(num_floating_ips)]
     return {'id': next,
             'network_id': network_id,
