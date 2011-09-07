@@ -65,6 +65,11 @@ class FakeAbstractScheduler(abstract_scheduler.AbstractScheduler):
     pass
 
 
+class FakeBaseScheduler(base_scheduler.BaseScheduler):
+    # No need to stub anything at the moment
+    pass
+
+
 class FakeZoneManager(zone_manager.ZoneManager):
     def __init__(self):
         self.service_states = {
@@ -365,3 +370,30 @@ class AbstractSchedulerTestCase(test.TestCase):
 
         self.assertEqual(fixture._decrypt_blob(test_data),
                          json.dumps(test_data))
+
+
+class BaseSchedulerTestCase(test.TestCase):
+    """Test case for Base Scheduler."""
+
+    def test_weigh_hosts(self):
+        """
+        Try to weigh a short list of hosts and make sure enough
+        entries for a larger number instances are returned.
+        """
+
+        sched = FakeBaseScheduler()
+
+        # Fake out a list of hosts
+        zm = FakeZoneManager()
+        hostlist = [(host, services['compute'])
+                    for host, services in zm.service_states
+                    if 'compute' in services]
+
+        # Call weigh_hosts()
+        num_instances = len(hostlist) * 2 + len(hostlist) / 2
+        instlist = sched.weigh_hosts('compute',
+                                     dict(num_instances=num_instances),
+                                     hostlist)
+
+        # Should be enough entries to cover all instances
+        self.assertEqual(len(instlist), num_instances)
