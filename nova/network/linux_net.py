@@ -672,11 +672,18 @@ def _host_dhcp_network(fixed_ip_ref):
 def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address in dhcp-host format."""
     instance_ref = fixed_ip_ref['instance']
-    return '%s,%s.%s,%s,%s' % (fixed_ip_ref['virtual_interface']['address'],
-                                   instance_ref['hostname'],
-                                   FLAGS.dhcp_domain,
-                                   fixed_ip_ref['address'],
-                                   "net:" + _host_dhcp_network(fixed_ip_ref))
+    vif = fixed_ip_ref['virtual_interface']
+    if FLAGS.use_single_default_gateway:
+        return '%s,%s.%s,%s,%s' % (vif['address'],
+                               instance_ref['hostname'],
+                               FLAGS.dhcp_domain,
+                               fixed_ip_ref['address'],
+                               "net:" + _host_dhcp_network(fixed_ip_ref))
+    else:
+        return '%s,%s.%s,%s' % (vif['address'],
+                               instance_ref['hostname'],
+                               FLAGS.dhcp_domain,
+                               fixed_ip_ref['address'])
 
 
 def _host_dhcp_opts(fixed_ip_ref):
