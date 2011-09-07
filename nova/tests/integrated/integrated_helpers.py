@@ -70,10 +70,10 @@ class _IntegratedTestBase(test.TestCase):
         self.stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
 
         # set up services
-        self.start_service('compute')
-        self.start_service('volume')
-        self.start_service('network')
-        self.start_service('scheduler')
+        self.compute = self.start_service('compute')
+        self.volume = self.start_service('volume')
+        self.network = self.start_service('network')
+        self.scheduler = self.start_service('scheduler')
 
         self._start_api_service()
 

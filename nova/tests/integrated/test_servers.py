@@ -38,6 +38,15 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         return server
 
+    def _restart_compute_service(self, periodic_interval=None):
+        """restart compute service. NOTE: fake driver forgets all instances."""
+        self.compute.kill()
+        if periodic_interval:
+            self.compute = self.start_service(
+                'compute', periodic_interval=periodic_interval)
+        else:
+            self.compute = self.start_service('compute')
+
     def test_get_servers(self):
         """Simple check that listing servers works."""
         servers = self.api.get_servers()
@@ -116,6 +125,9 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
     def test_deferred_delete(self):
         """Creates and deletes a server."""
         self.flags(stub_network=True, delete_instance_interval=1)
+
+        # enforce periodic tasks run in short time to avoid wait for 60s.
+        self._restart_compute_service(periodic_interval=0.3)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -209,7 +221,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def _wait_for_deletion(self, server_id):
         # Wait (briefly) for deletion
-        for _retries in range(500):
+        for _retries in range(50):
             try:
                 found_server = self.api.get_server(server_id)
             except client.OpenStackApiNotFoundException:
