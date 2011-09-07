@@ -92,13 +92,14 @@ def _is_able_to_shutdown(instance, instance_id):
     return True
 
 
-def _is_delete_queued(instance, instance_id):
+def _is_queued_delete(instance, instance_id):
     vm_state = instance["vm_state"]
     task_state = instance["task_state"]
 
-    if vm_state != vm_states.DELETED:
-        LOG.warn(_("Instance %(instance_id)s is not in a 'deleted' state. It "
-                   "is currently %(vm_state)s. Action aborted.") % locals())
+    if task_state != task_states.QUEUED_DELETE:
+        LOG.warn(_("Instance %(instance_id)s is not in a 'queued deleted' "
+                   "state. It is currently %(task_state)s. Action aborted.") %
+                 locals())
         return False
 
     return True
@@ -798,7 +799,7 @@ class API(base.Base):
         """Restore a previously deleted (but not reclaimed) instance."""
         instance = self._get_instance(context, instance_id, 'restore')
 
-        if not _is_delete_queued(instance, instance_id):
+        if not _is_queued_delete(instance, instance_id):
             return
 
         self.update(context,
@@ -818,7 +819,7 @@ class API(base.Base):
         """Force delete a previously deleted (but not reclaimed) instance."""
         instance = self._get_instance(context, instance_id, 'force delete')
 
-        if not _is_delete_queued(instance, instance_id):
+        if not _is_queued_delete(instance, instance_id):
             return
 
         self.update(context,
