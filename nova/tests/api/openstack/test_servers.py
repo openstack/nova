@@ -349,6 +349,8 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -448,6 +450,8 @@ class ServersTest(test.TestCase):
         expected = minidom.parseString("""
         <server id="1"
                 uuid="%(expected_uuid)s"
+                userId="fake"
+                tenantId="fake"
                 xmlns="http://docs.openstack.org/compute/api/v1.1"
                 xmlns:atom="http://www.w3.org/2005/Atom"
                 name="server1"
@@ -517,6 +521,8 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -612,6 +618,8 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -1201,6 +1209,26 @@ class ServersTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], 100)
 
+    def test_tenant_id_filter_converts_to_project_id_for_admin(self):
+        def fake_get_all(context, filters=None):
+            self.assertNotEqual(filters, None)
+            self.assertEqual(filters['project_id'], 'faketenant')
+            self.assertFalse(filters.get('tenant_id'))
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
+                       fake_get_all)
+        self.flags(allow_admin_api=True)
+
+        req = webob.Request.blank('/v1.1/fake/servers?tenant_id=faketenant')
+        # Use admin context
+        context = nova.context.RequestContext('testuser', 'testproject',
+                is_admin=True)
+        res = req.get_response(fakes.wsgi_app(fake_auth_context=context))
+        res_dict = json.loads(res.body)
+        # Failure in fake_get_all returns non 200 status code
+        self.assertEqual(res.status_int, 200)
+
     def test_get_servers_allows_flavor_v1_1(self):
         def fake_get_all(compute_self, context, search_opts=None):
             self.assertNotEqual(search_opts, None)
@@ -1457,6 +1485,8 @@ class ServersTest(test.TestCase):
                     'access_ip_v4': '1.2.3.4',
                     'access_ip_v6': 'fead::1234',
                     'image_ref': image_ref,
+                    'user_id': 'fake',
+                    'project_id': 'fake',
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                     "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
                     "config_drive": self.config_drive,
@@ -2513,9 +2543,9 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
         req = webob.Request.blank('/v1.0/servers/1/rescue')
+        req.method = 'POST'
         body = {"rescue": {"adminPass": "AABBCC112233"}}
         req.body = json.dumps(body)
-        req.method = 'POST'
         req.content_type = 'application/json'
 
         res = req.get_response(fakes.wsgi_app())
@@ -3130,7 +3160,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": []
+                "networks": [],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -3357,6 +3387,8 @@ class TestServerInstanceCreation(test.TestCase):
                     self.injected_files = None
 
                 return [{'id': '1234', 'display_name': 'fakeinstance',
+                         'user_id': 'fake',
+                         'project_id': 'fake',
                          'uuid': FAKE_UUID}]
 
             def set_admin_password(self, *args, **kwargs):
@@ -3650,8 +3682,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "created_at": created_at,
             "updated_at": updated_at,
             "admin_pass": "",
-            "user_id": "",
-            "project_id": "",
+            "user_id": "fake",
+            "project_id": "fake",
             "image_ref": "5",
             "kernel_id": "",
             "ramdisk_id": "",
@@ -3676,7 +3708,6 @@ class ServersViewBuilderV11Test(test.TestCase):
             "terminated_at": utils.utcnow(),
             "availability_zone": "",
             "display_name": "test_server",
-            "display_description": "",
             "locked": False,
             "metadata": [],
             "accessIPv4": "1.2.3.4",
@@ -3759,6 +3790,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3814,6 +3847,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -3870,6 +3905,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3926,6 +3963,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3985,6 +4024,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -4053,6 +4094,8 @@ class ServerXMLSerializationTest(test.TestCase):
         fixture = {
             "server": {
                 "id": 1,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "uuid": FAKE_UUID,
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
@@ -4190,6 +4233,8 @@ class ServerXMLSerializationTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
@@ -4390,6 +4435,8 @@ class ServerXMLSerializationTest(test.TestCase):
             {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
@@ -4445,6 +4492,8 @@ class ServerXMLSerializationTest(test.TestCase):
             {
                 "id": 2,
                 "uuid": FAKE_UUID,
+                "user_id": 'fake',
+                "tenant_id": 'fake',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 100,
@@ -4564,6 +4613,8 @@ class ServerXMLSerializationTest(test.TestCase):
         fixture = {
             "server": {
                 "id": 1,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "uuid": FAKE_UUID,
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
@@ -4700,6 +4751,8 @@ class ServerXMLSerializationTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
