@@ -14,6 +14,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+from itertools import islice
 
 from nova import db
 from nova import flags
@@ -68,8 +69,8 @@ def fixed_ips(num_networks, num_ips, num_floating_ips=0):
     for network_index in xrange(num_networks):
         for ip_index in xrange(num_ips):
             fixed_ip_id = network_index * num_ips + ip_index
-            f_ips = [FakeModel(**floating_ips(fixed_ip_id).next())
-                     for i in xrange(num_floating_ips)]
+            f_ips = [FakeModel(**floating_ip_dict) for floating_ip_dict
+                     in islice(floating_ips(fixed_ip_id), num_floating_ips)]
             yield {'id': fixed_ip_id,
                    'network_id': network_index,
                    'address': '192.168.%d.1%02d' % (network_index, ip_index),
@@ -94,7 +95,7 @@ flavor = {'id': 0,
 def floating_ips(fixed_ip_id):
     for i in xrange(154):
         yield {'id': i,
-               'address': '10.10.10.%d' % (i + 100),
+               'address': '10.10.%d.%d' % (fixed_ip_id, i + 100),
                'fixed_ip_id': fixed_ip_id,
                'project_id': None,
                'auto_assigned': False}
