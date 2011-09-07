@@ -122,4 +122,5 @@ def notify(publisher_id, event_type, priority, payload):
         driver.notify(msg)
     except Exception, e:
         LOG.exception(_("Problem '%(e)s' attempting to "
-                        "send to notification system." % locals()))
+                        "send to notification system. Payload=%(payload)s" %
+                        locals()))

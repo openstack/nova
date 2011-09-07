@@ -51,6 +51,7 @@ A fake XenAPI SDK.
 """
 
 
+import random
 import uuid
 
 from pprint import pformat
@@ -103,8 +104,10 @@ def create_network(name_label, bridge):
 
 def create_vm(name_label, status,
               is_a_template=False, is_control_domain=False):
+    domid = status == 'Running' and random.randrange(1, 1 << 16) or -1
     return _create_object('VM',
                           {'name_label': name_label,
+                           'domid': domid,
                            'power-state': status,
                            'is_a_template': is_a_template,
                            'is_control_domain': is_control_domain})

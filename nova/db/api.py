@@ -501,9 +501,20 @@ def instance_get_all_by_filters(context, filters):
     return IMPL.instance_get_all_by_filters(context, filters)
 
 
-def instance_get_active_by_window(context, begin, end=None):
-    """Get instances active during a certain time window."""
-    return IMPL.instance_get_active_by_window(context, begin, end)
+def instance_get_active_by_window(context, begin, end=None, project_id=None):
+    """Get instances active during a certain time window.
+
+    Specifying a project_id will filter for a certain project."""
+    return IMPL.instance_get_active_by_window(context, begin, end, project_id)
+
+
+def instance_get_active_by_window_joined(context, begin, end=None,
+                                         project_id=None):
+    """Get instances and joins active during a certain time window.
+
+    Specifying a project_id will filter for a certain project."""
+    return IMPL.instance_get_active_by_window_joined(context, begin, end,
+                                              project_id)
 
 
 def instance_get_all_by_user(context, user_id):

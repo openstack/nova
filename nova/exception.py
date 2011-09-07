@@ -61,7 +61,7 @@ class ApiError(Error):
         super(ApiError, self).__init__(outstr)
 
 
-class BuildInProgress(Error):
+class RebuildRequiresActiveInstance(Error):
     pass
 
 
@@ -146,6 +146,7 @@ class NovaException(Exception):
     message = _("An unknown exception occurred.")
 
     def __init__(self, **kwargs):
+        self.kwargs = kwargs
         try:
             self._error_string = self.message % kwargs
 
@@ -402,10 +403,6 @@ class KernelNotFoundForImage(ImageNotFound):
     message = _("Kernel not found for image %(image_id)s.")
 
 
-class RamdiskNotFoundForImage(ImageNotFound):
-    message = _("Ramdisk not found for image %(image_id)s.")
-
-
 class UserNotFound(NotFound):
     message = _("User %(user_id)s could not be found.")
 
@@ -535,6 +532,10 @@ class FloatingIpNotFoundForHost(FloatingIpNotFound):
 
 class NoMoreFloatingIps(FloatingIpNotFound):
     message = _("Zero floating ips available.")
+
+
+class FloatingIpAlreadyInUse(NovaException):
+    message = _("Floating ip %(address)s already in use by %(fixed_ip)s.")
 
 
 class NoFloatingIpsDefined(NotFound):
