@@ -295,6 +295,8 @@ class AbstractScheduler(driver.Scheduler):
                         "child_zone": child_zone,
                         "child_blob": weighting["blob"]}
                 weighted_hosts.append(host_dict)
+        if FLAGS.spread_first:
+            random.shuffle(weighted_hosts)
         weighted_hosts.sort(key=operator.itemgetter('weight'))
         return weighted_hosts
 
