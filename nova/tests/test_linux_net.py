@@ -195,11 +195,11 @@ class LinuxNetworkTestCase(test.TestCase):
     def setUp(self):
         super(LinuxNetworkTestCase, self).setUp()
         network_driver = FLAGS.network_driver
-        self.flags(use_single_default_gateway=True)
         self.driver = utils.import_object(network_driver)
         self.driver.db = db
 
     def test_update_dhcp_for_nw00(self):
+        self.flags(use_single_default_gateway=True)
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
 
@@ -223,6 +223,7 @@ class LinuxNetworkTestCase(test.TestCase):
         self.driver.update_dhcp(None, "eth0", networks[0])
 
     def test_update_dhcp_for_nw01(self):
+        self.flags(use_single_default_gateway=True)
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
 
@@ -246,6 +247,7 @@ class LinuxNetworkTestCase(test.TestCase):
         self.driver.update_dhcp(None, "eth0", networks[0])
 
     def test_get_dhcp_hosts_for_nw00(self):
+        self.flags(use_single_default_gateway=True)
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
 
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
@@ -264,6 +266,7 @@ class LinuxNetworkTestCase(test.TestCase):
         self.assertEquals(actual_hosts, expected)
 
     def test_get_dhcp_hosts_for_nw01(self):
+        self.flags(use_single_default_gateway=True)
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
 
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
@@ -339,7 +342,6 @@ class LinuxNetworkTestCase(test.TestCase):
         self.assertEquals(actual, expected)
 
     def test_host_dhcp_without_default_gateway_network(self):
-        self.flags(use_single_default_gateway=False)
         expected = ("10.0.0.1,fake_instance00.novalocal,192.168.0.100")
         actual = self.driver._host_dhcp(fixed_ips[0])
         self.assertEquals(actual, expected)
