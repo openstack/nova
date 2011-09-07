@@ -128,8 +128,8 @@ class RPCAllocateFixedIP(object):
         """Calls allocate_fixed_ip once for each network."""
         green_pool = greenpool.GreenPool()
 
-        vpn = kwargs.pop('vpn')
-        requested_networks = kwargs.pop('requested_networks')
+        vpn = kwargs.get('vpn')
+        requested_networks = kwargs.get('requested_networks')
 
         for network in networks:
             address = None
@@ -890,7 +890,7 @@ class FlatManager(NetworkManager):
     def _allocate_fixed_ips(self, context, instance_id, host, networks,
                             **kwargs):
         """Calls allocate_fixed_ip once for each network."""
-        requested_networks = kwargs.pop('requested_networks')
+        requested_networks = kwargs.get('requested_networks')
         for network in networks:
             address = None
             if requested_networks is not None:
