@@ -28,15 +28,14 @@ LOG = logging.getLogger('nova.tests.integrated')
 
 class ServersTest(integrated_helpers._IntegratedTestBase):
 
-    def _wait_for_creation(self, server):
-        retries = 0
-        while server['status'] == 'BUILD':
-            time.sleep(1)
+    def _wait_for_state_change(self, server, status):
+        for i in xrange(0, 50):
             server = self.api.get_server(server['id'])
             print server
-            retries = retries + 1
-            if retries > 5:
+            if server['status'] != status:
                 break
+            time.sleep(.1)
+
         return server
 
     def test_get_servers(self):
@@ -102,7 +101,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         server_ids = [server['id'] for server in servers]
         self.assertTrue(created_server_id in server_ids)
 
-        found_server = self._wait_for_creation(found_server)
+        found_server = self._wait_for_state_change(found_server, 'BUILD')
 
         # It should be available...
         # TODO(justinsb): Mock doesn't yet do this...
@@ -114,12 +113,103 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         self._delete_server(created_server_id)
 
-    def _delete_server(self, server_id):
-        # Delete the server
-        self.api.delete_server(server_id)
+    def test_deferred_delete(self):
+        """Creates and deletes a server."""
+        self.flags(stub_network=True, delete_instance_interval=1)
 
+        # Create server
+        server = self._build_minimal_create_server_request()
+
+        created_server = self.api.post_server({'server': server})
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Wait for it to finish being created
+        found_server = self._wait_for_state_change(created_server, 'BUILD')
+
+        # It should be available...
+        # TODO(justinsb): Mock doesn't yet do this...
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Delete the server
+        self.api.delete_server(created_server_id)
+
+        # Wait for queued deletion
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
+        self.assertEqual('DELETED', found_server['status'])
+
+        # Wait for real deletion
+        self._wait_for_deletion(created_server_id)
+
+    def test_deferred_delete_restore(self):
+        """Creates, deletes and restores a server."""
+        self.flags(stub_network=True, delete_instance_interval=1)
+
+        # Create server
+        server = self._build_minimal_create_server_request()
+
+        created_server = self.api.post_server({'server': server})
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Wait for it to finish being created
+        found_server = self._wait_for_state_change(created_server, 'BUILD')
+
+        # It should be available...
+        # TODO(justinsb): Mock doesn't yet do this...
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Delete the server
+        self.api.delete_server(created_server_id)
+
+        # Wait for queued deletion
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
+        self.assertEqual('DELETED', found_server['status'])
+
+        # Restore server
+        self.api.post_server_action(created_server_id, {'restore': {}})
+
+        # Wait for server to become active again
+        found_server = self._wait_for_state_change(found_server, 'DELETED')
+        self.assertEqual('ACTIVE', found_server['status'])
+
+    def test_deferred_delete_force(self):
+        """Creates, deletes and force deletes a server."""
+        self.flags(stub_network=True, delete_instance_interval=1)
+
+        # Create server
+        server = self._build_minimal_create_server_request()
+
+        created_server = self.api.post_server({'server': server})
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Wait for it to finish being created
+        found_server = self._wait_for_state_change(created_server, 'BUILD')
+
+        # It should be available...
+        # TODO(justinsb): Mock doesn't yet do this...
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Delete the server
+        self.api.delete_server(created_server_id)
+
+        # Wait for queued deletion
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
+        self.assertEqual('DELETED', found_server['status'])
+
+        # Force delete server
+        self.api.post_server_action(created_server_id, {'forceDelete': {}})
+
+        # Wait for real deletion
+        self._wait_for_deletion(created_server_id)
+
+    def _wait_for_deletion(self, server_id):
         # Wait (briefly) for deletion
-        for _retries in range(5):
+        for _retries in range(500):
             try:
                 found_server = self.api.get_server(server_id)
             except client.OpenStackApiNotFoundException:
@@ -132,10 +222,15 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
             # TODO(justinsb): Mock doesn't yet do accurate state changes
             #if found_server['status'] != 'deleting':
             #    break
-            time.sleep(1)
+            time.sleep(.1)
 
         # Should be gone
         self.assertFalse(found_server)
+
+    def _delete_server(self, server_id):
+        # Delete the server
+        self.api.delete_server(server_id)
+        self._wait_for_deletion(server_id)
 
     def test_create_server_with_metadata(self):
         """Creates a server with metadata."""
@@ -194,7 +289,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
 
-        created_server = self._wait_for_creation(created_server)
+        created_server = self._wait_for_state_change(created_server, 'BUILD')
 
         # rebuild the server with metadata
         post = {}
@@ -228,7 +323,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
 
-        created_server = self._wait_for_creation(created_server)
+        created_server = self._wait_for_state_change(created_server, 'BUILD')
 
         # rebuild the server with metadata
         post = {}
@@ -274,7 +369,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
 
-        created_server = self._wait_for_creation(created_server)
+        created_server = self._wait_for_state_change(created_server, 'BUILD')
 
         # rebuild the server with metadata
         post = {}
