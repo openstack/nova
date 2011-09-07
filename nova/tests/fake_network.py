@@ -143,6 +143,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     network.db = db
 
     # reset the fixed and floating ip generators
+    global floating_ip_id, fixed_ip_id
     floating_ip_id = floating_ip_ids()
     fixed_ip_id = fixed_ip_ids()
 
