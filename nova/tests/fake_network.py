@@ -118,7 +118,7 @@ def next_fixed_ip(network_id, num_floating_ips=0):
     next_id = fixed_ip_id.next()
     f_ips = [FakeModel(**next_floating_ip(next_id))
              for i in xrange(num_floating_ips)]
-    return {'id': next,
+    return {'id': next_id,
             'network_id': network_id,
             'address': '192.168.%d.1%02d' % (network_id, next_id),
             'instance_id': 0,
