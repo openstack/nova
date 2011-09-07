@@ -20,8 +20,9 @@ customize the behavior: filter_hosts() and weigh_hosts(). The default
 behavior is to simply select all hosts and weight them the same.
 """
 
-import operator
 import json
+import operator
+import random
 
 import M2Crypto
 
@@ -40,6 +41,8 @@ from nova.scheduler import api
 from nova.scheduler import driver
 
 FLAGS = flags.FLAGS
+flags.DEFINE_boolean('spread_first', False,
+                     'Use a spread-first zone scheduler strategy')
 LOG = logging.getLogger('nova.scheduler.abstract_scheduler')
 
 
