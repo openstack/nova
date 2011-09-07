@@ -26,6 +26,7 @@ from nova import test
 from nova.compute import api as compute_api
 from nova.scheduler import driver
 from nova.scheduler import abstract_scheduler
+from nova.scheduler import base_scheduler
 from nova.scheduler import zone_manager
 
 
@@ -386,7 +387,7 @@ class BaseSchedulerTestCase(test.TestCase):
         # Fake out a list of hosts
         zm = FakeZoneManager()
         hostlist = [(host, services['compute'])
-                    for host, services in zm.service_states
+                    for host, services in zm.service_states.items()
                     if 'compute' in services]
 
         # Call weigh_hosts()
