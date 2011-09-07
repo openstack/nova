@@ -68,6 +68,9 @@ flags.DEFINE_string('linuxnet_interface_driver',
                     'Driver used to create ethernet devices.')
 flags.DEFINE_string('linuxnet_ovs_integration_bridge',
                     'br-int', 'Name of Open vSwitch bridge used with linuxnet')
+flags.DEFINE_bool('use_single_default_gateway',
+                   False, 'Use single default gateway. Only first nic of vm'
+                          ' will get default gateway from dhcp server')
 binary_name = os.path.basename(inspect.stack()[-1][1])
 
 
@@ -513,35 +516,27 @@ def get_dhcp_hosts(context, network_ref):
 
 def get_dhcp_opts(context, network_ref):
     """Get network's hosts config in dhcp-opts format."""
-    # create a decision dictionary for default gateway for eache instance
     hosts = []
-    default_gateway_network_node = dict()
-    network_id = network_ref['id']
-    instance_set = set()
-    ips_ref = db.network_get_associated_fixed_ips(context, network_id)
+    ips_ref = db.network_get_associated_fixed_ips(context, network_ref['id'])
 
-    for fixed_ip_ref in ips_ref:
-        instance_set.add(fixed_ip_ref['instance_id'])
+    if ips_ref:
+        #set of instance ids
+        instance_set = set([fixed_ip_ref['instance_id']
+                            for fixed_ip_ref in ips_ref])
+        default_gw_network_node = {}
+        for instance_id in instance_set:
+            vifs = db.virtual_interface_get_by_instance(context, instance_id)
+            if vifs:
+                #offer a default gateway to the first virtual interface
+                default_gw_network_node[instance_id] = vifs[0]['network_id']
 
-    for instance_id in instance_set:
-        # nic number is decided by xxx from this function in xxx function
-        vifs = db.virtual_interface_get_by_instance(context, instance_id)
-        if vifs == None:
-            default_gateway_network_node[instance_id] = None
-            continue
-        # offer a default gateway to the first virtual interface of instance
-        first_vif = vifs[0]
-        default_gateway_network_node[instance_id] = first_vif['network_id']
-
-    for fixed_ip_ref in ips_ref:
-        instance_id = fixed_ip_ref['instance_id']
-        if instance_id in default_gateway_network_node:
-            target_network_id = default_gateway_network_node[instance_id]
-            if target_network_id == fixed_ip_ref['network_id']:
-                hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=True))
-            else:
-                hosts.append(_host_dhcp_opts(fixed_ip_ref, gw=None))
-
+        for fixed_ip_ref in ips_ref:
+            instance_id = fixed_ip_ref['instance_id']
+            if instance_id in default_gw_network_node:
+                target_network_id = default_gw_network_node[instance_id]
+                # we don't want default gateway for this fixed ip
+                if target_network_id != fixed_ip_ref['network_id']:
+                    hosts.append(_host_dhcp_opts(fixed_ip_ref))
     return '\n'.join(hosts)
 
 
@@ -560,13 +555,14 @@ def update_dhcp(context, dev, network_ref):
     with open(conffile, 'w') as f:
         f.write(get_dhcp_hosts(context, network_ref))
 
-    optsfile = _dhcp_file(dev, 'opts')
-    with open(optsfile, 'w') as f:
-        f.write(get_dhcp_opts(context, network_ref))
+    if FLAGS.use_single_default_gateway:
+        optsfile = _dhcp_file(dev, 'opts')
+        with open(optsfile, 'w') as f:
+            f.write(get_dhcp_opts(context, network_ref))
+        os.chmod(optsfile, 0644)
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
-    os.chmod(optsfile, 0644)
 
     pid = _dnsmasq_pid_for(dev)
 
@@ -598,10 +594,12 @@ def update_dhcp(context, dev, network_ref):
            '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(network_ref['cidr'])),
            '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
            '--dhcp-script=%s' % FLAGS.dhcpbridge,
-           '--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts'),
            '--leasefile-ro']
     if FLAGS.dns_server:
         cmd += ['-h', '-R', '--server=%s' % FLAGS.dns_server]
+
+    if FLAGS.use_single_default_gateway:
+        cmd += ['--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts')]
 
     _execute(*cmd, run_as_root=True)
 
@@ -681,13 +679,9 @@ def _host_dhcp(fixed_ip_ref):
                                    "net:" + _host_dhcp_network(fixed_ip_ref))
 
 
-def _host_dhcp_opts(fixed_ip_ref, gw):
+def _host_dhcp_opts(fixed_ip_ref):
     """Return a host string for an address in dhcp-host format."""
-    if not gw:
-        return '%s,%s' % (_host_dhcp_network(fixed_ip_ref),
-                           3)
-    else:
-        return ''
+    return '%s,%s' % (_host_dhcp_network(fixed_ip_ref), 3)
 
 
 def _execute(*cmd, **kwargs):

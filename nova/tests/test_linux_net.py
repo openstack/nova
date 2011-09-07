@@ -23,6 +23,7 @@ from nova import log as logging
 from nova import test
 from nova import utils
 from nova.network import manager as network_manager
+from nova.network import linux_net
 
 import mox
 
@@ -194,6 +195,7 @@ class LinuxNetworkTestCase(test.TestCase):
     def setUp(self):
         super(LinuxNetworkTestCase, self).setUp()
         network_driver = FLAGS.network_driver
+        self.flags(use_single_default_gateway=True)
         self.driver = utils.import_object(network_driver)
         self.driver.db = db
 
@@ -300,9 +302,7 @@ class LinuxNetworkTestCase(test.TestCase):
                                                          vifs[5]])
         self.mox.ReplayAll()
 
-        expected_opts = '\n'\
-                        'NW-i00000001-0,3\n'\
-                        ''
+        expected_opts = 'NW-i00000001-0,3'
         actual_opts = self.driver.get_dhcp_opts(None, networks[0])
 
         self.assertEquals(actual_opts, expected_opts)
@@ -328,19 +328,12 @@ class LinuxNetworkTestCase(test.TestCase):
                                                          vifs[5]])
         self.mox.ReplayAll()
 
-        expected_opts = 'NW-i00000000-1,3\n'\
-                        '\n'\
-                        ''
+        expected_opts = "NW-i00000000-1,3"
         actual_opts = self.driver.get_dhcp_opts(None, networks[1])
 
         self.assertEquals(actual_opts, expected_opts)
 
-    def test_dhcp_opts_default_gateway_network(self):
-        expected = ""
-        actual = self.driver._host_dhcp_opts(fixed_ips[0], True)
-        self.assertEquals(actual, expected)
-
     def test_dhcp_opts_not_default_gateway_network(self):
         expected = "NW-i00000000-0,3"
-        actual = self.driver._host_dhcp_opts(fixed_ips[0], False)
+        actual = self.driver._host_dhcp_opts(fixed_ips[0])
         self.assertEquals(actual, expected)
