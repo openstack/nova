@@ -112,6 +112,8 @@ class CreateserverextTest(test.TestCase):
 
                 return [{'id': '1234', 'display_name': 'fakeinstance',
                          'uuid': FAKE_UUID,
+                         'user_id': 'fake',
+                         'project_id': 'fake',
                          'created_at': "",
                          'updated_at': ""}]
 
