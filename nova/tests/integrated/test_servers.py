@@ -123,7 +123,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self._delete_server(created_server_id)
 
     def test_deferred_delete(self):
-        """Creates and deletes a server."""
+        """Creates, deletes and waits for server to be reclaimed."""
         self.flags(stub_network=True, reclaim_instance_interval=1)
 
         # enforce periodic tasks run in short time to avoid wait for 60s.
@@ -142,6 +142,20 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # It should be available...
         # TODO(justinsb): Mock doesn't yet do this...
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Cannot restore unless instance is deleted
+        self.api.post_server_action(created_server_id, {'restore': {}})
+
+        # Check it's still active
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Cannot forceDelete unless instance is deleted
+        self.api.post_server_action(created_server_id, {'forceDelete': {}})
+
+        # Check it's still active
+        found_server = self.api.get_server(created_server_id)
         self.assertEqual('ACTIVE', found_server['status'])
 
         # Delete the server
