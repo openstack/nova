@@ -22,15 +22,10 @@ import json
 
 import webob
 
-from nova import compute
 from nova import context
 from nova import exception
-from nova import network
 from nova import test
-from nova import volume
-from nova import utils
 from nova.api import direct
-from nova.tests.api.ec2 import test_cloud
 
 
 class ArbitraryObject(object):
@@ -45,8 +40,25 @@ class FakeService(object):
         return {'user': context.user_id,
                 'project': context.project_id}
 
+    def echo_data_directly(self, context, data):
+        return data
+
     def invalid_return(self, context):
         return ArbitraryObject()
+
+
+class MyLimited(direct.Limited):
+    _allowed = ['var1', 'func1']
+
+
+class MyProxy(object):
+    var1 = var2 = True
+
+    def func1(self):
+        return True
+
+    def func2(self):
+        return True
 
 
 class DirectTestCase(test.TestCase):
@@ -83,6 +95,22 @@ class DirectTestCase(test.TestCase):
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
 
+    def test_filter_json_params(self):
+        req = webob.Request.blank('/fake/echo')
+        req.environ['openstack.context'] = self.context
+        req.method = 'POST'
+        req.body = 'json=%s' % json.dumps({'data': 'foo',
+                                           '_underscored': 'ignoreMe',
+                                           'self': 'ignoreMe',
+                                           'context': 'ignoreMe'})
+        resp = req.get_response(self.router)
+        self.assertEqual(resp.status_int, 200)
+        resp_parsed = json.loads(resp.body)
+        self.assertEqual(resp_parsed['data'], 'foo')
+        self.assertNotIn('_underscored', resp_parsed)
+        self.assertNotIn('self', resp_parsed)
+        self.assertNotIn('context', resp_parsed)
+
     def test_post_params(self):
         req = webob.Request.blank('/fake/echo')
         req.environ['openstack.context'] = self.context
@@ -92,6 +120,29 @@ class DirectTestCase(test.TestCase):
         self.assertEqual(resp.status_int, 200)
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
+
+    def test_filter_post_params(self):
+        req = webob.Request.blank('/fake/echo')
+        req.environ['openstack.context'] = self.context
+        req.method = 'POST'
+        req.body = 'data=foo&_underscored=ignoreMe&self=ignoreMe&context='\
+                   'ignoreMe'
+        resp = req.get_response(self.router)
+        self.assertEqual(resp.status_int, 200)
+        resp_parsed = json.loads(resp.body)
+        self.assertEqual(resp_parsed['data'], 'foo')
+        self.assertNotIn('_underscored', resp_parsed)
+        self.assertNotIn('self', resp_parsed)
+        self.assertNotIn('context', resp_parsed)
+
+    def test_string_resp(self):
+        req = webob.Request.blank('/fake/echo_data_directly')
+        req.environ['openstack.context'] = self.context
+        req.method = 'POST'
+        req.body = 'data=foo'
+        resp = req.get_response(self.router)
+        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.body, 'foo')
 
     def test_invalid(self):
         req = webob.Request.blank('/fake/invalid_return')
@@ -103,6 +154,42 @@ class DirectTestCase(test.TestCase):
         proxy = direct.Proxy(self.router)
         rv = proxy.fake.echo(self.context, data='baz')
         self.assertEqual(rv['data'], 'baz')
+
+
+class LimitedTestCase(test.TestCase):
+    def test_limited_class_getattr(self):
+        limited = MyLimited(MyProxy())
+
+        # Allowed are still visible
+        self.assertTrue(limited.func1())
+        self.assertTrue(limited.var1)
+
+        # Non-allowed are no longer visible
+        self.assertRaises(AttributeError, getattr, limited, 'func2')
+        self.assertRaises(AttributeError, getattr, limited, 'var2')
+
+    def test_limited_class_dir(self):
+        limited = MyLimited(MyProxy())
+
+        # Allowed are still visible
+        self.assertIn('func1', dir(limited))
+        self.assertIn('var1', dir(limited))
+
+        # Non-allowed are no longer visible
+        self.assertNotIn('func2', dir(limited))
+        self.assertNotIn('var2', dir(limited))
+
+    def test_limited_class_no_allowed(self):
+
+        # New MyLimited class with no _allowed variable
+        class MyLimited(direct.Limited):
+            pass
+
+        limited = MyLimited(MyProxy())
+
+        # Nothing in MyProxy object visible now
+        self.assertNotIn('func1', dir(limited))
+        self.assertNotIn('var1', dir(limited))
 
 
 # NOTE(jkoelker): This fails using the EC2 api
