@@ -166,7 +166,7 @@ class VpnCommands(object):
                 print address,
                 print vpn['host'],
                 print ec2utils.id_to_ec2_id(vpn['id']),
-                print vpn['state_description'],
+                print vpn['vm_state'],
                 print state
             else:
                 print None
@@ -869,7 +869,7 @@ class VmCommands(object):
                 instance['hostname'],
                 instance['host'],
                 instance['instance_type'].name,
-                instance['state_description'],
+                instance['vm_state'],
                 instance['launched_at'],
                 instance['image_ref'],
                 instance['kernel_id'],
@@ -1223,7 +1223,7 @@ class VsaCommands(object):
                     type=vc['instance_type']['name'],
                     fl_ip=floating_addr,
                     fx_ip=fixed_addr,
-                    stat=vc['state_description'],
+                    stat=vc['vm_state'],
                     host=vc['host'],
                     time=str(vc['created_at']))
 

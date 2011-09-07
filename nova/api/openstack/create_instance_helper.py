@@ -94,7 +94,7 @@ class CreateInstanceHelper(object):
         try:
             image_service, image_id = nova.image.get_image_service(image_href)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
-                                                req, image_id)
+                                                req, image_service, image_id)
             images = set([str(x['id']) for x in image_service.index(context)])
             assert str(image_id) in images
         except Exception, e:
@@ -247,12 +247,12 @@ class CreateInstanceHelper(object):
             msg = _("Server name is an empty string")
             raise exc.HTTPBadRequest(explanation=msg)
 
-    def _get_kernel_ramdisk_from_image(self, req, image_id):
+    def _get_kernel_ramdisk_from_image(self, req, image_service, image_id):
         """Fetch an image from the ImageService, then if present, return the
         associated kernel and ramdisk image IDs.
         """
         context = req.environ['nova.context']
-        image_meta = self._image_service.show(context, image_id)
+        image_meta = image_service.show(context, image_id)
         # NOTE(sirp): extracted to a separate method to aid unit-testing, the
         # new method doesn't need a request obj or an ImageService stub
         kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
@@ -282,7 +282,7 @@ class CreateInstanceHelper(object):
         try:
             ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
-            raise exception.RamdiskNotFoundForImage(image_id=image_id)
+            ramdisk_id = None
 
         return kernel_id, ramdisk_id
 

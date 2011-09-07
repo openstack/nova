@@ -161,6 +161,19 @@ class ComputeTestCase(test.TestCase):
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
 
+    def test_create_instance_with_invalid_security_group_raises(self):
+        instance_type = instance_types.get_default_instance_type()
+
+        pre_build_len = len(db.instance_get_all(context.get_admin_context()))
+        self.assertRaises(exception.SecurityGroupNotFoundForProject,
+                          self.compute_api.create,
+                          self.context,
+                          instance_type=instance_type,
+                          image_href=None,
+                          security_group=['this_is_a_fake_sec_group'])
+        self.assertEqual(pre_build_len,
+                         len(db.instance_get_all(context.get_admin_context())))
+
     def test_create_instance_associates_config_drive(self):
         """Make sure create associates a config drive."""
 

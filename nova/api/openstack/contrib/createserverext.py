@@ -14,18 +14,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
+from nova import utils
 from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import extensions
 from nova.api.openstack import servers
 from nova.api.openstack import wsgi
 
 
+class CreateServerController(servers.ControllerV11):
+    def _build_view(self, req, instance, is_detail=False):
+        server = super(CreateServerController, self)._build_view(req,
+                                                             instance,
+                                                             is_detail)
+        if is_detail:
+            self._build_security_groups(server['server'], instance)
+        return server
+
+    def _build_security_groups(self, response, inst):
+        sg_names = []
+        sec_groups = inst.get('security_groups')
+        if sec_groups:
+            sg_names = [sec_group['name'] for sec_group in sec_groups]
+
+        response['security_groups'] = utils.convert_to_list_dict(sg_names,
+                                                                 'name')
+
+
 class Createserverext(extensions.ExtensionDescriptor):
-    """The servers create ext
-
-    Exposes addFixedIp and removeFixedIp actions on servers.
-
-    """
+    """The servers create ext"""
     def get_name(self):
         return "Createserverext"
 
@@ -58,7 +74,7 @@ class Createserverext(extensions.ExtensionDescriptor):
         deserializer = wsgi.RequestDeserializer(body_deserializers)
 
         res = extensions.ResourceExtension('os-create-server-ext',
-                                        controller=servers.ControllerV11(),
+                                        controller=CreateServerController(),
                                         deserializer=deserializer,
                                         serializer=serializer)
         resources.append(res)

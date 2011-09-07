@@ -34,6 +34,7 @@ from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
 from nova.compute import power_state
+from nova.compute import vm_states
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
 from nova.tests import fake_network
@@ -631,8 +632,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Preparing data
         self.compute = utils.import_object(FLAGS.compute_manager)
-        instance_dict = {'host': 'fake', 'state': power_state.RUNNING,
-                         'state_description': 'running'}
+        instance_dict = {'host': 'fake',
+                         'power_state': power_state.RUNNING,
+                         'vm_state': vm_states.ACTIVE}
         instance_ref = db.instance_create(self.context, self.test_instance)
         instance_ref = db.instance_update(self.context, instance_ref['id'],
                                           instance_dict)
@@ -670,8 +672,8 @@ class LibvirtConnTestCase(test.TestCase):
                       self.compute.rollback_live_migration)
 
         instance_ref = db.instance_get(self.context, instance_ref['id'])
-        self.assertTrue(instance_ref['state_description'] == 'running')
-        self.assertTrue(instance_ref['state'] == power_state.RUNNING)
+        self.assertTrue(instance_ref['vm_state'] == vm_states.ACTIVE)
+        self.assertTrue(instance_ref['power_state'] == power_state.RUNNING)
         volume_ref = db.volume_get(self.context, volume_ref['id'])
         self.assertTrue(volume_ref['status'] == 'in-use')
 
