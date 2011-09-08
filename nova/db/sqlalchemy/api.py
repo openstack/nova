@@ -945,6 +945,22 @@ def virtual_interface_get_by_address(context, address):
 
 
 @require_context
+def virtual_interface_get_by_uuid(context, vif_uuid):
+    """Gets a virtual interface from the table.
+
+    :param vif_uuid: the uuid of the interface you're looking to get
+    """
+    session = get_session()
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(uuid=vif_uuid).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
+
+
+@require_context
 def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
     """Gets the virtual interface fixed_ip is associated with.
 
@@ -1854,6 +1870,19 @@ def network_get_by_bridge(context, bridge):
 
     if not result:
         raise exception.NetworkNotFoundForBridge(bridge=bridge)
+    return result
+
+
+@require_admin_context
+def network_get_by_uuid(context, uuid):
+    session = get_session()
+    result = session.query(models.Network).\
+                 filter_by(uuid=uuid).\
+                 filter_by(deleted=False).\
+                 first()
+
+    if not result:
+        raise exception.NetworkNotFoundForUUID(uuid=uuid)
     return result
 
 

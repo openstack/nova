@@ -55,5 +55,17 @@ class BaseScheduler(abstract_scheduler.AbstractScheduler):
         scheduling objectives
         """
         # NOTE(sirp): The default logic is the same as the NoopCostFunction
-        return [dict(weight=1, hostname=hostname, capabilities=capabilities)
-                for hostname, capabilities in hosts]
+        hosts = [dict(weight=1, hostname=hostname, capabilities=capabilities)
+                 for hostname, capabilities in hosts]
+
+        # NOTE(Vek): What we actually need to return is enough hosts
+        #            for all the instances!
+        num_instances = request_spec.get('num_instances', 1)
+        instances = []
+        while num_instances > len(hosts):
+            instances.extend(hosts)
+            num_instances -= len(hosts)
+        if num_instances > 0:
+            instances.extend(hosts[:num_instances])
+
+        return instances
