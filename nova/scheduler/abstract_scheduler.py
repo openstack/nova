@@ -123,6 +123,14 @@ class AbstractScheduler(driver.Scheduler):
         except novaclient_exceptions.BadRequest, e:
             raise exception.NotAuthorized(_("Bad credentials attempting "
                     "to talk to zone at %(url)s.") % locals())
+        # NOTE(Vek): Novaclient has two different calling conventions
+        #            for this call, depending on whether you're using
+        #            1.0 or 1.1 API: in 1.0, there's an ipgroups
+        #            argument after flavor_id which isn't present in
+        #            1.1.  To work around this, all the extra
+        #            arguments are passed as keyword arguments
+        #            (there's a reasonable default for ipgroups in the
+        #            novaclient call).
         nova.servers.create(name, image_ref, flavor_id,
                             meta=meta, files=files, zone_blob=child_blob,
                             reservation_id=reservation_id)
