@@ -66,6 +66,8 @@ class ViewBuilder(object):
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
+            'user_id': inst.get('user_id', ''),
+            'tenant_id': inst.get('project_id', ''),
             'status': common.status_from_state(vm_state, task_state)}
 
         # Return the metadata as a dictionary

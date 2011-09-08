@@ -494,6 +494,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.check_vm_params_for_linux_with_external_kernel()
 
     def test_spawn_netinject_file(self):
+        self.flags(flat_injected=True)
         db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
 
         self._tee_executed = False
@@ -611,7 +612,6 @@ class XenAPIVMTestCase(test.TestCase):
                               str(3 * 1024))
 
     def test_rescue(self):
-        self.flags(flat_injected=False)
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
         conn.rescue(self.context, instance, None, [])
