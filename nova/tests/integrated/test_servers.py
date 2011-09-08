@@ -141,7 +141,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         found_server = self._wait_for_state_change(created_server, 'BUILD')
 
         # It should be available...
-        # TODO(justinsb): Mock doesn't yet do this...
         self.assertEqual('ACTIVE', found_server['status'])
 
         # Cannot restore unless instance is deleted
@@ -184,7 +183,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         found_server = self._wait_for_state_change(created_server, 'BUILD')
 
         # It should be available...
-        # TODO(justinsb): Mock doesn't yet do this...
         self.assertEqual('ACTIVE', found_server['status'])
 
         # Delete the server
@@ -217,7 +215,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         found_server = self._wait_for_state_change(created_server, 'BUILD')
 
         # It should be available...
-        # TODO(justinsb): Mock doesn't yet do this...
         self.assertEqual('ACTIVE', found_server['status'])
 
         # Delete the server
