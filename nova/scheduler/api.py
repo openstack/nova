@@ -169,8 +169,8 @@ def child_zone_helper(zone_list, func):
             LOG.warn(_("Failed request to zone; URL=%(url)s: %(e)s")
                     % locals())
             # This is being returned instead of raised, so that when
-            # results are # processed in unmarshal_result() after the
-            # greenpool.imap completes, # the exception can be raised
+            # results are processed in unmarshal_result() after the
+            # greenpool.imap completes, the exception can be raised
             # there if no other zones had a response.
             return exception.ZoneRequestError()
         else:
