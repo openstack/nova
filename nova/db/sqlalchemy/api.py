@@ -1277,10 +1277,6 @@ def instance_get_all_by_filters(context, filters):
         changes_since = filters['changes-since']
         query_prefix = query_prefix.\
                             filter(models.Instance.updated_at > changes_since)
-    else:
-        # filter out deleted instances if no changes-since filter provided
-        query_prefix = query_prefix.\
-                            filter_by(deleted=can_read_deleted(context))
 
     if not context.is_admin:
         # If we're not admin context, add appropriate filter..
