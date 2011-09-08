@@ -435,6 +435,10 @@ class NetworkNotFoundForBridge(NetworkNotFound):
     message = _("Network could not be found for bridge %(bridge)s")
 
 
+class NetworkNotFoundForUUID(NetworkNotFound):
+    message = _("Network could not be found for uuid %(uuid)s")
+
+
 class NetworkNotFoundForCidr(NetworkNotFound):
     message = _("Network could not be found with cidr %(cidr)s.")
 
