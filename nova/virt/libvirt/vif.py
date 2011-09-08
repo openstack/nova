@@ -101,7 +101,7 @@ class LibvirtOpenVswitchDriver(VIFDriver):
     """VIF driver for Open vSwitch."""
 
     def get_dev_name(_self, iface_id):
-        return "tap-" + iface_id[0:15]
+        return "tap" + iface_id[0:11]
 
     def plug(self, instance, network, mapping):
         iface_id = mapping['vif_uuid']

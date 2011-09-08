@@ -897,6 +897,8 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         server_elem.set('id', str(server_dict['id']))
         if detailed:
             server_elem.set('uuid', str(server_dict['uuid']))
+            server_elem.set('userId', str(server_dict['user_id']))
+            server_elem.set('tenantId', str(server_dict['tenant_id']))
             server_elem.set('updated', str(server_dict['updated']))
             server_elem.set('created', str(server_dict['created']))
             server_elem.set('hostId', str(server_dict['hostId']))
@@ -961,6 +963,19 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         self._populate_server(server, server_dict['server'], True)
         return self._to_xml(server)
 
+    def _security_group_to_xml(self, doc, security_group):
+        node = doc.createElement('security_group')
+        node.setAttribute('name', str(security_group.get('name')))
+        return node
+
+    def _create_security_groups_node(self, xml_doc, security_groups):
+        security_groups_node = xml_doc.createElement('security_groups')
+        if security_groups:
+            for security_group in security_groups:
+                node = self._security_group_to_xml(xml_doc, security_group)
+                security_groups_node.appendChild(node)
+        return security_groups_node
+
 
 def create_resource(version='1.0'):
     controller = {
@@ -972,7 +987,7 @@ def create_resource(version='1.0'):
         "attributes": {
             "server": ["id", "imageId", "name", "flavorId", "hostId",
                        "status", "progress", "adminPass", "flavorRef",
-                       "imageRef"],
+                       "imageRef", "userId", "tenantId"],
             "link": ["rel", "type", "href"],
         },
         "dict_collections": {

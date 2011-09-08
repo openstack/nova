@@ -52,6 +52,10 @@ from nova.tests.api.openstack import fakes
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
+XPATH_NS = {
+    'atom': 'http://www.w3.org/2005/Atom',
+    'ns': 'http://docs.openstack.org/compute/api/v1.1'
+}
 
 
 def fake_gen_uuid():
@@ -347,6 +351,8 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -410,12 +416,7 @@ class ServersTest(test.TestCase):
 
     def test_get_server_by_id_v1_1_xml(self):
         image_bookmark = "http://localhost/fake/images/10"
-        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
-        flavor_id = "1"
         flavor_bookmark = "http://localhost/fake/flavors/1"
-        server_href = "http://localhost/v1.1/fake/servers/1"
-        server_bookmark = "http://localhost/fake/servers/1"
-
         public_ip = '192.168.0.3'
         private_ip = '172.19.0.1'
         interfaces = [
@@ -443,6 +444,83 @@ class ServersTest(test.TestCase):
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
+
+        expected = {
+            'id': 1,
+            'uuid': FAKE_UUID,
+            'user_id': 'fake',
+            'tenant_id': 'fake',
+            'updated': '2010-11-11T11:00:00Z',
+            'created': '2010-10-10T12:00:00Z',
+            'progress': 0,
+            'name': 'server1',
+            'status': 'BUILD',
+            'accessIPv4': '',
+            'accessIPv6': '',
+            'hostId': '',
+            'key_name': '',
+            'image': {
+                'id': '10',
+                'links': [{'rel': 'bookmark', 'href': image_bookmark}],
+            },
+            'flavor': {
+                'id': '1',
+              'links': [{'rel': 'bookmark', 'href': flavor_bookmark}],
+            },
+            'addresses': {
+                'public': [{'version': 4, 'addr': public_ip}],
+                'private': [{'version': 4, 'addr': private_ip}],
+            },
+            'metadata': {'seq': '1'},
+            'config_drive': None,
+            'links': [
+                {
+                    'rel': 'self',
+                    'href': 'http://localhost/v1.1/fake/servers/1',
+                },
+                {
+                    'rel': 'bookmark',
+                    'href': 'http://localhost/fake/servers/1',
+                },
+            ],
+        }
+
+        self.assertTrue(root.xpath('/ns:server', namespaces=XPATH_NS))
+        for key in ['id', 'uuid', 'created', 'progress', 'name', 'status',
+                    'accessIPv4', 'accessIPv6', 'hostId']:
+            self.assertEqual(root.get(key), str(expected[key]))
+        self.assertEqual(root.get('userId'), str(expected['user_id']))
+        self.assertEqual(root.get('tenantId'), str(expected['tenant_id']))
+
+        (image,) = root.xpath('ns:image', namespaces=XPATH_NS)
+        self.assertEqual(image.get('id'), str(expected['image']['id']))
+
+        links = root.xpath('ns:image/atom:link', namespaces=XPATH_NS)
+        self.assertTrue(common.compare_links(links, expected['image']['links']))
+
+        (flavor,) = root.xpath('ns:flavor', namespaces=XPATH_NS)
+        self.assertEqual(flavor.get('id'), str(expected['flavor']['id']))
+
+        (meta,) = root.xpath('ns:metadata/ns:meta', namespaces=XPATH_NS)
+        self.assertEqual(meta.get('key'), 'seq')
+        self.assertEqual(meta.text, '1')
+
+        (pub_network, priv_network) = root.xpath('ns:addresses/ns:network',
+                                                 namespaces=XPATH_NS)
+        self.assertEqual(pub_network.get('id'), 'public')
+        (pub_ip,) = pub_network.xpath('ns:ip', namespaces=XPATH_NS)
+        (priv_ip,) = priv_network.xpath('ns:ip', namespaces=XPATH_NS)
+        self.assertEqual(pub_ip.get('version'),
+                         str(expected['addresses']['public'][0]['version']))
+        self.assertEqual(pub_ip.get('addr'),
+                         str(expected['addresses']['public'][0]['addr']))
+        self.assertEqual(priv_ip.get('version'),
+                         str(expected['addresses']['private'][0]['version']))
+        self.assertEqual(priv_ip.get('addr'),
+                         str(expected['addresses']['private'][0]['addr']))
+
+        links = root.xpath('atom:link', namespaces=XPATH_NS)
+        self.assertTrue(common.compare_links(links, expected['links']))
 
     def test_get_server_with_active_status_by_id_v1_1(self):
         image_bookmark = "http://localhost/fake/images/10"
@@ -477,6 +555,8 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -572,6 +652,8 @@ class ServersTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -1161,6 +1243,26 @@ class ServersTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], 100)
 
+    def test_tenant_id_filter_converts_to_project_id_for_admin(self):
+        def fake_get_all(context, filters=None):
+            self.assertNotEqual(filters, None)
+            self.assertEqual(filters['project_id'], 'faketenant')
+            self.assertFalse(filters.get('tenant_id'))
+            return [stub_instance(100)]
+
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
+                       fake_get_all)
+        self.flags(allow_admin_api=True)
+
+        req = webob.Request.blank('/v1.1/fake/servers?tenant_id=faketenant')
+        # Use admin context
+        context = nova.context.RequestContext('testuser', 'testproject',
+                is_admin=True)
+        res = req.get_response(fakes.wsgi_app(fake_auth_context=context))
+        res_dict = json.loads(res.body)
+        # Failure in fake_get_all returns non 200 status code
+        self.assertEqual(res.status_int, 200)
+
     def test_get_servers_allows_flavor_v1_1(self):
         def fake_get_all(compute_self, context, search_opts=None):
             self.assertNotEqual(search_opts, None)
@@ -1417,6 +1519,8 @@ class ServersTest(test.TestCase):
                     'access_ip_v4': '1.2.3.4',
                     'access_ip_v6': 'fead::1234',
                     'image_ref': image_ref,
+                    'user_id': 'fake',
+                    'project_id': 'fake',
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                     "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
                     "config_drive": self.config_drive,
@@ -3065,7 +3169,7 @@ class TestServerCreateRequestXMLDeserializerV11(test.TestCase):
                 "name": "new-server-test",
                 "imageRef": "1",
                 "flavorRef": "1",
-                "networks": []
+                "networks": [],
                 }}
         self.assertEquals(request['body'], expected)
 
@@ -3304,6 +3408,8 @@ class TestServerInstanceCreation(test.TestCase):
                     self.injected_files = None
 
                 return [{'id': '1234', 'display_name': 'fakeinstance',
+                         'user_id': 'fake',
+                         'project_id': 'fake',
                          'uuid': FAKE_UUID}]
 
             def set_admin_password(self, *args, **kwargs):
@@ -3557,10 +3663,14 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
         self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
 
     def test_ami_no_ramdisk(self):
-        """If an ami is missing a ramdisk it should raise NotFound"""
+        """If an ami is missing a ramdisk, return kernel ID and None for 
+        ramdisk ID
+        """
         image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
                       'properties': {'kernel_id': 1}}
-        self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
+        kernel_id, ramdisk_id = self._get_k_r(image_meta)
+        self.assertEqual(kernel_id, 1)
+        self.assertEqual(ramdisk_id, None)
 
     def test_ami_kernel_ramdisk_present(self):
         """Return IDs if both kernel and ramdisk are present"""
@@ -3595,8 +3705,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "created_at": created_at,
             "updated_at": updated_at,
             "admin_pass": "",
-            "user_id": "",
-            "project_id": "",
+            "user_id": "fake",
+            "project_id": "fake",
             "image_ref": "5",
             "kernel_id": "",
             "ramdisk_id": "",
@@ -3621,7 +3731,6 @@ class ServersViewBuilderV11Test(test.TestCase):
             "terminated_at": utils.utcnow(),
             "availability_zone": "",
             "display_name": "test_server",
-            "display_description": "",
             "locked": False,
             "metadata": [],
             "accessIPv4": "1.2.3.4",
@@ -3704,6 +3813,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3759,6 +3870,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -3815,6 +3928,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3871,6 +3986,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3930,6 +4047,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": self.instance['uuid'],
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3997,8 +4116,10 @@ class ServerXMLSerializationTest(test.TestCase):
 
         fixture = {
             "server": {
-                "id": 1,
-                "uuid": FAKE_UUID,
+                'id': 1,
+                'uuid': FAKE_UUID,
+                'user_id': 'fake_user_id',
+                'tenant_id': 'fake_tenant_id',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
@@ -4075,6 +4196,8 @@ class ServerXMLSerializationTest(test.TestCase):
         fixture = {
             "server": {
                 "id": 1,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "uuid": FAKE_UUID,
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
@@ -4212,6 +4335,8 @@ class ServerXMLSerializationTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
@@ -4412,6 +4537,8 @@ class ServerXMLSerializationTest(test.TestCase):
             {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
@@ -4467,6 +4594,8 @@ class ServerXMLSerializationTest(test.TestCase):
             {
                 "id": 2,
                 "uuid": FAKE_UUID,
+                "user_id": 'fake',
+                "tenant_id": 'fake',
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 100,
@@ -4586,6 +4715,8 @@ class ServerXMLSerializationTest(test.TestCase):
         fixture = {
             "server": {
                 "id": 1,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 "uuid": FAKE_UUID,
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
@@ -4722,6 +4853,8 @@ class ServerXMLSerializationTest(test.TestCase):
             "server": {
                 "id": 1,
                 "uuid": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
