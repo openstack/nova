@@ -628,6 +628,7 @@ class Network(BASE, NovaBase):
     dhcp_start = Column(String(255))
 
     project_id = Column(String(255))
+    priority = Column(Integer)
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     uuid = Column(String(36))
 

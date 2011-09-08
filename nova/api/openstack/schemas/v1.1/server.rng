@@ -1,6 +1,8 @@
 <element name="server" ns="http://docs.openstack.org/compute/api/v1.1"
     xmlns="http://relaxng.org/ns/structure/1.0">
   <attribute name="name">      <text/> </attribute>
+  <attribute name="userId">      <text/> </attribute>
+  <attribute name="tenantId">      <text/> </attribute>
   <attribute name="id">      <text/> </attribute>
   <attribute name="uuid"> <text/> </attribute>
   <attribute name="updated">   <text/> </attribute>
