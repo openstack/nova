@@ -194,7 +194,7 @@ class VMOps(object):
             # point for file injection.
             first_vdi_ref = None
             for vdi in vdis:
-                if vdi['vdi_type'] != 'swap':
+                if vdi.get('vdi_type') != 'swap':
                     # Create the VM ref and attach the first disk
                     first_vdi_ref = self._session.call_xenapi(
                             'VDI.get_by_uuid', vdi['vdi_uuid'])
