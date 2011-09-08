@@ -422,6 +422,11 @@ def virtual_interface_get_by_address(context, address):
     return IMPL.virtual_interface_get_by_address(context, address)
 
 
+def virtual_interface_get_by_uuid(context, vif_uuid):
+    """Gets a virtual interface from the table filtering on vif uuid."""
+    return IMPL.virtual_interface_get_by_uuid(context, vif_uuid)
+
+
 def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
     """Gets the virtual interface fixed_ip is associated with."""
     return IMPL.virtual_interface_get_by_fixed_ip(context, fixed_ip_id)
@@ -715,6 +720,11 @@ def network_get_associated_fixed_ips(context, network_id):
 def network_get_by_bridge(context, bridge):
     """Get a network by bridge or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
+
+
+def network_get_by_uuid(context, uuid):
+    """Get a network by uuid or raise if it does not exist."""
+    return IMPL.network_get_by_uuid(context, uuid)
 
 
 def network_get_by_cidr(context, cidr):

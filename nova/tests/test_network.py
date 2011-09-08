@@ -118,9 +118,14 @@ vifs = [{'id': 0,
         {'id': 1,
          'address': 'DE:AD:BE:EF:00:01',
          'uuid': '00000000-0000-0000-0000-0000000000000001',
-         'network_id': 0,
          'network_id': 1,
          'network': FakeModel(**networks[1]),
+         'instance_id': 0},
+        {'id': 2,
+         'address': 'DE:AD:BE:EF:00:02',
+         'uuid': '00000000-0000-0000-0000-0000000000000002',
+         'network_id': 2,
+         'network': None,
          'instance_id': 0}]
 
 
