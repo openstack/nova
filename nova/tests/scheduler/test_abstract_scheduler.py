@@ -365,3 +365,25 @@ class AbstractSchedulerTestCase(test.TestCase):
 
         self.assertEqual(fixture._decrypt_blob(test_data),
                          json.dumps(test_data))
+
+    def test_empty_local_hosts(self):
+        """
+        Create a nested set of FakeZones, try to build multiple instances
+        and ensure that a select call returns the appropriate build plan.
+        """
+        sched = FakeAbstractScheduler()
+        self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
+        self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
+
+        zm = FakeZoneManager()
+        # patch this to have no local hosts
+        zm.service_states = {}
+        sched.set_zone_manager(zm)
+
+        fake_context = {}
+        build_plan = sched.select(fake_context,
+                {'instance_type': {'memory_mb': 512},
+                    'num_instances': 4})
+
+        # 0 from local zones, 12 from remotes
+        self.assertEqual(12, len(build_plan))
