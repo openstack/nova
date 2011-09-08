@@ -269,9 +269,6 @@ class AbstractScheduler(driver.Scheduler):
         # Filter local hosts based on requirements ...
         filtered_hosts = self.filter_hosts(topic, request_spec,
                 unfiltered_hosts)
-        if not filtered_hosts:
-            LOG.warn(_("No hosts available"))
-            return []
 
         # weigh the selected hosts.
         # weighted_hosts = [{weight=weight, hostname=hostname,
