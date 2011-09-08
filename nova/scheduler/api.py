@@ -168,9 +168,10 @@ def child_zone_helper(zone_list, func):
             url = zone.api_url
             LOG.warn(_("Failed request to zone; URL=%(url)s: %(e)s")
                     % locals())
-            # This is being returned instead of raised, so that when results are
-            # processed in unmarshal_result() after the greenpool.imap completes,
-            # the exception can be raised there if no other zones had a response.
+            # This is being returned instead of raised, so that when
+            # results are # processed in unmarshal_result() after the
+            # greenpool.imap completes, # the exception can be raised
+            # there if no other zones had a response.
             return exception.ZoneRequestError()
         else:
             return func(nova, zone)
@@ -372,7 +373,7 @@ class reroute_compute(object):
             return reduced_response[0]  # first for now.
         elif found_exception:
             raise found_exception
-        exception.InstanceNotFound(instance_id=self.item_uuid)
+        raise exception.InstanceNotFound(instance_id=self.item_uuid)
 
 
 def redirect_handler(f):
