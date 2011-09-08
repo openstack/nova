@@ -3615,7 +3615,7 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
         self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
 
     def test_ami_no_ramdisk(self):
-        """If an ami is missing a ramdisk, return kernel ID and None for 
+        """If an ami is missing a ramdisk, return kernel ID and None for
         ramdisk ID
         """
         image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
