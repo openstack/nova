@@ -808,7 +808,6 @@ class API(base.Base):
                     task_state=None,
                     deleted_at=None)
 
-        # FIXME: How to handle no host?
         host = instance['host']
         if host:
             self._cast_compute_message('power_on_instance', context,
@@ -826,7 +825,6 @@ class API(base.Base):
                     instance_id,
                     task_state=task_states.DELETING)
 
-        # FIXME: How to handle no host?
         host = instance['host']
         if host:
             self._cast_compute_message('terminate_instance', context,
