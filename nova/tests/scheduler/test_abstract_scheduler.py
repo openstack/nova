@@ -26,6 +26,7 @@ from nova import test
 from nova.compute import api as compute_api
 from nova.scheduler import driver
 from nova.scheduler import abstract_scheduler
+from nova.scheduler import base_scheduler
 from nova.scheduler import zone_manager
 
 
@@ -61,6 +62,11 @@ def fake_zone_manager_service_states(num_hosts):
 
 
 class FakeAbstractScheduler(abstract_scheduler.AbstractScheduler):
+    # No need to stub anything at the moment
+    pass
+
+
+class FakeBaseScheduler(base_scheduler.BaseScheduler):
     # No need to stub anything at the moment
     pass
 
@@ -365,3 +371,30 @@ class AbstractSchedulerTestCase(test.TestCase):
 
         self.assertEqual(fixture._decrypt_blob(test_data),
                          json.dumps(test_data))
+
+
+class BaseSchedulerTestCase(test.TestCase):
+    """Test case for Base Scheduler."""
+
+    def test_weigh_hosts(self):
+        """
+        Try to weigh a short list of hosts and make sure enough
+        entries for a larger number instances are returned.
+        """
+
+        sched = FakeBaseScheduler()
+
+        # Fake out a list of hosts
+        zm = FakeZoneManager()
+        hostlist = [(host, services['compute'])
+                    for host, services in zm.service_states.items()
+                    if 'compute' in services]
+
+        # Call weigh_hosts()
+        num_instances = len(hostlist) * 2 + len(hostlist) / 2
+        instlist = sched.weigh_hosts('compute',
+                                     dict(num_instances=num_instances),
+                                     hostlist)
+
+        # Should be enough entries to cover all instances
+        self.assertEqual(len(instlist), num_instances)
