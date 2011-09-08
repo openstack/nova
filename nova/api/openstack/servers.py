@@ -873,6 +873,8 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
     def _add_server_attributes(self, node, server):
         node.setAttribute('id', str(server['id']))
+        node.setAttribute('userId', str(server['user_id']))
+        node.setAttribute('tenantId', str(server['tenant_id']))
         node.setAttribute('uuid', str(server['uuid']))
         node.setAttribute('hostId', str(server['hostId']))
         node.setAttribute('name', server['name'])
@@ -1009,7 +1011,7 @@ def create_resource(version='1.0'):
         "attributes": {
             "server": ["id", "imageId", "name", "flavorId", "hostId",
                        "status", "progress", "adminPass", "flavorRef",
-                       "imageRef"],
+                       "imageRef", "userId", "tenantId"],
             "link": ["rel", "type", "href"],
         },
         "dict_collections": {
