@@ -407,7 +407,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "name": "queued snapshot",
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
-                "status": "QUEUED",
+                "status": "SAVING",
                 "progress": 0,
                 'server': {
                     'id': 42,
@@ -603,7 +603,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'queued snapshot',
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
-            'status': 'QUEUED',
+            'status': 'SAVING',
             'progress': 0,
         },
         {
@@ -627,7 +627,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'name': 'killed snapshot',
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
-            'status': 'FAILED',
+            'status': 'ERROR',
             'progress': 0,
         },
         {
@@ -676,7 +676,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
-            'status': 'QUEUED',
+            'status': 'SAVING',
             'progress': 0,
             'server': {
                 'id': 42,
@@ -769,7 +769,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             },
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
-            'status': 'FAILED',
+            'status': 'ERROR',
             'progress': 0,
             'server': {
                 'id': 42,
