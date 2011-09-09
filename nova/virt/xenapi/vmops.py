@@ -188,9 +188,16 @@ class VMOps(object):
                 ramdisk = VMHelper.fetch_image(context, self._session,
                         instance, instance.ramdisk_id, instance.user_id,
                         instance.project_id, ImageType.RAMDISK)[0]
-            # Create the VM ref and attach the first disk
-            first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                    vdis[0]['vdi_uuid'])
+
+            # NOTE(jk0): Since vdi_type may contain either 'os' or 'swap', we
+            # need to ensure that the 'swap' VDI is not chosen as the mount
+            # point for file injection.
+            first_vdi_ref = None
+            for vdi in vdis:
+                if vdi.get('vdi_type') != 'swap':
+                    # Create the VM ref and attach the first disk
+                    first_vdi_ref = self._session.call_xenapi(
+                            'VDI.get_by_uuid', vdi['vdi_uuid'])
 
             vm_mode = instance.vm_mode and instance.vm_mode.lower()
             if vm_mode == 'pv':

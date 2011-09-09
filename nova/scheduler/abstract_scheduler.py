@@ -41,8 +41,6 @@ from nova.scheduler import api
 from nova.scheduler import driver
 
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('spread_first', False,
-                     'Use a spread-first zone scheduler strategy')
 LOG = logging.getLogger('nova.scheduler.abstract_scheduler')
 
 
@@ -113,7 +111,6 @@ class AbstractScheduler(driver.Scheduler):
         flavor_id = instance_type['flavorid']
         reservation_id = instance_properties['reservation_id']
         files = kwargs['injected_files']
-        ipgroup = None  # Not supported in OS API ... yet
         child_zone = zone_info['child_zone']
         child_blob = zone_info['child_blob']
         zone = db.zone_get(context, child_zone)
@@ -127,8 +124,17 @@ class AbstractScheduler(driver.Scheduler):
         except novaclient_exceptions.BadRequest, e:
             raise exception.NotAuthorized(_("Bad credentials attempting "
                     "to talk to zone at %(url)s.") % locals())
-        nova.servers.create(name, image_ref, flavor_id, ipgroup, meta, files,
-                child_blob, reservation_id=reservation_id)
+        # NOTE(Vek): Novaclient has two different calling conventions
+        #            for this call, depending on whether you're using
+        #            1.0 or 1.1 API: in 1.0, there's an ipgroups
+        #            argument after flavor_id which isn't present in
+        #            1.1.  To work around this, all the extra
+        #            arguments are passed as keyword arguments
+        #            (there's a reasonable default for ipgroups in the
+        #            novaclient call).
+        nova.servers.create(name, image_ref, flavor_id,
+                            meta=meta, files=files, zone_blob=child_blob,
+                            reservation_id=reservation_id)
 
     def _provision_resource_from_blob(self, context, build_plan_item,
             instance_id, request_spec, kwargs):
@@ -272,9 +278,6 @@ class AbstractScheduler(driver.Scheduler):
         # Filter local hosts based on requirements ...
         filtered_hosts = self.filter_hosts(topic, request_spec,
                 unfiltered_hosts)
-        if not filtered_hosts:
-            LOG.warn(_("No hosts available"))
-            return []
 
         # weigh the selected hosts.
         # weighted_hosts = [{weight=weight, hostname=hostname,
@@ -295,15 +298,6 @@ class AbstractScheduler(driver.Scheduler):
                         "child_zone": child_zone,
                         "child_blob": weighting["blob"]}
                 weighted_hosts.append(host_dict)
-        if FLAGS.spread_first:
-            # NOTE(Vek): If all the weights are unique, then the sort
-            #            below undoes this shuffle; however, if
-            #            several responses from several zones have the
-            #            same weight, then this shuffle serves to
-            #            break up the monolithic blocks and cause the
-            #            instances to be uniformly spread across the
-            #            zones.
-            random.shuffle(weighted_hosts)
         weighted_hosts.sort(key=operator.itemgetter('weight'))
         return weighted_hosts
 
