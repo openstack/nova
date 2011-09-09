@@ -40,13 +40,17 @@ def upgrade(migrate_engine):
     migrations.create_column(new_instance_type_id)
 
     # Convert flavor_id to instance_type_id
+    itypes = {}
     for instance_type in migrate_engine.execute(instance_types.select()):
+        itypes[instance_type.id] = instance_type.flavorid
+
+    for instance_type_id in itypes.keys():
         migrate_engine.execute(migrations.update()\
-                .where(migrations.c.old_flavor_id == instance_type.flavorid)\
-                .values(old_instance_type_id=instance_type.id))
+                .where(migrations.c.old_flavor_id == itypes[instance_type_id])\
+                .values(old_instance_type_id=instance_type_id))
         migrate_engine.execute(migrations.update()\
-                .where(migrations.c.new_flavor_id == instance_type.flavorid)\
-                .values(new_instance_type_id=instance_type.id))
+                .where(migrations.c.new_flavor_id == itypes[instance_type_id])\
+                .values(new_instance_type_id=instance_type_id))
 
     migrations.c.old_flavor_id.drop()
     migrations.c.new_flavor_id.drop()

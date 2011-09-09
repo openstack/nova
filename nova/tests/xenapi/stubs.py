@@ -18,6 +18,8 @@
 
 import eventlet
 import json
+import random
+
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
@@ -191,6 +193,7 @@ class FakeSessionForVMTests(fake.SessionBase):
         vm['power_state'] = 'Running'
         vm['is_a_template'] = False
         vm['is_control_domain'] = False
+        vm['domid'] = random.randrange(1, 1 << 16)
 
     def VM_snapshot(self, session_ref, vm_ref, label):
         status = "Running"
@@ -290,6 +293,7 @@ class FakeSessionForMigrationTests(fake.SessionBase):
         vm['power_state'] = 'Running'
         vm['is_a_template'] = False
         vm['is_control_domain'] = False
+        vm['domid'] = random.randrange(1, 1 << 16)
 
 
 def stub_out_migration_methods(stubs):
