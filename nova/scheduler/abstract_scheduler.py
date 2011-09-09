@@ -22,7 +22,6 @@ behavior is to simply select all hosts and weight them the same.
 
 import json
 import operator
-import random
 
 import M2Crypto
 
