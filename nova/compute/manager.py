@@ -1746,7 +1746,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   power_state=vm_power_state)
 
     def _reclaim_queued_deletes(self, context):
-        "Reclaim instances that are queued for deletion."
+        """Reclaim instances that are queued for deletion."""
 
         instances = self.db.instance_get_all_by_host(context, self.host)
 
