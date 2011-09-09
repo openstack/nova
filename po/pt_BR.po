@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-07-25 17:40+0000\n"
-"Last-Translator: msinhore <msinhore@gmail.com>\n"
+"PO-Revision-Date: 2011-09-02 12:17+0000\n"
+"Last-Translator: Robson Negreiros Bezerra <Unknown>\n"
 "Language-Team: Brazilian Portuguese <pt_BR@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-08-03 04:44+0000\n"
-"X-Generator: Launchpad (build 13573)\n"
+"X-Launchpad-Export-Date: 2011-09-03 05:50+0000\n"
+"X-Generator: Launchpad (build 13830)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
@@ -453,11 +453,13 @@ msgid ""
 "Detach volume %(volume_id)s from mountpoint %(mp)s on instance "
 "%(instance_id)s"
 msgstr ""
+"Desconectando volume %(volume_id)s do ponto de montagem %(mp)s na instância "
+"%(instance_id)s"
 
 #: ../nova/compute/manager.py:588
 #, python-format
 msgid "Detaching volume from unknown instance %s"
-msgstr ""
+msgstr "Desconectando volume da instância desconhecida %s"
 
 #: ../nova/scheduler/simple.py:53
 #, python-format
@@ -708,7 +710,7 @@ msgstr "Ligação %(queue)s para %(exchange)s com chave %(routing_key)s"
 #: ../nova/fakerabbit.py:121
 #, python-format
 msgid "Getting from %(queue)s: %(message)s"
-msgstr ""
+msgstr "Recebendo de %(queue)s: %(message)s"
 
 #: ../nova/virt/xenapi/vm_utils.py:135 ../nova/virt/hyperv.py:171
 #, python-format
@@ -808,7 +810,7 @@ msgstr "Kernel/Ramdisk %s destruidos"
 #: ../nova/virt/xenapi/vm_utils.py:361
 #, python-format
 msgid "Asking xapi to fetch %(url)s as %(access)s"
-msgstr ""
+msgstr "Requisitando à xapi a busca da url %(url)s como %(access)s"
 
 #: ../nova/virt/xenapi/vm_utils.py:386 ../nova/virt/xenapi/vm_utils.py:402
 #, python-format
@@ -880,58 +882,59 @@ msgstr ""
 #: ../nova/virt/xenapi/vm_utils.py:590
 #, python-format
 msgid "No VDIs found for VM %s"
-msgstr ""
+msgstr "Nenhum VDIs encontrado para MV %s"
 
 #: ../nova/virt/xenapi/vm_utils.py:594
 #, python-format
 msgid "Unexpected number of VDIs (%(num_vdis)s) found for VM %(vm_ref)s"
 msgstr ""
+"Número de VDIs inesperado (%(num_vdis)s) encontrado para MV %(vm_ref)s"
 
 #: ../nova/virt/xenapi/vm_utils.py:653
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:188
 #, python-format
 msgid "Creating VBD for VDI %s ... "
-msgstr ""
+msgstr "Criando VBD para VDI %s ... "
 
 #: ../nova/virt/xenapi/vm_utils.py:655
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:190
 #, python-format
 msgid "Creating VBD for VDI %s done."
-msgstr ""
+msgstr "O VBD para VDI %s foi criado."
 
 #: ../nova/virt/xenapi/vm_utils.py:657
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:192
 #, python-format
 msgid "Plugging VBD %s ... "
-msgstr ""
+msgstr "Conectando VBD %s ... "
 
 #: ../nova/virt/xenapi/vm_utils.py:659
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:194
 #, python-format
 msgid "Plugging VBD %s done."
-msgstr ""
+msgstr "O VDB %s foi conectado."
 
 #: ../nova/virt/xenapi/vm_utils.py:661
 #, python-format
 msgid "VBD %(vbd)s plugged as %(orig_dev)s"
-msgstr ""
+msgstr "VBD %(vbd)s conectado como %(orig_dev)s"
 
 #: ../nova/virt/xenapi/vm_utils.py:664
 #, python-format
 msgid "VBD %(vbd)s plugged into wrong dev, remapping to %(dev)s"
-msgstr ""
+msgstr "VBD %(vbd)s conectado no device errado, remapeando para %(dev)s"
 
 #: ../nova/virt/xenapi/vm_utils.py:668
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:197
 #, python-format
 msgid "Destroying VBD for VDI %s ... "
-msgstr ""
+msgstr "Destruindo VBD para o VDI %s ... "
 
 #: ../nova/virt/xenapi/vm_utils.py:671
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:200
 #, python-format
 msgid "Destroying VBD for VDI %s done."
-msgstr ""
+msgstr "O VBD para o VDI %s foi destruído."
 
 #: ../nova/virt/xenapi/vm_utils.py:683
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:211
@@ -952,7 +955,7 @@ msgstr ""
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:223
 #, python-format
 msgid "Ignoring XenAPI.Failure in VBD.unplug: %s"
-msgstr ""
+msgstr "Ignorando XenAPI.Failure em VBD.unplug: %s"
 
 #: ../nova/virt/xenapi/vm_utils.py:704
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:66
@@ -2824,47 +2827,6 @@ msgstr ""
 msgid "Removing user %(user)s from project %(project)s"
 msgstr ""
 
-#, python-format
-#~ msgid ""
-#~ "%s\n"
-#~ "Command: %s\n"
-#~ "Exit code: %s\n"
-#~ "Stdout: %r\n"
-#~ "Stderr: %r"
-#~ msgstr ""
-#~ "%s\n"
-#~ "Comando: %s\n"
-#~ "Código de retorno: %s\n"
-#~ "Stdout: %r\n"
-#~ "Stderr: %r"
-
-#, python-format
-#~ msgid "(%s) publish (key: %s) %s"
-#~ msgstr "(%s) publicar (key: %s) %s"
-
-#, python-format
-#~ msgid "AMQP server on %s:%d is unreachable. Trying again in %d seconds."
-#~ msgstr ""
-#~ "Servidor AMQP em %s:%d inatingível. Tentando novamente em %d segundos."
-
-#, python-format
-#~ msgid "Binding %s to %s with key %s"
-#~ msgstr "Atribuindo %s para %s com chave %s"
-
-#, python-format
-#~ msgid "Getting from %s: %s"
-#~ msgstr "Obtendo de %s: %s"
-
-#, python-format
-#~ msgid "Starting %s node"
-#~ msgstr "Iniciando nó %s"
-
-#, python-format
-#~ msgid "Data store %s is unreachable. Trying again in %d seconds."
-#~ msgstr ""
-#~ "Repositório de dados %s não pode ser atingido. Tentando novamente em %d "
-#~ "segundos."
-
 #~ msgid "Full set of FLAGS:"
 #~ msgstr "Conjunto completo de FLAGS:"
 
@@ -2875,115 +2837,6 @@ msgstr ""
 #, python-format
 #~ msgid "Serving %s"
 #~ msgstr "Servindo %s"
-
-#, python-format
-#~ msgid "Couldn't get IP, using 127.0.0.1 %s"
-#~ msgstr "Não foi possível obter IP, usando 127.0.0.1 %s"
-
-#, python-format
-#~ msgid ""
-#~ "Access key %s has had %d failed authentications and will be locked out for "
-#~ "%d minutes."
-#~ msgstr ""
-#~ "Chave de acesso %s tem %d falhas de autenticação e vai ser bloqueada por %d "
-#~ "minutos."
-
-#, python-format
-#~ msgid "arg: %s\t\tval: %s"
-#~ msgstr "argumento: %s\t\tvalor: %s"
-
-#, python-format
-#~ msgid "Authenticated Request For %s:%s)"
-#~ msgstr "Pedido de Autenticação Para: %s:%s"
-
-#, python-format
-#~ msgid "Adding sitewide role %s to user %s"
-#~ msgstr "Adicionando papel em todo site %s ao usuário %s"
-
-#, python-format
-#~ msgid "Adding role %s to user %s for project %s"
-#~ msgstr "Adicionando papel %s ao usuário %s para o projeto %s"
-
-#, python-format
-#~ msgid "Unauthorized request for controller=%s and action=%s"
-#~ msgstr "Requisição não autorizada para controlador=%s e ação=%s"
-
-#, python-format
-#~ msgid "Removing role %s from user %s for project %s"
-#~ msgstr "Removendo papel %s do usuário %s para o projeto %s"
-
-#, python-format
-#~ msgid "Getting x509 for user: %s on project: %s"
-#~ msgstr "Obtendo x509 para usuário: %s do projeto: %s"
-
-#, python-format
-#~ msgid "Create project %s managed by %s"
-#~ msgstr "Criar projeto %s gerenciado por %s"
-
-#, python-format
-#~ msgid "Removing user %s from project %s"
-#~ msgstr "Excluindo usuário %s do projeto %s"
-
-#, python-format
-#~ msgid "Adding user %s to project %s"
-#~ msgstr "Adicionando usuário %s ao projeto %s"
-
-#, python-format
-#~ msgid "Unsupported API request: controller = %s,action = %s"
-#~ msgstr "Requisição de API não suportada: controlador = %s,ação = %s"
-
-#, python-format
-#~ msgid "Removing sitewide role %s from user %s"
-#~ msgstr "Removendo papel %s em todo site do usuário %s"
-
-#, python-format
-#~ msgid "Associate address %s to instance %s"
-#~ msgstr "Atribuir endereço %s à instância %s"
-
-#, python-format
-#~ msgid "Attach volume %s to instacne %s at %s"
-#~ msgstr "Anexar volume %s para instância %s em %s"
-
-#, python-format
-#~ msgid "Registered image %s with id %s"
-#~ msgstr "Registrada imagem %s com id %s"
-
-#, python-format
-#~ msgid "User %s is already a member of the group %s"
-#~ msgstr "Usuário %s já pertence ao grupo %s"
-
-#, python-format
-#~ msgid "User %s is not a member of project %s"
-#~ msgstr "Usuário %s não é membro do projeto %s"
-
-#, python-format
-#~ msgid "failed authorization: no project named %s (user=%s)"
-#~ msgstr "falha de autorização: nenhum projeto de nome %s (usuário=%s)"
-
-#, python-format
-#~ msgid "Failed authorization: user %s not admin and not member of project %s"
-#~ msgstr ""
-#~ "Falha de autorização: usuário %s não é administrador nem membro do projeto %s"
-
-#, python-format
-#~ msgid "Created project %s with manager %s"
-#~ msgstr "Criado projeto %s com gerente %s"
-
-#, python-format
-#~ msgid "Removing role %s from user %s on project %s"
-#~ msgstr "Removendo papel %s do usuário %s no projeto %s"
-
-#, python-format
-#~ msgid "Adding role %s to user %s in project %s"
-#~ msgstr "Adicionando papel %s ao usuário %s no projeto %s"
-
-#, python-format
-#~ msgid "Remove user %s from project %s"
-#~ msgstr "Remover usuário %s do projeto %s"
-
-#, python-format
-#~ msgid "Created user %s (admin: %r)"
-#~ msgstr "Criado usuário %s (administrador: %r)"
 
 #~ msgid "No such process"
 #~ msgstr "Processo inexistente"

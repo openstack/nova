@@ -61,7 +61,7 @@ class ApiError(Error):
         super(ApiError, self).__init__(outstr)
 
 
-class BuildInProgress(Error):
+class RebuildRequiresActiveInstance(Error):
     pass
 
 
@@ -146,6 +146,7 @@ class NovaException(Exception):
     message = _("An unknown exception occurred.")
 
     def __init__(self, **kwargs):
+        self.kwargs = kwargs
         try:
             self._error_string = self.message % kwargs
 
@@ -195,6 +196,10 @@ class InvalidInput(Invalid):
 
 class InvalidInstanceType(Invalid):
     message = _("Invalid instance type %(instance_type)s.")
+
+
+class InvalidVolumeType(Invalid):
+    message = _("Invalid volume type %(volume_type)s.")
 
 
 class InvalidPortRange(Invalid):
@@ -338,6 +343,29 @@ class VolumeNotFoundForInstance(VolumeNotFound):
     message = _("Volume not found for instance %(instance_id)s.")
 
 
+class VolumeMetadataNotFound(NotFound):
+    message = _("Volume %(volume_id)s has no metadata with "
+                "key %(metadata_key)s.")
+
+
+class NoVolumeTypesFound(NotFound):
+    message = _("Zero volume types found.")
+
+
+class VolumeTypeNotFound(NotFound):
+    message = _("Volume type %(volume_type_id)s could not be found.")
+
+
+class VolumeTypeNotFoundByName(VolumeTypeNotFound):
+    message = _("Volume type with name %(volume_type_name)s "
+                "could not be found.")
+
+
+class VolumeTypeExtraSpecsNotFound(NotFound):
+    message = _("Volume Type %(volume_type_id)s has no extra specs with "
+                "key %(extra_specs_key)s.")
+
+
 class SnapshotNotFound(NotFound):
     message = _("Snapshot %(snapshot_id)s could not be found.")
 
@@ -375,10 +403,6 @@ class KernelNotFoundForImage(ImageNotFound):
     message = _("Kernel not found for image %(image_id)s.")
 
 
-class RamdiskNotFoundForImage(ImageNotFound):
-    message = _("Ramdisk not found for image %(image_id)s.")
-
-
 class UserNotFound(NotFound):
     message = _("User %(user_id)s could not be found.")
 
@@ -409,6 +433,10 @@ class NetworkNotFound(NotFound):
 
 class NetworkNotFoundForBridge(NetworkNotFound):
     message = _("Network could not be found for bridge %(bridge)s")
+
+
+class NetworkNotFoundForUUID(NetworkNotFound):
+    message = _("Network could not be found for uuid %(uuid)s")
 
 
 class NetworkNotFoundForCidr(NetworkNotFound):
@@ -504,6 +532,10 @@ class FloatingIpNotFoundForHost(FloatingIpNotFound):
 
 class NoMoreFloatingIps(FloatingIpNotFound):
     message = _("Zero floating ips available.")
+
+
+class FloatingIpAlreadyInUse(NovaException):
+    message = _("Floating ip %(address)s already in use by %(fixed_ip)s.")
 
 
 class NoFloatingIpsDefined(NotFound):
@@ -756,6 +788,18 @@ class PasteAppNotFound(NotFound):
     message = _("Could not load paste app '%(name)s' from %(path)s")
 
 
+class VSANovaAccessParamNotFound(Invalid):
+    message = _("Nova access parameters were not specified.")
+
+
+class VirtualStorageArrayNotFound(NotFound):
+    message = _("Virtual Storage Array %(id)d could not be found.")
+
+
+class VirtualStorageArrayNotFoundByName(NotFound):
+    message = _("Virtual Storage Array %(name)s could not be found.")
+
+
 class CannotResizeToSameSize(NovaException):
     message = _("When resizing, instances must change size!")
 
@@ -766,3 +810,10 @@ class CannotResizeToSmallerSize(NovaException):
 
 class ImageTooLarge(NovaException):
     message = _("Image is larger than instance type allows")
+
+
+class ZoneRequestError(Error):
+    def __init__(self, message=None):
+        if message is None:
+            message = _("1 or more Zones could not complete the request")
+        super(ZoneRequestError, self).__init__(message=message)

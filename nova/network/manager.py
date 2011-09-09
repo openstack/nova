@@ -74,7 +74,7 @@ flags.DEFINE_string('flat_network_bridge', None,
                     'Bridge for simple network instances')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
-flags.DEFINE_bool('flat_injected', True,
+flags.DEFINE_bool('flat_injected', False,
                   'Whether to attempt to inject network setup into guest')
 flags.DEFINE_string('flat_interface', None,
                     'FlatDhcp will bridge into this interface if set')
@@ -128,8 +128,8 @@ class RPCAllocateFixedIP(object):
         """Calls allocate_fixed_ip once for each network."""
         green_pool = greenpool.GreenPool()
 
-        vpn = kwargs.pop('vpn')
-        requested_networks = kwargs.pop('requested_networks')
+        vpn = kwargs.get('vpn')
+        requested_networks = kwargs.get('requested_networks')
 
         for network in networks:
             address = None
@@ -280,6 +280,13 @@ class FloatingIP(object):
 
     def associate_floating_ip(self, context, floating_address, fixed_address):
         """Associates an floating ip to a fixed ip."""
+        floating_ip = self.db.floating_ip_get_by_address(context,
+                                                         floating_address)
+        if floating_ip['fixed_ip']:
+            raise exception.FloatingIpAlreadyInUse(
+                            address=floating_ip['address'],
+                            fixed_ip=floating_ip['fixed_ip']['address'])
+
         self.db.floating_ip_fixed_ip_associate(context,
                                                floating_address,
                                                fixed_address)
@@ -441,7 +448,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         try:
             fixed_ips = kwargs.get('fixed_ips') or \
                   self.db.fixed_ip_get_by_instance(context, instance_id)
-        except exceptions.FixedIpNotFoundForInstance:
+        except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
         LOG.debug(_("network deallocation for instance |%s|"), instance_id,
                                                                context=context)
@@ -477,6 +484,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         for vif in vifs:
             network = vif['network']
 
+            if network is None:
+                continue
+
             # determine which of the instance's IPs belong to this network
             network_IPs = [fixed_ip['address'] for fixed_ip in fixed_ips if
                            fixed_ip['network_id'] == network['id']]
@@ -484,17 +494,17 @@ class NetworkManager(manager.SchedulerDependentManager):
             # TODO(tr3buchet) eventually "enabled" should be determined
             def ip_dict(ip):
                 return {
-                    "ip": ip,
-                    "netmask": network["netmask"],
-                    "enabled": "1"}
+                    'ip': ip,
+                    'netmask': network['netmask'],
+                    'enabled': '1'}
 
             def ip6_dict():
                 return {
-                    "ip": ipv6.to_global(network['cidr_v6'],
+                    'ip': ipv6.to_global(network['cidr_v6'],
                                          vif['address'],
                                          network['project_id']),
-                    "netmask": network['netmask_v6'],
-                    "enabled": "1"}
+                    'netmask': network['netmask_v6'],
+                    'enabled': '1'}
             network_dict = {
                 'bridge': network['bridge'],
                 'id': network['id'],
@@ -539,21 +549,23 @@ class NetworkManager(manager.SchedulerDependentManager):
     def _allocate_mac_addresses(self, context, instance_id, networks):
         """Generates mac addresses and creates vif rows in db for them."""
         for network in networks:
-            vif = {'address': self.generate_mac_address(),
+            self.add_virtual_interface(context, instance_id, network['id'])
+
+    def add_virtual_interface(self, context, instance_id, network_id):
+        vif = {'address': self.generate_mac_address(),
                    'instance_id': instance_id,
-                   'network_id': network['id'],
+                   'network_id': network_id,
                    'uuid': str(utils.gen_uuid())}
-            # try FLAG times to create a vif record with a unique mac_address
-            for i in range(FLAGS.create_unique_mac_address_attempts):
-                try:
-                    self.db.virtual_interface_create(context, vif)
-                    break
-                except exception.VirtualInterfaceCreateException:
-                    vif['address'] = self.generate_mac_address()
-            else:
-                self.db.virtual_interface_delete_by_instance(context,
+        # try FLAG times to create a vif record with a unique mac_address
+        for _ in xrange(FLAGS.create_unique_mac_address_attempts):
+            try:
+                return self.db.virtual_interface_create(context, vif)
+            except exception.VirtualInterfaceCreateException:
+                vif['address'] = self.generate_mac_address()
+        else:
+            self.db.virtual_interface_delete_by_instance(context,
                                                              instance_id)
-                raise exception.VirtualInterfaceMacAddressException()
+            raise exception.VirtualInterfaceMacAddressException()
 
     def generate_mac_address(self):
         """Generate an Ethernet MAC address."""
@@ -782,6 +794,15 @@ class NetworkManager(manager.SchedulerDependentManager):
                 self._create_fixed_ips(context, network['id'])
         return networks
 
+    def delete_network(self, context, fixed_range, require_disassociated=True):
+
+        network = db.network_get_by_cidr(context, fixed_range)
+
+        if require_disassociated and network.project_id is not None:
+            raise ValueError(_('Network must be disassociated from project %s'
+                               ' before delete' % network.project_id))
+        db.network_delete_safe(context, network.id)
+
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201
         """Number of reserved ips at the bottom of the range."""
@@ -883,7 +904,7 @@ class FlatManager(NetworkManager):
     def _allocate_fixed_ips(self, context, instance_id, host, networks,
                             **kwargs):
         """Calls allocate_fixed_ip once for each network."""
-        requested_networks = kwargs.pop('requested_networks')
+        requested_networks = kwargs.get('requested_networks')
         for network in networks:
             address = None
             if requested_networks is not None:
