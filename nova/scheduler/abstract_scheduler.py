@@ -296,6 +296,13 @@ class AbstractScheduler(driver.Scheduler):
                         "child_blob": weighting["blob"]}
                 weighted_hosts.append(host_dict)
         if FLAGS.spread_first:
+            # NOTE(Vek): If all the weights are unique, then the sort
+            #            below undoes this shuffle; however, if
+            #            several responses from several zones have the
+            #            same weight, then this shuffle serves to
+            #            break up the monolithic blocks and cause the
+            #            instances to be uniformly spread across the
+            #            zones.
             random.shuffle(weighted_hosts)
         weighted_hosts.sort(key=operator.itemgetter('weight'))
         return weighted_hosts
