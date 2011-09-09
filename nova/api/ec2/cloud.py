@@ -337,8 +337,9 @@ class CloudController(object):
 
         # public-keys should only show up if it is non-empty (if user specified one)
         if instance_ref['key_name']:
-            data['public-keys'] = {'0': {'_name': instance_ref['key_name'],
-                          'openssh-key': instance_ref['key_data']}}
+            data['meta-data']['public-keys'] = {
+                '0': {'_name': instance_ref['key_name'],
+                      'openssh-key': instance_ref['key_data']}}
 
         for image_type in ['kernel', 'ramdisk']:
             if instance_ref.get('%s_id' % image_type):
