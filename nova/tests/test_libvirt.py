@@ -394,7 +394,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(snapshot['disk_format'], FLAGS.snapshot_image_format)
         self.assertEquals(snapshot['name'], snapshot_name)
 
-
     def test_snapshot_no_image_architecture(self):
         if not self.lazy_load_library_exists():
             return
