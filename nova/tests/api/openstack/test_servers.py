@@ -3615,7 +3615,7 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
         self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
 
     def test_ami_no_ramdisk(self):
-        """If an ami is missing a ramdisk, return kernel ID and None for 
+        """If an ami is missing a ramdisk, return kernel ID and None for
         ramdisk ID
         """
         image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
@@ -3715,7 +3715,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
-                "key_name": '',
                 "links": [
                     {
                         "rel": "self",
@@ -3726,7 +3725,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                         "href": "http://localhost/servers/1",
                     },
                 ],
-                "config_drive": None,
             }
         }
 
@@ -3739,8 +3737,6 @@ class ServersViewBuilderV11Test(test.TestCase):
                 "id": 1,
                 "uuid": self.instance['uuid'],
                 "name": "test_server",
-                "key_name": '',
-                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
