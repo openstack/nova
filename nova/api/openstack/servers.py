@@ -920,6 +920,13 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
             addresses_elem = self._create_addresses_node(
                             server_dict.get('addresses', {}))
             server_elem.append(addresses_elem)
+            groups = server_dict.get('security_groups')
+            if groups:
+                groups_elem = etree.SubElement(server_elem, 'security_groups')
+                for group in groups:
+                    group_elem = etree.SubElement(groups_elem,
+                                                  'security_group')
+                    group_elem.set('name', group['name'])
 
         for link in server_dict.get('links', []):
             elem = etree.SubElement(server_elem,
@@ -962,19 +969,6 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         server = etree.Element('server', nsmap=self.NSMAP)
         self._populate_server(server, server_dict['server'], True)
         return self._to_xml(server)
-
-    def _security_group_to_xml(self, doc, security_group):
-        node = doc.createElement('security_group')
-        node.setAttribute('name', str(security_group.get('name')))
-        return node
-
-    def _create_security_groups_node(self, xml_doc, security_groups):
-        security_groups_node = xml_doc.createElement('security_groups')
-        if security_groups:
-            for security_group in security_groups:
-                node = self._security_group_to_xml(xml_doc, security_group)
-                security_groups_node.appendChild(node)
-        return security_groups_node
 
 
 def create_resource(version='1.0'):
