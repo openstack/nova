@@ -335,7 +335,7 @@ class CloudController(object):
                 'security-groups': security_groups,
                 'mpi': mpi}}
 
-        # public-keys should only show up if it is non-empty (if user specified one)
+        # public-keys should be in meta-data only if user specified one
         if instance_ref['key_name']:
             data['meta-data']['public-keys'] = {
                 '0': {'_name': instance_ref['key_name'],
