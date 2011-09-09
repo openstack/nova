@@ -110,11 +110,12 @@ def _wrap_method(function, self):
     return _wrap
 
 
-def _process(func, zone):
+def _process(func, context, zone):
     """Worker stub for green thread pool. Give the worker
-    an authenticated nova client and zone info."""
+    an authenticated nova client and zone info. This call
+    is done on behalf of the user."""
     nova = novaclient.Client(zone.username, zone.password, None,
-                                zone.api_url)
+                             zone.api_url, token=context.auth_token)
     nova.authenticate()
     return func(nova, zone)
 
@@ -133,13 +134,15 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
         zones = db.zone_get_all(context)
     for zone in zones:
         try:
+            # Do this on behalf of the user ...
             nova = novaclient.Client(zone.username, zone.password, None,
-                    zone.api_url)
+                    zone.api_url, token = context.auth_token)
             nova.authenticate()
         except novaclient_exceptions.BadRequest, e:
             url = zone.api_url
-            LOG.warn(_("Failed request to zone; URL=%(url)s: %(e)s")
-                    % locals())
+            name = zone.name
+            LOG.warn(_("Authentication failed to zone "
+                       "'%(name)s' URL=%(url)s: %(e)s") % locals())
             #TODO (dabo) - add logic for failure counts per zone,
             # with escalation after a given number of failures.
             continue
@@ -160,7 +163,7 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
     return [(zone.id, res.wait()) for zone, res in results]
 
 
-def child_zone_helper(zone_list, func):
+def child_zone_helper(context, zone_list, func):
     """Fire off a command to each zone in the list.
     The return is [novaclient return objects] from each child zone.
     For example, if you are calling server.pause(), the list will
@@ -168,7 +171,7 @@ def child_zone_helper(zone_list, func):
     per child zone called."""
     green_pool = greenpool.GreenPool()
     return [result for result in green_pool.imap(
-                    _wrap_method(_process, func), zone_list)]
+                    _wrap_method(_process, context, func), zone_list)]
 
 
 def _issue_novaclient_command(nova, zone, collection,
@@ -266,7 +269,7 @@ class reroute_compute(object):
 
         # Ask the children to provide an answer ...
         LOG.debug(_("Asking child zones ..."))
-        result = self._call_child_zones(zones,
+        result = self._call_child_zones(context, zones,
                     wrap_novaclient_function(_issue_novaclient_command,
                            collection, self.method_name, item_uuid))
         # Scrub the results and raise another exception
@@ -306,10 +309,10 @@ class reroute_compute(object):
 
         return wrapped_f
 
-    def _call_child_zones(self, zones, function):
+    def _call_child_zones(self, context, zones, function):
         """Ask the child zones to perform this operation.
         Broken out for testing."""
-        return child_zone_helper(zones, function)
+        return child_zone_helper(context, zones, function)
 
     def get_collection_context_and_id(self, args, kwargs):
         """Returns a tuple of (novaclient collection name, security
