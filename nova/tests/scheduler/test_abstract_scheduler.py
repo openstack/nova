@@ -26,6 +26,7 @@ from nova import test
 from nova.compute import api as compute_api
 from nova.scheduler import driver
 from nova.scheduler import abstract_scheduler
+from nova.scheduler import base_scheduler
 from nova.scheduler import zone_manager
 
 
@@ -61,6 +62,11 @@ def fake_zone_manager_service_states(num_hosts):
 
 
 class FakeAbstractScheduler(abstract_scheduler.AbstractScheduler):
+    # No need to stub anything at the moment
+    pass
+
+
+class FakeBaseScheduler(base_scheduler.BaseScheduler):
     # No need to stub anything at the moment
     pass
 
@@ -365,3 +371,52 @@ class AbstractSchedulerTestCase(test.TestCase):
 
         self.assertEqual(fixture._decrypt_blob(test_data),
                          json.dumps(test_data))
+
+    def test_empty_local_hosts(self):
+        """
+        Create a nested set of FakeZones, try to build multiple instances
+        and ensure that a select call returns the appropriate build plan.
+        """
+        sched = FakeAbstractScheduler()
+        self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
+        self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
+
+        zm = FakeZoneManager()
+        # patch this to have no local hosts
+        zm.service_states = {}
+        sched.set_zone_manager(zm)
+
+        fake_context = {}
+        build_plan = sched.select(fake_context,
+                {'instance_type': {'memory_mb': 512},
+                    'num_instances': 4})
+
+        # 0 from local zones, 12 from remotes
+        self.assertEqual(12, len(build_plan))
+
+
+class BaseSchedulerTestCase(test.TestCase):
+    """Test case for Base Scheduler."""
+
+    def test_weigh_hosts(self):
+        """
+        Try to weigh a short list of hosts and make sure enough
+        entries for a larger number instances are returned.
+        """
+
+        sched = FakeBaseScheduler()
+
+        # Fake out a list of hosts
+        zm = FakeZoneManager()
+        hostlist = [(host, services['compute'])
+                    for host, services in zm.service_states.items()
+                    if 'compute' in services]
+
+        # Call weigh_hosts()
+        num_instances = len(hostlist) * 2 + len(hostlist) / 2
+        instlist = sched.weigh_hosts('compute',
+                                     dict(num_instances=num_instances),
+                                     hostlist)
+
+        # Should be enough entries to cover all instances
+        self.assertEqual(len(instlist), num_instances)

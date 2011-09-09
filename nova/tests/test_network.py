@@ -58,7 +58,7 @@ networks = [{'id': 0,
              'dns1': '192.168.0.1',
              'dns2': '192.168.0.2',
              'vlan': None,
-             'host': None,
+             'host': HOST,
              'project_id': 'fake_project',
              'vpn_public_address': '192.168.0.2'},
             {'id': 1,
@@ -78,7 +78,7 @@ networks = [{'id': 0,
              'dns1': '192.168.0.1',
              'dns2': '192.168.0.2',
              'vlan': None,
-             'host': None,
+             'host': HOST,
              'project_id': 'fake_project',
              'vpn_public_address': '192.168.1.2'}]
 
@@ -118,9 +118,14 @@ vifs = [{'id': 0,
         {'id': 1,
          'address': 'DE:AD:BE:EF:00:01',
          'uuid': '00000000-0000-0000-0000-0000000000000001',
-         'network_id': 0,
          'network_id': 1,
          'network': FakeModel(**networks[1]),
+         'instance_id': 0},
+        {'id': 2,
+         'address': 'DE:AD:BE:EF:00:02',
+         'uuid': '00000000-0000-0000-0000-0000000000000002',
+         'network_id': 2,
+         'network': None,
          'instance_id': 0}]
 
 
@@ -246,6 +251,34 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.network.validate_networks(None, requested_networks)
+
+    def test_add_fixed_ip_instance_without_vpn_requested_networks(self):
+        self.mox.StubOutWithMock(db, 'network_get')
+        self.mox.StubOutWithMock(db, 'network_update')
+        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(db,
+                              'virtual_interface_get_by_instance_and_network')
+        self.mox.StubOutWithMock(db, 'fixed_ip_update')
+
+        db.fixed_ip_update(mox.IgnoreArg(),
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
+        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+
+        db.instance_get(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'security_groups':
+                                                             [{'id': 0}]})
+        db.fixed_ip_associate_pool(mox.IgnoreArg(),
+                                   mox.IgnoreArg(),
+                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
+        db.network_get(mox.IgnoreArg(),
+                       mox.IgnoreArg()).AndReturn(networks[0])
+        db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
+                                              networks[0]['id'])
 
 
 class VlanNetworkTestCase(test.TestCase):
@@ -386,6 +419,32 @@ class VlanNetworkTestCase(test.TestCase):
                           ctxt,
                           mox.IgnoreArg(),
                           mox.IgnoreArg())
+
+    def test_add_fixed_ip_instance_without_vpn_requested_networks(self):
+        self.mox.StubOutWithMock(db, 'network_get')
+        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(db,
+                              'virtual_interface_get_by_instance_and_network')
+        self.mox.StubOutWithMock(db, 'fixed_ip_update')
+
+        db.fixed_ip_update(mox.IgnoreArg(),
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
+        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+
+        db.instance_get(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'security_groups':
+                                                             [{'id': 0}]})
+        db.fixed_ip_associate_pool(mox.IgnoreArg(),
+                                   mox.IgnoreArg(),
+                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
+        db.network_get(mox.IgnoreArg(),
+                       mox.IgnoreArg()).AndReturn(networks[0])
+        self.mox.ReplayAll()
+        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
+                                              networks[0]['id'])
 
 
 class CommonNetworkTestCase(test.TestCase):

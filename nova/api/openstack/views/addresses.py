@@ -88,7 +88,6 @@ class ViewBuilderV11(ViewBuilder):
         try:
             return interface['network']['label']
         except (TypeError, KeyError) as exc:
-            LOG.exception(exc)
             raise TypeError
 
     def _extract_ipv4_addresses(self, interface):
