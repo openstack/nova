@@ -67,10 +67,10 @@ class Deferred_delete(extensions.ExtensionDescriptor):
     def get_actions(self):
         """Return the actions the extension adds, as required by contract."""
         actions = [
-                extensions.ActionExtension("servers", "restore",
-                                           self._restore),
-                extensions.ActionExtension("servers", "forceDelete",
-                                           self._force_delete),
+            extensions.ActionExtension("servers", "restore",
+                                       self._restore),
+            extensions.ActionExtension("servers", "forceDelete",
+                                       self._force_delete),
         ]
 
         return actions
