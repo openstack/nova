@@ -496,7 +496,8 @@ class ServersTest(test.TestCase):
         self.assertEqual(image.get('id'), str(expected['image']['id']))
 
         links = root.xpath('ns:image/atom:link', namespaces=XPATH_NS)
-        self.assertTrue(common.compare_links(links, expected['image']['links']))
+        self.assertTrue(common.compare_links(links,
+                                             expected['image']['links']))
 
         (flavor,) = root.xpath('ns:flavor', namespaces=XPATH_NS)
         self.assertEqual(flavor.get('id'), str(expected['flavor']['id']))
@@ -3663,7 +3664,7 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
         self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
 
     def test_ami_no_ramdisk(self):
-        """If an ami is missing a ramdisk, return kernel ID and None for 
+        """If an ami is missing a ramdisk, return kernel ID and None for
         ramdisk ID
         """
         image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
