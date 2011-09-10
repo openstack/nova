@@ -38,6 +38,7 @@ from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
+from nova.compute import vm_states
 from nova.image import fake
 
 
@@ -50,8 +51,6 @@ class CloudTestCase(test.TestCase):
         super(CloudTestCase, self).setUp()
         self.flags(connection_type='fake',
                    stub_network=True)
-
-        self.conn = rpc.create_connection()
 
         # set up our cloud
         self.cloud = cloud.CloudController()
@@ -85,13 +84,6 @@ class CloudTestCase(test.TestCase):
             greenthread.sleep(0.2)
 
         self.stubs.Set(rpc, 'cast', finish_cast)
-
-    def tearDown(self):
-        networks = db.project_get_networks(self.context, self.project_id,
-                                           associate=False)
-        for network in networks:
-            db.network_disassociate(self.context, network['id'])
-        super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
@@ -494,8 +486,9 @@ class CloudTestCase(test.TestCase):
         inst2 = db.instance_create(self.context, args2)
         db.instance_destroy(self.context, inst1.id)
         result = self.cloud.describe_instances(self.context)
-        result = result['reservationSet'][0]['instancesSet']
-        self.assertEqual(result[0]['instanceId'],
+        self.assertEqual(len(result['reservationSet']), 1)
+        result1 = result['reservationSet'][0]['instancesSet']
+        self.assertEqual(result1[0]['instanceId'],
                          ec2utils.id_to_ec2_id(inst2.id))
 
     def _block_device_mapping_create(self, instance_id, mappings):
@@ -1163,7 +1156,7 @@ class CloudTestCase(test.TestCase):
             self.compute = self.start_service('compute')
 
     def _wait_for_state(self, ctxt, instance_id, predicate):
-        """Wait for an stopping instance to be a given state"""
+        """Wait for a stopped instance to be a given state"""
         id = ec2utils.ec2_id_to_id(instance_id)
         while True:
             info = self.cloud.compute_api.get(context=ctxt, instance_id=id)
@@ -1174,12 +1167,16 @@ class CloudTestCase(test.TestCase):
 
     def _wait_for_running(self, instance_id):
         def is_running(info):
-            return info['state_description'] == 'running'
+            vm_state = info["vm_state"]
+            task_state = info["task_state"]
+            return vm_state == vm_states.ACTIVE and task_state == None
         self._wait_for_state(self.context, instance_id, is_running)
 
     def _wait_for_stopped(self, instance_id):
         def is_stopped(info):
-            return info['state_description'] == 'stopped'
+            vm_state = info["vm_state"]
+            task_state = info["task_state"]
+            return vm_state == vm_states.STOPPED and task_state == None
         self._wait_for_state(self.context, instance_id, is_stopped)
 
     def _wait_for_terminate(self, instance_id):
@@ -1562,7 +1559,7 @@ class CloudTestCase(test.TestCase):
                 'id': 0,
                 'root_device_name': '/dev/sdh',
                 'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
-                'state_description': 'stopping',
+                'vm_state': vm_states.STOPPED,
                 'instance_type': {'name': 'fake_type'},
                 'kernel_id': 1,
                 'ramdisk_id': 2,
@@ -1606,7 +1603,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(groupSet, expected_groupSet)
         self.assertEqual(get_attribute('instanceInitiatedShutdownBehavior'),
                          {'instance_id': 'i-12345678',
-                          'instanceInitiatedShutdownBehavior': 'stop'})
+                          'instanceInitiatedShutdownBehavior': 'stopped'})
         self.assertEqual(get_attribute('instanceType'),
                          {'instance_id': 'i-12345678',
                           'instanceType': 'fake_type'})

@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-07-09 07:20+0000\n"
-"Last-Translator: ilya kislicyn <Unknown>\n"
+"PO-Revision-Date: 2011-08-23 11:22+0000\n"
+"Last-Translator: Thierry Carrez <thierry.carrez+lp@gmail.com>\n"
 "Language-Team: Russian <ru@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-08-03 04:44+0000\n"
-"X-Generator: Launchpad (build 13573)\n"
+"X-Launchpad-Export-Date: 2011-08-24 04:47+0000\n"
+"X-Generator: Launchpad (build 13697)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
@@ -2793,58 +2793,6 @@ msgstr ""
 #~ msgid "Starting %s"
 #~ msgstr "Запускается %s"
 
-#, python-format
-#~ msgid "arg: %s\t\tval: %s"
-#~ msgstr "arg: %s\t\tval: %s"
-
-#, python-format
-#~ msgid "Adding role %s to user %s for project %s"
-#~ msgstr "Добавление роли %s для пользователя %s для проекта %s"
-
-#, python-format
-#~ msgid "Removing role %s from user %s for project %s"
-#~ msgstr "Удаление роли %s пользователя %s для проекта %s"
-
-#, python-format
-#~ msgid "Create project %s managed by %s"
-#~ msgstr "Создать проект %s под управлением %s"
-
-#, python-format
-#~ msgid "Removing user %s from project %s"
-#~ msgstr "Удаление пользователя %s с проекта %s"
-
-#, python-format
-#~ msgid "Adding user %s to project %s"
-#~ msgstr "Добавление пользователя %s к проекту %s"
-
-#, python-format
-#~ msgid "User %s is already a member of the group %s"
-#~ msgstr "Пользователь %s уже член группы %s"
-
-#, python-format
-#~ msgid "User %s is not a member of project %s"
-#~ msgstr "Пользователь %s не является членом группы %s"
-
-#, python-format
-#~ msgid "Created project %s with manager %s"
-#~ msgstr "Создан проект %s под управлением %s"
-
-#, python-format
-#~ msgid "Removing role %s from user %s on project %s"
-#~ msgstr "Удаление роли %s пользователя %s в проекте %s"
-
-#, python-format
-#~ msgid "Remove user %s from project %s"
-#~ msgstr "Удалить пользователя %s из проекта %s"
-
-#, python-format
-#~ msgid "Created user %s (admin: %r)"
-#~ msgstr "Создан пользователь %s (администратор: %r)"
-
-#, python-format
-#~ msgid "Adding role %s to user %s in project %s"
-#~ msgstr "Добавление роли %s для пользователя %s в проект %s"
-
 #~ msgid "unexpected error during update"
 #~ msgstr "неожиданная ошибка во время обновления"
 
@@ -2853,74 +2801,8 @@ msgstr ""
 #~ msgstr "обновление %s..."
 
 #, python-format
-#~ msgid "Getting object: %s / %s"
-#~ msgstr "Получение объекта: %s / %s"
-
-#, python-format
-#~ msgid "Deleting object: %s / %s"
-#~ msgstr "Удаление объекта: %s / %s"
-
-#, python-format
-#~ msgid "%s: _db_content => %s"
-#~ msgstr "%s: _db_content => %s"
-
-#, python-format
-#~ msgid "Calling %s %s"
-#~ msgstr "Звонок %s %s"
-
-#, python-format
-#~ msgid ""
-#~ "%s\n"
-#~ "Command: %s\n"
-#~ "Exit code: %s\n"
-#~ "Stdout: %r\n"
-#~ "Stderr: %r"
-#~ msgstr ""
-#~ "%s\n"
-#~ "Команда: %s\n"
-#~ "Код завершения: %s\n"
-#~ "Stdout: %r\n"
-#~ "Stderr: %r"
-
-#, python-format
-#~ msgid "AMQP server on %s:%d is unreachable. Trying again in %d seconds."
-#~ msgstr "AMQP сервер %s:%d недоступен. Повторная попытка через %d секунд."
-
-#, python-format
-#~ msgid "Putting object: %s / %s"
-#~ msgstr "Вставка объекта: %s / %s"
-
-#, python-format
-#~ msgid "Starting %s node"
-#~ msgstr "Запускается нода %s"
-
-#, python-format
-#~ msgid "Data store %s is unreachable. Trying again in %d seconds."
-#~ msgstr "Хранилище данных %s недоступно. Повторная попытка через %d секунд."
-
-#, python-format
-#~ msgid "Couldn't get IP, using 127.0.0.1 %s"
-#~ msgstr "Не удалось получить IP, используем 127.0.0.1 %s"
-
-#, python-format
 #~ msgid "pidfile %s does not exist. Daemon not running?\n"
 #~ msgstr "pidfile %s не обнаружен. Демон не запущен?\n"
-
-#, python-format
-#~ msgid "Getting from %s: %s"
-#~ msgstr "Получение из %s: %s"
-
-#, python-format
-#~ msgid ""
-#~ "Access key %s has had %d failed authentications and will be locked out for "
-#~ "%d minutes."
-#~ msgstr ""
-#~ "Ключ доступа %s имеет %d неудачных попыток аутентификации и будет "
-#~ "заблокирован на %d минут."
-
-#, python-format
-#~ msgid "Authenticated Request For %s:%s)"
-#~ msgstr "Запрос аутентификации для %s:%s)"
 
 #~ msgid "Wrong number of arguments."
 #~ msgstr "Неверное число аргументов."

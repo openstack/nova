@@ -1696,7 +1696,7 @@ class LibvirtConnection(driver.ComputeDriver):
             base = os.path.basename(info['path'])
             # Get image type and create empty disk image.
             instance_disk = os.path.join(instance_dir, base)
-            utils.execute('sudo', 'qemu-img', 'create', '-f', info['type'],
+            utils.execute('qemu-img', 'create', '-f', info['type'],
                           instance_disk, info['local_gb'])
 
         # if image has kernel and ramdisk, just download
@@ -1788,7 +1788,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if disk_type == 'raw':
                 size = int(os.path.getsize(path))
             else:
-                out, err = utils.execute('sudo', 'qemu-img', 'info', path)
+                out, err = utils.execute('qemu-img', 'info', path)
                 size = [i.split('(')[1].split()[0] for i in out.split('\n')
                     if i.strip().find('virtual size') >= 0]
                 size = int(size[0])

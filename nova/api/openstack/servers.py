@@ -22,6 +22,7 @@ from xml.dom import minidom
 import webob
 
 from nova import compute
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -95,17 +96,23 @@ class Controller(object):
         search_opts['recurse_zones'] = utils.bool_from_str(
                 search_opts.get('recurse_zones', False))
 
-        # If search by 'status', we need to convert it to 'state'
-        # If the status is unknown, bail.
-        # Leave 'state' in search_opts so compute can pass it on to
-        # child zones..
+        # If search by 'status', we need to convert it to 'vm_state'
+        # to pass on to child zones.
         if 'status' in search_opts:
             status = search_opts['status']
-            search_opts['state'] = common.power_states_from_status(status)
-            if len(search_opts['state']) == 0:
+            state = common.vm_state_from_status(status)
+            if state is None:
                 reason = _('Invalid server status: %(status)s') % locals()
-                LOG.error(reason)
                 raise exception.InvalidInput(reason=reason)
+            search_opts['vm_state'] = state
+
+        if 'changes-since' in search_opts:
+            try:
+                parsed = utils.parse_isotime(search_opts['changes-since'])
+            except ValueError:
+                msg = _('Invalid changes-since value')
+                raise exc.HTTPBadRequest(explanation=msg)
+            search_opts['changes-since'] = parsed
 
         # By default, compute's get_all() will return deleted instances.
         # If an admin hasn't specified a 'deleted' search option, we need
@@ -114,23 +121,17 @@ class Controller(object):
         # should return recently deleted images according to the API spec.
 
         if 'deleted' not in search_opts:
-            # Admin hasn't specified deleted filter
             if 'changes-since' not in search_opts:
-                # No 'changes-since', so we need to find non-deleted servers
+                # No 'changes-since', so we only want non-deleted servers
                 search_opts['deleted'] = False
-            else:
-                # This is the default, but just in case..
-                search_opts['deleted'] = True
 
-        instance_list = self.compute_api.get_all(
-                context, search_opts=search_opts)
-
-        # FIXME(comstud): 'changes-since' is not fully implemented.  Where
-        # should this be filtered?
+        instance_list = self.compute_api.get_all(context,
+                                                 search_opts=search_opts)
 
         limited_list = self._limit_items(instance_list, req)
         servers = [self._build_view(req, inst, is_detail)['server']
-                for inst in limited_list]
+                    for inst in limited_list]
+
         return dict(servers=servers)
 
     @scheduler_api.redirect_handler
@@ -143,10 +144,16 @@ class Controller(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
+    def _get_key_name(self, req, body):
+        """ Get default keypair if not set """
+        raise NotImplementedError()
+
     def create(self, req, body):
         """ Creates a new server for a given user """
+        if 'server' in body:
+            body['server']['key_name'] = self._get_key_name(req, body)
+
         extra_values = None
-        result = None
         extra_values, instances = self.helper.create_instance(
                 req, body, self.compute_api.create)
 
@@ -327,9 +334,8 @@ class Controller(object):
             LOG.exception(msg)
             raise exc.HTTPBadRequest(explanation=msg)
         try:
-            # TODO(gundlach): pass reboot_type, support soft reboot in
-            # virt driver
-            self.compute_api.reboot(req.environ['nova.context'], id)
+            self.compute_api.reboot(req.environ['nova.context'], id,
+                    reboot_type)
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
             raise exc.HTTPUnprocessableEntity()
@@ -564,6 +570,13 @@ class ControllerV10(Controller):
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
+    def _get_key_name(self, req, body):
+        context = req.environ["nova.context"]
+        keypairs = db.key_pair_get_all_by_user(context,
+                                               context.user_id)
+        if keypairs:
+            return keypairs[0]['name']
+
     def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
@@ -608,9 +621,8 @@ class ControllerV10(Controller):
 
         try:
             self.compute_api.rebuild(context, instance_id, image_id, password)
-        except exception.BuildInProgress:
-            msg = _("Instance %s is currently being rebuilt.") % instance_id
-            LOG.debug(msg)
+        except exception.RebuildRequiresActiveInstance:
+            msg = _("Instance %s must be active to rebuild.") % instance_id
             raise exc.HTTPConflict(explanation=msg)
 
         return webob.Response(status_int=202)
@@ -634,6 +646,10 @@ class ControllerV11(Controller):
             self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
+
+    def _get_key_name(self, req, body):
+        if 'server' in body:
+            return body['server'].get('key_name')
 
     def _image_ref_from_req_data(self, data):
         try:
@@ -750,9 +766,8 @@ class ControllerV11(Controller):
             self.compute_api.rebuild(context, instance_id, image_href,
                                      password, name=name, metadata=metadata,
                                      files_to_inject=personalities)
-        except exception.BuildInProgress:
-            msg = _("Instance %s is currently being rebuilt.") % instance_id
-            LOG.debug(msg)
+        except exception.RebuildRequiresActiveInstance:
+            msg = _("Instance %s must be active to rebuild.") % instance_id
             raise exc.HTTPConflict(explanation=msg)
         except exception.InstanceNotFound:
             msg = _("Instance %s could not be found") % instance_id
@@ -857,6 +872,8 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
     def _add_server_attributes(self, node, server):
         node.setAttribute('id', str(server['id']))
+        node.setAttribute('userId', str(server['user_id']))
+        node.setAttribute('tenantId', str(server['tenant_id']))
         node.setAttribute('uuid', str(server['uuid']))
         node.setAttribute('hostId', str(server['hostId']))
         node.setAttribute('name', server['name'])
@@ -912,6 +929,11 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
                                                      server['addresses'])
         server_node.appendChild(addresses_node)
 
+        if 'security_groups' in server:
+            security_groups_node = self._create_security_groups_node(xml_doc,
+                                                    server['security_groups'])
+            server_node.appendChild(security_groups_node)
+
         return server_node
 
     def _server_list_to_xml(self, xml_doc, servers, detailed):
@@ -964,6 +986,19 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
                                        server_dict['server'])
         return self.to_xml_string(node, True)
 
+    def _security_group_to_xml(self, doc, security_group):
+        node = doc.createElement('security_group')
+        node.setAttribute('name', str(security_group.get('name')))
+        return node
+
+    def _create_security_groups_node(self, xml_doc, security_groups):
+        security_groups_node = xml_doc.createElement('security_groups')
+        if security_groups:
+            for security_group in security_groups:
+                node = self._security_group_to_xml(xml_doc, security_group)
+                security_groups_node.appendChild(node)
+        return security_groups_node
+
 
 def create_resource(version='1.0'):
     controller = {
@@ -975,7 +1010,7 @@ def create_resource(version='1.0'):
         "attributes": {
             "server": ["id", "imageId", "name", "flavorId", "hostId",
                        "status", "progress", "adminPass", "flavorRef",
-                       "imageRef"],
+                       "imageRef", "userId", "tenantId"],
             "link": ["rel", "type", "href"],
         },
         "dict_collections": {

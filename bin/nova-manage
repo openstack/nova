@@ -59,11 +59,11 @@ import glob
 import json
 import math
 import netaddr
+from optparse import OptionParser
 import os
 import sys
 import time
 
-from optparse import OptionParser
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -166,7 +166,7 @@ class VpnCommands(object):
                 print address,
                 print vpn['host'],
                 print ec2utils.id_to_ec2_id(vpn['id']),
-                print vpn['state_description'],
+                print vpn['vm_state'],
                 print state
             else:
                 print None
@@ -685,10 +685,17 @@ class NetworkCommands(object):
             help='Multi host')
     @args('--dns1', dest="dns1", metavar="<DNS Address>", help='First DNS')
     @args('--dns2', dest="dns2", metavar="<DNS Address>", help='Second DNS')
+    @args('--uuid', dest="net_uuid", metavar="<network uuid>",
+      help='Network UUID')
+    @args('--project_id', dest="project_id", metavar="<project id>",
+      help='Project id')
+    @args('--priority', dest="priority", metavar="<number>",
+      help='Network interface priority')
     def create(self, label=None, fixed_range_v4=None, num_networks=None,
                network_size=None, multi_host=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, gateway_v6=None,
-               bridge=None, bridge_interface=None, dns1=None, dns2=None):
+               bridge=None, bridge_interface=None, dns1=None, dns2=None,
+               project_id=None, priority=None, uuid=None):
         """Creates fixed ips for host by range"""
 
         # check for certain required inputs
@@ -765,7 +772,10 @@ class NetworkCommands(object):
                                     bridge=bridge,
                                     bridge_interface=bridge_interface,
                                     dns1=dns1,
-                                    dns2=dns2)
+                                    dns2=dns2,
+                                    project_id=project_id,
+                                    priority=priority,
+                                    uuid=uuid)
 
     def list(self):
         """List all created networks"""
@@ -790,16 +800,29 @@ class NetworkCommands(object):
                           network.project_id,
                           network.uuid)
 
+    def quantum_list(self):
+        """List all created networks with Quantum-relevant fields"""
+        _fmt = "%-32s\t%-10s\t%-10s\t%s , %s"
+        print _fmt % (_('uuid'),
+                      _('project'),
+                      _('priority'),
+                      _('cidr_v4'),
+                      _('cidr_v6'))
+        for network in db.network_get_all(context.get_admin_context()):
+            print _fmt % (network.uuid,
+                          network.project_id,
+                          network.priority,
+                          network.cidr,
+                          network.cidr_v6)
+
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to delete')
     def delete(self, fixed_range):
         """Deletes a network"""
-        network = db.network_get_by_cidr(context.get_admin_context(), \
-                                         fixed_range)
-        if network.project_id is not None:
-            raise ValueError(_('Network must be disassociated from project %s'
-                               ' before delete' % network.project_id))
-        db.network_delete_safe(context.get_admin_context(), network.id)
+
+        # delete the network
+        net_manager = utils.import_object(FLAGS.network_manager)
+        net_manager.delete_network(context.get_admin_context(), fixed_range)
 
     @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to modify')
@@ -869,7 +892,7 @@ class VmCommands(object):
                 instance['hostname'],
                 instance['host'],
                 instance['instance_type'].name,
-                instance['state_description'],
+                instance['vm_state'],
                 instance['launched_at'],
                 instance['image_ref'],
                 instance['kernel_id'],
@@ -1223,7 +1246,7 @@ class VsaCommands(object):
                     type=vc['instance_type']['name'],
                     fl_ip=floating_addr,
                     fx_ip=fixed_addr,
-                    stat=vc['state_description'],
+                    stat=vc['vm_state'],
                     host=vc['host'],
                     time=str(vc['created_at']))
 

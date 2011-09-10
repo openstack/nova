@@ -420,6 +420,11 @@ def virtual_interface_get_by_address(context, address):
     return IMPL.virtual_interface_get_by_address(context, address)
 
 
+def virtual_interface_get_by_uuid(context, vif_uuid):
+    """Gets a virtual interface from the table filtering on vif uuid."""
+    return IMPL.virtual_interface_get_by_uuid(context, vif_uuid)
+
+
 def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
     """Gets the virtual interface fixed_ip is associated with."""
     return IMPL.virtual_interface_get_by_fixed_ip(context, fixed_ip_id)
@@ -496,9 +501,20 @@ def instance_get_all_by_filters(context, filters):
     return IMPL.instance_get_all_by_filters(context, filters)
 
 
-def instance_get_active_by_window(context, begin, end=None):
-    """Get instances active during a certain time window."""
-    return IMPL.instance_get_active_by_window(context, begin, end)
+def instance_get_active_by_window(context, begin, end=None, project_id=None):
+    """Get instances active during a certain time window.
+
+    Specifying a project_id will filter for a certain project."""
+    return IMPL.instance_get_active_by_window(context, begin, end, project_id)
+
+
+def instance_get_active_by_window_joined(context, begin, end=None,
+                                         project_id=None):
+    """Get instances and joins active during a certain time window.
+
+    Specifying a project_id will filter for a certain project."""
+    return IMPL.instance_get_active_by_window_joined(context, begin, end,
+                                              project_id)
 
 
 def instance_get_all_by_user(context, user_id):
@@ -702,6 +718,11 @@ def network_get_associated_fixed_ips(context, network_id):
 def network_get_by_bridge(context, bridge):
     """Get a network by bridge or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
+
+
+def network_get_by_uuid(context, uuid):
+    """Get a network by uuid or raise if it does not exist."""
+    return IMPL.network_get_by_uuid(context, uuid)
 
 
 def network_get_by_cidr(context, cidr):
