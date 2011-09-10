@@ -212,11 +212,45 @@ class FloatingIpTest(test.TestCase):
             "fixed_ip": None}
         self.assertEqual(ip, expected)
 
-    def test_floating_ip_release(self):
+    def test_floating_ip_release_associated(self):
+        self.disassociated = False
+
+        def get_floating_ip(ignore, context, id):
+            return {'id': 1, 'address': '10.10.10.10',
+                    'fixed_ip': {'id': 1}}
+
+        def disassociate(ignore, context, floating_address):
+            self.disassociated = True
+
+        self.stubs.Set(network.api.API, "get_floating_ip",
+                       get_floating_ip)
+        self.stubs.Set(network.api.API, "disassociate_floating_ip",
+                       disassociate)
         req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
+        self.assertTrue(self.disassociated)
+
+    def test_floating_ip_release_disassociated(self):
+        self.disassociated = False
+
+        def fake_get_floating_ip(ignore, context, id):
+            return {'id': 1, 'address': '10.10.10.10',
+                    'fixed_ip': None}
+
+        def fake_disassociate(ignore, context, floating_address):
+            self.disassociated = True
+
+        self.stubs.Set(network.api.API, "get_floating_ip",
+                       fake_get_floating_ip)
+        self.stubs.Set(network.api.API, "disassociate_floating_ip",
+                       fake_disassociate)
+        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
+        req.method = 'DELETE'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertFalse(self.disassociated)
 
     def test_add_floating_ip_to_instance(self):
         self.stubs.Set(network.api.API, "associate_floating_ip",
@@ -289,8 +323,21 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(resp.status_int, 202)
         self.assertTrue(self.disassociated)
 
-    def test_remove_floating_ip_from_instance(self):
-        body = dict(removeFloatingIp=dict(address='11.0.0.1'))
+    def test_remove_associated_floating_ip_from_instance(self):
+        self.disassociated = False
+
+        def fake_get_floating_ip_by_ip(ignore, context, ip):
+            return {'id': 1, 'address': '10.10.10.10',
+                    'fixed_ip': {'id': 1}}
+
+        def fake_disassociate(ignore, context, floating_address):
+            self.disassociated = True
+
+        self.stubs.Set(network.api.API, "get_floating_ip_by_ip",
+                       fake_get_floating_ip_by_ip)
+        self.stubs.Set(network.api.API, "disassociate_floating_ip",
+                       fake_disassociate)
+        body = dict(removeFloatingIp=dict(address='10.10.10.10'))
         req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
@@ -298,6 +345,31 @@ class FloatingIpTest(test.TestCase):
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
+        self.assertTrue(self.disassociated)
+
+    def test_remove_disassociated_floating_ip_from_instance(self):
+        self.disassociated = False
+
+        def fake_get_floating_ip_by_ip(ignore, context, ip):
+            return {'id': 1, 'address': '10.10.10.10',
+                    'fixed_ip': None}
+
+        def fake_disassociate(ignore, context, floating_address):
+            self.disassociated = True
+
+        self.stubs.Set(network.api.API, "get_floating_ip_by_ip",
+                       fake_get_floating_ip_by_ip)
+        self.stubs.Set(network.api.API, "disassociate_floating_ip",
+                       fake_disassociate)
+        body = dict(removeFloatingIp=dict(address='10.10.10.10'))
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 202)
+        self.assertFalse(self.disassociated)
 
     def test_bad_address_param_in_remove_floating_ip(self):
         body = dict(removeFloatingIp=dict(badparam='11.0.0.1'))
