@@ -272,11 +272,17 @@ class CloudController(object):
         mappings = {}
         mappings['ami'] = block_device.strip_dev(root_device_name)
         mappings['root'] = root_device_name
+        ebs_devices = []
 
-        # 'ephemeralN' and 'swap'
+        # 'ephemeralN', 'swap' and ebs
         for bdm in db.block_device_mapping_get_all_by_instance(
             ctxt, instance_ref['id']):
-            if (bdm['volume_id'] or bdm['snapshot_id'] or bdm['no_device']):
+            if bdm['no_device']:
+                continue
+
+            # ebs volume case
+            if (bdm['volume_id'] or bdm['snapshot_id']):
+                ebs_devices.append(bdm['device_name'])
                 continue
 
             virtual_name = bdm['virtual_name']
@@ -285,6 +291,16 @@ class CloudController(object):
 
             if block_device.is_swap_or_ephemeral(virtual_name):
                 mappings[virtual_name] = bdm['device_name']
+
+        # NOTE(yamahata): I'm not sure how ebs device should be numbered.
+        #                 Right now sort by device name for deterministic
+        #                 result.
+        if ebs_devices:
+            nebs = 0
+            ebs_devices.sort()
+            for ebs in ebs_devices:
+                mappings['ebs%d' % nebs] = ebs
+                nebs += 1
 
         return mappings
 
