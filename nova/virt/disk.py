@@ -52,6 +52,47 @@ flags.DEFINE_integer('timeout_nbd', 10,
 flags.DEFINE_integer('max_nbd_devices', 16,
                      'maximum number of possible nbd devices')
 
+# NOTE(yamahata): DEFINE_list() doesn't work because the command may
+#                 include ','. For example,
+#                 mkfs.ext3 -O dir_index,extent -E stride=8,stripe-width=16
+#                 --label %(fs_label)s %(target)s
+#
+#                 DEFINE_list() parses its argument by
+#                 [s.strip() for s in argument.split(self._token)]
+#                 where self._token = ','
+#                 No escape nor exceptional handling for ','.
+#                 DEFINE_list() doesn't give us what we need.
+flags.DEFINE_multistring('virt_mkfs',
+                         ['windows=mkfs.ntfs --fast --label %(fs_label)s '
+                          '%(target)s',
+                          # NOTE(yamahata): vfat case
+                          #'windows=mkfs.vfat -n %(fs_label)s %(target)s',
+                          'linux=mkfs.ext3 -L %(fs_label)s -F %(target)s',
+                          'default=mkfs.ext3 -L %(fs_label)s -F %(target)s'],
+                         'mkfs commands for ephemeral device. The format is'
+                         '<os_type>=<mkfs command>')
+
+
+_MKFS_COMMAND = {}
+_DEFAULT_MKFS_COMMAND = None
+
+
+for s in FLAGS.virt_mkfs:
+    # NOTE(yamahata): mkfs command may includes '=' for its options.
+    #                 So item.partition('=') doesn't work here
+    os_type, mkfs_command = s.split('=', 1)
+    if os_type:
+        _MKFS_COMMAND[os_type] = mkfs_command
+    if os_type == 'default':
+        _DEFAULT_MKFS_COMMAND = mkfs_command
+
+
+def mkfs(os_type, fs_label, target):
+    mkfs_command = (_MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND) or
+                    '') % locals()
+    if mkfs_command:
+        utils.execute(*mkfs_command.split())
+
 
 def extend(image, size):
     """Increase image to size"""
