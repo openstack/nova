@@ -272,6 +272,12 @@ class CloudController(object):
         mappings = {}
         mappings['ami'] = block_device.strip_dev(root_device_name)
         mappings['root'] = root_device_name
+        default_local_device = instance_ref.get('default_local_device')
+        if default_local_device:
+            mappings['ephemeral0'] = default_local_device
+        default_swap_device = instance_ref.get('default_swap_device')
+        if default_swap_device:
+            mappings['swap'] = default_swap_device
         ebs_devices = []
 
         # 'ephemeralN', 'swap' and ebs

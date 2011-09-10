@@ -1111,6 +1111,11 @@ class LibvirtConnection(driver.ComputeDriver):
                 nova_context.get_admin_context(), instance['id'],
                 {'root_device_name': '/dev/' + self.default_root_device})
 
+        if local_device:
+            db.instance_update(
+                nova_context.get_admin_context(), instance['id'],
+                {'default_local_device': '/dev/' + self.default_local_device})
+
         swap = driver.block_device_info_get_swap(block_device_info)
         if driver.swap_is_usable(swap):
             xml_info['swap_device'] = block_device.strip_dev(
@@ -1119,6 +1124,9 @@ class LibvirtConnection(driver.ComputeDriver):
               not self._volume_in_mapping(self.default_swap_device,
                                           block_device_info)):
             xml_info['swap_device'] = self.default_swap_device
+            db.instance_update(
+                nova_context.get_admin_context(), instance['id'],
+                {'default_swap_device': '/dev/' + self.default_swap_device})
 
         config_drive = False
         if instance.get('config_drive') or instance.get('config_drive_id'):
