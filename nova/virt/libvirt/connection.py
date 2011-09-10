@@ -196,7 +196,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _test_connection(self):
         try:
-            self._wrapped_conn.geCapabilities()
+            self._wrapped_conn.getCapabilities()
             return True
         except libvirt.libvirtError as e:
             if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
