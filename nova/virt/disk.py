@@ -160,6 +160,7 @@ def destroy_container(target, instance, nbd=False):
     except Exception, exn:
         LOG.exception(_('Failed to remove container: %s'), exn)
 
+
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
 
