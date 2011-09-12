@@ -92,7 +92,8 @@ class CreateInstanceHelper(object):
         if str(image_href).startswith(req.application_url):
             image_href = image_href.split('/').pop()
         try:
-            image_service, image_id = nova.image.get_image_service(image_href)
+            image_service, image_id = nova.image.get_image_service(context,
+                                                                   image_href)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
                                                 req, image_service, image_id)
             images = set([str(x['id']) for x in image_service.index(context)])
