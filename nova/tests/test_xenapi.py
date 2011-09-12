@@ -932,8 +932,9 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.fake_instance.architecture = 'x86-64'
 
     def assert_disk_type(self, disk_type):
+        ctx = context.RequestContext('fake', 'fake')
         dt = vm_utils.VMHelper.determine_disk_image_type(
-            self.fake_instance)
+            self.fake_instance, ctx)
         self.assertEqual(disk_type, dt)
 
     def test_instance_disk(self):

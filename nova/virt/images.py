@@ -37,7 +37,8 @@ def fetch(context, image_href, path, _user_id, _project_id):
     #             when it is added to glance.  Right now there is no
     #             auth checking in glance, so we assume that access was
     #             checked before we got here.
-    (image_service, image_id) = nova.image.get_image_service(image_href)
+    (image_service, image_id) = nova.image.get_image_service(context,
+                                                             image_href)
     with open(path, "wb") as image_file:
         metadata = image_service.get(context, image_id, image_file)
     return metadata
