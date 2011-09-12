@@ -624,10 +624,15 @@ class VMOps(object):
                     str(new_disk_size))
             LOG.debug(_("Resize instance %s complete") % (instance.name))
 
-    def reboot(self, instance):
+    def reboot(self, instance, reboot_type):
         """Reboot VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
+
+        if reboot_type == "HARD":
+            task = self._session.call_xenapi('Async.VM.hard_reboot', vm_ref)
+        else:
+            task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
+
         self._session.wait_for_task(task, instance.id)
 
     def get_agent_version(self, instance, timeout=None):
