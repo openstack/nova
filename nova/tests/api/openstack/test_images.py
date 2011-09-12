@@ -1182,7 +1182,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         # Snapshot for User 1
         server_ref = 'http://localhost/v1.1/servers/42'
         snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
-        statuses = ('queued', 'saving', 'active','killed',
+        statuses = ('queued', 'saving', 'active', 'killed',
                     'deleted', 'pending_delete')
         for status in statuses:
             add_fixture(id=image_id, name='%s snapshot' % status,
