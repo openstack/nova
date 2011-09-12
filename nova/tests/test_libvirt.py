@@ -16,7 +16,6 @@
 
 import copy
 import eventlet
-import inspect
 import mox
 import os
 import re
