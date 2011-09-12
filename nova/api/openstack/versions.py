@@ -100,13 +100,17 @@ class Versions(wsgi.Resource):
         body_serializers = {
             'application/atom+xml': VersionsAtomSerializer(metadata=metadata),
             'application/xml': VersionsXMLSerializer(metadata=metadata),
+            'application/vnd.openstack.compute+xml':
+                VersionsXMLSerializer(metadata=metadata),
         }
         serializer = wsgi.ResponseSerializer(
             body_serializers=body_serializers,
             headers_serializer=headers_serializer)
 
         supported_content_types = ('application/json',
+                                   'application/vnd.openstack.compute+json',
                                    'application/xml',
+                                   'application/vnd.openstack.compute+xml',
                                    'application/atom+xml')
         deserializer = VersionsRequestDeserializer(
             supported_content_types=supported_content_types)
@@ -383,12 +387,15 @@ def create_resource(version='1.0'):
 
     body_serializers = {
         'application/xml': VersionsXMLSerializer(),
+        'application/vnd.openstack.compute+xml': VersionsXMLSerializer(),
         'application/atom+xml': VersionsAtomSerializer(),
     }
     serializer = wsgi.ResponseSerializer(body_serializers)
 
     supported_content_types = ('application/json',
+                               'application/vnd.openstack.compute+json',
                                'application/xml',
+                               'application/vnd.openstack.compute+xml',
                                'application/atom+xml')
     deserializer = wsgi.RequestDeserializer(
         supported_content_types=supported_content_types)

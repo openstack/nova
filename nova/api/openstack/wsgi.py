@@ -28,8 +28,12 @@ class Request(webob.Request):
         Based on the query extension then the Accept header.
 
         """
+        LOG.info('supported = %s' % repr(supported_content_types))
         supported_content_types = supported_content_types or \
-            ('application/json', 'application/xml')
+            ('application/json',
+             'application/vnd.openstack.compute+json',
+             'application/xml',
+             'application/vnd.openstack.compute+xml')
 
         parts = self.path.rsplit('.', 1)
         if len(parts) > 1:
@@ -51,7 +55,10 @@ class Request(webob.Request):
         if not "Content-Type" in self.headers:
             return None
 
-        allowed_types = ("application/xml", "application/json")
+        allowed_types = ('application/json',
+                         'application/vnd.openstack.compute+json',
+                         'application/xml',
+                         'application/vnd.openstack.compute+xml')
         content_type = self.content_type
 
         if content_type not in allowed_types:
@@ -191,11 +198,16 @@ class RequestDeserializer(object):
                  supported_content_types=None):
 
         self.supported_content_types = supported_content_types or \
-                ('application/json', 'application/xml')
+                ('application/json',
+                 'application/vnd.openstack.compute+json',
+                 'application/xml',
+                 'application/vnd.openstack.compute+xml')
 
         self.body_deserializers = {
             'application/xml': XMLDeserializer(),
+            'application/vnd.openstack.compute+xml': XMLDeserializer(),
             'application/json': JSONDeserializer(),
+            'application/vnd.openstack.compute+json': JSONDeserializer(),
         }
         self.body_deserializers.update(body_deserializers or {})
 
@@ -409,7 +421,9 @@ class ResponseSerializer(object):
     def __init__(self, body_serializers=None, headers_serializer=None):
         self.body_serializers = {
             'application/xml': XMLDictSerializer(),
+            'application/vnd.openstack.compute+xml': XMLDictSerializer(),
             'application/json': JSONDictSerializer(),
+            'application/vnd.openstack.compute+json': JSONDictSerializer(),
         }
         self.body_serializers.update(body_serializers or {})
 
