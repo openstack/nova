@@ -102,7 +102,9 @@ def _call_novaclient(zone):
 
 def _poll_zone(zone):
     """Eventlet worker to poll a zone."""
-    logging.debug(_("Polling zone: %s @ %s") % (zone.name, zone.api_url))
+    name = zone.name
+    url = zone.api_url
+    logging.debug(_("Polling zone: %(name)s @ %(url)s") % locals())
     try:
         zone.update_metadata(_call_novaclient(zone))
     except Exception, e:

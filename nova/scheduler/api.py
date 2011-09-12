@@ -120,7 +120,7 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
             # Do this on behalf of the user ...
             nova = novaclient.Client(zone.username, zone.password, None,
                     zone.api_url, region_name=zone.name,
-                    token = context.auth_token)
+                    token=context.auth_token)
             nova.authenticate()
         except novaclient_exceptions.BadRequest, e:
             url = zone.api_url

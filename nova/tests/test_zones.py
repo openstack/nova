@@ -63,7 +63,7 @@ class ZoneManagerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'zone_get_all')
         db.zone_get_all(mox.IgnoreArg()).AndReturn([
                FakeZone(id=1, api_url='http://foo.com', username='user1',
-                    password='pass1'),
+                    password='pass1', name='child'),
             ])
 
         self.assertEquals(len(zm.zone_states), 0)
@@ -107,13 +107,15 @@ class ZoneManagerTestCase(test.TestCase):
         zm = zone_manager.ZoneManager()
         zone_state = zone_manager.ZoneState()
         zone_state.update_credentials(FakeZone(id=1, api_url='http://foo.com',
-                        username='user1', password='pass1'))
+                        username='user1', password='pass1', name='child',
+                        weight_offset=0.0, weight_scale=1.0))
         zm.zone_states[1] = zone_state
 
         self.mox.StubOutWithMock(db, 'zone_get_all')
         db.zone_get_all(mox.IgnoreArg()).AndReturn([
                FakeZone(id=1, api_url='http://foo.com', username='user2',
-                    password='pass2'),
+                    password='pass2', name='child',
+                    weight_offset=0.0, weight_scale=1.0),
             ])
 
         self.assertEquals(len(zm.zone_states), 1)
@@ -129,7 +131,8 @@ class ZoneManagerTestCase(test.TestCase):
         zm = zone_manager.ZoneManager()
         zone_state = zone_manager.ZoneState()
         zone_state.update_credentials(FakeZone(id=1, api_url='http://foo.com',
-                        username='user1', password='pass1'))
+                        username='user1', password='pass1', name='child',
+                        weight_offset=0.0, weight_scale=1.0))
         zm.zone_states[1] = zone_state
 
         self.mox.StubOutWithMock(db, 'zone_get_all')
@@ -147,14 +150,15 @@ class ZoneManagerTestCase(test.TestCase):
         zm = zone_manager.ZoneManager()
         zone_state = zone_manager.ZoneState()
         zone_state.update_credentials(FakeZone(id=1, api_url='http://foo.com',
-                        username='user1', password='pass1'))
+                        username='user1', password='pass1', name='child',
+                        weight_offset=0.0, weight_scale=1.0))
         zm.zone_states[1] = zone_state
 
         self.mox.StubOutWithMock(db, 'zone_get_all')
 
         db.zone_get_all(mox.IgnoreArg()).AndReturn([
                FakeZone(id=2, api_url='http://foo.com', username='user2',
-                    password='pass2'),
+                    password='pass2', name='child'),
             ])
         self.assertEquals(len(zm.zone_states), 1)
 
@@ -173,7 +177,8 @@ class ZoneManagerTestCase(test.TestCase):
         zone_state = zone_manager.ZoneState()
         zone_state.update_credentials(FakeZone(id=2,
                        api_url='http://foo.com', username='user2',
-                       password='pass2'))
+                       password='pass2', name='child',
+                        weight_offset=0.0, weight_scale=1.0))
         zone_state.attempt = 1
 
         self.mox.ReplayAll()
@@ -188,7 +193,8 @@ class ZoneManagerTestCase(test.TestCase):
         zone_state = zone_manager.ZoneState()
         zone_state.update_credentials(FakeZone(id=2,
                        api_url='http://foo.com', username='user2',
-                       password='pass2'))
+                       password='pass2', name='child',
+                       weight_offset=0.0, weight_scale=1.0))
         zone_state.attempt = FLAGS.zone_failures_to_offline - 1
 
         self.mox.ReplayAll()

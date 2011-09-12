@@ -728,7 +728,6 @@ def multicall(context, topic, msg):
     wait_msg = MulticallWaiter(conn)
     conn.declare_direct_consumer(msg_id, wait_msg)
     conn.topic_send(topic, msg)
-
     return wait_msg
 
 

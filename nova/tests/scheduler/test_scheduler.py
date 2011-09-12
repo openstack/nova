@@ -53,6 +53,10 @@ FAKE_UUID_NOT_FOUND = 'ffffffff-ffff-ffff-ffff-ffffffffffff'
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
+class FakeContext(object):
+    auth_token = None
+
+
 class TestDriver(driver.Scheduler):
     """Scheduler Driver for Tests"""
     def schedule(context, topic, *args, **kwargs):
@@ -956,11 +960,12 @@ class MultiDriverTestCase(SimpleDriverTestCase):
 
 
 class FakeZone(object):
-    def __init__(self, id, api_url, username, password):
+    def __init__(self, id, api_url, username, password, name='child'):
         self.id = id
         self.api_url = api_url
         self.username = username
         self.password = password
+        self.name = name
 
 
 ZONE_API_URL1 = "http://1.example.com"
@@ -986,7 +991,7 @@ class FakeRerouteCompute(api.reroute_compute):
         super(FakeRerouteCompute, self).__init__(method_name)
         self.id_to_return = id_to_return
 
-    def _call_child_zones(self, zones, function):
+    def _call_child_zones(self, context, zones, function):
         return []
 
     def get_collection_context_and_id(self, args, kwargs):
@@ -1092,7 +1097,8 @@ class ZoneRedirectTest(test.TestCase):
             return None
 
         class FakeNovaClientWithFailure(object):
-            def __init__(self, username, password, method, api_url):
+            def __init__(self, username, password, method, api_url,
+                         token=None, region_name=None):
                 self.api_url = api_url
 
             def authenticate(self):
@@ -1108,7 +1114,7 @@ class ZoneRedirectTest(test.TestCase):
             pass
 
         self.assertRaises(exception.ZoneRequestError,
-                do_get, None, {}, FAKE_UUID)
+                do_get, None, FakeContext(), FAKE_UUID)
 
     def test_one_zone_down_got_instance(self):
 
@@ -1120,7 +1126,8 @@ class ZoneRedirectTest(test.TestCase):
             return FakeServer()
 
         class FakeNovaClientWithFailure(object):
-            def __init__(self, username, password, method, api_url):
+            def __init__(self, username, password, method, api_url,
+                         token=None, region_name=None):
                 self.api_url = api_url
 
             def authenticate(self):
@@ -1136,14 +1143,14 @@ class ZoneRedirectTest(test.TestCase):
             pass
 
         try:
-            do_get(None, {}, FAKE_UUID)
+            do_get(None, FakeContext(), FAKE_UUID)
         except api.RedirectResult, e:
             results = e.results
             self.assertIn('server', results)
             self.assertEqual(results['server']['id'], FAKE_UUID)
             self.assertEqual(results['server']['test'], '1234')
         except Exception, e:
-            self.fail(_("RedirectResult should have been raised"))
+            self.fail(_("RedirectResult should have been raised: %s" % e))
         else:
             self.fail(_("RedirectResult should have been raised"))
 
@@ -1153,7 +1160,8 @@ class ZoneRedirectTest(test.TestCase):
             return None
 
         class FakeNovaClientNoFailure(object):
-            def __init__(self, username, password, method, api_url):
+            def __init__(self, username, password, method, api_url,
+                         token=None, region_name=None):
                 pass
 
             def authenticate(self):
@@ -1168,7 +1176,7 @@ class ZoneRedirectTest(test.TestCase):
             pass
 
         self.assertRaises(exception.InstanceNotFound,
-                do_get, None, {}, FAKE_UUID)
+                do_get, None, FakeContext(), FAKE_UUID)
 
 
 class FakeServerCollection(object):
@@ -1250,7 +1258,7 @@ class CallZoneMethodTest(test.TestCase):
         super(CallZoneMethodTest, self).tearDown()
 
     def test_call_zone_method(self):
-        context = {}
+        context = FakeContext()
         method = 'do_something'
         results = api.call_zone_method(context, method)
         self.assertEqual(len(results), 2)
@@ -1258,12 +1266,12 @@ class CallZoneMethodTest(test.TestCase):
         self.assertIn((2, 42), results)
 
     def test_call_zone_method_not_present(self):
-        context = {}
+        context = FakeContext()
         method = 'not_present'
         self.assertRaises(AttributeError, api.call_zone_method,
                           context, method)
 
     def test_call_zone_method_generates_exception(self):
-        context = {}
+        context = FakeContext()
         method = 'raises_exception'
         self.assertRaises(Exception, api.call_zone_method, context, method)
