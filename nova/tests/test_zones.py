@@ -63,7 +63,8 @@ class ZoneManagerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'zone_get_all')
         db.zone_get_all(mox.IgnoreArg()).AndReturn([
                FakeZone(id=1, api_url='http://foo.com', username='user1',
-                    password='pass1', name='child'),
+                    password='pass1', name='child', weight_offset=0.0,
+                    weight_scale=1.0),
             ])
 
         self.assertEquals(len(zm.zone_states), 0)
@@ -151,14 +152,15 @@ class ZoneManagerTestCase(test.TestCase):
         zone_state = zone_manager.ZoneState()
         zone_state.update_credentials(FakeZone(id=1, api_url='http://foo.com',
                         username='user1', password='pass1', name='child',
-                        weight_offset=0.0, weight_scale=1.0))
+                        weight_offset=2.0, weight_scale=3.0))
         zm.zone_states[1] = zone_state
 
         self.mox.StubOutWithMock(db, 'zone_get_all')
 
         db.zone_get_all(mox.IgnoreArg()).AndReturn([
                FakeZone(id=2, api_url='http://foo.com', username='user2',
-                    password='pass2', name='child'),
+                    password='pass2', name='child', weight_offset=2.0,
+                    weight_scale=3.0),
             ])
         self.assertEquals(len(zm.zone_states), 1)
 
@@ -172,7 +174,7 @@ class ZoneManagerTestCase(test.TestCase):
     def test_poll_zone(self):
         self.mox.StubOutWithMock(zone_manager, '_call_novaclient')
         zone_manager._call_novaclient(mox.IgnoreArg()).AndReturn(
-                        dict(name='zohan', capabilities='hairdresser'))
+                        dict(name='child', capabilities='hairdresser'))
 
         zone_state = zone_manager.ZoneState()
         zone_state.update_credentials(FakeZone(id=2,
@@ -185,7 +187,7 @@ class ZoneManagerTestCase(test.TestCase):
         zone_manager._poll_zone(zone_state)
         self.mox.VerifyAll()
         self.assertEquals(zone_state.attempt, 0)
-        self.assertEquals(zone_state.name, 'zohan')
+        self.assertEquals(zone_state.name, 'child')
 
     def test_poll_zone_fails(self):
         self.stubs.Set(zone_manager, "_call_novaclient", exploding_novaclient)
@@ -202,7 +204,6 @@ class ZoneManagerTestCase(test.TestCase):
         self.mox.VerifyAll()
         self.assertEquals(zone_state.attempt, 3)
         self.assertFalse(zone_state.is_active)
-        self.assertEquals(zone_state.name, None)
 
     def test_host_service_caps_stale_no_stale_service(self):
         zm = zone_manager.ZoneManager()
