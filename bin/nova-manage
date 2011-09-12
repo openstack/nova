@@ -724,8 +724,7 @@ class NetworkCommands(object):
         bridge_interface = bridge_interface or FLAGS.flat_interface or \
                            FLAGS.vlan_interface
         if not bridge_interface:
-            interface_required = ['nova.network.manager.FlatDHCPManager',
-                                  'nova.network.manager.VlanManager']
+            interface_required = ['nova.network.manager.VlanManager']
             if FLAGS.network_manager in interface_required:
                 raise exception.NetworkNotCreated(req='--bridge_interface')
 

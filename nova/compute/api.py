@@ -908,10 +908,8 @@ class API(base.Base):
         if not recurse_zones:
             return instances
 
-        # Recurse zones.  Need admin context for this.  Send along
-        # the un-modified search options we received..
-        admin_context = context.elevated()
-        children = scheduler_api.call_zone_method(admin_context,
+        # Recurse zones. Send along the un-modified search options we received.
+        children = scheduler_api.call_zone_method(context,
                 "list",
                 errors_to_ignore=[novaclient.exceptions.NotFound],
                 novaclient_collection_name="servers",
@@ -1042,13 +1040,14 @@ class API(base.Base):
         return recv_meta
 
     @scheduler_api.reroute_compute("reboot")
-    def reboot(self, context, instance_id):
+    def reboot(self, context, instance_id, reboot_type):
         """Reboot the given instance."""
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.REBOOTING)
-        self._cast_compute_message('reboot_instance', context, instance_id)
+        self._cast_compute_message('reboot_instance', context, instance_id,
+                reboot_type)
 
     @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, admin_password,

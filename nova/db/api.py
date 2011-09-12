@@ -324,13 +324,15 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 ####################
 
 
-def fixed_ip_associate(context, address, instance_id, network_id=None):
+def fixed_ip_associate(context, address, instance_id, network_id=None,
+                       reserved=False):
     """Associate fixed ip to instance.
 
     Raises if fixed ip is not available.
 
     """
-    return IMPL.fixed_ip_associate(context, address, instance_id, network_id)
+    return IMPL.fixed_ip_associate(context, address, instance_id, network_id,
+                                   reserved)
 
 
 def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):

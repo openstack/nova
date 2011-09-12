@@ -579,7 +579,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def reboot_instance(self, context, instance_id):
+    def reboot_instance(self, context, instance_id, reboot_type="SOFT"):
         """Reboot an instance on this host."""
         LOG.audit(_("Rebooting instance %s"), instance_id, context=context)
         context = context.elevated()
@@ -601,7 +601,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context=context)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.reboot(instance_ref, network_info)
+        self.driver.reboot(instance_ref, network_info, reboot_type)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
