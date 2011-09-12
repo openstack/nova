@@ -188,9 +188,16 @@ class VMOps(object):
                 ramdisk = VMHelper.fetch_image(context, self._session,
                         instance, instance.ramdisk_id, instance.user_id,
                         instance.project_id, ImageType.RAMDISK)[0]
-            # Create the VM ref and attach the first disk
-            first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                    vdis[0]['vdi_uuid'])
+
+            # NOTE(jk0): Since vdi_type may contain either 'os' or 'swap', we
+            # need to ensure that the 'swap' VDI is not chosen as the mount
+            # point for file injection.
+            first_vdi_ref = None
+            for vdi in vdis:
+                if vdi.get('vdi_type') != 'swap':
+                    # Create the VM ref and attach the first disk
+                    first_vdi_ref = self._session.call_xenapi(
+                            'VDI.get_by_uuid', vdi['vdi_uuid'])
 
             vm_mode = instance.vm_mode and instance.vm_mode.lower()
             if vm_mode == 'pv':
@@ -610,10 +617,15 @@ class VMOps(object):
                     str(new_disk_size))
             LOG.debug(_("Resize instance %s complete") % (instance.name))
 
-    def reboot(self, instance):
+    def reboot(self, instance, reboot_type):
         """Reboot VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
+
+        if reboot_type == "HARD":
+            task = self._session.call_xenapi('Async.VM.hard_reboot', vm_ref)
+        else:
+            task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
+
         self._session.wait_for_task(task, instance.id)
 
     def get_agent_version(self, instance):
