@@ -286,7 +286,8 @@ class VlanNetworkTestCase(test.TestCase):
 
         db.fixed_ip_associate(mox.IgnoreArg(),
                               mox.IgnoreArg(),
-                              mox.IgnoreArg()).AndReturn('192.168.0.1')
+                              mox.IgnoreArg(),
+                              reserved=True).AndReturn('192.168.0.1')
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
