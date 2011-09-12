@@ -154,10 +154,10 @@ def child_zone_helper(context, zone_list, func):
     be whatever the response from server.pause() is. One entry
     per child zone called."""
 
-    def _wrap_method(function, arg1):
+    def _wrap_method(function, arg1, arg2):
         """Wrap method to supply an argument."""
         def _wrap(*args, **kwargs):
-            return function(arg1, *args, **kwargs)
+            return function(arg1, arg2, *args, **kwargs)
         return _wrap
 
     def _process(func, context, zone):
@@ -165,7 +165,8 @@ def child_zone_helper(context, zone_list, func):
         an authenticated nova client and zone info."""
         try:
             nova = novaclient.Client(zone.username, zone.password, None,
-                    zone.api_url, token=context.auth_token)
+                    zone.api_url, region_name=zone.name,
+                    token=context.auth_token)
             nova.authenticate()
         except novaclient_exceptions.BadRequest, e:
             url = zone.api_url
