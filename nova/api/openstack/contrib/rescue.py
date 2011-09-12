@@ -50,7 +50,7 @@ class Rescue(exts.ExtensionDescriptor):
         """Rescue an instance."""
         context = req.environ["nova.context"]
         if input_dict['rescue'] and 'adminPass' in input_dict['rescue']:
-            password = input_dict["rescue"]["adminPass"]
+            password = input_dict['rescue']['adminPass']
         else:
             password = utils.generate_password(FLAGS.password_length)
         self.compute_api.rescue(context, instance_id, rescue_password=password)

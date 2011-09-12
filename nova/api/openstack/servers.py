@@ -483,7 +483,7 @@ class Controller(object):
         try:
             if 'rescue' in body and body['rescue'] and \
                     'adminPass' in body['rescue']:
-                password = body["rescue"]["adminPass"]
+                password = body['rescue']['adminPass']
             else:
                 password = utils.generate_password(FLAGS.password_length)
             self.compute_api.rescue(context, id, rescue_password=password)
@@ -767,7 +767,7 @@ class ControllerV11(Controller):
         self._decode_personalities(personalities)
 
         if 'rebuild' in info and 'adminPass' in info['rebuild']:
-            password = info["rebuild"]["adminPass"]
+            password = info['rebuild']['adminPass']
         else:
             password = utils.generate_password(FLAGS.password_length)
 
