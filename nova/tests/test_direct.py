@@ -30,7 +30,7 @@ from nova import test
 from nova import volume
 from nova import utils
 from nova.api import direct
-from nova.tests import test_cloud
+from nova.tests.api.ec2 import test_cloud
 
 
 class ArbitraryObject(object):
