@@ -672,7 +672,7 @@ def floating_ip_update(context, address, values):
 def fixed_ip_associate(context, address, instance_id, network_id=None,
                        reserved=False):
     """Keyword arguments:
-    reserved -- should be a boolean value(True or False), exact value will be 
+    reserved -- should be a boolean value(True or False), exact value will be
     used to filter on the fixed ip address
     """
     session = get_session()
