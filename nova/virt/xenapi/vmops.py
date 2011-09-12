@@ -135,7 +135,7 @@ class VMOps(object):
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
     def _create_disks(self, context, instance):
-        disk_image_type = VMHelper.determine_disk_image_type(instance)
+        disk_image_type = VMHelper.determine_disk_image_type(instance, context)
         vdis = VMHelper.fetch_image(context, self._session,
                 instance, instance.image_ref,
                 instance.user_id, instance.project_id,
@@ -176,7 +176,7 @@ class VMOps(object):
                                   power_state.SHUTDOWN)
             return
 
-        disk_image_type = VMHelper.determine_disk_image_type(instance)
+        disk_image_type = VMHelper.determine_disk_image_type(instance, context)
         kernel = None
         ramdisk = None
         try:
