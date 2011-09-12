@@ -398,10 +398,10 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom = self._lookup_by_name(instance['name'])
 
         (image_service, image_id) = nova.image.get_image_service(
-            instance['image_ref'])
+            context, instance['image_ref'])
         base = image_service.show(context, image_id)
         (snapshot_image_service, snapshot_image_id) = \
-            nova.image.get_image_service(image_href)
+            nova.image.get_image_service(context, image_href)
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
         metadata = {'is_public': False,
