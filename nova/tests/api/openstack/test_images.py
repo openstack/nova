@@ -365,7 +365,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     {'id': 125, 'name': 'saving snapshot'},
                     {'id': 126, 'name': 'active snapshot'},
                     {'id': 127, 'name': 'killed snapshot'},
-                    {'id': 129, 'name': None}]
+                    {'id': 128, 'name': 'deleted snapshot'},
+                    {'id': 129, 'name': 'pending_delete snapshot'},
+                    {'id': 131, 'name': None}]
 
         self.assertDictListMatch(response_list, expected)
 
@@ -458,7 +460,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
 
     def test_get_image_xml_no_name(self):
-        request = webob.Request.blank('/v1.0/images/129')
+        request = webob.Request.blank('/v1.0/images/131')
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
 
@@ -466,7 +468,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         expected_now = self.NOW_API_FORMAT
         expected_image = minidom.parseString("""
-            <image id="129"
+            <image id="131"
                     name="None"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
@@ -631,7 +633,23 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'progress': 0,
         },
         {
+            'id': 128,
+            'name': 'deleted snapshot',
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'DELETED',
+            'progress': 0,
+        },
+        {
             'id': 129,
+            'name': 'pending_delete snapshot',
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'DELETED',
+            'progress': 0,
+        },
+        {
+            'id': 131,
             'name': None,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -792,7 +810,69 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
+            'id': 128,
+            'name': 'deleted snapshot',
+            'metadata': {
+                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'user_id': u'fake',
+            },
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'DELETED',
+            'progress': 0,
+            'server': {
+                'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
+            },
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/fake/images/128",
+            },
+            {
+                "rel": "bookmark",
+                "href": "http://localhost/fake/images/128",
+            }],
+        },
+        {
             'id': 129,
+            'name': 'pending_delete snapshot',
+            'metadata': {
+                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'user_id': u'fake',
+            },
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'DELETED',
+            'progress': 0,
+            'server': {
+                'id': 42,
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
+            },
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/fake/images/129",
+            },
+            {
+                "rel": "bookmark",
+                "href": "http://localhost/fake/images/129",
+            }],
+        },
+        {
+            'id': 131,
             'name': None,
             'metadata': {},
             'updated': self.NOW_API_FORMAT,
@@ -801,11 +881,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'progress': 100,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/129",
+                "href": "http://localhost/v1.1/fake/images/131",
             },
             {
                 "rel": "bookmark",
-                "href": "http://localhost/fake/images/129",
+                "href": "http://localhost/fake/images/131",
             }],
         },
         ]
@@ -1034,7 +1114,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         """We should return a 404 if we request an image that doesn't belong
         to us
         """
-        req = webob.Request.blank('/v1.0/images/128')
+        req = webob.Request.blank('/v1.0/images/130')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -1102,7 +1182,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         # Snapshot for User 1
         server_ref = 'http://localhost/v1.1/servers/42'
         snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
-        for status in ('queued', 'saving', 'active', 'killed'):
+        statuses = ('queued', 'saving', 'active','killed',
+                    'deleted', 'pending_delete')
+        for status in statuses:
             add_fixture(id=image_id, name='%s snapshot' % status,
                         is_public=False, status=status,
                         properties=snapshot_properties)
