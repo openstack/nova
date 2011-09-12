@@ -92,7 +92,9 @@ class ZoneState(object):
 
 
 def _call_novaclient(zone):
-    """Call novaclient. Broken out for testing purposes."""
+    """Call novaclient. Broken out for testing purposes. Note that
+    we have to use the admin credentials for this since there is no
+    available context."""
     client = novaclient.Client(zone.username, zone.password, None,
                                zone.api_url, region_name=zone.name)
     return client.zones.info()._info
