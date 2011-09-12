@@ -634,7 +634,7 @@ class VMOps(object):
         # The agent can be slow to start for a variety of reasons. On Windows,
         # it will generally perform a setup process on first boot that can
         # take a couple of minutes and then reboot. On Linux, the system can
-        # also take a while to boot. So we need to be more partient than
+        # also take a while to boot. So we need to be more patient than
         # normal as well as watch for domid changes
 
         def _call():
