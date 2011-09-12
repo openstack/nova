@@ -229,8 +229,8 @@ def _inject_metadata_into_fs(metadata, fs, execute=None):
     metadata_path = os.path.join(fs, "meta.js")
     metadata = dict([(m.key, m.value) for m in metadata])
 
-    utils.execute('sudo', 'tee', metadata_path,
-                  process_input=json.dumps(metadata))
+    utils.execute('tee', metadata_path,
+                  process_input=json.dumps(metadata), run_as_root=True)
 
 
 def _inject_key_into_fs(key, fs, execute=None):

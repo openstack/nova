@@ -61,9 +61,9 @@ def _create_glance_client(context, host, port):
     if context.strategy == 'keystone':
         # NOTE(dprince): Glance client just needs auth_tok right? Should we
         # add username and tenant to the creds below?
-        creds={'strategy': 'keystone',
-               'username': context.user_id,
-               'tenant': context.project_id}
+        creds = {'strategy': 'keystone',
+                 'username': context.user_id,
+                 'tenant': context.project_id}
         glance_client = GlanceClient(host, port, auth_tok=context.auth_token,
                                      creds=creds)
     else:

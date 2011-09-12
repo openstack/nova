@@ -700,7 +700,7 @@ class LibvirtConnTestCase(test.TestCase):
         # qemu-img should be mockd since test environment might not have
         # large disk space.
         self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('sudo', 'qemu-img', 'create', '-f', 'raw',
+        utils.execute('qemu-img', 'create', '-f', 'raw',
                       '%s/%s/disk' % (tmpdir, instance_ref.name), '10G')
 
         self.mox.ReplayAll()
@@ -752,7 +752,7 @@ class LibvirtConnTestCase(test.TestCase):
         os.path.getsize("/test/disk").AndReturn(10 * 1024 * 1024 * 1024)
         # another is qcow image, so qemu-img should be mocked.
         self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('sudo', 'qemu-img', 'info', '/test/disk.local').\
+        utils.execute('qemu-img', 'info', '/test/disk.local').\
             AndReturn((ret, ''))
 
         self.mox.ReplayAll()
