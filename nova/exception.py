@@ -403,10 +403,6 @@ class KernelNotFoundForImage(ImageNotFound):
     message = _("Kernel not found for image %(image_id)s.")
 
 
-class RamdiskNotFoundForImage(ImageNotFound):
-    message = _("Ramdisk not found for image %(image_id)s.")
-
-
 class UserNotFound(NotFound):
     message = _("User %(user_id)s could not be found.")
 
@@ -437,6 +433,10 @@ class NetworkNotFound(NotFound):
 
 class NetworkNotFoundForBridge(NetworkNotFound):
     message = _("Network could not be found for bridge %(bridge)s")
+
+
+class NetworkNotFoundForUUID(NetworkNotFound):
+    message = _("Network could not be found for uuid %(uuid)s")
 
 
 class NetworkNotFoundForCidr(NetworkNotFound):
@@ -810,3 +810,10 @@ class CannotResizeToSmallerSize(NovaException):
 
 class ImageTooLarge(NovaException):
     message = _("Image is larger than instance type allows")
+
+
+class ZoneRequestError(Error):
+    def __init__(self, message=None):
+        if message is None:
+            message = _("1 or more Zones could not complete the request")
+        super(ZoneRequestError, self).__init__(message=message)

@@ -877,6 +877,7 @@ class API(base.Base):
                 'image': 'image_ref',
                 'name': 'display_name',
                 'instance_name': 'name',
+                'tenant_id': 'project_id',
                 'recurse_zones': None,
                 'flavor': _remap_flavor_filter,
                 'fixed_ip': _remap_fixed_ip_filter}
@@ -1041,13 +1042,14 @@ class API(base.Base):
         return recv_meta
 
     @scheduler_api.reroute_compute("reboot")
-    def reboot(self, context, instance_id):
+    def reboot(self, context, instance_id, reboot_type):
         """Reboot the given instance."""
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.REBOOTING)
-        self._cast_compute_message('reboot_instance', context, instance_id)
+        self._cast_compute_message('reboot_instance', context, instance_id,
+                reboot_type)
 
     @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, admin_password,
