@@ -197,7 +197,8 @@ def _make_image_fixtures():
     # Snapshot for User 1
     server_ref = 'http://localhost/v1.1/servers/42'
     snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
-    for status in ('queued', 'saving', 'active', 'killed'):
+    for status in ('queued', 'saving', 'active', 'killed',
+                   'deleted', 'pending_delete'):
         add_fixture(id=image_id, name='%s snapshot' % status,
                     is_public=False, status=status,
                     properties=snapshot_properties)
