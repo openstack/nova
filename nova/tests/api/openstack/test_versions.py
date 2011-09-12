@@ -309,9 +309,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(f.feed.author, 'Rackspace')
         self.assertEqual(f.feed.author_detail.href,
                          'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.0/',
-                                         'type': 'application/atom+xml',
-                                         'rel': 'self'}])
+        self.assertEqual(f.feed.links[0]['href'], 'http://localhost/v1.0/')
+        self.assertEqual(f.feed.links[0]['rel'], 'self')
 
         self.assertEqual(len(f.entries), 1)
         entry = f.entries[0]
@@ -354,9 +353,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(f.feed.author, 'Rackspace')
         self.assertEqual(f.feed.author_detail.href,
                          'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.1/',
-                                         'type': 'application/atom+xml',
-                                         'rel': 'self'}])
+        self.assertEqual(f.feed.links[0]['href'], 'http://localhost/v1.1/')
+        self.assertEqual(f.feed.links[0]['rel'], 'self')
 
         self.assertEqual(len(f.entries), 1)
         entry = f.entries[0]
@@ -399,9 +397,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(f.feed.author, 'Rackspace')
         self.assertEqual(f.feed.author_detail.href,
                          'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links, [{'href': 'http://localhost/',
-                                         'type': 'application/atom+xml',
-                                         'rel': 'self'}])
+        self.assertEqual(f.feed.links[0]['href'], 'http://localhost/')
+        self.assertEqual(f.feed.links[0]['rel'], 'self')
 
         self.assertEqual(len(f.entries), 2)
         entry = f.entries[0]
@@ -790,9 +787,9 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(f.feed.author, 'Rackspace')
         self.assertEqual(f.feed.author_detail.href,
                          'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links, [{'href': 'http://test/',
-                                         'type': 'application/atom+xml',
-                                         'rel': 'self'}])
+        self.assertEqual(f.feed.links[0]['href'], 'http://test/')
+        self.assertEqual(f.feed.links[0]['rel'], 'self')
+
         self.assertEqual(len(f.entries), 1)
         entry = f.entries[0]
         self.assertEqual(entry.id, 'http://test/2.9.8')
@@ -853,9 +850,9 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(f.feed.author, 'Rackspace')
         self.assertEqual(f.feed.author_detail.href,
                          'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links, [{'href': 'http://localhost/v1.1/',
-                                         'type': 'application/atom+xml',
-                                         'rel': 'self'}])
+        self.assertEqual(f.feed.links[0]['href'], 'http://localhost/v1.1/')
+        self.assertEqual(f.feed.links[0]['rel'], 'self')
+
         self.assertEqual(len(f.entries), 1)
         entry = f.entries[0]
         self.assertEqual(entry.id, 'http://localhost/v1.1/')
