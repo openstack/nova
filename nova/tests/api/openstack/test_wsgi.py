@@ -28,15 +28,14 @@ class RequestTest(test.TestCase):
         self.assertEqual(result, "application/json")
 
     def test_content_type_from_accept_xml(self):
-        request = wsgi.Request.blank('/tests/123')
-        request.headers["Accept"] = "application/xml"
-        result = request.best_match_content_type()
-        self.assertEqual(result, "application/xml")
-
-        request = wsgi.Request.blank('/tests/123')
-        request.headers["Accept"] = "application/json"
-        result = request.best_match_content_type()
-        self.assertEqual(result, "application/json")
+        for content_type in ('application/xml',
+                             'application/vnd.openstack.compute+xml',
+                             'application/json',
+                             'application/vnd.openstack.compute+json'):
+            request = wsgi.Request.blank('/tests/123')
+            request.headers["Accept"] = content_type
+            result = request.best_match_content_type()
+            self.assertEqual(result, content_type)
 
         request = wsgi.Request.blank('/tests/123')
         request.headers["Accept"] = "application/xml, application/json"
@@ -231,7 +230,9 @@ class ResponseSerializerTest(test.TestCase):
 
         self.body_serializers = {
             'application/json': JSONSerializer(),
-            'application/XML': XMLSerializer(),
+            'application/vnd.openstack.compute+json': JSONSerializer(),
+            'application/xml': XMLSerializer(),
+            'application/vnd.openstack.compute+xml': XMLSerializer(),
         }
 
         self.serializer = wsgi.ResponseSerializer(self.body_serializers,
@@ -281,7 +282,9 @@ class RequestDeserializerTest(test.TestCase):
 
         self.body_deserializers = {
             'application/json': JSONDeserializer(),
-            'application/XML': XMLDeserializer(),
+            'application/vnd.openstack.compute+json': JSONDeserializer(),
+            'application/xml': XMLDeserializer(),
+            'application/vnd.openstack.compute+xml': XMLDeserializer(),
         }
 
         self.deserializer = wsgi.RequestDeserializer(self.body_deserializers)
