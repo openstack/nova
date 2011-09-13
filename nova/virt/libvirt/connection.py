@@ -467,7 +467,7 @@ class LibvirtConnection(driver.ComputeDriver):
         shutil.rmtree(temp_dir)
 
     @exception.wrap_exception()
-    def reboot(self, instance, network_info):
+    def reboot(self, instance, network_info, reboot_type):
         """Reboot a virtual machine, given an instance reference.
 
         This method actually destroys and re-creates the domain to ensure the
