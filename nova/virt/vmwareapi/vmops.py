@@ -157,7 +157,7 @@ class VMWareVMOps(object):
             repository.
             """
             image_size, image_properties = \
-                    vmware_images.get_vmdk_size_and_properties(
+                    vmware_images.get_vmdk_size_and_properties(context,
                                        instance.image_ref, instance)
             vmdk_file_size_in_kb = int(image_size) / 1024
             os_type = image_properties.get("vmware_ostype", "otherGuest")
@@ -282,6 +282,7 @@ class VMWareVMOps(object):
             # Upload the -flat.vmdk file whose meta-data file we just created
             # above
             vmware_images.fetch_image(
+                context,
                 instance.image_ref,
                 instance,
                 host=self._session._host_ip,
@@ -448,6 +449,7 @@ class VMWareVMOps(object):
             # Upload the contents of -flat.vmdk file which has the disk data.
             LOG.debug(_("Uploading image %s") % snapshot_name)
             vmware_images.upload_image(
+                context,
                 snapshot_name,
                 instance,
                 os_type=os_type,

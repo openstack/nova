@@ -334,9 +334,8 @@ class Controller(object):
             LOG.exception(msg)
             raise exc.HTTPBadRequest(explanation=msg)
         try:
-            # TODO(gundlach): pass reboot_type, support soft reboot in
-            # virt driver
-            self.compute_api.reboot(req.environ['nova.context'], id)
+            self.compute_api.reboot(req.environ['nova.context'], id,
+                    reboot_type)
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
             raise exc.HTTPUnprocessableEntity()
@@ -873,6 +872,8 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
     def _add_server_attributes(self, node, server):
         node.setAttribute('id', str(server['id']))
+        node.setAttribute('userId', str(server['user_id']))
+        node.setAttribute('tenantId', str(server['tenant_id']))
         node.setAttribute('uuid', str(server['uuid']))
         node.setAttribute('hostId', str(server['hostId']))
         node.setAttribute('name', server['name'])
@@ -1009,7 +1010,7 @@ def create_resource(version='1.0'):
         "attributes": {
             "server": ["id", "imageId", "name", "flavorId", "hostId",
                        "status", "progress", "adminPass", "flavorRef",
-                       "imageRef"],
+                       "imageRef", "userId", "tenantId"],
             "link": ["rel", "type", "href"],
         },
         "dict_collections": {

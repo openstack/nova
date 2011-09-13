@@ -37,17 +37,18 @@ class ViewBuilder(object):
     def _format_status(self, image):
         """Update the status field to standardize format."""
         status_mapping = {
-            'pending': 'QUEUED',
-            'decrypting': 'PREPARING',
-            'untarring': 'SAVING',
-            'available': 'ACTIVE',
-            'killed': 'FAILED',
+            'active': 'ACTIVE',
+            'queued': 'SAVING',
+            'saving': 'SAVING',
+            'deleted': 'DELETED',
+            'pending_delete': 'DELETED',
+            'killed': 'ERROR',
         }
 
         try:
-            image['status'] = status_mapping[image['status']].upper()
+            image['status'] = status_mapping[image['status']]
         except KeyError:
-            image['status'] = image['status'].upper()
+            image['status'] = 'UNKNOWN'
 
     def _build_server(self, image, image_obj):
         """Indicates that you must use a ViewBuilder subclass."""

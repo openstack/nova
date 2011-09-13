@@ -494,6 +494,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.check_vm_params_for_linux_with_external_kernel()
 
     def test_spawn_netinject_file(self):
+        self.flags(flat_injected=True)
         db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
 
         self._tee_executed = False
@@ -611,7 +612,6 @@ class XenAPIVMTestCase(test.TestCase):
                               str(3 * 1024))
 
     def test_rescue(self):
-        self.flags(flat_injected=False)
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
         conn.rescue(self.context, instance, None, [])
@@ -932,8 +932,9 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.fake_instance.architecture = 'x86-64'
 
     def assert_disk_type(self, disk_type):
+        ctx = context.RequestContext('fake', 'fake')
         dt = vm_utils.VMHelper.determine_disk_image_type(
-            self.fake_instance)
+            self.fake_instance, ctx)
         self.assertEqual(disk_type, dt)
 
     def test_instance_disk(self):

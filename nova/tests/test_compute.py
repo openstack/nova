@@ -300,11 +300,20 @@ class ComputeTestCase(test.TestCase):
         self.compute.resume_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
-    def test_reboot(self):
-        """Ensure instance can be rebooted"""
+    def test_soft_reboot(self):
+        """Ensure instance can be soft rebooted"""
         instance_id = self._create_instance()
+        reboot_type = "SOFT"
         self.compute.run_instance(self.context, instance_id)
-        self.compute.reboot_instance(self.context, instance_id)
+        self.compute.reboot_instance(self.context, instance_id, reboot_type)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_hard_reboot(self):
+        """Ensure instance can be hard rebooted"""
+        instance_id = self._create_instance()
+        reboot_type = "HARD"
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.reboot_instance(self.context, instance_id, reboot_type)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_set_admin_password(self):
