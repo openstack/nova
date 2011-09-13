@@ -499,8 +499,6 @@ class VersionsTest(test.TestCase):
         self.assertTrue(common.compare_links(links,
             [{'rel': 'self', 'href': 'http://localhost/v1.0/images/1'}]))
 
-        self.assertEqual(expected, res.body)
-
     def test_multi_choice_server_atom(self):
         """
         Make sure multi choice responses do not have content-type
