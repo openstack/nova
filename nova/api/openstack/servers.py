@@ -17,8 +17,8 @@ import base64
 import os
 import traceback
 
+from lxml import etree
 from webob import exc
-from xml.dom import minidom
 import webob
 
 from nova import compute
@@ -38,6 +38,7 @@ import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
+from nova.api.openstack import xmlutil
 
 
 LOG = logging.getLogger('nova.api.openstack.servers')
@@ -850,130 +851,113 @@ class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
 class ServerXMLSerializer(wsgi.XMLDictSerializer):
 
-    xmlns = wsgi.XMLNS_V11
+    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
     def __init__(self):
         self.metadata_serializer = common.MetadataXMLSerializer()
         self.addresses_serializer = ips.IPXMLSerializer()
 
-    def _create_basic_entity_node(self, xml_doc, id, links, name):
-        basic_node = xml_doc.createElement(name)
-        basic_node.setAttribute('id', str(id))
-        link_nodes = self._create_link_nodes(xml_doc, links)
-        for link_node in link_nodes:
-            basic_node.appendChild(link_node)
-        return basic_node
+    def _create_metadata_node(self, metadata_dict):
+        metadata_elem = etree.Element('metadata', nsmap=self.NSMAP)
+        self.metadata_serializer.populate_metadata(metadata_elem,
+                                                   metadata_dict)
+        return metadata_elem
 
-    def _create_metadata_node(self, xml_doc, metadata):
-        return self.metadata_serializer.meta_list_to_xml(xml_doc, metadata)
+    def _create_image_node(self, image_dict):
+        image_elem = etree.Element('image', nsmap=self.NSMAP)
+        image_elem.set('id', str(image_dict['id']))
+        for link in image_dict.get('links', []):
+            elem = etree.SubElement(image_elem,
+                                    '{%s}link' % xmlutil.XMLNS_ATOM)
+            elem.set('rel', link['rel'])
+            elem.set('href', link['href'])
+        return image_elem
 
-    def _create_addresses_node(self, xml_doc, addresses):
-        return self.addresses_serializer.networks_to_xml(xml_doc, addresses)
+    def _create_flavor_node(self, flavor_dict):
+        flavor_elem = etree.Element('flavor', nsmap=self.NSMAP)
+        flavor_elem.set('id', str(flavor_dict['id']))
+        for link in flavor_dict.get('links', []):
+            elem = etree.SubElement(flavor_elem,
+                                    '{%s}link' % xmlutil.XMLNS_ATOM)
+            elem.set('rel', link['rel'])
+            elem.set('href', link['href'])
+        return flavor_elem
 
-    def _add_server_attributes(self, node, server):
-        node.setAttribute('id', str(server['id']))
-        node.setAttribute('userId', str(server['user_id']))
-        node.setAttribute('tenantId', str(server['tenant_id']))
-        node.setAttribute('uuid', str(server['uuid']))
-        node.setAttribute('hostId', str(server['hostId']))
-        node.setAttribute('name', server['name'])
-        node.setAttribute('created', str(server['created']))
-        node.setAttribute('updated', str(server['updated']))
-        node.setAttribute('status', server['status'])
-        if 'accessIPv4' in server:
-            node.setAttribute('accessIPv4', str(server['accessIPv4']))
-        if 'accessIPv6' in server:
-            node.setAttribute('accessIPv6', str(server['accessIPv6']))
-        if 'progress' in server:
-            node.setAttribute('progress', str(server['progress']))
+    def _create_addresses_node(self, addresses_dict):
+        addresses_elem = etree.Element('addresses', nsmap=self.NSMAP)
+        self.addresses_serializer.populate_addresses_node(addresses_elem,
+                                                          addresses_dict)
+        return addresses_elem
 
-    def _server_to_xml(self, xml_doc, server):
-        server_node = xml_doc.createElement('server')
-        server_node.setAttribute('id', str(server['id']))
-        server_node.setAttribute('name', server['name'])
-        link_nodes = self._create_link_nodes(xml_doc,
-                                             server['links'])
-        for link_node in link_nodes:
-            server_node.appendChild(link_node)
-        return server_node
+    def _populate_server(self, server_elem, server_dict, detailed=False):
+        """Populate a server xml element from a dict."""
 
-    def _server_to_xml_detailed(self, xml_doc, server):
-        server_node = xml_doc.createElement('server')
-        self._add_server_attributes(server_node, server)
-
-        link_nodes = self._create_link_nodes(xml_doc,
-                                             server['links'])
-        for link_node in link_nodes:
-            server_node.appendChild(link_node)
-
-        if 'image' in server:
-            image_node = self._create_basic_entity_node(xml_doc,
-                                                    server['image']['id'],
-                                                    server['image']['links'],
-                                                    'image')
-            server_node.appendChild(image_node)
-
-        if 'flavor' in server:
-            flavor_node = self._create_basic_entity_node(xml_doc,
-                                                    server['flavor']['id'],
-                                                    server['flavor']['links'],
-                                                    'flavor')
-            server_node.appendChild(flavor_node)
-
-        metadata = server.get('metadata', {}).items()
-        if len(metadata) > 0:
-            metadata_node = self._create_metadata_node(xml_doc, metadata)
-            server_node.appendChild(metadata_node)
-
-        addresses_node = self._create_addresses_node(xml_doc,
-                                                     server['addresses'])
-        server_node.appendChild(addresses_node)
-
-        if 'security_groups' in server:
-            security_groups_node = self._create_security_groups_node(xml_doc,
-                                                    server['security_groups'])
-            server_node.appendChild(security_groups_node)
-
-        return server_node
-
-    def _server_list_to_xml(self, xml_doc, servers, detailed):
-        container_node = xml_doc.createElement('servers')
+        server_elem.set('name', server_dict['name'])
+        server_elem.set('id', str(server_dict['id']))
         if detailed:
-            server_to_xml = self._server_to_xml_detailed
-        else:
-            server_to_xml = self._server_to_xml
+            server_elem.set('uuid', str(server_dict['uuid']))
+            server_elem.set('userId', str(server_dict['user_id']))
+            server_elem.set('tenantId', str(server_dict['tenant_id']))
+            server_elem.set('updated', str(server_dict['updated']))
+            server_elem.set('created', str(server_dict['created']))
+            server_elem.set('hostId', str(server_dict['hostId']))
+            server_elem.set('accessIPv4', str(server_dict['accessIPv4']))
+            server_elem.set('accessIPv6', str(server_dict['accessIPv6']))
+            server_elem.set('status', str(server_dict['status']))
+            if 'progress' in server_dict:
+                server_elem.set('progress', str(server_dict['progress']))
+            image_elem = self._create_image_node(server_dict['image'])
+            server_elem.append(image_elem)
 
-        for server in servers:
-            item_node = server_to_xml(xml_doc, server)
-            container_node.appendChild(item_node)
-        return container_node
+            flavor_elem = self._create_flavor_node(server_dict['flavor'])
+            server_elem.append(flavor_elem)
+
+            meta_elem = self._create_metadata_node(
+                            server_dict.get('metadata', {}))
+            server_elem.append(meta_elem)
+
+            addresses_elem = self._create_addresses_node(
+                            server_dict.get('addresses', {}))
+            server_elem.append(addresses_elem)
+            groups = server_dict.get('security_groups')
+            if groups:
+                groups_elem = etree.SubElement(server_elem, 'security_groups')
+                for group in groups:
+                    group_elem = etree.SubElement(groups_elem,
+                                                  'security_group')
+                    group_elem.set('name', group['name'])
+
+        for link in server_dict.get('links', []):
+            elem = etree.SubElement(server_elem,
+                                    '{%s}link' % xmlutil.XMLNS_ATOM)
+            elem.set('rel', link['rel'])
+            elem.set('href', link['href'])
+        return server_elem
 
     def index(self, servers_dict):
-        xml_doc = minidom.Document()
-        node = self._server_list_to_xml(xml_doc,
-                                       servers_dict['servers'],
-                                       detailed=False)
-        return self.to_xml_string(node, True)
+        servers = etree.Element('servers', nsmap=self.NSMAP)
+        for server_dict in servers_dict['servers']:
+            server = etree.SubElement(servers, 'server')
+            self._populate_server(server, server_dict, False)
+        return self._to_xml(servers)
 
     def detail(self, servers_dict):
-        xml_doc = minidom.Document()
-        node = self._server_list_to_xml(xml_doc,
-                                       servers_dict['servers'],
-                                       detailed=True)
-        return self.to_xml_string(node, True)
+        servers = etree.Element('servers', nsmap=self.NSMAP)
+        for server_dict in servers_dict['servers']:
+            server = etree.SubElement(servers, 'server')
+            self._populate_server(server, server_dict, True)
+        return self._to_xml(servers)
 
     def show(self, server_dict):
-        xml_doc = minidom.Document()
-        node = self._server_to_xml_detailed(xml_doc,
-                                       server_dict['server'])
-        return self.to_xml_string(node, True)
+        server = etree.Element('server', nsmap=self.NSMAP)
+        self._populate_server(server, server_dict['server'], True)
+        return self._to_xml(server)
 
     def create(self, server_dict):
-        xml_doc = minidom.Document()
-        node = self._server_to_xml_detailed(xml_doc,
-                                       server_dict['server'])
-        node.setAttribute('adminPass', server_dict['server']['adminPass'])
-        return self.to_xml_string(node, True)
+        server = etree.Element('server', nsmap=self.NSMAP)
+        self._populate_server(server, server_dict['server'], True)
+        server.set('adminPass', server_dict['server']['adminPass'])
+        return self._to_xml(server)
 
     def action(self, server_dict):
         #NOTE(bcwaldon): We need a way to serialize actions individually. This
@@ -981,23 +965,9 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         return self.create(server_dict)
 
     def update(self, server_dict):
-        xml_doc = minidom.Document()
-        node = self._server_to_xml_detailed(xml_doc,
-                                       server_dict['server'])
-        return self.to_xml_string(node, True)
-
-    def _security_group_to_xml(self, doc, security_group):
-        node = doc.createElement('security_group')
-        node.setAttribute('name', str(security_group.get('name')))
-        return node
-
-    def _create_security_groups_node(self, xml_doc, security_groups):
-        security_groups_node = xml_doc.createElement('security_groups')
-        if security_groups:
-            for security_group in security_groups:
-                node = self._security_group_to_xml(xml_doc, security_group)
-                security_groups_node.appendChild(node)
-        return security_groups_node
+        server = etree.Element('server', nsmap=self.NSMAP)
+        self._populate_server(server, server_dict['server'], True)
+        return self._to_xml(server)
 
 
 def create_resource(version='1.0'):

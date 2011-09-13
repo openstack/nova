@@ -20,12 +20,12 @@ Module dedicated functions/classes dealing with rate limiting requests.
 import copy
 import httplib
 import json
+from lxml import etree
 import math
 import re
 import time
 import urllib
 import webob.exc
-from xml.dom import minidom
 
 from collections import defaultdict
 
@@ -38,6 +38,7 @@ from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import limits as limits_views
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 
 
 # Convenience constants for the limits dictionary passed to Limiter().
@@ -81,52 +82,49 @@ class LimitsXMLSerializer(wsgi.XMLDictSerializer):
 
     xmlns = wsgi.XMLNS_V11
 
+    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+
     def __init__(self):
         pass
 
-    def _create_rates_node(self, xml_doc, rates):
-        rates_node = xml_doc.createElement('rates')
+    def _create_rates_node(self, rates):
+        rates_elem = etree.Element('rates', nsmap=self.NSMAP)
         for rate in rates:
-            rate_node = xml_doc.createElement('rate')
-            rate_node.setAttribute('uri', rate['uri'])
-            rate_node.setAttribute('regex', rate['regex'])
-
+            rate_node = etree.SubElement(rates_elem, 'rate')
+            rate_node.set('uri', rate['uri'])
+            rate_node.set('regex', rate['regex'])
             for limit in rate['limit']:
-                limit_node = xml_doc.createElement('limit')
-                limit_node.setAttribute('value', str(limit['value']))
-                limit_node.setAttribute('verb', limit['verb'])
-                limit_node.setAttribute('remaining', str(limit['remaining']))
-                limit_node.setAttribute('unit', limit['unit'])
-                limit_node.setAttribute('next-available',
-                                        str(limit['next-available']))
-                rate_node.appendChild(limit_node)
+                limit_elem = etree.SubElement(rate_node, 'limit')
+                limit_elem.set('value', str(limit['value']))
+                limit_elem.set('verb', str(limit['verb']))
+                limit_elem.set('remaining', str(limit['remaining']))
+                limit_elem.set('unit', str(limit['unit']))
+                limit_elem.set('next-available', str(limit['next-available']))
+        return rates_elem
 
-            rates_node.appendChild(rate_node)
-        return rates_node
+    def _create_absolute_node(self, absolute_dict):
+        absolute_elem = etree.Element('absolute', nsmap=self.NSMAP)
+        for key, value in absolute_dict.items():
+            limit_elem = etree.SubElement(absolute_elem, 'limit')
+            limit_elem.set('name', str(key))
+            limit_elem.set('value', str(value))
+        return absolute_elem
 
-    def _create_absolute_node(self, xml_doc, absolutes):
-        absolute_node = xml_doc.createElement('absolute')
-        for key, value in absolutes.iteritems():
-            limit_node = xml_doc.createElement('limit')
-            limit_node.setAttribute('name', key)
-            limit_node.setAttribute('value', str(value))
-            absolute_node.appendChild(limit_node)
-        return absolute_node
+    def _populate_limits(self, limits_elem, limits_dict):
+        """Populate a limits xml element from a dict."""
 
-    def _limits_to_xml(self, xml_doc, limits):
-        limits_node = xml_doc.createElement('limits')
-        rates_node = self._create_rates_node(xml_doc, limits['rate'])
-        limits_node.appendChild(rates_node)
+        rates_elem = self._create_rates_node(
+                        limits_dict.get('rate', []))
+        limits_elem.append(rates_elem)
 
-        absolute_node = self._create_absolute_node(xml_doc, limits['absolute'])
-        limits_node.appendChild(absolute_node)
-
-        return limits_node
+        absolutes_elem = self._create_absolute_node(
+                        limits_dict.get('absolute', {}))
+        limits_elem.append(absolutes_elem)
 
     def index(self, limits_dict):
-        xml_doc = minidom.Document()
-        node = self._limits_to_xml(xml_doc, limits_dict['limits'])
-        return self.to_xml_string(node, False)
+        limits = etree.Element('limits', nsmap=self.NSMAP)
+        self._populate_limits(limits, limits_dict['limits'])
+        return self._to_xml(limits)
 
 
 def create_resource(version='1.0'):
