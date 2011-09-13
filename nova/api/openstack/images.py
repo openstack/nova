@@ -50,7 +50,7 @@ class Controller(object):
         """Initialize new `ImageController`.
 
         :param compute_service: `nova.compute.api:API`
-        :param image_service: `nova.image.service:BaseImageService`
+        :param image_service: `nova.image.glance:GlancemageService`
 
         """
         self._compute_service = compute_service or compute.API()

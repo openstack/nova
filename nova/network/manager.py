@@ -1005,7 +1005,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             address = network['vpn_private_address']
             self.db.fixed_ip_associate(context,
                                        address,
-                                       instance_id)
+                                       instance_id,
+                                       reserved=True)
         else:
             address = kwargs.get('address', None)
             if address:

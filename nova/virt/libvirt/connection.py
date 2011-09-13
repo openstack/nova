@@ -196,7 +196,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _test_connection(self):
         try:
-            self._wrapped_conn.getInfo()
+            self._wrapped_conn.getCapabilities()
             return True
         except libvirt.libvirtError as e:
             if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
@@ -398,10 +398,10 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom = self._lookup_by_name(instance['name'])
 
         (image_service, image_id) = nova.image.get_image_service(
-            instance['image_ref'])
+            context, instance['image_ref'])
         base = image_service.show(context, image_id)
         (snapshot_image_service, snapshot_image_id) = \
-            nova.image.get_image_service(image_href)
+            nova.image.get_image_service(context, image_href)
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
         metadata = {'is_public': False,
@@ -1696,7 +1696,7 @@ class LibvirtConnection(driver.ComputeDriver):
             base = os.path.basename(info['path'])
             # Get image type and create empty disk image.
             instance_disk = os.path.join(instance_dir, base)
-            utils.execute('sudo', 'qemu-img', 'create', '-f', info['type'],
+            utils.execute('qemu-img', 'create', '-f', info['type'],
                           instance_disk, info['local_gb'])
 
         # if image has kernel and ramdisk, just download
@@ -1788,7 +1788,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if disk_type == 'raw':
                 size = int(os.path.getsize(path))
             else:
-                out, err = utils.execute('sudo', 'qemu-img', 'info', path)
+                out, err = utils.execute('qemu-img', 'info', path)
                 size = [i.split('(')[1].split()[0] for i in out.split('\n')
                     if i.strip().find('virtual size') >= 0]
                 size = int(size[0])
