@@ -261,11 +261,13 @@ def floating_ip_disassociate(context, address):
     return IMPL.floating_ip_disassociate(context, address)
 
 
-def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
+def floating_ip_fixed_ip_associate(context, floating_address,
+                                   fixed_address, host):
     """Associate an floating ip to a fixed_ip by address."""
     return IMPL.floating_ip_fixed_ip_associate(context,
                                                floating_address,
-                                               fixed_address)
+                                               fixed_address,
+                                               host)
 
 
 def floating_ip_get_all(context):
@@ -365,7 +367,7 @@ def fixed_ip_get_all(context):
 
 def fixed_ip_get_all_by_instance_host(context, host):
     """Get all allocated fixed ips filtered by instance host."""
-    return IMPL.fixed_ip_get_all_instance_by_host(context, host)
+    return IMPL.fixed_ip_get_all_by_instance_host(context, host)
 
 
 def fixed_ip_get_by_address(context, address):
