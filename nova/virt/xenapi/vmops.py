@@ -253,6 +253,8 @@ class VMOps(object):
 
         self.create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
+        self.inject_hostname(vm_ref, instance['hostname'])
+
         return vm_ref
 
     def _attach_disks(self, instance, disk_image_type, vm_ref, first_vdi_ref,
@@ -1157,6 +1159,12 @@ class VMOps(object):
         #resp = self._make_agent_call('resetnetwork', instance, '', args)
         resp = self._make_plugin_call('agent', 'resetnetwork', instance, '',
                                                                args, vm_ref)
+
+    def inject_hostname(self, vm_ref, hostname):
+        """Inject the hostname of the instance into the xenstore."""
+        logging.debug(_("injecting hostname to xs for vm: |%s|"), vm_ref)
+        self._session.call_xenapi_request("VM.add_to_xenstore_data",
+                (vm_ref, "vm-data/hostname", hostname))
 
     def list_from_xenstore(self, vm, path):
         """
