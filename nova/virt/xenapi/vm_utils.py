@@ -31,12 +31,10 @@ import urllib
 import uuid
 from xml.dom import minidom
 
-import glance.client
 from nova import db
 from nova import exception
 from nova import flags
-import nova.image
-from nova.image import glance as glance_image_service
+from nova.image import glance
 from nova import log as logging
 from nova import utils
 from nova.compute import instance_types
@@ -383,8 +381,7 @@ class VMHelper(HelperBase):
 
         os_type = instance.os_type or FLAGS.default_os_type
 
-        glance_host, glance_port = \
-            glance_image_service.pick_glance_api_server()
+        glance_host, glance_port = glance.pick_glance_api_server()
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
                   'glance_host': glance_host,
@@ -447,8 +444,7 @@ class VMHelper(HelperBase):
         # pass them as arguments
         uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
 
-        glance_host, glance_port = \
-            glance_image_service.pick_glance_api_server()
+        glance_host, glance_port = glance.pick_glance_api_server()
         params = {'image_id': image,
                   'glance_host': glance_host,
                   'glance_port': glance_port,
@@ -546,7 +542,7 @@ class VMHelper(HelperBase):
         else:
             sr_ref = safe_find_sr(session)
 
-        glance_client, image_id = nova.image.get_glance_client(image)
+        glance_client, image_id = glance.get_glance_client(context, image)
         glance_client.set_auth_token(getattr(context, 'auth_token', None))
         meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
@@ -606,7 +602,7 @@ class VMHelper(HelperBase):
             raise e
 
     @classmethod
-    def determine_disk_image_type(cls, instance):
+    def determine_disk_image_type(cls, instance, context):
         """Disk Image Types are used to determine where the kernel will reside
         within an image. To figure out which type we're dealing with, we use
         the following rules:
@@ -639,7 +635,8 @@ class VMHelper(HelperBase):
                 'vhd': ImageType.DISK_VHD,
                 'iso': ImageType.DISK_ISO}
             image_ref = instance.image_ref
-            glance_client, image_id = nova.image.get_glance_client(image_ref)
+            glance_client, image_id = glance.get_glance_client(context,
+                                                               image_ref)
             meta = glance_client.get_image_meta(image_id)
             disk_format = meta['disk_format']
             try:

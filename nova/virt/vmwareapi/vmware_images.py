@@ -20,14 +20,12 @@ Utility functions for Image transfer.
 
 from nova import exception
 from nova import flags
-import nova.image
+from nova.image import glance
 from nova import log as logging
 from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import read_write_util
 
 LOG = logging.getLogger("nova.virt.vmwareapi.vmware_images")
-
-FLAGS = flags.FLAGS
 
 QUEUE_BUFFER_SIZE = 10
 
@@ -87,36 +85,10 @@ def start_transfer(read_file_handle, data_size, write_file_handle=None,
             write_file_handle.close()
 
 
-def fetch_image(image, instance, **kwargs):
-    """Fetch an image for attaching to the newly created VM."""
-    # Depending upon the image service, make appropriate image service call
-    if FLAGS.image_service == "nova.image.glance.GlanceImageService":
-        func = _get_glance_image
-    elif FLAGS.image_service == "nova.image.s3.S3ImageService":
-        func = _get_s3_image
-    else:
-        raise NotImplementedError(_("The Image Service %s is not implemented")
-                                  % FLAGS.image_service)
-    return func(image, instance, **kwargs)
-
-
-def upload_image(image, instance, **kwargs):
-    """Upload the newly snapshotted VM disk file."""
-    # Depending upon the image service, make appropriate image service call
-    if FLAGS.image_service == "nova.image.glance.GlanceImageService":
-        func = _put_glance_image
-    elif FLAGS.image_service == "nova.image.s3.S3ImageService":
-        func = _put_s3_image
-    else:
-        raise NotImplementedError(_("The Image Service %s is not implemented")
-                                  % FLAGS.image_service)
-    return func(image, instance, **kwargs)
-
-
-def _get_glance_image(image, instance, **kwargs):
+def fetch_image(context, image, instance, **kwargs):
     """Download image from the glance image server."""
     LOG.debug(_("Downloading image %s from glance image server") % image)
-    (glance_client, image_id) = nova.image.get_glance_client(image)
+    (glance_client, image_id) = glance.get_glance_client(context, image)
     metadata, read_iter = glance_client.get_image(image_id)
     read_file_handle = read_write_util.GlanceFileRead(read_iter)
     file_size = int(metadata['size'])
@@ -132,17 +104,7 @@ def _get_glance_image(image, instance, **kwargs):
     LOG.debug(_("Downloaded image %s from glance image server") % image)
 
 
-def _get_s3_image(image, instance, **kwargs):
-    """Download image from the S3 image server."""
-    raise NotImplementedError
-
-
-def _get_local_image(image, instance, **kwargs):
-    """Download image from the local nova compute node."""
-    raise NotImplementedError
-
-
-def _put_glance_image(image, instance, **kwargs):
+def upload_image(context, image, instance, **kwargs):
     """Upload the snapshotted vm disk file to Glance image server."""
     LOG.debug(_("Uploading image %s to the Glance image server") % image)
     read_file_handle = read_write_util.VmWareHTTPReadFile(
@@ -152,7 +114,7 @@ def _put_glance_image(image, instance, **kwargs):
                                 kwargs.get("cookies"),
                                 kwargs.get("file_path"))
     file_size = read_file_handle.get_size()
-    (glance_client, image_id) = nova.image.get_glance_client(image)
+    (glance_client, image_id) = glance.get_glance_client(context, image)
     # The properties and other fields that we need to set for the image.
     image_metadata = {"is_public": True,
                       "disk_format": "vmdk",
@@ -168,17 +130,7 @@ def _put_glance_image(image, instance, **kwargs):
     LOG.debug(_("Uploaded image %s to the Glance image server") % image)
 
 
-def _put_local_image(image, instance, **kwargs):
-    """Upload the snapshotted vm disk file to the local nova compute node."""
-    raise NotImplementedError
-
-
-def _put_s3_image(image, instance, **kwargs):
-    """Upload the snapshotted vm disk file to S3 image server."""
-    raise NotImplementedError
-
-
-def get_vmdk_size_and_properties(image, instance):
+def get_vmdk_size_and_properties(context, image, instance):
     """
     Get size of the vmdk file that is to be downloaded for attach in spawn.
     Need this to create the dummy virtual disk for the meta-data file. The
@@ -186,12 +138,9 @@ def get_vmdk_size_and_properties(image, instance):
     """
 
     LOG.debug(_("Getting image size for the image %s") % image)
-    if FLAGS.image_service == "nova.image.glance.GlanceImageService":
-        (glance_client, image_id) = nova.image.get_glance_client(image)
-        meta_data = glance_client.get_image_meta(image_id)
-        size, properties = meta_data["size"], meta_data["properties"]
-    elif FLAGS.image_service == "nova.image.s3.S3ImageService":
-        raise NotImplementedError
+    (glance_client, image_id) = glance.get_glance_client(context, image)
+    meta_data = glance_client.get_image_meta(image_id)
+    size, properties = meta_data["size"], meta_data["properties"]
     LOG.debug(_("Got image size of %(size)s for the image %(image)s") %
               locals())
     return size, properties

@@ -202,7 +202,8 @@ class API(base.Base):
         self._check_injected_file_quota(context, injected_files)
         self._check_requested_networks(context, requested_networks)
 
-        (image_service, image_id) = nova.image.get_image_service(image_href)
+        (image_service, image_id) = nova.image.get_image_service(context,
+                                                                 image_href)
         image = image_service.show(context, image_id)
 
         config_drive_id = None

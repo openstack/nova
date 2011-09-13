@@ -196,7 +196,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _test_connection(self):
         try:
-            self._wrapped_conn.getInfo()
+            self._wrapped_conn.getCapabilities()
             return True
         except libvirt.libvirtError as e:
             if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
@@ -398,10 +398,10 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom = self._lookup_by_name(instance['name'])
 
         (image_service, image_id) = nova.image.get_image_service(
-            instance['image_ref'])
+            context, instance['image_ref'])
         base = image_service.show(context, image_id)
         (snapshot_image_service, snapshot_image_id) = \
-            nova.image.get_image_service(image_href)
+            nova.image.get_image_service(context, image_href)
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
         metadata = {'is_public': False,
