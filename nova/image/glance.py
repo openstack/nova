@@ -23,6 +23,7 @@ import copy
 import datetime
 import json
 import random
+from urlparse import urlparse
 
 from glance.common import exception as glance_exception
 
@@ -30,7 +31,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.image import service
 
 
 LOG = logging.getLogger('nova.image.glance')
@@ -40,6 +40,35 @@ FLAGS = flags.FLAGS
 
 
 GlanceClient = utils.import_class('glance.client.Client')
+
+
+def _parse_image_ref(image_href):
+    """Parse an image href into composite parts.
+
+    :param image_href: href of an image
+    :returns: a tuple of the form (image_id, host, port)
+    :raises ValueError
+
+    """
+    o = urlparse(image_href)
+    port = o.port or 80
+    host = o.netloc.split(':', 1)[0]
+    image_id = int(o.path.split('/')[-1])
+    return (image_id, host, port)
+
+
+def _create_glance_client(context, host, port):
+    if context.strategy == 'keystone':
+        # NOTE(dprince): Glance client just needs auth_tok right? Should we
+        # add username and tenant to the creds below?
+        creds = {'strategy': 'keystone',
+                 'username': context.user_id,
+                 'tenant': context.project_id}
+        glance_client = GlanceClient(host, port, auth_tok=context.auth_token,
+                                     creds=creds)
+    else:
+        glance_client = GlanceClient(host, port)
+    return glance_client
 
 
 def pick_glance_api_server():
@@ -57,37 +86,47 @@ def pick_glance_api_server():
     return host, port
 
 
-class GlanceImageService(service.BaseImageService):
+def get_glance_client(context, image_href):
+    """Get the correct glance client and id for the given image_href.
+
+    The image_href param can be an href of the form
+    http://myglanceserver:9292/images/42, or just an int such as 42. If the
+    image_href is an int, then flags are used to create the default
+    glance client.
+
+    :param image_href: image ref/id for an image
+    :returns: a tuple of the form (glance_client, image_id)
+
+    """
+    image_href = image_href or 0
+    if str(image_href).isdigit():
+        glance_host, glance_port = pick_glance_api_server()
+        glance_client = _create_glance_client(context, glance_host,
+                                              glance_port)
+        return (glance_client, int(image_href))
+
+    try:
+        (image_id, host, port) = _parse_image_ref(image_href)
+    except ValueError:
+        raise exception.InvalidImageRef(image_href=image_href)
+    glance_client = _create_glance_client(context, glance_host, glance_port)
+    return (glance_client, image_id)
+
+
+class GlanceImageService(object):
     """Provides storage and retrieval of disk image objects within Glance."""
-
-    GLANCE_ONLY_ATTRS = ['size', 'location', 'disk_format',
-                         'container_format', 'checksum']
-
-    # NOTE(sirp): Overriding to use _translate_to_service provided by
-    # BaseImageService
-    SERVICE_IMAGE_ATTRS = service.BaseImageService.BASE_IMAGE_ATTRS +\
-                          GLANCE_ONLY_ATTRS
 
     def __init__(self, client=None):
         self._client = client
 
-    def _get_client(self):
+    def _get_client(self, context):
         # NOTE(sirp): we want to load balance each request across glance
         # servers. Since GlanceImageService is a long-lived object, `client`
         # is made to choose a new server each time via this property.
         if self._client is not None:
             return self._client
         glance_host, glance_port = pick_glance_api_server()
-        return GlanceClient(glance_host, glance_port)
-
-    def _set_client(self, client):
-        self._client = client
-
-    client = property(_get_client, _set_client)
-
-    def _set_client_context(self, context):
-        """Sets the client's auth token."""
-        self.client.set_auth_token(context.auth_token)
+        return _create_glance_client(context, glance_host, glance_port)
 
     def index(self, context, **kwargs):
         """Calls out to Glance for a list of images available."""
@@ -112,7 +151,7 @@ class GlanceImageService(service.BaseImageService):
         images = []
         for image_meta in image_metas:
             if self._is_image_available(context, image_meta):
-                base_image_meta = self._translate_to_base(image_meta)
+                base_image_meta = self._translate_from_glance(image_meta)
                 images.append(base_image_meta)
         return images
 
@@ -128,14 +167,14 @@ class GlanceImageService(service.BaseImageService):
 
     def _get_images(self, context, **kwargs):
         """Get image entitites from images service"""
-        self._set_client_context(context)
 
         # ensure filters is a dict
         kwargs['filters'] = kwargs.get('filters') or {}
         # NOTE(vish): don't filter out private images
         kwargs['filters'].setdefault('is_public', 'none')
 
-        return self._fetch_images(self.client.get_images_detailed, **kwargs)
+        client = self._get_client(context)
+        return self._fetch_images(client.get_images_detailed, **kwargs)
 
     def _fetch_images(self, fetch_func, **kwargs):
         """Paginate through results from glance server"""
@@ -168,16 +207,15 @@ class GlanceImageService(service.BaseImageService):
 
     def show(self, context, image_id):
         """Returns a dict with image data for the given opaque image id."""
-        self._set_client_context(context)
         try:
-            image_meta = self.client.get_image_meta(image_id)
+            image_meta = self._get_client(context).get_image_meta(image_id)
         except glance_exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
 
         if not self._is_image_available(context, image_meta):
             raise exception.ImageNotFound(image_id=image_id)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def show_by_name(self, context, name):
@@ -192,16 +230,16 @@ class GlanceImageService(service.BaseImageService):
 
     def get(self, context, image_id, data):
         """Calls out to Glance for metadata and data and writes data."""
-        self._set_client_context(context)
         try:
-            image_meta, image_chunks = self.client.get_image(image_id)
+            client = self._get_client(context)
+            image_meta, image_chunks = client.get_image(image_id)
         except glance_exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
 
         for chunk in image_chunks:
             data.write(chunk)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def create(self, context, image_meta, data=None):
@@ -210,19 +248,18 @@ class GlanceImageService(service.BaseImageService):
         :raises: AlreadyExists if the image already exist.
 
         """
-        self._set_client_context(context)
         # Translate Base -> Service
         LOG.debug(_('Creating image in Glance. Metadata passed in %s'),
                   image_meta)
-        sent_service_image_meta = self._translate_to_service(image_meta)
+        sent_service_image_meta = self._translate_to_glance(image_meta)
         LOG.debug(_('Metadata after formatting for Glance %s'),
                   sent_service_image_meta)
 
-        recv_service_image_meta = self.client.add_image(
+        recv_service_image_meta = self._get_client(context).add_image(
             sent_service_image_meta, data)
 
         # Translate Service -> Base
-        base_image_meta = self._translate_to_base(recv_service_image_meta)
+        base_image_meta = self._translate_from_glance(recv_service_image_meta)
         LOG.debug(_('Metadata returned from Glance formatted for Base %s'),
                   base_image_meta)
         return base_image_meta
@@ -233,16 +270,16 @@ class GlanceImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
-        self._set_client_context(context)
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
-        image_meta = _convert_to_string(image_meta)
+        image_meta = self._translate_to_glance(image_meta)
         try:
-            image_meta = self.client.update_image(image_id, image_meta, data)
+            client = self._get_client(context)
+            image_meta = client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def delete(self, context, image_id):
@@ -251,11 +288,10 @@ class GlanceImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
-        self._set_client_context(context)
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         try:
-            result = self.client.delete_image(image_id)
+            result = self._get_client(context).delete_image(image_id)
         except glance_exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
         return result
@@ -265,17 +301,14 @@ class GlanceImageService(service.BaseImageService):
         pass
 
     @classmethod
-    def _translate_to_service(cls, image_meta):
-        image_meta = super(GlanceImageService,
-                           cls)._translate_to_service(image_meta)
+    def _translate_to_glance(cls, image_meta):
         image_meta = _convert_to_string(image_meta)
+        image_meta = _remove_read_only(image_meta)
         return image_meta
 
     @classmethod
-    def _translate_to_base(cls, image_meta):
-        """Override translation to handle conversion to datetime objects."""
-        image_meta = service.BaseImageService._propertify_metadata(
-                        image_meta, cls.SERVICE_IMAGE_ATTRS)
+    def _translate_from_glance(cls, image_meta):
+        image_meta = _limit_attributes(image_meta)
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         image_meta = _convert_from_string(image_meta)
         return image_meta
@@ -285,14 +318,26 @@ class GlanceImageService(service.BaseImageService):
         """Check image availability.
 
         Under Glance, images are always available if the context has
-        an auth_token.  Otherwise, we fall back to the superclass
-        method.
+        an auth_token.
 
         """
         if hasattr(context, 'auth_token') and context.auth_token:
             return True
-        return service.BaseImageService._is_image_available(context,
-                                                            image_meta)
+
+        if image_meta['is_public'] or context.is_admin:
+            return True
+
+        properties = image_meta['properties']
+
+        if context.project_id and ('project_id' in properties):
+            return str(properties['project_id']) == str(context.project_id)
+
+        try:
+            user_id = properties['user_id']
+        except KeyError:
+            return False
+
+        return str(user_id) == str(context.user_id)
 
 
 # utility functions
@@ -352,3 +397,27 @@ def _convert_from_string(metadata):
 
 def _convert_to_string(metadata):
     return _convert(_json_dumps, metadata)
+
+
+def _limit_attributes(image_meta):
+    IMAGE_ATTRIBUTES = ['size', 'location', 'disk_format',
+                        'container_format', 'checksum', 'id',
+                        'name', 'created_at', 'updated_at',
+                        'deleted_at', 'deleted', 'status',
+                        'is_public']
+    output = {}
+    for attr in IMAGE_ATTRIBUTES:
+        output[attr] = image_meta.get(attr)
+
+    output['properties'] = image_meta.get('properties', {})
+
+    return output
+
+
+def _remove_read_only(image_meta):
+    IMAGE_ATTRIBUTES = ['updated_at', 'created_at', 'deleted_at']
+    output = copy.deepcopy(image_meta)
+    for attr in IMAGE_ATTRIBUTES:
+        if attr in output:
+            del output[attr]
+    return output

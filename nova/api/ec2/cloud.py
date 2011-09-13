@@ -1467,7 +1467,7 @@ class CloudController(object):
         return image
 
     def _format_image(self, image):
-        """Convert from format defined by BaseImageService to S3 format."""
+        """Convert from format defined by GlanceImageService to S3 format."""
         i = {}
         image_type = self._image_type(image.get('container_format'))
         ec2_id = self.image_ec2_id(image.get('id'), image_type)
