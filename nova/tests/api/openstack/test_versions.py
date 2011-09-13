@@ -408,10 +408,9 @@ class VersionsTest(test.TestCase):
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
             'Version v1.1 CURRENT (2011-01-21T11:33:21Z)')
-        self.assertEqual(entry.links, [{
-            'href': 'http://localhost/v1.1/',
-            'type': 'application/atom+xml',
-            'rel': 'self'}])
+        self.assertEqual(len(entry.links), 1)
+        self.assertEqual(entry.links[0]['href'], 'http://localhost/v1.1/')
+        self.assertEqual(entry.links[0]['rel'], 'self')
 
     def test_multi_choice_image(self):
         req = webob.Request.blank('/images/1')
