@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urlparse
 import os.path
 
 from lxml import etree
@@ -149,8 +148,7 @@ class ControllerV10(Controller):
         filters = self._get_filters(req)
         images = self._image_service.index(context, filters=filters)
         images = common.limited(images, req)
-        builder = self.get_builder(req).build
-        return dict(images=[builder(image, detail=False) for image in images])
+        return self.get_builder(req).build_list(images)
 
     def detail(self, req):
         """Return a detailed index listing of images available to the request.
@@ -183,11 +181,14 @@ class ControllerV11(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
+        params = req.GET.copy()
         page_params = common.get_pagination_params(req)
+        for key, val in page_params.iteritems():
+            params[key] = val
+
         images = self._image_service.index(context, filters=filters,
                                            **page_params)
-        builder = self.get_builder(req).build
-        return dict(images=[builder(image, detail=False) for image in images])
+        return self.get_builder(req).build_list(images, **params)
 
     def detail(self, req):
         """Return a detailed index listing of images available to the request.
@@ -197,11 +198,14 @@ class ControllerV11(Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
+        params = req.GET.copy()
         page_params = common.get_pagination_params(req)
+        for key, val in page_params.iteritems():
+            params[key] = val
         images = self._image_service.detail(context, filters=filters,
                                             **page_params)
-        builder = self.get_builder(req).build
-        return dict(images=[builder(image, detail=True) for image in images])
+
+        return self.get_builder(req).build_list(images, detail=True, **params)
 
     def create(self, *args, **kwargs):
         raise webob.exc.HTTPMethodNotAllowed()
@@ -253,20 +257,23 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
                             image_dict.get('metadata', {}))
             image_elem.append(meta_elem)
 
-        for link in image_dict.get('links', []):
-            elem = etree.SubElement(image_elem,
-                                    '{%s}link' % xmlutil.XMLNS_ATOM)
+        self._populate_links(image_elem, image_dict.get('links', []))
+
+    def _populate_links(self, parent, links):
+        for link in links:
+            elem = etree.SubElement(parent, '{%s}link' % xmlutil.XMLNS_ATOM)
             elem.set('rel', link['rel'])
             if 'type' in link:
                 elem.set('type', link['type'])
             elem.set('href', link['href'])
-        return image_elem
 
     def index(self, images_dict):
         images = etree.Element('images', nsmap=self.NSMAP)
         for image_dict in images_dict['images']:
             image = etree.SubElement(images, 'image')
             self._populate_image(image, image_dict, False)
+
+        self._populate_links(images, images_dict.get('images_links', []))
         return self._to_xml(images)
 
     def detail(self, images_dict):
