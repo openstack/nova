@@ -259,7 +259,6 @@ class ResponseSerializerTest(test.TestCase):
 
     def test_serialize_response_None(self):
         response = self.serializer.serialize(None, 'application/json')
-        print response
         self.assertEqual(response.headers['Content-Type'], 'application/json')
         self.assertEqual(response.body, '')
         self.assertEqual(response.status_int, 404)
