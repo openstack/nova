@@ -31,7 +31,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.image import service
 
 
 LOG = logging.getLogger('nova.image.glance')
@@ -114,16 +113,8 @@ def get_glance_client(context, image_href):
     return (glance_client, image_id)
 
 
-class GlanceImageService(service.BaseImageService):
+class GlanceImageService(object):
     """Provides storage and retrieval of disk image objects within Glance."""
-
-    GLANCE_ONLY_ATTRS = ['size', 'location', 'disk_format',
-                         'container_format', 'checksum']
-
-    # NOTE(sirp): Overriding to use _translate_to_service provided by
-    # BaseImageService
-    SERVICE_IMAGE_ATTRS = service.BaseImageService.BASE_IMAGE_ATTRS +\
-                          GLANCE_ONLY_ATTRS
 
     def __init__(self, client=None):
         self._client = client
@@ -160,7 +151,7 @@ class GlanceImageService(service.BaseImageService):
         images = []
         for image_meta in image_metas:
             if self._is_image_available(context, image_meta):
-                base_image_meta = self._translate_to_base(image_meta)
+                base_image_meta = self._translate_from_glance(image_meta)
                 images.append(base_image_meta)
         return images
 
@@ -224,7 +215,7 @@ class GlanceImageService(service.BaseImageService):
         if not self._is_image_available(context, image_meta):
             raise exception.ImageNotFound(image_id=image_id)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def show_by_name(self, context, name):
@@ -248,7 +239,7 @@ class GlanceImageService(service.BaseImageService):
         for chunk in image_chunks:
             data.write(chunk)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def create(self, context, image_meta, data=None):
@@ -260,7 +251,7 @@ class GlanceImageService(service.BaseImageService):
         # Translate Base -> Service
         LOG.debug(_('Creating image in Glance. Metadata passed in %s'),
                   image_meta)
-        sent_service_image_meta = self._translate_to_service(image_meta)
+        sent_service_image_meta = self._translate_to_glance(image_meta)
         LOG.debug(_('Metadata after formatting for Glance %s'),
                   sent_service_image_meta)
 
@@ -268,7 +259,7 @@ class GlanceImageService(service.BaseImageService):
             sent_service_image_meta, data)
 
         # Translate Service -> Base
-        base_image_meta = self._translate_to_base(recv_service_image_meta)
+        base_image_meta = self._translate_from_glance(recv_service_image_meta)
         LOG.debug(_('Metadata returned from Glance formatted for Base %s'),
                   base_image_meta)
         return base_image_meta
@@ -281,14 +272,14 @@ class GlanceImageService(service.BaseImageService):
         """
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
-        image_meta = _convert_to_string(image_meta)
+        image_meta = self._translate_to_glance(image_meta)
         try:
             client = self._get_client(context)
             image_meta = client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
 
-        base_image_meta = self._translate_to_base(image_meta)
+        base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
     def delete(self, context, image_id):
@@ -310,17 +301,14 @@ class GlanceImageService(service.BaseImageService):
         pass
 
     @classmethod
-    def _translate_to_service(cls, image_meta):
-        image_meta = super(GlanceImageService,
-                           cls)._translate_to_service(image_meta)
+    def _translate_to_glance(cls, image_meta):
         image_meta = _convert_to_string(image_meta)
+        image_meta = _remove_read_only(image_meta)
         return image_meta
 
     @classmethod
-    def _translate_to_base(cls, image_meta):
-        """Override translation to handle conversion to datetime objects."""
-        image_meta = service.BaseImageService._propertify_metadata(
-                        image_meta, cls.SERVICE_IMAGE_ATTRS)
+    def _translate_from_glance(cls, image_meta):
+        image_meta = _limit_attributes(image_meta)
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         image_meta = _convert_from_string(image_meta)
         return image_meta
@@ -330,14 +318,26 @@ class GlanceImageService(service.BaseImageService):
         """Check image availability.
 
         Under Glance, images are always available if the context has
-        an auth_token.  Otherwise, we fall back to the superclass
-        method.
+        an auth_token.
 
         """
         if hasattr(context, 'auth_token') and context.auth_token:
             return True
-        return service.BaseImageService._is_image_available(context,
-                                                            image_meta)
+
+        if image_meta['is_public'] or context.is_admin:
+            return True
+
+        properties = image_meta['properties']
+
+        if context.project_id and ('project_id' in properties):
+            return str(properties['project_id']) == str(context.project_id)
+
+        try:
+            user_id = properties['user_id']
+        except KeyError:
+            return False
+
+        return str(user_id) == str(context.user_id)
 
 
 # utility functions
@@ -397,3 +397,27 @@ def _convert_from_string(metadata):
 
 def _convert_to_string(metadata):
     return _convert(_json_dumps, metadata)
+
+
+def _limit_attributes(image_meta):
+    IMAGE_ATTRIBUTES = ['size', 'location', 'disk_format',
+                        'container_format', 'checksum', 'id',
+                        'name', 'created_at', 'updated_at',
+                        'deleted_at', 'deleted', 'status',
+                        'is_public']
+    output = {}
+    for attr in IMAGE_ATTRIBUTES:
+        output[attr] = image_meta.get(attr)
+
+    output['properties'] = image_meta.get('properties', {})
+
+    return output
+
+
+def _remove_read_only(image_meta):
+    IMAGE_ATTRIBUTES = ['updated_at', 'created_at', 'deleted_at']
+    output = copy.deepcopy(image_meta)
+    for attr in IMAGE_ATTRIBUTES:
+        if attr in output:
+            del output[attr]
+    return output
