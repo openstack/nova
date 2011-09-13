@@ -320,24 +320,19 @@ class VersionsTest(test.TestCase):
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
             'Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)')
-        self.assertEqual(entry.links, [
-            {
-                'href': 'http://localhost/v1.0/',
-                'type': 'application/atom+xml',
-                'rel': 'self'
-            },
-            {
-                'href': 'http://docs.rackspacecloud.com/servers/api/v1.0/'\
-                        'cs-devguide-20110125.pdf',
-                'type': 'application/pdf',
-                'rel': 'describedby'
-            },
-            {
-                'href': 'http://docs.rackspacecloud.com/servers/api/v1.0/'\
-                        'application.wadl',
-                'type': 'application/vnd.sun.wadl+xml',
-                'rel': 'describedby'
-            }])
+        self.assertEqual(len(entry.links), 3)
+        self.assertEqual(entry.links[0]['href'], 'http://localhost/v1.0/')
+        self.assertEqual(entry.links[0]['rel'], 'self')
+        self.assertEqual(entry.links[1], {
+            'href': 'http://docs.rackspacecloud.com/servers/api/v1.0/'\
+                    'cs-devguide-20110125.pdf',
+            'type': 'application/pdf',
+            'rel': 'describedby'})
+        self.assertEqual(entry.links[2], {
+            'href': 'http://docs.rackspacecloud.com/servers/api/v1.0/'\
+                    'application.wadl',
+            'type': 'application/vnd.sun.wadl+xml',
+            'rel': 'describedby'})
 
     def test_get_version_1_1_detail_atom(self):
         req = webob.Request.blank('/v1.1/')
@@ -364,24 +359,19 @@ class VersionsTest(test.TestCase):
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
             'Version v1.1 CURRENT (2011-01-21T11:33:21Z)')
-        self.assertEqual(entry.links, [
-            {
-                'href': 'http://localhost/v1.1/',
-                'type': 'application/atom+xml',
-                'rel': 'self'
-            },
-            {
-                'href': 'http://docs.rackspacecloud.com/servers/api/v1.1/'\
-                        'cs-devguide-20110125.pdf',
-                'type': 'application/pdf',
-                'rel': 'describedby'
-            },
-            {
-                'href': 'http://docs.rackspacecloud.com/servers/api/v1.1/'\
-                        'application.wadl',
-                'type': 'application/vnd.sun.wadl+xml',
-                'rel': 'describedby'
-            }])
+        self.assertEqual(len(entry.links), 3)
+        self.assertEqual(entry.links[0]['href'], 'http://localhost/v1.1/')
+        self.assertEqual(entry.links[0]['rel'], 'self')
+        self.assertEqual(entry.links[1], {
+            'href': 'http://docs.rackspacecloud.com/servers/api/v1.1/'\
+                    'cs-devguide-20110125.pdf',
+            'type': 'application/pdf',
+            'rel': 'describedby'})
+        self.assertEqual(entry.links[2], {
+            'href': 'http://docs.rackspacecloud.com/servers/api/v1.1/'\
+                    'application.wadl',
+            'type': 'application/vnd.sun.wadl+xml',
+            'rel': 'describedby'})
 
     def test_get_version_list_atom(self):
         req = webob.Request.blank('/')
@@ -408,10 +398,9 @@ class VersionsTest(test.TestCase):
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
             'Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)')
-        self.assertEqual(entry.links, [{
-            'href': 'http://localhost/v1.0/',
-            'type': 'application/atom+xml',
-            'rel': 'self'}])
+        self.assertEqual(len(entry.links), 1)
+        self.assertEqual(entry.links[0]['href'], 'http://localhost/v1.0/')
+        self.assertEqual(entry.links[0]['rel'], 'self')
         entry = f.entries[1]
         self.assertEqual(entry.id, 'http://localhost/v1.1/')
         self.assertEqual(entry.title, 'Version v1.1')
@@ -798,10 +787,9 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
             'Version 2.9.8 CURRENT (2011-07-20T11:40:00Z)')
-        self.assertEqual(entry.links, [{
-            'href': 'http://test/2.9.8',
-            'type': 'application/atom+xml',
-            'rel': 'self'}])
+        self.assertEqual(len(entry.links), 1)
+        self.assertEqual(entry.links[0]['href'], 'http://test/2.9.8')
+        self.assertEqual(entry.links[0]['rel'], 'self')
 
     def test_version_detail_atom_serializer(self):
         versions_data = {
@@ -861,22 +849,17 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
              'Version v1.1 CURRENT (2011-01-21T11:33:21Z)')
-        self.assertEqual(entry.links, [
-            {
-                'rel': 'self',
-                'type': 'application/atom+xml',
-                'href': 'http://localhost/v1.1/',
-            },
-            {
-                'rel': 'describedby',
-                'type': 'application/pdf',
-                'href': 'http://docs.rackspacecloud.com/'
-                        'servers/api/v1.1/cs-devguide-20110125.pdf',
-            },
-            {
-                'rel': 'describedby',
-                'type': 'application/vnd.sun.wadl+xml',
-                'href': 'http://docs.rackspacecloud.com/'
-                        'servers/api/v1.1/application.wadl',
-            },
-        ])
+        self.assertEqual(len(entry.links), 3)
+        self.assertEqual(entry.links[0]['href'], 'http://localhost/v1.1/')
+        self.assertEqual(entry.links[0]['rel'], 'self')
+        self.assertEqual(entry.links[1], {
+            'rel': 'describedby',
+            'type': 'application/pdf',
+            'href': 'http://docs.rackspacecloud.com/'
+                    'servers/api/v1.1/cs-devguide-20110125.pdf'})
+        self.assertEqual(entry.links[2], {
+            'rel': 'describedby',
+            'type': 'application/vnd.sun.wadl+xml',
+            'href': 'http://docs.rackspacecloud.com/'
+                    'servers/api/v1.1/application.wadl',
+        })
