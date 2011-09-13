@@ -20,6 +20,7 @@ import json
 import webob.exc
 import webob.dec
 
+from lxml import etree
 from webob import Request
 
 from nova import test
@@ -51,6 +52,30 @@ class APITest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_vendor_content_type_json(self):
+        ctype = 'application/vnd.openstack.compute+json'
+
+        req = webob.Request.blank('/')
+        req.headers['Accept'] = ctype
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, ctype)
+
+        body = json.loads(res.body)
+
+    def test_vendor_content_type_xml(self):
+        ctype = 'application/vnd.openstack.compute+xml'
+
+        req = webob.Request.blank('/')
+        req.headers['Accept'] = ctype
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, ctype)
+
+        body = etree.XML(res.body)
 
     def test_exceptions_are_converted_to_faults(self):
 
