@@ -34,7 +34,6 @@ from nova import flags
 from nova import image
 from nova import log as logging
 from nova import utils
-from nova.image import service
 from nova.api.ec2 import ec2utils
 
 
@@ -48,7 +47,7 @@ flags.DEFINE_string('s3_secret_key', 'notchecked',
                     'secret key to use for s3 server for images')
 
 
-class S3ImageService(service.BaseImageService):
+class S3ImageService(object):
     """Wraps an existing image service to support s3 based register."""
 
     def __init__(self, service=None, *args, **kwargs):
