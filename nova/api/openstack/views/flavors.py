@@ -48,11 +48,10 @@ class ViewBuilder(object):
         detail = {
             "ram": flavor_obj["memory_mb"],
             "disk": flavor_obj["local_gb"],
-            "swap": flavor_obj["swap"],
-            "rxtx_quota": flavor_obj["rxtx_quota"],
-            "rxtx_cap": flavor_obj["rxtx_cap"],
-            "vcpus": flavor_obj["vcpus"],
         }
+
+        for key in ( "vcpus", "swap", "rxtx_quota", "rxtx_cap"):
+            detail[key] = flavor_obj.get(key,"")
 
         detail.update(simple)
 
