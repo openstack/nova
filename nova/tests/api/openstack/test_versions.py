@@ -534,6 +534,8 @@ class VersionsTest(test.TestCase):
         </choices>""".replace("  ", "").replace("\n", "") % (wsgi.XMLNS_V11,
                                                             wsgi.XMLNS_ATOM)
 
+        self.assertEqual(expected, res.body)
+
     def test_multi_choice_server_atom(self):
         """
         Make sure multi choice responses do not have content-type
