@@ -768,19 +768,19 @@ class LibvirtConnection(driver.ComputeDriver):
         if size:
             disk.extend(target, size)
 
-    def _create_local(self, target, local_size, prefix='G', fs_format=None):
+    def _create_local(self, target, local_size, unit='G', fs_format=None):
         """Create a blank image of specified size"""
 
         if not fs_format:
             fs_format = FLAGS.default_local_format
 
-        utils.execute('truncate', target, '-s', "%d%c" % (local_size, prefix))
+        utils.execute('truncate', target, '-s', "%d%c" % (local_size, unit))
         if fs_format:
             utils.execute('mkfs', '-t', fs_format, target)
 
-    def _create_swap(self, target, swap_gb):
+    def _create_swap(self, target, swap_mb):
         """Create a swap file of specified size"""
-        self._create_local(target, swap_gb)
+        self._create_local(target, swap_mb, unit='M')
         utils.execute('mkswap', target)
 
     def _create_image(self, context, inst, libvirt_xml, suffix='',
@@ -872,22 +872,22 @@ class LibvirtConnection(driver.ComputeDriver):
                               cow=FLAGS.use_cow_images,
                               local_size=eph['size'])
 
-        swap_gb = 0
+        swap_mb = 0
 
         swap = driver.block_device_info_get_swap(block_device_info)
         if driver.swap_is_usable(swap):
-            swap_gb = swap['swap_size']
+            swap_mb = swap['swap_size']
         elif (inst_type['swap'] > 0 and
               not self._volume_in_mapping(self.default_swap_device,
                                           block_device_info)):
-            swap_gb = inst_type['swap']
+            swap_mb = inst_type['swap']
 
-        if swap_gb > 0:
+        if swap_mb > 0:
             self._cache_image(fn=self._create_swap,
                               target=basepath('disk.swap'),
-                              fname="swap_%s" % swap_gb,
+                              fname="swap_%s" % swap_mb,
                               cow=FLAGS.use_cow_images,
-                              swap_gb=swap_gb)
+                              swap_mb=swap_mb)
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -911,7 +911,7 @@ class LibvirtConnection(driver.ComputeDriver):
                               user=user,
                               project=project)
         elif config_drive:
-            self._create_local(basepath('disk.config'), 64, prefix="M",
+            self._create_local(basepath('disk.config'), 64, unit='M',
                                fs_format='msdos')  # 64MB
 
         if inst['key_data']:
