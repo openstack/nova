@@ -851,6 +851,9 @@ class API(base.Base):
         if host:
             self._cast_compute_message('terminate_instance', context,
                     instance_id, host)
+        else:
+            terminate_volumes(self.db, context, instance_id)
+            self.db.instance_destroy(context, instance_id)
 
     @scheduler_api.reroute_compute("stop")
     def stop(self, context, instance_id):
