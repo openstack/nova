@@ -821,7 +821,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 128,
+            'id': '128',
             'name': 'deleted snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -832,7 +832,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'DELETED',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -852,7 +852,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 129,
+            'id': '129',
             'name': 'pending_delete snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -863,7 +863,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'DELETED',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -914,7 +914,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 132,
+            'id': '132',
             'name': None,
             'metadata': {},
             'updated': self.NOW_API_FORMAT,
@@ -1224,7 +1224,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         # Snapshots for User 1
         server_ref = 'http://localhost/v1.1/servers/42'
         snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
-        statuses = ('queued', 'saving', 'active','killed',
+        statuses = ('queued', 'saving', 'active', 'killed',
                     'deleted', 'pending_delete')
         for status in statuses:
             add_fixture(id=image_id, name='%s snapshot' % status,
