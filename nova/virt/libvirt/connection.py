@@ -419,9 +419,9 @@ class LibvirtConnection(driver.ComputeDriver):
             metadata['properties']['architecture'] = arch
 
         source_format = base.get('disk_format') or 'raw'
+        image_format = FLAGS.snapshot_image_format or source_format
         if FLAGS.use_cow_images:
             source_format = 'qcow2'
-        image_format = FLAGS.snapshot_image_format or source_format
         metadata['disk_format'] = image_format
 
         if 'container_format' in base:

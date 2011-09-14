@@ -354,7 +354,7 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertEquals(snapshot['properties']['image_state'], 'available')
         self.assertEquals(snapshot['status'], 'active')
-        self.assertEquals(snapshot['disk_format'], FLAGS.snapshot_image_format)
+        self.assertEquals(snapshot['disk_format'], 'raw')
         self.assertEquals(snapshot['name'], snapshot_name)
 
     def test_snapshot_in_qcow2_format(self):
@@ -391,7 +391,7 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertEquals(snapshot['properties']['image_state'], 'available')
         self.assertEquals(snapshot['status'], 'active')
-        self.assertEquals(snapshot['disk_format'], FLAGS.snapshot_image_format)
+        self.assertEquals(snapshot['disk_format'], 'qcow2')
         self.assertEquals(snapshot['name'], snapshot_name)
 
     def test_snapshot_no_image_architecture(self):
