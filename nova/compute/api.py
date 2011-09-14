@@ -932,9 +932,12 @@ class API(base.Base):
     def _get_instances_by_filters(self, context, filters):
         ip_instances = None
         if 'ip6' in filters or 'ip' in filters:
-            ids = self.network_api.get_instance_ids_by_ip_filter(context,
-                                                                  filters)
-            ip_instances = [self.db.instance_get(id) for id in ids]
+            res = self.network_api.get_instance_ids_by_ip_filter(context,
+                                                                 filters)
+            # NOTE(jkoelker) When this flips to using UUIDS the name
+            #                needs to be updated accordingingly
+            ip_instances = [self.db.instance_get(r['instance_id']) \
+                            for r in res]
 
         return self.db.instance_get_all_by_filters(context, filters,
                                                    ip_instances)
