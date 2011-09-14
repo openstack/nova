@@ -25,6 +25,36 @@ HOST = "testhost"
 FLAGS = flags.FLAGS
 
 
+class FakeIptablesFirewallDriver(object):
+    def __init__(self, **kwargs):
+        pass
+
+    def setattr(self, key, val):
+        self.__setattr__(key, val)
+
+    def apply_instance_filter(self, instance, network_info):
+        pass
+
+
+class FakeVIFDriver(object):
+
+    def __init__(self, **kwargs):
+        pass
+
+    def setattr(self, key, val):
+        self.__setattr__(key, val)
+
+    def plug(self, instance, network, mapping):
+        return {
+            'id': 'fake',
+            'bridge_name': 'fake',
+            'mac_address': 'fake',
+            'ip_address': 'fake',
+            'dhcp_server': 'fake',
+            'extra_params': 'fake',
+        }
+
+
 class FakeModel(dict):
     """Represent a model from the db"""
     def __init__(self, *args, **kwargs):
