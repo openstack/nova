@@ -1278,7 +1278,8 @@ def instance_get_all_by_filters(context, filters, instance_ids=None):
                 filters.pop(filter_name))
 
     instances = query_prefix.all()
-    ids = [instance['id'] for instance in instances if instance['id']]
+    ids = [instance['id'] for instance in instances \
+           if instance['id'] is not None]
     uuids = [instance['uuid'] for instance in instances if instance['uuid']]
 
     if instance_ids is None:
