@@ -19,6 +19,21 @@ XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
 LOG = logging.getLogger('nova.api.openstack.wsgi')
 
+# The vendor content types should serialize identically to the non-vendor
+# content types. So to avoid littering the code with both options, we
+# map the vendor to the other when looking up the type
+_CONTENT_TYPE_MAP = {
+    'application/vnd.openstack.compute+json': 'application/json',
+    'application/vnd.openstack.compute+xml': 'application/xml',
+}
+
+_SUPPORTED_CONTENT_TYPES = (
+    'application/json',
+    'application/vnd.openstack.compute+json',
+    'application/xml',
+    'application/vnd.openstack.compute+xml',
+)
+
 
 class Request(webob.Request):
     """Add some Openstack API-specific logic to the base webob.Request."""
@@ -30,10 +45,7 @@ class Request(webob.Request):
 
         """
         supported_content_types = supported_content_types or \
-            ('application/json',
-             'application/vnd.openstack.compute+json',
-             'application/xml',
-             'application/vnd.openstack.compute+xml')
+            _SUPPORTED_CONTENT_TYPES
 
         parts = self.path.rsplit('.', 1)
         if len(parts) > 1:
@@ -55,10 +67,7 @@ class Request(webob.Request):
         if not "Content-Type" in self.headers:
             return None
 
-        allowed_types = ('application/json',
-                         'application/vnd.openstack.compute+json',
-                         'application/xml',
-                         'application/vnd.openstack.compute+xml')
+        allowed_types = _SUPPORTED_CONTENT_TYPES
         content_type = self.content_type
 
         if content_type not in allowed_types:
@@ -198,16 +207,11 @@ class RequestDeserializer(object):
                  supported_content_types=None):
 
         self.supported_content_types = supported_content_types or \
-                ('application/json',
-                 'application/vnd.openstack.compute+json',
-                 'application/xml',
-                 'application/vnd.openstack.compute+xml')
+                _SUPPORTED_CONTENT_TYPES
 
         self.body_deserializers = {
             'application/xml': XMLDeserializer(),
-            'application/vnd.openstack.compute+xml': XMLDeserializer(),
             'application/json': JSONDeserializer(),
-            'application/vnd.openstack.compute+json': JSONDeserializer(),
         }
         self.body_deserializers.update(body_deserializers or {})
 
@@ -261,6 +265,7 @@ class RequestDeserializer(object):
 
     def get_body_deserializer(self, content_type):
         try:
+            content_type = _CONTENT_TYPE_MAP.get(content_type, content_type)
             return self.body_deserializers[content_type]
         except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
@@ -425,9 +430,7 @@ class ResponseSerializer(object):
     def __init__(self, body_serializers=None, headers_serializer=None):
         self.body_serializers = {
             'application/xml': XMLDictSerializer(),
-            'application/vnd.openstack.compute+xml': XMLDictSerializer(),
             'application/json': JSONDictSerializer(),
-            'application/vnd.openstack.compute+json': JSONDictSerializer(),
         }
         self.body_serializers.update(body_serializers or {})
 
@@ -452,6 +455,7 @@ class ResponseSerializer(object):
     def serialize_body(self, response, data, content_type, action):
         response.headers['Content-Type'] = content_type
         if data is not None:
+            content_type = _CONTENT_TYPE_MAP.get(content_type, content_type)
             serializer = self.get_body_serializer(content_type)
             response.body = serializer.serialize(data, action)
 
