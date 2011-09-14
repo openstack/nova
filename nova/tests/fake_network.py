@@ -16,8 +16,8 @@
 # under the License.
 
 from nova import db
+from nova import exception
 from nova import flags
-from nova import test
 from nova.network import manager as network_manager
 
 
@@ -62,6 +62,58 @@ class FakeModel(dict):
 
         def __getattr__(self, name):
             return self[name]
+
+
+class FakeNetworkManager(network_manager.NetworkManager):
+    """This NetworkManager doesn't call the base class so we can bypass all
+    inherited service cruft and just perform unit tests.
+    """
+
+    class FakeDB:
+        def fixed_ip_get_by_instance(self, context, instance_id):
+            return [dict(address='10.0.0.0'),  dict(address='10.0.0.1'),
+                    dict(address='10.0.0.2')]
+
+        def network_get_by_cidr(self, context, cidr):
+            raise exception.NetworkNotFoundForCidr()
+
+        def network_create_safe(self, context, net):
+            fakenet = dict(net)
+            fakenet['id'] = 999
+            return fakenet
+
+        def network_get_all(self, context):
+            raise exception.NoNetworksFound()
+
+        def virtual_interface_get_all(self, context):
+            floats = [{'address': '172.16.1.1'},
+                      {'address': '172.16.1.2'},
+                      {'address': '173.16.1.2'}]
+
+            vifs = [{'instance_id': 0,
+                     'fixed_ipv6': '2001:db8::dcad:beff:feef:1',
+                     'fixed_ips': [{'address': '172.16.0.1',
+                                    'floating_ips': [floats[0]]}]},
+                    {'instance_id': 1,
+                     'fixed_ipv6': '2001:db8::dcad:beff:feef:2',
+                     'fixed_ips': [{'address': '172.16.0.2',
+                                    'floating_ips': [floats[1]]}]},
+                    {'instance_id': 2,
+                     'fixed_ipv6': '2002:db8::dcad:beff:feef:2',
+                     'fixed_ips': [{'address': '173.16.0.2',
+                                    'floating_ips': [floats[2]]}]}]
+            return vifs
+
+
+    def __init__(self):
+        self.db = self.FakeDB()
+        self.deallocate_called = None
+
+    def deallocate_fixed_ip(self, context, address):
+        self.deallocate_called = address
+
+    def _create_fixed_ips(self, context, network_id):
+        pass
 
 
 flavor = {'id': 0,
