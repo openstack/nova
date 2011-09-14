@@ -300,6 +300,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "name": "asdf",
                 "ram": "256",
                 "disk": "10",
+                "rxtx_cap": "",
+                "rxtx_quota": "",
+                "swap": "",
+                "vcpus": "",
                 "links": [
                     {
                         "rel": "self",
@@ -327,6 +331,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "name": "asdf",
                 "ram": "256",
                 "disk": "10",
+                "rxtx_cap": "",
+                "rxtx_quota": "",
+                "swap": "",
+                "vcpus": "",
                 "links": [
                     {
                         "rel": "self",
@@ -364,6 +372,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "name": "asdf",
                 "ram": 256,
                 "disk": 10,
+                "rxtx_cap": "",
+                "rxtx_quota": "",
+                "swap": "",
+                "vcpus": "",
                 "links": [
                     {
                         "rel": "self",
@@ -402,6 +414,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "name": "flavor 23",
                     "ram": "512",
                     "disk": "20",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
                     "links": [
                         {
                             "rel": "self",
@@ -417,6 +433,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "name": "flavor 13",
                     "ram": "256",
                     "disk": "10",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
                     "links": [
                         {
                             "rel": "self",
@@ -459,6 +479,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "name": "flavor 23",
                     "ram": "512",
                     "disk": "20",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
                     "links": [
                         {
                             "rel": "self",
@@ -474,6 +498,10 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "name": "flavor 13",
                     "ram": "256",
                     "disk": "10",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
                     "links": [
                         {
                             "rel": "self",
