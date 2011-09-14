@@ -61,6 +61,7 @@ import math
 import netaddr
 from optparse import OptionParser
 import os
+import StringIO
 import sys
 import time
 
@@ -273,6 +274,50 @@ class ShellCommands(object):
         """Runs the script from the specifed path with flags set properly.
         arguments: path"""
         exec(compile(open(path).read(), path, 'exec'), locals(), globals())
+
+    @args('--filename', dest='filename', metavar='<path>', help='Export path')
+    def export(self, filename):
+        """Export Nova users into a file that can be consumed by Keystone"""
+        def create_file(filename):
+            data = generate_file()
+            with open(filename, 'w') as f:
+                f.write(data.getvalue())
+
+        def tenants(data, am):
+            for project in am.get_projects():
+                print >> data, ("tenant add '%s'" %
+                                   (project.name))
+                for u in project.member_ids:
+                    user = am.get_user(u)
+                    print >> data, ("user add '%s' '%s' '%s'" %
+                                     (user.name, user.access, project.name))
+                    print >> data, ("credentials add 'EC2' '%s' '%s'" %
+                                 (user.access, user.secret))
+
+        def roles(data, am):
+            for role in am.get_roles():
+                print >> data, ("role add '%s'" % (role))
+
+        def grant_roles(data, am):
+            roles = am.get_roles()
+            for project in am.get_projects():
+                for u in project.member_ids:
+                    user = am.get_user(u)
+                    for role in roles:
+                        if user.has_role(role):
+                            print >> data, ("role grant '%s', '%s', '%s')," %
+                                           (user.name, role, project.name))
+            print >> data, footer
+
+        def generate_file():
+            data = StringIO.StringIO()
+            am = manager.AuthManager()
+            tenants(data, am)
+            roles(data, am)
+            data.seek(0)
+            return data
+
+        create_file(filename)
 
 
 class RoleCommands(object):
