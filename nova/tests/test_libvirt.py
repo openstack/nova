@@ -35,6 +35,7 @@ from nova import utils
 from nova.api.ec2 import cloud
 from nova.compute import power_state
 from nova.compute import vm_states
+from nova.virt import driver
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
 from nova.tests import fake_network
@@ -49,6 +50,32 @@ _ipv4_like = fake_network.ipv4_like
 def _concurrency(wait, done, target):
     wait.wait()
     done.send()
+
+
+class FakeVirtDomain(object):
+
+    def __init__(self, fake_xml=None):
+        if fake_xml:
+            self._fake_dom_xml = fake_xml
+        else:
+            self._fake_dom_xml = """
+                <domain type='kvm'>
+                    <devices>
+                        <disk type='file'>
+                            <source file='filename'/>
+                        </disk>
+                    </devices>
+                </domain>
+            """
+
+    def snapshotCreateXML(self, *args):
+        return None
+
+    def createWithFlags(self, launch_flags):
+        pass
+
+    def XMLDesc(self, *args):
+        return self._fake_dom_xml
 
 
 class CacheConcurrencyTestCase(test.TestCase):
@@ -152,70 +179,24 @@ class LibvirtConnTestCase(test.TestCase):
 
         # A fake libvirt.virConnect
         class FakeLibvirtConnection(object):
-            pass
-
-        # A fake connection.IptablesFirewallDriver
-        class FakeIptablesFirewallDriver(object):
-
-            def __init__(self, **kwargs):
-                pass
-
-            def setattr(self, key, val):
-                self.__setattr__(key, val)
-
-        # A fake VIF driver
-        class FakeVIFDriver(object):
-
-            def __init__(self, **kwargs):
-                pass
-
-            def setattr(self, key, val):
-                self.__setattr__(key, val)
-
-            def plug(self, instance, network, mapping):
-                return {
-                    'id': 'fake',
-                    'bridge_name': 'fake',
-                    'mac_address': 'fake',
-                    'ip_address': 'fake',
-                    'dhcp_server': 'fake',
-                    'extra_params': 'fake',
-                }
+            def defineXML(self, xml):
+                return FakeVirtDomain()
 
         # Creating mocks
         fake = FakeLibvirtConnection()
-        fakeip = FakeIptablesFirewallDriver
-        fakevif = FakeVIFDriver()
         # Customizing above fake if necessary
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
-        # Inevitable mocks for connection.LibvirtConnection
-        self.mox.StubOutWithMock(connection.utils, 'import_class')
-        connection.utils.import_class(mox.IgnoreArg()).AndReturn(fakeip)
-        self.mox.StubOutWithMock(connection.utils, 'import_object')
-        connection.utils.import_object(mox.IgnoreArg()).AndReturn(fakevif)
+        self.flags(image_service='nova.image.fake.FakeImageService')
+        fw_driver = "nova.tests.fake_network.FakeIptablesFirewallDriver"
+        self.flags(firewall_driver=fw_driver)
+        self.flags(libvirt_vif_driver="nova.tests.fake_network.FakeVIFDriver")
+
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
         connection.LibvirtConnection._conn = fake
 
     def fake_lookup(self, instance_name):
-
-        class FakeVirtDomain(object):
-
-            def snapshotCreateXML(self, *args):
-                return None
-
-            def XMLDesc(self, *args):
-                return """
-                    <domain type='kvm'>
-                        <devices>
-                            <disk type='file'>
-                                <source file='filename'/>
-                            </disk>
-                        </devices>
-                    </domain>
-                """
-
         return FakeVirtDomain()
 
     def fake_execute(self, *args):
@@ -797,8 +778,6 @@ class LibvirtConnTestCase(test.TestCase):
         shutil.rmtree(os.path.join(FLAGS.instances_path, instance.name))
         shutil.rmtree(os.path.join(FLAGS.instances_path, '_base'))
 
-        self.assertTrue(count)
-
     def test_get_host_ip_addr(self):
         conn = connection.LibvirtConnection(False)
         ip = conn.get_host_ip_addr()
@@ -839,6 +818,50 @@ class LibvirtConnTestCase(test.TestCase):
         _assert_volume_in_mapping('sdf', True)
         _assert_volume_in_mapping('sdg', False)
         _assert_volume_in_mapping('sdh1', False)
+
+    def test_reboot_signature(self):
+        """Test that libvirt driver method sig matches interface"""
+        def fake_reboot_with_correct_sig(ignore, instance,
+                                         network_info, reboot_type):
+            pass
+
+        def fake_destroy(instance, network_info, cleanup=False):
+            pass
+
+        def fake_plug_vifs(instance, network_info):
+            pass
+
+        def fake_create_new_domain(xml):
+            return
+
+        def fake_none(self, instance):
+            return
+
+        instance = db.instance_create(self.context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
+
+        conn = connection.LibvirtConnection(False)
+        self.stubs.Set(conn, 'destroy', fake_destroy)
+        self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
+        self.stubs.Set(conn.firewall_driver,
+                       'setup_basic_filtering',
+                       fake_none)
+        self.stubs.Set(conn.firewall_driver,
+                       'prepare_instance_filter',
+                       fake_none)
+        self.stubs.Set(conn, '_create_new_domain', fake_create_new_domain)
+        self.stubs.Set(conn.firewall_driver,
+                       'apply_instance_filter',
+                       fake_none)
+
+        args = [instance, network_info, 'SOFT']
+        conn.reboot(*args)
+
+        compute_driver = driver.ComputeDriver()
+        self.assertRaises(NotImplementedError, compute_driver.reboot, *args)
 
 
 class NWFilterFakes:
