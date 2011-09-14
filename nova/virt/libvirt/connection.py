@@ -38,6 +38,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 """
 
 import hashlib
+import functools
 import multiprocessing
 import netaddr
 import os
@@ -196,7 +197,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _test_connection(self):
         try:
-            self._wrapped_conn.getInfo()
+            self._wrapped_conn.getCapabilities()
             return True
         except libvirt.libvirtError as e:
             if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
@@ -398,10 +399,10 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom = self._lookup_by_name(instance['name'])
 
         (image_service, image_id) = nova.image.get_image_service(
-            instance['image_ref'])
+            context, instance['image_ref'])
         base = image_service.show(context, image_id)
         (snapshot_image_service, snapshot_image_id) = \
-            nova.image.get_image_service(image_href)
+            nova.image.get_image_service(context, image_href)
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
         metadata = {'is_public': False,
@@ -466,7 +467,7 @@ class LibvirtConnection(driver.ComputeDriver):
         shutil.rmtree(temp_dir)
 
     @exception.wrap_exception()
-    def reboot(self, instance, network_info, xml=None):
+    def reboot(self, instance, network_info, reboot_type=None, xml=None):
         """Reboot a virtual machine, given an instance reference.
 
         This method actually destroys and re-creates the domain to ensure the
@@ -779,6 +780,10 @@ class LibvirtConnection(driver.ComputeDriver):
         if fs_format:
             utils.execute('mkfs', '-t', fs_format, target)
 
+    def _create_ephemeral(self, target, local_size, fs_label, os_type):
+        self._create_local(target, local_size)
+        disk.mkfs(os_type, fs_label, target)
+
     def _create_swap(self, target, swap_gb):
         """Create a swap file of specified size"""
         self._create_local(target, swap_gb)
@@ -867,9 +872,13 @@ class LibvirtConnection(driver.ComputeDriver):
                               local_size=local_gb)
 
         for eph in driver.block_device_info_get_ephemerals(block_device_info):
-            self._cache_image(fn=self._create_local,
+            fn = functools.partial(self._create_ephemeral,
+                                   fs_label='ephemeral%d' % eph['num'],
+                                   os_type=inst.os_type)
+            self._cache_image(fn=fn,
                               target=basepath(_get_eph_disk(eph)),
-                              fname="local_%s" % eph['size'],
+                              fname="ephemeral_%s_%s_%s" %
+                              (eph['num'], eph['size'], inst.os_type),
                               cow=FLAGS.use_cow_images,
                               local_size=eph['size'])
 
@@ -1103,6 +1112,11 @@ class LibvirtConnection(driver.ComputeDriver):
                 nova_context.get_admin_context(), instance['id'],
                 {'root_device_name': '/dev/' + self.default_root_device})
 
+        if local_device:
+            db.instance_update(
+                nova_context.get_admin_context(), instance['id'],
+                {'default_local_device': '/dev/' + self.default_local_device})
+
         swap = driver.block_device_info_get_swap(block_device_info)
         if driver.swap_is_usable(swap):
             xml_info['swap_device'] = block_device.strip_dev(
@@ -1111,6 +1125,9 @@ class LibvirtConnection(driver.ComputeDriver):
               not self._volume_in_mapping(self.default_swap_device,
                                           block_device_info)):
             xml_info['swap_device'] = self.default_swap_device
+            db.instance_update(
+                nova_context.get_admin_context(), instance['id'],
+                {'default_swap_device': '/dev/' + self.default_swap_device})
 
         config_drive = False
         if instance.get('config_drive') or instance.get('config_drive_id'):
@@ -1697,7 +1714,7 @@ class LibvirtConnection(driver.ComputeDriver):
             base = os.path.basename(info['path'])
             # Get image type and create empty disk image.
             instance_disk = os.path.join(instance_dir, base)
-            utils.execute('sudo', 'qemu-img', 'create', '-f', info['type'],
+            utils.execute('qemu-img', 'create', '-f', info['type'],
                           instance_disk, info['local_gb'])
 
         # if image has kernel and ramdisk, just download
@@ -1789,7 +1806,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if disk_type == 'raw':
                 size = int(os.path.getsize(path))
             else:
-                out, err = utils.execute('sudo', 'qemu-img', 'info', path)
+                out, err = utils.execute('qemu-img', 'info', path)
                 size = [i.split('(')[1].split()[0] for i in out.split('\n')
                     if i.strip().find('virtual size') >= 0]
                 size = int(size[0])

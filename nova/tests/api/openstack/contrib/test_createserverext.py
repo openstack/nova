@@ -49,9 +49,13 @@ INSTANCE = {
              "id": 1,
              "display_name": "test_server",
              "uuid": FAKE_UUID,
+             "user_id": 'fake_user_id',
+             "tenant_id": 'fake_tenant_id',
              "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
              "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-             "security_groups": [{"id": 1, "name": "test"}]
+             "security_groups": [{"id": 1, "name": "test"}],
+             "image_ref": 'http://foo.com/123',
+             "instance_type": {"flavorid": '124'},
         }
 
 

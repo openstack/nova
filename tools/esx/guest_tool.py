@@ -81,28 +81,34 @@ def _bytes2int(bytes):
 
 def _parse_network_details(machine_id):
     """
-    Parse the machine.id field to get MAC, IP, Netmask and Gateway fields
-    machine.id is of the form MAC;IP;Netmask;Gateway;Broadcast;DNS1,DNS2
-    where ';' is the separator.
+    Parse the machine_id to get MAC, IP, Netmask and Gateway fields per NIC.
+    machine_id is of the form ('NIC_record#NIC_record#', '')
+    Each of the NIC will have record NIC_record in the form
+    'MAC;IP;Netmask;Gateway;Broadcast;DNS' where ';' is field separator.
+    Each record is separated by '#' from next record.
     """
+    logging.debug(_("Received machine_id from vmtools : %s") % machine_id[0])
     network_details = []
     if machine_id[1].strip() == "1":
         pass
     else:
-        network_info_list = machine_id[0].split(';')
-        assert len(network_info_list) % 6 == 0
-        no_grps = len(network_info_list) / 6
-        i = 0
-        while i < no_grps:
-            k = i * 6
-            network_details.append((
-                            network_info_list[k].strip().lower(),
-                            network_info_list[k + 1].strip(),
-                            network_info_list[k + 2].strip(),
-                            network_info_list[k + 3].strip(),
-                            network_info_list[k + 4].strip(),
-                            network_info_list[k + 5].strip().split(',')))
-            i += 1
+        for machine_id_str in machine_id[0].split('#'):
+            network_info_list = machine_id_str.split(';')
+            if len(network_info_list) % 6 != 0:
+                break
+            no_grps = len(network_info_list) / 6
+            i = 0
+            while i < no_grps:
+                k = i * 6
+                network_details.append((
+                                network_info_list[k].strip().lower(),
+                                network_info_list[k + 1].strip(),
+                                network_info_list[k + 2].strip(),
+                                network_info_list[k + 3].strip(),
+                                network_info_list[k + 4].strip(),
+                                network_info_list[k + 5].strip().split(',')))
+                i += 1
+    logging.debug(_("NIC information from vmtools : %s") % network_details)
     return network_details
 
 
@@ -279,6 +285,7 @@ def _filter_duplicates(all_entries):
 
 
 def _set_rhel_networking(network_details=None):
+    """Set IPv4 network settings for RHEL distros."""
     network_details = network_details or []
     all_dns_servers = []
     for network_detail in network_details:
@@ -320,31 +327,33 @@ def _set_rhel_networking(network_details=None):
 
 
 def _set_ubuntu_networking(network_details=None):
+    """Set IPv4 network settings for Ubuntu."""
     network_details = network_details or []
-    """ Set IPv4 network settings for Ubuntu """
     all_dns_servers = []
-    for network_detail in network_details:
+    interface_file_name = '/etc/network/interfaces'
+    # Remove file
+    os.remove(interface_file_name)
+    # Touch file
+    _execute(['touch', interface_file_name])
+    interface_file = open(interface_file_name, 'w')
+    for device, network_detail in enumerate(network_details):
         mac_address, ip_address, subnet_mask, gateway, broadcast,\
             dns_servers = network_detail
         all_dns_servers.extend(dns_servers)
         adapter_name, current_ip_address = \
                 _get_linux_adapter_name_and_ip_address(mac_address)
 
-        if adapter_name and not ip_address == current_ip_address:
-            interface_file_name = \
-                '/etc/network/interfaces'
-            # Remove file
-            os.remove(interface_file_name)
-            # Touch file
-            _execute(['touch', interface_file_name])
-            interface_file = open(interface_file_name, 'w')
+        if adapter_name:
             interface_file.write('\nauto %s' % adapter_name)
             interface_file.write('\niface %s inet static' % adapter_name)
             interface_file.write('\nbroadcast %s' % broadcast)
             interface_file.write('\ngateway %s' % gateway)
             interface_file.write('\nnetmask %s' % subnet_mask)
-            interface_file.write('\naddress %s' % ip_address)
-            interface_file.close()
+            interface_file.write('\naddress %s\n' % ip_address)
+        logging.debug(_("Successfully configured NIC %d with "
+                        "NIC info %s") % (device, network_detail))
+    interface_file.close()
+
     if all_dns_servers:
         dns_file_name = "/etc/resolv.conf"
         os.remove(dns_file_name)
@@ -355,7 +364,8 @@ def _set_ubuntu_networking(network_details=None):
         for dns_server in unique_entries:
             dns_file.write("\nnameserver %s" % dns_server)
         dns_file.close()
-    print "\nRestarting networking....\n"
+
+    logging.debug(_("Restarting networking....\n"))
     _execute(['/etc/init.d/networking', 'restart'])
 
 
