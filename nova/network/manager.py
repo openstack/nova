@@ -289,7 +289,8 @@ class FloatingIP(object):
 
         self.db.floating_ip_fixed_ip_associate(context,
                                                floating_address,
-                                               fixed_address)
+                                               fixed_address,
+                                               self.host)
         self.driver.bind_floating_ip(floating_address)
         self.driver.ensure_floating_forward(floating_address, fixed_address)
 
