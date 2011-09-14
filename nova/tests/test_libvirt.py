@@ -57,7 +57,7 @@ class FakeVirtDomain(object):
         if fake_xml:
             self._fake_dom_xml = fake_xml
         else:
-            self._fake_dom_xml="""
+            self._fake_dom_xml = """
                 <domain type='kvm'>
                     <devices>
                         <disk type='file'>
@@ -188,7 +188,8 @@ class LibvirtConnTestCase(test.TestCase):
             fake.__setattr__(key, val)
 
         self.flags(image_service='nova.image.fake.FakeImageService')
-        self.flags(firewall_driver="nova.tests.fake_network.FakeIptablesFirewallDriver")
+        fw_driver = "nova.tests.fake_network.FakeIptablesFirewallDriver"
+        self.flags(firewall_driver=fw_driver)
         self.flags(libvirt_vif_driver="nova.tests.fake_network.FakeVIFDriver")
 
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
