@@ -48,6 +48,7 @@ import datetime
 import itertools
 import math
 import netaddr
+import re
 import socket
 from eventlet import greenpool
 
@@ -401,28 +402,40 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                          instance_id)
         return vifs
 
-    def get_instance_ids_by_ip_filter(self, context, ip_filter):
-#    def _regexp_filter_by_ipv6(instance, filter_re):
-#        for interface in instance['virtual_interfaces']:
-#            fixed_ipv6 = interface.get('fixed_ipv6')
-#            if fixed_ipv6 and filter_re.match(fixed_ipv6):
-#                return True
-#        return False
+    def get_instance_ids_by_ip_filter(self, context, filters):
+        ip_filter = re.compile(str(filters.get('ip')))
+        ipv6_filter = re.compile(str(filters.get('ip6')))
 
-#    def _regexp_filter_by_ip(instance, filter_re):
-#        for interface in instance['virtual_interfaces']:
-#            for fixed_ip in interface['fixed_ips']:
-#                if not fixed_ip or not fixed_ip['address']:
-#                    continue
-#                if filter_re.match(fixed_ip['address']):
-#                    return True
-#                for floating_ip in fixed_ip.get('floating_ips', []):
-#                    if not floating_ip or not floating_ip['address']:
-#                        continue
-#                    if filter_re.match(floating_ip['address']):
-#                        return True
-#        return False
-        return []
+        # NOTE(jkoelker) Should probably figur out a better way to do
+        #                this. But for now it "works", this could suck on
+        #                large installs.
+
+        vifs = self.db.virtual_interface_get_all(context)
+        results = []
+
+        for vif in vifs:
+            fixed_ipv6 = vif.get('fixed_ipv6')
+            if fixed_ipv6 and ipv6_filter.match(fixed_ipv6):
+                # NOTE(jkoelker) Will need to update for the UUID flip
+                results.append({'instance_id': vif['instance_id'],
+                                'ip': fixed_ipv6})
+
+            for fixed_ip in vif['fixed_ips']:
+                if not fixed_ip or not fixed_ip['address']:
+                    continue
+                if ip_filter.match(fixed_ip['address']):
+                    results.append({'instance_id': vif['instance_id'],
+                                    'ip': fixed_ip['address']})
+                    break
+                for floating_ip in fixed_ip.get('floating_ips', []):
+                    if not floating_ip or not floating_ip['address']:
+                        continue
+                    if ip_filter.match(floating_ip['address']):
+                        results.append({'instance_id': vif['instance_id'],
+                                        'ip': fixed_ip['address']})
+                        break
+        return results
+
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):

@@ -934,10 +934,13 @@ class API(base.Base):
         if 'ip6' in filters or 'ip' in filters:
             res = self.network_api.get_instance_ids_by_ip_filter(context,
                                                                  filters)
+            # NOTE(jkoelker) It is possible that we will get the same
+            #                instance id twice (one for ipv4 and ipv4)
+            ids = set([r['instance_id'] for r in res])
+
             # NOTE(jkoelker) When this flips to using UUIDS the name
             #                needs to be updated accordingingly
-            ip_instances = [self.db.instance_get(r['instance_id']) \
-                            for r in res]
+            ip_instances = [self.db.instance_get(id) for id in ids]
 
         return self.db.instance_get_all_by_filters(context, filters,
                                                    ip_instances)
