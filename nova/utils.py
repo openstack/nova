@@ -910,3 +910,17 @@ def convert_to_list_dict(lst, label):
     if not isinstance(lst, list):
         lst = [lst]
     return [{label: x} for x in lst]
+
+
+def timefunc(func):
+    """Decorator that logs how long a particular function took to execute"""
+    @functools.wraps(func)
+    def inner(*args, **kwargs):
+        start_time = time.time()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            total_time = time.time() - start_time
+            LOG.debug(_("timefunc: '%(name)s' took %(total_time).2f secs") %
+                      dict(name=func.__name__, total_time=total_time))
+    return inner

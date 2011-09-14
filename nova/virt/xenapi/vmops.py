@@ -142,12 +142,55 @@ class VMOps(object):
                 disk_image_type)
         return vdis
 
+    def _update_instance_progress(self, context, instance, progress):
+        if progress < 0:
+            progress = 0
+        elif progress > 100:
+            progress = 100
+        instance_id = instance['id']
+        LOG.debug(_("Updating instance '%(instance_id)s' progress to"
+                    " %(progress)d") % locals())
+        db.instance_update(context, instance_id, {'progress': progress})
+
     def spawn(self, context, instance, network_info):
+        total_steps = 4
+        progress = {'value': 0}
+        def bump_progress():
+            # FIXME(sirp): for now we're taking a KISS approach to
+            # instance-build-progress:
+            # divide the action's workflow into discrete steps and "bump" the
+            # instance's progress field as each step is completed.
+            #
+            # For a first cut this should be fine, however, as image size
+            # grows, the _create_disks step begins to dominate the equation. A
+            # better approximation would reflect the percentage of the image
+            # that has been streamed to the host machine.
+            progress['value'] += 100 / total_steps
+            self._update_instance_progress(
+                context, instance, progress['value'])
+
         vdis = None
         try:
+            # 1. Vanity Step
+            # NOTE(sirp): _create_disk will potentially take a *very* long
+            # time to complete since it has to fetch the image over the
+            # network and images can be several gigs in size. To avoid
+            # progress remaining at 0% for too long, which will appear to be
+            # an error, we insert a "vanity" step to bump the progress up one
+            # notch above 0.
+            bump_progress()
+
+            # 2. Fetch the Image over the Network
             vdis = self._create_disks(context, instance)
+            bump_progress()
+
+            # 3. Create the VM records
             vm_ref = self._create_vm(context, instance, vdis, network_info)
+            bump_progress()
+
+            # 4. Boot the Instance
             self._spawn(instance, vm_ref)
+            bump_progress()
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
             LOG.exception(_("instance %s: Failed to spawn"),
                           instance.id, exc_info=sys.exc_info())
@@ -155,6 +198,8 @@ class VMOps(object):
                       instance.id)
             self._handle_spawn_error(vdis, spawn_error)
             raise spawn_error
+        else:
+            self._update_instance_progress(context, instance, 100)
 
     def spawn_rescue(self, context, instance, network_info):
         """Spawn a rescue instance."""

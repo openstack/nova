@@ -156,7 +156,7 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
                   vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
                   flavor_id="1", interfaces=None, name=None, key_name='',
-                  access_ipv4=None, access_ipv6=None):
+                  access_ipv4=None, access_ipv6=None, progress=0):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -216,7 +216,8 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "access_ip_v4": access_ipv4,
         "access_ip_v6": access_ipv6,
         "uuid": uuid,
-        "virtual_interfaces": interfaces}
+        "virtual_interfaces": interfaces,
+        "progress": progress}
 
     instance["fixed_ips"] = {
         "address": private_address,
@@ -509,7 +510,8 @@ class ServersTest(test.TestCase):
             },
         ]
         new_return_server = return_server_with_attributes(
-            interfaces=interfaces, vm_state=vm_states.ACTIVE)
+            interfaces=interfaces, vm_state=vm_states.ACTIVE,
+            progress=100)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
@@ -606,7 +608,7 @@ class ServersTest(test.TestCase):
         ]
         new_return_server = return_server_with_attributes(
             interfaces=interfaces, vm_state=vm_states.ACTIVE,
-            image_ref=image_ref, flavor_id=flavor_id)
+            image_ref=image_ref, flavor_id=flavor_id, progress=100)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
@@ -1488,6 +1490,7 @@ class ServersTest(test.TestCase):
                     "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                     "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
                     "config_drive": self.config_drive,
+                    "progress": 0
                    }
 
         def server_update(context, id, params):
@@ -3689,7 +3692,8 @@ class ServersViewBuilderV11Test(test.TestCase):
             "accessIPv6": "fead::1234",
             #"address": ,
             #"floating_ips": [{"address":ip} for ip in public_addresses]}
-            "uuid": "deadbeef-feed-edee-beef-d0ea7beefedd"}
+            "uuid": "deadbeef-feed-edee-beef-d0ea7beefedd",
+            "progress": 0}
 
         return instance
 
@@ -3812,6 +3816,7 @@ class ServersViewBuilderV11Test(test.TestCase):
     def test_build_server_detail_active_status(self):
         #set the power state of the instance to running
         self.instance['vm_state'] = vm_states.ACTIVE
+        self.instance['progress'] = 100
         image_bookmark = "http://localhost/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {

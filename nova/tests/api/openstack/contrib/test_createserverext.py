@@ -51,7 +51,8 @@ INSTANCE = {
              "uuid": FAKE_UUID,
              "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
              "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-             "security_groups": [{"id": 1, "name": "test"}]
+             "security_groups": [{"id": 1, "name": "test"}],
+             "progress": 0
         }
 
 
@@ -115,7 +116,8 @@ class CreateserverextTest(test.TestCase):
                          'user_id': 'fake',
                          'project_id': 'fake',
                          'created_at': "",
-                         'updated_at': ""}]
+                         'updated_at': "",
+                         'progress': 0}]
 
             def set_admin_password(self, *args, **kwargs):
                 pass
