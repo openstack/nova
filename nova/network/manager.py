@@ -403,7 +403,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         return vifs
 
     def get_instance_ids_by_ip_filter(self, context, filters):
-        fixed_ip_filter = filter.get('fixed_ip')
+        fixed_ip_filter = filters.get('fixed_ip')
         ip_filter = re.compile(str(filters.get('ip')))
         ipv6_filter = re.compile(str(filters.get('ip6')))
 
