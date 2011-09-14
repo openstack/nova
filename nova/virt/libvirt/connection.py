@@ -38,6 +38,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 """
 
 import hashlib
+import functools
 import multiprocessing
 import netaddr
 import os
@@ -466,7 +467,7 @@ class LibvirtConnection(driver.ComputeDriver):
         shutil.rmtree(temp_dir)
 
     @exception.wrap_exception()
-    def reboot(self, instance, network_info):
+    def reboot(self, instance, network_info, reboot_type):
         """Reboot a virtual machine, given an instance reference.
 
         This method actually destroys and re-creates the domain to ensure the
@@ -778,6 +779,10 @@ class LibvirtConnection(driver.ComputeDriver):
         if fs_format:
             utils.execute('mkfs', '-t', fs_format, target)
 
+    def _create_ephemeral(self, target, local_size, fs_label, os_type):
+        self._create_local(target, local_size)
+        disk.mkfs(os_type, fs_label, target)
+
     def _create_swap(self, target, swap_gb):
         """Create a swap file of specified size"""
         self._create_local(target, swap_gb)
@@ -866,9 +871,13 @@ class LibvirtConnection(driver.ComputeDriver):
                               local_size=local_gb)
 
         for eph in driver.block_device_info_get_ephemerals(block_device_info):
-            self._cache_image(fn=self._create_local,
+            fn = functools.partial(self._create_ephemeral,
+                                   fs_label='ephemeral%d' % eph['num'],
+                                   os_type=inst.os_type)
+            self._cache_image(fn=fn,
                               target=basepath(_get_eph_disk(eph)),
-                              fname="local_%s" % eph['size'],
+                              fname="ephemeral_%s_%s_%s" %
+                              (eph['num'], eph['size'], inst.os_type),
                               cow=FLAGS.use_cow_images,
                               local_size=eph['size'])
 
@@ -1102,6 +1111,11 @@ class LibvirtConnection(driver.ComputeDriver):
                 nova_context.get_admin_context(), instance['id'],
                 {'root_device_name': '/dev/' + self.default_root_device})
 
+        if local_device:
+            db.instance_update(
+                nova_context.get_admin_context(), instance['id'],
+                {'default_local_device': '/dev/' + self.default_local_device})
+
         swap = driver.block_device_info_get_swap(block_device_info)
         if driver.swap_is_usable(swap):
             xml_info['swap_device'] = block_device.strip_dev(
@@ -1110,6 +1124,9 @@ class LibvirtConnection(driver.ComputeDriver):
               not self._volume_in_mapping(self.default_swap_device,
                                           block_device_info)):
             xml_info['swap_device'] = self.default_swap_device
+            db.instance_update(
+                nova_context.get_admin_context(), instance['id'],
+                {'default_swap_device': '/dev/' + self.default_swap_device})
 
         config_drive = False
         if instance.get('config_drive') or instance.get('config_drive_id'):

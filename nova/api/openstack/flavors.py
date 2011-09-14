@@ -16,12 +16,13 @@
 #    under the License.
 
 import webob
-import xml.dom.minidom as minidom
+from lxml import etree
 
 from nova import db
 from nova import exception
 from nova.api.openstack import views
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 
 
 class Controller(object):
@@ -78,48 +79,44 @@ class ControllerV11(Controller):
 
 class FlavorXMLSerializer(wsgi.XMLDictSerializer):
 
+    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+
     def __init__(self):
         super(FlavorXMLSerializer, self).__init__(xmlns=wsgi.XMLNS_V11)
 
-    def _flavor_to_xml(self, xml_doc, flavor, detailed):
-        flavor_node = xml_doc.createElement('flavor')
-        flavor_node.setAttribute('id', str(flavor['id']))
-        flavor_node.setAttribute('name', flavor['name'])
+    def _populate_flavor(self, flavor_elem, flavor_dict, detailed=False):
+        """Populate a flavor xml element from a dict."""
 
+        flavor_elem.set('name', flavor_dict['name'])
+        flavor_elem.set('id', str(flavor_dict['id']))
         if detailed:
-            flavor_node.setAttribute('ram', str(flavor['ram']))
-            flavor_node.setAttribute('disk', str(flavor['disk']))
-
-        link_nodes = self._create_link_nodes(xml_doc, flavor['links'])
-        for link_node in link_nodes:
-            flavor_node.appendChild(link_node)
-        return flavor_node
-
-    def _flavors_list_to_xml(self, xml_doc, flavors, detailed):
-        container_node = xml_doc.createElement('flavors')
-
-        for flavor in flavors:
-            item_node = self._flavor_to_xml(xml_doc, flavor, detailed)
-            container_node.appendChild(item_node)
-        return container_node
+            flavor_elem.set('ram', str(flavor_dict['ram']))
+            flavor_elem.set('disk', str(flavor_dict['disk']))
+        for link in flavor_dict.get('links', []):
+            elem = etree.SubElement(flavor_elem,
+                                    '{%s}link' % xmlutil.XMLNS_ATOM)
+            elem.set('rel', link['rel'])
+            elem.set('href', link['href'])
+        return flavor_elem
 
     def show(self, flavor_container):
-        xml_doc = minidom.Document()
-        flavor = flavor_container['flavor']
-        node = self._flavor_to_xml(xml_doc, flavor, True)
-        return self.to_xml_string(node, True)
+        flavor = etree.Element('flavor', nsmap=self.NSMAP)
+        self._populate_flavor(flavor, flavor_container['flavor'], True)
+        return self._to_xml(flavor)
 
-    def detail(self, flavors_container):
-        xml_doc = minidom.Document()
-        flavors = flavors_container['flavors']
-        node = self._flavors_list_to_xml(xml_doc, flavors, True)
-        return self.to_xml_string(node, True)
+    def detail(self, flavors_dict):
+        flavors = etree.Element('flavors', nsmap=self.NSMAP)
+        for flavor_dict in flavors_dict['flavors']:
+            flavor = etree.SubElement(flavors, 'flavor')
+            self._populate_flavor(flavor, flavor_dict, True)
+        return self._to_xml(flavors)
 
-    def index(self, flavors_container):
-        xml_doc = minidom.Document()
-        flavors = flavors_container['flavors']
-        node = self._flavors_list_to_xml(xml_doc, flavors, False)
-        return self.to_xml_string(node, True)
+    def index(self, flavors_dict):
+        flavors = etree.Element('flavors', nsmap=self.NSMAP)
+        for flavor_dict in flavors_dict['flavors']:
+            flavor = etree.SubElement(flavors, 'flavor')
+            self._populate_flavor(flavor, flavor_dict, False)
+        return self._to_xml(flavors)
 
 
 def create_resource(version='1.0'):
