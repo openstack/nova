@@ -1047,6 +1047,17 @@ def virtual_interface_delete_by_instance(context, instance_id):
         virtual_interface_delete(context, vif_ref['id'])
 
 
+@require_context
+def virtual_interface_get_all(context):
+    """Get all vifs"""
+    session = get_session()
+    vif_refs = session.query(models.VirtualInterface).\
+                       options(joinedload('network')).\
+                       options(joinedload('fixed_ips')).\
+                       all()
+    return vif_refs
+
+
 ###################
 
 
