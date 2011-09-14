@@ -403,6 +403,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         return vifs
 
     def get_instance_ids_by_ip_filter(self, context, filters):
+        fixed_ip_filter = filter.get('fixed_ip')
         ip_filter = re.compile(str(filters.get('ip')))
         ipv6_filter = re.compile(str(filters.get('ip6')))
 
@@ -426,17 +427,21 @@ class NetworkManager(manager.SchedulerDependentManager):
             for fixed_ip in vif['fixed_ips']:
                 if not fixed_ip or not fixed_ip['address']:
                     continue
+                if fixed_ip == fixed_ip_filter:
+                    results.append({'instance_id': vif['instance_id'],
+                                    'ip': fixed_ip['address']})
+                    continue
                 if ip_filter.match(fixed_ip['address']):
                     results.append({'instance_id': vif['instance_id'],
                                     'ip': fixed_ip['address']})
-                    break
+                    continue
                 for floating_ip in fixed_ip.get('floating_ips', []):
                     if not floating_ip or not floating_ip['address']:
                         continue
                     if ip_filter.match(floating_ip['address']):
                         results.append({'instance_id': vif['instance_id'],
                                         'ip': floating_ip['address']})
-                        break
+                        continue
         return results
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
