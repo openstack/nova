@@ -281,8 +281,8 @@ class RequestDeserializer(object):
 
     def get_body_deserializer(self, content_type):
         try:
-            content_type = _CONTENT_TYPE_MAP.get(content_type, content_type)
-            return self.body_deserializers[content_type]
+            ctype = _CONTENT_TYPE_MAP.get(content_type, content_type)
+            return self.body_deserializers[ctype]
         except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
 
@@ -471,13 +471,13 @@ class ResponseSerializer(object):
     def serialize_body(self, response, data, content_type, action):
         response.headers['Content-Type'] = content_type
         if data is not None:
-            content_type = _CONTENT_TYPE_MAP.get(content_type, content_type)
             serializer = self.get_body_serializer(content_type)
             response.body = serializer.serialize(data, action)
 
     def get_body_serializer(self, content_type):
         try:
-            return self.body_serializers[content_type]
+            ctype = _CONTENT_TYPE_MAP.get(content_type, content_type)
+            return self.body_serializers[ctype]
         except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
 
