@@ -414,6 +414,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         results = []
 
         for vif in vifs:
+            if vif['instance_id'] is None:
+                continue
+
             fixed_ipv6 = vif.get('fixed_ipv6')
             if fixed_ipv6 and ipv6_filter.match(fixed_ipv6):
                 # NOTE(jkoelker) Will need to update for the UUID flip
