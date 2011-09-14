@@ -904,7 +904,7 @@ class API(base.Base):
         if 'reservation_id' in filters:
             recurse_zones = True
 
-        instances = self.db.instance_get_all_by_filters(context, filters)
+        instances = self._get_instances_by_filters(context, filters)
 
         if not recurse_zones:
             return instances
@@ -928,6 +928,16 @@ class API(base.Base):
                 instances.append(server._info)
 
         return instances
+
+    def _get_instances_by_filters(self, context, filters):
+        ip_instances = None
+        if 'ip6' in filters or 'ip' in filters:
+            ids = self.network_api.get_instance_ids_by_ip_filter(context,
+                                                                  filters)
+            ip_instances = [self.db.instance_get(id) for id in ids]
+
+        return self.db.instance_get_all_by_filters(context, filters,
+                                                   ip_instances)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):
