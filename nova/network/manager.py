@@ -436,7 +436,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                         break
         return results
 
-
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):
         """Determine & return which networks an instance should connect to."""

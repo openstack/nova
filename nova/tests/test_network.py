@@ -4,7 +4,8 @@
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain # a copy of the License at
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
 #
 #      http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -662,10 +663,11 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertTrue(manager.create_networks(*args))
 
     def get_instance_ids_by_ip_regex(self):
-        pass
+        manager = self.FakeNetworkManager()
+        self.mox.StubOutWithMock(manager.db, 'virtual_interface_get_all')
 
     def get_instance_ids_by_ipv6_regex(self):
-        pass
+        manager = self.FakeNetworkManager()
 
     def get_instance_ids_by_ip(self):
-        pass
+        manager = self.FakeNetworkManager()
