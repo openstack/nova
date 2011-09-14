@@ -24,6 +24,7 @@ import copy
 import json
 import xml.dom.minidom as minidom
 
+from lxml import etree
 import mox
 import stubout
 import webob
@@ -31,10 +32,13 @@ import webob
 from nova import context
 import nova.api.openstack
 from nova.api.openstack import images
+from nova.api.openstack import xmlutil
 from nova import test
 from nova.tests.api.openstack import fakes
 
 
+NS = "{http://docs.openstack.org/compute/api/v1.1}"
+ATOMNS = "{http://www.w3.org/2005/Atom}"
 NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
 
@@ -972,7 +976,7 @@ class ImageXMLSerializationTest(test.TestCase):
     IMAGE_HREF = 'http://localhost/v1.1/fake/images/%s'
     IMAGE_BOOKMARK = 'http://localhost/fake/images/%s'
 
-    def test_show(self):
+    def test_xml_declaration(self):
         serializer = images.ImageXMLSerializer()
 
         fixture = {
@@ -984,7 +988,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'status': 'ACTIVE',
                 'progress': 80,
                 'server': {
-                    'id': 1,
+                    'id': '1',
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1013,37 +1017,80 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
+        self.assertTrue(has_dec)
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_href = self.IMAGE_HREF % 1
-        expected_bookmark = self.IMAGE_BOOKMARK % 1
-        expected_now = self.TIMESTAMP
-        expected = minidom.parseString("""
-        <image id="1"
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                name="Image1"
-                updated="%(expected_now)s"
-                created="%(expected_now)s"
-                status="ACTIVE"
-                progress="80">
-            <server id="1">
-                <atom:link rel="self" href="%(expected_server_href)s"/>
-                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
-            </server>
-            <metadata>
-                <meta key="key1">
-                    value1
-                </meta>
-            </metadata>
-            <atom:link href="%(expected_href)s" rel="self"/>
-            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
-        </image>
-        """.replace("  ", "") % (locals()))
+    def test_show(self):
+        serializer = images.ImageXMLSerializer()
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        fixture = {
+            'image': {
+                'id': 1,
+                'name': 'Image1',
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                'status': 'ACTIVE',
+                'progress': 80,
+                'server': {
+                    'id': '1',
+                    'links': [
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
+                'metadata': {
+                    'key1': 'value1',
+                },
+                'links': [
+                    {
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = fixture['image']
+
+        for key in ['name', 'id', 'updated', 'created', 'status', 'progress']:
+            self.assertEqual(root.get(key), str(image_dict[key]))
+
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        metadata_root = root.find('{0}metadata'.format(NS))
+        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
+        self.assertEqual(len(metadata_elems), 1)
+        for i, metadata_elem in enumerate(metadata_elems):
+            (meta_key, meta_value) = image_dict['metadata'].items()[i]
+            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
+            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
+
+        server_root = root.find('{0}server'.format(NS))
+        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
+        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['server']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
 
     def test_show_zero_metadata(self):
         serializer = images.ImageXMLSerializer()
@@ -1056,7 +1103,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 'status': 'ACTIVE',
                 'server': {
-                    'id': 1,
+                    'id': '1',
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1083,31 +1130,31 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = fixture['image']
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_href = self.IMAGE_HREF % 1
-        expected_bookmark = self.IMAGE_BOOKMARK % 1
-        expected_now = self.TIMESTAMP
-        expected = minidom.parseString("""
-        <image id="1"
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                name="Image1"
-                updated="%(expected_now)s"
-                created="%(expected_now)s"
-                status="ACTIVE">
-            <server id="1">
-                <atom:link rel="self" href="%(expected_server_href)s"/>
-                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
-            </server>
-            <atom:link href="%(expected_href)s" rel="self"/>
-            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
-        </image>
-        """.replace("  ", "") % (locals()))
+        for key in ['name', 'id', 'updated', 'created', 'status']:
+            self.assertEqual(root.get(key), str(image_dict[key]))
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        metadata_root = root.find('{0}metadata'.format(NS))
+        meta_nodes = root.findall('{0}meta'.format(ATOMNS))
+        self.assertEqual(len(meta_nodes), 0)
+
+        server_root = root.find('{0}server'.format(NS))
+        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
+        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['server']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
 
     def test_show_image_no_metadata_key(self):
         serializer = images.ImageXMLSerializer()
@@ -1120,7 +1167,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 'status': 'ACTIVE',
                 'server': {
-                    'id': 1,
+                    'id': '1',
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1146,31 +1193,31 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = fixture['image']
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_href = self.IMAGE_HREF % 1
-        expected_bookmark = self.IMAGE_BOOKMARK % 1
-        expected_now = self.TIMESTAMP
-        expected = minidom.parseString("""
-        <image id="1"
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                name="Image1"
-                updated="%(expected_now)s"
-                created="%(expected_now)s"
-                status="ACTIVE">
-            <server id="1">
-                <atom:link rel="self" href="%(expected_server_href)s"/>
-                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
-            </server>
-            <atom:link href="%(expected_href)s" rel="self"/>
-            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
-        </image>
-        """.replace("  ", "") % (locals()))
+        for key in ['name', 'id', 'updated', 'created', 'status']:
+            self.assertEqual(root.get(key), str(image_dict[key]))
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        metadata_root = root.find('{0}metadata'.format(NS))
+        meta_nodes = root.findall('{0}meta'.format(ATOMNS))
+        self.assertEqual(len(meta_nodes), 0)
+
+        server_root = root.find('{0}server'.format(NS))
+        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
+        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['server']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
 
     def test_show_no_server(self):
         serializer = images.ImageXMLSerializer()
@@ -1199,30 +1246,30 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = fixture['image']
 
-        expected_href = self.IMAGE_HREF % 1
-        expected_bookmark = self.IMAGE_BOOKMARK % 1
-        expected_now = self.TIMESTAMP
-        expected = minidom.parseString("""
-        <image id="1"
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                name="Image1"
-                updated="%(expected_now)s"
-                created="%(expected_now)s"
-                status="ACTIVE">
-            <metadata>
-                <meta key="key1">
-                    value1
-                </meta>
-            </metadata>
-            <atom:link href="%(expected_href)s" rel="self"/>
-            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
-        </image>
-        """.replace("  ", "") % (locals()))
+        for key in ['name', 'id', 'updated', 'created', 'status']:
+            self.assertEqual(root.get(key), str(image_dict[key]))
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        metadata_root = root.find('{0}metadata'.format(NS))
+        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
+        self.assertEqual(len(metadata_elems), 1)
+        for i, metadata_elem in enumerate(metadata_elems):
+            (meta_key, meta_value) = image_dict['metadata'].items()[i]
+            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
+            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
+
+        server_root = root.find('{0}server'.format(NS))
+        self.assertEqual(server_root, None)
 
     def test_index(self):
         serializer = images.ImageXMLSerializer()
@@ -1237,6 +1284,10 @@ class ImageXMLSerializationTest(test.TestCase):
                             'href': self.IMAGE_HREF % 1,
                             'rel': 'self',
                         },
+                        {
+                            'href': self.IMAGE_BOOKMARK % 1,
+                            'rel': 'bookmark',
+                        },
                     ],
                 },
                 {
@@ -1247,35 +1298,32 @@ class ImageXMLSerializationTest(test.TestCase):
                             'href': self.IMAGE_HREF % 2,
                             'rel': 'self',
                         },
+                        {
+                            'href': self.IMAGE_BOOKMARK % 2,
+                            'rel': 'bookmark',
+                        },
                     ],
                 },
             ]
         }
 
         output = serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'images_index')
+        image_elems = root.findall('{0}image'.format(NS))
+        self.assertEqual(len(image_elems), 2)
+        for i, image_elem in enumerate(image_elems):
+            image_dict = fixture['images'][i]
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_href = self.IMAGE_HREF % 1
-        expected_bookmark = self.IMAGE_BOOKMARK % 1
-        expected_href_two = self.IMAGE_HREF % 2
-        expected_bookmark_two = self.IMAGE_BOOKMARK % 2
-        expected_now = self.TIMESTAMP
-        expected = minidom.parseString("""
-        <images
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom">
-        <image id="1" name="Image1">
-            <atom:link href="%(expected_href)s" rel="self"/>
-        </image>
-        <image id="2" name="Image2">
-            <atom:link href="%(expected_href_two)s" rel="self"/>
-        </image>
-        </images>
-        """.replace("  ", "") % (locals()))
+            for key in ['name', 'id']:
+                self.assertEqual(image_elem.get(key), str(image_dict[key]))
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+            link_nodes = image_elem.findall('{0}link'.format(ATOMNS))
+            self.assertEqual(len(link_nodes), 2)
+            for i, link in enumerate(image_dict['links']):
+                for key, value in link.items():
+                    self.assertEqual(link_nodes[i].get(key), value)
 
     def test_index_zero_images(self):
         serializer = images.ImageXMLSerializer()
@@ -1285,15 +1333,11 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixtures, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-        <images
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom" />
-        """.replace("  ", "") % (locals()))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'images_index')
+        image_elems = root.findall('{0}image'.format(NS))
+        self.assertEqual(len(image_elems), 0)
 
     def test_detail(self):
         serializer = images.ImageXMLSerializer()
@@ -1307,7 +1351,7 @@ class ImageXMLSerializationTest(test.TestCase):
                     'updated': self.TIMESTAMP,
                     'status': 'ACTIVE',
                     'server': {
-                        'id': 1,
+                        'id': '1',
                         'links': [
                             {
                                 'href': self.SERVER_HREF,
@@ -1331,7 +1375,7 @@ class ImageXMLSerializationTest(test.TestCase):
                     ],
                 },
                 {
-                    'id': 2,
+                    'id': '2',
                     'name': 'Image2',
                     'created': self.TIMESTAMP,
                     'updated': self.TIMESTAMP,
@@ -1355,46 +1399,22 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'detail')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'images')
+        image_elems = root.findall('{0}image'.format(NS))
+        self.assertEqual(len(image_elems), 2)
+        for i, image_elem in enumerate(image_elems):
+            image_dict = fixture['images'][i]
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_href = self.IMAGE_HREF % 1
-        expected_bookmark = self.IMAGE_BOOKMARK % 1
-        expected_href_two = self.IMAGE_HREF % 2
-        expected_bookmark_two = self.IMAGE_BOOKMARK % 2
-        expected_now = self.TIMESTAMP
-        expected = minidom.parseString("""
-        <images
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom">
-        <image id="1"
-                name="Image1"
-                updated="%(expected_now)s"
-                created="%(expected_now)s"
-                status="ACTIVE">
-            <server id="1">
-                <atom:link rel="self" href="%(expected_server_href)s"/>
-                <atom:link rel="bookmark" href="%(expected_server_bookmark)s"/>
-            </server>
-            <atom:link href="%(expected_href)s" rel="self"/>
-            <atom:link href="%(expected_bookmark)s" rel="bookmark"/>
-        </image>
-        <image id="2"
-                name="Image2"
-                updated="%(expected_now)s"
-                created="%(expected_now)s"
-                status="SAVING"
-                progress="80">
-            <metadata>
-                <meta key="key1">
-                    value1
-                </meta>
-            </metadata>
-            <atom:link href="%(expected_href_two)s" rel="self"/>
-            <atom:link href="%(expected_bookmark_two)s" rel="bookmark"/>
-        </image>
-        </images>
-        """.replace("  ", "") % (locals()))
+            for key in ['name', 'id', 'updated', 'created', 'status']:
+                self.assertEqual(image_elem.get(key), str(image_dict[key]))
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+            link_nodes = image_elem.findall('{0}link'.format(ATOMNS))
+            self.assertEqual(len(link_nodes), 2)
+            for i, link in enumerate(image_dict['links']):
+                for key, value in link.items():
+                    self.assertEqual(link_nodes[i].get(key), value)
+
+            metadata_root = image_elem.find('{0}metadata'.format(NS))
+            metadata_elems = metadata_root.findall('{0}meta'.format(NS))
