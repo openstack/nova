@@ -1,5 +1,6 @@
 
 import json
+from lxml import etree
 import webob
 from xml.dom import minidom
 from xml.parsers import expat
@@ -391,6 +392,10 @@ class XMLDictSerializer(DictSerializer):
                 link_node.setAttribute('type', link['type'])
             link_nodes.append(link_node)
         return link_nodes
+
+    def _to_xml(self, root):
+        """Convert the xml object to an xml string."""
+        return etree.tostring(root, encoding='UTF-8', xml_declaration=True)
 
 
 class ResponseHeadersSerializer(ActionDispatcher):

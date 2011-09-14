@@ -1,0 +1,9 @@
+  <element name="metadata" ns="http://docs.openstack.org/compute/api/v1.1"
+    xmlns="http://relaxng.org/ns/structure/1.0">
+    <zeroOrMore>
+      <element name="meta">
+        <attribute name="key"> <text/> </attribute>
+        <text/>
+      </element>
+    </zeroOrMore>
+  </element>

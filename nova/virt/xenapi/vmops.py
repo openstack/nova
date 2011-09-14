@@ -135,7 +135,7 @@ class VMOps(object):
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
     def _create_disks(self, context, instance):
-        disk_image_type = VMHelper.determine_disk_image_type(instance)
+        disk_image_type = VMHelper.determine_disk_image_type(instance, context)
         vdis = VMHelper.fetch_image(context, self._session,
                 instance, instance.image_ref,
                 instance.user_id, instance.project_id,
@@ -176,7 +176,7 @@ class VMOps(object):
                                   power_state.SHUTDOWN)
             return
 
-        disk_image_type = VMHelper.determine_disk_image_type(instance)
+        disk_image_type = VMHelper.determine_disk_image_type(instance, context)
         kernel = None
         ramdisk = None
         try:
@@ -253,6 +253,8 @@ class VMOps(object):
 
         self.create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
+        self.inject_hostname(instance, vm_ref, instance['hostname'])
+
         return vm_ref
 
     def _attach_disks(self, instance, disk_image_type, vm_ref, first_vdi_ref,
@@ -1157,6 +1159,16 @@ class VMOps(object):
         #resp = self._make_agent_call('resetnetwork', instance, '', args)
         resp = self._make_plugin_call('agent', 'resetnetwork', instance, '',
                                                                args, vm_ref)
+
+    def inject_hostname(self, instance, vm_ref, hostname):
+        """Inject the hostname of the instance into the xenstore."""
+        if instance.os_type == "windows":
+            # NOTE(jk0): Windows hostnames can only be <= 15 chars.
+            hostname = hostname[:15]
+
+        logging.debug(_("injecting hostname to xs for vm: |%s|"), vm_ref)
+        self._session.call_xenapi_request("VM.add_to_xenstore_data",
+                (vm_ref, "vm-data/hostname", hostname))
 
     def list_from_xenstore(self, vm, path):
         """
