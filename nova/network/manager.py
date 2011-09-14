@@ -427,7 +427,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             for fixed_ip in vif['fixed_ips']:
                 if not fixed_ip or not fixed_ip['address']:
                     continue
-                if fixed_ip == fixed_ip_filter:
+                if fixed_ip['address'] == fixed_ip_filter:
                     results.append({'instance_id': vif['instance_id'],
                                     'ip': fixed_ip['address']})
                     continue
