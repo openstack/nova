@@ -17,42 +17,35 @@
 
 """VIF drivers for VMWare."""
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova.virt.vif import VIFDriver
-from nova.virt.vmwareapi_conn import VMWareAPISession
 from nova.virt.vmwareapi import network_utils
 
 
 LOG = logging.getLogger("nova.virt.vmwareapi.vif")
 
 FLAGS = flags.FLAGS
+FLAGS['vmwareapi_vlan_interface'].SetDefault('vmnic0')
 
 
 class VMWareVlanBridgeDriver(VIFDriver):
     """VIF Driver to setup bridge/VLAN networking using VMWare API."""
 
     def plug(self, instance, network, mapping):
+        """Plug the VIF to specified instance using information passed.
+        Currently we are plugging the VIF(s) during instance creation itself.
+        We can use this method when we add support to add additional NIC to
+        an existing instance."""
+        pass
+
+    def ensure_vlan_bridge(self, session, network):
         """Create a vlan and bridge unless they already exist."""
         vlan_num = network['vlan']
         bridge = network['bridge']
-        bridge_interface = network['bridge_interface']
+        vlan_interface = FLAGS.vmwareapi_vlan_interface
 
-        # Open vmwareapi session
-        host_ip = FLAGS.vmwareapi_host_ip
-        host_username = FLAGS.vmwareapi_host_username
-        host_password = FLAGS.vmwareapi_host_password
-        if not host_ip or host_username is None or host_password is None:
-            raise Exception(_('Must specify vmwareapi_host_ip, '
-                              'vmwareapi_host_username '
-                              'and vmwareapi_host_password to use '
-                              'connection_type=vmwareapi'))
-        session = VMWareAPISession(host_ip, host_username, host_password,
-                                   FLAGS.vmwareapi_api_retry_count)
-        vlan_interface = bridge_interface
         # Check if the vlan_interface physical network adapter exists on the
         # host.
         if not network_utils.check_if_vlan_interface_exists(session,
@@ -92,4 +85,6 @@ class VMWareVlanBridgeDriver(VIFDriver):
                                                pgroup=pg_vlanid)
 
     def unplug(self, instance, network, mapping):
+        """Cleanup operations like deleting port group if no instance
+        is associated with it."""
         pass
