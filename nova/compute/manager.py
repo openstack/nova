@@ -531,7 +531,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
                               instance_id,
-                              power_state=current_power_state)
+                              power_state=current_power_state,
+                              task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -542,7 +543,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
                               instance_id,
-                              power_state=current_power_state)
+                              power_state=current_power_state,
+                              task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1755,7 +1757,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                          seconds=FLAGS.reclaim_instance_interval)
         curtime = utils.utcnow()
         for instance in instances:
-            if instance['task_state'] == task_states.QUEUED_DELETE and \
+            if instance['vm_state'] == vm_states.SOFT_DELETE and \
                (curtime - instance['deleted_at']) >= queue_time:
                 LOG.info('Deleting %s' % instance['name'])
                 self._delete_instance(context, instance['id'])

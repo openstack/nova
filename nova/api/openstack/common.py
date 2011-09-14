@@ -78,6 +78,9 @@ _STATE_MAP = {
     vm_states.DELETED: {
         'default': 'DELETED',
     },
+    vm_states.SOFT_DELETE: {
+        'default': 'DELETED',
+    },
 }
 
 

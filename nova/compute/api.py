@@ -96,9 +96,9 @@ def _is_queued_delete(instance, instance_id):
     vm_state = instance["vm_state"]
     task_state = instance["task_state"]
 
-    if task_state != task_states.QUEUED_DELETE:
-        LOG.warn(_("Instance %(instance_id)s is not in a 'queued deleted' "
-                   "state. It is currently %(task_state)s. Action aborted.") %
+    if vm_state != vm_states.SOFT_DELETE:
+        LOG.warn(_("Instance %(instance_id)s is not in a 'soft delete' "
+                   "state. It is currently %(vm_state)s. Action aborted.") %
                  locals())
         return False
 
@@ -764,36 +764,54 @@ class API(base.Base):
                         {'instance_id': instance_id, 'action_str': action_str})
             raise
 
+    @scheduler_api.reroute_compute("soft_delete")
+    def soft_delete(self, context, instance_id):
+        """Terminate an instance."""
+        LOG.debug(_("Going to try to soft delete %s"), instance_id)
+        instance = self._get_instance(context, instance_id, 'soft delete')
+
+        if not _is_able_to_shutdown(instance, instance_id):
+            return
+
+        # NOTE(jerdfelt): The compute daemon handles reclaiming instances
+        # that are in soft delete. If there is no host assigned, there is
+        # no daemon to reclaim, so delete it immediately.
+        host = instance['host']
+        if host:
+            self.update(context,
+                        instance_id,
+                        vm_state=vm_states.SOFT_DELETE,
+                        task_state=task_states.POWERING_OFF,
+                        deleted_at=utils.utcnow())
+
+            self._cast_compute_message('power_off_instance', context,
+                                       instance_id, host)
+        else:
+            LOG.warning(_("No host for instance %s, deleting immediately"),
+                        instance_id)
+            terminate_volumes(self.db, context, instance_id)
+            self.db.instance_destroy(context, instance_id)
+
     @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate %s"), instance_id)
-        instance = self._get_instance(context, instance_id, 'terminating')
+        instance = self._get_instance(context, instance_id, 'delete')
 
         if not _is_able_to_shutdown(instance, instance_id):
             return
 
         host = instance['host']
-        if FLAGS.reclaim_instance_interval and host:
-            self.update(context,
-                        instance_id,
-                        vm_state=vm_states.DELETED,
-                        task_state=task_states.QUEUED_DELETE,
-                        deleted_at=utils.utcnow())
-
-            self._cast_compute_message('power_off_instance', context,
-                        instance_id, host)
-        else:
+        if host:
             self.update(context,
                         instance_id,
                         task_state=task_states.DELETING)
 
-            if host:
-                self._cast_compute_message('terminate_instance', context,
-                        instance_id, host)
-            else:
-                terminate_volumes(self.db, context, instance_id)
-                self.db.instance_destroy(context, instance_id)
+            self._cast_compute_message('terminate_instance', context,
+                                       instance_id, host)
+        else:
+            terminate_volumes(self.db, context, instance_id)
+            self.db.instance_destroy(context, instance_id)
 
     @scheduler_api.reroute_compute("restore")
     def restore(self, context, instance_id):
@@ -811,6 +829,9 @@ class API(base.Base):
 
         host = instance['host']
         if host:
+            self.update(context,
+                        instance_id,
+                        task_state=task_states.POWERING_ON)
             self._cast_compute_message('power_on_instance', context,
                     instance_id, host)
 

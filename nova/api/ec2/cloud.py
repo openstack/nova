@@ -89,6 +89,7 @@ _STATE_DESCRIPTION_MAP = {
     vm_states.BUILDING: 'pending',
     vm_states.REBUILDING: 'pending',
     vm_states.DELETED: 'terminated',
+    vm_states.SOFT_DELETE: 'terminated',
     vm_states.STOPPED: 'stopped',
     vm_states.MIGRATING: 'migrate',
     vm_states.RESIZING: 'resize',
