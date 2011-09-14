@@ -1208,7 +1208,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(servers[0]['id'], 100)
 
     def test_tenant_id_filter_converts_to_project_id_for_admin(self):
-        def fake_get_all(context, filters=None):
+        def fake_get_all(context, filters=None, instances=None):
             self.assertNotEqual(filters, None)
             self.assertEqual(filters['project_id'], 'faketenant')
             self.assertFalse(filters.get('tenant_id'))
