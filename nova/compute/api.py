@@ -930,7 +930,7 @@ class API(base.Base):
         return instances
 
     def _get_instances_by_filters(self, context, filters):
-        ip_instances = None
+        ids = None
         if 'ip6' in filters or 'ip' in filters:
             res = self.network_api.get_instance_ids_by_ip_filter(context,
                                                                  filters)
@@ -938,12 +938,7 @@ class API(base.Base):
             #                instance id twice (one for ipv4 and ipv4)
             ids = set([r['instance_id'] for r in res])
 
-            # NOTE(jkoelker) When this flips to using UUIDS the name
-            #                needs to be updated accordingingly
-            ip_instances = [self.db.instance_get(context, id) for id in ids]
-
-        return self.db.instance_get_all_by_filters(context, filters,
-                                                   ip_instances)
+        return self.db.instance_get_all_by_filters(context, filters, ids)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):

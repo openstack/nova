@@ -503,10 +503,10 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
-def instance_get_all_by_filters(context, filters, instances=None):
+def instance_get_all_by_filters(context, filters, instance_ids=None):
     """Get all instances that match all filters."""
     return IMPL.instance_get_all_by_filters(context, filters,
-                                            instances=instances)
+                                            instance_ids=instance_ids)
 
 
 def instance_get_active_by_window(context, begin, end=None, project_id=None):

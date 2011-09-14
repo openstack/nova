@@ -1201,7 +1201,7 @@ def instance_get_all(context):
 
 
 @require_context
-def instance_get_all_by_filters(context, filters, instances=None):
+def instance_get_all_by_filters(context, filters, instance_ids=None):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise"""
@@ -1277,15 +1277,21 @@ def instance_get_all_by_filters(context, filters, instances=None):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    # TODO(jkoelker): This is for ID or UUID compat
-    if instances is None:
-        instances = []
-    elif isinstance(instances, types.StringType):
-        instances = [instance_get_by_uuid(context, instances)]
-    elif isinstance(instances, types.IntType):
-        instances = [instance_get(context, instances)]
+    instances = query_prefix.all()
+    ids = [instance['id'] for instance in instances if instance['id']]
+    uuids = [instance['uuid'] for instance in instances if instance['uuid']]
 
-    instances.extend(query_prefix.all())
+    if instance_ids is None:
+        instance_ids = []
+
+    # TODO(jkoelker): This is for ID or UUID compat
+    for instance_id in instance_ids:
+        if isinstance(instance_id,
+                      types.StringType) and instance_id not in uuids:
+            instances.append(instance_get_by_uuid(context, instance_id))
+        elif isinstance(instance_id,
+                        types.IntType) and instance_id not in ids:
+            instances.append(instance_get(context, instance_id))
 
     if not instances:
         return []
