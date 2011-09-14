@@ -94,7 +94,7 @@ class FlavorXMLSerializer(wsgi.XMLDictSerializer):
             flavor_elem.set('disk', str(flavor_dict['disk']))
 
             for attr in ("vcpus", "swap", "rxtx_quota", "rxtx_cap"):
-                flavor_elem.set(attr, str(flavor_dict.get(attr,"")))
+                flavor_elem.set(attr, str(flavor_dict.get(attr, "")))
 
         for link in flavor_dict.get('links', []):
             elem = etree.SubElement(flavor_elem,
