@@ -29,9 +29,9 @@ Supports KVM, LXC, QEMU, UML, and XEN.
                 (default: kvm).
 :libvirt_uri:  Override for the default libvirt URI (depends on libvirt_type).
 :libvirt_xml_template:  Libvirt XML Template.
-:rescue_image_id:  Rescue ami image (default: ami-rescue).
-:rescue_kernel_id:  Rescue aki image (default: aki-rescue).
-:rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
+:rescue_image_id:  Rescue ami image (None = original image).
+:rescue_kernel_id:  Rescue aki image (None = original image).
+:rescue_ramdisk_id:  Rescue ari image (None = original image).
 :injected_network_template:  Template file for injected network
 :allow_same_net_traffic:  Whether to allow in project network traffic
 
@@ -83,9 +83,9 @@ LOG = logging.getLogger('nova.virt.libvirt_conn')
 FLAGS = flags.FLAGS
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 # TODO(vish): These flags should probably go into a shared location
-flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
-flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
-flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
+flags.DEFINE_string('rescue_image_id', None, 'Rescue ami image')
+flags.DEFINE_string('rescue_kernel_id', None, 'Rescue aki image')
+flags.DEFINE_string('rescue_ramdisk_id', None, 'Rescue ari image')
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
@@ -466,18 +466,22 @@ class LibvirtConnection(driver.ComputeDriver):
         shutil.rmtree(temp_dir)
 
     @exception.wrap_exception()
-    def reboot(self, instance, network_info):
+    def reboot(self, instance, network_info, regenerate_xml=False):
         """Reboot a virtual machine, given an instance reference.
 
         This method actually destroys and re-creates the domain to ensure the
         reboot happens, as the guest OS cannot ignore this action.
 
         """
+        # NOTE(vish): this should accept block device info
         virt_dom = self._conn.lookupByName(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance
         # instead of using to_xml(instance, network_info). This is almost
         # the ultimate stupid workaround.
-        xml = virt_dom.XMLDesc(0)
+        if regenerate_xml:
+            xml = self.to_xml(instance, network_info, False)
+        else:
+            xml = virt_dom.XMLDesc(0)
         # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
         # better because we cannot ensure flushing dirty buffers
         # in the guest OS. But, in case of KVM, shutdown() does not work...
@@ -544,11 +548,17 @@ class LibvirtConnection(driver.ComputeDriver):
         self.destroy(instance, network_info, cleanup=False)
 
         xml = self.to_xml(instance, network_info, rescue=True)
-        rescue_images = {'image_id': FLAGS.rescue_image_id,
-                         'kernel_id': FLAGS.rescue_kernel_id,
-                         'ramdisk_id': FLAGS.rescue_ramdisk_id}
-        self._create_image(context, instance, xml, '.rescue', rescue_images)
+        rescue_images = {
+            'image_id': FLAGS.rescue_image_id or instance['image_ref'],
+            'kernel_id': FLAGS.rescue_kernel_id or instance['kernel_id'],
+            'ramdisk_id': FLAGS.rescue_ramdisk_id or instance['ramdisk_id'],
+        }
+        self._create_image(context, instance, xml, '.rescue', rescue_images,
+                           network_info=network_info)
+        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_new_domain(xml)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_rescue():
             """Called at an interval until the VM is running again."""
@@ -557,7 +567,7 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 state = self.get_info(instance_name)['state']
             except exception.NotFound:
-                msg = _("During reboot, %s disappeared.") % instance_name
+                msg = _("During rescue, %s disappeared.") % instance_name
                 LOG.error(msg)
                 raise utils.LoopingCallDone
 
@@ -570,14 +580,15 @@ class LibvirtConnection(driver.ComputeDriver):
         return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception()
-    def unrescue(self, instance, network_info):
+    def unrescue(self, instance, callback, network_info):
         """Reboot the VM which is being rescued back into primary images.
 
         Because reboot destroys and re-creates instances, unresue should
         simply call reboot.
 
         """
-        self.reboot(instance, network_info)
+        # NOTE(vish): this should accept block device info
+        self.reboot(instance, network_info, regenerate_xml=True)
 
     @exception.wrap_exception()
     def poll_rescued_instances(self, timeout):
