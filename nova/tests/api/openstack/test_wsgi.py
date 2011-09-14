@@ -250,11 +250,21 @@ class ResponseSerializerTest(test.TestCase):
                           self.serializer.get_body_serializer,
                           'application/unknown')
 
-    def test_serialize_response(self):
-        response = self.serializer.serialize({}, 'application/json')
-        self.assertEqual(response.headers['Content-Type'], 'application/json')
-        self.assertEqual(response.body, 'pew_json')
-        self.assertEqual(response.status_int, 404)
+    def test_serialize_response_json(self):
+        for content_type in ('application/json',
+                             'application/vnd.openstack.compute+json'):
+            response = self.serializer.serialize({}, content_type)
+            self.assertEqual(response.headers['Content-Type'], content_type)
+            self.assertEqual(response.body, 'pew_json')
+            self.assertEqual(response.status_int, 404)
+
+    def test_serialize_response_xml(self):
+        for content_type in ('application/xml',
+                             'application/vnd.openstack.compute+xml'):
+            response = self.serializer.serialize({}, content_type)
+            self.assertEqual(response.headers['Content-Type'], content_type)
+            self.assertEqual(response.body, 'pew_xml')
+            self.assertEqual(response.status_int, 404)
 
     def test_serialize_response_None(self):
         response = self.serializer.serialize(None, 'application/json')
