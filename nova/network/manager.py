@@ -396,6 +396,34 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.compute_api.trigger_security_group_members_refresh(admin_context,
                                                                     group_ids)
 
+    def get_vifs_by_instance(self, context, instance_id):
+        vifs = self.db.virtual_interface_get_by_instance(context,
+                                                         instance_id)
+        return vifs
+
+    def get_instance_ids_by_ip_filter(self, context, ip_filter):
+#    def _regexp_filter_by_ipv6(instance, filter_re):
+#        for interface in instance['virtual_interfaces']:
+#            fixed_ipv6 = interface.get('fixed_ipv6')
+#            if fixed_ipv6 and filter_re.match(fixed_ipv6):
+#                return True
+#        return False
+
+#    def _regexp_filter_by_ip(instance, filter_re):
+#        for interface in instance['virtual_interfaces']:
+#            for fixed_ip in interface['fixed_ips']:
+#                if not fixed_ip or not fixed_ip['address']:
+#                    continue
+#                if filter_re.match(fixed_ip['address']):
+#                    return True
+#                for floating_ip in fixed_ip.get('floating_ips', []):
+#                    if not floating_ip or not floating_ip['address']:
+#                        continue
+#                    if filter_re.match(floating_ip['address']):
+#                        return True
+#        return False
+        return []
+
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):
         """Determine & return which networks an instance should connect to."""
