@@ -432,7 +432,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                         continue
                     if ip_filter.match(floating_ip['address']):
                         results.append({'instance_id': vif['instance_id'],
-                                        'ip': fixed_ip['address']})
+                                        'ip': floating_ip['address']})
                         break
         return results
 
