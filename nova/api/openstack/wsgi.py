@@ -29,7 +29,6 @@ class Request(webob.Request):
         Based on the query extension then the Accept header.
 
         """
-        LOG.info('supported = %s' % repr(supported_content_types))
         supported_content_types = supported_content_types or \
             ('application/json',
              'application/vnd.openstack.compute+json',
