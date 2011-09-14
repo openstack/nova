@@ -940,7 +940,7 @@ class API(base.Base):
 
             # NOTE(jkoelker) When this flips to using UUIDS the name
             #                needs to be updated accordingingly
-            ip_instances = [self.db.instance_get(id) for id in ids]
+            ip_instances = [self.db.instance_get(context, id) for id in ids]
 
         return self.db.instance_get_all_by_filters(context, filters,
                                                    ip_instances)
