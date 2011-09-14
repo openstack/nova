@@ -50,8 +50,8 @@ class ViewBuilder(object):
             "disk": flavor_obj["local_gb"],
         }
 
-        for key in ( "vcpus", "swap", "rxtx_quota", "rxtx_cap"):
-            detail[key] = flavor_obj.get(key,"")
+        for key in ("vcpus", "swap", "rxtx_quota", "rxtx_cap"):
+            detail[key] = flavor_obj.get(key, "")
 
         detail.update(simple)
 
