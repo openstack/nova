@@ -42,7 +42,7 @@ def upgrade(migrate_engine):
 
     try:
         ForeignKeyConstraint(columns=[vifs.c.instance_id],
-                             refcolumns=[instances.c.id]).create()
+                             refcolumns=[instances.c.id]).drop()
     except Exception:
         try:
             migrate_engine.execute("ALTER TABLE migrations DROP " \
