@@ -1201,7 +1201,7 @@ def instance_get_all(context):
 
 
 @require_context
-def instance_get_all_by_filters(context, filters, instance_ids=None):
+def instance_get_all_by_filters(context, filters, instance_uuids=None):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise"""
@@ -1277,25 +1277,29 @@ def instance_get_all_by_filters(context, filters, instance_ids=None):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    instances = query_prefix.all()
-    ids = [instance['id'] for instance in instances \
-           if instance['id'] is not None]
-    uuids = [instance['uuid'] for instance in instances if instance['uuid']]
+    db_instances = query_prefix.all()
+    db_uuids = [instance['uuid'] for instance in db_instances \
+                if instance['uuid']]
 
-    if instance_ids is None:
-        instance_ids = []
+    if instance_uuids is None:
+        instance_uuids = []
 
-    # TODO(jkoelker): This is for ID or UUID compat
-    for instance_id in instance_ids:
-        if isinstance(instance_id,
-                      types.StringType) and instance_id not in uuids:
-            instances.append(instance_get_by_uuid(context, instance_id))
-        elif isinstance(instance_id,
-                        types.IntType) and instance_id not in ids:
-            instances.append(instance_get(context, instance_id))
+    uuids = []
 
-    if not instances:
+    # NOTE(jkoelker): String UUIDs only!
+    if not instance_uuids:
+        uuids = db_uuids
+    elif not db_instances:
+        uuids = instance_uuids
+    else:
+        uuids = list(set(instance_uuids) & set(db_uuids))
+
+    if not uuids:
         return []
+
+    instances = session.query(models.Instance).\
+                        filter(models.Instance.uuid.in_(uuids)).\
+                        all()
 
     # Now filter on everything else for regexp matching..
     # For filters not in the list, we'll attempt to use the filter_name
@@ -1555,6 +1559,18 @@ def instance_get_actions(context, instance_id):
     return session.query(models.InstanceActions).\
         filter_by(instance_id=instance_id).\
        all()
+
+
+@require_context
+def instance_get_uuids_by_ids(context, ids):
+    if not isinstance(ids, types.ListType):
+        return instance_get(context, ids)['uuid']
+    session = get_session()
+    instances = session.query(models.Instance).\
+                        filter(models.Instance.id.in_(ids)).\
+                        all()
+    return [{'uuid': instance['uuid'],
+             'id': instance['id']} for instance in instances]
 
 
 ###################
