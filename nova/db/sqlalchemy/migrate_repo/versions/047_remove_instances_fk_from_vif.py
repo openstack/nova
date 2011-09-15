@@ -26,7 +26,7 @@ instances = Table('instances', meta,
              )
 
 
-vifs = Table('vifs', meta,
+vifs = Table('virtual_interfaces', meta,
         Column('id', Integer(), primary_key=True, nullable=False),
         Column('instance_id', Integer()),
         )
