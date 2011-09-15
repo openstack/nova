@@ -1076,7 +1076,8 @@ class ZoneRedirectTest(test.TestCase):
     def test_unmarshal_single_server(self):
         decorator = api.reroute_compute("foo")
         decorator.item_uuid = 'fake_uuid'
-        self.assertTrue(isinstance(decorator.unmarshall_result([]), exception.InstanceNotFound))
+        self.assertTrue(isinstance(decorator.unmarshall_result([]),
+                        exception.InstanceNotFound))
         self.assertEquals(decorator.unmarshall_result(
                 [FakeResource(dict(a=1, b=2)), ]),
                 dict(server=dict(a=1, b=2)))

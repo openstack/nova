@@ -393,6 +393,7 @@ class reroute_compute(object):
         LOG.debug("****** COULD NOT FIND INSTANCE")
         return exception.InstanceNotFound(instance_id=self.item_uuid)
 
+
 def redirect_handler(f):
     def new_f(*args, **kwargs):
         try:
