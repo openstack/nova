@@ -94,15 +94,19 @@ class FakeNetworkManager(network_manager.NetworkManager):
                      'fixed_ipv6': '2001:db8::dcad:beff:feef:1',
                      'fixed_ips': [{'address': '172.16.0.1',
                                     'floating_ips': [floats[0]]}]},
-                    {'instance_id': 1,
+                    {'instance_id': 20,
                      'fixed_ipv6': '2001:db8::dcad:beff:feef:2',
                      'fixed_ips': [{'address': '172.16.0.2',
                                     'floating_ips': [floats[1]]}]},
-                    {'instance_id': 2,
+                    {'instance_id': 30,
                      'fixed_ipv6': '2002:db8::dcad:beff:feef:2',
                      'fixed_ips': [{'address': '173.16.0.2',
                                     'floating_ips': [floats[2]]}]}]
             return vifs
+
+        def instance_get_uuids_by_ids(self, context):
+            # NOTE(jkoelker): This is just here until we can rely on UUIDs
+            pass
 
 
     def __init__(self):
