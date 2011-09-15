@@ -1076,8 +1076,7 @@ class ZoneRedirectTest(test.TestCase):
     def test_unmarshal_single_server(self):
         decorator = api.reroute_compute("foo")
         decorator.item_uuid = 'fake_uuid'
-        self.assertRaises(exception.InstanceNotFound,
-                decorator.unmarshall_result, [])
+        self.assertTrue(isinstance(decorator.unmarshall_result([]), exception.InstanceNotFound))
         self.assertEquals(decorator.unmarshall_result(
                 [FakeResource(dict(a=1, b=2)), ]),
                 dict(server=dict(a=1, b=2)))
@@ -1113,8 +1112,11 @@ class ZoneRedirectTest(test.TestCase):
         def do_get(self, context, uuid):
             pass
 
-        self.assertRaises(exception.ZoneRequestError,
-                do_get, None, FakeContext(), FAKE_UUID)
+        try:
+            do_get(None, FakeContext(), FAKE_UUID)
+            self.fail("Should have got redirect exception.")
+        except api.RedirectResult, e:
+            self.assertTrue(isinstance(e.results, exception.ZoneRequestError))
 
     def test_one_zone_down_got_instance(self):
 
@@ -1175,8 +1177,11 @@ class ZoneRedirectTest(test.TestCase):
         def do_get(self, context, uuid):
             pass
 
-        self.assertRaises(exception.InstanceNotFound,
-                do_get, None, FakeContext(), FAKE_UUID)
+        try:
+            do_get(None, FakeContext(), FAKE_UUID)
+            self.fail("Expected redirect exception")
+        except api.RedirectResult, e:
+            self.assertTrue(isinstance(e.results, exception.InstanceNotFound))
 
 
 class FakeServerCollection(object):
@@ -1217,17 +1222,19 @@ class DynamicNovaClientTest(test.TestCase):
 
     def test_issue_novaclient_command_not_found(self):
         zone = FakeZone(1, 'http://example.com', 'bob', 'xxx')
-        self.assertEquals(api._issue_novaclient_command(
-                    FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "get", 100), None)
+        try:
+            api._issue_novaclient_command(FakeNovaClient(
+                FakeEmptyServerCollection()), zone, "servers", "get", 100)
+            self.fail("Expected NotFound exception")
+        except novaclient_exceptions.NotFound, e:
+            pass
 
-        self.assertEquals(api._issue_novaclient_command(
-                    FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "find", name="test"), None)
-
-        self.assertEquals(api._issue_novaclient_command(
-                    FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "any", "name"), None)
+        try:
+            api._issue_novaclient_command(FakeNovaClient(
+                FakeEmptyServerCollection()), zone, "servers", "any", "name")
+            self.fail("Expected NotFound exception")
+        except novaclient_exceptions.NotFound, e:
+            pass
 
 
 class FakeZonesProxy(object):

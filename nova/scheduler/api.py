@@ -178,7 +178,13 @@ def child_zone_helper(context, zone_list, func):
             # there if no other zones had a response.
             return exception.ZoneRequestError()
         else:
-            return func(nova, zone)
+            try:
+                answer = func(nova, zone)
+                LOG.debug("***** GOT %s FROM CHILD" % answer)
+                return answer
+            except Exception, e:
+                LOG.debug("***** GOT EXCEPTION %s FROM CHILD" % e)
+                return e
 
     green_pool = greenpool.GreenPool()
     return [result for result in green_pool.imap(
@@ -215,11 +221,11 @@ def _issue_novaclient_command(nova, zone, collection,
     item = args.pop(0)
     try:
         result = manager.get(item)
-    except novaclient_exceptions.NotFound:
+    except novaclient_exceptions.NotFound, e:
         url = zone.api_url
         LOG.debug(_("%(collection)s '%(item)s' not found on '%(url)s'" %
                                                 locals()))
-        return None
+        raise e
 
     if method_name.lower() != 'get':
         # if we're doing something other than 'get', call it passing args.
@@ -360,6 +366,7 @@ class reroute_compute(object):
         reduced_response = []
         found_exception = None
         for zone_response in zone_responses:
+            LOG.debug("****** ZONE RESPONSE %s" % zone_response)
             if not zone_response:
                 continue
             if isinstance(zone_response, BaseException):
@@ -373,17 +380,26 @@ class reroute_compute(object):
                     del server[k]
 
             reduced_response.append(dict(server=server))
+
+        # Boil the responses down to a single response.
+        #
+        # If we get a happy response use that, ignore all the
+        # complaint repsonses ...
         if reduced_response:
             return reduced_response[0]  # first for now.
         elif found_exception:
-            raise found_exception
-        raise exception.InstanceNotFound(instance_id=self.item_uuid)
-
+            LOG.debug("****** FOUND EXCEPTION %s" % found_exception)
+            return found_exception
+        LOG.debug("****** COULD NOT FIND INSTANCE")
+        return exception.InstanceNotFound(instance_id=self.item_uuid)
 
 def redirect_handler(f):
     def new_f(*args, **kwargs):
         try:
             return f(*args, **kwargs)
         except RedirectResult, e:
+            LOG.debug("****** REDIRECT HANDLER %s" % e.results)
+            if isinstance(e.results, BaseException):
+                raise e.results
             return e.results
     return new_f
