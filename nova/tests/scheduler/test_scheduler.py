@@ -1076,8 +1076,8 @@ class ZoneRedirectTest(test.TestCase):
     def test_unmarshal_single_server(self):
         decorator = api.reroute_compute("foo")
         decorator.item_uuid = 'fake_uuid'
-        self.assertTrue(isinstance(decorator.unmarshall_result([]),
-                        exception.InstanceNotFound))
+        result = decorator.unmarshall_result([])
+        self.assertEquals(decorator.unmarshall_result([]), None)
         self.assertEquals(decorator.unmarshall_result(
                 [FakeResource(dict(a=1, b=2)), ]),
                 dict(server=dict(a=1, b=2)))
@@ -1182,7 +1182,7 @@ class ZoneRedirectTest(test.TestCase):
             do_get(None, FakeContext(), FAKE_UUID)
             self.fail("Expected redirect exception")
         except api.RedirectResult, e:
-            self.assertTrue(isinstance(e.results, exception.InstanceNotFound))
+            self.assertEquals(e.results, None)
 
 
 class FakeServerCollection(object):
