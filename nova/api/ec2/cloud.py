@@ -326,11 +326,6 @@ class CloudController(object):
         instance_ref = db.instance_get(ctxt, instance_ref[0]['id'])
 
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
-        if instance_ref['key_name']:
-            keys = {'0': {'_name': instance_ref['key_name'],
-                          'openssh-key': instance_ref['key_data']}}
-        else:
-            keys = ''
         hostname = instance_ref['hostname']
         host = instance_ref['host']
         availability_zone = self._get_availability_zone_by_host(ctxt, host)
@@ -358,10 +353,15 @@ class CloudController(object):
                 'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
-                'public-keys': keys,
                 'reservation-id': instance_ref['reservation_id'],
                 'security-groups': security_groups,
                 'mpi': mpi}}
+
+        # public-keys should be in meta-data only if user specified one
+        if instance_ref['key_name']:
+            data['meta-data']['public-keys'] = {
+                '0': {'_name': instance_ref['key_name'],
+                      'openssh-key': instance_ref['key_data']}}
 
         for image_type in ['kernel', 'ramdisk']:
             if instance_ref.get('%s_id' % image_type):
