@@ -1155,8 +1155,6 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
         servers_links = json.loads(res.body)['servers_links']
-        print res
-        print servers_links
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
         self.assertEqual(servers_links[0]['href'],
@@ -1172,8 +1170,6 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
         servers_links = json.loads(res.body)['servers_links']
-        print res
-        print servers_links
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
         self.assertEqual(servers_links[0]['href'],
@@ -1188,7 +1184,6 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/fake/servers?limit=30')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        print res
         self.assertTrue('servers_links' not in res_dict)
 
     def test_get_servers_with_offset(self):
@@ -1991,7 +1986,6 @@ class ServersTest(test.TestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
-        print res
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
         self.assertEqual(1, server['id'])
