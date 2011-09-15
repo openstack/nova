@@ -40,7 +40,7 @@ class ViewBuilder(object):
     def __init__(self, addresses_builder):
         self.addresses_builder = addresses_builder
 
-    def build(self, inst, is_detail):
+    def build(self, inst, is_detail=False):
         """Return a dict that represenst a server."""
         if inst.get('_is_precooked', False):
             server = dict(server=inst)
@@ -53,6 +53,16 @@ class ViewBuilder(object):
             self._build_extra(server['server'], inst)
 
         return server
+
+    def build_list(self, server_objs, is_detail=False, **kwargs):
+        limit = kwargs.get('limit', None)
+        servers = []
+        servers_links = []
+
+        for server_obj in server_objs:
+            servers.append(self.build(server_obj, is_detail)['server'])
+
+        return dict(servers=servers)
 
     def _build_simple(self, inst):
         """Return a simple model of a server."""
@@ -204,6 +214,16 @@ class ViewBuilderV11(ViewBuilder):
         ]
 
         response["links"] = links
+
+    def build_list(self, server_objs, is_detail=False, **kwargs):
+        limit = kwargs.get('limit', None)
+        servers = []
+        servers_links = []
+
+        for server_obj in server_objs:
+            servers.append(self.build(server_obj, is_detail)['server'])
+
+        return dict(servers=servers)
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""

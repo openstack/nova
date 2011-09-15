@@ -2393,10 +2393,12 @@ class ServersTest(test.TestCase):
     def test_get_all_server_details_v1_0(self):
         req = webob.Request.blank('/v1.0/servers/detail')
         res = req.get_response(fakes.wsgi_app())
+        print res.body
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
+            print i, ' --:-- ', s
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)

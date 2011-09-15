@@ -75,6 +75,9 @@ class Controller(object):
     def _build_view(self, req, instance, is_detail=False):
         raise NotImplementedError()
 
+    def _build_list(self, req, instances, is_detail=False):
+        raise NotImplementedError()
+
     def _limit_items(self, items, req):
         raise NotImplementedError()
 
@@ -130,10 +133,7 @@ class Controller(object):
                                                  search_opts=search_opts)
 
         limited_list = self._limit_items(instance_list, req)
-        servers = [self._build_view(req, inst, is_detail)['server']
-                    for inst in limited_list]
-
-        return dict(servers=servers)
+        return self._build_list(req, limited_list, is_detail=is_detail)
 
     @scheduler_api.redirect_handler
     def show(self, req, id):
@@ -589,6 +589,11 @@ class ControllerV10(Controller):
         builder = nova.api.openstack.views.servers.ViewBuilderV10(addresses)
         return builder.build(instance, is_detail=is_detail)
 
+    def _build_list(self, req, instances, is_detail=False):
+        addresses = nova.api.openstack.views.addresses.ViewBuilderV10()
+        builder = nova.api.openstack.views.servers.ViewBuilderV10(addresses)
+        return builder.build_list(instances, is_detail=is_detail)
+
     def _limit_items(self, items, req):
         return common.limited(items, req)
 
@@ -681,6 +686,20 @@ class ControllerV11(Controller):
             base_url, project_id)
 
         return builder.build(instance, is_detail=is_detail)
+
+    def _build_list(self, req, instances, is_detail=False):
+        params = common.get_pagination_params(req)
+        project_id = getattr(req.environ['nova.context'], 'project_id', '')
+        base_url = req.application_url
+        flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
+            base_url, project_id)
+        image_builder = nova.api.openstack.views.images.ViewBuilderV11(
+            base_url, project_id)
+        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
+        builder = nova.api.openstack.views.servers.ViewBuilderV11(
+            addresses_builder, flavor_builder, image_builder,
+            base_url, project_id)
+        return builder.build_list(instances, is_detail=is_detail)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']
