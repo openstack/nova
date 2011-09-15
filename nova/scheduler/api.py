@@ -17,6 +17,8 @@
 Handles all requests relating to schedulers.
 """
 
+import webob
+
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
 
@@ -321,6 +323,7 @@ class reroute_compute(object):
                     self.replace_uuid_with_id(args, kwargs, item_id)
 
             if attempt_reroute:
+                LOG.debug("***** REROUTING TO ASK CHILDREN")
                 return self._route_to_child_zones(context, collection,
                         item_uuid)
             else:
@@ -391,16 +394,21 @@ class reroute_compute(object):
             LOG.debug("****** FOUND EXCEPTION %s" % found_exception)
             return found_exception
         LOG.debug("****** COULD NOT FIND INSTANCE")
-        return exception.InstanceNotFound(instance_id=self.item_uuid)
+        #return exception.InstanceNotFound(instance_id=self.item_uuid)
+        return None
 
 
 def redirect_handler(f):
     def new_f(*args, **kwargs):
         try:
-            return f(*args, **kwargs)
+            LOG.debug("****** REDIRECT HANDLER >>>>")
+            ret = f(*args, **kwargs)
+            LOG.debug("****** REDIRECT HANDLER <<<<")
+            return ret
         except RedirectResult, e:
-            LOG.debug("****** REDIRECT HANDLER %s" % e.results)
+            LOG.debug("****** REDIRECT HANDLER %s" % e.results.__class__)
             if isinstance(e.results, BaseException):
+                LOG.debug("****** REDIRECT HANDLER - RAISING %s" % e.results.__class__)
                 raise e.results
             return e.results
     return new_f
