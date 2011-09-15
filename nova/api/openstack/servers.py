@@ -688,7 +688,12 @@ class ControllerV11(Controller):
         return builder.build(instance, is_detail=is_detail)
 
     def _build_list(self, req, instances, is_detail=False):
-        params = common.get_pagination_params(req)
+        params = req.GET.copy()
+        pagination_params = common.get_pagination_params(req)
+        # Update params with int() values from pagination params
+        for key, val in pagination_params.iteritems():
+            params[key] = val
+
         project_id = getattr(req.environ['nova.context'], 'project_id', '')
         base_url = req.application_url
         flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(

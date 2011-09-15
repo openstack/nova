@@ -19,6 +19,7 @@
 import datetime
 import hashlib
 import os
+import urllib
 
 from nova import exception
 from nova.api.openstack import common
@@ -225,7 +226,7 @@ class ViewBuilderV11(ViewBuilder):
 
         if (len(servers) and limit) and (limit == len(servers)):
             next_link = self.generate_next_link(servers[-1]['id'],
-                                                limit, is_detail)
+                                                kwargs, is_detail)
             servers_links = [dict(rel='next', href=next_link)]
 
         reval = dict(servers=servers)
@@ -233,11 +234,10 @@ class ViewBuilderV11(ViewBuilder):
             reval['servers_links'] = servers_links
         return reval
 
-    def generate_next_link(self, server_id, limit, is_detail=False):
+    def generate_next_link(self, server_id, params, is_detail=False):
         """ Return an href string with proper limit and marker params"""
-        return "%s?limit=%s&marker=%s" % (
-            os.path.join(self.base_url, self.project_id, "servers"),
-            limit, server_id)
+        params['marker'] = server_id
+        return "%s?%s" % (self.base_url, urllib.urlencode(params))
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""

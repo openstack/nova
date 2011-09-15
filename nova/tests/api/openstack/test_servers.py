@@ -20,6 +20,7 @@ import base64
 import datetime
 import json
 import unittest
+import urlparse
 from lxml import etree
 from xml.dom import minidom
 
@@ -1157,8 +1158,11 @@ class ServersTest(test.TestCase):
         servers_links = json.loads(res.body)['servers_links']
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
-        self.assertEqual(servers_links[0]['href'],
-                         'http://localhost/v1.1/fake/servers?limit=3&marker=2')
+
+
+        qs = urlparse.urlparse(servers_links[0]['href']).query
+        params = urlparse.parse_qs(qs)
+        self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
 
         req = webob.Request.blank('/v1.1/fake/servers?limit=aaa')
         res = req.get_response(fakes.wsgi_app())
@@ -1172,8 +1176,28 @@ class ServersTest(test.TestCase):
         servers_links = json.loads(res.body)['servers_links']
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
-        self.assertEqual(servers_links[0]['href'],
-                         'http://localhost/v1.1/fake/servers?limit=3&marker=2')
+
+        qs = urlparse.urlparse(servers_links[0]['href']).query
+        params = urlparse.parse_qs(qs)
+        self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
+
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('limit' in res.body)
+
+    def test_get_server_details_with_limit_and_other_params_v1_1(self):
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=3&blah=2')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        servers_links = json.loads(res.body)['servers_links']
+        self.assertEqual([s['id'] for s in servers], [0, 1, 2])
+        self.assertEqual(servers_links[0]['rel'], 'next')
+
+        qs = urlparse.urlparse(servers_links[0]['href']).query
+        params = urlparse.parse_qs(qs)
+        self.assertDictMatch({'limit': ['3'], 'blah': ['2'], 'marker': ['2']},
+                             params)
 
         req = webob.Request.blank('/v1.1/fake/servers/detail?limit=aaa')
         res = req.get_response(fakes.wsgi_app())
