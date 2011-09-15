@@ -212,11 +212,11 @@ class API(base.Base):
                         {'method': 'validate_networks',
                          'args': args})
 
-    def get_instance_ids_by_ip_filter(self, context, filters):
+    def get_instance_uuids_by_ip_filter(self, context, filters):
         """Returns a list of dicts in the form of
-        {'instance_id': id, 'ip': ip} that matched the ip_filter
+        {'instance_uuid': uuid, 'ip': ip} that matched the ip_filter
         """
         args = {'filters': filters}
         return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'get_instance_ids_by_ip_filter',
+                        {'method': 'get_instance_uuids_by_ip_filter',
                          'args': args})

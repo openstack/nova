@@ -402,7 +402,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                          instance_id)
         return vifs
 
-    def get_instance_ids_by_ip_filter(self, context, filters):
+    def get_instance_uuids_by_ip_filter(self, context, filters):
         fixed_ip_filter = filters.get('fixed_ip')
         ip_filter = re.compile(str(filters.get('ip')))
         ipv6_filter = re.compile(str(filters.get('ip6')))
@@ -442,6 +442,15 @@ class NetworkManager(manager.SchedulerDependentManager):
                         results.append({'instance_id': vif['instance_id'],
                                         'ip': floating_ip['address']})
                         continue
+
+        # NOTE(jkoelker) Until we switch over to instance_uuid ;)
+        ids = [res['instance_id'] for res in results]
+        uuids = self.db.instance_get_uuids_by_ids(context, ids)
+        for res in results:
+            uuid = [u['uuid'] for u in uuids if u['id'] == res['instance_id']]
+            # NOTE(jkoelker) UUID must exist, so no test here
+            res['instance_uuid'] = uuid[0]
+
         return results
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
