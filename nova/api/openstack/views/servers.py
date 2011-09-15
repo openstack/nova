@@ -217,13 +217,30 @@ class ViewBuilderV11(ViewBuilder):
 
     def build_list(self, server_objs, is_detail=False, **kwargs):
         limit = kwargs.get('limit', None)
+        print "BUILD LIST 11", limit
         servers = []
         servers_links = []
 
         for server_obj in server_objs:
             servers.append(self.build(server_obj, is_detail)['server'])
 
-        return dict(servers=servers)
+        if (len(servers) and limit) and (limit == len(servers)):
+            print "LIMIT SET"
+            next_link = self.generate_next_link(servers[-1]['id'],
+                                                limit, is_detail)
+            servers_links = [dict(rel='next', href=next_link)]
+
+        reval = dict(servers=servers)
+        if len(servers_links) > 0:
+            reval['servers_links'] = servers_links
+            
+        return reval
+
+    def generate_next_link(self, server_id, limit, is_detail=False):
+        """ Return an href string with proper limit and marker params"""
+        return "%s?limit=%s&marker=%s" % (
+            os.path.join(self.base_url, self.project_id, "servers"),
+            limit, server_id)
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""

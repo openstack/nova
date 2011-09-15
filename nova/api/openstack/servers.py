@@ -699,7 +699,7 @@ class ControllerV11(Controller):
         builder = nova.api.openstack.views.servers.ViewBuilderV11(
             addresses_builder, flavor_builder, image_builder,
             base_url, project_id)
-        return builder.build_list(instances, is_detail=is_detail)
+        return builder.build_list(instances, is_detail=is_detail, **params)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']

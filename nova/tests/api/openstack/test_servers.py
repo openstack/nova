@@ -1150,6 +1150,48 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         self.assertTrue('limit' in res.body)
 
+    def test_get_servers_with_limit_v1_1(self):
+        req = webob.Request.blank('/v1.1/fake/servers?limit=3')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        servers_links = json.loads(res.body)['servers_links']
+        print res
+        print servers_links
+        self.assertEqual([s['id'] for s in servers], [0, 1, 2])
+        self.assertEqual(servers_links[0]['rel'], 'next')
+        self.assertEqual(servers_links[0]['href'],
+                         'http://localhost/v1.1/fake/servers?limit=3&marker=2')
+
+        req = webob.Request.blank('/v1.1/fake/servers?limit=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('limit' in res.body)
+
+    def test_get_server_details_with_limit_v1_1(self):
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=3')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        servers_links = json.loads(res.body)['servers_links']
+        print res
+        print servers_links
+        self.fail()
+        self.assertEqual([s['id'] for s in servers], [0, 1, 2])
+        self.assertEqual(servers_links[0]['rel'], 'next')
+        self.assertEqual(servers_links[0]['href'],
+                         'http://localhost/v1.1/fake/servers?limit=3&marker=2')
+
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('limit' in res.body)
+
+    def test_get_servers_with_too_big_limit_v1_1(self):
+        req = webob.Request.blank('/v1.1/fake/servers?limit=30')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        print res
+        self.assertTrue('servers_links' not in res_dict)
+
     def test_get_servers_with_offset(self):
         req = webob.Request.blank('/v1.0/servers?offset=2')
         res = req.get_response(fakes.wsgi_app())
@@ -2428,6 +2470,42 @@ class ServersTest(test.TestCase):
         }
         req = webob.Request.blank('/v1.1/fake/servers/detail')
         res = req.get_response(fakes.wsgi_app())
+        print res.body
+        self.fail()
+        res_dict = json.loads(res.body)
+
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], '')
+            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['image'], expected_image)
+            self.assertEqual(s['flavor'], expected_flavor)
+            self.assertEqual(s['status'], 'BUILD')
+            self.assertEqual(s['metadata']['seq'], str(i))
+
+    def test_get_all_server_details_v1_1_with_limit(self):
+        expected_flavor = {
+            "id": "1",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/fake/flavors/1',
+                },
+            ],
+        }
+        expected_image = {
+            "id": "10",
+            "links": [
+                {
+                    "rel": "bookmark",
+                    "href": 'http://localhost/fake/images/10',
+                },
+            ],
+        }
+        req = webob.Request.blank('/v1.1/fake/servers/detail')
+        res = req.get_response(fakes.wsgi_app())
+        print res.body
+        self.fail()
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
