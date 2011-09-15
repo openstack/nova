@@ -217,7 +217,6 @@ class ViewBuilderV11(ViewBuilder):
 
     def build_list(self, server_objs, is_detail=False, **kwargs):
         limit = kwargs.get('limit', None)
-        print "BUILD LIST 11", limit
         servers = []
         servers_links = []
 
@@ -225,7 +224,6 @@ class ViewBuilderV11(ViewBuilder):
             servers.append(self.build(server_obj, is_detail)['server'])
 
         if (len(servers) and limit) and (limit == len(servers)):
-            print "LIMIT SET"
             next_link = self.generate_next_link(servers[-1]['id'],
                                                 limit, is_detail)
             servers_links = [dict(rel='next', href=next_link)]
