@@ -946,18 +946,22 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
                                                   'security_group')
                     group_elem.set('name', group['name'])
 
-        for link in server_dict.get('links', []):
-            elem = etree.SubElement(server_elem,
+        self._populate_links(server_elem, server_dict.get('links', []))
+
+    def _populate_links(self, parent, links):
+        for link in links:
+            elem = etree.SubElement(parent,
                                     '{%s}link' % xmlutil.XMLNS_ATOM)
             elem.set('rel', link['rel'])
             elem.set('href', link['href'])
-        return server_elem
 
     def index(self, servers_dict):
         servers = etree.Element('servers', nsmap=self.NSMAP)
         for server_dict in servers_dict['servers']:
             server = etree.SubElement(servers, 'server')
             self._populate_server(server, server_dict, False)
+
+        self._populate_links(servers, servers_dict.get('servers_links', []))
         return self._to_xml(servers)
 
     def detail(self, servers_dict):

@@ -9,4 +9,7 @@
       </zeroOrMore>
     </element>
   </zeroOrMore>
+  <zeroOrMore>
+    <externalRef href="../atom-link.rng"/>
+  </zeroOrMore>
 </element>

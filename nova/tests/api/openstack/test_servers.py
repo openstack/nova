@@ -1174,7 +1174,6 @@ class ServersTest(test.TestCase):
         servers_links = json.loads(res.body)['servers_links']
         print res
         print servers_links
-        self.fail()
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
         self.assertEqual(servers_links[0]['href'],
@@ -2471,41 +2470,6 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/fake/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         print res.body
-        self.fail()
-        res_dict = json.loads(res.body)
-
-        for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], i)
-            self.assertEqual(s['hostId'], '')
-            self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['image'], expected_image)
-            self.assertEqual(s['flavor'], expected_flavor)
-            self.assertEqual(s['status'], 'BUILD')
-            self.assertEqual(s['metadata']['seq'], str(i))
-
-    def test_get_all_server_details_v1_1_with_limit(self):
-        expected_flavor = {
-            "id": "1",
-            "links": [
-                {
-                    "rel": "bookmark",
-                    "href": 'http://localhost/fake/flavors/1',
-                },
-            ],
-        }
-        expected_image = {
-            "id": "10",
-            "links": [
-                {
-                    "rel": "bookmark",
-                    "href": 'http://localhost/fake/images/10',
-                },
-            ],
-        }
-        req = webob.Request.blank('/v1.1/fake/servers/detail')
-        res = req.get_response(fakes.wsgi_app())
-        print res.body
-        self.fail()
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
@@ -4180,6 +4144,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_HREF = 'http://localhost/v1.1/servers/123'
+    SERVER_NEXT = 'http://localhost/v1.1/servers?limit=%s&marker=%s'
     SERVER_BOOKMARK = 'http://localhost/servers/123'
     IMAGE_BOOKMARK = 'http://localhost/images/5'
     FLAVOR_BOOKMARK = 'http://localhost/flavors/1'
@@ -4597,6 +4562,74 @@ class ServerXMLSerializationTest(test.TestCase):
             for i, link in enumerate(server_dict['links']):
                 for key, value in link.items():
                     self.assertEqual(link_nodes[i].get(key), value)
+
+    def test_index_with_servers_links(self):
+        serializer = servers.ServerXMLSerializer()
+
+        expected_server_href = 'http://localhost/v1.1/servers/1'
+        expected_server_next = self.SERVER_NEXT % (2, 2)
+        expected_server_bookmark = 'http://localhost/servers/1'
+        expected_server_href_2 = 'http://localhost/v1.1/servers/2'
+        expected_server_bookmark_2 = 'http://localhost/servers/2'
+        fixture = {"servers": [
+            {
+                "id": 1,
+                "name": "test_server",
+                'links': [
+                    {
+                        'href': expected_server_href,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': expected_server_bookmark,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+            {
+                "id": 2,
+                "name": "test_server_2",
+                'links': [
+                    {
+                        'href': expected_server_href_2,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': expected_server_bookmark_2,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+        ],
+        "servers_links": [
+            {
+                'rel': 'next',
+                'href': expected_server_next,
+            },
+        ]}
+
+        output = serializer.serialize(fixture, 'index')
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'servers_index')
+        server_elems = root.findall('{0}server'.format(NS))
+        self.assertEqual(len(server_elems), 2)
+        for i, server_elem in enumerate(server_elems):
+            server_dict = fixture['servers'][i]
+            for key in ['name', 'id']:
+                self.assertEqual(server_elem.get(key), str(server_dict[key]))
+
+            link_nodes = server_elem.findall('{0}link'.format(ATOMNS))
+            self.assertEqual(len(link_nodes), 2)
+            for i, link in enumerate(server_dict['links']):
+                for key, value in link.items():
+                    self.assertEqual(link_nodes[i].get(key), value)
+
+        # Check servers_links
+        servers_links = root.findall('{0}link'.format(ATOMNS))
+        for i, link in enumerate(fixture['servers_links']):
+            for key, value in link.items():
+                self.assertEqual(servers_links[i].get(key), value)
 
     def test_detail(self):
         serializer = servers.ServerXMLSerializer()
