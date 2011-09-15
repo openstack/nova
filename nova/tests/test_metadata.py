@@ -19,13 +19,11 @@
 """Tests for the testing the metadata code."""
 
 import base64
-import httplib
 
 import webob
 
 from nova import exception
 from nova import test
-from nova import wsgi
 from nova.api.ec2 import metadatarequesthandler
 from nova.db.sqlalchemy import api
 
@@ -75,16 +73,13 @@ class MetadataTestCase(test.TestCase):
         request.remote_addr = "127.0.0.1"
         return request.get_response(self.app).body
 
-    @test.skip_test("need to fix remote IP filtering")
     def test_base(self):
         self.assertEqual(self.request('/'), 'meta-data/\nuser-data')
 
-    @test.skip_test("need to fix remote IP filtering")
     def test_user_data(self):
         self.instance['user_data'] = base64.b64encode('happy')
         self.assertEqual(self.request('/user-data'), 'happy')
 
-    @test.skip_test("need to fix remote IP filtering")
     def test_security_groups(self):
         def sg_get(*args, **kwargs):
             return [{'name': 'default'}, {'name': 'other'}]
@@ -92,7 +87,6 @@ class MetadataTestCase(test.TestCase):
         self.assertEqual(self.request('/meta-data/security-groups'),
                          'default\nother')
 
-    @test.skip_test("need to fix remote IP filtering")
     def test_user_data_non_existing_fixed_address(self):
         self.stubs.Set(api, 'instance_get_all_by_filters',
                        return_non_existing_server_by_address)
@@ -101,7 +95,6 @@ class MetadataTestCase(test.TestCase):
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 404)
 
-    @test.skip_test("need to fix remote IP filtering")
     def test_user_data_none_fixed_address(self):
         self.stubs.Set(api, 'instance_get_all_by_filters',
                        return_non_existing_server_by_address)
@@ -110,14 +103,12 @@ class MetadataTestCase(test.TestCase):
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 500)
 
-    @test.skip_test("need to fix remote IP filtering")
     def test_user_data_invalid_url(self):
         request = webob.Request.blank('/user-data-invalid')
         request.remote_addr = "127.0.0.1"
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 404)
 
-    @test.skip_test("need to fix remote IP filtering")
     def test_user_data_with_use_forwarded_header(self):
         self.instance['user_data'] = ENCODE_USER_DATA_STRING
         self.flags(use_forwarded_for=True)

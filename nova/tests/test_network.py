@@ -629,7 +629,6 @@ class CommonNetworkTestCase(test.TestCase):
                 None]
         self.assertTrue(manager.create_networks(*args))
 
-
     def test_get_instance_uuids_by_ip_regex(self):
         manager = fake_network.FakeNetworkManager()
         _vifs = manager.db.virtual_interface_get_all(None)
@@ -681,7 +680,8 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(len(res), len(_vifs))
 
         # Doesn't exist
-        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': '.*1034.*'})
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                      {'ip6': '.*1034.*'})
         self.assertFalse(res)
 
         # Get instance 1

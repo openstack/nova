@@ -110,7 +110,6 @@ class FakeNetworkManager(network_manager.NetworkManager):
             return [{'uuid': str(utils.gen_uuid()),
                      'id': id} for id in ids]
 
-
     def __init__(self):
         self.db = self.FakeDB()
         self.deallocate_called = None
