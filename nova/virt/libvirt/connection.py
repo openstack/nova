@@ -584,6 +584,10 @@ class LibvirtConnection(driver.ComputeDriver):
     def poll_rescued_instances(self, timeout):
         pass
 
+    @exception.wrap_exception()
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
+        pass
+
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()

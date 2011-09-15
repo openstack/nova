@@ -469,6 +469,11 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
+        """Poll for unconfirmed resizes"""
+        # TODO(Vek): Need to pass context in for access to auth_token
+        raise NotImplementedError()
+
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""
         raise NotImplementedError()
