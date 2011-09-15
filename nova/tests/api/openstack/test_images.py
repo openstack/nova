@@ -77,14 +77,14 @@ class ImagesTest(test.TestCase):
         response_dict = json.loads(response.body)
         response_list = response_dict["images"]
 
-        expected = [{'id': '123', 'name': 'public image'},
-                    {'id': '124', 'name': 'queued snapshot'},
-                    {'id': '125', 'name': 'saving snapshot'},
-                    {'id': '126', 'name': 'active snapshot'},
-                    {'id': '127', 'name': 'killed snapshot'},
-                    {'id': '128', 'name': 'deleted snapshot'},
-                    {'id': '129', 'name': 'pending_delete snapshot'},
-                    {'id': '130', 'name': None}]
+        expected = [{'id': 123, 'name': 'public image'},
+                    {'id': 124, 'name': 'queued snapshot'},
+                    {'id': 125, 'name': 'saving snapshot'},
+                    {'id': 126, 'name': 'active snapshot'},
+                    {'id': 127, 'name': 'killed snapshot'},
+                    {'id': 128, 'name': 'deleted snapshot'},
+                    {'id': 129, 'name': 'pending_delete snapshot'},
+                    {'id': 130, 'name': None}]
 
         self.assertDictListMatch(response_list, expected)
 
@@ -99,7 +99,7 @@ class ImagesTest(test.TestCase):
 
         expected_image = {
             "image": {
-                "id": "123",
+                "id": 123,
                 "name": "public image",
                 "updated": NOW_API_FORMAT,
                 "created": NOW_API_FORMAT,
@@ -131,7 +131,7 @@ class ImagesTest(test.TestCase):
                 "status": "SAVING",
                 "progress": 0,
                 'server': {
-                    'id': 42,
+                    'id': '42',
                     "links": [{
                         "rel": "self",
                         "href": server_href,
@@ -224,12 +224,10 @@ class ImagesTest(test.TestCase):
 
         expected = minidom.parseString("""
             <itemNotFound code="404"
-                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
-                <message>
-                    Image not found.
-                </message>
+                 xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+                <message>Image not found.</message>
             </itemNotFound>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n", ""))
 
         actual = minidom.parseString(response.body.replace("  ", ""))
 
@@ -261,12 +259,10 @@ class ImagesTest(test.TestCase):
         # because the element hasn't changed definition
         expected = minidom.parseString("""
             <itemNotFound code="404"
-                    xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <message>
-                    Image not found.
-                </message>
+                 xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <message>Image not found.</message>
             </itemNotFound>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n", ""))
 
         actual = minidom.parseString(response.body.replace("  ", ""))
 
@@ -406,7 +402,7 @@ class ImagesTest(test.TestCase):
         response_list = response_dict["images"]
 
         expected = [{
-            'id': '123',
+            'id': 123,
             'name': 'public image',
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
@@ -414,7 +410,7 @@ class ImagesTest(test.TestCase):
             'progress': 100,
         },
         {
-            'id': '124',
+            'id': 124,
             'name': 'queued snapshot',
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
@@ -422,7 +418,7 @@ class ImagesTest(test.TestCase):
             'progress': 0,
         },
         {
-            'id': '125',
+            'id': 125,
             'name': 'saving snapshot',
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
@@ -430,7 +426,7 @@ class ImagesTest(test.TestCase):
             'progress': 0,
         },
         {
-            'id': '126',
+            'id': 126,
             'name': 'active snapshot',
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
@@ -438,7 +434,7 @@ class ImagesTest(test.TestCase):
             'progress': 100,
         },
         {
-            'id': '127',
+            'id': 127,
             'name': 'killed snapshot',
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
@@ -446,7 +442,7 @@ class ImagesTest(test.TestCase):
             'progress': 0,
         },
         {
-            'id': '128',
+            'id': 128,
             'name': 'deleted snapshot',
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
@@ -454,7 +450,7 @@ class ImagesTest(test.TestCase):
             'progress': 0,
         },
         {
-            'id': '129',
+            'id': 129,
             'name': 'pending_delete snapshot',
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
@@ -462,7 +458,7 @@ class ImagesTest(test.TestCase):
             'progress': 0,
         },
         {
-            'id': '130',
+            'id': 130,
             'name': None,
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
@@ -511,7 +507,7 @@ class ImagesTest(test.TestCase):
             'status': 'SAVING',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -542,7 +538,7 @@ class ImagesTest(test.TestCase):
             'status': 'SAVING',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -573,7 +569,7 @@ class ImagesTest(test.TestCase):
             'status': 'ACTIVE',
             'progress': 100,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -604,7 +600,7 @@ class ImagesTest(test.TestCase):
             'status': 'ERROR',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -635,7 +631,7 @@ class ImagesTest(test.TestCase):
             'status': 'DELETED',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -666,7 +662,7 @@ class ImagesTest(test.TestCase):
             'status': 'DELETED',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -914,7 +910,7 @@ class ImagesTest(test.TestCase):
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         res = req.get_response(app)
         image_meta = json.loads(res.body)['image']
-        expected = {'id': '123', 'name': 'public image',
+        expected = {'id': 123, 'name': 'public image',
                     'updated': NOW_API_FORMAT,
                     'created': NOW_API_FORMAT, 'status': 'ACTIVE',
                     'progress': 100}
