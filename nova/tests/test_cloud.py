@@ -1540,7 +1540,9 @@ class CloudTestCase(test.TestCase):
                     'ephemeral0': '/dev/sdb',
                     'swap': '/dev/sdc',
                     'ephemeral1': '/dev/sdd',
-                    'ephemeral2': '/dev/sd3'}
+                    'ephemeral2': '/dev/sd3',
+                    'ebs0': '/dev/sdh',
+                    'ebs1': '/dev/sdi'}
 
         self.assertEqual(self.cloud._format_instance_mapping(ctxt,
                                                              instance_ref0),
