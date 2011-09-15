@@ -409,7 +409,7 @@ def bind_floating_ip(floating_ip, check_exit_code=True):
     if FLAGS.send_arp_for_ha:
         _execute('sudo', 'arping', '-U', floating_ip,
                  '-A', '-I', FLAGS.public_interface,
-                 '-c', 1, check_exit_code=False)
+                 '-c', 1, run_as_root=True, check_exit_code=False)
 
 
 def unbind_floating_ip(floating_ip):
@@ -484,7 +484,7 @@ def initialize_gateway_device(dev, network_ref):
     if FLAGS.send_arp_for_ha:
         _execute('sudo', 'arping', '-U', network_ref['gateway'],
                   '-A', '-I', dev,
-                  '-c', 1, check_exit_code=False)
+                  '-c', 1, run_as_root=True, check_exit_code=False)
     if(FLAGS.use_ipv6):
         _execute('ip', '-f', 'inet6', 'addr',
                      'change', network_ref['cidr_v6'],
