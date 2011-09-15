@@ -219,6 +219,11 @@ class API(base.Base):
                                                                  image_href)
         image = image_service.show(context, image_id)
 
+        if instance_type['memory_mb'] < int(image.get('min_ram', 0)):
+            raise exception.InstanceTypeMemoryTooSmall()
+        if instance_type['local_gb'] < int(image.get('min_disk', 0)):
+            raise exception.InstanceTypeDiskTooSmall()
+
         config_drive_id = None
         if config_drive and config_drive is not True:
             # config_drive is volume id

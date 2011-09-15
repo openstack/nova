@@ -404,7 +404,7 @@ def _limit_attributes(image_meta):
                         'container_format', 'checksum', 'id',
                         'name', 'created_at', 'updated_at',
                         'deleted_at', 'deleted', 'status',
-                        'is_public']
+                        'min_disk', 'min_ram', 'is_public']
     output = {}
     for attr in IMAGE_ATTRIBUTES:
         output[attr] = image_meta.get(attr)

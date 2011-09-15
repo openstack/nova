@@ -810,3 +810,11 @@ class ZoneRequestError(Error):
         if message is None:
             message = _("1 or more Zones could not complete the request")
         super(ZoneRequestError, self).__init__(message=message)
+
+
+class InstanceTypeMemoryTooSmall(NovaException):
+    message = _("Instance type's memory is too small for requested image.")
+
+
+class InstanceTypeDiskTooSmall(NovaException):
+    message = _("Instance type's disk is too small for requested image.")

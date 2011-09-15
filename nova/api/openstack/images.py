@@ -41,6 +41,8 @@ SUPPORTED_FILTERS = {
     'changes-since': 'changes-since',
     'server': 'property-instance_ref',
     'type': 'property-image_type',
+    'minRam': 'min_ram',
+    'minDisk': 'min_disk',
 }
 
 
@@ -239,6 +241,10 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
             image_elem.set('status', str(image_dict['status']))
             if 'progress' in image_dict:
                 image_elem.set('progress', str(image_dict['progress']))
+            if 'minRam' in image_dict:
+                image_elem.set('minRam', str(image_dict['minRam']))
+            if 'minDisk' in image_dict:
+                image_elem.set('minDisk', str(image_dict['minDisk']))
             if 'server' in image_dict:
                 server_elem = self._create_server_node(image_dict['server'])
                 image_elem.append(server_elem)
