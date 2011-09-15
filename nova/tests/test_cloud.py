@@ -315,25 +315,47 @@ class CloudTestCase(test.TestCase):
                                        {'project_id': 'someuser',
                                         'name': 'othergroup2'})
         authz = self.cloud.authorize_security_group_ingress
-        kwargs = {'ip_permissions': [{
-                  'groups': {'1': {'user_id': u'someuser',
-                                   'group_name': u'somegroup1'},
-                             '2': {'user_id': u'someuser',
-                                   'group_name': u'othergroup2'}}}]}
+        kwargs = {'ip_permissions': [
+                  {'groups': {'1': {'user_id': u'someuser',
+                                    'group_name': u'somegroup1'}}},
+                  {'ip_protocol': 'tcp',
+                   'from_port': 80,
+                   'to_port': 80,
+                   'groups': {'1': {'user_id': u'someuser',
+                                    'group_name': u'othergroup2'}}}]}
         self.assertTrue(authz(self.context, group_name=sec1['name'], **kwargs))
         describe = self.cloud.describe_security_groups
         groups = describe(self.context, group_name=['test'])
         self.assertEquals(len(groups['securityGroupInfo']), 1)
-        for proto, min_port, max_port in (('icmp', -1, -1),
-                                          ('udp', 1, 65536),
-                                          ('tcp', 1, 65535)):
-            rules = filter(lambda g:g['ipProtocol'] == proto,
-                           groups['securityGroupInfo'][0]['ipPermissions'])
-            self.assertEquals(len(rules), 2,
-                              "Expected 2 rules for protocol %s" % proto)
-            for rule in rules:
-                self.assertEquals(rule['fromPort'], min_port)
-                self.assertEquals(rule['toPort'], max_port)
+        actual_rules = groups['securityGroupInfo'][0]['ipPermissions']
+        self.assertEquals(len(actual_rules), 4)
+        expected_rules = [{'fromPort': -1,
+                           'groups': [{'groupName': 'somegroup1',
+                                       'userId': 'someuser'}],
+                           'ipProtocol': 'icmp',
+                           'ipRanges': [],
+                           'toPort': -1},
+                          {'fromPort': 1,
+                           'groups': [{'groupName': u'somegroup1',
+                                       'userId': u'someuser'}],
+                           'ipProtocol': 'tcp',
+                           'ipRanges': [],
+                           'toPort': 65535},
+                          {'fromPort': 1,
+                           'groups': [{'groupName': u'somegroup1',
+                                       'userId': u'someuser'}],
+                           'ipProtocol': 'udp',
+                           'ipRanges': [],
+                           'toPort': 65536},
+                          {'fromPort': 80,
+                           'groups': [{'groupName': u'othergroup2',
+                                       'userId': u'someuser'}],
+                           'ipProtocol': u'tcp',
+                           'ipRanges': [],
+                           'toPort': 80}]
+        for rule in expected_rules:
+            self.assertTrue(rule in actual_rules)
+
         db.security_group_destroy(self.context, sec3['id'])
         db.security_group_destroy(self.context, sec2['id'])
         db.security_group_destroy(self.context, sec1['id'])
