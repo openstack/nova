@@ -1297,9 +1297,9 @@ def instance_get_all_by_filters(context, filters, instance_uuids=None):
     if not uuids:
         return []
 
-    instances = _build_instance_get(context, session=session).\
-                    filter(models.Instance.uuid.in_(uuids)).\
-                    all()
+    instances = session.query(models.Instance).\
+                        filter(models.Instance.uuid.in_(uuids)).\
+                        all()
 
     # Now filter on everything else for regexp matching..
     # For filters not in the list, we'll attempt to use the filter_name
