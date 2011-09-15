@@ -26,13 +26,14 @@ from nova import exception
 from nova import test
 from nova.api.ec2 import metadatarequesthandler
 from nova.db.sqlalchemy import api
+from nova.tests import fake_network
 
 
 USER_DATA_STRING = ("This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
 
 
-def return_non_existing_server_by_address(context, address):
+def return_non_existing_server_by_address(context, address, *args, **kwarg):
     raise exception.NotFound()
 
 
@@ -67,6 +68,10 @@ class MetadataTestCase(test.TestCase):
         self.stubs.Set(api, 'instance_get_all_by_filters', instance_get_list)
         self.stubs.Set(api, 'instance_get_floating_address', floating_get)
         self.app = metadatarequesthandler.MetadataRequestHandler()
+        network_manager = fake_network.FakeNetworkManager()
+        self.stubs.Set(self.app.cc.network_api,
+                       'get_instance_uuids_by_ip_filter',
+                       network_manager.get_instance_uuids_by_ip_filter)
 
     def request(self, relative_url):
         request = webob.Request.blank(relative_url)
