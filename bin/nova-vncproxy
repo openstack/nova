@@ -107,10 +107,13 @@ if __name__ == "__main__":
     else:
         with_auth = auth.VNCNovaAuthMiddleware(with_logging)
 
-    server = wsgi.Server("VNC Proxy",
-                         with_auth,
-                         host=FLAGS.vncproxy_host,
-                         port=FLAGS.vncproxy_port)
-    server.start_tcp(handle_flash_socket_policy, 843, host=FLAGS.vncproxy_host)
-    service.serve(server)
+    wsgi_server = wsgi.Server("VNC Proxy",
+                              with_auth,
+                              host=FLAGS.vncproxy_host,
+                              port=FLAGS.vncproxy_port)
+    wsgi_server.start_tcp(handle_flash_socket_policy,
+                          843,
+                          host=FLAGS.vncproxy_host)
+    server = service.Service.create(binary='nova-vncproxy')
+    service.serve(wsgi_server, server)
     service.wait()

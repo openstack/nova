@@ -1,5 +1,22 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2011 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 import json
+from lxml import etree
 import webob
 from xml.dom import minidom
 from xml.parsers import expat
@@ -18,6 +35,21 @@ XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
 LOG = logging.getLogger('nova.api.openstack.wsgi')
 
+# The vendor content types should serialize identically to the non-vendor
+# content types. So to avoid littering the code with both options, we
+# map the vendor to the other when looking up the type
+_CONTENT_TYPE_MAP = {
+    'application/vnd.openstack.compute+json': 'application/json',
+    'application/vnd.openstack.compute+xml': 'application/xml',
+}
+
+_SUPPORTED_CONTENT_TYPES = (
+    'application/json',
+    'application/vnd.openstack.compute+json',
+    'application/xml',
+    'application/vnd.openstack.compute+xml',
+)
+
 
 class Request(webob.Request):
     """Add some Openstack API-specific logic to the base webob.Request."""
@@ -29,7 +61,7 @@ class Request(webob.Request):
 
         """
         supported_content_types = supported_content_types or \
-            ('application/json', 'application/xml')
+            _SUPPORTED_CONTENT_TYPES
 
         parts = self.path.rsplit('.', 1)
         if len(parts) > 1:
@@ -51,7 +83,7 @@ class Request(webob.Request):
         if not "Content-Type" in self.headers:
             return None
 
-        allowed_types = ("application/xml", "application/json")
+        allowed_types = _SUPPORTED_CONTENT_TYPES
         content_type = self.content_type
 
         if content_type not in allowed_types:
@@ -191,7 +223,7 @@ class RequestDeserializer(object):
                  supported_content_types=None):
 
         self.supported_content_types = supported_content_types or \
-                ('application/json', 'application/xml')
+                _SUPPORTED_CONTENT_TYPES
 
         self.body_deserializers = {
             'application/xml': XMLDeserializer(),
@@ -249,7 +281,8 @@ class RequestDeserializer(object):
 
     def get_body_deserializer(self, content_type):
         try:
-            return self.body_deserializers[content_type]
+            ctype = _CONTENT_TYPE_MAP.get(content_type, content_type)
+            return self.body_deserializers[ctype]
         except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
 
@@ -392,6 +425,10 @@ class XMLDictSerializer(DictSerializer):
             link_nodes.append(link_node)
         return link_nodes
 
+    def _to_xml(self, root):
+        """Convert the xml object to an xml string."""
+        return etree.tostring(root, encoding='UTF-8', xml_declaration=True)
+
 
 class ResponseHeadersSerializer(ActionDispatcher):
     """Default response headers serialization"""
@@ -439,7 +476,8 @@ class ResponseSerializer(object):
 
     def get_body_serializer(self, content_type):
         try:
-            return self.body_serializers[content_type]
+            ctype = _CONTENT_TYPE_MAP.get(content_type, content_type)
+            return self.body_serializers[ctype]
         except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
 

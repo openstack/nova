@@ -16,6 +16,7 @@
 #    under the License.
 
 import functools
+from lxml import etree
 import re
 import urlparse
 from xml.dom import minidom
@@ -27,7 +28,9 @@ from nova import flags
 from nova import log as logging
 from nova import quota
 from nova.api.openstack import wsgi
-from nova.compute import power_state as compute_power_state
+from nova.api.openstack import xmlutil
+from nova.compute import vm_states
+from nova.compute import task_states
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
@@ -38,36 +41,61 @@ XML_NS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
 
-_STATUS_MAP = {
-    None: 'BUILD',
-    compute_power_state.NOSTATE: 'BUILD',
-    compute_power_state.RUNNING: 'ACTIVE',
-    compute_power_state.BLOCKED: 'ACTIVE',
-    compute_power_state.SUSPENDED: 'SUSPENDED',
-    compute_power_state.PAUSED: 'PAUSED',
-    compute_power_state.SHUTDOWN: 'SHUTDOWN',
-    compute_power_state.SHUTOFF: 'SHUTOFF',
-    compute_power_state.CRASHED: 'ERROR',
-    compute_power_state.FAILED: 'ERROR',
-    compute_power_state.BUILDING: 'BUILD',
+_STATE_MAP = {
+    vm_states.ACTIVE: {
+        'default': 'ACTIVE',
+        task_states.REBOOTING: 'REBOOT',
+        task_states.UPDATING_PASSWORD: 'PASSWORD',
+        task_states.RESIZE_VERIFY: 'VERIFY_RESIZE',
+    },
+    vm_states.BUILDING: {
+        'default': 'BUILD',
+    },
+    vm_states.REBUILDING: {
+        'default': 'REBUILD',
+    },
+    vm_states.STOPPED: {
+        'default': 'STOPPED',
+    },
+    vm_states.MIGRATING: {
+        'default': 'MIGRATING',
+    },
+    vm_states.RESIZING: {
+        'default': 'RESIZE',
+    },
+    vm_states.PAUSED: {
+        'default': 'PAUSED',
+    },
+    vm_states.SUSPENDED: {
+        'default': 'SUSPENDED',
+    },
+    vm_states.RESCUED: {
+        'default': 'RESCUE',
+    },
+    vm_states.ERROR: {
+        'default': 'ERROR',
+    },
+    vm_states.DELETED: {
+        'default': 'DELETED',
+    },
 }
 
 
-def status_from_power_state(power_state):
-    """Map the power state to the server status string"""
-    return _STATUS_MAP[power_state]
+def status_from_state(vm_state, task_state='default'):
+    """Given vm_state and task_state, return a status string."""
+    task_map = _STATE_MAP.get(vm_state, dict(default='UNKNOWN_STATE'))
+    status = task_map.get(task_state, task_map['default'])
+    LOG.debug("Generated %(status)s from vm_state=%(vm_state)s "
+              "task_state=%(task_state)s." % locals())
+    return status
 
 
-def power_states_from_status(status):
-    """Map the server status string to a list of power states"""
-    power_states = []
-    for power_state, status_map in _STATUS_MAP.iteritems():
-        # Skip the 'None' state
-        if power_state is None:
-            continue
-        if status.lower() == status_map.lower():
-            power_states.append(power_state)
-    return power_states
+def vm_state_from_status(status):
+    """Map the server status string to a vm state."""
+    for state, task_map in _STATE_MAP.iteritems():
+        status_string = task_map.get("default")
+        if status.lower() == status_string.lower():
+            return state
 
 
 def get_pagination_params(request):
@@ -159,30 +187,16 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
 
 
 def get_id_from_href(href):
-    """Return the id portion of a url as an int.
+    """Return the id or uuid portion of a url.
 
     Given: 'http://www.foo.com/bar/123?q=4'
-    Returns: 123
+    Returns: '123'
 
-    In order to support local hrefs, the href argument can be just an id:
-    Given: '123'
-    Returns: 123
+    Given: 'http://www.foo.com/bar/abc123?q=4'
+    Returns: 'abc123'
 
     """
-    LOG.debug(_("Attempting to treat %(href)s as an integer ID.") % locals())
-
-    try:
-        return int(href)
-    except ValueError:
-        pass
-
-    LOG.debug(_("Attempting to treat %(href)s as a URL.") % locals())
-
-    try:
-        return int(urlparse.urlsplit(href).path.split('/')[-1])
-    except ValueError as error:
-        LOG.debug(_("Failed to parse ID from %(href)s: %(error)s") % locals())
-        raise
+    return urlparse.urlsplit("%s" % href).path.split('/')[-1]
 
 
 def remove_version_from_href(href):
@@ -282,54 +296,48 @@ class MetadataHeadersSerializer(wsgi.ResponseHeadersSerializer):
 
 
 class MetadataXMLSerializer(wsgi.XMLDictSerializer):
+
+    NSMAP = {None: xmlutil.XMLNS_V11}
+
     def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(MetadataXMLSerializer, self).__init__(xmlns=xmlns)
 
-    def _meta_item_to_xml(self, doc, key, value):
-        node = doc.createElement('meta')
-        doc.appendChild(node)
-        node.setAttribute('key', '%s' % key)
-        text = doc.createTextNode('%s' % value)
-        node.appendChild(text)
-        return node
+    def populate_metadata(self, metadata_elem, meta_dict):
+        for (key, value) in meta_dict.items():
+            elem = etree.SubElement(metadata_elem, 'meta')
+            elem.set('key', str(key))
+            elem.text = value
 
-    def meta_list_to_xml(self, xml_doc, meta_items):
-        container_node = xml_doc.createElement('metadata')
-        for (key, value) in meta_items:
-            item_node = self._meta_item_to_xml(xml_doc, key, value)
-            container_node.appendChild(item_node)
-        return container_node
-
-    def _meta_list_to_xml_string(self, metadata_dict):
-        xml_doc = minidom.Document()
-        items = metadata_dict['metadata'].items()
-        container_node = self.meta_list_to_xml(xml_doc, items)
-        xml_doc.appendChild(container_node)
-        self._add_xmlns(container_node)
-        return xml_doc.toxml('UTF-8')
+    def _populate_meta_item(self, meta_elem, meta_item_dict):
+        """Populate a meta xml element from a dict."""
+        (key, value) = meta_item_dict.items()[0]
+        meta_elem.set('key', str(key))
+        meta_elem.text = value
 
     def index(self, metadata_dict):
-        return self._meta_list_to_xml_string(metadata_dict)
+        metadata = etree.Element('metadata', nsmap=self.NSMAP)
+        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
+        return self._to_xml(metadata)
 
     def create(self, metadata_dict):
-        return self._meta_list_to_xml_string(metadata_dict)
+        metadata = etree.Element('metadata', nsmap=self.NSMAP)
+        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
+        return self._to_xml(metadata)
 
     def update_all(self, metadata_dict):
-        return self._meta_list_to_xml_string(metadata_dict)
-
-    def _meta_item_to_xml_string(self, meta_item_dict):
-        xml_doc = minidom.Document()
-        item_key, item_value = meta_item_dict.items()[0]
-        item_node = self._meta_item_to_xml(xml_doc, item_key, item_value)
-        xml_doc.appendChild(item_node)
-        self._add_xmlns(item_node)
-        return xml_doc.toxml('UTF-8')
+        metadata = etree.Element('metadata', nsmap=self.NSMAP)
+        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
+        return self._to_xml(metadata)
 
     def show(self, meta_item_dict):
-        return self._meta_item_to_xml_string(meta_item_dict['meta'])
+        meta = etree.Element('meta', nsmap=self.NSMAP)
+        self._populate_meta_item(meta, meta_item_dict['meta'])
+        return self._to_xml(meta)
 
     def update(self, meta_item_dict):
-        return self._meta_item_to_xml_string(meta_item_dict['meta'])
+        meta = etree.Element('meta', nsmap=self.NSMAP)
+        self._populate_meta_item(meta, meta_item_dict['meta'])
+        return self._to_xml(meta)
 
     def default(self, *args, **kwargs):
         return ''

@@ -221,7 +221,14 @@ class VolumeDriver(object):
 
 
 class AOEDriver(VolumeDriver):
-    """Implements AOE specific volume commands."""
+    """WARNING! Deprecated. This driver will be removed in Essex. Its use
+    is not recommended.
+
+    Implements AOE specific volume commands."""
+
+    def __init__(self, *args, **kwargs):
+        LOG.warn(_("AOEDriver is deprecated and will be removed in Essex"))
+        super(AOEDriver, self).__init__(*args, **kwargs)
 
     def ensure_export(self, context, volume):
         # NOTE(vish): we depend on vblade-persist for recreating exports
