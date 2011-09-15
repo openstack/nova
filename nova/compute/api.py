@@ -202,7 +202,8 @@ class API(base.Base):
         self._check_injected_file_quota(context, injected_files)
         self._check_requested_networks(context, requested_networks)
 
-        (image_service, image_id) = nova.image.get_image_service(image_href)
+        (image_service, image_id) = nova.image.get_image_service(context,
+                                                                 image_href)
         image = image_service.show(context, image_id)
 
         config_drive_id = None
@@ -1042,13 +1043,14 @@ class API(base.Base):
         return recv_meta
 
     @scheduler_api.reroute_compute("reboot")
-    def reboot(self, context, instance_id):
+    def reboot(self, context, instance_id, reboot_type):
         """Reboot the given instance."""
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.REBOOTING)
-        self._cast_compute_message('reboot_instance', context, instance_id)
+        self._cast_compute_message('reboot_instance', context, instance_id,
+                params={'reboot_type': reboot_type})
 
     @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, admin_password,
