@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import dialect, Column, Integer, MetaData, Table
+from sqlalchemy import Column, Integer, MetaData, Table
 from migrate import ForeignKeyConstraint
 
 from nova import log as logging
@@ -36,6 +36,7 @@ def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
+    dialect = migrate_engine.url.get_dialect().name
     try:
         if not dialect.startswith('sqlite'):
             ForeignKeyConstraint(columns=[vifs.c.instance_id],
@@ -48,6 +49,7 @@ def upgrade(migrate_engine):
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
     meta.bind = migrate_engine
+    dialect = migrate_engine.url.get_dialect().name
     try:
         if not dialect.startswith('sqlite'):
             ForeignKeyConstraint(columns=[vifs.c.instance_id],
