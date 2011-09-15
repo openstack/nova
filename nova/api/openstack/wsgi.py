@@ -348,7 +348,7 @@ class XMLDictSerializer(DictSerializer):
 
     def to_xml_string(self, node, has_atom=False):
         self._add_xmlns(node, has_atom)
-        return node.toprettyxml(indent='    ', encoding='UTF-8')
+        return node.toxml('UTF-8')
 
     #NOTE (ameade): the has_atom should be removed after all of the
     # xml serializers and view builders have been updated to the current

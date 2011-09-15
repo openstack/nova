@@ -224,12 +224,10 @@ class ImagesTest(test.TestCase):
 
         expected = minidom.parseString("""
             <itemNotFound code="404"
-                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
-                <message>
-                    Image not found.
-                </message>
+                 xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+                <message>Image not found.</message>
             </itemNotFound>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n", ""))
 
         actual = minidom.parseString(response.body.replace("  ", ""))
 
@@ -261,12 +259,10 @@ class ImagesTest(test.TestCase):
         # because the element hasn't changed definition
         expected = minidom.parseString("""
             <itemNotFound code="404"
-                    xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <message>
-                    Image not found.
-                </message>
+                 xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <message>Image not found.</message>
             </itemNotFound>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n", ""))
 
         actual = minidom.parseString(response.body.replace("  ", ""))
 
