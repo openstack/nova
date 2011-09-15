@@ -506,7 +506,7 @@ class FixedIpInvalid(Invalid):
     message = _("Fixed IP address %(address)s is invalid.")
 
 
-class NoMoreFixedIps(Error):
+class NoMoreFixedIps(NovaException):
     message = _("Zero fixed ips available.")
 
 
