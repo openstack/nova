@@ -18,6 +18,7 @@
 from nova import db
 from nova import exception
 from nova import flags
+from nova import utils
 from nova.network import manager as network_manager
 
 
@@ -104,9 +105,10 @@ class FakeNetworkManager(network_manager.NetworkManager):
                                     'floating_ips': [floats[2]]}]}]
             return vifs
 
-        def instance_get_uuids_by_ids(self, context):
+        def instance_get_uuids_by_ids(self, context, ids):
             # NOTE(jkoelker): This is just here until we can rely on UUIDs
-            pass
+            return [{'uuid': str(utils.gen_uuid()),
+                     'id': id} for id in ids]
 
 
     def __init__(self):
