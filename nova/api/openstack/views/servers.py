@@ -233,7 +233,6 @@ class ViewBuilderV11(ViewBuilder):
         reval = dict(servers=servers)
         if len(servers_links) > 0:
             reval['servers_links'] = servers_links
-            
         return reval
 
     def generate_next_link(self, server_id, limit, is_detail=False):
