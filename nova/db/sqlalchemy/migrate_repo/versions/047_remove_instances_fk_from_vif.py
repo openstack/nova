@@ -37,23 +37,32 @@ def upgrade(migrate_engine):
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
     dialect = migrate_engine.url.get_dialect().name
+    if dialect.startswith('sqlite'):
+        return
+
     try:
-        if not dialect.startswith('sqlite'):
-            ForeignKeyConstraint(columns=[vifs.c.instance_id],
-                                 refcolumns=[instances.c.id]).drop()
+        ForeignKeyConstraint(columns=[vifs.c.instance_id],
+                             refcolumns=[instances.c.id]).create()
     except Exception:
-        logging.error(_("foreign key constraint couldn't be removed"))
-        raise
+        try:
+               migrate_engine.execute("ALTER TABLE migrations DROP " \
+                                      "FOREIGN KEY " \
+                                      "`virtual_interfaces_ibfk_2`;")
+        except Exception:
+            logging.error(_("foreign key constraint couldn't be removed"))
+            raise
 
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
     meta.bind = migrate_engine
     dialect = migrate_engine.url.get_dialect().name
+    if dialect.startswith('sqlite'):
+        return
+
     try:
-        if not dialect.startswith('sqlite'):
-            ForeignKeyConstraint(columns=[vifs.c.instance_id],
-                                 refcolumns=[instances.c.id]).create()
+        ForeignKeyConstraint(columns=[vifs.c.instance_id],
+                             refcolumns=[instances.c.id]).create()
     except Exception:
         logging.error(_("foreign key constraint couldn't be added"))
         raise
