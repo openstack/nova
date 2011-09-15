@@ -174,12 +174,11 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         response = request.get_response(self.controller)
 
         expected = minidom.parseString("""
-            <limits
-                xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+            <limits xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate/>
                 <absolute/>
             </limits>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n", ""))
 
         body = minidom.parseString(response.body.replace("  ", ""))
 
@@ -192,17 +191,16 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         response = request.get_response(self.controller)
 
         expected = minidom.parseString("""
-            <limits
-                xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+            <limits xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate>
                     <limit URI="*" regex=".*" remaining="10" resetTime="0"
-                        unit="MINUTE" value="10" verb="GET"/>
+                         unit="MINUTE" value="10" verb="GET"/>
                     <limit URI="*" regex=".*" remaining="5" resetTime="0"
-                        unit="HOUR" value="5" verb="POST"/>
+                         unit="HOUR" value="5" verb="POST"/>
                 </rate>
                 <absolute/>
             </limits>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n", ""))
         body = minidom.parseString(response.body.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), body.toxml())
