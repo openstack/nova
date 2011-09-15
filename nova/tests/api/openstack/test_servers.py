@@ -1159,7 +1159,6 @@ class ServersTest(test.TestCase):
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
 
-
         qs = urlparse.urlparse(servers_links[0]['href']).query
         params = urlparse.parse_qs(qs)
         self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
