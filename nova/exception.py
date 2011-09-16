@@ -121,13 +121,6 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                     notifier.notify(publisher_id, temp_type, temp_level,
                                     payload)
 
-                if (not isinstance(e, Error) and
-                    not isinstance(e, NovaException)):
-                    #exc_type, exc_value, exc_traceback = sys.exc_info()
-                    LOG.exception(_('Uncaught exception'))
-                    #logging.error(traceback.extract_stack(exc_traceback))
-                    raise Error(str(e))
-
                 # re-raise original exception since it may have been clobbered
                 raise exc_info[0], exc_info[1], exc_info[2]
 
