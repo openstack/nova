@@ -68,6 +68,8 @@ flags.DEFINE_string('linuxnet_interface_driver',
                     'Driver used to create ethernet devices.')
 flags.DEFINE_string('linuxnet_ovs_integration_bridge',
                     'br-int', 'Name of Open vSwitch bridge used with linuxnet')
+flags.DEFINE_bool('send_arp_for_ha', False,
+                  'send gratuitous ARPs for HA setup')
 flags.DEFINE_bool('use_single_default_gateway',
                    False, 'Use single default gateway. Only first nic of vm'
                           ' will get default gateway from dhcp server')
@@ -407,6 +409,10 @@ def bind_floating_ip(floating_ip, check_exit_code=True):
     _execute('ip', 'addr', 'add', floating_ip,
              'dev', FLAGS.public_interface,
              run_as_root=True, check_exit_code=check_exit_code)
+    if FLAGS.send_arp_for_ha:
+        _execute('arping', '-U', floating_ip,
+                 '-A', '-I', FLAGS.public_interface,
+                 '-c', 1, run_as_root=True, check_exit_code=False)
 
 
 def unbind_floating_ip(floating_ip):
@@ -478,6 +484,10 @@ def initialize_gateway_device(dev, network_ref):
                             check_exit_code=False)
     if err and err != 'RTNETLINK answers: File exists\n':
         raise exception.Error('Failed to add ip: %s' % err)
+    if FLAGS.send_arp_for_ha:
+        _execute('arping', '-U', network_ref['gateway'],
+                  '-A', '-I', dev,
+                  '-c', 1, run_as_root=True, check_exit_code=False)
     if(FLAGS.use_ipv6):
         _execute('ip', '-f', 'inet6', 'addr',
                      'change', network_ref['cidr_v6'],
