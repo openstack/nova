@@ -17,8 +17,6 @@
 Handles all requests relating to schedulers.
 """
 
-import webob
-
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
 
