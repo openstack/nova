@@ -261,11 +261,13 @@ def floating_ip_disassociate(context, address):
     return IMPL.floating_ip_disassociate(context, address)
 
 
-def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
+def floating_ip_fixed_ip_associate(context, floating_address,
+                                   fixed_address, host):
     """Associate an floating ip to a fixed_ip by address."""
     return IMPL.floating_ip_fixed_ip_associate(context,
                                                floating_address,
-                                               fixed_address)
+                                               fixed_address,
+                                               host)
 
 
 def floating_ip_get_all(context):
@@ -324,13 +326,15 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 ####################
 
 
-def fixed_ip_associate(context, address, instance_id, network_id=None):
+def fixed_ip_associate(context, address, instance_id, network_id=None,
+                       reserved=False):
     """Associate fixed ip to instance.
 
     Raises if fixed ip is not available.
 
     """
-    return IMPL.fixed_ip_associate(context, address, instance_id, network_id)
+    return IMPL.fixed_ip_associate(context, address, instance_id, network_id,
+                                   reserved)
 
 
 def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
@@ -365,7 +369,7 @@ def fixed_ip_get_all(context):
 
 def fixed_ip_get_all_by_instance_host(context, host):
     """Get all allocated fixed ips filtered by instance host."""
-    return IMPL.fixed_ip_get_all_instance_by_host(context, host)
+    return IMPL.fixed_ip_get_all_by_instance_host(context, host)
 
 
 def fixed_ip_get_by_address(context, address):
