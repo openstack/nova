@@ -623,6 +623,11 @@ class VMOps(object):
         :param disk_type: values are 'primary' or 'cow'.
 
         """
+        # 0. Zero out the progress to begin
+        self._update_instance_progress(context, instance,
+                                       step=0,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
         # The primary VDI becomes the COW after the snapshot, and we can
