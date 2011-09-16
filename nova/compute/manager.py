@@ -1403,6 +1403,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Retry operation is necessary because continuously request comes,
         # concorrent request occurs to iptables, then it complains.
         network_info = self._get_instance_nw_info(context, instance_ref)
+
+        fixed_ips = [nw_info[1]['ips'] for nw_info in network_info]
+        if not fixed_ips:
+            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+
         max_retry = FLAGS.live_migration_retry_count
         for cnt in range(max_retry):
             try:
