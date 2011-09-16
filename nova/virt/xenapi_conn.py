@@ -189,14 +189,19 @@ class XenAPIConnection(driver.ComputeDriver):
         """Create VM instance"""
         self._vmops.spawn(context, instance, network_info)
 
-    def revert_migration(self, instance):
-        """Reverts a resize, powering back on the instance"""
-        self._vmops.revert_migration(instance)
+    def confirm_migration(self, migration, instance, network_info):
+        """Confirms a resize, destroying the source VM"""
+        # TODO(Vek): Need to pass context in for access to auth_token
+        self._vmops.confirm_migration(migration, instance, network_info)
 
-    def finish_migration(self, context, instance, disk_info, network_info,
-                         resize_instance=False):
+    def finish_revert_migration(self, instance):
+        """Finish reverting a resize, powering back on the instance"""
+        self._vmops.finish_revert_migration(instance)
+
+    def finish_migration(self, context, migration, instance, disk_info,
+                         network_info, resize_instance=False):
         """Completes a resize, turning on the migrated instance"""
-        self._vmops.finish_migration(context, instance, disk_info,
+        self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, resize_instance)
 
     def snapshot(self, context, instance, image_id):

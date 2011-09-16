@@ -695,6 +695,10 @@ class VMHelper(HelperBase):
         return is_pv
 
     @classmethod
+    def set_vm_name_label(cls, session, vm_ref, name_label):
+        session.get_xenapi().VM.set_name_label(vm_ref, name_label)
+
+    @classmethod
     def lookup(cls, session, name_label):
         """Look the instance i up, and returns it if available"""
         vm_refs = session.get_xenapi().VM.get_by_name_label(name_label)

@@ -76,7 +76,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
-        self.values = {'id': 1,
+        self.instance_values = {'id': 1,
                   'project_id': self.user_id,
                   'user_id': 'fake',
                   'image_ref': 1,
@@ -132,7 +132,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
-        instance = db.instance_create(self.context, self.values)
+        instance = db.instance_create(self.context, self.instance_values)
         vm = xenapi_fake.create_vm(instance.name, 'Running')
         result = conn.attach_volume(instance.name, volume['id'], '/dev/sdc')
 
@@ -152,7 +152,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
-        instance = db.instance_create(self.context, self.values)
+        instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance.name, 'Running')
         self.assertRaises(Exception,
                           conn.attach_volume,
@@ -369,7 +369,7 @@ class XenAPIVMTestCase(test.TestCase):
                     create_record=True, empty_dns=False):
         stubs.stubout_loopingcall_start(self.stubs)
         if create_record:
-            values = {'id': instance_id,
+            instance_values = {'id': instance_id,
                       'project_id': self.project_id,
                       'user_id': self.user_id,
                       'image_ref': image_ref,
@@ -378,7 +378,7 @@ class XenAPIVMTestCase(test.TestCase):
                       'instance_type_id': instance_type_id,
                       'os_type': os_type,
                       'architecture': architecture}
-            instance = db.instance_create(self.context, values)
+            instance = db.instance_create(self.context, instance_values)
         else:
             instance = db.instance_get(self.context, instance_id)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': True},
@@ -622,28 +622,28 @@ class XenAPIVMTestCase(test.TestCase):
         # Ensure that it will not unrescue a non-rescued instance.
         self.assertRaises(Exception, conn.unrescue, instance, None)
 
-    def test_revert_migration(self):
+    def test_finish_revert_migration(self):
         instance = self._create_instance()
 
         class VMOpsMock():
 
             def __init__(self):
-                self.revert_migration_called = False
+                self.finish_revert_migration_called = False
 
-            def revert_migration(self, instance):
-                self.revert_migration_called = True
+            def finish_revert_migration(self, instance):
+                self.finish_revert_migration_called = True
 
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
 
         conn = xenapi_conn.get_connection(False)
         conn._vmops = VMOpsMock()
-        conn.revert_migration(instance)
-        self.assertTrue(conn._vmops.revert_migration_called)
+        conn.finish_revert_migration(instance)
+        self.assertTrue(conn._vmops.finish_revert_migration_called)
 
     def _create_instance(self, instance_id=1, spawn=True):
         """Creates and spawns a test instance."""
         stubs.stubout_loopingcall_start(self.stubs)
-        values = {
+        instance_values = {
             'id': instance_id,
             'project_id': self.project_id,
             'user_id': self.user_id,
@@ -653,7 +653,7 @@ class XenAPIVMTestCase(test.TestCase):
             'instance_type_id': '3',  # m1.large
             'os_type': 'linux',
             'architecture': 'x86-64'}
-        instance = db.instance_create(self.context, values)
+        instance = db.instance_create(self.context, instance_values)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
                           {'broadcast': '192.168.0.255',
                            'dns': ['192.168.0.1'],
@@ -731,7 +731,7 @@ class XenAPIMigrateInstance(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        self.values = {'id': 1,
+        self.instance_values = {'id': 1,
                   'project_id': self.project_id,
                   'user_id': self.user_id,
                   'image_ref': 1,
@@ -742,22 +742,34 @@ class XenAPIMigrateInstance(test.TestCase):
                   'os_type': 'linux',
                   'architecture': 'x86-64'}
 
+        migration_values = {
+            'source_compute': 'nova-compute',
+            'dest_compute': 'nova-compute',
+            'dest_host': '10.127.5.114',
+            'status': 'post-migrating',
+            'instance_uuid': '15f23e6a-cc6e-4d22-b651-d9bdaac316f7',
+            'old_instance_type_id': 5,
+            'new_instance_type_id': 1
+        }
+        self.migration = db.migration_create(
+            context.get_admin_context(), migration_values)
+
         fake_utils.stub_out_utils_execute(self.stubs)
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
 
     def test_migrate_disk_and_power_off(self):
-        instance = db.instance_create(self.context, self.values)
+        instance = db.instance_create(self.context, self.instance_values)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(instance, '127.0.0.1')
 
     def test_revert_migrate(self):
-        instance = db.instance_create(self.context, self.values)
+        instance = db.instance_create(self.context, self.instance_values)
         self.called = False
         self.fake_vm_start_called = False
-        self.fake_revert_migration_called = False
+        self.fake_finish_revert_migration_called = False
 
         def fake_vm_start(*args, **kwargs):
             self.fake_vm_start_called = True
@@ -765,13 +777,13 @@ class XenAPIMigrateInstance(test.TestCase):
         def fake_vdi_resize(*args, **kwargs):
             self.called = True
 
-        def fake_revert_migration(*args, **kwargs):
-            self.fake_revert_migration_called = True
+        def fake_finish_revert_migration(*args, **kwargs):
+            self.fake_finish_revert_migration_called = True
 
         self.stubs.Set(stubs.FakeSessionForMigrationTests,
                 "VDI_resize_online", fake_vdi_resize)
         self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
-        self.stubs.Set(vmops.VMOps, 'revert_migration', fake_revert_migration)
+        self.stubs.Set(vmops.VMOps, 'finish_revert_migration', fake_finish_revert_migration)
 
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
@@ -790,17 +802,17 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_migration(self.context, instance,
+        conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, resize_instance=True)
         self.assertEqual(self.called, True)
         self.assertEqual(self.fake_vm_start_called, True)
 
-        conn.revert_migration(instance)
-        self.assertEqual(self.fake_revert_migration_called, True)
+        conn.finish_revert_migration(instance)
+        self.assertEqual(self.fake_finish_revert_migration_called, True)
 
     def test_finish_migrate(self):
-        instance = db.instance_create(self.context, self.values)
+        instance = db.instance_create(self.context, self.instance_values)
         self.called = False
         self.fake_vm_start_called = False
 
@@ -831,7 +843,7 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_migration(self.context, instance,
+        conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, resize_instance=True)
         self.assertEqual(self.called, True)
@@ -840,8 +852,8 @@ class XenAPIMigrateInstance(test.TestCase):
     def test_finish_migrate_no_local_storage(self):
         tiny_type_id = \
                 instance_types.get_instance_type_by_name('m1.tiny')['id']
-        self.values.update({'instance_type_id': tiny_type_id, 'local_gb': 0})
-        instance = db.instance_create(self.context, self.values)
+        self.instance_values.update({'instance_type_id': tiny_type_id, 'local_gb': 0})
+        instance = db.instance_create(self.context, self.instance_values)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
@@ -865,12 +877,12 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
-        conn.finish_migration(self.context, instance,
+        conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, resize_instance=True)
 
     def test_finish_migrate_no_resize_vdi(self):
-        instance = db.instance_create(self.context, self.values)
+        instance = db.instance_create(self.context, self.instance_values)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
@@ -896,7 +908,7 @@ class XenAPIMigrateInstance(test.TestCase):
                            'rxtx_cap': 3})]
 
         # Resize instance would be determined by the compute call
-        conn.finish_migration(self.context, instance,
+        conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, resize_instance=False)
 
