@@ -1274,13 +1274,18 @@ class API(base.Base):
         self._cast_compute_message('resume_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("rescue")
-    def rescue(self, context, instance_id):
+    def rescue(self, context, instance_id, rescue_password=None):
         """Rescue the given instance."""
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.RESCUING)
-        self._cast_compute_message('rescue_instance', context, instance_id)
+
+        rescue_params = {
+            "rescue_password": rescue_password
+        }
+        self._cast_compute_message('rescue_instance', context, instance_id,
+                                    params=rescue_params)
 
     @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance_id):
