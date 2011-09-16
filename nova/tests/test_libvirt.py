@@ -52,6 +52,15 @@ def _concurrency(wait, done, target):
     done.send()
 
 
+class FakeVirDomainSnapshot(object):
+
+    def __init__(self, dom=None):
+        self.dom = dom
+
+    def delete(self, flags):
+        pass
+
+
 class FakeVirtDomain(object):
 
     def __init__(self, fake_xml=None):
@@ -69,7 +78,7 @@ class FakeVirtDomain(object):
             """
 
     def snapshotCreateXML(self, *args):
-        return None
+        return FakeVirDomainSnapshot(self)
 
     def createWithFlags(self, launch_flags):
         pass
