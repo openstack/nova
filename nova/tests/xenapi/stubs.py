@@ -295,6 +295,9 @@ class FakeSessionForMigrationTests(fake.SessionBase):
         vm['is_control_domain'] = False
         vm['domid'] = random.randrange(1, 1 << 16)
 
+    def VM_set_name_label(self, *args):
+        pass
+
 
 def stub_out_migration_methods(stubs):
     def fake_create_snapshot(self, instance):

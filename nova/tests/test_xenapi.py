@@ -783,7 +783,8 @@ class XenAPIMigrateInstance(test.TestCase):
         self.stubs.Set(stubs.FakeSessionForMigrationTests,
                 "VDI_resize_online", fake_vdi_resize)
         self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
-        self.stubs.Set(vmops.VMOps, 'finish_revert_migration', fake_finish_revert_migration)
+        self.stubs.Set(vmops.VMOps, 'finish_revert_migration',
+                       fake_finish_revert_migration)
 
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
@@ -852,7 +853,8 @@ class XenAPIMigrateInstance(test.TestCase):
     def test_finish_migrate_no_local_storage(self):
         tiny_type_id = \
                 instance_types.get_instance_type_by_name('m1.tiny')['id']
-        self.instance_values.update({'instance_type_id': tiny_type_id, 'local_gb': 0})
+        self.instance_values.update({'instance_type_id': tiny_type_id,
+                                     'local_gb': 0})
         instance = db.instance_create(self.context, self.instance_values)
 
         def fake_vdi_resize(*args, **kwargs):

@@ -844,7 +844,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 migration_ref.instance_uuid)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.confirm_migration(migration_ref, instance_ref, network_info)
+        self.driver.confirm_migration(
+                migration_ref, instance_ref, network_info)
 
         usage_info = utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host,
