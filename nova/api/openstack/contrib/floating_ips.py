@@ -107,7 +107,7 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
         floating_ip = self.network_api.get_floating_ip(context, id)
 
-        if 'fixed_ip' in floating_ip:
+        if floating_ip.get('fixed_ip'):
             self.network_api.disassociate_floating_ip(context,
                                                       floating_ip['address'])
 
@@ -161,7 +161,7 @@ class Floating_ips(extensions.ExtensionDescriptor):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         floating_ip = self.network_api.get_floating_ip_by_ip(context, address)
-        if 'fixed_ip' in floating_ip:
+        if floating_ip.get('fixed_ip'):
             self.network_api.disassociate_floating_ip(context, address)
 
         return webob.Response(status_int=202)

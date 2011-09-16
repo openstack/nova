@@ -103,22 +103,6 @@ def update_service_capabilities(context, service_name, host, capabilities):
     return rpc.fanout_cast(context, 'scheduler', kwargs)
 
 
-def _wrap_method(function, self):
-    """Wrap method to supply self."""
-    def _wrap(*args, **kwargs):
-        return function(self, *args, **kwargs)
-    return _wrap
-
-
-def _process(func, zone):
-    """Worker stub for green thread pool. Give the worker
-    an authenticated nova client and zone info."""
-    nova = novaclient.Client(zone.username, zone.password, None,
-                                zone.api_url)
-    nova.authenticate()
-    return func(nova, zone)
-
-
 def call_zone_method(context, method_name, errors_to_ignore=None,
                      novaclient_collection_name='zones', zones=None,
                      *args, **kwargs):
@@ -166,6 +150,32 @@ def child_zone_helper(zone_list, func):
     For example, if you are calling server.pause(), the list will
     be whatever the response from server.pause() is. One entry
     per child zone called."""
+
+    def _wrap_method(function, arg1):
+        """Wrap method to supply an argument."""
+        def _wrap(*args, **kwargs):
+            return function(arg1, *args, **kwargs)
+        return _wrap
+
+    def _process(func, zone):
+        """Worker stub for green thread pool. Give the worker
+        an authenticated nova client and zone info."""
+        try:
+            nova = novaclient.Client(zone.username, zone.password, None,
+                    zone.api_url)
+            nova.authenticate()
+        except novaclient_exceptions.BadRequest, e:
+            url = zone.api_url
+            LOG.warn(_("Failed request to zone; URL=%(url)s: %(e)s")
+                    % locals())
+            # This is being returned instead of raised, so that when
+            # results are processed in unmarshal_result() after the
+            # greenpool.imap completes, the exception can be raised
+            # there if no other zones had a response.
+            return exception.ZoneRequestError()
+        else:
+            return func(nova, zone)
+
     green_pool = greenpool.GreenPool()
     return [result for result in green_pool.imap(
                     _wrap_method(_process, func), zone_list)]
@@ -260,6 +270,8 @@ class reroute_compute(object):
         if not FLAGS.enable_zone_routing:
             raise exception.InstanceNotFound(instance_id=item_uuid)
 
+        self.item_uuid = item_uuid
+
         zones = db.zone_get_all(context)
         if not zones:
             raise exception.InstanceNotFound(instance_id=item_uuid)
@@ -342,8 +354,12 @@ class reroute_compute(object):
         dict {'server':{k:v}}. Others may return a list of them, like
         {'servers':[{k,v}]}"""
         reduced_response = []
+        found_exception = None
         for zone_response in zone_responses:
             if not zone_response:
+                continue
+            if isinstance(zone_response, BaseException):
+                found_exception = zone_response
                 continue
 
             server = zone_response.__dict__
@@ -355,7 +371,9 @@ class reroute_compute(object):
             reduced_response.append(dict(server=server))
         if reduced_response:
             return reduced_response[0]  # first for now.
-        return {}
+        elif found_exception:
+            raise found_exception
+        raise exception.InstanceNotFound(instance_id=self.item_uuid)
 
 
 def redirect_handler(f):

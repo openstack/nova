@@ -272,11 +272,23 @@ class CloudController(object):
         mappings = {}
         mappings['ami'] = block_device.strip_dev(root_device_name)
         mappings['root'] = root_device_name
+        default_local_device = instance_ref.get('default_local_device')
+        if default_local_device:
+            mappings['ephemeral0'] = default_local_device
+        default_swap_device = instance_ref.get('default_swap_device')
+        if default_swap_device:
+            mappings['swap'] = default_swap_device
+        ebs_devices = []
 
-        # 'ephemeralN' and 'swap'
+        # 'ephemeralN', 'swap' and ebs
         for bdm in db.block_device_mapping_get_all_by_instance(
             ctxt, instance_ref['id']):
-            if (bdm['volume_id'] or bdm['snapshot_id'] or bdm['no_device']):
+            if bdm['no_device']:
+                continue
+
+            # ebs volume case
+            if (bdm['volume_id'] or bdm['snapshot_id']):
+                ebs_devices.append(bdm['device_name'])
                 continue
 
             virtual_name = bdm['virtual_name']
@@ -285,6 +297,16 @@ class CloudController(object):
 
             if block_device.is_swap_or_ephemeral(virtual_name):
                 mappings[virtual_name] = bdm['device_name']
+
+        # NOTE(yamahata): I'm not sure how ebs device should be numbered.
+        #                 Right now sort by device name for deterministic
+        #                 result.
+        if ebs_devices:
+            nebs = 0
+            ebs_devices.sort()
+            for ebs in ebs_devices:
+                mappings['ebs%d' % nebs] = ebs
+                nebs += 1
 
         return mappings
 
@@ -304,11 +326,6 @@ class CloudController(object):
         instance_ref = db.instance_get(ctxt, instance_ref[0]['id'])
 
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
-        if instance_ref['key_name']:
-            keys = {'0': {'_name': instance_ref['key_name'],
-                          'openssh-key': instance_ref['key_data']}}
-        else:
-            keys = ''
         hostname = instance_ref['hostname']
         host = instance_ref['host']
         availability_zone = self._get_availability_zone_by_host(ctxt, host)
@@ -336,10 +353,15 @@ class CloudController(object):
                 'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
-                'public-keys': keys,
                 'reservation-id': instance_ref['reservation_id'],
                 'security-groups': security_groups,
                 'mpi': mpi}}
+
+        # public-keys should be in meta-data only if user specified one
+        if instance_ref['key_name']:
+            data['meta-data']['public-keys'] = {
+                '0': {'_name': instance_ref['key_name'],
+                      'openssh-key': instance_ref['key_data']}}
 
         for image_type in ['kernel', 'ramdisk']:
             if instance_ref.get('%s_id' % image_type):
@@ -1033,14 +1055,6 @@ class CloudController(object):
                 'status': volume['attach_status'],
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
-    @staticmethod
-    def _convert_to_set(lst, label):
-        if lst is None or lst == []:
-            return None
-        if not isinstance(lst, list):
-            lst = [lst]
-        return [{label: x} for x in lst]
-
     def _format_kernel_id(self, instance_ref, result, key):
         kernel_id = instance_ref['kernel_id']
         if kernel_id is None:
@@ -1199,7 +1213,7 @@ class CloudController(object):
         if instance.get('security_groups'):
             for security_group in instance['security_groups']:
                 security_group_names.append(security_group['name'])
-        result['groupSet'] = CloudController._convert_to_set(
+        result['groupSet'] = utils.convert_to_list_dict(
             security_group_names, 'groupId')
 
     def _format_instances(self, context, instance_id=None, use_v6=False,
@@ -1221,8 +1235,10 @@ class CloudController(object):
                 instances.append(instance)
         else:
             try:
+                # always filter out deleted instances
+                search_opts['deleted'] = False
                 instances = self.compute_api.get_all(context,
-                        search_opts=search_opts)
+                                                     search_opts=search_opts)
             except exception.NotFound:
                 instances = []
         for instance in instances:
@@ -1263,7 +1279,8 @@ class CloudController(object):
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],
                     instance['host'])
-            i['productCodesSet'] = self._convert_to_set([], 'product_codes')
+            i['productCodesSet'] = utils.convert_to_list_dict([],
+                                                              'product_codes')
             self._format_instance_type(instance, i)
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
@@ -1485,7 +1502,7 @@ class CloudController(object):
         return image
 
     def _format_image(self, image):
-        """Convert from format defined by BaseImageService to S3 format."""
+        """Convert from format defined by GlanceImageService to S3 format."""
         i = {}
         image_type = self._image_type(image.get('container_format'))
         ec2_id = self.image_ec2_id(image.get('id'), image_type)

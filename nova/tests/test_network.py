@@ -14,6 +14,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import mox
 
 from nova import context
 from nova import db
@@ -21,9 +22,7 @@ from nova import exception
 from nova import log as logging
 from nova import test
 from nova.network import manager as network_manager
-
-
-import mox
+from nova.tests import fake_network
 
 
 LOG = logging.getLogger('nova.tests.network')
@@ -58,7 +57,7 @@ networks = [{'id': 0,
              'dns1': '192.168.0.1',
              'dns2': '192.168.0.2',
              'vlan': None,
-             'host': None,
+             'host': HOST,
              'project_id': 'fake_project',
              'vpn_public_address': '192.168.0.2'},
             {'id': 1,
@@ -78,7 +77,7 @@ networks = [{'id': 0,
              'dns1': '192.168.0.1',
              'dns2': '192.168.0.2',
              'vlan': None,
-             'host': None,
+             'host': HOST,
              'project_id': 'fake_project',
              'vpn_public_address': '192.168.1.2'}]
 
@@ -118,9 +117,14 @@ vifs = [{'id': 0,
         {'id': 1,
          'address': 'DE:AD:BE:EF:00:01',
          'uuid': '00000000-0000-0000-0000-0000000000000001',
-         'network_id': 0,
          'network_id': 1,
          'network': FakeModel(**networks[1]),
+         'instance_id': 0},
+        {'id': 2,
+         'address': 'DE:AD:BE:EF:00:02',
+         'uuid': '00000000-0000-0000-0000-0000000000000002',
+         'network_id': 2,
+         'network': None,
          'instance_id': 0}]
 
 
@@ -133,60 +137,50 @@ class FlatNetworkTestCase(test.TestCase):
                                               is_admin=False)
 
     def test_get_instance_nw_info(self):
-        self.mox.StubOutWithMock(db, 'fixed_ip_get_by_instance')
-        self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
-        self.mox.StubOutWithMock(db, 'instance_type_get')
+        fake_get_instance_nw_info = fake_network.fake_get_instance_nw_info
 
-        db.fixed_ip_get_by_instance(mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndReturn(fixed_ips)
-        db.virtual_interface_get_by_instance(mox.IgnoreArg(),
-                                             mox.IgnoreArg()).AndReturn(vifs)
-        db.instance_type_get(mox.IgnoreArg(),
-                                   mox.IgnoreArg()).AndReturn(flavor)
-        self.mox.ReplayAll()
+        nw_info = fake_get_instance_nw_info(self.stubs, 0, 2)
+        self.assertFalse(nw_info)
 
-        nw_info = self.network.get_instance_nw_info(None, 0, 0, None)
-
-        self.assertTrue(nw_info)
-
-        for i, nw in enumerate(nw_info):
-            i8 = i + 8
-            check = {'bridge': 'fa%s' % i,
+        for i, (nw, info) in enumerate(nw_info):
+            check = {'bridge': 'fake_br%d' % i,
                      'cidr': '192.168.%s.0/24' % i,
-                     'cidr_v6': '2001:db%s::/64' % i8,
+                     'cidr_v6': '2001:db8:0:%x::/64' % i,
                      'id': i,
                      'multi_host': False,
-                     'injected': 'DONTCARE',
-                     'bridge_interface': 'fake_fa%s' % i,
+                     'injected': False,
+                     'bridge_interface': 'fake_eth%d' % i,
                      'vlan': None}
 
-            self.assertDictMatch(nw[0], check)
+            self.assertDictMatch(nw, check)
 
-            check = {'broadcast': '192.168.%s.255' % i,
-                     'dhcp_server': '192.168.%s.1' % i,
-                     'dns': 'DONTCARE',
-                     'gateway': '192.168.%s.1' % i,
-                     'gateway6': '2001:db%s::1' % i8,
+            check = {'broadcast': '192.168.%d.255' % i,
+                     'dhcp_server': '192.168.%d.1' % i,
+                     'dns': ['192.168.%d.3' % n, '192.168.%d.4' % n],
+                     'gateway': '192.168.%d.1' % i,
+                     'gateway6': '2001:db8:0:%x::1' % i,
                      'ip6s': 'DONTCARE',
                      'ips': 'DONTCARE',
-                     'label': 'test%s' % i,
-                     'mac': 'DE:AD:BE:EF:00:0%s' % i,
-                     'vif_uuid': ('00000000-0000-0000-0000-000000000000000%s' %
-                                  i),
-                     'rxtx_cap': 'DONTCARE',
+                     'label': 'test%d' % i,
+                     'mac': 'DE:AD:BE:EF:00:%02x' % i,
+                     'vif_uuid':
+                        '00000000-0000-0000-0000-00000000000000%02d' % i,
+                     'rxtx_cap': 3,
                      'should_create_vlan': False,
                      'should_create_bridge': False}
-            self.assertDictMatch(nw[1], check)
+            self.assertDictMatch(info, check)
 
             check = [{'enabled': 'DONTCARE',
-                      'ip': '2001:db%s::dcad:beff:feef:%s' % (i8, i),
+                      'ip': '2001:db8::dcad:beff:feef:%s' % i,
                       'netmask': '64'}]
-            self.assertDictListMatch(nw[1]['ip6s'], check)
+            self.assertDictListMatch(info['ip6s'], check)
 
-            check = [{'enabled': '1',
-                      'ip': '192.168.%s.100' % i,
-                      'netmask': '255.255.255.0'}]
-            self.assertDictListMatch(nw[1]['ips'], check)
+            num_fixed_ips = len(info['ips'])
+            check = [{'enabled': 'DONTCARE',
+                      'ip': '192.168.%d.1%02d' % (i, ip_num),
+                      'netmask': '255.255.255.0'}
+                      for ip_num in xrange(num_fixed_ips)]
+            self.assertDictListMatch(info['ips'], check)
 
     def test_validate_networks(self):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
@@ -247,6 +241,34 @@ class FlatNetworkTestCase(test.TestCase):
 
         self.network.validate_networks(None, requested_networks)
 
+    def test_add_fixed_ip_instance_without_vpn_requested_networks(self):
+        self.mox.StubOutWithMock(db, 'network_get')
+        self.mox.StubOutWithMock(db, 'network_update')
+        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(db,
+                              'virtual_interface_get_by_instance_and_network')
+        self.mox.StubOutWithMock(db, 'fixed_ip_update')
+
+        db.fixed_ip_update(mox.IgnoreArg(),
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
+        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+
+        db.instance_get(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'security_groups':
+                                                             [{'id': 0}]})
+        db.fixed_ip_associate_pool(mox.IgnoreArg(),
+                                   mox.IgnoreArg(),
+                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
+        db.network_get(mox.IgnoreArg(),
+                       mox.IgnoreArg()).AndReturn(networks[0])
+        db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
+                                              networks[0]['id'])
+
 
 class VlanNetworkTestCase(test.TestCase):
     def setUp(self):
@@ -264,7 +286,8 @@ class VlanNetworkTestCase(test.TestCase):
 
         db.fixed_ip_associate(mox.IgnoreArg(),
                               mox.IgnoreArg(),
-                              mox.IgnoreArg()).AndReturn('192.168.0.1')
+                              mox.IgnoreArg(),
+                              reserved=True).AndReturn('192.168.0.1')
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
@@ -386,6 +409,32 @@ class VlanNetworkTestCase(test.TestCase):
                           ctxt,
                           mox.IgnoreArg(),
                           mox.IgnoreArg())
+
+    def test_add_fixed_ip_instance_without_vpn_requested_networks(self):
+        self.mox.StubOutWithMock(db, 'network_get')
+        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(db,
+                              'virtual_interface_get_by_instance_and_network')
+        self.mox.StubOutWithMock(db, 'fixed_ip_update')
+
+        db.fixed_ip_update(mox.IgnoreArg(),
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
+        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+
+        db.instance_get(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'security_groups':
+                                                             [{'id': 0}]})
+        db.fixed_ip_associate_pool(mox.IgnoreArg(),
+                                   mox.IgnoreArg(),
+                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
+        db.network_get(mox.IgnoreArg(),
+                       mox.IgnoreArg()).AndReturn(networks[0])
+        self.mox.ReplayAll()
+        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
+                                              networks[0]['id'])
 
 
 class CommonNetworkTestCase(test.TestCase):

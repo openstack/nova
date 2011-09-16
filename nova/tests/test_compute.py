@@ -161,6 +161,19 @@ class ComputeTestCase(test.TestCase):
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
 
+    def test_create_instance_with_invalid_security_group_raises(self):
+        instance_type = instance_types.get_default_instance_type()
+
+        pre_build_len = len(db.instance_get_all(context.get_admin_context()))
+        self.assertRaises(exception.SecurityGroupNotFoundForProject,
+                          self.compute_api.create,
+                          self.context,
+                          instance_type=instance_type,
+                          image_href=None,
+                          security_group=['this_is_a_fake_sec_group'])
+        self.assertEqual(pre_build_len,
+                         len(db.instance_get_all(context.get_admin_context())))
+
     def test_create_instance_associates_config_drive(self):
         """Make sure create associates a config drive."""
 
@@ -287,11 +300,20 @@ class ComputeTestCase(test.TestCase):
         self.compute.resume_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
-    def test_reboot(self):
-        """Ensure instance can be rebooted"""
+    def test_soft_reboot(self):
+        """Ensure instance can be soft rebooted"""
         instance_id = self._create_instance()
+        reboot_type = "SOFT"
         self.compute.run_instance(self.context, instance_id)
-        self.compute.reboot_instance(self.context, instance_id)
+        self.compute.reboot_instance(self.context, instance_id, reboot_type)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_hard_reboot(self):
+        """Ensure instance can be hard rebooted"""
+        instance_id = self._create_instance()
+        reboot_type = "HARD"
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.reboot_instance(self.context, instance_id, reboot_type)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_set_admin_password(self):

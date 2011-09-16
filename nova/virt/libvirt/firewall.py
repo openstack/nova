@@ -338,8 +338,8 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-allow-dhcp-server']
 
         if FLAGS.use_ipv6:
-            networks = [network for (network, _m) in network_info if
-                        network['gateway_v6']]
+            networks = [network for (network, info) in network_info if
+                        info['gateway6']]
 
             if networks:
                 instance_secgroup_filter_children.\

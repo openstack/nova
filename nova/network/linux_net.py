@@ -68,6 +68,9 @@ flags.DEFINE_string('linuxnet_interface_driver',
                     'Driver used to create ethernet devices.')
 flags.DEFINE_string('linuxnet_ovs_integration_bridge',
                     'br-int', 'Name of Open vSwitch bridge used with linuxnet')
+flags.DEFINE_bool('use_single_default_gateway',
+                   False, 'Use single default gateway. Only first nic of vm'
+                          ' will get default gateway from dhcp server')
 binary_name = os.path.basename(inspect.stack()[-1][1])
 
 
@@ -511,6 +514,32 @@ def get_dhcp_hosts(context, network_ref):
     return '\n'.join(hosts)
 
 
+def get_dhcp_opts(context, network_ref):
+    """Get network's hosts config in dhcp-opts format."""
+    hosts = []
+    ips_ref = db.network_get_associated_fixed_ips(context, network_ref['id'])
+
+    if ips_ref:
+        #set of instance ids
+        instance_set = set([fixed_ip_ref['instance_id']
+                            for fixed_ip_ref in ips_ref])
+        default_gw_network_node = {}
+        for instance_id in instance_set:
+            vifs = db.virtual_interface_get_by_instance(context, instance_id)
+            if vifs:
+                #offer a default gateway to the first virtual interface
+                default_gw_network_node[instance_id] = vifs[0]['network_id']
+
+        for fixed_ip_ref in ips_ref:
+            instance_id = fixed_ip_ref['instance_id']
+            if instance_id in default_gw_network_node:
+                target_network_id = default_gw_network_node[instance_id]
+                # we don't want default gateway for this fixed ip
+                if target_network_id != fixed_ip_ref['network_id']:
+                    hosts.append(_host_dhcp_opts(fixed_ip_ref))
+    return '\n'.join(hosts)
+
+
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
@@ -525,6 +554,12 @@ def update_dhcp(context, dev, network_ref):
     conffile = _dhcp_file(dev, 'conf')
     with open(conffile, 'w') as f:
         f.write(get_dhcp_hosts(context, network_ref))
+
+    if FLAGS.use_single_default_gateway:
+        optsfile = _dhcp_file(dev, 'opts')
+        with open(optsfile, 'w') as f:
+            f.write(get_dhcp_opts(context, network_ref))
+        os.chmod(optsfile, 0644)
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
@@ -562,6 +597,9 @@ def update_dhcp(context, dev, network_ref):
            '--leasefile-ro']
     if FLAGS.dns_server:
         cmd += ['-h', '-R', '--server=%s' % FLAGS.dns_server]
+
+    if FLAGS.use_single_default_gateway:
+        cmd += ['--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts')]
 
     _execute(*cmd, run_as_root=True)
 
@@ -625,13 +663,32 @@ def _host_lease(fixed_ip_ref):
                               instance_ref['hostname'] or '*')
 
 
+def _host_dhcp_network(fixed_ip_ref):
+    instance_ref = fixed_ip_ref['instance']
+    return 'NW-i%08d-%s' % (instance_ref['id'],
+                            fixed_ip_ref['network_id'])
+
+
 def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address in dhcp-host format."""
     instance_ref = fixed_ip_ref['instance']
-    return '%s,%s.%s,%s' % (fixed_ip_ref['virtual_interface']['address'],
-                                   instance_ref['hostname'],
-                                   FLAGS.dhcp_domain,
-                                   fixed_ip_ref['address'])
+    vif = fixed_ip_ref['virtual_interface']
+    if FLAGS.use_single_default_gateway:
+        return '%s,%s.%s,%s,%s' % (vif['address'],
+                               instance_ref['hostname'],
+                               FLAGS.dhcp_domain,
+                               fixed_ip_ref['address'],
+                               "net:" + _host_dhcp_network(fixed_ip_ref))
+    else:
+        return '%s,%s.%s,%s' % (vif['address'],
+                               instance_ref['hostname'],
+                               FLAGS.dhcp_domain,
+                               fixed_ip_ref['address'])
+
+
+def _host_dhcp_opts(fixed_ip_ref):
+    """Return a host string for an address in dhcp-host format."""
+    return '%s,%s' % (_host_dhcp_network(fixed_ip_ref), 3)
 
 
 def _execute(*cmd, **kwargs):

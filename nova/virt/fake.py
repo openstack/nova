@@ -103,7 +103,7 @@ class FakeConnection(driver.ComputeDriver):
         if not instance['name'] in self.instances:
             raise exception.InstanceNotRunning()
 
-    def reboot(self, instance, network_info):
+    def reboot(self, instance, network_info, reboot_type):
         pass
 
     def get_host_ip_addr(self):

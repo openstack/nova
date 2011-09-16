@@ -232,6 +232,8 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
+    default_local_device = Column(String(255), nullable=True)
+    default_swap_device = Column(String(255), nullable=True)
     config_drive = Column(String(255))
 
     # User editable field meant to represent what ip should be used
@@ -628,6 +630,7 @@ class Network(BASE, NovaBase):
     dhcp_start = Column(String(255))
 
     project_id = Column(String(255))
+    priority = Column(Integer)
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     uuid = Column(String(36))
 
