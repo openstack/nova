@@ -91,7 +91,7 @@ class FlavorXMLSerializer(wsgi.XMLDictSerializer):
             flavor_node.setAttribute('disk', str(flavor['disk']))
 
             for attr in ("vcpus", "swap", "rxtx_quota", "rxtx_cap"):
-                flavor_node.setAttribute(attr, str(flavor.get(attr,"")))
+                flavor_elem.set(attr, str(flavor_dict.get(attr, "")))
 
         link_nodes = self._create_link_nodes(xml_doc, flavor['links'])
         for link_node in link_nodes:
