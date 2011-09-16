@@ -1008,10 +1008,6 @@ class IptablesFirewallTestCase(test.TestCase):
                                        'to_port': 81,
                                        'group_id': src_secgroup['id']})
 
-        db.security_group_rule_create(admin_ctxt,
-                                      {'parent_group_id': secgroup['id'],
-                                       'group_id': src_secgroup['id']})
-
         db.instance_add_security_group(admin_ctxt, instance_ref['id'],
                                        secgroup['id'])
         db.instance_add_security_group(admin_ctxt, src_instance_ref['id'],
@@ -1093,10 +1089,6 @@ class IptablesFirewallTestCase(test.TestCase):
                                '--dports 80:81 -s %s' % ip)
             self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                             "TCP port 80/81 acceptance rule wasn't added")
-
-        regex = re.compile('-A .* -j ACCEPT -s %s' % (src_ip,))
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "TCP port 80/81 acceptance rule wasn't added")
 
         regex = re.compile('-A .* -j ACCEPT -p tcp '
                            '-m multiport --dports 80:81 -s 192.168.10.0/24')
