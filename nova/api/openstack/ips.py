@@ -15,14 +15,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from lxml import etree
 import time
-from xml.dom import minidom
 
 from webob import exc
 
 import nova
 import nova.api.openstack.views.addresses
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova import db
 
 
@@ -102,42 +103,36 @@ class ControllerV11(Controller):
 
 
 class IPXMLSerializer(wsgi.XMLDictSerializer):
+
+    NSMAP = {None: xmlutil.XMLNS_V11}
+
     def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(IPXMLSerializer, self).__init__(xmlns=xmlns)
 
-    def _ip_to_xml(self, xml_doc, ip_dict):
-        ip_node = xml_doc.createElement('ip')
-        ip_node.setAttribute('addr', ip_dict['addr'])
-        ip_node.setAttribute('version', str(ip_dict['version']))
-        return ip_node
+    def populate_addresses_node(self, addresses_elem,  addresses_dict):
+        for (network_id, ip_dicts) in addresses_dict.items():
+            network_elem = self._create_network_node(network_id, ip_dicts)
+            addresses_elem.append(network_elem)
 
-    def _network_to_xml(self, xml_doc, network_id, ip_dicts):
-        network_node = xml_doc.createElement('network')
-        network_node.setAttribute('id', network_id)
-
+    def _create_network_node(self, network_id, ip_dicts):
+        network_elem = etree.Element('network', nsmap=self.NSMAP)
+        network_elem.set('id', str(network_id))
         for ip_dict in ip_dicts:
-            ip_node = self._ip_to_xml(xml_doc, ip_dict)
-            network_node.appendChild(ip_node)
+            ip_elem = etree.SubElement(network_elem, 'ip')
+            ip_elem.set('version', str(ip_dict['version']))
+            ip_elem.set('addr', ip_dict['addr'])
+        return network_elem
 
-        return network_node
+    def show(self, network_dict):
+        (network_id, ip_dicts) = network_dict.items()[0]
+        network = self._create_network_node(network_id, ip_dicts)
+        return self._to_xml(network)
 
-    def networks_to_xml(self, xml_doc, networks_container):
-        addresses_node = xml_doc.createElement('addresses')
-        for (network_id, ip_dicts) in networks_container.items():
-            network_node = self._network_to_xml(xml_doc, network_id, ip_dicts)
-            addresses_node.appendChild(network_node)
-        return addresses_node
-
-    def show(self, network_container):
-        (network_id, ip_dicts) = network_container.items()[0]
-        xml_doc = minidom.Document()
-        node = self._network_to_xml(xml_doc, network_id, ip_dicts)
-        return self.to_xml_string(node, False)
-
-    def index(self, addresses_container):
-        xml_doc = minidom.Document()
-        node = self.networks_to_xml(xml_doc, addresses_container['addresses'])
-        return self.to_xml_string(node, False)
+    def index(self, addresses_dict):
+        addresses = etree.Element('addresses', nsmap=self.NSMAP)
+        self.populate_addresses_node(addresses,
+                                     addresses_dict.get('addresses', {}))
+        return self._to_xml(addresses)
 
 
 def create_resource(version):

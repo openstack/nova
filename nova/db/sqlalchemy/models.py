@@ -232,6 +232,8 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
+    default_local_device = Column(String(255), nullable=True)
+    default_swap_device = Column(String(255), nullable=True)
     config_drive = Column(String(255))
 
     # User editable field meant to represent what ip should be used

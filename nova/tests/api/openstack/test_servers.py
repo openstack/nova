@@ -28,6 +28,7 @@ import webob
 from nova import context
 from nova import db
 from nova import exception
+from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
@@ -49,9 +50,14 @@ from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
 
 
+FLAGS = flags.FLAGS
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
+XPATH_NS = {
+    'atom': 'http://www.w3.org/2005/Atom',
+    'ns': 'http://docs.openstack.org/compute/api/v1.1'
+}
 
 
 def fake_gen_uuid():
@@ -413,12 +419,7 @@ class ServersTest(test.TestCase):
 
     def test_get_server_by_id_v1_1_xml(self):
         image_bookmark = "http://localhost/fake/images/10"
-        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
-        flavor_id = "1"
         flavor_bookmark = "http://localhost/fake/flavors/1"
-        server_href = "http://localhost/v1.1/fake/servers/1"
-        server_bookmark = "http://localhost/fake/servers/1"
-
         public_ip = '192.168.0.3'
         private_ip = '172.19.0.1'
         interfaces = [
@@ -442,50 +443,88 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/fake/servers/1')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
-        actual = minidom.parseString(res.body.replace('  ', ''))
-        expected_uuid = FAKE_UUID
-        expected_updated = "2010-11-11T11:00:00Z"
-        expected_created = "2010-10-10T12:00:00Z"
-        expected = minidom.parseString("""
-        <server id="1"
-                uuid="%(expected_uuid)s"
-                userId="fake"
-                tenantId="fake"
-                xmlns="http://docs.openstack.org/compute/api/v1.1"
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                name="server1"
-                updated="%(expected_updated)s"
-                created="%(expected_created)s"
-                hostId=""
-                status="BUILD"
-                accessIPv4=""
-                accessIPv6=""
-                progress="0">
-            <atom:link href="%(server_href)s" rel="self"/>
-            <atom:link href="%(server_bookmark)s" rel="bookmark"/>
-            <image id="10">
-                <atom:link rel="bookmark" href="%(image_bookmark)s"/>
-            </image>
-            <flavor id="1">
-                <atom:link rel="bookmark" href="%(flavor_bookmark)s"/>
-            </flavor>
-            <metadata>
-                <meta key="seq">
-                    1
-                </meta>
-            </metadata>
-            <addresses>
-                <network id="public">
-                    <ip version="4" addr="%(public_ip)s"/>
-                </network>
-                <network id="private">
-                    <ip version="4" addr="%(private_ip)s"/>
-                </network>
-            </addresses>
-        </server>
-        """.replace("  ", "") % (locals()))
+        output = res.body
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'server')
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        expected = {
+            'id': 1,
+            'uuid': FAKE_UUID,
+            'user_id': 'fake',
+            'tenant_id': 'fake',
+            'updated': '2010-11-11T11:00:00Z',
+            'created': '2010-10-10T12:00:00Z',
+            'progress': 0,
+            'name': 'server1',
+            'status': 'BUILD',
+            'accessIPv4': '',
+            'accessIPv6': '',
+            'hostId': '',
+            'key_name': '',
+            'image': {
+                'id': '10',
+                'links': [{'rel': 'bookmark', 'href': image_bookmark}],
+            },
+            'flavor': {
+                'id': '1',
+              'links': [{'rel': 'bookmark', 'href': flavor_bookmark}],
+            },
+            'addresses': {
+                'public': [{'version': 4, 'addr': public_ip}],
+                'private': [{'version': 4, 'addr': private_ip}],
+            },
+            'metadata': {'seq': '1'},
+            'config_drive': None,
+            'links': [
+                {
+                    'rel': 'self',
+                    'href': 'http://localhost/v1.1/fake/servers/1',
+                },
+                {
+                    'rel': 'bookmark',
+                    'href': 'http://localhost/fake/servers/1',
+                },
+            ],
+        }
+
+        self.assertTrue(root.xpath('/ns:server', namespaces=XPATH_NS))
+        for key in ['id', 'uuid', 'created', 'progress', 'name', 'status',
+                    'accessIPv4', 'accessIPv6', 'hostId']:
+            self.assertEqual(root.get(key), str(expected[key]))
+        self.assertEqual(root.get('userId'), str(expected['user_id']))
+        self.assertEqual(root.get('tenantId'), str(expected['tenant_id']))
+
+        (image,) = root.xpath('ns:image', namespaces=XPATH_NS)
+        self.assertEqual(image.get('id'), str(expected['image']['id']))
+
+        links = root.xpath('ns:image/atom:link', namespaces=XPATH_NS)
+        self.assertTrue(common.compare_links(links,
+                                             expected['image']['links']))
+
+        (flavor,) = root.xpath('ns:flavor', namespaces=XPATH_NS)
+        self.assertEqual(flavor.get('id'), str(expected['flavor']['id']))
+
+        (meta,) = root.xpath('ns:metadata/ns:meta', namespaces=XPATH_NS)
+        self.assertEqual(meta.get('key'), 'seq')
+        self.assertEqual(meta.text, '1')
+
+        (pub_network, priv_network) = root.xpath('ns:addresses/ns:network',
+                                                 namespaces=XPATH_NS)
+        self.assertEqual(pub_network.get('id'), 'public')
+        (pub_ip,) = pub_network.xpath('ns:ip', namespaces=XPATH_NS)
+        (priv_ip,) = priv_network.xpath('ns:ip', namespaces=XPATH_NS)
+        self.assertEqual(pub_ip.get('version'),
+                         str(expected['addresses']['public'][0]['version']))
+        self.assertEqual(pub_ip.get('addr'),
+                         str(expected['addresses']['public'][0]['addr']))
+        self.assertEqual(priv_ip.get('version'),
+                         str(expected['addresses']['private'][0]['version']))
+        self.assertEqual(priv_ip.get('addr'),
+                         str(expected['addresses']['private'][0]['addr']))
+
+        links = root.xpath('atom:link', namespaces=XPATH_NS)
+        self.assertTrue(common.compare_links(links, expected['links']))
 
     def test_get_server_with_active_status_by_id_v1_1(self):
         image_bookmark = "http://localhost/fake/images/10"
@@ -1541,7 +1580,7 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
-        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
         self.assertEqual(2, server['flavorId'])
@@ -1742,7 +1781,7 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
-        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(1, server['id'])
         self.assertEqual(0, server['progress'])
         self.assertEqual('server_test', server['name'])
@@ -1802,7 +1841,7 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
-        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(1, server['id'])
         self.assertEqual("BUILD", server["status"])
         self.assertEqual(0, server['progress'])
@@ -2513,9 +2552,8 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
 
-    def test_rescue_accepted(self):
+    def test_rescue_generates_password(self):
         self.flags(allow_admin_api=True)
-        body = {}
 
         self.called = False
 
@@ -2530,7 +2568,33 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(self.called, True)
-        self.assertEqual(res.status_int, 202)
+        self.assertEqual(res.status_int, 200)
+        res_body = json.loads(res.body)
+        self.assertTrue('adminPass' in res_body)
+        self.assertEqual(FLAGS.password_length, len(res_body['adminPass']))
+
+    def test_rescue_with_preset_password(self):
+        self.flags(allow_admin_api=True)
+
+        self.called = False
+
+        def rescue_mock(*args, **kwargs):
+            self.called = True
+
+        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
+        req = webob.Request.blank('/v1.0/servers/1/rescue')
+        req.method = 'POST'
+        body = {"rescue": {"adminPass": "AABBCC112233"}}
+        req.body = json.dumps(body)
+        req.content_type = 'application/json'
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(self.called, True)
+        self.assertEqual(res.status_int, 200)
+        res_body = json.loads(res.body)
+        self.assertTrue('adminPass' in res_body)
+        self.assertEqual('AABBCC112233', res_body['adminPass'])
 
     def test_rescue_raises_handled(self):
         self.flags(allow_admin_api=True)
@@ -3288,6 +3352,18 @@ class TestAddressesXMLSerialization(test.TestCase):
 
     serializer = nova.api.openstack.ips.IPXMLSerializer()
 
+    def test_xml_declaration(self):
+        fixture = {
+            'network_2': [
+                {'addr': '192.168.0.1', 'version': 4},
+                {'addr': 'fe80::beef', 'version': 6},
+            ],
+        }
+        output = self.serializer.serialize(fixture, 'show')
+        print output
+        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
+        self.assertTrue(has_dec)
+
     def test_show(self):
         fixture = {
             'network_2': [
@@ -3296,17 +3372,17 @@ class TestAddressesXMLSerialization(test.TestCase):
             ],
         }
         output = self.serializer.serialize(fixture, 'show')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <network xmlns="http://docs.openstack.org/compute/api/v1.1"
-                     id="network_2">
-                <ip version="4" addr="192.168.0.1"/>
-                <ip version="6" addr="fe80::beef"/>
-            </network>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
+        print output
+        root = etree.XML(output)
+        network = fixture['network_2']
+        self.assertEqual(str(root.get('id')), 'network_2')
+        ip_elems = root.findall('{0}ip'.format(NS))
+        for z, ip_elem in enumerate(ip_elems):
+            ip = network[z]
+            self.assertEqual(str(ip_elem.get('version')),
+                             str(ip['version']))
+            self.assertEqual(str(ip_elem.get('addr')),
+                             str(ip['addr']))
 
     def test_index(self):
         fixture = {
@@ -3322,22 +3398,22 @@ class TestAddressesXMLSerialization(test.TestCase):
             },
         }
         output = self.serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
-
-        expected = minidom.parseString("""
-            <addresses xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <network id="network_2">
-                    <ip version="4" addr="192.168.0.1"/>
-                    <ip version="6" addr="fe80::beef"/>
-                </network>
-                <network id="network_1">
-                    <ip version="4" addr="192.168.0.3"/>
-                    <ip version="4" addr="192.168.0.5"/>
-                </network>
-            </addresses>
-        """.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'addresses')
+        addresses_dict = fixture['addresses']
+        network_elems = root.findall('{0}network'.format(NS))
+        self.assertEqual(len(network_elems), 2)
+        for i, network_elem in enumerate(network_elems):
+            network = addresses_dict.items()[i]
+            self.assertEqual(str(network_elem.get('id')), str(network[0]))
+            ip_elems = network_elem.findall('{0}ip'.format(NS))
+            for z, ip_elem in enumerate(ip_elems):
+                ip = network[1][z]
+                self.assertEqual(str(ip_elem.get('version')),
+                                 str(ip['version']))
+                self.assertEqual(str(ip_elem.get('addr')),
+                                 str(ip['addr']))
 
 
 class TestServerInstanceCreation(test.TestCase):
@@ -3575,7 +3651,8 @@ class TestServerInstanceCreation(test.TestCase):
         self.assertEquals(response.status_int, 202)
         response = json.loads(response.body)
         self.assertTrue('adminPass' in response['server'])
-        self.assertEqual(16, len(response['server']['adminPass']))
+        self.assertEqual(FLAGS.password_length,
+                         len(response['server']['adminPass']))
 
     def test_create_instance_admin_pass_xml(self):
         request, response, dummy = \
@@ -3584,7 +3661,8 @@ class TestServerInstanceCreation(test.TestCase):
         dom = minidom.parseString(response.body)
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
-        self.assertEqual(16, len(server.getAttribute('adminPass')))
+        self.assertEqual(FLAGS.password_length,
+                         len(server.getAttribute('adminPass')))
 
 
 class TestGetKernelRamdiskFromImage(test.TestCase):
@@ -4063,6 +4141,85 @@ class ServerXMLSerializationTest(test.TestCase):
     def setUp(self):
         self.maxDiff = None
         test.TestCase.setUp(self)
+
+    def test_xml_declaration(self):
+        serializer = servers.ServerXMLSerializer()
+
+        fixture = {
+            "server": {
+                'id': 1,
+                'uuid': FAKE_UUID,
+                'user_id': 'fake_user_id',
+                'tenant_id': 'fake_tenant_id',
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
+                "accessIPv4": "1.2.3.4",
+                "accessIPv6": "fead::1234",
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": self.IMAGE_BOOKMARK,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": self.FLAVOR_BOOKMARK,
+                        },
+                    ],
+                },
+                "addresses": {
+                    "network_one": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.138",
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.138",
+                        },
+                    ],
+                    "network_two": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.139",
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.139",
+                        },
+                    ],
+                },
+                "metadata": {
+                    "Open": "Stack",
+                    "Number": "1",
+                },
+                'links': [
+                    {
+                        'href': self.SERVER_HREF,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.SERVER_BOOKMARK,
+                        'rel': 'bookmark',
+                    },
+                ],
+            }
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        print output
+        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
+        self.assertTrue(has_dec)
 
     def test_show(self):
         serializer = servers.ServerXMLSerializer()

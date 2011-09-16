@@ -18,11 +18,14 @@ import webob
 from webob import exc
 
 from nova import compute
+from nova import flags
 from nova import log as logging
+from nova import utils
 from nova.api.openstack import extensions as exts
 from nova.api.openstack import faults
 
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.contrib.rescue")
 
 
@@ -30,7 +33,7 @@ def wrap_errors(fn):
     """"Ensure errors are not passed along."""
     def wrapped(*args):
         try:
-            fn(*args)
+            return fn(*args)
         except Exception, e:
             return faults.Fault(exc.HTTPInternalServerError())
     return wrapped
@@ -46,9 +49,13 @@ class Rescue(exts.ExtensionDescriptor):
     def _rescue(self, input_dict, req, instance_id):
         """Rescue an instance."""
         context = req.environ["nova.context"]
-        self.compute_api.rescue(context, instance_id)
+        if input_dict['rescue'] and 'adminPass' in input_dict['rescue']:
+            password = input_dict['rescue']['adminPass']
+        else:
+            password = utils.generate_password(FLAGS.password_length)
+        self.compute_api.rescue(context, instance_id, rescue_password=password)
 
-        return webob.Response(status_int=202)
+        return {'adminPass': password}
 
     @wrap_errors
     def _unrescue(self, input_dict, req, instance_id):

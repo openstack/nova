@@ -87,6 +87,7 @@ class ExtensionControllerTest(test.TestCase):
         self.ext_list = [
             "Createserverext",
             "FlavorExtraSpecs",
+            "FlavorExtraData",
             "Floating_ips",
             "Fox In Socks",
             "Hosts",
