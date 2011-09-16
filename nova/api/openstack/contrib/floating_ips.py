@@ -80,8 +80,8 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
 
         try:
-            # FIXME(ja) - why does self.network_api.list_floating_ips raise?
-            floating_ips = self.network_api.list_floating_ips(context)
+            get_floating_ips = self.network_api.get_floating_ips_by_project
+            floating_ips = get_floating_ips(context)
         except exception.FloatingIpNotFoundForProject:
             floating_ips = []
 
@@ -92,7 +92,7 @@ class FloatingIPController(object):
 
         try:
             address = self.network_api.allocate_floating_ip(context)
-            ip = self.network_api.get_floating_ip_by_ip(context, address)
+            ip = self.network_api.get_floating_ip_by_address(context, address)
         except rpc.RemoteError as ex:
             # NOTE(tr3buchet) - why does this block exist?
             if ex.exc_type == 'NoMoreFloatingIps':
@@ -162,7 +162,8 @@ class Floating_ips(extensions.ExtensionDescriptor):
             msg = _("Address not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        floating_ip = self.network_api.get_floating_ip_by_ip(context, address)
+        floating_ip = self.network_api.get_floating_ip_by_address(context,
+                                                                  address)
         if floating_ip.get('fixed_ip'):
             try:
                 self.network_api.disassociate_floating_ip(context, address)

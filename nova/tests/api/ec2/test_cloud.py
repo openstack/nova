@@ -130,24 +130,6 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.release_address(self.context, address)
         self.assertEqual(result['releaseResponse'], ['Address released.'])
 
-    def test_release_address_still_associated(self):
-        address = "10.10.10.10"
-        fixed_ip = {'instance': {'id': 1}}
-        floating_ip = {'id': 0,
-                       'address': address,
-                       'fixed_ip_id': 0,
-                       'fixed_ip': fixed_ip,
-                       'project_id': None,
-                       'auto_assigned': False}
-        network_api = network.api.API()
-        self.mox.StubOutWithMock(network_api.db, 'floating_ip_get_by_address')
-        network_api.db.floating_ip_get_by_address(mox.IgnoreArg(),
-                                mox.IgnoreArg()).AndReturn(floating_ip)
-        self.mox.ReplayAll()
-        release = self.cloud.release_address
-        # ApiError: Floating ip is in use.  Disassociate it before releasing.
-        self.assertRaises(exception.ApiError, release, self.context, address)
-
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
         address = "10.10.10.10"

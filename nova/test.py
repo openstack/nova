@@ -56,6 +56,7 @@ LOG = log.getLogger('nova.tests')
 
 class skip_test(object):
     """Decorator that skips a test."""
+    # TODO(tr3buchet): remember forever what comstud did here
     def __init__(self, msg):
         self.message = msg
 

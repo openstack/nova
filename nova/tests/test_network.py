@@ -20,6 +20,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import log as logging
+from nova import quota
+from nova import rpc
 from nova import test
 from nova.network import manager as network_manager
 from nova.tests import fake_network
@@ -394,21 +396,202 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.network.validate_networks(self.context, requested_networks)
 
-    def test_cant_associate_associated_floating_ip(self):
+    def test_floating_ip_owned_by_project(self):
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
 
-        def fake_floating_ip_get_by_address(context, address):
-            return {'address': '10.10.10.10',
-                    'fixed_ip': {'address': '10.0.0.1'}}
-        self.stubs.Set(self.network.db, 'floating_ip_get_by_address',
-                                fake_floating_ip_get_by_address)
+        # raises because floating_ip project_id is None
+        floating_ip = {'address': '10.0.0.1',
+                       'project_id': None}
+        self.assertRaises(exception.NotAuthorized,
+                          self.network._floating_ip_owned_by_project,
+                          ctxt,
+                          floating_ip)
 
-        self.assertRaises(exception.FloatingIpAlreadyInUse,
+        # raises because floating_ip project_id is not equal to ctxt project_id
+        floating_ip = {'address': '10.0.0.1',
+                       'project_id': ctxt.project_id + '1'}
+        self.assertRaises(exception.NotAuthorized,
+                          self.network._floating_ip_owned_by_project,
+                          ctxt,
+                          floating_ip)
+
+        # does not raise (floating ip is owned by ctxt project)
+        floating_ip = {'address': '10.0.0.1',
+                       'project_id': ctxt.project_id}
+        self.network._floating_ip_owned_by_project(ctxt, floating_ip)
+
+    def test_allocate_floating_ip(self):
+        ctxt = context.RequestContext('testuser', 'testproject',
+                                      is_admin=False)
+
+        def fake1(*args, **kwargs):
+            return {'address': '10.0.0.1'}
+
+        def fake2(*args, **kwargs):
+            return 25
+
+        def fake3(*args, **kwargs):
+            return 0
+
+        self.stubs.Set(self.network.db, 'floating_ip_allocate_address', fake1)
+
+        # this time should raise
+        self.stubs.Set(self.network.db, 'floating_ip_count_by_project', fake2)
+        self.assertRaises(quota.QuotaError,
+                          self.network.allocate_floating_ip,
+                          ctxt,
+                          ctxt.project_id)
+
+        # this time should not
+        self.stubs.Set(self.network.db, 'floating_ip_count_by_project', fake3)
+        self.network.allocate_floating_ip(ctxt, ctxt.project_id)
+
+    def test_deallocate_floating_ip(self):
+        ctxt = context.RequestContext('testuser', 'testproject',
+                                      is_admin=False)
+
+        def fake1(*args, **kwargs):
+            pass
+
+        def fake2(*args, **kwargs):
+            return {'address': '10.0.0.1', 'fixed_ip_id': 1}
+
+        def fake3(*args, **kwargs):
+            return {'address': '10.0.0.1', 'fixed_ip_id': None}
+
+        self.stubs.Set(self.network.db, 'floating_ip_deallocate', fake1)
+        self.stubs.Set(self.network, '_floating_ip_owned_by_project', fake1)
+
+        # this time should raise because floating ip is associated to fixed_ip
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake2)
+        self.assertRaises(exception.FloatingIpAssociated,
+                          self.network.deallocate_floating_ip,
+                          ctxt,
+                          mox.IgnoreArg())
+
+        # this time should not raise
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake3)
+        self.network.deallocate_floating_ip(ctxt, ctxt.project_id)
+
+    def test_associate_floating_ip(self):
+        ctxt = context.RequestContext('testuser', 'testproject',
+                                      is_admin=False)
+
+        def fake1(*args, **kwargs):
+            pass
+
+        # floating ip that's already associated
+        def fake2(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'fixed_ip_id': 1}
+
+        # floating ip that isn't associated
+        def fake3(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'fixed_ip_id': None}
+
+        # fixed ip with remote host
+        def fake4(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'network': {'multi_host': False, 'host': 'jibberjabber'}}
+
+        # fixed ip with local host
+        def fake5(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'network': {'multi_host': False, 'host': 'testhost'}}
+
+        def fake6(*args, **kwargs):
+            self.local = False
+
+        def fake7(*args, **kwargs):
+            self.local = True
+
+        self.stubs.Set(self.network, '_floating_ip_owned_by_project', fake1)
+
+        # raises because floating_ip is already associated to a fixed_ip
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake2)
+        self.assertRaises(exception.FloatingIpAssociated,
                           self.network.associate_floating_ip,
                           ctxt,
                           mox.IgnoreArg(),
                           mox.IgnoreArg())
+
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake3)
+
+        # does not raise and makes call remotely
+        self.local = True
+        self.stubs.Set(self.network.db, 'fixed_ip_get_by_address', fake4)
+        self.stubs.Set(rpc, 'cast', fake6)
+        self.network.associate_floating_ip(ctxt, mox.IgnoreArg(),
+                                                 mox.IgnoreArg())
+        self.assertFalse(self.local)
+
+        # does not raise and makes call locally
+        self.local = False
+        self.stubs.Set(self.network.db, 'fixed_ip_get_by_address', fake5)
+        self.stubs.Set(self.network, '_associate_floating_ip', fake7)
+        self.network.associate_floating_ip(ctxt, mox.IgnoreArg(),
+                                                 mox.IgnoreArg())
+        self.assertTrue(self.local)
+
+    def test_disassociate_floating_ip(self):
+        ctxt = context.RequestContext('testuser', 'testproject',
+                                      is_admin=False)
+
+        def fake1(*args, **kwargs):
+            pass
+
+        # floating ip that isn't associated
+        def fake2(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'fixed_ip_id': None}
+
+        # floating ip that is associated
+        def fake3(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'fixed_ip_id': 1}
+
+        # fixed ip with remote host
+        def fake4(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'network': {'multi_host': False, 'host': 'jibberjabber'}}
+
+        # fixed ip with local host
+        def fake5(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'network': {'multi_host': False, 'host': 'testhost'}}
+
+        def fake6(*args, **kwargs):
+            self.local = False
+
+        def fake7(*args, **kwargs):
+            self.local = True
+
+        self.stubs.Set(self.network, '_floating_ip_owned_by_project', fake1)
+
+        # raises because floating_ip is not associated to a fixed_ip
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake2)
+        self.assertRaises(exception.FloatingIpNotAssociated,
+                          self.network.disassociate_floating_ip,
+                          ctxt,
+                          mox.IgnoreArg())
+
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake3)
+
+        # does not raise and makes call remotely
+        self.local = True
+        self.stubs.Set(self.network.db, 'fixed_ip_get', fake4)
+        self.stubs.Set(rpc, 'cast', fake6)
+        self.network.disassociate_floating_ip(ctxt, mox.IgnoreArg())
+        self.assertFalse(self.local)
+
+        # does not raise and makes call locally
+        self.local = False
+        self.stubs.Set(self.network.db, 'fixed_ip_get', fake5)
+        self.stubs.Set(self.network, '_disassociate_floating_ip', fake7)
+        self.network.disassociate_floating_ip(ctxt, mox.IgnoreArg())
+        self.assertTrue(self.local)
 
     def test_add_fixed_ip_instance_without_vpn_requested_networks(self):
         self.mox.StubOutWithMock(db, 'network_get')
