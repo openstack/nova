@@ -814,8 +814,10 @@ class LibvirtConnection(driver.ComputeDriver):
             utils.execute('mkdir', '-p', container_dir)
 
         # NOTE(vish): No need add the suffix to console.log
-        os.close(os.open(basepath('console.log', ''),
-                         os.O_CREAT | os.O_WRONLY, 0660))
+        console_log = basepath('console.log', '')
+        if os.path.exists(console_log):
+            utils.execute('chown', os.getuid(), console_log, run_as_root=True)
+        os.close(os.open(console_log, os.O_CREAT | os.O_WRONLY, 0660))
 
         if not disk_images:
             disk_images = {'image_id': inst['image_ref'],
