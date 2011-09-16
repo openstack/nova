@@ -182,10 +182,8 @@ def child_zone_helper(context, zone_list, func):
         else:
             try:
                 answer = func(nova, zone)
-                LOG.debug("***** GOT %s FROM CHILD" % answer)
                 return answer
             except Exception, e:
-                LOG.debug("***** GOT EXCEPTION %s FROM CHILD" % e)
                 return e
 
     green_pool = greenpool.GreenPool()
@@ -323,7 +321,6 @@ class reroute_compute(object):
                     self.replace_uuid_with_id(args, kwargs, item_id)
 
             if attempt_reroute:
-                LOG.debug("***** REROUTING TO ASK CHILDREN")
                 return self._route_to_child_zones(context, collection,
                         item_uuid)
             else:
@@ -369,7 +366,6 @@ class reroute_compute(object):
         reduced_response = []
         found_exception = None
         for zone_response in zone_responses:
-            LOG.debug("****** ZONE RESPONSE %s" % zone_response)
             if not zone_response:
                 continue
             if isinstance(zone_response, BaseException):
@@ -391,24 +387,22 @@ class reroute_compute(object):
         if reduced_response:
             return reduced_response[0]  # first for now.
         elif found_exception:
-            LOG.debug("****** FOUND EXCEPTION %s" % found_exception)
             return found_exception
-        LOG.debug("****** COULD NOT FIND INSTANCE")
-        #return exception.InstanceNotFound(instance_id=self.item_uuid)
+
+        # Some operations, like delete(), don't send back any results
+        # on success. We'll do the same.
         return None
 
 
 def redirect_handler(f):
     def new_f(*args, **kwargs):
         try:
-            LOG.debug("****** REDIRECT HANDLER >>>>")
             ret = f(*args, **kwargs)
-            LOG.debug("****** REDIRECT HANDLER <<<<")
             return ret
         except RedirectResult, e:
-            LOG.debug("****** REDIRECT HANDLER %s" % e.results.__class__)
+            # Remember: exceptions are returned, not thrown, in the decorator.
+            # At this point it's safe to throw it.
             if isinstance(e.results, BaseException):
-                LOG.debug("****** REDIRECT HANDLER - RAISING %s" % e.results.__class__)
                 raise e.results
             return e.results
     return new_f

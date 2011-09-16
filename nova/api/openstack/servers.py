@@ -60,12 +60,9 @@ def novaclient_exception_converter(f):
     """
     def new_f(*args, **kwargs):
         try:
-            LOG.debug("**** NOVACLIENT EXCEPTION CONVERTER >>>>")
             ret = f(*args, **kwargs)
-            LOG.debug("**** NOVACLIENT EXCEPTION CONVERTER <<<<")
             return ret
         except novaclient_exceptions.ClientException, e:
-            LOG.debug("**** NOVACLIENT EXCEPTION CONVERTER- RERAISING")
             raise ConvertedException(e.code, e.message, e.details)
     return new_f
 
