@@ -719,7 +719,6 @@ class ComputeTestCase(test.TestCase):
         def fake_nw_info(*args, **kwargs):
             return [(0, {'ips':['dummy']})]
 
-
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
 
