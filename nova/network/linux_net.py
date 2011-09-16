@@ -410,7 +410,7 @@ def bind_floating_ip(floating_ip, check_exit_code=True):
              'dev', FLAGS.public_interface,
              run_as_root=True, check_exit_code=check_exit_code)
     if FLAGS.send_arp_for_ha:
-        _execute('sudo', 'arping', '-U', floating_ip,
+        _execute('arping', '-U', floating_ip,
                  '-A', '-I', FLAGS.public_interface,
                  '-c', 1, run_as_root=True, check_exit_code=False)
 
@@ -485,7 +485,7 @@ def initialize_gateway_device(dev, network_ref):
     if err and err != 'RTNETLINK answers: File exists\n':
         raise exception.Error('Failed to add ip: %s' % err)
     if FLAGS.send_arp_for_ha:
-        _execute('sudo', 'arping', '-U', network_ref['gateway'],
+        _execute('arping', '-U', network_ref['gateway'],
                   '-A', '-I', dev,
                   '-c', 1, run_as_root=True, check_exit_code=False)
     if(FLAGS.use_ipv6):
