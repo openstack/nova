@@ -215,7 +215,7 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
         # 'snapshot' vhd needs to be copied into the SR before the base copy.
         # If it doesn't, then there is a possibliity that snapwatchd will
         # delete the base_copy since it is an unreferenced parent.
-        paths_to_move.insert(snap_info[0])
+        paths_to_move.insert(0, snap_info[0])
         # We return this snap as the VDI instead of image.vhd
         vdi_return_list.append(dict(vdi_type="os", vdi_uuid=snap_info[1]))
     else:
