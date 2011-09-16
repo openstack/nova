@@ -139,7 +139,8 @@ class ViewBuilderV11(ViewBuilder):
         response['server']['updated'] = utils.isotime(inst['updated_at'])
 
         status = response['server'].get('status')
-        if status in ('ACTIVE', 'BUILD', 'REBUILD'):
+        if status in ('ACTIVE', 'BUILD', 'REBUILD', 'RESIZE',
+                      'VERIFY_RESIZE'):
             response['server']['progress'] = inst['progress'] or 0
 
         response['server']['accessIPv4'] = inst.get('access_ip_v4') or ""

@@ -225,12 +225,11 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def migrate_disk_and_power_off(self, instance, dest):
+    def migrate_disk_and_power_off(self, context, instance, dest):
         """
         Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
-        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def snapshot(self, context, instance, image_id):

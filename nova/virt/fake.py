@@ -130,7 +130,7 @@ class FakeConnection(driver.ComputeDriver):
     def poll_rescued_instances(self, timeout):
         pass
 
-    def migrate_disk_and_power_off(self, instance, dest):
+    def migrate_disk_and_power_off(self, context, instance, dest):
         pass
 
     def pause(self, instance, callback):

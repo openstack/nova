@@ -55,6 +55,9 @@ flags.DEFINE_string('xenapi_vif_driver',
                     'nova.virt.xenapi.vif.XenAPIBridgeDriver',
                     'The XenAPI VIF driver using XenServer Network APIs.')
 
+RESIZE_TOTAL_STEPS = 5
+BUILD_TOTAL_STEPS = 4
+
 
 def cmp_version(a, b):
     """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)"""
@@ -137,7 +140,13 @@ class VMOps(object):
                                  network_info)
         if resize_instance:
             self.resize_instance(instance, vdi_uuid)
+
+        # 5. Start VM
         self._start(instance, vm_ref=vm_ref)
+        self._update_instance_progress(context, instance,
+                                       step=5,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
@@ -157,34 +166,7 @@ class VMOps(object):
                 disk_image_type)
         return vdis
 
-    def _update_instance_progress(self, context, instance, progress):
-        if progress < 0:
-            progress = 0
-        elif progress > 100:
-            progress = 100
-        instance_id = instance['id']
-        LOG.debug(_("Updating instance '%(instance_id)s' progress to"
-                    " %(progress)d") % locals())
-        db.instance_update(context, instance_id, {'progress': progress})
-
     def spawn(self, context, instance, network_info):
-        total_steps = 4
-        progress = {'value': 0}
-
-        def bump_progress():
-            # FIXME(sirp): for now we're taking a KISS approach to
-            # instance-build-progress:
-            # divide the action's workflow into discrete steps and "bump" the
-            # instance's progress field as each step is completed.
-            #
-            # For a first cut this should be fine, however, as image size
-            # grows, the _create_disks step begins to dominate the equation. A
-            # better approximation would reflect the percentage of the image
-            # that has been streamed to the host machine.
-            progress['value'] += 100 / total_steps
-            self._update_instance_progress(
-                context, instance, progress['value'])
-
         vdis = None
         try:
             # 1. Vanity Step
@@ -194,19 +176,28 @@ class VMOps(object):
             # progress remaining at 0% for too long, which will appear to be
             # an error, we insert a "vanity" step to bump the progress up one
             # notch above 0.
-            bump_progress()
+            self._update_instance_progress(context, instance,
+                                           step=1,
+                                           total_steps=BUILD_TOTAL_STEPS)
 
             # 2. Fetch the Image over the Network
             vdis = self._create_disks(context, instance)
-            bump_progress()
+            self._update_instance_progress(context, instance,
+                                           step=2,
+                                           total_steps=BUILD_TOTAL_STEPS)
 
             # 3. Create the VM records
             vm_ref = self._create_vm(context, instance, vdis, network_info)
-            bump_progress()
+            self._update_instance_progress(context, instance,
+                                           step=3,
+                                           total_steps=BUILD_TOTAL_STEPS)
 
             # 4. Boot the Instance
             self._spawn(instance, vm_ref)
-            bump_progress()
+            self._update_instance_progress(context, instance,
+                                           step=4,
+                                           total_steps=BUILD_TOTAL_STEPS)
+
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
             LOG.exception(_("instance %s: Failed to spawn"),
                           instance.id, exc_info=sys.exc_info())
@@ -214,8 +205,6 @@ class VMOps(object):
                       instance.id)
             self._handle_spawn_error(vdis, spawn_error)
             raise spawn_error
-        else:
-            self._update_instance_progress(context, instance, 100)
 
     def spawn_rescue(self, context, instance, network_info):
         """Spawn a rescue instance."""
@@ -228,7 +217,7 @@ class VMOps(object):
         if vm_ref is not None:
             raise exception.InstanceExists(name=instance_name)
 
-        #ensure enough free memory is available
+        # Ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
             LOG.exception(_('instance %(instance_name)s: not enough free '
                           'memory') % locals())
@@ -608,7 +597,25 @@ class VMOps(object):
     def _get_orig_vm_name_label(self, instance):
         return instance.name + '-orig'
 
-    def migrate_disk_and_power_off(self, instance, dest):
+    def _update_instance_progress(self, context, instance, step, total_steps):
+        """Update instance progress percent to reflect current step number
+        """
+        # FIXME(sirp): for now we're taking a KISS approach to instance
+        # progress:
+        # Divide the action's workflow into discrete steps and "bump" the
+        # instance's progress field as each step is completed.
+        #
+        # For a first cut this should be fine, however, for large VM images,
+        # the _create_disks step begins to dominate the equation. A
+        # better approximation would use the percentage of the VM image that
+        # has been streamed to the destination host.
+        progress = round(float(step) / total_steps * 100)
+        instance_id = instance['id']
+        LOG.debug(_("Updating instance '%(instance_id)s' progress to"
+                    " %(progress)d") % locals())
+        db.instance_update(context, instance_id, {'progress': progress})
+
+    def migrate_disk_and_power_off(self, context, instance, dest):
         """Copies a VHD from one host machine to another.
 
         :param instance: the instance that owns the VHD in question.
@@ -625,8 +632,13 @@ class VMOps(object):
         base_copy_uuid = cow_uuid = None
         template_vdi_uuids = template_vm_ref = None
         try:
+            # 1. Create Snapshot
             template_vm_ref, template_vdi_uuids =\
                     self._create_snapshot(instance)
+            self._update_instance_progress(context, instance,
+                                           step=1,
+                                           total_steps=RESIZE_TOTAL_STEPS)
+
             base_copy_uuid = template_vdi_uuids['image']
             vdi_ref, vm_vdi_rec = \
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
@@ -634,12 +646,23 @@ class VMOps(object):
 
             sr_path = VMHelper.get_sr_path(self._session)
 
-            # transfer the base copy
+            # 2. Transfer the base copy
             self._migrate_vhd(instance, base_copy_uuid, dest, sr_path)
+            self._update_instance_progress(context, instance,
+                                           step=2,
+                                           total_steps=RESIZE_TOTAL_STEPS)
 
-            # Now power down the instance and transfer the COW VHD
+            # 3. Now power down the instance 
             self._shutdown(instance, vm_ref, hard=False)
+            self._update_instance_progress(context, instance,
+                                           step=3,
+                                           total_steps=RESIZE_TOTAL_STEPS)
+
+            # 4. Transfer the COW VHD
             self._migrate_vhd(instance, cow_uuid, dest, sr_path)
+            self._update_instance_progress(context, instance,
+                                           step=4,
+                                           total_steps=RESIZE_TOTAL_STEPS)
 
             # NOTE(sirp): in case we're resizing to the same host (for dev
             # purposes), apply a suffix to name-label so the two VM records
