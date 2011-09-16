@@ -1055,8 +1055,10 @@ class VMOps(object):
 
         migrations_info = dict(migration_count=len(migrations),
                 confirm_window=FLAGS.resize_confirm_window)
-        LOG.info(_("Found %(migration_count)d unconfirmed migrations older "
-                "than %(confirm_window)d seconds") % migrations_info)
+
+        if migrations_info["migration_count"] > 0:
+            LOG.info(_("Found %(migration_count)d unconfirmed migrations "
+                    "older than %(confirm_window)d seconds") % migrations_info)
 
         for migration in migrations:
             LOG.info(_("Automatically confirming migration %d"), migration.id)
