@@ -170,6 +170,7 @@ class VMOps(object):
     def spawn(self, context, instance, network_info):
         total_steps = 4
         progress = {'value': 0}
+
         def bump_progress():
             # FIXME(sirp): for now we're taking a KISS approach to
             # instance-build-progress:
