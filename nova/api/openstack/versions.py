@@ -107,7 +107,9 @@ class Versions(wsgi.Resource):
             headers_serializer=headers_serializer)
 
         supported_content_types = ('application/json',
+                                   'application/vnd.openstack.compute+json',
                                    'application/xml',
+                                   'application/vnd.openstack.compute+xml',
                                    'application/atom+xml')
         deserializer = VersionsRequestDeserializer(
             supported_content_types=supported_content_types)
@@ -308,7 +310,9 @@ def create_resource(version='1.0'):
     serializer = wsgi.ResponseSerializer(body_serializers)
 
     supported_content_types = ('application/json',
+                               'application/vnd.openstack.compute+json',
                                'application/xml',
+                               'application/vnd.openstack.compute+xml',
                                'application/atom+xml')
     deserializer = wsgi.RequestDeserializer(
         supported_content_types=supported_content_types)
