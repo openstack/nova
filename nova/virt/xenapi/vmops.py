@@ -147,7 +147,6 @@ class VMOps(object):
                                        step=5,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
         if not vm_ref:
@@ -657,7 +656,7 @@ class VMOps(object):
                                            step=2,
                                            total_steps=RESIZE_TOTAL_STEPS)
 
-            # 3. Now power down the instance 
+            # 3. Now power down the instance
             self._shutdown(instance, vm_ref, hard=False)
             self._update_instance_progress(context, instance,
                                            step=3,
