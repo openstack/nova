@@ -465,6 +465,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # Clean up
         shutil.rmtree(temp_dir)
+        snapshot_ptr.delete(0)
 
     @exception.wrap_exception()
     def reboot(self, instance, network_info, reboot_type):

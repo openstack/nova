@@ -27,17 +27,17 @@ class RequestTest(test.TestCase):
         result = request.get_content_type()
         self.assertEqual(result, "application/json")
 
-    def test_content_type_from_accept_xml(self):
-        request = wsgi.Request.blank('/tests/123')
-        request.headers["Accept"] = "application/xml"
-        result = request.best_match_content_type()
-        self.assertEqual(result, "application/xml")
+    def test_content_type_from_accept(self):
+        for content_type in ('application/xml',
+                             'application/vnd.openstack.compute+xml',
+                             'application/json',
+                             'application/vnd.openstack.compute+json'):
+            request = wsgi.Request.blank('/tests/123')
+            request.headers["Accept"] = content_type
+            result = request.best_match_content_type()
+            self.assertEqual(result, content_type)
 
-        request = wsgi.Request.blank('/tests/123')
-        request.headers["Accept"] = "application/json"
-        result = request.best_match_content_type()
-        self.assertEqual(result, "application/json")
-
+    def test_content_type_from_accept_best(self):
         request = wsgi.Request.blank('/tests/123')
         request.headers["Accept"] = "application/xml, application/json"
         result = request.best_match_content_type()
@@ -231,7 +231,7 @@ class ResponseSerializerTest(test.TestCase):
 
         self.body_serializers = {
             'application/json': JSONSerializer(),
-            'application/XML': XMLSerializer(),
+            'application/xml': XMLSerializer(),
         }
 
         self.serializer = wsgi.ResponseSerializer(self.body_serializers,
@@ -250,15 +250,24 @@ class ResponseSerializerTest(test.TestCase):
                           self.serializer.get_body_serializer,
                           'application/unknown')
 
-    def test_serialize_response(self):
-        response = self.serializer.serialize({}, 'application/json')
-        self.assertEqual(response.headers['Content-Type'], 'application/json')
-        self.assertEqual(response.body, 'pew_json')
-        self.assertEqual(response.status_int, 404)
+    def test_serialize_response_json(self):
+        for content_type in ('application/json',
+                             'application/vnd.openstack.compute+json'):
+            response = self.serializer.serialize({}, content_type)
+            self.assertEqual(response.headers['Content-Type'], content_type)
+            self.assertEqual(response.body, 'pew_json')
+            self.assertEqual(response.status_int, 404)
+
+    def test_serialize_response_xml(self):
+        for content_type in ('application/xml',
+                             'application/vnd.openstack.compute+xml'):
+            response = self.serializer.serialize({}, content_type)
+            self.assertEqual(response.headers['Content-Type'], content_type)
+            self.assertEqual(response.body, 'pew_xml')
+            self.assertEqual(response.status_int, 404)
 
     def test_serialize_response_None(self):
         response = self.serializer.serialize(None, 'application/json')
-        print response
         self.assertEqual(response.headers['Content-Type'], 'application/json')
         self.assertEqual(response.body, '')
         self.assertEqual(response.status_int, 404)
@@ -281,7 +290,7 @@ class RequestDeserializerTest(test.TestCase):
 
         self.body_deserializers = {
             'application/json': JSONDeserializer(),
-            'application/XML': XMLDeserializer(),
+            'application/xml': XMLDeserializer(),
         }
 
         self.deserializer = wsgi.RequestDeserializer(self.body_deserializers)
@@ -290,8 +299,9 @@ class RequestDeserializerTest(test.TestCase):
         pass
 
     def test_get_deserializer(self):
-        expected = self.deserializer.get_body_deserializer('application/json')
-        self.assertEqual(expected, self.body_deserializers['application/json'])
+        ctype = 'application/json'
+        expected = self.deserializer.get_body_deserializer(ctype)
+        self.assertEqual(expected, self.body_deserializers[ctype])
 
     def test_get_deserializer_unknown_content_type(self):
         self.assertRaises(exception.InvalidContentType,
@@ -299,10 +309,11 @@ class RequestDeserializerTest(test.TestCase):
                           'application/unknown')
 
     def test_get_expected_content_type(self):
+        ctype = 'application/json'
         request = wsgi.Request.blank('/')
-        request.headers['Accept'] = 'application/json'
+        request.headers['Accept'] = ctype
         self.assertEqual(self.deserializer.get_expected_content_type(request),
-                         'application/json')
+                         ctype)
 
     def test_get_action_args(self):
         env = {
