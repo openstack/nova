@@ -630,7 +630,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         instance_id = instance_ref['id']
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
-        if FLAGS.force_release_dhcp:
+        if FLAGS.force_dhcp_release:
             dev = self.driver.get_dev(fixed_ip_ref['network'])
             address = fixed_ip_ref['address']
             mac_address = fixed_ip_ref['virtual_interface']['address']
