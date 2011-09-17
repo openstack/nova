@@ -275,11 +275,13 @@ class ShellCommands(object):
         arguments: path"""
         exec(compile(open(path).read(), path, 'exec'), locals(), globals())
 
-    @args('--filename', dest='filename', metavar='<path>', help='Export path')
+    @args('--filename', dest='filename', metavar='<path>', default=False,
+          help='Export file path')
     def export(self, filename):
         """Export Nova users into a file that can be consumed by Keystone"""
+
         def create_file(filename):
-            data = generate_file()
+            data = generate_data()
             with open(filename, 'w') as f:
                 f.write(data.getvalue())
 
@@ -303,21 +305,27 @@ class ShellCommands(object):
             for project in am.get_projects():
                 for u in project.member_ids:
                     user = am.get_user(u)
-                    for role in roles:
-                        if user.has_role(role):
-                            print >> data, ("role grant '%s', '%s', '%s')," %
-                                           (user.name, role, project.name))
-            print >> data, footer
+                    for role in db.user_get_roles_for_project(ctxt, u,
+                                                              project.id):
+                        print >> data, ("role grant '%s', '%s', '%s')," %
+                                       (user.name, role, project.name))
+            print >> data
 
-        def generate_file():
+        def generate_data():
             data = StringIO.StringIO()
             am = manager.AuthManager()
             tenants(data, am)
             roles(data, am)
+            grant_roles(data, am)
             data.seek(0)
             return data
 
-        create_file(filename)
+        ctxt = context.get_admin_context()
+        if filename:
+            create_file(filename)
+        else:
+            data = generate_data()
+            print data.getvalue()
 
 
 class RoleCommands(object):
