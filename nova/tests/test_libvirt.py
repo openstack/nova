@@ -47,6 +47,41 @@ def _concurrency(wait, done, target):
     done.send()
 
 
+class FakeVirDomainSnapshot(object):
+
+    def __init__(self, dom=None):
+        self.dom = dom
+
+    def delete(self, flags):
+        pass
+
+
+class FakeVirtDomain(object):
+
+    def __init__(self, fake_xml=None):
+        if fake_xml:
+            self._fake_dom_xml = fake_xml
+        else:
+            self._fake_dom_xml = """
+                <domain type='kvm'>
+                    <devices>
+                        <disk type='file'>
+                            <source file='filename'/>
+                        </disk>
+                    </devices>
+                </domain>
+            """
+
+    def snapshotCreateXML(self, *args):
+        return FakeVirDomainSnapshot(self)
+
+    def createWithFlags(self, launch_flags):
+        pass
+
+    def XMLDesc(self, *args):
+        return self._fake_dom_xml
+
+
 def _create_network_info(count=1, ipv6=None):
     if ipv6 is None:
         ipv6 = FLAGS.use_ipv6
@@ -194,7 +229,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         # A fake libvirt.virConnect
         class FakeLibvirtConnection(object):
-            pass
+            def defineXML(self, xml):
+                return FakeVirtDomain()
 
         # A fake connection.IptablesFirewallDriver
         class FakeIptablesFirewallDriver(object):
@@ -241,23 +277,6 @@ class LibvirtConnTestCase(test.TestCase):
         connection.LibvirtConnection._conn = fake
 
     def fake_lookup(self, instance_name):
-
-        class FakeVirtDomain(object):
-
-            def snapshotCreateXML(self, *args):
-                return None
-
-            def XMLDesc(self, *args):
-                return """
-                    <domain type='kvm'>
-                        <devices>
-                            <disk type='file'>
-                                <source file='filename'/>
-                            </disk>
-                        </devices>
-                    </domain>
-                """
-
         return FakeVirtDomain()
 
     def fake_execute(self, *args):
