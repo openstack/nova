@@ -110,6 +110,8 @@ flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
 flags.DEFINE_bool('fake_call', False,
                   'If True, skip using the queue and make local calls')
+flags.DEFINE_bool('force_dhcp_release', False,
+                  'If True, send a dhcp release on instance termination')
 
 
 class AddressAlreadyAllocated(exception.Error):
@@ -628,6 +630,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         instance_id = instance_ref['id']
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
+        if FLAGS.force_release_dhcp:
+            dev = self.driver.get_dev(fixed_ip_ref['network'])
+            address = fixed_ip_ref['address']
+            mac_address = fixed_ip_ref['virtual_interface']['address']
+            self.driver.release_dhcp(dev, address, mac_address)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
