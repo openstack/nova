@@ -633,8 +633,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         if FLAGS.force_dhcp_release:
             dev = self.driver.get_dev(fixed_ip_ref['network'])
             address = fixed_ip_ref['address']
-            mac_address = fixed_ip_ref['virtual_interface']['address']
-            self.driver.release_dhcp(dev, address, mac_address)
+            vif = self.db.virtual_interface_get_by_instance_and_network(
+                    context, instance_ref['id'], fixed_ip_ref['network']['id'])
+            self.driver.release_dhcp(dev, address, vif['address'])
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
