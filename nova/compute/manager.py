@@ -70,8 +70,6 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
 flags.DEFINE_string('stub_network', False,
                     'Stub network related code')
-flags.DEFINE_integer('password_length', 12,
-                    'Length of generated admin passwords')
 flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
@@ -322,7 +320,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # used by the image service. This should be refactored to be
             # consistent.
             image_href = instance['image_ref']
-            image_service, image_id = nova.image.get_image_service(image_href)
+            image_service, image_id = nova.image.get_image_service(context,
+                                                                   image_href)
             image_meta = image_service.show(context, image_id)
 
             try:
@@ -579,7 +578,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def reboot_instance(self, context, instance_id):
+    def reboot_instance(self, context, instance_id, reboot_type="SOFT"):
         """Reboot an instance on this host."""
         LOG.audit(_("Rebooting instance %s"), instance_id, context=context)
         context = context.elevated()
@@ -601,7 +600,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context=context)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.reboot(instance_ref, network_info)
+        self.driver.reboot(instance_ref, network_info, reboot_type)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -796,12 +795,18 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def rescue_instance(self, context, instance_id):
-        """Rescue an instance on this host."""
+    def rescue_instance(self, context, instance_id, **kwargs):
+        """
+        Rescue an instance on this host.
+        :param rescue_password: password to set on rescue instance
+        """
+
         LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
         context = context.elevated()
 
         instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref.admin_pass = kwargs.get('rescue_password',
+                utils.generate_password(FLAGS.password_length))
         network_info = self._get_instance_nw_info(context, instance_ref)
 
         # NOTE(blamar): None of the virt drivers use the 'callback' param

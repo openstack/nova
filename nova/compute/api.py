@@ -202,7 +202,8 @@ class API(base.Base):
         self._check_injected_file_quota(context, injected_files)
         self._check_requested_networks(context, requested_networks)
 
-        (image_service, image_id) = nova.image.get_image_service(image_href)
+        (image_service, image_id) = nova.image.get_image_service(context,
+                                                                 image_href)
         image = image_service.show(context, image_id)
 
         config_drive_id = None
@@ -877,6 +878,7 @@ class API(base.Base):
                 'image': 'image_ref',
                 'name': 'display_name',
                 'instance_name': 'name',
+                'tenant_id': 'project_id',
                 'recurse_zones': None,
                 'flavor': _remap_flavor_filter,
                 'fixed_ip': _remap_fixed_ip_filter}
@@ -1041,13 +1043,14 @@ class API(base.Base):
         return recv_meta
 
     @scheduler_api.reroute_compute("reboot")
-    def reboot(self, context, instance_id):
+    def reboot(self, context, instance_id, reboot_type):
         """Reboot the given instance."""
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.REBOOTING)
-        self._cast_compute_message('reboot_instance', context, instance_id)
+        self._cast_compute_message('reboot_instance', context, instance_id,
+                params={'reboot_type': reboot_type})
 
     @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, admin_password,
@@ -1271,13 +1274,18 @@ class API(base.Base):
         self._cast_compute_message('resume_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("rescue")
-    def rescue(self, context, instance_id):
+    def rescue(self, context, instance_id, rescue_password=None):
         """Rescue the given instance."""
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.RESCUING)
-        self._cast_compute_message('rescue_instance', context, instance_id)
+
+        rescue_params = {
+            "rescue_password": rescue_password
+        }
+        self._cast_compute_message('rescue_instance', context, instance_id,
+                                    params=rescue_params)
 
     @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance_id):

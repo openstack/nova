@@ -372,8 +372,7 @@ class BootFromVolumeController(servers.ControllerV11):
         for key in ['instance_type', 'image_ref']:
             inst[key] = extra_values[key]
 
-        builder = self._get_view_builder(req)
-        server = builder.build(inst, is_detail=True)
+        server = self._build_view(req, inst, is_detail=True)
         server['server']['adminPass'] = extra_values['password']
         return server
 

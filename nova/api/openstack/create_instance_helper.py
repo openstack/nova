@@ -92,7 +92,8 @@ class CreateInstanceHelper(object):
         if str(image_href).startswith(req.application_url):
             image_href = image_href.split('/').pop()
         try:
-            image_service, image_id = nova.image.get_image_service(image_href)
+            image_service, image_id = nova.image.get_image_service(context,
+                                                                   image_href)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
                                                 req, image_service, image_id)
             images = set([str(x['id']) for x in image_service.index(context)])
@@ -282,7 +283,7 @@ class CreateInstanceHelper(object):
         try:
             ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
-            raise exception.RamdiskNotFoundForImage(image_id=image_id)
+            ramdisk_id = None
 
         return kernel_id, ramdisk_id
 
@@ -316,14 +317,14 @@ class CreateInstanceHelper(object):
 
     def _get_server_admin_password_old_style(self, server):
         """ Determine the admin password for a server on creation """
-        return utils.generate_password(16)
+        return utils.generate_password(FLAGS.password_length)
 
     def _get_server_admin_password_new_style(self, server):
         """ Determine the admin password for a server on creation """
         password = server.get('adminPass')
 
         if password is None:
-            return utils.generate_password(16)
+            return utils.generate_password(FLAGS.password_length)
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
             raise exc.HTTPBadRequest(explanation=msg)

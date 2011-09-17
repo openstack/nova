@@ -70,6 +70,7 @@ class KeystoneContext(wsgi.Middleware):
                                      project_id,
                                      roles=roles,
                                      auth_token=auth_token,
+                                     strategy='keystone',
                                      remote_address=remote_address)
 
         req.environ['nova.context'] = ctx

@@ -622,7 +622,8 @@ class ServerActionsTestV11(test.TestCase):
         self.assertEqual(res.status_int, 202)
         body = json.loads(res.body)
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertEqual(len(body['server']['adminPass']), 16)
+        self.assertEqual(len(body['server']['adminPass']),
+                         FLAGS.password_length)
 
     def test_server_rebuild_rejected_when_building(self):
         body = {
