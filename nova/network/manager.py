@@ -632,7 +632,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                                    instance_id)
         if FLAGS.force_dhcp_release:
             dev = self.driver.get_dev(fixed_ip_ref['network'])
-            address = fixed_ip_ref['address']
             vif = self.db.virtual_interface_get_by_instance_and_network(
                     context, instance_ref['id'], fixed_ip_ref['network']['id'])
             self.driver.release_dhcp(dev, address, vif['address'])
