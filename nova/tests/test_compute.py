@@ -174,6 +174,20 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(pre_build_len,
                          len(db.instance_get_all(context.get_admin_context())))
 
+    def test_create_instance_with_img_ref_associates_config_drive(self):
+        """Make sure create associates a config drive."""
+
+        instance_id = self._create_instance(params={'config_drive': '1234', })
+
+        try:
+            self.compute.run_instance(self.context, instance_id)
+            instances = db.instance_get_all(context.get_admin_context())
+            instance = instances[0]
+
+            self.assertTrue(instance.config_drive)
+        finally:
+            db.instance_destroy(self.context, instance_id)
+
     def test_create_instance_associates_config_drive(self):
         """Make sure create associates a config drive."""
 
