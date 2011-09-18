@@ -151,7 +151,6 @@ class Controller(object):
 
     def create(self, req, body):
         """ Creates a new server for a given user """
-
         if 'server' in body:
             body['server']['key_name'] = self._get_key_name(req, body)
 
