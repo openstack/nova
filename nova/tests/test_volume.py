@@ -271,7 +271,6 @@ class DriverTestCase(test.TestCase):
             """Fake _execute."""
             return self.output, None
         self.volume.driver._execute = _fake_execute
-        self.volume.driver._sync_execute = _fake_execute
 
         log = logging.getLogger()
         self.stream = cStringIO.StringIO()

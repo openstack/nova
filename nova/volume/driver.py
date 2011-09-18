@@ -52,12 +52,10 @@ flags.DEFINE_string('rbd_pool', 'rbd',
 
 class VolumeDriver(object):
     """Executes commands relating to Volumes."""
-    def __init__(self, execute=utils.execute,
-                 sync_exec=utils.execute, *args, **kwargs):
+    def __init__(self, execute=utils.execute, *args, **kwargs):
         # NOTE(vish): db is set by Manager
         self.db = None
         self._execute = execute
-        self._sync_exec = sync_exec
 
     def _try_execute(self, *command, **kwargs):
         # NOTE(vish): Volume commands can partially fail due to timing, but
@@ -238,19 +236,19 @@ class ISCSIDriver(VolumeDriver):
 
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        self._sync_exec('ietadm', '--op', 'new',
-                        "--tid=%s" % iscsi_target,
-                        '--params',
-                        "Name=%s" % iscsi_name,
-                        run_as_root=True,
-                        check_exit_code=False)
-        self._sync_exec('ietadm', '--op', 'new',
-                        "--tid=%s" % iscsi_target,
-                        '--lun=0',
-                        '--params',
-                        "Path=%s,Type=fileio" % volume_path,
-                        run_as_root=True,
-                        check_exit_code=False)
+        self._execute('ietadm', '--op', 'new',
+                      "--tid=%s" % iscsi_target,
+                      '--params',
+                      "Name=%s" % iscsi_name,
+                      run_as_root=True,
+                      check_exit_code=False)
+        self._execute('ietadm', '--op', 'new',
+                      "--tid=%s" % iscsi_target,
+                      '--lun=0',
+                      '--params',
+                      "Path=%s,Type=fileio" % volume_path,
+                      run_as_root=True,
+                      check_exit_code=False)
 
     def _ensure_iscsi_targets(self, context, host):
         """Ensure that target ids have been created in datastore."""
@@ -439,7 +437,6 @@ class FakeISCSIDriver(ISCSIDriver):
     """Logs calls instead of executing."""
     def __init__(self, *args, **kwargs):
         super(FakeISCSIDriver, self).__init__(execute=self.fake_execute,
-                                              sync_exec=self.fake_execute,
                                               *args, **kwargs)
 
     def check_for_setup_error(self):
@@ -718,14 +715,14 @@ class ZadaraBEDriver(ISCSIDriver):
                 break
 
         try:
-            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
-                            'create_qospart',
-                            '--qos', qosstr,
-                            '--pname', volume['name'],
-                            '--psize', sizestr,
-                            '--vsaid', vsa_id,
-                            run_as_root=True,
-                            check_exit_code=0)
+            self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                          'create_qospart',
+                          '--qos', qosstr,
+                          '--pname', volume['name'],
+                          '--psize', sizestr,
+                          '--vsaid', vsa_id,
+                          run_as_root=True,
+                          check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE create_volume for %s failed"), volume['name'])
             raise
@@ -743,11 +740,11 @@ class ZadaraBEDriver(ISCSIDriver):
             return
 
         try:
-            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
-                            'delete_partition',
-                            '--pname', volume['name'],
-                            run_as_root=True,
-                            check_exit_code=0)
+            self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                          'delete_partition',
+                          '--pname', volume['name'],
+                          run_as_root=True,
+                          check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE delete_volume for %s failed"), volume['name'])
             return
@@ -883,12 +880,12 @@ class ZadaraBEDriver(ISCSIDriver):
             return
 
         try:
-            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
-                        'remove_export',
-                        '--pname', volume['name'],
-                        '--tid', iscsi_target,
-                        run_as_root=True,
-                        check_exit_code=0)
+            self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                          'remove_export',
+                          '--pname', volume['name'],
+                          '--tid', iscsi_target,
+                          run_as_root=True,
+                          check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE remove_export for %s failed"), volume['name'])
             return
@@ -913,13 +910,12 @@ class ZadaraBEDriver(ISCSIDriver):
         Common logic that asks zadara_sncfg to setup iSCSI target/lun for
         this volume
         """
-        (out, err) = self._sync_exec(
-                                '/var/lib/zadara/bin/zadara_sncfg',
-                                'create_export',
-                                '--pname', volume['name'],
-                                '--tid', iscsi_target,
-                                run_as_root=True,
-                                check_exit_code=0)
+        (out, err) = self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                                   'create_export',
+                                   '--pname', volume['name'],
+                                   '--tid', iscsi_target,
+                                   run_as_root=True,
+                                   check_exit_code=0)
 
         result_xml = ElementTree.fromstring(out)
         response_node = result_xml.find("Sn")
@@ -940,11 +936,10 @@ class ZadaraBEDriver(ISCSIDriver):
     def _get_qosgroup_summary(self):
         """gets the list of qosgroups from Zadara BE"""
         try:
-            (out, err) = self._sync_exec(
-                                        '/var/lib/zadara/bin/zadara_sncfg',
-                                        'get_qosgroups_xml',
-                                        run_as_root=True,
-                                        check_exit_code=0)
+            (out, err) = self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                                       'get_qosgroups_xml',
+                                       run_as_root=True,
+                                       check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("Failed to retrieve QoS info"))
             return {}
