@@ -921,8 +921,8 @@ class LibvirtConnection(driver.ComputeDriver):
                               target=basepath('disk.config'),
                               fname=fname,
                               image_id=config_drive_id,
-                              user=user,
-                              project=project)
+                              user_id=inst['user_id'],
+                              project_id=inst['project_id'],)
         elif config_drive:
             self._create_local(basepath('disk.config'), 64, unit='M',
                                fs_format='msdos')  # 64MB
