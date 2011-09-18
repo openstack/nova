@@ -1392,11 +1392,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         hostname = instance_ref['hostname']
 
-        # Getting fixed ips
-        fixed_ips = self.db.instance_get_fixed_addresses(context, instance_id)
-        if not fixed_ips:
-            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
-
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:
             LOG.info(_("%s has no volume."), hostname)
@@ -1412,6 +1407,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Retry operation is necessary because continuously request comes,
         # concorrent request occurs to iptables, then it complains.
         network_info = self._get_instance_nw_info(context, instance_ref)
+
+        fixed_ips = [nw_info[1]['ips'] for nw_info in network_info]
+        if not fixed_ips:
+            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+
         max_retry = FLAGS.live_migration_retry_count
         for cnt in range(max_retry):
             try:

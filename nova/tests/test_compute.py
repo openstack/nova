@@ -661,7 +661,6 @@ class ComputeTestCase(test.TestCase):
 
         dbmock = self.mox.CreateMock(db)
         dbmock.instance_get(c, i_id).AndReturn(instance_ref)
-        dbmock.instance_get_fixed_addresses(c, i_id).AndReturn(None)
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -671,6 +670,9 @@ class ComputeTestCase(test.TestCase):
 
     def test_pre_live_migration_instance_has_volume(self):
         """Confirm setup_compute_volume is called when volume is mounted."""
+        def fake_nw_info(*args, **kwargs):
+            return [(0, {'ips':['dummy']})]
+
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
 
@@ -680,13 +682,13 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
-        drivermock.plug_vifs(i_ref, [])
-        drivermock.ensure_filtering_rules_for_instance(i_ref, [])
+        drivermock.plug_vifs(i_ref, fake_nw_info())
+        drivermock.ensure_filtering_rules_for_instance(i_ref, fake_nw_info())
 
+        self.stubs.Set(self.compute, '_get_instance_nw_info', fake_nw_info)
         self.compute.db = dbmock
         self.compute.volume_manager = volmock
         self.compute.driver = drivermock
@@ -697,6 +699,9 @@ class ComputeTestCase(test.TestCase):
 
     def test_pre_live_migration_instance_has_no_volume(self):
         """Confirm log meg when instance doesn't mount any volumes."""
+        def fake_nw_info(*args, **kwargs):
+            return [(0, {'ips':['dummy']})]
+
         i_ref = self._get_dummy_instance()
         i_ref['volumes'] = []
         c = context.get_admin_context()
@@ -706,12 +711,12 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
         compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
-        drivermock.plug_vifs(i_ref, [])
-        drivermock.ensure_filtering_rules_for_instance(i_ref, [])
+        drivermock.plug_vifs(i_ref, fake_nw_info())
+        drivermock.ensure_filtering_rules_for_instance(i_ref, fake_nw_info())
 
+        self.stubs.Set(self.compute, '_get_instance_nw_info', fake_nw_info)
         self.compute.db = dbmock
         self.compute.driver = drivermock
 
@@ -725,6 +730,8 @@ class ComputeTestCase(test.TestCase):
         It retries and raise exception when timeout exceeded.
 
         """
+        def fake_nw_info(*args, **kwargs):
+            return [(0, {'ips':['dummy']})]
 
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
@@ -736,13 +743,13 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             volmock.setup_compute_volume(c, i_ref['volumes'][i]['id'])
         for i in range(FLAGS.live_migration_retry_count):
-            drivermock.plug_vifs(i_ref, []).\
+            drivermock.plug_vifs(i_ref, fake_nw_info()).\
                 AndRaise(exception.ProcessExecutionError())
 
+        self.stubs.Set(self.compute, '_get_instance_nw_info', fake_nw_info)
         self.compute.db = dbmock
         self.compute.network_manager = netmock
         self.compute.volume_manager = volmock
