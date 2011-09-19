@@ -663,7 +663,9 @@ class IptablesFirewallDriver(FirewallDriver):
                 if version == 6 and rule.protocol == 'icmp':
                     protocol = 'icmpv6'
 
-                args = ['-j ACCEPT', '-p', protocol]
+                args = ['-j ACCEPT']
+                if protocol:
+                    args += ['-p', protocol]
 
                 if protocol in ['udp', 'tcp']:
                     if rule.from_port == rule.to_port:

@@ -52,6 +52,15 @@ def _concurrency(wait, done, target):
     done.send()
 
 
+class FakeVirDomainSnapshot(object):
+
+    def __init__(self, dom=None):
+        self.dom = dom
+
+    def delete(self, flags):
+        pass
+
+
 class FakeVirtDomain(object):
 
     def __init__(self, fake_xml=None):
@@ -69,7 +78,7 @@ class FakeVirtDomain(object):
             """
 
     def snapshotCreateXML(self, *args):
-        return None
+        return FakeVirDomainSnapshot(self)
 
     def createWithFlags(self, launch_flags):
         pass
@@ -260,7 +269,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
 
-    def test_snapshot(self):
+    def test_snapshot_in_raw_format(self):
         if not self.lazy_load_library_exists():
             return
 
@@ -293,6 +302,44 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertEquals(snapshot['properties']['image_state'], 'available')
         self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['disk_format'], 'raw')
+        self.assertEquals(snapshot['name'], snapshot_name)
+
+    def test_snapshot_in_qcow2_format(self):
+        if not self.lazy_load_library_exists():
+            return
+
+        self.flags(image_service='nova.image.fake.FakeImageService')
+        self.flags(snapshot_image_format='qcow2')
+
+        # Start test
+        image_service = utils.import_object(FLAGS.image_service)
+
+        # Assuming that base image already exists in image_service
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        # Create new image. It will be updated in snapshot method
+        # To work with it from snapshot, the single image_service is needed
+        recv_meta = image_service.create(context, sent_meta)
+
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
+        self.mox.StubOutWithMock(connection.utils, 'execute')
+        connection.utils.execute = self.fake_execute
+
+        self.mox.ReplayAll()
+
+        conn = connection.LibvirtConnection(False)
+        conn.snapshot(self.context, instance_ref, recv_meta['id'])
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['disk_format'], 'qcow2')
         self.assertEquals(snapshot['name'], snapshot_name)
 
     def test_snapshot_no_image_architecture(self):
