@@ -3210,7 +3210,7 @@ def migration_get_all_unconfirmed(context, confirm_window, session=None):
 
     results = session.query(models.Migration).\
             filter(models.Migration.updated_at <= confirm_window).\
-            filter_by(status="VERIFY_RESIZE").all()
+            filter_by(status="FINISHED").all()
 
     return results
 
