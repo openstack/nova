@@ -48,6 +48,7 @@ import datetime
 import itertools
 import math
 import netaddr
+import re
 import socket
 from eventlet import greenpool
 
@@ -398,6 +399,62 @@ class NetworkManager(manager.SchedulerDependentManager):
         group_ids = [group['id'] for group in groups]
         self.compute_api.trigger_security_group_members_refresh(admin_context,
                                                                     group_ids)
+
+    def get_vifs_by_instance(self, context, instance_id):
+        vifs = self.db.virtual_interface_get_by_instance(context,
+                                                         instance_id)
+        return vifs
+
+    def get_instance_uuids_by_ip_filter(self, context, filters):
+        fixed_ip_filter = filters.get('fixed_ip')
+        ip_filter = re.compile(str(filters.get('ip')))
+        ipv6_filter = re.compile(str(filters.get('ip6')))
+
+        # NOTE(jkoelker) Should probably figur out a better way to do
+        #                this. But for now it "works", this could suck on
+        #                large installs.
+
+        vifs = self.db.virtual_interface_get_all(context)
+        results = []
+
+        for vif in vifs:
+            if vif['instance_id'] is None:
+                continue
+
+            fixed_ipv6 = vif.get('fixed_ipv6')
+            if fixed_ipv6 and ipv6_filter.match(fixed_ipv6):
+                # NOTE(jkoelker) Will need to update for the UUID flip
+                results.append({'instance_id': vif['instance_id'],
+                                'ip': fixed_ipv6})
+
+            for fixed_ip in vif['fixed_ips']:
+                if not fixed_ip or not fixed_ip['address']:
+                    continue
+                if fixed_ip['address'] == fixed_ip_filter:
+                    results.append({'instance_id': vif['instance_id'],
+                                    'ip': fixed_ip['address']})
+                    continue
+                if ip_filter.match(fixed_ip['address']):
+                    results.append({'instance_id': vif['instance_id'],
+                                    'ip': fixed_ip['address']})
+                    continue
+                for floating_ip in fixed_ip.get('floating_ips', []):
+                    if not floating_ip or not floating_ip['address']:
+                        continue
+                    if ip_filter.match(floating_ip['address']):
+                        results.append({'instance_id': vif['instance_id'],
+                                        'ip': floating_ip['address']})
+                        continue
+
+        # NOTE(jkoelker) Until we switch over to instance_uuid ;)
+        ids = [res['instance_id'] for res in results]
+        uuids = self.db.instance_get_uuids_by_ids(context, ids)
+        for res in results:
+            uuid = [u['uuid'] for u in uuids if u['id'] == res['instance_id']]
+            # NOTE(jkoelker) UUID must exist, so no test here
+            res['instance_uuid'] = uuid[0]
+
+        return results
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):
