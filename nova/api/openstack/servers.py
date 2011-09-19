@@ -656,7 +656,11 @@ class ControllerV11(Controller):
 
     def _get_key_name(self, req, body):
         if 'server' in body:
-            return body['server'].get('key_name')
+            try:
+                return body['server'].get('key_name')
+            except AttributeError:
+                msg = _("Malformed server entity")
+                raise exc.HTTPBadRequest(explanation=msg)
 
     def _image_ref_from_req_data(self, data):
         try:
