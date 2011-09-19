@@ -125,8 +125,10 @@ flags.DEFINE_string('block_migration_flag',
                     'Define block migration behavior.')
 flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
-flags.DEFINE_string('qemu_img', 'qemu-img',
-                    'binary to use for qemu-img commands')
+flags.DEFINE_string('snapshot_image_format', None,
+                    'Snapshot image format (valid options are : '
+                    'raw, qcow2, vmdk, vdi).'
+                    'Defaults to same as source image')
 flags.DEFINE_string('libvirt_vif_type', 'bridge',
                     'Type of VIF to create.')
 flags.DEFINE_string('libvirt_vif_driver',
@@ -391,10 +393,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def snapshot(self, context, instance, image_href):
         """Create snapshot from a running VM instance.
 
-        This command only works with qemu 0.14+, the qemu_img flag is
-        provided so that a locally compiled binary of qemu-img can be used
-        to support this command.
-
+        This command only works with qemu 0.14+
         """
         virt_dom = self._lookup_by_name(instance['name'])
 
@@ -420,8 +419,11 @@ class LibvirtConnection(driver.ComputeDriver):
             arch = base['properties']['architecture']
             metadata['properties']['architecture'] = arch
 
-        if 'disk_format' in base:
-            metadata['disk_format'] = base['disk_format']
+        source_format = base.get('disk_format') or 'raw'
+        image_format = FLAGS.snapshot_image_format or source_format
+        if FLAGS.use_cow_images:
+            source_format = 'qcow2'
+        metadata['disk_format'] = image_format
 
         if 'container_format' in base:
             metadata['container_format'] = base['container_format']
@@ -444,12 +446,12 @@ class LibvirtConnection(driver.ComputeDriver):
         # Export the snapshot to a raw image
         temp_dir = tempfile.mkdtemp()
         out_path = os.path.join(temp_dir, snapshot_name)
-        qemu_img_cmd = (FLAGS.qemu_img,
+        qemu_img_cmd = ('qemu-img',
                         'convert',
                         '-f',
-                        'qcow2',
+                        source_format,
                         '-O',
-                        'raw',
+                        image_format,
                         '-s',
                         snapshot_name,
                         disk_path,
@@ -771,13 +773,13 @@ class LibvirtConnection(driver.ComputeDriver):
         if size:
             disk.extend(target, size)
 
-    def _create_local(self, target, local_size, prefix='G', fs_format=None):
+    def _create_local(self, target, local_size, unit='G', fs_format=None):
         """Create a blank image of specified size"""
 
         if not fs_format:
             fs_format = FLAGS.default_local_format
 
-        utils.execute('truncate', target, '-s', "%d%c" % (local_size, prefix))
+        utils.execute('truncate', target, '-s', "%d%c" % (local_size, unit))
         if fs_format:
             utils.execute('mkfs', '-t', fs_format, target)
 
@@ -785,9 +787,9 @@ class LibvirtConnection(driver.ComputeDriver):
         self._create_local(target, local_size)
         disk.mkfs(os_type, fs_label, target)
 
-    def _create_swap(self, target, swap_gb):
+    def _create_swap(self, target, swap_mb):
         """Create a swap file of specified size"""
-        self._create_local(target, swap_gb)
+        self._create_local(target, swap_mb, unit='M')
         utils.execute('mkswap', target)
 
     def _create_image(self, context, inst, libvirt_xml, suffix='',
@@ -885,22 +887,22 @@ class LibvirtConnection(driver.ComputeDriver):
                               cow=FLAGS.use_cow_images,
                               local_size=eph['size'])
 
-        swap_gb = 0
+        swap_mb = 0
 
         swap = driver.block_device_info_get_swap(block_device_info)
         if driver.swap_is_usable(swap):
-            swap_gb = swap['swap_size']
+            swap_mb = swap['swap_size']
         elif (inst_type['swap'] > 0 and
               not self._volume_in_mapping(self.default_swap_device,
                                           block_device_info)):
-            swap_gb = inst_type['swap']
+            swap_mb = inst_type['swap']
 
-        if swap_gb > 0:
+        if swap_mb > 0:
             self._cache_image(fn=self._create_swap,
                               target=basepath('disk.swap'),
-                              fname="swap_%s" % swap_gb,
+                              fname="swap_%s" % swap_mb,
                               cow=FLAGS.use_cow_images,
-                              swap_gb=swap_gb)
+                              swap_mb=swap_mb)
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -921,10 +923,10 @@ class LibvirtConnection(driver.ComputeDriver):
                               target=basepath('disk.config'),
                               fname=fname,
                               image_id=config_drive_id,
-                              user=user,
-                              project=project)
+                              user_id=inst['user_id'],
+                              project_id=inst['project_id'],)
         elif config_drive:
-            self._create_local(basepath('disk.config'), 64, prefix="M",
+            self._create_local(basepath('disk.config'), 64, unit='M',
                                fs_format='msdos')  # 64MB
 
         if inst['key_data']:
