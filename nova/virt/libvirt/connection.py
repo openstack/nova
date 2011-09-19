@@ -29,9 +29,9 @@ Supports KVM, LXC, QEMU, UML, and XEN.
                 (default: kvm).
 :libvirt_uri:  Override for the default libvirt URI (depends on libvirt_type).
 :libvirt_xml_template:  Libvirt XML Template.
-:rescue_image_id:  Rescue ami image (default: ami-rescue).
-:rescue_kernel_id:  Rescue aki image (default: aki-rescue).
-:rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
+:rescue_image_id:  Rescue ami image (None = original image).
+:rescue_kernel_id:  Rescue aki image (None = original image).
+:rescue_ramdisk_id:  Rescue ari image (None = original image).
 :injected_network_template:  Template file for injected network
 :allow_same_net_traffic:  Whether to allow in project network traffic
 
@@ -84,9 +84,9 @@ LOG = logging.getLogger('nova.virt.libvirt_conn')
 FLAGS = flags.FLAGS
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 # TODO(vish): These flags should probably go into a shared location
-flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
-flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
-flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
+flags.DEFINE_string('rescue_image_id', None, 'Rescue ami image')
+flags.DEFINE_string('rescue_kernel_id', None, 'Rescue aki image')
+flags.DEFINE_string('rescue_ramdisk_id', None, 'Rescue ari image')
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
@@ -468,7 +468,7 @@ class LibvirtConnection(driver.ComputeDriver):
         snapshot_ptr.delete(0)
 
     @exception.wrap_exception()
-    def reboot(self, instance, network_info, reboot_type):
+    def reboot(self, instance, network_info, reboot_type=None, xml=None):
         """Reboot a virtual machine, given an instance reference.
 
         This method actually destroys and re-creates the domain to ensure the
@@ -479,7 +479,9 @@ class LibvirtConnection(driver.ComputeDriver):
         # NOTE(itoumsn): Use XML delived from the running instance
         # instead of using to_xml(instance, network_info). This is almost
         # the ultimate stupid workaround.
-        xml = virt_dom.XMLDesc(0)
+        if not xml:
+            xml = virt_dom.XMLDesc(0)
+
         # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
         # better because we cannot ensure flushing dirty buffers
         # in the guest OS. But, in case of KVM, shutdown() does not work...
@@ -543,43 +545,42 @@ class LibvirtConnection(driver.ComputeDriver):
         data recovery.
 
         """
-        self.destroy(instance, network_info, cleanup=False)
+
+        virt_dom = self._conn.lookupByName(instance['name'])
+        unrescue_xml = virt_dom.XMLDesc(0)
+        unrescue_xml_path = os.path.join(FLAGS.instances_path,
+                                         instance['name'],
+                                         'unrescue.xml')
+        f = open(unrescue_xml_path, 'w')
+        f.write(unrescue_xml)
+        f.close()
 
         xml = self.to_xml(instance, network_info, rescue=True)
-        rescue_images = {'image_id': FLAGS.rescue_image_id,
-                         'kernel_id': FLAGS.rescue_kernel_id,
-                         'ramdisk_id': FLAGS.rescue_ramdisk_id}
-        self._create_image(context, instance, xml, '.rescue', rescue_images)
-        self._create_new_domain(xml)
-
-        def _wait_for_rescue():
-            """Called at an interval until the VM is running again."""
-            instance_name = instance['name']
-
-            try:
-                state = self.get_info(instance_name)['state']
-            except exception.NotFound:
-                msg = _("During reboot, %s disappeared.") % instance_name
-                LOG.error(msg)
-                raise utils.LoopingCallDone
-
-            if state == power_state.RUNNING:
-                msg = _("Instance %s rescued successfully.") % instance_name
-                LOG.info(msg)
-                raise utils.LoopingCallDone
-
-        timer = utils.LoopingCall(_wait_for_rescue)
-        return timer.start(interval=0.5, now=True)
+        rescue_images = {
+            'image_id': FLAGS.rescue_image_id or instance['image_ref'],
+            'kernel_id': FLAGS.rescue_kernel_id or instance['kernel_id'],
+            'ramdisk_id': FLAGS.rescue_ramdisk_id or instance['ramdisk_id'],
+        }
+        self._create_image(context, instance, xml, '.rescue', rescue_images,
+                           network_info=network_info)
+        self.reboot(instance, network_info, xml=xml)
 
     @exception.wrap_exception()
-    def unrescue(self, instance, network_info):
+    def unrescue(self, instance, callback, network_info):
         """Reboot the VM which is being rescued back into primary images.
 
         Because reboot destroys and re-creates instances, unresue should
         simply call reboot.
 
         """
-        self.reboot(instance, network_info)
+        unrescue_xml_path = os.path.join(FLAGS.instances_path,
+                                         instance['name'],
+                                         'unrescue.xml')
+        f = open(unrescue_xml_path)
+        unrescue_xml = f.read()
+        f.close()
+        os.remove(unrescue_xml_path)
+        self.reboot(instance, network_info, xml=unrescue_xml)
 
     @exception.wrap_exception()
     def poll_rescued_instances(self, timeout):
@@ -770,13 +771,13 @@ class LibvirtConnection(driver.ComputeDriver):
         if size:
             disk.extend(target, size)
 
-    def _create_local(self, target, local_size, prefix='G', fs_format=None):
+    def _create_local(self, target, local_size, unit='G', fs_format=None):
         """Create a blank image of specified size"""
 
         if not fs_format:
             fs_format = FLAGS.default_local_format
 
-        utils.execute('truncate', target, '-s', "%d%c" % (local_size, prefix))
+        utils.execute('truncate', target, '-s', "%d%c" % (local_size, unit))
         if fs_format:
             utils.execute('mkfs', '-t', fs_format, target)
 
@@ -784,9 +785,9 @@ class LibvirtConnection(driver.ComputeDriver):
         self._create_local(target, local_size)
         disk.mkfs(os_type, fs_label, target)
 
-    def _create_swap(self, target, swap_gb):
+    def _create_swap(self, target, swap_mb):
         """Create a swap file of specified size"""
-        self._create_local(target, swap_gb)
+        self._create_local(target, swap_mb, unit='M')
         utils.execute('mkswap', target)
 
     def _create_image(self, context, inst, libvirt_xml, suffix='',
@@ -814,8 +815,10 @@ class LibvirtConnection(driver.ComputeDriver):
             utils.execute('mkdir', '-p', container_dir)
 
         # NOTE(vish): No need add the suffix to console.log
-        os.close(os.open(basepath('console.log', ''),
-                         os.O_CREAT | os.O_WRONLY, 0660))
+        console_log = basepath('console.log', '')
+        if os.path.exists(console_log):
+            utils.execute('chown', os.getuid(), console_log, run_as_root=True)
+        os.close(os.open(console_log, os.O_CREAT | os.O_WRONLY, 0660))
 
         if not disk_images:
             disk_images = {'image_id': inst['image_ref'],
@@ -882,22 +885,22 @@ class LibvirtConnection(driver.ComputeDriver):
                               cow=FLAGS.use_cow_images,
                               local_size=eph['size'])
 
-        swap_gb = 0
+        swap_mb = 0
 
         swap = driver.block_device_info_get_swap(block_device_info)
         if driver.swap_is_usable(swap):
-            swap_gb = swap['swap_size']
+            swap_mb = swap['swap_size']
         elif (inst_type['swap'] > 0 and
               not self._volume_in_mapping(self.default_swap_device,
                                           block_device_info)):
-            swap_gb = inst_type['swap']
+            swap_mb = inst_type['swap']
 
-        if swap_gb > 0:
+        if swap_mb > 0:
             self._cache_image(fn=self._create_swap,
                               target=basepath('disk.swap'),
-                              fname="swap_%s" % swap_gb,
+                              fname="swap_%s" % swap_mb,
                               cow=FLAGS.use_cow_images,
-                              swap_gb=swap_gb)
+                              swap_mb=swap_mb)
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -918,10 +921,10 @@ class LibvirtConnection(driver.ComputeDriver):
                               target=basepath('disk.config'),
                               fname=fname,
                               image_id=config_drive_id,
-                              user=user,
-                              project=project)
+                              user_id=inst['user_id'],
+                              project_id=inst['project_id'],)
         elif config_drive:
-            self._create_local(basepath('disk.config'), 64, prefix="M",
+            self._create_local(basepath('disk.config'), 64, unit='M',
                                fs_format='msdos')  # 64MB
 
         if inst['key_data']:
@@ -991,14 +994,15 @@ class LibvirtConnection(driver.ComputeDriver):
                                  nbd=FLAGS.use_cow_images,
                                  tune2fs=tune2fs)
 
-                if FLAGS.libvirt_type == 'lxc':
-                    disk.setup_container(basepath('disk'),
-                                        container_dir=container_dir,
-                                        nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 LOG.warn(_('instance %(inst_name)s: ignoring error injecting'
                         ' data into image %(img_id)s (%(e)s)') % locals())
+
+        if FLAGS.libvirt_type == 'lxc':
+            disk.setup_container(basepath('disk'),
+                                container_dir=container_dir,
+                                nbd=FLAGS.use_cow_images)
 
         if FLAGS.libvirt_type == 'uml':
             utils.execute('chown', 'root', basepath('disk'), run_as_root=True)
