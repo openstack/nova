@@ -45,7 +45,7 @@ def upgrade(migrate_engine):
                              refcolumns=[instances.c.id]).drop()
     except Exception:
         try:
-            migrate_engine.execute("ALTER TABLE migrations DROP " \
+            migrate_engine.execute("ALTER TABLE virtual_interfaces DROP " \
                                    "FOREIGN KEY " \
                                    "`virtual_interfaces_ibfk_2`;")
         except Exception:
