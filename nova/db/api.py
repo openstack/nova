@@ -467,6 +467,11 @@ def virtual_interface_delete_by_instance(context, instance_id):
     return IMPL.virtual_interface_delete_by_instance(context, instance_id)
 
 
+def virtual_interface_get_all(context):
+    """Gets all virtual interfaces from the table,"""
+    return IMPL.virtual_interface_get_all(context)
+
+
 ####################
 
 
@@ -505,9 +510,10 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
-def instance_get_all_by_filters(context, filters):
+def instance_get_all_by_filters(context, filters, instance_uuids=None):
     """Get all instances that match all filters."""
-    return IMPL.instance_get_all_by_filters(context, filters)
+    return IMPL.instance_get_all_by_filters(context, filters,
+                                            instance_uuids=instance_uuids)
 
 
 def instance_get_active_by_window(context, begin, end=None, project_id=None):
@@ -609,6 +615,11 @@ def instance_action_create(context, values):
 def instance_get_actions(context, instance_id):
     """Get instance actions by instance id."""
     return IMPL.instance_get_actions(context, instance_id)
+
+
+def instance_get_uuids_by_ids(context, ids):
+    """Return the UUIDs of the instances given the ids"""
+    return IMPL.instance_get_uuids_by_ids(context, ids)
 
 
 ###################

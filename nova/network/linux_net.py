@@ -550,6 +550,10 @@ def get_dhcp_opts(context, network_ref):
     return '\n'.join(hosts)
 
 
+def release_dhcp(dev, address, mac_address):
+    utils.execute('dhcp_release', dev, address, mac_address, run_as_root=True)
+
+
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
@@ -594,7 +598,6 @@ def update_dhcp(context, dev, network_ref):
            'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
-           '--interface=%s' % dev,
            '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(dev, 'pid'),
@@ -800,6 +803,10 @@ def unplug(network):
     return interface_driver.unplug(network)
 
 
+def get_dev(network):
+    return interface_driver.get_dev(network)
+
+
 class LinuxNetInterfaceDriver(object):
     """Abstract class that defines generic network host API"""
     """ for for all Linux interface drivers."""
@@ -810,6 +817,10 @@ class LinuxNetInterfaceDriver(object):
 
     def unplug(self, network):
         """Destory Linux device, return device name"""
+        raise NotImplementedError()
+
+    def get_dev(self, network):
+        """Get device name"""
         raise NotImplementedError()
 
 
@@ -833,6 +844,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         return network['bridge']
 
     def unplug(self, network):
+        return self.get_dev(network)
+
+    def get_dev(self, network):
         return network['bridge']
 
     @classmethod
@@ -957,6 +971,9 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         return dev
 
     def unplug(self, network):
+        return self.get_dev(network)
+
+    def get_dev(self, network):
         dev = "gw-" + str(network['id'])
         return dev
 

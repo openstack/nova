@@ -94,9 +94,9 @@ class DbApiTestCase(test.TestCase):
         db.instance_destroy(self.context, inst1.id)
         result = db.instance_get_all_by_filters(self.context.elevated(), {})
         self.assertEqual(2, len(result))
-        self.assertEqual(result[0].id, inst2.id)
-        self.assertEqual(result[1].id, inst1.id)
-        self.assertTrue(result[1].deleted)
+        self.assertEqual(result[0].id, inst1.id)
+        self.assertEqual(result[1].id, inst2.id)
+        self.assertTrue(result[0].deleted)
 
     def test_migration_get_all_unconfirmed(self):
         ctxt = context.get_admin_context()

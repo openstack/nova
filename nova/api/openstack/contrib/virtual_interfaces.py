@@ -15,15 +15,10 @@
 
 """The virtual interfaces extension."""
 
-from webob import exc
-import webob
-
-from nova import compute
-from nova import exception
 from nova import log as logging
+from nova import network
 from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -50,19 +45,14 @@ class ServerVirtualInterfaceController(object):
     """
 
     def __init__(self):
-        self.compute_api = compute.API()
+        self.network_api = network.API()
         super(ServerVirtualInterfaceController, self).__init__()
 
     def _items(self, req, server_id, entity_maker):
         """Returns a list of VIFs, transformed through entity_maker."""
         context = req.environ['nova.context']
 
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-
-        vifs = instance['virtual_interfaces']
+        vifs = self.network_api.get_vifs_by_instance(context, server_id)
         limited_list = common.limited(vifs, req)
         res = [entity_maker(context, vif) for vif in limited_list]
         return {'virtual_interfaces': res}
