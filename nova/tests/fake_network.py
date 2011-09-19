@@ -105,10 +105,12 @@ class FakeNetworkManager(network_manager.NetworkManager):
                                     'floating_ips': [floats[2]]}]}]
             return vifs
 
-        def instance_get_uuids_by_ids(self, context, ids):
+        def instance_get_id_to_uuid_mapping(self, context, ids):
             # NOTE(jkoelker): This is just here until we can rely on UUIDs
-            return [{'uuid': str(utils.gen_uuid()),
-                     'id': id} for id in ids]
+            mapping = {}
+            for id in ids:
+                mapping[id] = str(utils.gen_uuid())
+            return mapping
 
     def __init__(self):
         self.db = self.FakeDB()

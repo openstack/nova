@@ -1033,8 +1033,8 @@ class ComputeTestCase(test.TestCase):
                        'get_instance_uuids_by_ip_filter',
                        network_manager.get_instance_uuids_by_ip_filter)
         self.stubs.Set(network_manager.db,
-                       'instance_get_uuids_by_ids',
-                       db.instance_get_uuids_by_ids)
+                       'instance_get_id_to_uuid_mapping',
+                       db.instance_get_id_to_uuid_mapping)
 
         instance_id1 = self._create_instance({'display_name': 'woot',
                                               'id': 0})

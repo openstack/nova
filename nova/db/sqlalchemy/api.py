@@ -1203,7 +1203,7 @@ def instance_get_all(context):
 
 
 @require_context
-def instance_get_all_by_filters(context, filters, instance_uuids=None):
+def instance_get_all_by_filters(context, filters):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise"""
@@ -1234,7 +1234,7 @@ def instance_get_all_by_filters(context, filters, instance_uuids=None):
         """Do exact match against a column.  value to match can be a list
         so you can match any value in the list.
         """
-        if isinstance(value, list):
+        if isinstance(value, list) or isinstance(value, set):
             column_attr = getattr(models.Instance, column)
             return query.filter(column_attr.in_(value))
         else:
@@ -1268,7 +1268,7 @@ def instance_get_all_by_filters(context, filters, instance_uuids=None):
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
-            'vm_state', 'instance_type_id', 'deleted']
+            'vm_state', 'instance_type_id', 'deleted', 'uuid']
 
     query_filters = [key for key in filters.iterkeys()
             if key in exact_match_filter_names]
@@ -1279,29 +1279,9 @@ def instance_get_all_by_filters(context, filters, instance_uuids=None):
         query_prefix = _exact_match_filter(query_prefix, filter_name,
                 filters.pop(filter_name))
 
-    db_instances = query_prefix.all()
-    db_uuids = [instance['uuid'] for instance in db_instances \
-                if instance['uuid']]
-
-    if instance_uuids is None:
-        instance_uuids = []
-
-    uuids = []
-
-    # NOTE(jkoelker): String UUIDs only!
-    if not instance_uuids:
-        uuids = db_uuids
-    elif not db_instances:
-        uuids = instance_uuids
-    else:
-        uuids = list(set(instance_uuids) & set(db_uuids))
-
-    if not uuids:
+    instances = query_prefix.all()
+    if not instances:
         return []
-
-    instances = session.query(models.Instance).\
-                        filter(models.Instance.uuid.in_(uuids)).\
-                        all()
 
     # Now filter on everything else for regexp matching..
     # For filters not in the list, we'll attempt to use the filter_name
@@ -1320,6 +1300,8 @@ def instance_get_all_by_filters(context, filters, instance_uuids=None):
             filter_l = lambda instance: _regexp_filter_by_column(instance,
                     filter_name, filter_re)
         instances = filter(filter_l, instances)
+        if not instances:
+            break
 
     return instances
 
@@ -1564,13 +1546,15 @@ def instance_get_actions(context, instance_id):
 
 
 @require_context
-def instance_get_uuids_by_ids(context, ids):
+def instance_get_id_to_uuid_mapping(context, ids):
     session = get_session()
     instances = session.query(models.Instance).\
                         filter(models.Instance.id.in_(ids)).\
                         all()
-    return [{'uuid': instance['uuid'],
-             'id': instance['id']} for instance in instances]
+    mapping = {}
+    for instance in instances:
+        mapping[instance['id']] = instance['uuid']
+    return mapping
 
 
 ###################

@@ -410,7 +410,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         ip_filter = re.compile(str(filters.get('ip')))
         ipv6_filter = re.compile(str(filters.get('ip6')))
 
-        # NOTE(jkoelker) Should probably figur out a better way to do
+        # NOTE(jkoelker) Should probably figure out a better way to do
         #                this. But for now it "works", this could suck on
         #                large installs.
 
@@ -448,12 +448,9 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         # NOTE(jkoelker) Until we switch over to instance_uuid ;)
         ids = [res['instance_id'] for res in results]
-        uuids = self.db.instance_get_uuids_by_ids(context, ids)
+        uuid_map = self.db.instance_get_id_to_uuid_mapping(context, ids)
         for res in results:
-            uuid = [u['uuid'] for u in uuids if u['id'] == res['instance_id']]
-            # NOTE(jkoelker) UUID must exist, so no test here
-            res['instance_uuid'] = uuid[0]
-
+            res['instance_uuid'] = uuid_map.get(res['instance_id'])
         return results
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
