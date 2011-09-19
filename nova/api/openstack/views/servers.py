@@ -19,7 +19,6 @@
 import datetime
 import hashlib
 import os
-import urllib
 
 from nova import exception
 from nova.api.openstack import common
