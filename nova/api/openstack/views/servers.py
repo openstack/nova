@@ -66,6 +66,8 @@ class ViewBuilder(object):
         inst_dict = {
             'id': inst['id'],
             'name': inst['display_name'],
+            'user_id': inst.get('user_id', ''),
+            'tenant_id': inst.get('project_id', ''),
             'status': common.status_from_state(vm_state, task_state)}
 
         # Return the metadata as a dictionary
@@ -143,6 +145,8 @@ class ViewBuilderV11(ViewBuilder):
 
         response['server']['accessIPv4'] = inst.get('access_ip_v4') or ""
         response['server']['accessIPv6'] = inst.get('access_ip_v6') or ""
+        response['server']['key_name'] = inst.get('key_name', '')
+        response['server']['config_drive'] = inst.get('config_drive')
 
         return response
 
@@ -183,8 +187,6 @@ class ViewBuilderV11(ViewBuilder):
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
         response['uuid'] = inst['uuid']
-        response['key_name'] = inst.get('key_name', '')
-        self._build_config_drive(response, inst)
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])
@@ -202,9 +204,6 @@ class ViewBuilderV11(ViewBuilder):
         ]
 
         response["links"] = links
-
-    def _build_config_drive(self, response, inst):
-        response['config_drive'] = inst.get('config_drive')
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""
