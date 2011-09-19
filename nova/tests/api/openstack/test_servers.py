@@ -1188,7 +1188,7 @@ class ServersTest(test.TestCase):
         self.assertTrue('limit' in res.body)
 
     def test_get_server_details_with_limit_and_other_params_v1_1(self):
-        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=3&blah=2')
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=3&blah=2:t')
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
         servers_links = json.loads(res.body)['servers_links']
@@ -1197,8 +1197,8 @@ class ServersTest(test.TestCase):
 
         qs = urlparse.urlparse(servers_links[0]['href']).query
         params = urlparse.parse_qs(qs)
-        self.assertDictMatch({'limit': ['3'], 'blah': ['2'], 'marker': ['2']},
-                             params)
+        self.assertDictMatch({'limit': ['3'], 'blah': ['2:t'],
+                              'marker': ['2']}, params)
 
         req = webob.Request.blank('/v1.1/fake/servers/detail?limit=aaa')
         res = req.get_response(fakes.wsgi_app())
