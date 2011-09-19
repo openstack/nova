@@ -76,9 +76,10 @@ def fetch_to_raw(context, image_href, path, _user_id, _project_id):
     if fmt != "raw":
         staged = "%s.converted" % path
         if "backing file" in data:
+            backing_file = data['backing file']
             raise exception.ImageUnacceptable(image_id=image_href,
-                reason=_("Dangerous! fmt=%s with backing file: %s") %
-                (fmt, data['backing file']))
+                reason=_("Dangerous! fmt=%(fmt) backed by: %(backing_file)") %
+                         locals)
 
         LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
         out, err = utils.execute('qemu-img', 'convert', '-O', 'raw',
