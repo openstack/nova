@@ -18,6 +18,8 @@
 
 """Unit tests for the DB API"""
 
+import datetime
+
 from nova import test
 from nova import context
 from nova import db
@@ -95,3 +97,26 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(result[0].id, inst1.id)
         self.assertEqual(result[1].id, inst2.id)
         self.assertTrue(result[0].deleted)
+
+    def test_migration_get_all_unconfirmed(self):
+        ctxt = context.get_admin_context()
+
+        # Ensure no migrations are returned.
+        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        self.assertEqual(0, len(results))
+
+        # Ensure one migration older than 10 seconds is returned.
+        updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
+        values = {"status": "FINISHED", "updated_at": updated_at}
+        migration = db.migration_create(ctxt, values)
+        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        self.assertEqual(1, len(results))
+        db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
+
+        # Ensure the new migration is not returned.
+        updated_at = datetime.datetime.utcnow()
+        values = {"status": "FINISHED", "updated_at": updated_at}
+        migration = db.migration_create(ctxt, values)
+        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        self.assertEqual(0, len(results))
+        db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})

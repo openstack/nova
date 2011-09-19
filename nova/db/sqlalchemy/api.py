@@ -15,9 +15,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""
-Implementation of SQLAlchemy backend.
-"""
+
+"""Implementation of SQLAlchemy backend."""
+
+import datetime
 import re
 import warnings
 
@@ -3168,6 +3169,21 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
         raise exception.MigrationNotFoundByStatus(instance_id=instance_uuid,
                                                   status=status)
     return result
+
+
+@require_admin_context
+def migration_get_all_unconfirmed(context, confirm_window, session=None):
+    confirm_window = datetime.datetime.utcnow() - datetime.timedelta(
+            seconds=confirm_window)
+
+    if not session:
+        session = get_session()
+
+    results = session.query(models.Migration).\
+            filter(models.Migration.updated_at <= confirm_window).\
+            filter_by(status="FINISHED").all()
+
+    return results
 
 
 ##################

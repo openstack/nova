@@ -323,6 +323,11 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
             status)
 
 
+def migration_get_all_unconfirmed(context, confirm_window):
+    """Finds all unconfirmed migrations within the confirmation window."""
+    return IMPL.migration_get_all_unconfirmed(context, confirm_window)
+
+
 ####################
 
 

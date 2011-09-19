@@ -79,6 +79,9 @@ flags.DEFINE_integer('live_migration_retry_count', 30,
 flags.DEFINE_integer("rescue_timeout", 0,
                      "Automatically unrescue an instance after N seconds."
                      " Set to 0 to disable.")
+flags.DEFINE_integer("resize_confirm_window", 0,
+                     "Automatically confirm resizes after N seconds."
+                     " Set to 0 to disable.")
 flags.DEFINE_integer('host_state_interval', 120,
                      'Interval in seconds for querying the host status')
 
@@ -1648,14 +1651,23 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
         except Exception as ex:
             LOG.warning(_("Error during poll_rescued_instances: %s"),
-                        unicode(ex))
+                    unicode(ex))
+            error_list.append(ex)
+
+        try:
+            if FLAGS.resize_confirm_window > 0:
+                self.driver.poll_unconfirmed_resizes(
+                        FLAGS.resize_confirm_window)
+        except Exception as ex:
+            LOG.warning(_("Error during poll_unconfirmed_resizes: %s"),
+                    unicode(ex))
             error_list.append(ex)
 
         try:
             self._report_driver_status()
         except Exception as ex:
             LOG.warning(_("Error during report_driver_status(): %s"),
-                        unicode(ex))
+                    unicode(ex))
             error_list.append(ex)
 
         try:
