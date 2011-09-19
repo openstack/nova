@@ -477,16 +477,22 @@ class Controller(object):
         return webob.Response(status_int=202)
 
     @scheduler_api.redirect_handler
-    def rescue(self, req, id):
+    def rescue(self, req, id, body={}):
         """Permit users to rescue the server."""
         context = req.environ["nova.context"]
         try:
-            self.compute_api.rescue(context, id)
+            if 'rescue' in body and body['rescue'] and \
+                    'adminPass' in body['rescue']:
+                password = body['rescue']['adminPass']
+            else:
+                password = utils.generate_password(FLAGS.password_length)
+            self.compute_api.rescue(context, id, rescue_password=password)
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::rescue %s"), readable)
             raise exc.HTTPUnprocessableEntity()
-        return webob.Response(status_int=202)
+
+        return {'adminPass': password}
 
     @scheduler_api.redirect_handler
     def unrescue(self, req, id):
@@ -618,7 +624,7 @@ class ControllerV10(Controller):
             LOG.debug(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
-        password = utils.generate_password(16)
+        password = utils.generate_password(FLAGS.password_length)
 
         try:
             self.compute_api.rebuild(context, instance_id, image_id, password)
@@ -760,8 +766,10 @@ class ControllerV11(Controller):
             self._validate_metadata(metadata)
         self._decode_personalities(personalities)
 
-        password = info["rebuild"].get("adminPass",
-                                       utils.generate_password(16))
+        if 'rebuild' in info and 'adminPass' in info['rebuild']:
+            password = info['rebuild']['adminPass']
+        else:
+            password = utils.generate_password(FLAGS.password_length)
 
         try:
             self.compute_api.rebuild(context, instance_id, image_href,

@@ -70,8 +70,6 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
 flags.DEFINE_string('stub_network', False,
                     'Stub network related code')
-flags.DEFINE_integer('password_length', 12,
-                    'Length of generated admin passwords')
 flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
@@ -797,12 +795,18 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def rescue_instance(self, context, instance_id):
-        """Rescue an instance on this host."""
+    def rescue_instance(self, context, instance_id, **kwargs):
+        """
+        Rescue an instance on this host.
+        :param rescue_password: password to set on rescue instance
+        """
+
         LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
         context = context.elevated()
 
         instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref.admin_pass = kwargs.get('rescue_password',
+                utils.generate_password(FLAGS.password_length))
         network_info = self._get_instance_nw_info(context, instance_ref)
 
         # NOTE(blamar): None of the virt drivers use the 'callback' param
@@ -1388,11 +1392,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         hostname = instance_ref['hostname']
 
-        # Getting fixed ips
-        fixed_ips = self.db.instance_get_fixed_addresses(context, instance_id)
-        if not fixed_ips:
-            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
-
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:
             LOG.info(_("%s has no volume."), hostname)
@@ -1408,6 +1407,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Retry operation is necessary because continuously request comes,
         # concorrent request occurs to iptables, then it complains.
         network_info = self._get_instance_nw_info(context, instance_ref)
+
+        fixed_ips = [nw_info[1]['ips'] for nw_info in network_info]
+        if not fixed_ips:
+            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+
         max_retry = FLAGS.live_migration_retry_count
         for cnt in range(max_retry):
             try:

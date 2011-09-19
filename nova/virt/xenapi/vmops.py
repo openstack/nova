@@ -48,9 +48,9 @@ XenAPI = None
 LOG = logging.getLogger("nova.virt.xenapi.vmops")
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('windows_version_timeout', 300,
-                     'number of seconds to wait for windows agent to be '
-                     'fully operational')
+flags.DEFINE_integer('agent_version_timeout', 300,
+                     'number of seconds to wait for agent to be fully '
+                     'operational')
 flags.DEFINE_string('xenapi_vif_driver',
                     'nova.virt.xenapi.vif.XenAPIBridgeDriver',
                     'The XenAPI VIF driver using XenServer Network APIs.')
@@ -322,15 +322,8 @@ class VMOps(object):
 
         def _check_agent_version():
             LOG.debug(_("Querying agent version"))
-            if instance.os_type == 'windows':
-                # Windows will generally perform a setup process on first boot
-                # that can take a couple of minutes and then reboot. So we
-                # need to be more patient than normal as well as watch for
-                # domid changes
-                version = self.get_agent_version(instance,
-                                  timeout=FLAGS.windows_version_timeout)
-            else:
-                version = self.get_agent_version(instance)
+
+            version = self.get_agent_version(instance)
             if not version:
                 return
 
@@ -637,8 +630,14 @@ class VMOps(object):
 
         self._session.wait_for_task(task, instance.id)
 
-    def get_agent_version(self, instance, timeout=None):
+    def get_agent_version(self, instance):
         """Get the version of the agent running on the VM instance."""
+
+        # The agent can be slow to start for a variety of reasons. On Windows,
+        # it will generally perform a setup process on first boot that can
+        # take a couple of minutes and then reboot. On Linux, the system can
+        # also take a while to boot. So we need to be more patient than
+        # normal as well as watch for domid changes
 
         def _call():
             # Send the encrypted password
@@ -653,27 +652,26 @@ class VMOps(object):
             # (ie CRLF escaped) for some reason. Strip that off.
             return resp['message'].replace('\\r\\n', '')
 
-        if timeout:
-            vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+
+        domid = vm_rec['domid']
+
+        expiration = time.time() + FLAGS.agent_version_timeout
+        while time.time() < expiration:
+            ret = _call()
+            if ret:
+                return ret
+
             vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+            if vm_rec['domid'] != domid:
+                LOG.info(_('domid changed from %(olddomid)s to '
+                           '%(newdomid)s') % {
+                               'olddomid': domid,
+                                'newdomid': vm_rec['domid']})
+                domid = vm_rec['domid']
 
-            domid = vm_rec['domid']
-
-            expiration = time.time() + timeout
-            while time.time() < expiration:
-                ret = _call()
-                if ret:
-                    return ret
-
-                vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
-                if vm_rec['domid'] != domid:
-                    LOG.info(_('domid changed from %(olddomid)s to '
-                               '%(newdomid)s') % {
-                                   'olddomid': domid,
-                                    'newdomid': vm_rec['domid']})
-                    domid = vm_rec['domid']
-        else:
-            return _call()
+        return None
 
     def agent_update(self, instance, url, md5sum):
         """Update agent on the VM instance."""
