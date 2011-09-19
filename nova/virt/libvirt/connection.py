@@ -125,8 +125,10 @@ flags.DEFINE_string('block_migration_flag',
                     'Define block migration behavior.')
 flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
-flags.DEFINE_string('qemu_img', 'qemu-img',
-                    'binary to use for qemu-img commands')
+flags.DEFINE_string('snapshot_image_format', None,
+                    'Snapshot image format (valid options are : '
+                    'raw, qcow2, vmdk, vdi).'
+                    'Defaults to same as source image')
 flags.DEFINE_string('libvirt_vif_type', 'bridge',
                     'Type of VIF to create.')
 flags.DEFINE_string('libvirt_vif_driver',
@@ -391,10 +393,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def snapshot(self, context, instance, image_href):
         """Create snapshot from a running VM instance.
 
-        This command only works with qemu 0.14+, the qemu_img flag is
-        provided so that a locally compiled binary of qemu-img can be used
-        to support this command.
-
+        This command only works with qemu 0.14+
         """
         virt_dom = self._lookup_by_name(instance['name'])
 
@@ -420,8 +419,11 @@ class LibvirtConnection(driver.ComputeDriver):
             arch = base['properties']['architecture']
             metadata['properties']['architecture'] = arch
 
-        if 'disk_format' in base:
-            metadata['disk_format'] = base['disk_format']
+        source_format = base.get('disk_format') or 'raw'
+        image_format = FLAGS.snapshot_image_format or source_format
+        if FLAGS.use_cow_images:
+            source_format = 'qcow2'
+        metadata['disk_format'] = image_format
 
         if 'container_format' in base:
             metadata['container_format'] = base['container_format']
@@ -444,12 +446,12 @@ class LibvirtConnection(driver.ComputeDriver):
         # Export the snapshot to a raw image
         temp_dir = tempfile.mkdtemp()
         out_path = os.path.join(temp_dir, snapshot_name)
-        qemu_img_cmd = (FLAGS.qemu_img,
+        qemu_img_cmd = ('qemu-img',
                         'convert',
                         '-f',
-                        'qcow2',
+                        source_format,
                         '-O',
-                        'raw',
+                        image_format,
                         '-s',
                         snapshot_name,
                         disk_path,
