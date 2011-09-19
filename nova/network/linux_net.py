@@ -584,7 +584,6 @@ def update_dhcp(context, dev, network_ref):
            'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
-           '--interface=%s' % dev,
            '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(dev, 'pid'),
