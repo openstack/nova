@@ -1566,8 +1566,6 @@ def instance_get_actions(context, instance_id):
 
 @require_context
 def instance_get_uuids_by_ids(context, ids):
-    if not isinstance(ids, types.ListType):
-        return instance_get(context, ids)['uuid']
     session = get_session()
     instances = session.query(models.Instance).\
                         filter(models.Instance.id.in_(ids)).\
