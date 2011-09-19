@@ -769,7 +769,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def _fetch_image(self, context, target, image_id, user_id, project_id,
                      size=None):
         """Grab image and optionally attempt to resize it"""
-        images.fetch(context, image_id, target, user_id, project_id)
+        images.fetch_to_raw(context, image_id, target, user_id, project_id)
         if size:
             disk.extend(target, size)
 

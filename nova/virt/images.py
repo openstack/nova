@@ -21,6 +21,9 @@
 Handling of VM disk images.
 """
 
+import os
+
+from nova import exception
 from nova import flags
 from nova.image import glance as glance_image_service
 import nova.image
@@ -41,4 +44,56 @@ def fetch(context, image_href, path, _user_id, _project_id):
                                                              image_href)
     with open(path, "wb") as image_file:
         metadata = image_service.get(context, image_id, image_file)
+    return metadata
+
+
+def fetch_to_raw(context, image_href, path, _user_id, _project_id):
+    path_tmp = "%s.part" % path
+    metadata = fetch(context, image_href, path_tmp, _user_id, _project_id)
+
+    def _qemu_img_info(path):
+
+        out, err = utils.execute('qemu-img', 'info', path)
+
+        # output of qemu-img is 'field: value'
+        # the fields of interest are 'file format' and 'backing file'
+        data = {}
+        for line in out.splitlines():
+            (field, val) = line.split(':', 1)
+            if val[0] == " ":
+                val = val[1:]
+            data[field] = val
+
+        return(data)
+
+    data = _qemu_img_info(path_tmp)
+
+    fmt = data.get("file format", None)
+    if fmt == None:
+        raise exception.ImageUnacceptable(
+            reason="'qemu-img info' parsing failed.", image_id=image_href)
+
+    if fmt != "raw":
+        staged = "%s.converted" % path
+        if "backing file" in data:
+            raise exception.ImageUnacceptable(image_id=image_href,
+                reason="Dangerous! fmt=%s with backing file: %s" %
+                (fmt, data['backing file']))
+
+        LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
+        out, err = utils.execute('qemu-img', 'convert', '-O', 'raw',
+                                 path_tmp, staged)
+        os.unlink(path_tmp)
+
+        data = _qemu_img_info(staged)
+        if data.get('file format', None) != "raw":
+            raise exception.ImageUnacceptable(image_id=image_href,
+                reason="Dangerous! Converted to raw, but format is now %s" %
+                data.get('file format', None))
+
+        os.rename(staged, path)
+
+    else:
+        os.rename(path_tmp, path)
+
     return metadata
