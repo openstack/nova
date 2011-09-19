@@ -71,13 +71,13 @@ def fetch_to_raw(context, image_href, path, _user_id, _project_id):
     fmt = data.get("file format", None)
     if fmt == None:
         raise exception.ImageUnacceptable(
-            reason="'qemu-img info' parsing failed.", image_id=image_href)
+            reason=_("'qemu-img info' parsing failed."), image_id=image_href)
 
     if fmt != "raw":
         staged = "%s.converted" % path
         if "backing file" in data:
             raise exception.ImageUnacceptable(image_id=image_href,
-                reason="Dangerous! fmt=%s with backing file: %s" %
+                reason=_("Dangerous! fmt=%s with backing file: %s") %
                 (fmt, data['backing file']))
 
         LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
@@ -88,7 +88,7 @@ def fetch_to_raw(context, image_href, path, _user_id, _project_id):
         data = _qemu_img_info(staged)
         if data.get('file format', None) != "raw":
             raise exception.ImageUnacceptable(image_id=image_href,
-                reason="Dangerous! Converted to raw, but format is now %s" %
+                reason=_("Dangerous! Converted to raw, but format is now %s") %
                 data.get('file format', None))
 
         os.rename(staged, path)
