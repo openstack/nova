@@ -27,7 +27,6 @@ import urllib2
 import uuid
 
 from nova import context as nova_context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -111,22 +110,6 @@ class VMWareVMOps(object):
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
 
-        network = db.network_get_by_instance(nova_context.get_admin_context(),
-                                            instance['id'])
-
-        net_name = network['bridge']
-
-        def _check_if_network_bridge_exists():
-            network_ref = \
-                network_utils.get_network_with_the_name(self._session,
-                                                        net_name)
-            if network_ref is None:
-                raise exception.NetworkNotFoundForBridge(bridge=net_name)
-            return network_ref
-
-        self.plug_vifs(instance, network_info)
-        network_obj = _check_if_network_bridge_exists()
-
         def _get_datastore_ref():
             """Get the datastore list and choose the first local storage."""
             data_stores = self._session._call_method(vim_util, "get_objects",
@@ -157,7 +140,7 @@ class VMWareVMOps(object):
             repository.
             """
             image_size, image_properties = \
-                    vmware_images.get_vmdk_size_and_properties(
+                    vmware_images.get_vmdk_size_and_properties(context,
                                        instance.image_ref, instance)
             vmdk_file_size_in_kb = int(image_size) / 1024
             os_type = image_properties.get("vmware_ostype", "otherGuest")
@@ -182,11 +165,36 @@ class VMWareVMOps(object):
 
         vm_folder_mor, res_pool_mor = _get_vmfolder_and_res_pool_mors()
 
+        def _check_if_network_bridge_exists(network_name):
+            network_ref = \
+                network_utils.get_network_with_the_name(self._session,
+                                                        network_name)
+            if network_ref is None:
+                raise exception.NetworkNotFoundForBridge(bridge=network_name)
+            return network_ref
+
+        def _get_vif_infos():
+            vif_infos = []
+            for (network, mapping) in network_info:
+                mac_address = mapping['mac']
+                network_name = network['bridge']
+                if mapping.get('should_create_vlan'):
+                    network_ref = self._vif_driver.ensure_vlan_bridge(
+                                                        self._session, network)
+                else:
+                    network_ref = _check_if_network_bridge_exists(network_name)
+                vif_infos.append({'network_name': network_name,
+                                  'mac_address': mac_address,
+                                  'network_ref': network_ref,
+                                 })
+            return vif_infos
+
+        vif_infos = _get_vif_infos()
+
         # Get the create vm config spec
         config_spec = vm_util.get_vm_create_spec(
                             client_factory, instance,
-                            data_store_name, net_name, os_type,
-                            network_obj)
+                            data_store_name, vif_infos, os_type)
 
         def _execute_create_vm():
             """Create VM on ESX host."""
@@ -204,8 +212,10 @@ class VMWareVMOps(object):
 
         _execute_create_vm()
 
-        # Set the machine id for the VM for setting the IP
-        self._set_machine_id(client_factory, instance)
+        # Set the machine.id parameter of the instance to inject
+        # the NIC configuration inside the VM
+        if FLAGS.flat_injected:
+            self._set_machine_id(client_factory, instance, network_info)
 
         # Naming the VM files in correspondence with the VM instance name
         # The flat vmdk file name
@@ -282,6 +292,7 @@ class VMWareVMOps(object):
             # Upload the -flat.vmdk file whose meta-data file we just created
             # above
             vmware_images.fetch_image(
+                context,
                 instance.image_ref,
                 instance,
                 host=self._session._host_ip,
@@ -448,6 +459,7 @@ class VMWareVMOps(object):
             # Upload the contents of -flat.vmdk file which has the disk data.
             LOG.debug(_("Uploading image %s") % snapshot_name)
             vmware_images.upload_image(
+                context,
                 snapshot_name,
                 instance,
                 os_type=os_type,
@@ -716,39 +728,45 @@ class VMWareVMOps(object):
         """Return link to instance's ajax console."""
         return 'http://fakeajaxconsole/fake_url'
 
-    def _set_machine_id(self, client_factory, instance):
+    def _set_machine_id(self, client_factory, instance, network_info):
         """
-        Set the machine id of the VM for guest tools to pick up and change
-        the IP.
+        Set the machine id of the VM for guest tools to pick up and reconfigure
+        the network interfaces.
         """
-        admin_context = nova_context.get_admin_context()
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance.id)
-        network = db.network_get_by_instance(nova_context.get_admin_context(),
-                                            instance['id'])
-        mac_address = None
-        if instance['mac_addresses']:
-            mac_address = instance['mac_addresses'][0]['address']
 
-        net_mask = network["netmask"]
-        gateway = network["gateway"]
-        broadcast = network["broadcast"]
-        # TODO(vish): add support for dns2
-        dns = network["dns1"]
+        machine_id_str = ''
+        for (network, info) in network_info:
+            # TODO(vish): add support for dns2
+            # TODO(sateesh): add support for injection of ipv6 configuration
+            ip_v4 = ip_v6 = None
+            if 'ips' in info and len(info['ips']) > 0:
+                ip_v4 = info['ips'][0]
+            if 'ip6s' in info and len(info['ip6s']) > 0:
+                ip_v6 = info['ip6s'][0]
+            if len(info['dns']) > 0:
+                dns = info['dns'][0]
+            else:
+                dns = ''
 
-        addresses = db.instance_get_fixed_addresses(admin_context,
-                                                    instance['id'])
-        ip_addr = addresses[0] if addresses else None
+            interface_str = "%s;%s;%s;%s;%s;%s" % \
+                                            (info['mac'],
+                                             ip_v4 and ip_v4['ip'] or '',
+                                             ip_v4 and ip_v4['netmask'] or '',
+                                             info['gateway'],
+                                             info['broadcast'],
+                                             dns)
+            machine_id_str = machine_id_str + interface_str + '#'
 
         machine_id_change_spec = \
-            vm_util.get_machine_id_change_spec(client_factory, mac_address,
-                                               ip_addr, net_mask, gateway,
-                                               broadcast, dns)
+            vm_util.get_machine_id_change_spec(client_factory, machine_id_str)
+
         LOG.debug(_("Reconfiguring VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %
                   ({'name': instance.name,
-                   'ip_addr': ip_addr}))
+                   'ip_addr': ip_v4['ip']}))
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
                            spec=machine_id_change_spec)
@@ -756,7 +774,7 @@ class VMWareVMOps(object):
         LOG.debug(_("Reconfigured VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %
                   ({'name': instance.name,
-                   'ip_addr': ip_addr}))
+                   'ip_addr': ip_v4['ip']}))
 
     def _get_datacenter_name_and_ref(self):
         """Get the datacenter name and the reference."""

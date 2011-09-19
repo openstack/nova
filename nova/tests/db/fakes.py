@@ -125,10 +125,11 @@ def stub_out_db_network_api(stubs):
             if ips[0]['fixed_ip']:
                 fixed_ip_address = ips[0]['fixed_ip']['address']
             ips[0]['fixed_ip'] = None
+            ips[0]['host'] = None
             return fixed_ip_address
 
     def fake_floating_ip_fixed_ip_associate(context, floating_address,
-                                            fixed_address):
+                                            fixed_address, host):
         float = filter(lambda i: i['address'] == floating_address,
                        floating_ips)
         fixed = filter(lambda i: i['address'] == fixed_address,
@@ -136,6 +137,7 @@ def stub_out_db_network_api(stubs):
         if float and fixed:
             float[0]['fixed_ip'] = fixed[0]
             float[0]['fixed_ip_id'] = fixed[0]['id']
+            float[0]['host'] = host
 
     def fake_floating_ip_get_all_by_host(context, host):
         # TODO(jkoelker): Once we get the patches that remove host from

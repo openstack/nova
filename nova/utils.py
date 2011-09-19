@@ -901,3 +901,12 @@ def monkey_patch():
                 func = import_class("%s.%s" % (module, key))
                 setattr(sys.modules[module], key,\
                     decorator("%s.%s" % (module, key), func))
+
+
+def convert_to_list_dict(lst, label):
+    """Convert a value or list into a list of dicts"""
+    if not lst:
+        return None
+    if not isinstance(lst, list):
+        lst = [lst]
+    return [{label: x} for x in lst]

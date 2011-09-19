@@ -39,8 +39,7 @@ def split_datastore_path(datastore_path):
 
 
 def get_vm_create_spec(client_factory, instance, data_store_name,
-                       network_name="vmnet0",
-                       os_type="otherGuest", network_ref=None):
+                       vif_infos, os_type="otherGuest"):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = instance.name
@@ -61,14 +60,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.numCPUs = int(instance.vcpus)
     config_spec.memoryMB = int(instance.memory_mb)
 
-    mac_address = None
-    if instance['mac_addresses']:
-        mac_address = instance['mac_addresses'][0]['address']
+    vif_spec_list = []
+    for vif_info in vif_infos:
+        vif_spec = create_network_spec(client_factory, vif_info)
+        vif_spec_list.append(vif_spec)
 
-    nic_spec = create_network_spec(client_factory,
-                                    network_name, mac_address)
-
-    device_config_spec = [nic_spec]
+    device_config_spec = vif_spec_list
 
     config_spec.deviceChange = device_config_spec
     return config_spec
@@ -93,8 +90,7 @@ def create_controller_spec(client_factory, key):
     return virtual_device_config
 
 
-def create_network_spec(client_factory, network_name, mac_address,
-                        network_ref=None):
+def create_network_spec(client_factory, vif_info):
     """
     Builds a config spec for the addition of a new network
     adapter to the VM.
@@ -109,6 +105,9 @@ def create_network_spec(client_factory, network_name, mac_address,
     # NOTE(asomya): Only works on ESXi if the portgroup binding is set to
     # ephemeral. Invalid configuration if set to static and the NIC does
     # not come up on boot if set to dynamic.
+    network_ref = vif_info['network_ref']
+    network_name = vif_info['network_name']
+    mac_address = vif_info['mac_address']
     backing = None
     if (network_ref and
         network_ref['type'] == "DistributedVirtualPortgroup"):
@@ -295,11 +294,8 @@ def get_dummy_vm_create_spec(client_factory, name, data_store_name):
     return config_spec
 
 
-def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask,
-                               gateway, broadcast, dns):
+def get_machine_id_change_spec(client_factory, machine_id_str):
     """Builds the machine id change config spec."""
-    machine_id_str = "%s;%s;%s;%s;%s;%s" % (mac, ip_addr, netmask,
-                                            gateway, broadcast, dns)
     virtual_machine_config_spec = \
         client_factory.create('ns0:VirtualMachineConfigSpec')
 
