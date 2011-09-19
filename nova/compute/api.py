@@ -935,7 +935,7 @@ class API(base.Base):
             res = self.network_api.get_instance_uuids_by_ip_filter(context,
                                                                    filters)
             # NOTE(jkoelker) It is possible that we will get the same
-            #                instance uuid twice (one for ipv4 and ipv4)
+            #                instance uuid twice (one for ipv4 and ipv6)
             ids = set([r['instance_uuid'] for r in res])
 
         return self.db.instance_get_all_by_filters(context, filters, ids)
