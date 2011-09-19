@@ -19,7 +19,6 @@
 Implementation of SQLAlchemy backend.
 """
 import re
-import types
 import warnings
 
 from nova import block_device
