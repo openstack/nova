@@ -174,6 +174,20 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(pre_build_len,
                          len(db.instance_get_all(context.get_admin_context())))
 
+    def test_create_instance_with_img_ref_associates_config_drive(self):
+        """Make sure create associates a config drive."""
+
+        instance_id = self._create_instance(params={'config_drive': '1234', })
+
+        try:
+            self.compute.run_instance(self.context, instance_id)
+            instances = db.instance_get_all(context.get_admin_context())
+            instance = instances[0]
+
+            self.assertTrue(instance.config_drive)
+        finally:
+            db.instance_destroy(self.context, instance_id)
+
     def test_create_instance_associates_config_drive(self):
         """Make sure create associates a config drive."""
 
@@ -1554,12 +1568,16 @@ class ComputeTestCase(test.TestCase):
             db.block_device_mapping_destroy(self.context, bdm['id'])
         self.compute.terminate_instance(self.context, instance_id)
 
-    def test_ephemeral_size(self):
+    def test_volume_size(self):
         local_size = 2
-        inst_type = {'local_gb': local_size}
-        self.assertEqual(self.compute_api._ephemeral_size(inst_type,
+        swap_size = 3
+        inst_type = {'local_gb': local_size, 'swap': swap_size}
+        self.assertEqual(self.compute_api._volume_size(inst_type,
                                                           'ephemeral0'),
                          local_size)
-        self.assertEqual(self.compute_api._ephemeral_size(inst_type,
-                                                          'ephemeral1'),
+        self.assertEqual(self.compute_api._volume_size(inst_type,
+                                                       'ephemeral1'),
                          0)
+        self.assertEqual(self.compute_api._volume_size(inst_type,
+                                                       'swap'),
+                         swap_size)

@@ -322,7 +322,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # used by the image service. This should be refactored to be
             # consistent.
             image_href = instance['image_ref']
-            image_service, image_id = nova.image.get_image_service(image_href)
+            image_service, image_id = nova.image.get_image_service(context,
+                                                                   image_href)
             image_meta = image_service.show(context, image_id)
 
             try:
