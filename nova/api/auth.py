@@ -43,34 +43,3 @@ class InjectContext(wsgi.Middleware):
     def __call__(self, req):
         req.environ['nova.context'] = self.context
         return self.application
-
-
-class KeystoneContext(wsgi.Middleware):
-    """Make a request context from keystone headers"""
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        try:
-            user_id = req.headers['X_USER']
-        except KeyError:
-            return webob.exc.HTTPUnauthorized()
-        # get the roles
-        roles = [r.strip() for r in req.headers.get('X_ROLE', '').split(',')]
-        project_id = req.headers['X_TENANT']
-        # Get the auth token
-        auth_token = req.headers.get('X_AUTH_TOKEN',
-                                     req.headers.get('X_STORAGE_TOKEN'))
-
-        # Build a context, including the auth_token...
-        remote_address = getattr(req, 'remote_address', '127.0.0.1')
-        remote_address = req.remote_addr
-        if FLAGS.use_forwarded_for:
-            remote_address = req.headers.get('X-Forwarded-For', remote_address)
-        ctx = context.RequestContext(user_id,
-                                     project_id,
-                                     roles=roles,
-                                     auth_token=auth_token,
-                                     remote_address=remote_address)
-
-        req.environ['nova.context'] = ctx
-        return self.application
