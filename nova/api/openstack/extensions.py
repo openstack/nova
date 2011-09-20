@@ -16,14 +16,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import imp
 import inspect
 import os
 import sys
+
+from lxml import etree
 import routes
 import webob.dec
 import webob.exc
-from lxml import etree
 
 from nova import exception
 from nova import flags
@@ -36,7 +38,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 
 
-LOG = logging.getLogger('extensions')
+LOG = logging.getLogger('nova.api.openstack.extensions')
 
 
 FLAGS = flags.FLAGS
@@ -523,3 +525,23 @@ class ExtensionsXMLSerializer(wsgi.XMLDictSerializer):
         """Convert the xml object to an xml string."""
 
         return etree.tostring(root, encoding='UTF-8')
+
+
+def admin_only(fnc):
+    @functools.wraps(fnc)
+    def _wrapped(self, *args, **kwargs):
+        if FLAGS.allow_admin_api:
+            return fnc(self, *args, **kwargs)
+        return faults.Fault(webob.exc.HTTPNotFound())
+    _wrapped.func_name = fnc.func_name
+    return _wrapped
+
+
+def wrap_errors(fn):
+    """"Ensure errors are not passed along."""
+    def wrapped(*args):
+        try:
+            return fn(*args)
+        except Exception, e:
+            return faults.Fault(webob.exc.HTTPInternalServerError())
+    return wrapped

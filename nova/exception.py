@@ -27,9 +27,24 @@ SHOULD include dedicated exception logging.
 from functools import wraps
 import sys
 
+from novaclient import exceptions as novaclient_exceptions
+
 from nova import log as logging
 
 LOG = logging.getLogger('nova.exception')
+
+
+def novaclient_converter(f):
+    """Convert novaclient ClientException HTTP codes to webob exceptions.
+    Has to be the outer-most decorator.
+    """
+    def new_f(*args, **kwargs):
+        try:
+            ret = f(*args, **kwargs)
+            return ret
+        except novaclient_exceptions.ClientException, e:
+            raise ConvertedException(e.code, e.message, e.details)
+    return new_f
 
 
 class ProcessExecutionError(IOError):

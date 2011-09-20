@@ -299,23 +299,6 @@ class ServerActionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_migrate_server(self):
-        """This is basically the same as resize, only we provide the `migrate`
-        attribute in the body's dict.
-        """
-        req = self.webreq('/1/migrate', 'POST')
-
-        self.resize_called = False
-
-        def resize_mock(*args):
-            self.resize_called = True
-
-        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-        self.assertEqual(self.resize_called, True)
-
     def test_create_backup(self):
         """The happy path for creating backups"""
         self.flags(allow_admin_api=True)
