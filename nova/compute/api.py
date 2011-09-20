@@ -287,18 +287,24 @@ class API(base.Base):
         return (num_instances, base_options, image)
 
     @staticmethod
-    def _ephemeral_size(instance_type, ephemeral_name):
-        num = block_device.ephemeral_num(ephemeral_name)
+    def _volume_size(instance_type, virtual_name):
+        size = 0
+        if virtual_name == 'swap':
+            size = instance_type.get('swap', 0)
+        elif block_device.is_ephemeral(virtual_name):
+            num = block_device.ephemeral_num(virtual_name)
 
-        # TODO(yamahata): ephemeralN where N > 0
-        # Only ephemeral0 is allowed for now because InstanceTypes
-        # table only allows single local disk, local_gb.
-        # In order to enhance it, we need to add a new columns to
-        # instance_types table.
-        if num > 0:
-            return 0
+            # TODO(yamahata): ephemeralN where N > 0
+            # Only ephemeral0 is allowed for now because InstanceTypes
+            # table only allows single local disk, local_gb.
+            # In order to enhance it, we need to add a new columns to
+            # instance_types table.
+            if num > 0:
+                return 0
 
-        return instance_type.get('local_gb')
+            size = instance_type.get('local_gb')
+
+        return size
 
     def _update_image_block_device_mapping(self, elevated_context,
                                            instance_type, instance_id,
@@ -319,12 +325,7 @@ class API(base.Base):
             if not block_device.is_swap_or_ephemeral(virtual_name):
                 continue
 
-            size = 0
-            if virtual_name == 'swap':
-                size = instance_type.get('swap', 0)
-            elif block_device.is_ephemeral(virtual_name):
-                size = self._ephemeral_size(instance_type, virtual_name)
-
+            size = self._volume_size(instance_type, virtual_name)
             if size == 0:
                 continue
 
@@ -354,8 +355,8 @@ class API(base.Base):
 
             virtual_name = bdm.get('virtual_name')
             if (virtual_name is not None and
-                block_device.is_ephemeral(virtual_name)):
-                size = self._ephemeral_size(instance_type, virtual_name)
+                block_device.is_swap_or_ephemeral(virtual_name)):
+                size = self._volume_size(instance_type, virtual_name)
                 if size == 0:
                     continue
                 values['volume_size'] = size
