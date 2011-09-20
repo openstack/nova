@@ -22,9 +22,13 @@ import stubout
 from nova.tests.api.openstack import fakes
 from nova import context
 from nova import exception
+from nova import flags
 from nova.image import glance
 from nova import test
 from nova.tests.glance import stubs as glance_stubs
+
+
+FLAGS = flags.FLAGS
 
 
 class NullWriter(object):
@@ -451,3 +455,10 @@ class TestGlanceImageService(test.TestCase):
         image_meta = self.service.get(self.context, image_id, writer)
         self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
         self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
+
+    def test_contruct_glance_url(self):
+        # TODO(jk0): This will eventually need to take SSL into consideration
+        # when supported in glance.
+        generated_url = glance._construct_glance_url()
+        actual_url = "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
+        self.assertEqual(generated_url, actual_url)
