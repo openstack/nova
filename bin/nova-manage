@@ -1692,7 +1692,7 @@ class InstanceTypeCommands(object):
     def _print_instance_types(self, name, val):
         deleted = ('', ', inactive')[val["deleted"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
-            "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
+            "Swap: %sMB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
             name, val["memory_mb"], val["vcpus"], val["local_gb"],
             val["flavorid"], val["swap"], val["rxtx_quota"],
             val["rxtx_cap"], deleted)
