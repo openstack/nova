@@ -185,30 +185,16 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
 
 
 def get_id_from_href(href):
-    """Return the id portion of a url as an int.
+    """Return the id or uuid portion of a url.
 
     Given: 'http://www.foo.com/bar/123?q=4'
-    Returns: 123
+    Returns: '123'
 
-    In order to support local hrefs, the href argument can be just an id:
-    Given: '123'
-    Returns: 123
+    Given: 'http://www.foo.com/bar/abc123?q=4'
+    Returns: 'abc123'
 
     """
-    LOG.debug(_("Attempting to treat %(href)s as an integer ID.") % locals())
-
-    try:
-        return int(href)
-    except ValueError:
-        pass
-
-    LOG.debug(_("Attempting to treat %(href)s as a URL.") % locals())
-
-    try:
-        return int(urlparse.urlsplit(href).path.split('/')[-1])
-    except ValueError as error:
-        LOG.debug(_("Failed to parse ID from %(href)s: %(error)s") % locals())
-        raise
+    return urlparse.urlsplit("%s" % href).path.split('/')[-1]
 
 
 def remove_version_from_href(href):

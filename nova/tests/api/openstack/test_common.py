@@ -237,21 +237,41 @@ class MiscFunctionsTest(test.TestCase):
                           common.remove_version_from_href,
                           fixture)
 
-    def test_get_id_from_href(self):
+    def test_get_id_from_href_with_int_url(self):
         fixture = 'http://www.testsite.com/dir/45'
         actual = common.get_id_from_href(fixture)
-        expected = 45
+        expected = '45'
         self.assertEqual(actual, expected)
 
-    def test_get_id_from_href_bad_request(self):
-        fixture = 'http://45'
-        self.assertRaises(ValueError,
-                          common.get_id_from_href,
-                          fixture)
+    def test_get_id_from_href_with_int(self):
+        fixture = '45'
+        actual = common.get_id_from_href(fixture)
+        expected = '45'
+        self.assertEqual(actual, expected)
 
-    def test_get_id_from_href_int(self):
-        fixture = 1
-        self.assertEqual(fixture, common.get_id_from_href(fixture))
+    def test_get_id_from_href_with_int_url_query(self):
+        fixture = 'http://www.testsite.com/dir/45?asdf=jkl'
+        actual = common.get_id_from_href(fixture)
+        expected = '45'
+        self.assertEqual(actual, expected)
+
+    def test_get_id_from_href_with_uuid_url(self):
+        fixture = 'http://www.testsite.com/dir/abc123'
+        actual = common.get_id_from_href(fixture)
+        expected = "abc123"
+        self.assertEqual(actual, expected)
+
+    def test_get_id_from_href_with_uuid_url_query(self):
+        fixture = 'http://www.testsite.com/dir/abc123?asdf=jkl'
+        actual = common.get_id_from_href(fixture)
+        expected = "abc123"
+        self.assertEqual(actual, expected)
+
+    def test_get_id_from_href_with_uuid(self):
+        fixture = 'abc123'
+        actual = common.get_id_from_href(fixture)
+        expected = 'abc123'
+        self.assertEqual(actual, expected)
 
     def test_get_version_from_href(self):
         fixture = 'http://www.testsite.com/v1.1/images'

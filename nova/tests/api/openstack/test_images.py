@@ -405,14 +405,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         expected_image = {
             "image": {
-                "id": 124,
+                "id": '124',
                 "name": "queued snapshot",
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
                 "status": "SAVING",
                 "progress": 0,
                 'server': {
-                    'id': 42,
+                    'id': '42',
                     "links": [{
                         "rel": "self",
                         "href": server_href,
@@ -568,7 +568,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             href = "http://localhost/v1.1/fake/images/%s" % image["id"]
             bookmark = "http://localhost/fake/images/%s" % image["id"]
             test_image = {
-                "id": image["id"],
+                "id": str(image["id"]),
                 "name": image["name"],
                 "links": [
                     {
@@ -669,7 +669,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         server_bookmark = "http://localhost/servers/42"
 
         expected = [{
-            'id': 123,
+            'id': '123',
             'name': 'public image',
             'metadata': {},
             'updated': self.NOW_API_FORMAT,
@@ -686,7 +686,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 124,
+            'id': '124',
             'name': 'queued snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -697,7 +697,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'SAVING',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -717,7 +717,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 125,
+            'id': '125',
             'name': 'saving snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -728,7 +728,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'SAVING',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -748,7 +748,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 126,
+            'id': '126',
             'name': 'active snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -759,7 +759,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'ACTIVE',
             'progress': 100,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -779,7 +779,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 127,
+            'id': '127',
             'name': 'killed snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -790,7 +790,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'ERROR',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -810,7 +810,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 128,
+            'id': '128',
             'name': 'deleted snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -821,7 +821,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'DELETED',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -841,7 +841,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 129,
+            'id': '129',
             'name': 'pending_delete snapshot',
             'metadata': {
                 u'instance_ref': u'http://localhost/v1.1/servers/42',
@@ -852,7 +852,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'status': 'DELETED',
             'progress': 0,
             'server': {
-                'id': 42,
+                'id': '42',
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -872,7 +872,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             }],
         },
         {
-            'id': 131,
+            'id': '131',
             'name': None,
             'metadata': {},
             'updated': self.NOW_API_FORMAT,
