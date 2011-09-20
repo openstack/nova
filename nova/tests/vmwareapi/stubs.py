@@ -47,7 +47,5 @@ def set_stubs(stubs):
     stubs.Set(vmware_images, 'upload_image', fake.fake_upload_image)
     stubs.Set(vmwareapi_conn.VMWareAPISession, "_get_vim_object",
               fake_get_vim_object)
-    stubs.Set(vmwareapi_conn.VMWareAPISession, "_get_vim_object",
-              fake_get_vim_object)
     stubs.Set(vmwareapi_conn.VMWareAPISession, "_is_vim_object",
               fake_is_vim_object)
