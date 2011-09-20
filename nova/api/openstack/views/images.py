@@ -18,10 +18,7 @@
 import os.path
 
 from nova.api.openstack import common
-from nova import flags
-
-
-FLAGS = flags.FLAGS
+from nova import utils
 
 
 class ViewBuilder(object):
@@ -174,7 +171,7 @@ class ViewBuilderV11(ViewBuilder):
 
     def generate_alternate(self, image_id):
         """Create an alternate link for a specific flavor id."""
-        # TODO(jk0): This will eventually need to take SSL into consideration
-        # when supported in glance.
-        return "http://%s:%d/%s/images/%s" % (FLAGS.glance_host,
-                FLAGS.glance_port, self.project_id, str(image_id))
+        glance_url = utils.generate_glance_url()
+
+        return "%s/%s/images/%s" % (glance_url, self.project_id,
+                str(image_id))

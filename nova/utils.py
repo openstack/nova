@@ -910,3 +910,10 @@ def convert_to_list_dict(lst, label):
     if not isinstance(lst, list):
         lst = [lst]
     return [{label: x} for x in lst]
+
+
+def generate_glance_url():
+    """Generate the URL to glance."""
+    # TODO(jk0): This will eventually need to take SSL into consideration
+    # when supported in glance.
+    return "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
