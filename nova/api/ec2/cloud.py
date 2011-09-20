@@ -594,18 +594,31 @@ class CloudController(object):
         g['ipPermissions'] = []
         for rule in group.rules:
             r = {}
-            r['ipProtocol'] = rule.protocol
-            r['fromPort'] = rule.from_port
-            r['toPort'] = rule.to_port
             r['groups'] = []
             r['ipRanges'] = []
             if rule.group_id:
                 source_group = db.security_group_get(context, rule.group_id)
                 r['groups'] += [{'groupName': source_group.name,
                                  'userId': source_group.project_id}]
+                if rule.protocol:
+                    r['ipProtocol'] = rule.protocol
+                    r['fromPort'] = rule.from_port
+                    r['toPort'] = rule.to_port
+                    g['ipPermissions'] += [dict(r)]
+                else:
+                    for protocol, min_port, max_port in (('icmp', -1, -1),
+                                                         ('tcp', 1, 65535),
+                                                         ('udp', 1, 65536)):
+                        r['ipProtocol'] = protocol
+                        r['fromPort'] = min_port
+                        r['toPort'] = max_port
+                        g['ipPermissions'] += [dict(r)]
             else:
+                r['ipProtocol'] = rule.protocol
+                r['fromPort'] = rule.from_port
+                r['toPort'] = rule.to_port
                 r['ipRanges'] += [{'cidrIp': rule.cidr}]
-            g['ipPermissions'] += [r]
+                g['ipPermissions'] += [r]
         return g
 
     def _rule_args_to_dict(self, context, kwargs):
