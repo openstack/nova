@@ -42,13 +42,6 @@ FLAGS = flags.FLAGS
 GlanceClient = utils.import_class('glance.client.Client')
 
 
-def _construct_glance_url():
-    """Generate the default URL to glance."""
-    # TODO(jk0): This will eventually need to take SSL into consideration
-    # when supported in glance.
-    return "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
-
-
 def _parse_image_ref(image_href):
     """Parse an image href into composite parts.
 

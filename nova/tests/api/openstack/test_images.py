@@ -30,11 +30,16 @@ import stubout
 import webob
 
 from nova import context
+from nova import flags
 import nova.api.openstack
 from nova.api.openstack import images
 from nova.api.openstack import xmlutil
+from nova.api.openstack.views import images as images_view
 from nova import test
 from nova.tests.api.openstack import fakes
+
+
+FLAGS = flags.FLAGS
 
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -962,6 +967,15 @@ class ImagesTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
+
+    def test_generate_alternate(self):
+        # TODO(jk0): This will eventually need to take SSL into consideration
+        # when supported in glance.
+        view = images_view.ViewBuilderV11(1)
+        generated_url = view.generate_alternate(1)
+        actual_url = "http://%s:%d//images/1" % (FLAGS.glance_host,
+                FLAGS.glance_port)
+        self.assertEqual(generated_url, actual_url)
 
 
 class ImageXMLSerializationTest(test.TestCase):

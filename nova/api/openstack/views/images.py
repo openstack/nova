@@ -18,6 +18,10 @@
 import os.path
 
 from nova.api.openstack import common
+from nova import flags
+
+
+FLAGS = flags.FLAGS
 
 
 class ViewBuilder(object):
@@ -139,6 +143,7 @@ class ViewBuilderV11(ViewBuilder):
         image = ViewBuilder.build(self, image_obj, detail)
         href = self.generate_href(image_obj["id"])
         bookmark = self.generate_bookmark(image_obj["id"])
+        alternate = self.generate_alternate(image_obj["id"])
 
         image["links"] = [
             {
@@ -149,6 +154,11 @@ class ViewBuilderV11(ViewBuilder):
                 "rel": "bookmark",
                 "href": bookmark,
             },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": alternate,
+            },
 
         ]
 
@@ -158,6 +168,13 @@ class ViewBuilderV11(ViewBuilder):
         return image
 
     def generate_bookmark(self, image_id):
-        """Create an url that refers to a specific flavor id."""
+        """Create a URL that refers to a specific flavor id."""
         return os.path.join(common.remove_version_from_href(self.base_url),
             self.project_id, "images", str(image_id))
+
+    def generate_alternate(self, image_id):
+        """Create an alternate link for a specific flavor id."""
+        # TODO(jk0): This will eventually need to take SSL into consideration
+        # when supported in glance.
+        return "http://%s:%d/%s/images/%s" % (FLAGS.glance_host,
+                FLAGS.glance_port, self.project_id, str(image_id))
