@@ -937,9 +937,10 @@ class API(base.Base):
                                                                    filters)
             # NOTE(jkoelker) It is possible that we will get the same
             #                instance uuid twice (one for ipv4 and ipv6)
-            ids = set([r['instance_uuid'] for r in res])
+            uuids = set([r['instance_uuid'] for r in res])
+            filters['uuid'] = uuids
 
-        return self.db.instance_get_all_by_filters(context, filters, ids)
+        return self.db.instance_get_all_by_filters(context, filters)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):
