@@ -53,7 +53,9 @@ def fetch_to_raw(context, image_href, path, _user_id, _project_id):
 
     def _qemu_img_info(path):
 
-        out, err = utils.execute('qemu-img', 'info', path)
+        out, err = utils.execute('sh', '-c',
+            'export LC_ALL=C LANG=C && exec "$@"',
+            'qemu-img', 'info', path)
 
         # output of qemu-img is 'field: value'
         # the fields of interest are 'file format' and 'backing file'
