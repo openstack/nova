@@ -1161,8 +1161,9 @@ class ServersTest(test.TestCase):
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
 
-        qs = urlparse.urlparse(servers_links[0]['href']).query
-        params = urlparse.parse_qs(qs)
+        href_parts = urlparse.urlparse(servers_links[0]['href'])
+        self.assertEqual('/v1.1/fake/servers', href_parts.path) 
+        params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
 
         req = webob.Request.blank('/v1.1/fake/servers?limit=aaa')
@@ -1178,8 +1179,9 @@ class ServersTest(test.TestCase):
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
 
-        qs = urlparse.urlparse(servers_links[0]['href']).query
-        params = urlparse.parse_qs(qs)
+        href_parts = urlparse.urlparse(servers_links[0]['href'])
+        self.assertEqual('/v1.1/fake/servers', href_parts.path) 
+        params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
 
         req = webob.Request.blank('/v1.1/fake/servers/detail?limit=aaa')
@@ -1195,8 +1197,9 @@ class ServersTest(test.TestCase):
         self.assertEqual([s['id'] for s in servers], [0, 1, 2])
         self.assertEqual(servers_links[0]['rel'], 'next')
 
-        qs = urlparse.urlparse(servers_links[0]['href']).query
-        params = urlparse.parse_qs(qs)
+        href_parts = urlparse.urlparse(servers_links[0]['href'])
+        self.assertEqual('/v1.1/fake/servers', href_parts.path) 
+        params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch({'limit': ['3'], 'blah': ['2:t'],
                               'marker': ['2']}, params)
 

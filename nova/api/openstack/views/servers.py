@@ -236,7 +236,9 @@ class ViewBuilderV11(ViewBuilder):
     def generate_next_link(self, server_id, params, is_detail=False):
         """ Return an href string with proper limit and marker params"""
         params['marker'] = server_id
-        return "%s?%s" % (self.base_url, common.dict_to_query_str(params))
+        return "%s?%s" % (
+            os.path.join(self.base_url, self.project_id, "servers"),
+            common.dict_to_query_str(params))
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""
