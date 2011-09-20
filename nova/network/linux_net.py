@@ -838,7 +838,6 @@ class LinuxNetInterfaceDriver(object):
         raise NotImplementedError()
 
 
-
 # plugs interfaces using Linux Bridge
 class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
