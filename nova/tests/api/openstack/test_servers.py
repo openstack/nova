@@ -1162,7 +1162,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(servers_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(servers_links[0]['href'])
-        self.assertEqual('/v1.1/fake/servers', href_parts.path) 
+        self.assertEqual('/v1.1/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
 
@@ -1180,7 +1180,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(servers_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(servers_links[0]['href'])
-        self.assertEqual('/v1.1/fake/servers', href_parts.path) 
+        self.assertEqual('/v1.1/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
 
@@ -1198,7 +1198,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(servers_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(servers_links[0]['href'])
-        self.assertEqual('/v1.1/fake/servers', href_parts.path) 
+        self.assertEqual('/v1.1/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch({'limit': ['3'], 'blah': ['2:t'],
                               'marker': ['2']}, params)
