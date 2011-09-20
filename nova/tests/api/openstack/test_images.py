@@ -1060,8 +1060,6 @@ class ImagesTest(test.TestCase):
         self.assertEqual(400, response.status_int)
 
     def test_generate_alternate(self):
-        # TODO(jk0): This will eventually need to take SSL into consideration
-        # when supported in glance.
         view = images_view.ViewBuilderV11(1)
         generated_url = view.generate_alternate(1)
         actual_url = "%s//images/1" % utils.generate_glance_url()
