@@ -71,6 +71,7 @@ class ViewBuilder(object):
         }
 
         self._build_server(image, image_obj)
+        self._build_image_id(image, image_obj)
 
         if detail:
             image.update({
@@ -96,6 +97,12 @@ class ViewBuilderV10(ViewBuilder):
         except (KeyError, ValueError):
             pass
 
+    def _build_image_id(self, image, image_obj):
+        try:
+            image['id'] = int(image_obj['id'])
+        except ValueError:
+            pass
+
 
 class ViewBuilderV11(ViewBuilder):
     """OpenStack API v1.1 Image Builder"""
@@ -118,6 +125,9 @@ class ViewBuilderV11(ViewBuilder):
             }
         except KeyError:
             return
+
+    def _build_image_id(self, image, image_obj):
+        image['id'] = "%s" % image_obj['id']
 
     def generate_href(self, image_id):
         """Return an href string pointing to this object."""
