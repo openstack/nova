@@ -438,55 +438,23 @@ class VlanNetworkTestCase(test.TestCase):
 
 
 class CommonNetworkTestCase(test.TestCase):
-
-    class FakeNetworkManager(network_manager.NetworkManager):
-        """This NetworkManager doesn't call the base class so we can bypass all
-        inherited service cruft and just perform unit tests.
-        """
-
-        class FakeDB:
-            def fixed_ip_get_by_instance(self, context, instance_id):
-                return [dict(address='10.0.0.0'),  dict(address='10.0.0.1'),
-                        dict(address='10.0.0.2')]
-
-            def network_get_by_cidr(self, context, cidr):
-                raise exception.NetworkNotFoundForCidr()
-
-            def network_create_safe(self, context, net):
-                fakenet = dict(net)
-                fakenet['id'] = 999
-                return fakenet
-
-            def network_get_all(self, context):
-                raise exception.NoNetworksFound()
-
-        def __init__(self):
-            self.db = self.FakeDB()
-            self.deallocate_called = None
-
-        def deallocate_fixed_ip(self, context, address):
-            self.deallocate_called = address
-
-        def _create_fixed_ips(self, context, network_id):
-            pass
-
     def fake_create_fixed_ips(self, context, network_id):
         return None
 
     def test_remove_fixed_ip_from_instance(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         manager.remove_fixed_ip_from_instance(None, 99, '10.0.0.1')
 
         self.assertEquals(manager.deallocate_called, '10.0.0.1')
 
     def test_remove_fixed_ip_from_instance_bad_input(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.assertRaises(exception.FixedIpNotFoundForSpecificInstance,
                           manager.remove_fixed_ip_from_instance,
                           None, 99, 'bad input')
 
     def test_validate_cidrs(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         nets = manager.create_networks(None, 'fake', '192.168.0.0/24',
                                        False, 1, 256, None, None, None,
                                        None)
@@ -495,7 +463,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertTrue('192.168.0.0/24' in cidrs)
 
     def test_validate_cidrs_split_exact_in_half(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         nets = manager.create_networks(None, 'fake', '192.168.0.0/24',
                                        False, 2, 128, None, None, None,
                                        None)
@@ -505,7 +473,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertTrue('192.168.0.128/25' in cidrs)
 
     def test_validate_cidrs_split_cidr_in_use_middle_of_range(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
         manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
@@ -523,7 +491,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertFalse('192.168.2.0/24' in cidrs)
 
     def test_validate_cidrs_smaller_subnet_in_use(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
         manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
@@ -536,7 +504,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_split_smaller_cidr_in_use(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
         manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
@@ -553,7 +521,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertFalse('192.168.2.0/24' in cidrs)
 
     def test_validate_cidrs_split_smaller_cidr_in_use2(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
         manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
@@ -569,7 +537,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertFalse('192.168.2.0/27' in cidrs)
 
     def test_validate_cidrs_split_all_in_use(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
         in_use = [{'id': 1, 'cidr': '192.168.2.9/29'},
@@ -585,14 +553,14 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_one_in_use(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         args = (None, 'fake', '192.168.0.0/24', False, 2, 256, None, None,
                 None, None)
         # ValueError: network_size * num_networks exceeds cidr size
         self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_already_used(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
         manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
@@ -604,7 +572,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_too_many(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         args = (None, 'fake', '192.168.0.0/24', False, 200, 256, None, None,
                 None, None)
         # ValueError: Not enough subnets avail to satisfy requested
@@ -612,7 +580,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertRaises(ValueError, manager.create_networks, *args)
 
     def test_validate_cidrs_split_partial(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
                                        False, 2, 256, None, None, None, None)
         returned_cidrs = [str(net['cidr']) for net in nets]
@@ -620,7 +588,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertTrue('192.168.1.0/24' in returned_cidrs)
 
     def test_validate_cidrs_conflict_existing_supernet(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
         fakecidr = [{'id': 1, 'cidr': '192.168.0.0/8'}]
@@ -634,16 +602,15 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_create_networks(self):
         cidr = '192.168.0.0/24'
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.stubs.Set(manager, '_create_fixed_ips',
                                 self.fake_create_fixed_ips)
         args = [None, 'foo', cidr, None, 1, 256, 'fd00::/48', None, None,
                 None]
-        result = manager.create_networks(*args)
         self.assertTrue(manager.create_networks(*args))
 
     def test_create_networks_cidr_already_used(self):
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
         ctxt = mox.IgnoreArg()
         fakecidr = [{'id': 1, 'cidr': '192.168.0.0/24'}]
@@ -655,9 +622,124 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_create_networks_many(self):
         cidr = '192.168.0.0/16'
-        manager = self.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager()
         self.stubs.Set(manager, '_create_fixed_ips',
                                 self.fake_create_fixed_ips)
         args = [None, 'foo', cidr, None, 10, 256, 'fd00::/48', None, None,
                 None]
         self.assertTrue(manager.create_networks(*args))
+
+    def test_get_instance_uuids_by_ip_regex(self):
+        manager = fake_network.FakeNetworkManager()
+        _vifs = manager.db.virtual_interface_get_all(None)
+
+        # Greedy get eveything
+        res = manager.get_instance_uuids_by_ip_filter(None, {'ip': '.*'})
+        self.assertEqual(len(res), len(_vifs))
+
+        # Doesn't exist
+        res = manager.get_instance_uuids_by_ip_filter(None, {'ip': '10.0.0.1'})
+        self.assertFalse(res)
+
+        # Get instance 1
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                    {'ip': '172.16.0.2'})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
+
+        # Get instance 2
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                    {'ip': '173.16.0.2'})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
+
+        # Get instance 0 and 1
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                    {'ip': '172.16.0.*'})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0]['instance_id'], _vifs[0]['instance_id'])
+        self.assertEqual(res[1]['instance_id'], _vifs[1]['instance_id'])
+
+        # Get instance 1 and 2
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                    {'ip': '17..16.0.2'})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
+        self.assertEqual(res[1]['instance_id'], _vifs[2]['instance_id'])
+
+    def test_get_instance_uuids_by_ipv6_regex(self):
+        manager = fake_network.FakeNetworkManager()
+        _vifs = manager.db.virtual_interface_get_all(None)
+
+        # Greedy get eveything
+        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': '.*'})
+        self.assertEqual(len(res), len(_vifs))
+
+        # Doesn't exist
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                      {'ip6': '.*1034.*'})
+        self.assertFalse(res)
+
+        # Get instance 1
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                    {'ip6': '2001:.*:2'})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
+
+        # Get instance 2
+        ip6 = '2002:db8::dcad:beff:feef:2'
+        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': ip6})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
+
+        # Get instance 0 and 1
+        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': '2001:.*'})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0]['instance_id'], _vifs[0]['instance_id'])
+        self.assertEqual(res[1]['instance_id'], _vifs[1]['instance_id'])
+
+        # Get instance 1 and 2
+        ip6 = '200.:db8::dcad:beff:feef:2'
+        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': ip6})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
+        self.assertEqual(res[1]['instance_id'], _vifs[2]['instance_id'])
+
+    def test_get_instance_uuids_by_ip(self):
+        manager = fake_network.FakeNetworkManager()
+        _vifs = manager.db.virtual_interface_get_all(None)
+
+        # No regex for you!
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                      {'fixed_ip': '.*'})
+        self.assertFalse(res)
+
+        # Doesn't exist
+        ip = '10.0.0.1'
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                      {'fixed_ip': ip})
+        self.assertFalse(res)
+
+        # Get instance 1
+        ip = '172.16.0.2'
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                      {'fixed_ip': ip})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
+
+        # Get instance 2
+        ip = '173.16.0.2'
+        res = manager.get_instance_uuids_by_ip_filter(None,
+                                                      {'fixed_ip': ip})
+        self.assertTrue(res)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])

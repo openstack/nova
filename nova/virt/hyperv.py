@@ -487,6 +487,9 @@ class HyperVConnection(driver.ComputeDriver):
     def poll_rescued_instances(self, timeout):
         pass
 
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
+        pass
+
     def update_available_resource(self, ctxt, host):
         """This method is supported only by libvirt."""
         return
