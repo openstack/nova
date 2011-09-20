@@ -47,9 +47,9 @@ def fetch(context, image_href, path, _user_id, _project_id):
     return metadata
 
 
-def fetch_to_raw(context, image_href, path, _user_id, _project_id):
+def fetch_to_raw(context, image_href, path, user_id, project_id):
     path_tmp = "%s.part" % path
-    metadata = fetch(context, image_href, path_tmp, _user_id, _project_id)
+    metadata = fetch(context, image_href, path_tmp, user_id, project_id)
 
     def _qemu_img_info(path):
 
