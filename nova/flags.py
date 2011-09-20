@@ -421,6 +421,9 @@ DEFINE_string('root_helper', 'sudo',
 
 DEFINE_bool('use_ipv6', False, 'use ipv6')
 
+DEFINE_integer('password_length', 12,
+                    'Length of generated instance admin passwords')
+
 DEFINE_bool('monkey_patch', False,
               'Whether to log monkey patching')
 

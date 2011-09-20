@@ -19,6 +19,7 @@ Tests dealing with HTTP rate-limiting.
 
 import httplib
 import json
+from lxml import etree
 import StringIO
 import stubout
 import time
@@ -29,6 +30,7 @@ from xml.dom import minidom
 import nova.context
 from nova.api.openstack import limits
 from nova.api.openstack import views
+from nova.api.openstack import xmlutil
 from nova import test
 
 
@@ -39,6 +41,10 @@ TEST_LIMITS = [
     limits.Limit("PUT", "*", "", 10, limits.PER_MINUTE),
     limits.Limit("PUT", "/servers", "^/servers", 5, limits.PER_MINUTE),
 ]
+NS = {
+    'atom': 'http://www.w3.org/2005/Atom',
+    'ns': 'http://docs.openstack.org/compute/api/v1.1'
+}
 
 
 class BaseLimitTestSuite(unittest.TestCase):
@@ -168,12 +174,11 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         response = request.get_response(self.controller)
 
         expected = minidom.parseString("""
-            <limits
-                xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+            <limits xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate/>
                 <absolute/>
             </limits>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n", ""))
 
         body = minidom.parseString(response.body.replace("  ", ""))
 
@@ -186,17 +191,16 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         response = request.get_response(self.controller)
 
         expected = minidom.parseString("""
-            <limits
-                xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+            <limits xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate>
                     <limit URI="*" regex=".*" remaining="10" resetTime="0"
-                        unit="MINUTE" value="10" verb="GET"/>
+                         unit="MINUTE" value="10" verb="GET"/>
                     <limit URI="*" regex=".*" remaining="5" resetTime="0"
-                        unit="HOUR" value="5" verb="POST"/>
+                         unit="HOUR" value="5" verb="POST"/>
                 </rate>
                 <absolute/>
             </limits>
-        """.replace("  ", ""))
+        """.replace("  ", "").replace("\n", ""))
         body = minidom.parseString(response.body.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), body.toxml())
@@ -980,9 +984,22 @@ class LimitsXMLSerializationTest(test.TestCase):
     def tearDown(self):
         pass
 
+    def test_xml_declaration(self):
+        serializer = limits.LimitsXMLSerializer()
+
+        fixture = {"limits": {
+                   "rate": [],
+                   "absolute": {}}}
+
+        output = serializer.serialize(fixture, 'index')
+        print output
+        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
+        self.assertTrue(has_dec)
+
     def test_index(self):
         serializer = limits.LimitsXMLSerializer()
-        fixture = {"limits": {
+        fixture = {
+            "limits": {
                    "rate": [{
                          "uri": "*",
                          "regex": ".*",
@@ -1006,32 +1023,32 @@ class LimitsXMLSerializationTest(test.TestCase):
                                  "maxPersonalitySize": 10240}}}
 
         output = serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'limits')
 
-        expected = minidom.parseString("""
-        <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <rates>
-                <rate uri="*" regex=".*">
-                    <limit value="10" verb="POST" remaining="2"
-                        unit="MINUTE"
-                        next-available="2011-12-15T22:42:45Z"/>
-                </rate>
-                <rate uri="*/servers" regex="^/servers">
-                    <limit value="50" verb="POST" remaining="10"
-                        unit="DAY"
-                        next-available="2011-12-15T22:42:45Z"/>
-                </rate>
-            </rates>
-            <absolute>
-                <limit name="maxServerMeta" value="1"/>
-                <limit name="maxPersonality" value="5"/>
-                <limit name="maxImageMeta" value="1"/>
-                <limit name="maxPersonalitySize" value="10240"/>
-            </absolute>
-        </limits>
-        """.replace("  ", ""))
+        #verify absolute limits
+        absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
+        self.assertEqual(len(absolutes), 4)
+        for limit in absolutes:
+            name = limit.get('name')
+            value = limit.get('value')
+            self.assertEqual(value, str(fixture['limits']['absolute'][name]))
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        #verify rate limits
+        rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
+        self.assertEqual(len(rates), 2)
+        for i, rate in enumerate(rates):
+            for key in ['uri', 'regex']:
+                self.assertEqual(rate.get(key),
+                                 str(fixture['limits']['rate'][i][key]))
+            rate_limits = rate.xpath('ns:limit', namespaces=NS)
+            self.assertEqual(len(rate_limits), 1)
+            for j, limit in enumerate(rate_limits):
+                for key in ['verb', 'value', 'remaining', 'unit',
+                            'next-available']:
+                    self.assertEqual(limit.get(key),
+                         str(fixture['limits']['rate'][i]['limit'][j][key]))
 
     def test_index_no_limits(self):
         serializer = limits.LimitsXMLSerializer()
@@ -1041,13 +1058,14 @@ class LimitsXMLSerializationTest(test.TestCase):
                    "absolute": {}}}
 
         output = serializer.serialize(fixture, 'index')
-        actual = minidom.parseString(output.replace("  ", ""))
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'limits')
 
-        expected = minidom.parseString("""
-        <limits xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <rates />
-            <absolute />
-        </limits>
-        """.replace("  ", ""))
+        #verify absolute limits
+        absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
+        self.assertEqual(len(absolutes), 0)
 
-        self.assertEqual(expected.toxml(), actual.toxml())
+        #verify rate limits
+        rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
+        self.assertEqual(len(rates), 0)

@@ -37,17 +37,18 @@ class ViewBuilder(object):
     def _format_status(self, image):
         """Update the status field to standardize format."""
         status_mapping = {
-            'pending': 'QUEUED',
-            'decrypting': 'PREPARING',
-            'untarring': 'SAVING',
-            'available': 'ACTIVE',
-            'killed': 'FAILED',
+            'active': 'ACTIVE',
+            'queued': 'SAVING',
+            'saving': 'SAVING',
+            'deleted': 'DELETED',
+            'pending_delete': 'DELETED',
+            'killed': 'ERROR',
         }
 
         try:
-            image['status'] = status_mapping[image['status']].upper()
+            image['status'] = status_mapping[image['status']]
         except KeyError:
-            image['status'] = image['status'].upper()
+            image['status'] = 'UNKNOWN'
 
     def _build_server(self, image, image_obj):
         """Indicates that you must use a ViewBuilder subclass."""
@@ -70,6 +71,7 @@ class ViewBuilder(object):
         }
 
         self._build_server(image, image_obj)
+        self._build_image_id(image, image_obj)
 
         if detail:
             image.update({
@@ -95,6 +97,12 @@ class ViewBuilderV10(ViewBuilder):
         except (KeyError, ValueError):
             pass
 
+    def _build_image_id(self, image, image_obj):
+        try:
+            image['id'] = int(image_obj['id'])
+        except ValueError:
+            pass
+
 
 class ViewBuilderV11(ViewBuilder):
     """OpenStack API v1.1 Image Builder"""
@@ -117,6 +125,9 @@ class ViewBuilderV11(ViewBuilder):
             }
         except KeyError:
             return
+
+    def _build_image_id(self, image, image_obj):
+        image['id'] = "%s" % image_obj['id']
 
     def generate_href(self, image_id):
         """Return an href string pointing to this object."""

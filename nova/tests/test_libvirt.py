@@ -35,11 +35,16 @@ from nova import utils
 from nova.api.ec2 import cloud
 from nova.compute import power_state
 from nova.compute import vm_states
+from nova.virt import driver
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
+from nova.tests import fake_network
 
 libvirt = None
 FLAGS = flags.FLAGS
+
+_fake_network_info = fake_network.fake_get_instance_nw_info
+_ipv4_like = fake_network.ipv4_like
 
 
 def _concurrency(wait, done, target):
@@ -47,49 +52,39 @@ def _concurrency(wait, done, target):
     done.send()
 
 
-def _create_network_info(count=1, ipv6=None):
-    if ipv6 is None:
-        ipv6 = FLAGS.use_ipv6
-    fake = 'fake'
-    fake_ip = '10.11.12.13'
-    fake_ip_2 = '0.0.0.1'
-    fake_ip_3 = '0.0.0.1'
-    fake_vlan = 100
-    fake_bridge_interface = 'eth0'
-    network = {'bridge': fake,
-               'cidr': fake_ip,
-               'cidr_v6': fake_ip,
-               'gateway_v6': fake,
-               'vlan': fake_vlan,
-               'bridge_interface': fake_bridge_interface}
-    mapping = {'mac': fake,
-               'dhcp_server': '10.0.0.1',
-               'gateway': fake,
-               'gateway6': fake,
-               'ips': [{'ip': fake_ip}, {'ip': fake_ip}]}
-    if ipv6:
-        mapping['ip6s'] = [{'ip': fake_ip},
-                           {'ip': fake_ip_2},
-                           {'ip': fake_ip_3}]
-    return [(network, mapping) for x in xrange(0, count)]
+class FakeVirDomainSnapshot(object):
+
+    def __init__(self, dom=None):
+        self.dom = dom
+
+    def delete(self, flags):
+        pass
 
 
-def _setup_networking(instance_id, ip='1.2.3.4', mac='56:12:12:12:12:12'):
-    ctxt = context.get_admin_context()
-    network_ref = db.project_get_networks(ctxt,
-                                           'fake',
-                                           associate=True)[0]
-    vif = {'address': mac,
-           'network_id': network_ref['id'],
-           'instance_id': instance_id}
-    vif_ref = db.virtual_interface_create(ctxt, vif)
+class FakeVirtDomain(object):
 
-    fixed_ip = {'address': ip,
-                'network_id': network_ref['id'],
-                'virtual_interface_id': vif_ref['id']}
-    db.fixed_ip_create(ctxt, fixed_ip)
-    db.fixed_ip_update(ctxt, ip, {'allocated': True,
-                                  'instance_id': instance_id})
+    def __init__(self, fake_xml=None):
+        if fake_xml:
+            self._fake_dom_xml = fake_xml
+        else:
+            self._fake_dom_xml = """
+                <domain type='kvm'>
+                    <devices>
+                        <disk type='file'>
+                            <source file='filename'/>
+                        </disk>
+                    </devices>
+                </domain>
+            """
+
+    def snapshotCreateXML(self, *args):
+        return FakeVirDomainSnapshot(self)
+
+    def createWithFlags(self, launch_flags):
+        pass
+
+    def XMLDesc(self, *args):
+        return self._fake_dom_xml
 
 
 class CacheConcurrencyTestCase(test.TestCase):
@@ -163,7 +158,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.context = context.get_admin_context()
         self.flags(instances_path='')
         self.call_libvirt_dependant_setup = False
-        self.test_ip = '10.11.12.13'
 
     test_instance = {'memory_kb':     '1024000',
                      'basepath':      '/some/path',
@@ -194,70 +188,24 @@ class LibvirtConnTestCase(test.TestCase):
 
         # A fake libvirt.virConnect
         class FakeLibvirtConnection(object):
-            pass
-
-        # A fake connection.IptablesFirewallDriver
-        class FakeIptablesFirewallDriver(object):
-
-            def __init__(self, **kwargs):
-                pass
-
-            def setattr(self, key, val):
-                self.__setattr__(key, val)
-
-        # A fake VIF driver
-        class FakeVIFDriver(object):
-
-            def __init__(self, **kwargs):
-                pass
-
-            def setattr(self, key, val):
-                self.__setattr__(key, val)
-
-            def plug(self, instance, network, mapping):
-                return {
-                    'id': 'fake',
-                    'bridge_name': 'fake',
-                    'mac_address': 'fake',
-                    'ip_address': 'fake',
-                    'dhcp_server': 'fake',
-                    'extra_params': 'fake',
-                }
+            def defineXML(self, xml):
+                return FakeVirtDomain()
 
         # Creating mocks
         fake = FakeLibvirtConnection()
-        fakeip = FakeIptablesFirewallDriver
-        fakevif = FakeVIFDriver()
         # Customizing above fake if necessary
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
-        # Inevitable mocks for connection.LibvirtConnection
-        self.mox.StubOutWithMock(connection.utils, 'import_class')
-        connection.utils.import_class(mox.IgnoreArg()).AndReturn(fakeip)
-        self.mox.StubOutWithMock(connection.utils, 'import_object')
-        connection.utils.import_object(mox.IgnoreArg()).AndReturn(fakevif)
+        self.flags(image_service='nova.image.fake.FakeImageService')
+        fw_driver = "nova.tests.fake_network.FakeIptablesFirewallDriver"
+        self.flags(firewall_driver=fw_driver)
+        self.flags(libvirt_vif_driver="nova.tests.fake_network.FakeVIFDriver")
+
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
         connection.LibvirtConnection._conn = fake
 
     def fake_lookup(self, instance_name):
-
-        class FakeVirtDomain(object):
-
-            def snapshotCreateXML(self, *args):
-                return None
-
-            def XMLDesc(self, *args):
-                return """
-                    <domain type='kvm'>
-                        <devices>
-                            <disk type='file'>
-                                <source file='filename'/>
-                            </disk>
-                        </devices>
-                    </domain>
-                """
-
         return FakeVirtDomain()
 
     def fake_execute(self, *args):
@@ -277,12 +225,12 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, self.test_instance)
 
         result = conn._prepare_xml_info(instance_ref,
-                                        _create_network_info(),
+                                        _fake_network_info(self.stubs, 1),
                                         False)
         self.assertTrue(len(result['nics']) == 1)
 
         result = conn._prepare_xml_info(instance_ref,
-                                        _create_network_info(2),
+                                        _fake_network_info(self.stubs, 2),
                                         False)
         self.assertTrue(len(result['nics']) == 2)
 
@@ -321,7 +269,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
 
-    def test_snapshot(self):
+    def test_snapshot_in_raw_format(self):
         if not self.lazy_load_library_exists():
             return
 
@@ -354,6 +302,44 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot = image_service.show(context, recv_meta['id'])
         self.assertEquals(snapshot['properties']['image_state'], 'available')
         self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['disk_format'], 'raw')
+        self.assertEquals(snapshot['name'], snapshot_name)
+
+    def test_snapshot_in_qcow2_format(self):
+        if not self.lazy_load_library_exists():
+            return
+
+        self.flags(image_service='nova.image.fake.FakeImageService')
+        self.flags(snapshot_image_format='qcow2')
+
+        # Start test
+        image_service = utils.import_object(FLAGS.image_service)
+
+        # Assuming that base image already exists in image_service
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        # Create new image. It will be updated in snapshot method
+        # To work with it from snapshot, the single image_service is needed
+        recv_meta = image_service.create(context, sent_meta)
+
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
+        self.mox.StubOutWithMock(connection.utils, 'execute')
+        connection.utils.execute = self.fake_execute
+
+        self.mox.ReplayAll()
+
+        conn = connection.LibvirtConnection(False)
+        conn.snapshot(self.context, instance_ref, recv_meta['id'])
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['disk_format'], 'qcow2')
         self.assertEquals(snapshot['name'], snapshot_name)
 
     def test_snapshot_no_image_architecture(self):
@@ -407,7 +393,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
-        network_info = _create_network_info(2)
+        network_info = _fake_network_info(self.stubs, 2)
         conn = connection.LibvirtConnection(True)
         instance_ref = db.instance_create(self.context, instance_data)
         xml = conn.to_xml(instance_ref, network_info, False)
@@ -417,15 +403,14 @@ class LibvirtConnTestCase(test.TestCase):
         parameters = interfaces[0].findall('./filterref/parameter')
         self.assertEquals(interfaces[0].get('type'), 'bridge')
         self.assertEquals(parameters[0].get('name'), 'IP')
-        self.assertEquals(parameters[0].get('value'), '10.11.12.13')
+        self.assertTrue(_ipv4_like(parameters[0].get('value'), '192.168'))
         self.assertEquals(parameters[1].get('name'), 'DHCPSERVER')
-        self.assertEquals(parameters[1].get('value'), '10.0.0.1')
+        self.assertTrue(_ipv4_like(parameters[1].get('value'), '192.168.*.1'))
 
     def _check_xml_and_container(self, instance):
         user_context = context.RequestContext(self.user_id,
                                               self.project_id)
         instance_ref = db.instance_create(user_context, instance)
-        _setup_networking(instance_ref['id'], self.test_ip)
 
         self.flags(libvirt_type='lxc')
         conn = connection.LibvirtConnection(True)
@@ -433,7 +418,7 @@ class LibvirtConnTestCase(test.TestCase):
         uri = conn.get_uri()
         self.assertEquals(uri, 'lxc:///')
 
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
         xml = conn.to_xml(instance_ref, network_info)
         tree = xml_to_tree(xml)
 
@@ -456,8 +441,6 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(user_context, instance)
         network_ref = db.project_get_networks(context.get_admin_context(),
                                              self.project_id)[0]
-
-        _setup_networking(instance_ref['id'], self.test_ip)
 
         type_uri_map = {'qemu': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'qemu'),
@@ -504,9 +487,11 @@ class LibvirtConnTestCase(test.TestCase):
         common_checks = [
             (lambda t: t.find('.').tag, 'domain'),
             (lambda t: t.find(parameter).get('name'), 'IP'),
-            (lambda t: t.find(parameter).get('value'), '10.11.12.13'),
+            (lambda t: _ipv4_like(t.find(parameter).get('value'), '192.168'),
+             True),
             (lambda t: t.findall(parameter)[1].get('name'), 'DHCPSERVER'),
-            (lambda t: t.findall(parameter)[1].get('value'), '10.0.0.1'),
+            (lambda t: _ipv4_like(t.findall(parameter)[1].get('value'),
+                                  '192.168.*.1'), True),
             (lambda t: t.find('./devices/serial/source').get(
                 'path').split('/')[1], 'console.log'),
             (lambda t: t.find('./memory').text, '2097152')]
@@ -531,7 +516,7 @@ class LibvirtConnTestCase(test.TestCase):
             uri = conn.get_uri()
             self.assertEquals(uri, expected_uri)
 
-            network_info = _create_network_info()
+            network_info = _fake_network_info(self.stubs, 1)
             xml = conn.to_xml(instance_ref, network_info, rescue)
             tree = xml_to_tree(xml)
             for i, (check, expected_result) in enumerate(checks):
@@ -646,7 +631,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.create_fake_libvirt_mock()
         instance_ref = db.instance_create(self.context, self.test_instance)
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
 
         # Start test
         self.mox.ReplayAll()
@@ -743,7 +728,7 @@ class LibvirtConnTestCase(test.TestCase):
         # qemu-img should be mockd since test environment might not have
         # large disk space.
         self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('sudo', 'qemu-img', 'create', '-f', 'raw',
+        utils.execute('qemu-img', 'create', '-f', 'raw',
                       '%s/%s/disk' % (tmpdir, instance_ref.name), '10G')
 
         self.mox.ReplayAll()
@@ -795,7 +780,7 @@ class LibvirtConnTestCase(test.TestCase):
         os.path.getsize("/test/disk").AndReturn(10 * 1024 * 1024 * 1024)
         # another is qcow image, so qemu-img should be mocked.
         self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('sudo', 'qemu-img', 'info', '/test/disk.local').\
+        utils.execute('qemu-img', 'info', '/test/disk.local').\
             AndReturn((ret, ''))
 
         self.mox.ReplayAll()
@@ -830,7 +815,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
         conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
 
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
 
         try:
             conn.spawn(self.context, instance, network_info)
@@ -839,8 +824,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         shutil.rmtree(os.path.join(FLAGS.instances_path, instance.name))
         shutil.rmtree(os.path.join(FLAGS.instances_path, '_base'))
-
-        self.assertTrue(count)
 
     def test_get_host_ip_addr(self):
         conn = connection.LibvirtConnection(False)
@@ -883,6 +866,50 @@ class LibvirtConnTestCase(test.TestCase):
         _assert_volume_in_mapping('sdg', False)
         _assert_volume_in_mapping('sdh1', False)
 
+    def test_reboot_signature(self):
+        """Test that libvirt driver method sig matches interface"""
+        def fake_reboot_with_correct_sig(ignore, instance,
+                                         network_info, reboot_type):
+            pass
+
+        def fake_destroy(instance, network_info, cleanup=False):
+            pass
+
+        def fake_plug_vifs(instance, network_info):
+            pass
+
+        def fake_create_new_domain(xml):
+            return
+
+        def fake_none(self, instance):
+            return
+
+        instance = db.instance_create(self.context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
+
+        conn = connection.LibvirtConnection(False)
+        self.stubs.Set(conn, 'destroy', fake_destroy)
+        self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
+        self.stubs.Set(conn.firewall_driver,
+                       'setup_basic_filtering',
+                       fake_none)
+        self.stubs.Set(conn.firewall_driver,
+                       'prepare_instance_filter',
+                       fake_none)
+        self.stubs.Set(conn, '_create_new_domain', fake_create_new_domain)
+        self.stubs.Set(conn.firewall_driver,
+                       'apply_instance_filter',
+                       fake_none)
+
+        args = [instance, network_info, 'SOFT']
+        conn.reboot(*args)
+
+        compute_driver = driver.ComputeDriver()
+        self.assertRaises(NotImplementedError, compute_driver.reboot, *args)
+
 
 class NWFilterFakes:
     def __init__(self):
@@ -923,7 +950,6 @@ class IptablesFirewallTestCase(test.TestCase):
                 """setup_basic_rules in nwfilter calls this."""
                 pass
         self.fake_libvirt_connection = FakeLibvirtConnection()
-        self.test_ip = '10.11.12.13'
         self.fw = firewall.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
 
@@ -987,10 +1013,6 @@ class IptablesFirewallTestCase(test.TestCase):
     def test_static_filters(self):
         instance_ref = self._create_instance_ref()
         src_instance_ref = self._create_instance_ref()
-        src_ip = '10.11.12.14'
-        src_mac = '56:12:12:12:12:13'
-        _setup_networking(instance_ref['id'], self.test_ip, src_mac)
-        _setup_networking(src_instance_ref['id'], src_ip)
 
         admin_ctxt = context.get_admin_context()
         secgroup = db.security_group_create(admin_ctxt,
@@ -1061,10 +1083,17 @@ class IptablesFirewallTestCase(test.TestCase):
                 return '', ''
             print cmd, kwargs
 
+        def get_fixed_ips(*args, **kwargs):
+            ips = []
+            for network, info in network_info:
+                ips.extend(info['ips'])
+            return [ip['ip'] for ip in ips]
+
         from nova.network import linux_net
         linux_net.iptables_manager.execute = fake_iptables_execute
 
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
+        self.stubs.Set(db, 'instance_get_fixed_addresses', get_fixed_ips)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
 
@@ -1078,7 +1107,8 @@ class IptablesFirewallTestCase(test.TestCase):
         instance_chain = None
         for rule in self.out_rules:
             # This is pretty crude, but it'll do for now
-            if '-d 10.11.12.13 -j' in rule:
+            # last two octets change
+            if re.search('-d 192.168.[0-9]{1,3}.[0-9]{1,3} -j', rule):
                 instance_chain = rule.split(' ')[-1]
                 break
         self.assertTrue(instance_chain, "The instance chain wasn't added")
@@ -1101,10 +1131,11 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "ICMP Echo Request acceptance rule wasn't added")
 
-        regex = re.compile('-A .* -j ACCEPT -p tcp -m multiport '
-                           '--dports 80:81 -s %s' % (src_ip,))
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "TCP port 80/81 acceptance rule wasn't added")
+        for ip in get_fixed_ips():
+            regex = re.compile('-A .* -j ACCEPT -p tcp -m multiport '
+                               '--dports 80:81 -s %s' % ip)
+            self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
+                            "TCP port 80/81 acceptance rule wasn't added")
 
         regex = re.compile('-A .* -j ACCEPT -p tcp '
                            '-m multiport --dports 80:81 -s 192.168.10.0/24')
@@ -1114,24 +1145,27 @@ class IptablesFirewallTestCase(test.TestCase):
 
     def test_filters_for_instance_with_ip_v6(self):
         self.flags(use_ipv6=True)
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
-        self.assertEquals(len(rulesv6), 3)
+        self.assertEquals(len(rulesv6), 1)
 
     def test_filters_for_instance_without_ip_v6(self):
         self.flags(use_ipv6=False)
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 0)
 
     def test_multinic_iptables(self):
-        ipv4_rules_per_network = 2
-        ipv6_rules_per_network = 3
+        ipv4_rules_per_addr = 1
+        ipv4_addr_per_network = 2
+        ipv6_rules_per_addr = 1
+        ipv6_addr_per_network = 1
         networks_count = 5
         instance_ref = self._create_instance_ref()
-        network_info = _create_network_info(networks_count)
+        network_info = _fake_network_info(self.stubs, networks_count,
+                                                      ipv4_addr_per_network)
         ipv4_len = len(self.fw.iptables.ipv4['filter'].rules)
         ipv6_len = len(self.fw.iptables.ipv6['filter'].rules)
         inst_ipv4, inst_ipv6 = self.fw.instance_rules(instance_ref,
@@ -1142,9 +1176,9 @@ class IptablesFirewallTestCase(test.TestCase):
         ipv4_network_rules = len(ipv4) - len(inst_ipv4) - ipv4_len
         ipv6_network_rules = len(ipv6) - len(inst_ipv6) - ipv6_len
         self.assertEquals(ipv4_network_rules,
-                          ipv4_rules_per_network * networks_count)
+                  ipv4_rules_per_addr * ipv4_addr_per_network * networks_count)
         self.assertEquals(ipv6_network_rules,
-                          ipv6_rules_per_network * networks_count)
+                  ipv6_rules_per_addr * ipv6_addr_per_network * networks_count)
 
     def test_do_refresh_security_group_rules(self):
         instance_ref = self._create_instance_ref()
@@ -1170,8 +1204,7 @@ class IptablesFirewallTestCase(test.TestCase):
                                fakefilter.nwfilterLookupByName
         instance_ref = self._create_instance_ref()
 
-        _setup_networking(instance_ref['id'], self.test_ip)
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
@@ -1186,13 +1219,12 @@ class IptablesFirewallTestCase(test.TestCase):
     def test_provider_firewall_rules(self):
         # setup basic instance data
         instance_ref = self._create_instance_ref()
-        _setup_networking(instance_ref['id'], self.test_ip)
         # FRAGILE: peeks at how the firewall names chains
         chain_name = 'inst-%s' % instance_ref['id']
 
         # create a firewall via setup_basic_filtering like libvirt_conn.spawn
         # should have a chain with 0 rules
-        network_info = _create_network_info(1)
+        network_info = _fake_network_info(self.stubs, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
         self.assertTrue('provider' in self.fw.iptables.ipv4['filter'].chains)
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
@@ -1256,7 +1288,6 @@ class NWFilterTestCase(test.TestCase):
 
         self.fake_libvirt_connection = Mock()
 
-        self.test_ip = '10.11.12.13'
         self.fw = firewall.NWFilterFirewall(
                                          lambda: self.fake_libvirt_connection)
 
@@ -1372,11 +1403,9 @@ class NWFilterTestCase(test.TestCase):
         instance_ref = self._create_instance()
         inst_id = instance_ref['id']
 
-        _setup_networking(instance_ref['id'], self.test_ip)
-
-        def _ensure_all_called():
+        def _ensure_all_called(mac):
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
-                                                       'fake')
+                                                   mac.translate(None, ':'))
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',
@@ -1392,17 +1421,22 @@ class NWFilterTestCase(test.TestCase):
                                        self.security_group.id)
         instance = db.instance_get(self.context, inst_id)
 
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
+        # since there is one (network_info) there is one vif
+        # pass this vif's mac to _ensure_all_called()
+        # to set the instance_filter properly
+        mac = network_info[0][1]['mac']
+
         self.fw.setup_basic_filtering(instance, network_info)
         self.fw.prepare_instance_filter(instance, network_info)
         self.fw.apply_instance_filter(instance, network_info)
-        _ensure_all_called()
+        _ensure_all_called(mac)
         self.teardown_security_group()
         db.instance_destroy(context.get_admin_context(), instance_ref['id'])
 
     def test_create_network_filters(self):
         instance_ref = self._create_instance()
-        network_info = _create_network_info(3)
+        network_info = _fake_network_info(self.stubs, 3)
         result = self.fw._create_network_filters(instance_ref,
                                                  network_info,
                                                  "fake")
@@ -1425,8 +1459,7 @@ class NWFilterTestCase(test.TestCase):
 
         instance = db.instance_get(self.context, inst_id)
 
-        _setup_networking(instance_ref['id'], self.test_ip)
-        network_info = _create_network_info()
+        network_info = _fake_network_info(self.stubs, 1)
         self.fw.setup_basic_filtering(instance, network_info)
         self.fw.prepare_instance_filter(instance, network_info)
         self.fw.apply_instance_filter(instance, network_info)

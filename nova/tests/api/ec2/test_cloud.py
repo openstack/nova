@@ -305,6 +305,61 @@ class CloudTestCase(test.TestCase):
                   'ip_protocol': u'tcp'}]}
         self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
 
+    def test_describe_security_group_ingress_groups(self):
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec1 = db.security_group_create(self.context, kwargs)
+        sec2 = db.security_group_create(self.context,
+                                       {'project_id': 'someuser',
+                                        'name': 'somegroup1'})
+        sec3 = db.security_group_create(self.context,
+                                       {'project_id': 'someuser',
+                                        'name': 'othergroup2'})
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'ip_permissions': [
+                  {'groups': {'1': {'user_id': u'someuser',
+                                    'group_name': u'somegroup1'}}},
+                  {'ip_protocol': 'tcp',
+                   'from_port': 80,
+                   'to_port': 80,
+                   'groups': {'1': {'user_id': u'someuser',
+                                    'group_name': u'othergroup2'}}}]}
+        self.assertTrue(authz(self.context, group_name=sec1['name'], **kwargs))
+        describe = self.cloud.describe_security_groups
+        groups = describe(self.context, group_name=['test'])
+        self.assertEquals(len(groups['securityGroupInfo']), 1)
+        actual_rules = groups['securityGroupInfo'][0]['ipPermissions']
+        self.assertEquals(len(actual_rules), 4)
+        expected_rules = [{'fromPort': -1,
+                           'groups': [{'groupName': 'somegroup1',
+                                       'userId': 'someuser'}],
+                           'ipProtocol': 'icmp',
+                           'ipRanges': [],
+                           'toPort': -1},
+                          {'fromPort': 1,
+                           'groups': [{'groupName': u'somegroup1',
+                                       'userId': u'someuser'}],
+                           'ipProtocol': 'tcp',
+                           'ipRanges': [],
+                           'toPort': 65535},
+                          {'fromPort': 1,
+                           'groups': [{'groupName': u'somegroup1',
+                                       'userId': u'someuser'}],
+                           'ipProtocol': 'udp',
+                           'ipRanges': [],
+                           'toPort': 65536},
+                          {'fromPort': 80,
+                           'groups': [{'groupName': u'othergroup2',
+                                       'userId': u'someuser'}],
+                           'ipProtocol': u'tcp',
+                           'ipRanges': [],
+                           'toPort': 80}]
+        for rule in expected_rules:
+            self.assertTrue(rule in actual_rules)
+
+        db.security_group_destroy(self.context, sec3['id'])
+        db.security_group_destroy(self.context, sec2['id'])
+        db.security_group_destroy(self.context, sec1['id'])
+
     def test_revoke_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
         sec = db.security_group_create(self.context, kwargs)
@@ -486,11 +541,9 @@ class CloudTestCase(test.TestCase):
         inst2 = db.instance_create(self.context, args2)
         db.instance_destroy(self.context, inst1.id)
         result = self.cloud.describe_instances(self.context)
+        self.assertEqual(len(result['reservationSet']), 1)
         result1 = result['reservationSet'][0]['instancesSet']
         self.assertEqual(result1[0]['instanceId'],
-                         ec2utils.id_to_ec2_id(inst1.id))
-        result2 = result['reservationSet'][1]['instancesSet']
-        self.assertEqual(result2[0]['instanceId'],
                          ec2utils.id_to_ec2_id(inst2.id))
 
     def _block_device_mapping_create(self, instance_id, mappings):
@@ -1542,7 +1595,9 @@ class CloudTestCase(test.TestCase):
                     'ephemeral0': '/dev/sdb',
                     'swap': '/dev/sdc',
                     'ephemeral1': '/dev/sdd',
-                    'ephemeral2': '/dev/sd3'}
+                    'ephemeral2': '/dev/sd3',
+                    'ebs0': '/dev/sdh',
+                    'ebs1': '/dev/sdi'}
 
         self.assertEqual(self.cloud._format_instance_mapping(ctxt,
                                                              instance_ref0),
