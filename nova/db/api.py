@@ -323,6 +323,11 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
             status)
 
 
+def migration_get_all_unconfirmed(context, confirm_window):
+    """Finds all unconfirmed migrations within the confirmation window."""
+    return IMPL.migration_get_all_unconfirmed(context, confirm_window)
+
+
 ####################
 
 
@@ -463,7 +468,7 @@ def virtual_interface_delete_by_instance(context, instance_id):
 
 
 def virtual_interface_get_all(context):
-    """Gets all virtual interfaces from the table,"""
+    """Gets all virtual interfaces from the table"""
     return IMPL.virtual_interface_get_all(context)
 
 
@@ -505,10 +510,9 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
-def instance_get_all_by_filters(context, filters, instance_uuids=None):
+def instance_get_all_by_filters(context, filters):
     """Get all instances that match all filters."""
-    return IMPL.instance_get_all_by_filters(context, filters,
-                                            instance_uuids=instance_uuids)
+    return IMPL.instance_get_all_by_filters(context, filters)
 
 
 def instance_get_active_by_window(context, begin, end=None, project_id=None):
@@ -612,9 +616,9 @@ def instance_get_actions(context, instance_id):
     return IMPL.instance_get_actions(context, instance_id)
 
 
-def instance_get_uuids_by_ids(context, ids):
-    """Return the UUIDs of the instances given the ids"""
-    return IMPL.instance_get_uuids_by_ids(context, ids)
+def instance_get_id_to_uuid_mapping(context, ids):
+    """Return a dictionary containing 'ID: UUID' given the ids"""
+    return IMPL.instance_get_id_to_uuid_mapping(context, ids)
 
 
 ###################

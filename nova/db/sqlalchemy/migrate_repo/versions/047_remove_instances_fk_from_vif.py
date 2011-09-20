@@ -17,19 +17,7 @@ from migrate import ForeignKeyConstraint
 
 from nova import log as logging
 
-
 meta = MetaData()
-
-
-instances = Table('instances', meta,
-             Column('id', Integer(), primary_key=True, nullable=False),
-             )
-
-
-vifs = Table('virtual_interfaces', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('instance_id', Integer()),
-        )
 
 
 def upgrade(migrate_engine):
@@ -40,17 +28,18 @@ def upgrade(migrate_engine):
     if dialect.startswith('sqlite'):
         return
 
+    instances = Table('instances', meta, autoload=True)
+    vifs = Table('virtual_interfaces', meta, autoload=True)
+
     try:
+        fkey_name = vifs.c.instance_id.foreign_keys[0].constraint.name
         ForeignKeyConstraint(columns=[vifs.c.instance_id],
-                             refcolumns=[instances.c.id]).drop()
+                             refcolumns=[instances.c.id],
+                             name=fkey_name).drop()
+
     except Exception:
-        try:
-            migrate_engine.execute("ALTER TABLE migrations DROP " \
-                                   "FOREIGN KEY " \
-                                   "`virtual_interfaces_ibfk_2`;")
-        except Exception:
-            logging.error(_("foreign key constraint couldn't be removed"))
-            raise
+        logging.error(_("foreign key constraint couldn't be removed"))
+        raise
 
 
 def downgrade(migrate_engine):
@@ -59,6 +48,9 @@ def downgrade(migrate_engine):
     dialect = migrate_engine.url.get_dialect().name
     if dialect.startswith('sqlite'):
         return
+
+    instances = Table('instances', meta, autoload=True)
+    vifs = Table('virtual_interfaces', meta, autoload=True)
 
     try:
         ForeignKeyConstraint(columns=[vifs.c.instance_id],

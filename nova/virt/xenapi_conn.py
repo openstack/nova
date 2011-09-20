@@ -254,6 +254,10 @@ class XenAPIConnection(driver.ComputeDriver):
         """Poll for rescued instances"""
         self._vmops.poll_rescued_instances(timeout)
 
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
+        """Poll for unconfirmed resizes"""
+        self._vmops.poll_unconfirmed_resizes(resize_confirm_window)
+
     def reset_network(self, instance):
         """reset networking for specified instance"""
         self._vmops.reset_network(instance)
