@@ -773,7 +773,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def _fetch_image(self, context, target, image_id, user_id, project_id,
                      size=None):
         """Grab image and optionally attempt to resize it"""
-        images.fetch(context, image_id, target, user_id, project_id)
+        images.fetch_to_raw(context, image_id, target, user_id, project_id)
         if size:
             disk.extend(target, size)
 
@@ -874,9 +874,13 @@ class LibvirtConnection(driver.ComputeDriver):
         local_gb = inst['local_gb']
         if local_gb and not self._volume_in_mapping(
             self.default_local_device, block_device_info):
-            self._cache_image(fn=self._create_local,
+            fn = functools.partial(self._create_ephemeral,
+                                   fs_label='ephemeral0',
+                                   os_type=inst.os_type)
+            self._cache_image(fn=fn,
                               target=basepath('disk.local'),
-                              fname="local_%s" % local_gb,
+                              fname="ephemeral_%s_%s_%s" %
+                              ("0", local_gb, inst.os_type),
                               cow=FLAGS.use_cow_images,
                               local_size=local_gb)
 

@@ -524,6 +524,18 @@ def get_dhcp_hosts(context, network_ref):
     return '\n'.join(hosts)
 
 
+def _add_dnsmasq_accept_rules(dev):
+    """Allow DHCP and DNS traffic through to dnsmasq."""
+    table = iptables_manager.ipv4['filter']
+    for port in [67, 53]:
+        for proto in ['udp', 'tcp']:
+            args = {'dev': dev, 'port': port, 'proto': proto}
+            table.add_rule('INPUT',
+                           '-i %(dev)s -p %(proto)s -m %(proto)s '
+                           '--dport %(port)s -j ACCEPT' % args)
+    iptables_manager.apply()
+
+
 def get_dhcp_opts(context, network_ref):
     """Get network's hosts config in dhcp-opts format."""
     hosts = []
@@ -615,6 +627,8 @@ def update_dhcp(context, dev, network_ref):
         cmd += ['--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts')]
 
     _execute(*cmd, run_as_root=True)
+
+    _add_dnsmasq_accept_rules(dev)
 
 
 @utils.synchronized('radvd_start')
