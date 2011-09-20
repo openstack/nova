@@ -553,16 +553,18 @@ def get_dhcp_opts(context, network_ref):
 def release_dhcp(dev, address, mac_address):
     utils.execute('dhcp_release', dev, address, mac_address, run_as_root=True)
 
+
 def _add_dnsmasq_accept_rules(dev):
     """Allow DHCP and DNS traffic through to dnsmasq."""
     table = iptables_manager.ipv4['filter']
     for port in [67, 53]:
         for proto in ['udp', 'tcp']:
-            args = {'dev' : dev, 'port' : port, 'proto' : proto}
+            args = {'dev': dev, 'port': port, 'proto': proto}
             table.add_rule('INPUT',
                            '-i %(dev)s -p %(proto)s -m %(proto)s '
                            '--dport %(port)s -j ACCEPT' % args)
     iptables_manager.apply()
+
 
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
@@ -627,6 +629,7 @@ def update_dhcp(context, dev, network_ref):
     _execute(*cmd, run_as_root=True)
 
     _add_dnsmasq_accept_rules(dev)
+
 
 @utils.synchronized('radvd_start')
 def update_ra(context, dev, network_ref):
