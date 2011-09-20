@@ -47,13 +47,14 @@ def fetch(context, image_href, path, _user_id, _project_id):
     return metadata
 
 
-def fetch_to_raw(context, image_href, path, _user_id, _project_id):
+def fetch_to_raw(context, image_href, path, user_id, project_id):
     path_tmp = "%s.part" % path
-    metadata = fetch(context, image_href, path_tmp, _user_id, _project_id)
+    metadata = fetch(context, image_href, path_tmp, user_id, project_id)
 
     def _qemu_img_info(path):
 
-        out, err = utils.execute('qemu-img', 'info', path)
+        out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
+            'qemu-img', 'info', path)
 
         # output of qemu-img is 'field: value'
         # the fields of interest are 'file format' and 'backing file'
@@ -70,6 +71,7 @@ def fetch_to_raw(context, image_href, path, _user_id, _project_id):
 
     fmt = data.get("file format", None)
     if fmt == None:
+        os.unlink(path_tmp)
         raise exception.ImageUnacceptable(
             reason=_("'qemu-img info' parsing failed."), image_id=image_href)
 
@@ -77,6 +79,7 @@ def fetch_to_raw(context, image_href, path, _user_id, _project_id):
         staged = "%s.converted" % path
         if "backing file" in data:
             backing_file = data['backing file']
+            os.unlink(path_tmp)
             raise exception.ImageUnacceptable(image_id=image_href,
                 reason=_("fmt=%(fmt)s backed by: %(backing_file)s") % locals())
 
@@ -87,6 +90,7 @@ def fetch_to_raw(context, image_href, path, _user_id, _project_id):
 
         data = _qemu_img_info(staged)
         if data.get('file format', None) != "raw":
+            os.unlink(staged)
             raise exception.ImageUnacceptable(image_id=image_href,
                 reason=_("Converted to raw, but format is now %s") %
                 data.get('file format', None))
