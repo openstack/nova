@@ -257,6 +257,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_create_server_with_metadata(self):
         """Creates a server with metadata."""
+        self.flags(stub_network=True)
 
         # Build the server data gradually, checking errors along the way
         server = self._build_minimal_create_server_request()
@@ -418,6 +419,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_rename_server(self):
         """Test building and renaming a server."""
+        self.flags(stub_network=True)
 
         # Create a server
         server = self._build_minimal_create_server_request()

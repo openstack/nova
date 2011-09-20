@@ -290,6 +290,11 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
+def floating_ip_get_by_fixed_address(context, fixed_address):
+    """Get a floating ips by fixed address"""
+    return IMPL.floating_ip_get_by_fixed_address(context, fixed_address)
+
+
 def floating_ip_update(context, address, values):
     """Update a floating ip by address or raise if it doesn't exist."""
     return IMPL.floating_ip_update(context, address, values)

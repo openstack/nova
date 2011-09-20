@@ -35,7 +35,6 @@ from nova import utils
 import nova.api.openstack
 from nova.api.openstack import create_instance_helper
 from nova.api.openstack import servers
-from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.compute.api
 from nova.compute import instance_types
@@ -43,7 +42,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.db.api
 import nova.scheduler.api
-from nova.db.sqlalchemy.models import Instance
 from nova.db.sqlalchemy.models import InstanceMetadata
 import nova.image.fake
 import nova.rpc
@@ -72,18 +70,6 @@ def return_server_by_id(context, id):
 def return_server_by_uuid(context, uuid):
     id = 1
     return stub_instance(id, uuid=uuid)
-
-
-def return_virtual_interface_by_instance(interfaces):
-    def _return_virtual_interface_by_instance(context, instance_id):
-        return interfaces
-    return _return_virtual_interface_by_instance
-
-
-def return_virtual_interface_instance_nonexistant(interfaces):
-    def _return_virtual_interface_by_instance(context, instance_id):
-        raise exception.InstanceNotFound(instance_id=instance_id)
-    return _return_virtual_interface_by_instance
 
 
 def return_server_with_attributes(**kwargs):
@@ -260,6 +246,7 @@ class ServersTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
+        fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(utils, 'gen_uuid', fake_gen_uuid)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
                 return_servers)
@@ -324,29 +311,26 @@ class ServersTest(test.TestCase):
 
     def test_get_server_by_id_v1_1(self):
         image_bookmark = "http://localhost/fake/images/10"
-        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
-        flavor_id = "1"
         flavor_bookmark = "http://localhost/fake/flavors/1"
-
         public_ip = '192.168.0.3'
         private_ip = '172.19.0.1'
-        interfaces = [
-            {
-                'network': {'label': 'public'},
-                'fixed_ips': [
-                    {'address': public_ip},
-                ],
-            },
-            {
-                'network': {'label': 'private'},
-                'fixed_ips': [
-                    {'address': private_ip},
-                ],
-            },
-        ]
-        new_return_server = return_server_with_attributes(
-            interfaces=interfaces)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        nw_info = [(None, {'label': 'public',
+                           'ips': [{'ip': public_ip}],
+                           'ip6s': []}),
+                   (None, {'label': 'private',
+                           'ips': [{'ip': private_ip}],
+                           'ip6s': []})]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
@@ -423,23 +407,23 @@ class ServersTest(test.TestCase):
         flavor_bookmark = "http://localhost/fake/flavors/1"
         public_ip = '192.168.0.3'
         private_ip = '172.19.0.1'
-        interfaces = [
-            {
-                'network': {'label': 'public'},
-                'fixed_ips': [
-                    {'address': public_ip},
-                ],
-            },
-            {
-                'network': {'label': 'private'},
-                'fixed_ips': [
-                    {'address': private_ip},
-                ],
-            },
-        ]
-        new_return_server = return_server_with_attributes(
-            interfaces=interfaces)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        nw_info = [(None, {'label': 'public',
+                           'ips': [{'ip': public_ip}],
+                           'ip6s': []}),
+                   (None, {'label': 'private',
+                           'ips': [{'ip': private_ip}],
+                           'ip6s': []})]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
         req.headers['Accept'] = 'application/xml'
@@ -529,29 +513,28 @@ class ServersTest(test.TestCase):
 
     def test_get_server_with_active_status_by_id_v1_1(self):
         image_bookmark = "http://localhost/fake/images/10"
-        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
-        flavor_id = "1"
         flavor_bookmark = "http://localhost/fake/flavors/1"
         private_ip = "192.168.0.3"
         public_ip = "1.2.3.4"
 
-        interfaces = [
-            {
-                'network': {'label': 'public'},
-                'fixed_ips': [
-                    {'address': public_ip},
-                ],
-            },
-            {
-                'network': {'label': 'private'},
-                'fixed_ips': [
-                    {'address': private_ip},
-                ],
-            },
-        ]
+        nw_info = [(None, {'label': 'public',
+                           'ips': [{'ip': public_ip}],
+                           'ip6s': []}),
+                   (None, {'label': 'private',
+                           'ips': [{'ip': private_ip}],
+                           'ip6s': []})]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
         new_return_server = return_server_with_attributes(
-            interfaces=interfaces, vm_state=vm_states.ACTIVE,
-            progress=100)
+            vm_state=vm_states.ACTIVE, progress=100)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
@@ -626,28 +609,29 @@ class ServersTest(test.TestCase):
     def test_get_server_with_id_image_ref_by_id_v1_1(self):
         image_ref = "10"
         image_bookmark = "http://localhost/fake/images/10"
-        flavor_ref = "http://localhost/v1.1/fake/flavors/1"
         flavor_id = "1"
         flavor_bookmark = "http://localhost/fake/flavors/1"
         private_ip = "192.168.0.3"
         public_ip = "1.2.3.4"
 
-        interfaces = [
-            {
-                'network': {'label': 'public'},
-                'fixed_ips': [
-                    {'address': public_ip},
-                ],
-            },
-            {
-                'network': {'label': 'private'},
-                'fixed_ips': [
-                    {'address': private_ip},
-                ],
-            },
-        ]
+        nw_info = [(None, {'label': 'public',
+                           'ips': [{'ip': public_ip}],
+                           'ip6s': []}),
+                   (None, {'label': 'private',
+                           'ips': [{'ip': private_ip}],
+                           'ip6s': []})]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
         new_return_server = return_server_with_attributes(
-            interfaces=interfaces, vm_state=vm_states.ACTIVE,
+            vm_state=vm_states.ACTIVE,
             image_ref=image_ref, flavor_id=flavor_id, progress=100)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
 
@@ -857,26 +841,24 @@ class ServersTest(test.TestCase):
 
     def test_get_server_by_id_with_addresses_v1_1(self):
         self.flags(use_ipv6=True)
-        interfaces = [
-            {
-                'network': {'label': 'network_1'},
-                'fixed_ips': [
-                    {'address': '192.168.0.3'},
-                    {'address': '192.168.0.4'},
-                ],
-            },
-            {
-                'network': {'label': 'network_2'},
-                'fixed_ips': [
-                    {'address': '172.19.0.1'},
-                    {'address': '172.19.0.2'},
-                ],
-                'fixed_ipv6': '2001:4860::12',
-            },
-        ]
-        new_return_server = return_server_with_attributes(
-            interfaces=interfaces)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        nw_info = [(None, {'label': 'network_1',
+                           'ips': [{'ip': '192.168.0.3'},
+                                   {'ip': '192.168.0.4'}],
+                           'ip6s': []}),
+                   (None, {'label': 'network_2',
+                           'ips': [{'ip': '172.19.0.1'},
+                                   {'ip': '172.19.0.2'}],
+                           'ip6s': [{'ip': '2001:4860::12'}]})]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
@@ -897,30 +879,33 @@ class ServersTest(test.TestCase):
             ],
         }
 
-        self.assertEqual(addresses, expected)
+        self.assertTrue('network_1' in addresses)
+        self.assertTrue('network_2' in addresses)
+
+        for network in ('network_1', 'network_2'):
+            for ip in expected[network]:
+                self.assertTrue(ip in addresses[network])
 
     def test_get_server_by_id_with_addresses_v1_1_ipv6_disabled(self):
         self.flags(use_ipv6=False)
-        interfaces = [
-            {
-                'network': {'label': 'network_1'},
-                'fixed_ips': [
-                    {'address': '192.168.0.3'},
-                    {'address': '192.168.0.4'},
-                ],
-            },
-            {
-                'network': {'label': 'network_2'},
-                'fixed_ips': [
-                    {'address': '172.19.0.1'},
-                    {'address': '172.19.0.2'},
-                ],
-                'fixed_ipv6': '2001:4860::12',
-            },
-        ]
-        new_return_server = return_server_with_attributes(
-            interfaces=interfaces)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        nw_info = [(None, {'label': 'network_1',
+                           'ips': [{'ip': '192.168.0.3'},
+                                   {'ip': '192.168.0.4'}],
+                           'ip6s': []}),
+                   (None, {'label': 'network_2',
+                           'ips': [{'ip': '172.19.0.1'},
+                                   {'ip': '172.19.0.2'}],
+                           'ip6s': [{'ip': '2001:4860::12'}]})]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
@@ -940,37 +925,36 @@ class ServersTest(test.TestCase):
             ],
         }
 
-        self.assertEqual(addresses, expected)
+        self.assertTrue('network_1' in addresses)
+        self.assertTrue('network_2' in addresses)
+
+        for network in ('network_1', 'network_2'):
+            for ip in expected[network]:
+                self.assertTrue(ip['version'] != 6)
+                self.assertTrue(ip in addresses[network])
 
     def test_get_server_addresses_v1_1(self):
         self.flags(use_ipv6=True)
-        interfaces = [
-            {
-                'network': {'label': 'network_1'},
-                'fixed_ips': [
-                    {'address': '192.168.0.3'},
-                    {'address': '192.168.0.4'},
-                ],
-            },
-            {
-                'network': {'label': 'network_2'},
-                'fixed_ips': [
-                    {
-                        'address': '172.19.0.1',
-                        'floating_ips': [
-                            {'address': '1.2.3.4'},
-                        ],
-                    },
-                    {'address': '172.19.0.2'},
-                ],
-                'fixed_ipv6': '2001:4860::12',
-            },
-        ]
+        nw_info = [(None, {'label': 'network_1',
+                           'ips': [{'ip': '192.168.0.3'},
+                                   {'ip': '192.168.0.4'}],
+                           'ip6s': []}),
+                   (None, {'label': 'network_2',
+                           'ips': [{'ip': '172.19.0.1'},
+                                   {'ip': '172.19.0.2'}],
+                           'ip6s': [{'ip': '2001:4860::12'}]})]
 
-        _return_vifs = return_virtual_interface_by_instance(interfaces)
-        self.stubs.Set(nova.db.api,
-                       'virtual_interface_get_by_instance',
-                       _return_vifs)
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            if fixed_ip == '172.19.0.1':
+                return ['1.2.3.4']
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
 
         req = webob.Request.blank('/v1.1/fake/servers/1/ips')
         res = req.get_response(fakes.wsgi_app())
@@ -991,36 +975,36 @@ class ServersTest(test.TestCase):
             },
         }
 
-        self.assertEqual(res_dict, expected)
+        self.assertTrue('addresses' in res_dict)
+        self.assertTrue('network_1' in res_dict['addresses'])
+        self.assertTrue('network_2' in res_dict['addresses'])
+
+        for network in ('network_1', 'network_2'):
+            for ip in expected['addresses'][network]:
+                self.assertTrue(ip in res_dict['addresses'][network])
 
     def test_get_server_addresses_single_network_v1_1(self):
         self.flags(use_ipv6=True)
-        interfaces = [
-            {
-                'network': {'label': 'network_1'},
-                'fixed_ips': [
-                    {'address': '192.168.0.3'},
-                    {'address': '192.168.0.4'},
-                ],
-            },
-            {
-                'network': {'label': 'network_2'},
-                'fixed_ips': [
-                    {
-                        'address': '172.19.0.1',
-                        'floating_ips': [
-                            {'address': '1.2.3.4'},
-                        ],
-                    },
-                    {'address': '172.19.0.2'},
-                ],
-                'fixed_ipv6': '2001:4860::12',
-            },
-        ]
-        _return_vifs = return_virtual_interface_by_instance(interfaces)
-        self.stubs.Set(nova.db.api,
-                       'virtual_interface_get_by_instance',
-                       _return_vifs)
+        nw_info = [(None, {'label': 'network_1',
+                           'ips': [{'ip': '192.168.0.3'},
+                                   {'ip': '192.168.0.4'}],
+                           'ip6s': []}),
+                   (None, {'label': 'network_2',
+                           'ips': [{'ip': '172.19.0.1'},
+                                   {'ip': '172.19.0.2'}],
+                           'ip6s': [{'ip': '2001:4860::12'}]})]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            if fixed_ip == '172.19.0.1':
+                return ['1.2.3.4']
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
 
         req = webob.Request.blank('/v1.1/fake/servers/1/ips/network_2')
         res = req.get_response(fakes.wsgi_app())
@@ -1028,30 +1012,32 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
         expected = {
             'network_2': [
+                {'version': 6, 'addr': '2001:4860::12'},
                 {'version': 4, 'addr': '172.19.0.1'},
                 {'version': 4, 'addr': '1.2.3.4'},
                 {'version': 4, 'addr': '172.19.0.2'},
-                {'version': 6, 'addr': '2001:4860::12'},
             ],
         }
-        self.assertEqual(res_dict, expected)
+
+        self.assertTrue('network_2' in res_dict)
+        self.assertTrue(len(res_dict['network_2']) == 4)
+        for ip in expected['network_2']:
+            self.assertTrue(ip in res_dict['network_2'])
 
     def test_get_server_addresses_nonexistant_network_v1_1(self):
-        _return_vifs = return_virtual_interface_by_instance([])
-        self.stubs.Set(nova.db.api,
-                       'virtual_interface_get_by_instance',
-                       _return_vifs)
-
         req = webob.Request.blank('/v1.1/fake/servers/1/ips/network_0')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
     def test_get_server_addresses_nonexistant_server_v1_1(self):
-        _return_vifs = return_virtual_interface_instance_nonexistant([])
-        self.stubs.Set(nova.db.api,
-                       'virtual_interface_get_by_instance',
-                       _return_vifs)
+        def fake(*args, **kwargs):
+            return []
 
+        def fake_instance_get(*args, **kwargs):
+            raise nova.exception.InstanceNotFound()
+
+        self.stubs.Set(nova.db.api, 'instance_get', fake_instance_get)
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info', fake)
         req = webob.Request.blank('/v1.1/fake/servers/600/ips')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
@@ -2745,6 +2731,10 @@ class ServersTest(test.TestCase):
 
 class TestServerStatus(test.TestCase):
 
+    def setUp(self):
+        super(TestServerStatus, self).setUp()
+        fakes.stub_out_nw_api(self.stubs)
+
     def _get_with_state(self, vm_state, task_state=None):
         new_server = return_server_with_state(vm_state, task_state)
         self.stubs.Set(nova.db.api, 'instance_get', new_server)
@@ -3536,6 +3526,7 @@ class TestServerInstanceCreation(test.TestCase):
         super(TestServerInstanceCreation, self).setUp()
         fakes.stub_out_image_service(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_nw_api(self.stubs)
 
     def _setup_mock_compute_api_for_personality(self):
 
@@ -3924,7 +3915,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, False)
+        output = self.view_builder.build(self.instance, {}, False)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_with_project_id(self):
@@ -3947,7 +3938,7 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         view_builder = self._get_view_builder(project_id='fake')
-        output = view_builder.build(self.instance, False)
+        output = view_builder.build(self.instance, {}, False)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail(self):
@@ -4002,7 +3993,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, True)
+        output = self.view_builder.build(self.instance, {}, True)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_active_status(self):
@@ -4060,7 +4051,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, True)
+        output = self.view_builder.build(self.instance, {}, True)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_with_accessipv4(self):
@@ -4118,7 +4109,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, True)
+        output = self.view_builder.build(self.instance, {}, True)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_with_accessipv6(self):
@@ -4176,7 +4167,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, True)
+        output = self.view_builder.build(self.instance, {}, True)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_with_metadata(self):
@@ -4240,7 +4231,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, True)
+        output = self.view_builder.build(self.instance, {}, True)
         self.assertDictMatch(output, expected_server)
 
 

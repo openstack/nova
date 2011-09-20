@@ -18,10 +18,8 @@
 import base64
 import datetime
 import json
-import unittest
 from xml.dom import minidom
 
-import stubout
 import webob
 
 from nova import db
@@ -91,6 +89,11 @@ class CreateserverextTest(test.TestCase):
     def tearDown(self):
         super(CreateserverextTest, self).tearDown()
 
+    def _make_stub_method(self, canned_return):
+        def stub_method(*args, **kwargs):
+            return canned_return
+        return stub_method
+
     def _setup_mock_compute_api(self):
 
         class MockComputeAPI(nova.compute.API):
@@ -126,17 +129,18 @@ class CreateserverextTest(test.TestCase):
             def set_admin_password(self, *args, **kwargs):
                 pass
 
-        def make_stub_method(canned_return):
-            def stub_method(*args, **kwargs):
-                return canned_return
-            return stub_method
-
         compute_api = MockComputeAPI()
-        self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
+        self.stubs.Set(nova.compute, 'API',
+                       self._make_stub_method(compute_api))
         self.stubs.Set(
             nova.api.openstack.create_instance_helper.CreateInstanceHelper,
-            '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
+            '_get_kernel_ramdisk_from_image',
+            self._make_stub_method((1, 1)))
+
         return compute_api
+
+    def _setup_mock_network_api(self):
+        fakes.stub_out_nw_api(self.stubs)
 
     def _create_security_group_request_dict(self, security_groups):
         server = {}
@@ -179,6 +183,7 @@ class CreateserverextTest(test.TestCase):
 
     def _run_create_instance_with_mock_compute_api(self, request):
         compute_api = self._setup_mock_compute_api()
+        self._setup_mock_network_api()
         response = request.get_response(fakes.wsgi_app())
         return compute_api, response
 
@@ -391,6 +396,7 @@ class CreateserverextTest(test.TestCase):
                        return_security_group_get_by_name)
         self.stubs.Set(nova.db.api, 'instance_add_security_group',
                        return_instance_add_security_group)
+        self._setup_mock_network_api()
         body_dict = self._create_security_group_request_dict(security_groups)
         request = self._get_create_request_json(body_dict)
         response = request.get_response(fakes.wsgi_app())
@@ -398,6 +404,7 @@ class CreateserverextTest(test.TestCase):
 
     def test_get_server_by_id_verify_security_groups_json(self):
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        self._setup_mock_network_api()
         req = webob.Request.blank('/v1.1/123/os-create-server-ext/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app())
@@ -409,6 +416,7 @@ class CreateserverextTest(test.TestCase):
 
     def test_get_server_by_id_verify_security_groups_xml(self):
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        self._setup_mock_network_api()
         req = webob.Request.blank('/v1.1/123/os-create-server-ext/1')
         req.headers['Accept'] = 'application/xml'
         response = req.get_response(fakes.wsgi_app())

@@ -661,6 +661,23 @@ def floating_ip_get_by_address(context, address, session=None):
 
 
 @require_context
+def floating_ip_get_by_fixed_address(context, fixed_address, session=None):
+    if not session:
+        session = get_session()
+
+    fixed_ip = fixed_ip_get_by_address(context, fixed_address, session)
+    fixed_ip_id = fixed_ip['id']
+
+    return session.query(models.FloatingIp).\
+                   options(joinedload_all('fixed_ip.network')).\
+                   filter_by(fixed_ip_id=fixed_ip_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+    # NOTE(tr3buchet) please don't invent an exception here, empty list is fine
+
+
+@require_context
 def floating_ip_update(context, address, values):
     session = get_session()
     with session.begin():

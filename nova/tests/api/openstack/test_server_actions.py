@@ -474,6 +474,7 @@ class ServerActionsTestV11(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_update', instance_update)
 
         fakes.stub_out_glance(self.stubs)
+        fakes.stub_out_nw_api(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)

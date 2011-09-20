@@ -45,6 +45,12 @@ class API(base.Base):
                                                      context.project_id)
         return ips
 
+    def get_floating_ips_by_fixed_address(self, context, fixed_address):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_floating_ips_by_fixed_address',
+                         'args': {'fixed_address': fixed_address}})
+
     def get_vifs_by_instance(self, context, instance_id):
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_vifs_by_instance',

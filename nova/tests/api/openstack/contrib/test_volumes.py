@@ -18,10 +18,8 @@ import json
 import webob
 
 import nova
-from nova import context
 from nova import flags
 from nova import test
-from nova.api.openstack.contrib.volumes import BootFromVolumeController
 from nova.compute import instance_types
 from nova.tests.api.openstack import fakes
 from nova.tests.api.openstack.test_servers import fake_gen_uuid
@@ -47,11 +45,22 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
              }]
 
 
+def fake_get_instance_nw_info(cls, context, instance):
+    return [(None, {'label': 'public',
+                    'ips': [{'ip': '10.0.0.1'}],
+                    'ip6s': []})]
+
+
+def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
+    return ['172.16.0.1']
+
+
 class BootFromVolumeTest(test.TestCase):
 
     def setUp(self):
         super(BootFromVolumeTest, self).setUp()
         self.stubs.Set(nova.compute.API, 'create', fake_compute_api_create)
+        fakes.stub_out_nw_api(self.stubs)
 
     def test_create_root_volume(self):
         body = dict(server=dict(

@@ -137,6 +137,7 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
 
     def test_attach_and_detach_volume(self):
         """Creates, attaches, detaches and deletes a volume."""
+        self.flags(stub_network=True)
 
         # Create server
         server_req = {'server': self._build_minimal_create_server_request()}

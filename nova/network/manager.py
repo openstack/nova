@@ -308,6 +308,12 @@ class FloatingIP(object):
         """Returns an floating ip to the pool."""
         self.db.floating_ip_deallocate(context, floating_address)
 
+    def get_floating_ips_by_fixed_address(self, context, fixed_address):
+        """Returns the floating IPs associated with a fixed_address"""
+        floating_ips = self.db.floating_ip_get_by_fixed_address(context,
+                                                                fixed_address)
+        return [floating_ip['address'] for floating_ip in floating_ips]
+
 
 class NetworkManager(manager.SchedulerDependentManager):
     """Implements common network manager functionality.
@@ -399,6 +405,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         group_ids = [group['id'] for group in groups]
         self.compute_api.trigger_security_group_members_refresh(admin_context,
                                                                     group_ids)
+
+    def get_floating_ips_by_fixed_address(self, context, fixed_address):
+        # NOTE(jkoelker) This is just a stub function. Managers supporting
+        #                floating ips MUST override this or use the Mixin
+        return []
 
     def get_vifs_by_instance(self, context, instance_id):
         vifs = self.db.virtual_interface_get_by_instance(context,

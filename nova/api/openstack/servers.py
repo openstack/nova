@@ -23,6 +23,7 @@ from webob import exc
 import webob
 
 from nova import compute
+from nova import network
 from nova import db
 from nova import exception
 from nova import flags
@@ -32,7 +33,6 @@ from nova.api.openstack import common
 from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import ips
 from nova.api.openstack import wsgi
-from nova.compute import instance_types
 from nova.scheduler import api as scheduler_api
 import nova.api.openstack
 import nova.api.openstack.views.addresses
@@ -72,6 +72,7 @@ class Controller(object):
 
     def __init__(self):
         self.compute_api = compute.API()
+        self.network_api = network.API()
         self.helper = helper.CreateInstanceHelper(self)
 
     def index(self, req):
@@ -105,6 +106,11 @@ class Controller(object):
 
     def _action_rebuild(self, info, request, instance_id):
         raise NotImplementedError()
+
+    def _get_networks_for_instance(self, req, instance):
+        return ips._get_networks_for_instance(req.environ['nova.context'],
+                                              self.network_api,
+                                              instance)
 
     def _get_servers(self, req, is_detail):
         """Returns a list of servers, taking into account any search
@@ -639,12 +645,15 @@ class ControllerV10(Controller):
     def _build_view(self, req, instance, is_detail=False):
         addresses = nova.api.openstack.views.addresses.ViewBuilderV10()
         builder = nova.api.openstack.views.servers.ViewBuilderV10(addresses)
-        return builder.build(instance, is_detail=is_detail)
+        networks = self._get_networks_for_instance(req, instance)
+        return builder.build(instance, networks, is_detail=is_detail)
 
     def _build_list(self, req, instances, is_detail=False):
         addresses = nova.api.openstack.views.addresses.ViewBuilderV10()
         builder = nova.api.openstack.views.servers.ViewBuilderV10(addresses)
-        return builder.build_list(instances, is_detail=is_detail)
+        get_nw = self._get_networks_for_instance
+        inst_data = [(inst, get_nw(req, inst)) for inst in instances]
+        return builder.build_list(inst_data, is_detail=is_detail)
 
     def _limit_items(self, items, req):
         return common.limited(items, req)
@@ -741,8 +750,8 @@ class ControllerV11(Controller):
         builder = nova.api.openstack.views.servers.ViewBuilderV11(
             addresses_builder, flavor_builder, image_builder,
             base_url, project_id)
-
-        return builder.build(instance, is_detail=is_detail)
+        networks = self._get_networks_for_instance(req, instance)
+        return builder.build(instance, networks, is_detail=is_detail)
 
     def _build_list(self, req, instances, is_detail=False):
         params = req.GET.copy()
@@ -761,7 +770,9 @@ class ControllerV11(Controller):
         builder = nova.api.openstack.views.servers.ViewBuilderV11(
             addresses_builder, flavor_builder, image_builder,
             base_url, project_id)
-        return builder.build_list(instances, is_detail=is_detail, **params)
+        get_nw = self._get_networks_for_instance
+        inst_data = [(inst, get_nw(req, inst)) for inst in instances]
+        return builder.build_list(inst_data, is_detail=is_detail, **params)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']
