@@ -738,7 +738,7 @@ class NetworkCommands(object):
             help='Multi host')
     @args('--dns1', dest="dns1", metavar="<DNS Address>", help='First DNS')
     @args('--dns2', dest="dns2", metavar="<DNS Address>", help='Second DNS')
-    @args('--uuid', dest="net_uuid", metavar="<network uuid>",
+    @args('--uuid', dest="uuid", metavar="<network uuid>",
       help='Network UUID')
     @args('--project_id', dest="project_id", metavar="<project id>",
       help='Project id')
