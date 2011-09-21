@@ -211,7 +211,11 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
     snap_info = prepare_if_exists(staging_path, 'snap.vhd',
             image_info[0])
     if snap_info:
-        paths_to_move.append(snap_info[0])
+        # NOTE(sirp): this is an insert rather than an append since the
+        # 'snapshot' vhd needs to be copied into the SR before the base copy.
+        # If it doesn't, then there is a possibliity that snapwatchd will
+        # delete the base_copy since it is an unreferenced parent.
+        paths_to_move.insert(0, snap_info[0])
         # We return this snap as the VDI instead of image.vhd
         vdi_return_list.append(dict(vdi_type="os", vdi_uuid=snap_info[1]))
     else:

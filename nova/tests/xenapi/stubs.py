@@ -295,9 +295,12 @@ class FakeSessionForMigrationTests(fake.SessionBase):
         vm['is_control_domain'] = False
         vm['domid'] = random.randrange(1, 1 << 16)
 
+    def VM_set_name_label(self, *args):
+        pass
+
 
 def stub_out_migration_methods(stubs):
-    def fake_get_snapshot(self, instance):
+    def fake_create_snapshot(self, instance):
         return 'vm_ref', dict(image='foo', snap='bar')
 
     @classmethod
@@ -327,7 +330,7 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
     stubs.Set(vm_utils.VMHelper, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
-    stubs.Set(vmops.VMOps, '_get_snapshot', fake_get_snapshot)
+    stubs.Set(vmops.VMOps, '_create_snapshot', fake_create_snapshot)
     stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task', lambda x, y, z: None)
     stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)

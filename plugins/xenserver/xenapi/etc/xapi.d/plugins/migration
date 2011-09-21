@@ -48,7 +48,7 @@ def move_vhds_into_sr(session, args):
 
     # Discover the copied VHDs locally, and then set up paths to copy
     # them to under the SR
-    source_image_path = "%s/instance%d" % ('/images/', instance_id)
+    source_image_path = "/images/instance%d" % instance_id
     source_base_copy_path = "%s/%s.vhd" % (source_image_path,
             old_base_copy_uuid)
     source_cow_path = "%s/%s.vhd" % (source_image_path, old_cow_uuid)
@@ -74,9 +74,12 @@ def move_vhds_into_sr(session, args):
             (new_cow_path, new_base_copy_path))
     subprocess.call(shlex.split('/usr/sbin/vhd-util modify -n %s -p %s' %
             (new_cow_path, new_base_copy_path)))
+
     logging.debug('Moving VHDs into SR %s' % sr_path)
-    shutil.move("%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid), sr_path)
-    shutil.move("%s/%s.vhd" % (temp_vhd_path, new_cow_uuid), sr_path)
+    # NOTE(sirp): COW should be copied before base_copy to avoid snapwatchd
+    # GC'ing an unreferenced base copy VDI
+    shutil.move(new_cow_path, sr_path)
+    shutil.move(new_base_copy_path, sr_path)
 
     logging.debug('Cleaning up temporary SR path %s' % temp_vhd_path)
     os.rmdir(temp_vhd_path)
@@ -93,7 +96,7 @@ def transfer_vhd(session, args):
     vhd_path = "%s.vhd" % vdi_uuid
 
     source_path = "%s/%s" % (sr_path, vhd_path)
-    dest_path = '%s:%sinstance%d/' % (host, '/images/', instance_id)
+    dest_path = '%s:/images/instance%d/' % (host, instance_id)
 
     logging.debug("Preparing to transmit %s to %s" % (source_path,
             dest_path))

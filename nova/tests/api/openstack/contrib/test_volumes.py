@@ -1,4 +1,4 @@
-# Copyright 2011 Josh Durgin
+# Copyright 2013 Josh Durgin
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -43,6 +43,7 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
              'project_id': 'fake',
              'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
              'updated_at': datetime.datetime(2010, 11, 11, 11, 0, 0),
+             'progress': 0
              }]
 
 

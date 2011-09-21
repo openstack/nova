@@ -241,6 +241,8 @@ class Instance(BASE, NovaBase):
     access_ip_v4 = Column(String(255))
     access_ip_v6 = Column(String(255))
 
+    progress = Column(Integer)
+
 
 class VirtualStorageArray(BASE, NovaBase):
     """

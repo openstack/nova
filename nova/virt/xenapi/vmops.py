@@ -56,6 +56,9 @@ flags.DEFINE_string('xenapi_vif_driver',
                     'nova.virt.xenapi.vif.XenAPIBridgeDriver',
                     'The XenAPI VIF driver using XenServer Network APIs.')
 
+RESIZE_TOTAL_STEPS = 5
+BUILD_TOTAL_STEPS = 4
+
 
 def cmp_version(a, b):
     """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)"""
@@ -111,20 +114,40 @@ class VMOps(object):
                 instance_infos.append(instance_info)
         return instance_infos
 
-    def revert_migration(self, instance):
-        vm_ref = VMHelper.lookup(self._session, instance.name)
+    def confirm_migration(self, migration, instance, network_info):
+        name_label = self._get_orig_vm_name_label(instance)
+        vm_ref = VMHelper.lookup(self._session, name_label)
+        return self._destroy(instance, vm_ref, network_info, shutdown=False)
+
+    def finish_revert_migration(self, instance):
+        # NOTE(sirp): the original vm was suffixed with '-orig'; find it using
+        # the old suffix, remove the suffix, then power it back on.
+        name_label = self._get_orig_vm_name_label(instance)
+        vm_ref = VMHelper.lookup(self._session, name_label)
+
+        # Remove the '-orig' suffix (which was added in case the resized VM
+        # ends up on the source host, common during testing)
+        name_label = instance.name
+        VMHelper.set_vm_name_label(self._session, vm_ref, name_label)
+
         self._start(instance, vm_ref)
 
-    def finish_migration(self, context, instance, disk_info, network_info,
-                      resize_instance):
+    def finish_migration(self, context, migration, instance, disk_info,
+                         network_info, resize_instance):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
+
         vm_ref = self._create_vm(context, instance,
                                  [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
                                  network_info)
         if resize_instance:
             self.resize_instance(instance, vdi_uuid)
+
+        # 5. Start VM
         self._start(instance, vm_ref=vm_ref)
+        self._update_instance_progress(context, instance,
+                                       step=5,
+                                       total_steps=RESIZE_TOTAL_STEPS)
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
@@ -147,9 +170,35 @@ class VMOps(object):
     def spawn(self, context, instance, network_info):
         vdis = None
         try:
+            # 1. Vanity Step
+            # NOTE(sirp): _create_disk will potentially take a *very* long
+            # time to complete since it has to fetch the image over the
+            # network and images can be several gigs in size. To avoid
+            # progress remaining at 0% for too long, which will appear to be
+            # an error, we insert a "vanity" step to bump the progress up one
+            # notch above 0.
+            self._update_instance_progress(context, instance,
+                                           step=1,
+                                           total_steps=BUILD_TOTAL_STEPS)
+
+            # 2. Fetch the Image over the Network
             vdis = self._create_disks(context, instance)
+            self._update_instance_progress(context, instance,
+                                           step=2,
+                                           total_steps=BUILD_TOTAL_STEPS)
+
+            # 3. Create the VM records
             vm_ref = self._create_vm(context, instance, vdis, network_info)
+            self._update_instance_progress(context, instance,
+                                           step=3,
+                                           total_steps=BUILD_TOTAL_STEPS)
+
+            # 4. Boot the Instance
             self._spawn(instance, vm_ref)
+            self._update_instance_progress(context, instance,
+                                           step=4,
+                                           total_steps=BUILD_TOTAL_STEPS)
+
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
             LOG.exception(_("instance %s: Failed to spawn"),
                           instance.id, exc_info=sys.exc_info())
@@ -169,7 +218,7 @@ class VMOps(object):
         if vm_ref is not None:
             raise exception.InstanceExists(name=instance_name)
 
-        #ensure enough free memory is available
+        # Ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
             LOG.exception(_('instance %(instance_name)s: not enough free '
                           'memory') % locals())
@@ -501,7 +550,8 @@ class VMOps(object):
         """
         template_vm_ref = None
         try:
-            template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
+            template_vm_ref, template_vdi_uuids =\
+                    self._create_snapshot(instance)
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(context,
                     self._session, instance, template_vdi_uuids, image_id)
@@ -512,7 +562,7 @@ class VMOps(object):
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
-    def _get_snapshot(self, instance):
+    def _create_snapshot(self, instance):
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
 
@@ -529,7 +579,39 @@ class VMOps(object):
                     % locals())
             return
 
-    def migrate_disk_and_power_off(self, instance, dest):
+    def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path):
+        instance_id = instance.id
+        params = {'host': dest,
+                  'vdi_uuid': vdi_uuid,
+                  'instance_id': instance_id,
+                  'sr_path': sr_path}
+
+        task = self._session.async_call_plugin('migration', 'transfer_vhd',
+                {'params': pickle.dumps(params)})
+        self._session.wait_for_task(task, instance_id)
+
+    def _get_orig_vm_name_label(self, instance):
+        return instance.name + '-orig'
+
+    def _update_instance_progress(self, context, instance, step, total_steps):
+        """Update instance progress percent to reflect current step number
+        """
+        # FIXME(sirp): for now we're taking a KISS approach to instance
+        # progress:
+        # Divide the action's workflow into discrete steps and "bump" the
+        # instance's progress field as each step is completed.
+        #
+        # For a first cut this should be fine, however, for large VM images,
+        # the _create_disks step begins to dominate the equation. A
+        # better approximation would use the percentage of the VM image that
+        # has been streamed to the destination host.
+        progress = round(float(step) / total_steps * 100)
+        instance_id = instance['id']
+        LOG.debug(_("Updating instance '%(instance_id)s' progress to"
+                    " %(progress)d") % locals())
+        db.instance_update(context, instance_id, {'progress': progress})
+
+    def migrate_disk_and_power_off(self, context, instance, dest):
         """Copies a VHD from one host machine to another.
 
         :param instance: the instance that owns the VHD in question.
@@ -537,6 +619,11 @@ class VMOps(object):
         :param disk_type: values are 'primary' or 'cow'.
 
         """
+        # 0. Zero out the progress to begin
+        self._update_instance_progress(context, instance,
+                                       step=0,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
         # The primary VDI becomes the COW after the snapshot, and we can
@@ -546,34 +633,43 @@ class VMOps(object):
         base_copy_uuid = cow_uuid = None
         template_vdi_uuids = template_vm_ref = None
         try:
-            # transfer the base copy
-            template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
+            # 1. Create Snapshot
+            template_vm_ref, template_vdi_uuids =\
+                    self._create_snapshot(instance)
+            self._update_instance_progress(context, instance,
+                                           step=1,
+                                           total_steps=RESIZE_TOTAL_STEPS)
+
             base_copy_uuid = template_vdi_uuids['image']
             vdi_ref, vm_vdi_rec = \
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
             cow_uuid = vm_vdi_rec['uuid']
 
-            params = {'host': dest,
-                      'vdi_uuid': base_copy_uuid,
-                      'instance_id': instance.id,
-                      'sr_path': VMHelper.get_sr_path(self._session)}
+            sr_path = VMHelper.get_sr_path(self._session)
 
-            task = self._session.async_call_plugin('migration', 'transfer_vhd',
-                    {'params': pickle.dumps(params)})
-            self._session.wait_for_task(task, instance.id)
+            # 2. Transfer the base copy
+            self._migrate_vhd(instance, base_copy_uuid, dest, sr_path)
+            self._update_instance_progress(context, instance,
+                                           step=2,
+                                           total_steps=RESIZE_TOTAL_STEPS)
 
-            # Now power down the instance and transfer the COW VHD
+            # 3. Now power down the instance
             self._shutdown(instance, vm_ref, hard=False)
+            self._update_instance_progress(context, instance,
+                                           step=3,
+                                           total_steps=RESIZE_TOTAL_STEPS)
 
-            params = {'host': dest,
-                      'vdi_uuid': cow_uuid,
-                      'instance_id': instance.id,
-                      'sr_path': VMHelper.get_sr_path(self._session), }
+            # 4. Transfer the COW VHD
+            self._migrate_vhd(instance, cow_uuid, dest, sr_path)
+            self._update_instance_progress(context, instance,
+                                           step=4,
+                                           total_steps=RESIZE_TOTAL_STEPS)
 
-            task = self._session.async_call_plugin('migration', 'transfer_vhd',
-                    {'params': pickle.dumps(params)})
-            self._session.wait_for_task(task, instance.id)
-
+            # NOTE(sirp): in case we're resizing to the same host (for dev
+            # purposes), apply a suffix to name-label so the two VM records
+            # extant until a confirm_resize don't collide.
+            name_label = self._get_orig_vm_name_label(instance)
+            VMHelper.set_vm_name_label(self._session, vm_ref, name_label)
         finally:
             if template_vm_ref:
                 self._destroy(instance, template_vm_ref,

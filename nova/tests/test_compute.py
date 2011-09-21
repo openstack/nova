@@ -584,7 +584,7 @@ class ComputeTestCase(test.TestCase):
             pass
 
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
-        self.stubs.Set(self.compute.driver, 'revert_migration', fake)
+        self.stubs.Set(self.compute.driver, 'finish_revert_migration', fake)
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
 
         self.compute.run_instance(self.context, instance_id)

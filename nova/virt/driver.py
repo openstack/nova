@@ -225,12 +225,11 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def migrate_disk_and_power_off(self, instance, dest):
+    def migrate_disk_and_power_off(self, context, instance, dest):
         """
         Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
-        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def snapshot(self, context, instance, image_id):
@@ -244,8 +243,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def finish_migration(self, context, instance, disk_info, network_info,
-                         resize_instance):
+    def finish_migration(self, context, migration, instance, disk_info,
+                         network_info, resize_instance):
         """Completes a resize, turning on the migrated instance
 
         :param network_info:
@@ -253,8 +252,13 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def revert_migration(self, instance):
-        """Reverts a resize, powering back on the instance"""
+    def confirm_migration(self, migration, instance, network_info):
+        """Confirms a resize, destroying the source VM"""
+        # TODO(Vek): Need to pass context in for access to auth_token
+        raise NotImplementedError()
+
+    def finish_revert_migration(self, instance):
+        """Finish reverting a resize, powering back on the instance"""
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
