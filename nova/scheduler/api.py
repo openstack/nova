@@ -17,7 +17,6 @@
 Handles all requests relating to schedulers.
 """
 
-import webob
 import functools
 
 from novaclient import v1_1 as novaclient
