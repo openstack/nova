@@ -465,14 +465,14 @@ class VlanNetworkTestCase(test.TestCase):
                 1, instance['id'])
 
         # Associate the IP with non-admin user context
-        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+        self.assertRaises(exception.NotAuthorized,
                           self.network.associate_floating_ip,
                           context2,
                           float_addr,
                           fix_addr)
 
         # Deallocate address from other project
-        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+        self.assertRaises(exception.NotAuthorized,
                           self.network.deallocate_floating_ip,
                           context2,
                           float_addr)
@@ -481,7 +481,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.associate_floating_ip(context1, float_addr, fix_addr)
 
         # Now try dis-associating from other project
-        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+        self.assertRaises(exception.NotAuthorized,
                           self.network.disassociate_floating_ip,
                           context2,
                           float_addr)

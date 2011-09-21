@@ -639,19 +639,20 @@ def floating_ip_get_by_address(context, address, session=None):
     if not session:
         session = get_session()
 
-    query = session.query(models.FloatingIp).\
-                     options(joinedload_all('fixed_ip.network')).\
-                     filter_by(address=address)
+    result = session.query(models.FloatingIp).\
+                options(joinedload_all('fixed_ip.network')).\
+                filter_by(address=address).\
+                filter_by(deleted=can_read_deleted(context)).\
+                first()
 
-    if is_admin_context(context):
-        query = query.filter_by(deleted=can_read_deleted(context))
-    elif is_user_context(context):
-        query = query.filter_by(project_id=context.project_id).\
-                      filter_by(deleted=False)
-
-    result = query.first()
     if not result:
         raise exception.FloatingIpNotFoundForAddress(address=address)
+
+    # If the floating IP has a project ID set, check to make sure
+    # the non-admin user has access.
+    if result.project_id and is_user_context(context):
+        authorize_project_context(context, result.project_id)
+
     return result
 
 
