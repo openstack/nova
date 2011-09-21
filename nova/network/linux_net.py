@@ -485,7 +485,7 @@ def initialize_gateway_device(dev, network_ref):
             old_ip_params.append(ip_params)
             if ip_params[0] != full_ip:
                 new_ip_params.append(ip_params)
-    if old_ip_params[0][0] != full_ip:
+    if not old_ip_params or old_ip_params[0][0] != full_ip:
         for ip_params in old_ip_params:
             _execute(*_ip_bridge_cmd('del', ip_params, dev),
                         run_as_root=True)
