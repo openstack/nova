@@ -48,11 +48,11 @@ FAKE_FLAVORS = {
 }
 
 
-def return_instance_type_by_flavor_id(context, flavorid):
+def fake_instance_type_get_by_flavor_id(context, flavorid):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 
 
-def return_instance_types(context, num=2):
+def fake_instance_type_get_all(context, inactive=False, filters=None):
     return FAKE_FLAVORS.values()
 
 
@@ -66,9 +66,9 @@ class FlavorsTest(test.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(nova.db.api, "instance_type_get_all",
-                       return_instance_types)
+                       fake_instance_type_get_all)
         self.stubs.Set(nova.db.api, "instance_type_get_by_flavor_id",
-                       return_instance_type_by_flavor_id)
+                       fake_instance_type_get_by_flavor_id)
 
     def tearDown(self):
         self.stubs.UnsetAll()

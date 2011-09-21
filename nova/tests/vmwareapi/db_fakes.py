@@ -99,7 +99,7 @@ def stub_out_db_instance_api(stubs):
         """Stubs out the db.instance_get_fixed_address method."""
         return '10.10.10.10'
 
-    def fake_instance_type_get_all(context, inactive=0):
+    def fake_instance_type_get_all(context, inactive=0, filters=None):
         return INSTANCE_TYPES.values()
 
     def fake_instance_type_get_by_name(context, name):
