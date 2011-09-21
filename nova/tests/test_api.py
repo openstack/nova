@@ -515,7 +515,7 @@ class ApiEc2TestCase(test.TestCase):
         # be good enough for that.
         for group in rv:
             if group.name == security_group_name:
-                self.assertEquals(len(group.rules), 1)
+                self.assertEquals(len(group.rules), 3)
                 self.assertEquals(len(group.rules[0].grants), 1)
                 self.assertEquals(str(group.rules[0].grants[0]), '%s-%s' %
                                   (other_security_group_name, 'fake'))

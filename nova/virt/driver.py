@@ -165,12 +165,13 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def reboot(self, instance, network_info):
+    def reboot(self, instance, network_info, reboot_type):
         """Reboot the specified instance.
 
         :param instance: Instance object as returned by DB layer.
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param reboot_type: Either a HARD or SOFT reboot
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
@@ -284,6 +285,14 @@ class ComputeDriver(object):
     def unrescue(self, instance, callback, network_info):
         """Unrescue the specified instance"""
         # TODO(Vek): Need to pass context in for access to auth_token
+        raise NotImplementedError()
+
+    def power_off(self, instance):
+        """Power off the specified instance."""
+        raise NotImplementedError()
+
+    def power_on(self, instance):
+        """Power on the specified instance"""
         raise NotImplementedError()
 
     def update_available_resource(self, ctxt, host):
@@ -465,6 +474,11 @@ class ComputeDriver(object):
 
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
+        # TODO(Vek): Need to pass context in for access to auth_token
+        raise NotImplementedError()
+
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
+        """Poll for unconfirmed resizes"""
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 

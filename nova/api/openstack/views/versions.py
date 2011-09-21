@@ -52,7 +52,7 @@ class ViewBuilder(object):
 
     def build_versions(self, versions):
         version_objs = []
-        for version in versions:
+        for version in sorted(versions.keys()):
             version = versions[version]
             version_objs.append({
                 "id": version['id'],

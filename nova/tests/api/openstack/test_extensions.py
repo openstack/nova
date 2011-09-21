@@ -86,7 +86,9 @@ class ExtensionControllerTest(test.TestCase):
         self.flags(osapi_extensions_path=ext_path)
         self.ext_list = [
             "Createserverext",
+            "DeferredDelete",
             "FlavorExtraSpecs",
+            "FlavorExtraData",
             "Floating_ips",
             "Fox In Socks",
             "Hosts",

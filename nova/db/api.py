@@ -261,11 +261,13 @@ def floating_ip_disassociate(context, address):
     return IMPL.floating_ip_disassociate(context, address)
 
 
-def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
+def floating_ip_fixed_ip_associate(context, floating_address,
+                                   fixed_address, host):
     """Associate an floating ip to a fixed_ip by address."""
     return IMPL.floating_ip_fixed_ip_associate(context,
                                                floating_address,
-                                               fixed_address)
+                                               fixed_address,
+                                               host)
 
 
 def floating_ip_get_all(context):
@@ -321,16 +323,23 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
             status)
 
 
+def migration_get_all_unconfirmed(context, confirm_window):
+    """Finds all unconfirmed migrations within the confirmation window."""
+    return IMPL.migration_get_all_unconfirmed(context, confirm_window)
+
+
 ####################
 
 
-def fixed_ip_associate(context, address, instance_id, network_id=None):
+def fixed_ip_associate(context, address, instance_id, network_id=None,
+                       reserved=False):
     """Associate fixed ip to instance.
 
     Raises if fixed ip is not available.
 
     """
-    return IMPL.fixed_ip_associate(context, address, instance_id, network_id)
+    return IMPL.fixed_ip_associate(context, address, instance_id, network_id,
+                                   reserved)
 
 
 def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
@@ -365,7 +374,7 @@ def fixed_ip_get_all(context):
 
 def fixed_ip_get_all_by_instance_host(context, host):
     """Get all allocated fixed ips filtered by instance host."""
-    return IMPL.fixed_ip_get_all_instance_by_host(context, host)
+    return IMPL.fixed_ip_get_all_by_instance_host(context, host)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -456,6 +465,11 @@ def virtual_interface_delete(context, vif_id):
 def virtual_interface_delete_by_instance(context, instance_id):
     """Delete virtual interface records associated with instance."""
     return IMPL.virtual_interface_delete_by_instance(context, instance_id)
+
+
+def virtual_interface_get_all(context):
+    """Gets all virtual interfaces from the table"""
+    return IMPL.virtual_interface_get_all(context)
 
 
 ####################
@@ -600,6 +614,11 @@ def instance_action_create(context, values):
 def instance_get_actions(context, instance_id):
     """Get instance actions by instance id."""
     return IMPL.instance_get_actions(context, instance_id)
+
+
+def instance_get_id_to_uuid_mapping(context, ids):
+    """Return a dictionary containing 'ID: UUID' given the ids"""
+    return IMPL.instance_get_id_to_uuid_mapping(context, ids)
 
 
 ###################

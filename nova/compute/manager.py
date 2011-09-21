@@ -35,12 +35,13 @@ terminating it.
 
 """
 
+import datetime
+import functools
 import os
 import socket
 import sys
 import tempfile
 import time
-import functools
 
 from eventlet import greenthread
 
@@ -70,8 +71,6 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
 flags.DEFINE_string('stub_network', False,
                     'Stub network related code')
-flags.DEFINE_integer('password_length', 12,
-                    'Length of generated admin passwords')
 flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
@@ -81,8 +80,13 @@ flags.DEFINE_integer('live_migration_retry_count', 30,
 flags.DEFINE_integer("rescue_timeout", 0,
                      "Automatically unrescue an instance after N seconds."
                      " Set to 0 to disable.")
+flags.DEFINE_integer("resize_confirm_window", 0,
+                     "Automatically confirm resizes after N seconds."
+                     " Set to 0 to disable.")
 flags.DEFINE_integer('host_state_interval', 120,
                      'Interval in seconds for querying the host status')
+flags.DEFINE_integer('reclaim_instance_interval', 0,
+                     'Interval in seconds for reclaiming deleted instances')
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -174,7 +178,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                             'nova-compute restart.'), locals())
                 self.reboot_instance(context, instance['id'])
             elif drv_state == power_state.RUNNING:
-                # Hyper-V and VMWareAPI drivers will raise and exception
+                # Hyper-V and VMWareAPI drivers will raise an exception
                 try:
                     net_info = self._get_instance_nw_info(context, instance)
                     self.driver.ensure_filtering_rules_for_instance(instance,
@@ -322,7 +326,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # used by the image service. This should be refactored to be
             # consistent.
             image_href = instance['image_ref']
-            image_service, image_id = nova.image.get_image_service(image_href)
+            image_service, image_id = nova.image.get_image_service(context,
+                                                                   image_href)
             image_meta = image_service.show(context, image_id)
 
             try:
@@ -485,10 +490,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         if action_str == 'Terminating':
             terminate_volumes(self.db, context, instance_id)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def terminate_instance(self, context, instance_id):
-        """Terminate an instance on this host."""
+    def _delete_instance(self, context, instance_id):
+        """Delete an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
         instance = self.db.instance_get(context.elevated(), instance_id)
         self._instance_update(context,
@@ -506,12 +509,42 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    def terminate_instance(self, context, instance_id):
+        """Terminate an instance on this host."""
+        self._delete_instance(context, instance_id)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
     def stop_instance(self, context, instance_id):
         """Stopping an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Stopping')
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.STOPPED,
+                              task_state=None)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
+    def power_off_instance(self, context, instance_id):
+        """Power off an instance on this host."""
+        instance = self.db.instance_get(context, instance_id)
+        self.driver.power_off(instance)
+        current_power_state = self._get_power_state(context, instance)
+        self._instance_update(context,
+                              instance_id,
+                              power_state=current_power_state,
+                              task_state=None)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
+    def power_on_instance(self, context, instance_id):
+        """Power on an instance on this host."""
+        instance = self.db.instance_get(context, instance_id)
+        self.driver.power_on(instance)
+        current_power_state = self._get_power_state(context, instance)
+        self._instance_update(context,
+                              instance_id,
+                              power_state=current_power_state,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -579,7 +612,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def reboot_instance(self, context, instance_id):
+    def reboot_instance(self, context, instance_id, reboot_type="SOFT"):
         """Reboot an instance on this host."""
         LOG.audit(_("Rebooting instance %s"), instance_id, context=context)
         context = context.elevated()
@@ -601,7 +634,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context=context)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.reboot(instance_ref, network_info)
+        self.driver.reboot(instance_ref, network_info, reboot_type)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -796,12 +829,18 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def rescue_instance(self, context, instance_id):
-        """Rescue an instance on this host."""
+    def rescue_instance(self, context, instance_id, **kwargs):
+        """
+        Rescue an instance on this host.
+        :param rescue_password: password to set on rescue instance
+        """
+
         LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
         context = context.elevated()
 
         instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref.admin_pass = kwargs.get('rescue_password',
+                utils.generate_password(FLAGS.password_length))
         network_info = self._get_instance_nw_info(context, instance_ref)
 
         # NOTE(blamar): None of the virt drivers use the 'callback' param
@@ -1387,11 +1426,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         hostname = instance_ref['hostname']
 
-        # Getting fixed ips
-        fixed_ips = self.db.instance_get_fixed_addresses(context, instance_id)
-        if not fixed_ips:
-            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
-
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:
             LOG.info(_("%s has no volume."), hostname)
@@ -1407,6 +1441,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Retry operation is necessary because continuously request comes,
         # concorrent request occurs to iptables, then it complains.
         network_info = self._get_instance_nw_info(context, instance_ref)
+
+        fixed_ips = [nw_info[1]['ips'] for nw_info in network_info]
+        if not fixed_ips:
+            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+
         max_retry = FLAGS.live_migration_retry_count
         for cnt in range(max_retry):
             try:
@@ -1643,20 +1682,36 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
         except Exception as ex:
             LOG.warning(_("Error during poll_rescued_instances: %s"),
-                        unicode(ex))
+                    unicode(ex))
+            error_list.append(ex)
+
+        try:
+            if FLAGS.resize_confirm_window > 0:
+                self.driver.poll_unconfirmed_resizes(
+                        FLAGS.resize_confirm_window)
+        except Exception as ex:
+            LOG.warning(_("Error during poll_unconfirmed_resizes: %s"),
+                    unicode(ex))
             error_list.append(ex)
 
         try:
             self._report_driver_status()
         except Exception as ex:
             LOG.warning(_("Error during report_driver_status(): %s"),
-                        unicode(ex))
+                    unicode(ex))
             error_list.append(ex)
 
         try:
             self._sync_power_states(context)
         except Exception as ex:
             LOG.warning(_("Error during power_state sync: %s"), unicode(ex))
+            error_list.append(ex)
+
+        try:
+            self._reclaim_queued_deletes(context)
+        except Exception as ex:
+            LOG.warning(_("Error during reclamation of queued deletes: %s"),
+                        unicode(ex))
             error_list.append(ex)
 
         return error_list
@@ -1708,3 +1763,17 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._instance_update(context,
                                   db_instance["id"],
                                   power_state=vm_power_state)
+
+    def _reclaim_queued_deletes(self, context):
+        """Reclaim instances that are queued for deletion."""
+
+        instances = self.db.instance_get_all_by_host(context, self.host)
+
+        queue_time = datetime.timedelta(
+                         seconds=FLAGS.reclaim_instance_interval)
+        curtime = utils.utcnow()
+        for instance in instances:
+            if instance['vm_state'] == vm_states.SOFT_DELETE and \
+               (curtime - instance['deleted_at']) >= queue_time:
+                LOG.info('Deleting %s' % instance['name'])
+                self._delete_instance(context, instance['id'])

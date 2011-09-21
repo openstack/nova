@@ -18,6 +18,7 @@
 import os.path
 
 from nova.api.openstack import common
+from nova import utils
 
 
 class ViewBuilder(object):
@@ -37,17 +38,18 @@ class ViewBuilder(object):
     def _format_status(self, image):
         """Update the status field to standardize format."""
         status_mapping = {
-            'pending': 'QUEUED',
-            'decrypting': 'PREPARING',
-            'untarring': 'SAVING',
-            'available': 'ACTIVE',
-            'killed': 'FAILED',
+            'active': 'ACTIVE',
+            'queued': 'SAVING',
+            'saving': 'SAVING',
+            'deleted': 'DELETED',
+            'pending_delete': 'DELETED',
+            'killed': 'ERROR',
         }
 
         try:
-            image['status'] = status_mapping[image['status']].upper()
+            image['status'] = status_mapping[image['status']]
         except KeyError:
-            image['status'] = image['status'].upper()
+            image['status'] = 'UNKNOWN'
 
     def _build_server(self, image, image_obj):
         """Indicates that you must use a ViewBuilder subclass."""
@@ -70,6 +72,7 @@ class ViewBuilder(object):
         }
 
         self._build_server(image, image_obj)
+        self._build_image_id(image, image_obj)
 
         if detail:
             image.update({
@@ -95,6 +98,12 @@ class ViewBuilderV10(ViewBuilder):
         except (KeyError, ValueError):
             pass
 
+    def _build_image_id(self, image, image_obj):
+        try:
+            image['id'] = int(image_obj['id'])
+        except ValueError:
+            pass
+
 
 class ViewBuilderV11(ViewBuilder):
     """OpenStack API v1.1 Image Builder"""
@@ -118,6 +127,9 @@ class ViewBuilderV11(ViewBuilder):
         except KeyError:
             return
 
+    def _build_image_id(self, image, image_obj):
+        image['id'] = "%s" % image_obj['id']
+
     def generate_href(self, image_id):
         """Return an href string pointing to this object."""
         return os.path.join(self.base_url, self.project_id,
@@ -128,6 +140,7 @@ class ViewBuilderV11(ViewBuilder):
         image = ViewBuilder.build(self, image_obj, detail)
         href = self.generate_href(image_obj["id"])
         bookmark = self.generate_bookmark(image_obj["id"])
+        alternate = self.generate_alternate(image_obj["id"])
 
         image["links"] = [
             {
@@ -138,6 +151,11 @@ class ViewBuilderV11(ViewBuilder):
                 "rel": "bookmark",
                 "href": bookmark,
             },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": alternate,
+            },
 
         ]
 
@@ -147,6 +165,13 @@ class ViewBuilderV11(ViewBuilder):
         return image
 
     def generate_bookmark(self, image_id):
-        """Create an url that refers to a specific flavor id."""
+        """Create a URL that refers to a specific flavor id."""
         return os.path.join(common.remove_version_from_href(self.base_url),
             self.project_id, "images", str(image_id))
+
+    def generate_alternate(self, image_id):
+        """Create an alternate link for a specific flavor id."""
+        glance_url = utils.generate_glance_url()
+
+        return "%s/%s/images/%s" % (glance_url, self.project_id,
+                str(image_id))

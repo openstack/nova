@@ -61,6 +61,7 @@ import math
 import netaddr
 from optparse import OptionParser
 import os
+import StringIO
 import sys
 import time
 
@@ -273,6 +274,58 @@ class ShellCommands(object):
         """Runs the script from the specifed path with flags set properly.
         arguments: path"""
         exec(compile(open(path).read(), path, 'exec'), locals(), globals())
+
+    @args('--filename', dest='filename', metavar='<path>', default=False,
+          help='Export file path')
+    def export(self, filename):
+        """Export Nova users into a file that can be consumed by Keystone"""
+
+        def create_file(filename):
+            data = generate_data()
+            with open(filename, 'w') as f:
+                f.write(data.getvalue())
+
+        def tenants(data, am):
+            for project in am.get_projects():
+                print >> data, ("tenant add '%s'" %
+                               (project.name))
+                for u in project.member_ids:
+                    user = am.get_user(u)
+                    print >> data, ("user add '%s' '%s' '%s'" %
+                                   (user.name, user.access, project.name))
+                    print >> data, ("credentials add 'EC2' '%s:%s' '%s' '%s'" %
+                            (user.access, project.id, user.secret, project.id))
+
+        def roles(data, am):
+            for role in am.get_roles():
+                print >> data, ("role add '%s'" % (role))
+
+        def grant_roles(data, am):
+            roles = am.get_roles()
+            for project in am.get_projects():
+                for u in project.member_ids:
+                    user = am.get_user(u)
+                    for role in db.user_get_roles_for_project(ctxt, u,
+                                                              project.id):
+                        print >> data, ("role grant '%s', '%s', '%s')," %
+                                       (user.name, role, project.name))
+            print >> data
+
+        def generate_data():
+            data = StringIO.StringIO()
+            am = manager.AuthManager()
+            tenants(data, am)
+            roles(data, am)
+            grant_roles(data, am)
+            data.seek(0)
+            return data
+
+        ctxt = context.get_admin_context()
+        if filename:
+            create_file(filename)
+        else:
+            data = generate_data()
+            print data.getvalue()
 
 
 class RoleCommands(object):
@@ -685,7 +738,7 @@ class NetworkCommands(object):
             help='Multi host')
     @args('--dns1', dest="dns1", metavar="<DNS Address>", help='First DNS')
     @args('--dns2', dest="dns2", metavar="<DNS Address>", help='Second DNS')
-    @args('--uuid', dest="net_uuid", metavar="<network uuid>",
+    @args('--uuid', dest="uuid", metavar="<network uuid>",
       help='Network UUID')
     @args('--project_id', dest="project_id", metavar="<project id>",
       help='Project id')
@@ -710,22 +763,12 @@ class NetworkCommands(object):
             bridge_required = ['nova.network.manager.FlatManager',
                                'nova.network.manager.FlatDHCPManager']
             if FLAGS.network_manager in bridge_required:
-                # TODO(tr3buchet) - swap print statement and following line for
-                #                   raise statement in diablo 4
-                print _('--bridge parameter required or FLAG '
-                        'flat_network_bridge must be set to create networks\n'
-                        'WARNING! ACHTUNG! Setting the bridge to br100 '
-                        'automatically is deprecated and will be removed in '
-                        'Diablo milestone 4. Prepare yourself accordingly.')
-                time.sleep(10)
-                bridge = 'br100'
-                #raise exception.NetworkNotCreated(req='--bridge')
+                raise exception.NetworkNotCreated(req='--bridge')
 
         bridge_interface = bridge_interface or FLAGS.flat_interface or \
                            FLAGS.vlan_interface
         if not bridge_interface:
-            interface_required = ['nova.network.manager.FlatDHCPManager',
-                                  'nova.network.manager.VlanManager']
+            interface_required = ['nova.network.manager.VlanManager']
             if FLAGS.network_manager in interface_required:
                 raise exception.NetworkNotCreated(req='--bridge_interface')
 
@@ -1649,7 +1692,7 @@ class InstanceTypeCommands(object):
     def _print_instance_types(self, name, val):
         deleted = ('', ', inactive')[val["deleted"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
-            "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
+            "Swap: %sMB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
             name, val["memory_mb"], val["vcpus"], val["local_gb"],
             val["flavorid"], val["swap"], val["rxtx_quota"],
             val["rxtx_cap"], deleted)

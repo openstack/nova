@@ -32,6 +32,7 @@ SUSPENDED = 'suspended'
 RESCUED = 'rescued'
 DELETED = 'deleted'
 STOPPED = 'stopped'
+SOFT_DELETE = 'soft-delete'
 
 MIGRATING = 'migrating'
 RESIZING = 'resizing'

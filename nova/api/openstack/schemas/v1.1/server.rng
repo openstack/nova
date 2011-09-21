@@ -17,9 +17,6 @@
   <optional>
     <attribute name="adminPass">   <text/> </attribute>
   </optional>
-  <zeroOrMore>
-    <externalRef href="../atom-link.rng"/>
-  </zeroOrMore>
   <element name="image">
     <attribute name="id"> <text/> </attribute>
     <externalRef href="../atom-link.rng"/>
@@ -49,4 +46,7 @@
       </element>
     </zeroOrMore>
   </element>
+  <zeroOrMore>
+    <externalRef href="../atom-link.rng"/>
+  </zeroOrMore>
 </element>

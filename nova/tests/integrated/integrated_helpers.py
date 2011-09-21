@@ -64,16 +64,16 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(**f)
         self.flags(verbose=True)
 
-        def fake_get_image_service(image_href):
+        def fake_get_image_service(context, image_href):
             image_id = int(str(image_href).split('/')[-1])
             return (nova.image.fake.FakeImageService(), image_id)
         self.stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
 
         # set up services
-        self.start_service('compute')
-        self.start_service('volume')
-        self.start_service('network')
-        self.start_service('scheduler')
+        self.compute = self.start_service('compute')
+        self.volume = self.start_service('volume')
+        self.network = self.start_service('network')
+        self.scheduler = self.start_service('scheduler')
 
         self._start_api_service()
 
