@@ -19,6 +19,7 @@
 import os
 import sys
 
+from nova import exception
 from nova import flags
 
 import sqlalchemy
@@ -38,9 +39,19 @@ FLAGS = flags.FLAGS
 
 
 def db_sync(version=None):
-    db_version()
+    if version is not None:
+        try:
+            version = int(version)
+        except ValueError:
+            raise exception.Error(_("version should be an integer"))
+
+    current_version = db_version()
     repo_path = _find_migrate_repo()
-    return versioning_api.upgrade(FLAGS.sql_connection, repo_path, version)
+    if version is None or version > current_version:
+        return versioning_api.upgrade(FLAGS.sql_connection, repo_path, version)
+    else:
+        return versioning_api.downgrade(FLAGS.sql_connection, repo_path,
+                                        version)
 
 
 def db_version():
