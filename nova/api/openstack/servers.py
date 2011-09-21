@@ -17,6 +17,7 @@ import base64
 import os
 import traceback
 
+from novaclient import exceptions as novaclient_exceptions
 from lxml import etree
 from webob import exc
 import webob
@@ -43,6 +44,27 @@ from nova.api.openstack import xmlutil
 
 LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
+
+
+class ConvertedException(exc.WSGIHTTPException):
+    def __init__(self, code, title, explanation):
+        self.code = code
+        self.title = title
+        self.explanation = explanation
+        super(ConvertedException, self).__init__()
+
+
+def novaclient_exception_converter(f):
+    """Convert novaclient ClientException HTTP codes to webob exceptions.
+    Has to be the outer-most decorator.
+    """
+    def new_f(*args, **kwargs):
+        try:
+            ret = f(*args, **kwargs)
+            return ret
+        except novaclient_exceptions.ClientException, e:
+            raise ConvertedException(e.code, e.message, e.details)
+    return new_f
 
 
 class Controller(object):
@@ -135,6 +157,7 @@ class Controller(object):
 
         return dict(servers=servers)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def show(self, req, id):
         """ Returns server details by server id """
@@ -210,6 +233,7 @@ class Controller(object):
     def _update(self, context, req, id, inst_dict):
         return exc.HTTPNotImplemented()
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def action(self, req, id, body):
         """Multi-purpose method used to take actions on a server"""
@@ -348,6 +372,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def lock(self, req, id):
         """
@@ -364,6 +389,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def unlock(self, req, id):
         """
@@ -380,6 +406,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def get_lock(self, req, id):
         """
@@ -395,6 +422,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def reset_network(self, req, id):
         """
@@ -410,6 +438,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def inject_network_info(self, req, id):
         """
@@ -425,6 +454,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
@@ -437,6 +467,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def unpause(self, req, id):
         """ Permit Admins to Unpause the server. """
@@ -449,6 +480,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def suspend(self, req, id):
         """permit admins to suspend the server"""
@@ -461,6 +493,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def resume(self, req, id):
         """permit admins to resume the server from suspend"""
@@ -473,6 +506,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def migrate(self, req, id):
         try:
@@ -482,6 +516,7 @@ class Controller(object):
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def rescue(self, req, id, body={}):
         """Permit users to rescue the server."""
@@ -500,6 +535,7 @@ class Controller(object):
 
         return {'adminPass': password}
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def unrescue(self, req, id):
         """Permit users to unrescue the server."""
@@ -512,6 +548,7 @@ class Controller(object):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def get_ajax_console(self, req, id):
         """Returns a url to an instance's ajaxterm console."""
@@ -522,6 +559,7 @@ class Controller(object):
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def get_vnc_console(self, req, id):
         """Returns a url to an instance's ajaxterm console."""
@@ -532,6 +570,7 @@ class Controller(object):
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def diagnostics(self, req, id):
         """Permit Admins to retrieve server diagnostics."""
@@ -574,6 +613,7 @@ class Controller(object):
 class ControllerV10(Controller):
     """v1.0 OpenStack API controller"""
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def delete(self, req, id):
         """ Destroys a server """
@@ -652,6 +692,7 @@ class ControllerV10(Controller):
 class ControllerV11(Controller):
     """v1.1 OpenStack API controller"""
 
+    @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def delete(self, req, id):
         """ Destroys a server """
