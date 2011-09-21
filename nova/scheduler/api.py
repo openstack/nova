@@ -18,6 +18,7 @@ Handles all requests relating to schedulers.
 """
 
 import webob
+import functools
 
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
@@ -156,12 +157,6 @@ def child_zone_helper(context, zone_list, func):
     be whatever the response from server.pause() is. One entry
     per child zone called."""
 
-    def _wrap_method(function, arg1, arg2):
-        """Wrap method to supply an argument."""
-        def _wrap(*args, **kwargs):
-            return function(arg1, arg2, *args, **kwargs)
-        return _wrap
-
     def _process(func, context, zone):
         """Worker stub for green thread pool. Give the worker
         an authenticated nova client and zone info."""
@@ -188,7 +183,7 @@ def child_zone_helper(context, zone_list, func):
 
     green_pool = greenpool.GreenPool()
     return [result for result in green_pool.imap(
-                    _wrap_method(_process, func, context), zone_list)]
+                    functools.partial(_process, func, context), zone_list)]
 
 
 def _issue_novaclient_command(nova, zone, collection,
@@ -397,8 +392,7 @@ class reroute_compute(object):
 def redirect_handler(f):
     def new_f(*args, **kwargs):
         try:
-            ret = f(*args, **kwargs)
-            return ret
+            return f(*args, **kwargs)
         except RedirectResult, e:
             # Remember: exceptions are returned, not thrown, in the decorator.
             # At this point it's safe to throw it.

@@ -50,7 +50,7 @@ class ConvertedException(exc.WSGIHTTPException):
     def __init__(self, code, title, explaination):
         self.code = code
         self.title = title
-        self.explaination = explaination
+        self.explanation = explanation
         super(ConvertedException, self).__init__()
 
 
