@@ -144,6 +144,8 @@ class Floating_ips(extensions.ExtensionDescriptor):
                                                    address)
         except exception.ApiError, e:
             raise webob.exc.HTTPBadRequest(explanation=e.message)
+        except exception.NotAuthorized, e:
+            raise webob.exc.HTTPUnauthorized()
 
         return webob.Response(status_int=202)
 
@@ -162,7 +164,10 @@ class Floating_ips(extensions.ExtensionDescriptor):
 
         floating_ip = self.network_api.get_floating_ip_by_ip(context, address)
         if floating_ip.get('fixed_ip'):
-            self.network_api.disassociate_floating_ip(context, address)
+            try:
+                self.network_api.disassociate_floating_ip(context, address)
+            except exception.NotAuthorized, e:
+                raise webob.exc.HTTPUnauthorized()
 
         return webob.Response(status_int=202)
 
