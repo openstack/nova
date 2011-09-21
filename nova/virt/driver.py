@@ -287,6 +287,14 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def power_off(self, instance):
+        """Power off the specified instance."""
+        raise NotImplementedError()
+
+    def power_on(self, instance):
+        """Power on the specified instance"""
+        raise NotImplementedError()
+
     def update_available_resource(self, ctxt, host):
         """Updates compute manager resource info on ComputeNode table.
 

@@ -251,6 +251,8 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
             elem = etree.SubElement(image_elem,
                                     '{%s}link' % xmlutil.XMLNS_ATOM)
             elem.set('rel', link['rel'])
+            if 'type' in link:
+                elem.set('type', link['type'])
             elem.set('href', link['href'])
         return image_elem
 

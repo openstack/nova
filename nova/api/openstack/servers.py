@@ -47,7 +47,7 @@ FLAGS = flags.FLAGS
 
 
 class ConvertedException(exc.WSGIHTTPException):
-    def __init__(self, code, title, explaination):
+    def __init__(self, code, title, explanation):
         self.code = code
         self.title = title
         self.explanation = explanation
@@ -192,7 +192,12 @@ class Controller(object):
         server['server']['adminPass'] = extra_values['password']
         return server
 
-    @novaclient_exception_converter
+    def _delete(self, context, id):
+        if FLAGS.reclaim_instance_interval:
+            self.compute_api.soft_delete(context, id)
+        else:
+            self.compute_api.delete(context, id)
+
     @scheduler_api.redirect_handler
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller"""
@@ -613,7 +618,7 @@ class ControllerV10(Controller):
     def delete(self, req, id):
         """ Destroys a server """
         try:
-            self.compute_api.delete(req.environ['nova.context'], id)
+            self._delete(req.environ['nova.context'], id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -692,7 +697,7 @@ class ControllerV11(Controller):
     def delete(self, req, id):
         """ Destroys a server """
         try:
-            self.compute_api.delete(req.environ['nova.context'], id)
+            self._delete(req.environ['nova.context'], id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
