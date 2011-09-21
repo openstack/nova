@@ -68,6 +68,8 @@ flags.DEFINE_string('linuxnet_interface_driver',
                     'Driver used to create ethernet devices.')
 flags.DEFINE_string('linuxnet_ovs_integration_bridge',
                     'br-int', 'Name of Open vSwitch bridge used with linuxnet')
+flags.DEFINE_bool('send_arp_for_ha', False,
+                  'send gratuitous ARPs for HA setup')
 flags.DEFINE_bool('use_single_default_gateway',
                    False, 'Use single default gateway. Only first nic of vm'
                           ' will get default gateway from dhcp server')
@@ -407,6 +409,10 @@ def bind_floating_ip(floating_ip, check_exit_code=True):
     _execute('ip', 'addr', 'add', floating_ip,
              'dev', FLAGS.public_interface,
              run_as_root=True, check_exit_code=check_exit_code)
+    if FLAGS.send_arp_for_ha:
+        _execute('arping', '-U', floating_ip,
+                 '-A', '-I', FLAGS.public_interface,
+                 '-c', 1, run_as_root=True, check_exit_code=False)
 
 
 def unbind_floating_ip(floating_ip):
@@ -478,6 +484,10 @@ def initialize_gateway_device(dev, network_ref):
                             check_exit_code=False)
     if err and err != 'RTNETLINK answers: File exists\n':
         raise exception.Error('Failed to add ip: %s' % err)
+    if FLAGS.send_arp_for_ha:
+        _execute('arping', '-U', network_ref['gateway'],
+                  '-A', '-I', dev,
+                  '-c', 1, run_as_root=True, check_exit_code=False)
     if(FLAGS.use_ipv6):
         _execute('ip', '-f', 'inet6', 'addr',
                      'change', network_ref['cidr_v6'],
@@ -514,6 +524,18 @@ def get_dhcp_hosts(context, network_ref):
     return '\n'.join(hosts)
 
 
+def _add_dnsmasq_accept_rules(dev):
+    """Allow DHCP and DNS traffic through to dnsmasq."""
+    table = iptables_manager.ipv4['filter']
+    for port in [67, 53]:
+        for proto in ['udp', 'tcp']:
+            args = {'dev': dev, 'port': port, 'proto': proto}
+            table.add_rule('INPUT',
+                           '-i %(dev)s -p %(proto)s -m %(proto)s '
+                           '--dport %(port)s -j ACCEPT' % args)
+    iptables_manager.apply()
+
+
 def get_dhcp_opts(context, network_ref):
     """Get network's hosts config in dhcp-opts format."""
     hosts = []
@@ -538,6 +560,10 @@ def get_dhcp_opts(context, network_ref):
                 if target_network_id != fixed_ip_ref['network_id']:
                     hosts.append(_host_dhcp_opts(fixed_ip_ref))
     return '\n'.join(hosts)
+
+
+def release_dhcp(dev, address, mac_address):
+    utils.execute('dhcp_release', dev, address, mac_address, run_as_root=True)
 
 
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
@@ -584,7 +610,6 @@ def update_dhcp(context, dev, network_ref):
            'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
-           '--interface=%s' % dev,
            '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(dev, 'pid'),
@@ -602,6 +627,8 @@ def update_dhcp(context, dev, network_ref):
         cmd += ['--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts')]
 
     _execute(*cmd, run_as_root=True)
+
+    _add_dnsmasq_accept_rules(dev)
 
 
 @utils.synchronized('radvd_start')
@@ -790,6 +817,10 @@ def unplug(network):
     return interface_driver.unplug(network)
 
 
+def get_dev(network):
+    return interface_driver.get_dev(network)
+
+
 class LinuxNetInterfaceDriver(object):
     """Abstract class that defines generic network host API"""
     """ for for all Linux interface drivers."""
@@ -800,6 +831,10 @@ class LinuxNetInterfaceDriver(object):
 
     def unplug(self, network):
         """Destory Linux device, return device name"""
+        raise NotImplementedError()
+
+    def get_dev(self, network):
+        """Get device name"""
         raise NotImplementedError()
 
 
@@ -823,6 +858,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         return network['bridge']
 
     def unplug(self, network):
+        return self.get_dev(network)
+
+    def get_dev(self, network):
         return network['bridge']
 
     @classmethod
@@ -947,6 +985,9 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         return dev
 
     def unplug(self, network):
+        return self.get_dev(network)
+
+    def get_dev(self, network):
         dev = "gw-" + str(network['id'])
         return dev
 

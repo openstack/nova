@@ -14,22 +14,20 @@
 #    under the License.
 
 import json
-import stubout
 import webob
 
 from nova import test
-from nova import compute
+from nova import network
 from nova.tests.api.openstack import fakes
 from nova.api.openstack.contrib.virtual_interfaces import \
     ServerVirtualInterfaceController
 
 
-def compute_api_get(self, context, server_id):
-    return {'virtual_interfaces': [
-                {'uuid': '00000000-0000-0000-0000-00000000000000000',
-                 'address': '00-00-00-00-00-00'},
-                {'uuid': '11111111-1111-1111-1111-11111111111111111',
-                 'address': '11-11-11-11-11-11'}]}
+def get_vifs_by_instance(self, context, server_id):
+    return [{'uuid': '00000000-0000-0000-0000-00000000000000000',
+             'address': '00-00-00-00-00-00'},
+            {'uuid': '11111111-1111-1111-1111-11111111111111111',
+             'address': '11-11-11-11-11-11'}]
 
 
 class ServerVirtualInterfaceTest(test.TestCase):
@@ -37,7 +35,8 @@ class ServerVirtualInterfaceTest(test.TestCase):
     def setUp(self):
         super(ServerVirtualInterfaceTest, self).setUp()
         self.controller = ServerVirtualInterfaceController()
-        self.stubs.Set(compute.api.API, "get", compute_api_get)
+        self.stubs.Set(network.api.API, "get_vifs_by_instance",
+                       get_vifs_by_instance)
 
     def tearDown(self):
         super(ServerVirtualInterfaceTest, self).tearDown()

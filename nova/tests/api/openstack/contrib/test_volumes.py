@@ -19,11 +19,15 @@ import webob
 
 import nova
 from nova import context
+from nova import flags
 from nova import test
 from nova.api.openstack.contrib.volumes import BootFromVolumeController
 from nova.compute import instance_types
 from nova.tests.api.openstack import fakes
 from nova.tests.api.openstack.test_servers import fake_gen_uuid
+
+
+FLAGS = flags.FLAGS
 
 
 def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
@@ -70,4 +74,4 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(2, int(server['flavor']['id']))
         self.assertEqual(u'test_server', server['name'])
         self.assertEqual(3, int(server['image']['id']))
-        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(FLAGS.password_length, len(server['adminPass']))

@@ -28,6 +28,7 @@ import webob
 from nova import context
 from nova import db
 from nova import exception
+from nova import flags
 from nova import test
 from nova import utils
 import nova.api.openstack
@@ -49,6 +50,7 @@ from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
 
 
+FLAGS = flags.FLAGS
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
@@ -1245,7 +1247,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(servers[0]['id'], 100)
 
     def test_tenant_id_filter_converts_to_project_id_for_admin(self):
-        def fake_get_all(context, filters=None):
+        def fake_get_all(context, filters=None, instances=None):
             self.assertNotEqual(filters, None)
             self.assertEqual(filters['project_id'], 'faketenant')
             self.assertFalse(filters.get('tenant_id'))
@@ -1575,7 +1577,7 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
-        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
         self.assertEqual(2, server['flavorId'])
@@ -1776,7 +1778,7 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
-        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(1, server['id'])
         self.assertEqual(0, server['progress'])
         self.assertEqual('server_test', server['name'])
@@ -1836,7 +1838,7 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
-        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(1, server['id'])
         self.assertEqual("BUILD", server["status"])
         self.assertEqual(0, server['progress'])
@@ -2191,6 +2193,58 @@ class ServersTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_malformed_entity(self):
+        self._setup_for_create_instance()
+        req = webob.Request.blank('/v1.1/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps({'server': 'string'})
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_malformed_body_string(self):
+        self._setup_for_create_instance()
+        req = webob.Request.blank('/v1.1/fake/servers')
+        req.method = 'POST'
+        req.body = 'string'
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_malformed_body_list(self):
+        self._setup_for_create_instance()
+        body = ['string']
+        req = webob.Request.blank('/v1.1/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(['string'])
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 422)
+
+    def test_create_instance_v1_0_malformed_entity(self):
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps({'server': 'string'})
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_0_malformed_body_string(self):
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = 'string'
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_0_malformed_body_list(self):
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(['string'])
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 422)
 
     def test_update_server_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -2547,9 +2601,8 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
 
-    def test_rescue_accepted(self):
+    def test_rescue_generates_password(self):
         self.flags(allow_admin_api=True)
-        body = {}
 
         self.called = False
 
@@ -2564,7 +2617,33 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(self.called, True)
-        self.assertEqual(res.status_int, 202)
+        self.assertEqual(res.status_int, 200)
+        res_body = json.loads(res.body)
+        self.assertTrue('adminPass' in res_body)
+        self.assertEqual(FLAGS.password_length, len(res_body['adminPass']))
+
+    def test_rescue_with_preset_password(self):
+        self.flags(allow_admin_api=True)
+
+        self.called = False
+
+        def rescue_mock(*args, **kwargs):
+            self.called = True
+
+        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
+        req = webob.Request.blank('/v1.0/servers/1/rescue')
+        req.method = 'POST'
+        body = {"rescue": {"adminPass": "AABBCC112233"}}
+        req.body = json.dumps(body)
+        req.content_type = 'application/json'
+
+        res = req.get_response(fakes.wsgi_app())
+
+        self.assertEqual(self.called, True)
+        self.assertEqual(res.status_int, 200)
+        res_body = json.loads(res.body)
+        self.assertTrue('adminPass' in res_body)
+        self.assertEqual('AABBCC112233', res_body['adminPass'])
 
     def test_rescue_raises_handled(self):
         self.flags(allow_admin_api=True)
@@ -3621,7 +3700,8 @@ class TestServerInstanceCreation(test.TestCase):
         self.assertEquals(response.status_int, 202)
         response = json.loads(response.body)
         self.assertTrue('adminPass' in response['server'])
-        self.assertEqual(16, len(response['server']['adminPass']))
+        self.assertEqual(FLAGS.password_length,
+                         len(response['server']['adminPass']))
 
     def test_create_instance_admin_pass_xml(self):
         request, response, dummy = \
@@ -3630,7 +3710,8 @@ class TestServerInstanceCreation(test.TestCase):
         dom = minidom.parseString(response.body)
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
-        self.assertEqual(16, len(server.getAttribute('adminPass')))
+        self.assertEqual(FLAGS.password_length,
+                         len(server.getAttribute('adminPass')))
 
 
 class TestGetKernelRamdiskFromImage(test.TestCase):

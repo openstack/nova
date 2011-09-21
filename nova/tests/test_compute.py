@@ -21,22 +21,24 @@ Tests For Compute
 """
 
 from nova import compute
-from nova.compute import instance_types
-from nova.compute import manager as compute_manager
-from nova.compute import power_state
-from nova.compute import vm_states
 from nova import context
 from nova import db
-from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova import flags
-import nova.image.fake
 from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
+
+from nova.compute import instance_types
+from nova.compute import manager as compute_manager
+from nova.compute import power_state
+from nova.compute import vm_states
+from nova.db.sqlalchemy import models
+from nova.image import fake as fake_image
 from nova.notifier import test_notifier
+from nova.tests import fake_network
+
 
 LOG = logging.getLogger('nova.tests.compute')
 FLAGS = flags.FLAGS
@@ -74,7 +76,7 @@ class ComputeTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
-        self.stubs.Set(nova.image.fake._FakeImageService, 'show', fake_show)
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
     def _create_instance(self, params=None):
         """Create a test instance"""
@@ -173,6 +175,20 @@ class ComputeTestCase(test.TestCase):
                           security_group=['this_is_a_fake_sec_group'])
         self.assertEqual(pre_build_len,
                          len(db.instance_get_all(context.get_admin_context())))
+
+    def test_create_instance_with_img_ref_associates_config_drive(self):
+        """Make sure create associates a config drive."""
+
+        instance_id = self._create_instance(params={'config_drive': '1234', })
+
+        try:
+            self.compute.run_instance(self.context, instance_id)
+            instances = db.instance_get_all(context.get_admin_context())
+            instance = instances[0]
+
+            self.assertTrue(instance.config_drive)
+        finally:
+            db.instance_destroy(self.context, instance_id)
 
     def test_create_instance_associates_config_drive(self):
         """Make sure create associates a config drive."""
@@ -647,7 +663,6 @@ class ComputeTestCase(test.TestCase):
 
         dbmock = self.mox.CreateMock(db)
         dbmock.instance_get(c, i_id).AndReturn(instance_ref)
-        dbmock.instance_get_fixed_addresses(c, i_id).AndReturn(None)
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -657,6 +672,9 @@ class ComputeTestCase(test.TestCase):
 
     def test_pre_live_migration_instance_has_volume(self):
         """Confirm setup_compute_volume is called when volume is mounted."""
+        def fake_nw_info(*args, **kwargs):
+            return [(0, {'ips':['dummy']})]
+
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
 
@@ -666,13 +684,13 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
-        drivermock.plug_vifs(i_ref, [])
-        drivermock.ensure_filtering_rules_for_instance(i_ref, [])
+        drivermock.plug_vifs(i_ref, fake_nw_info())
+        drivermock.ensure_filtering_rules_for_instance(i_ref, fake_nw_info())
 
+        self.stubs.Set(self.compute, '_get_instance_nw_info', fake_nw_info)
         self.compute.db = dbmock
         self.compute.volume_manager = volmock
         self.compute.driver = drivermock
@@ -683,6 +701,9 @@ class ComputeTestCase(test.TestCase):
 
     def test_pre_live_migration_instance_has_no_volume(self):
         """Confirm log meg when instance doesn't mount any volumes."""
+        def fake_nw_info(*args, **kwargs):
+            return [(0, {'ips':['dummy']})]
+
         i_ref = self._get_dummy_instance()
         i_ref['volumes'] = []
         c = context.get_admin_context()
@@ -692,12 +713,12 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
         compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
-        drivermock.plug_vifs(i_ref, [])
-        drivermock.ensure_filtering_rules_for_instance(i_ref, [])
+        drivermock.plug_vifs(i_ref, fake_nw_info())
+        drivermock.ensure_filtering_rules_for_instance(i_ref, fake_nw_info())
 
+        self.stubs.Set(self.compute, '_get_instance_nw_info', fake_nw_info)
         self.compute.db = dbmock
         self.compute.driver = drivermock
 
@@ -711,6 +732,8 @@ class ComputeTestCase(test.TestCase):
         It retries and raise exception when timeout exceeded.
 
         """
+        def fake_nw_info(*args, **kwargs):
+            return [(0, {'ips':['dummy']})]
 
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
@@ -722,13 +745,13 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             volmock.setup_compute_volume(c, i_ref['volumes'][i]['id'])
         for i in range(FLAGS.live_migration_retry_count):
-            drivermock.plug_vifs(i_ref, []).\
+            drivermock.plug_vifs(i_ref, fake_nw_info()).\
                 AndRaise(exception.ProcessExecutionError())
 
+        self.stubs.Set(self.compute, '_get_instance_nw_info', fake_nw_info)
         self.compute.db = dbmock
         self.compute.network_manager = netmock
         self.compute.volume_manager = volmock
@@ -1002,226 +1025,25 @@ class ComputeTestCase(test.TestCase):
         db.instance_destroy(c, instance_id2)
         db.instance_destroy(c, instance_id3)
 
-    def test_get_by_fixed_ip(self):
-        """Test getting 1 instance by Fixed IP"""
-        c = context.get_admin_context()
-        instance_id1 = self._create_instance()
-        instance_id2 = self._create_instance({'id': 20})
-        instance_id3 = self._create_instance({'id': 30})
-
-        vif_ref1 = db.virtual_interface_create(c,
-                {'address': '12:34:56:78:90:12',
-                 'instance_id': instance_id1,
-                 'network_id': 1})
-        vif_ref2 = db.virtual_interface_create(c,
-                {'address': '90:12:34:56:78:90',
-                 'instance_id': instance_id2,
-                 'network_id': 1})
-
-        db.fixed_ip_create(c,
-                {'address': '1.1.1.1',
-                 'instance_id': instance_id1,
-                 'virtual_interface_id': vif_ref1['id']})
-        db.fixed_ip_create(c,
-                {'address': '1.1.2.1',
-                 'instance_id': instance_id2,
-                 'virtual_interface_id': vif_ref2['id']})
-
-        # regex not allowed
-        instances = self.compute_api.get_all(c,
-                search_opts={'fixed_ip': '.*'})
-        self.assertEqual(len(instances), 0)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'fixed_ip': '1.1.3.1'})
-        self.assertEqual(len(instances), 0)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'fixed_ip': '1.1.1.1'})
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id1)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'fixed_ip': '1.1.2.1'})
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id2)
-
-        db.virtual_interface_delete(c, vif_ref1['id'])
-        db.virtual_interface_delete(c, vif_ref2['id'])
-        db.instance_destroy(c, instance_id1)
-        db.instance_destroy(c, instance_id2)
-
-    def test_get_all_by_ip_regexp(self):
-        """Test searching by Floating and Fixed IP"""
-        c = context.get_admin_context()
-        instance_id1 = self._create_instance({'display_name': 'woot'})
-        instance_id2 = self._create_instance({
-                'display_name': 'woo',
-                'id': 20})
-        instance_id3 = self._create_instance({
-                'display_name': 'not-woot',
-                'id': 30})
-
-        vif_ref1 = db.virtual_interface_create(c,
-                {'address': '12:34:56:78:90:12',
-                 'instance_id': instance_id1,
-                 'network_id': 1})
-        vif_ref2 = db.virtual_interface_create(c,
-                {'address': '90:12:34:56:78:90',
-                 'instance_id': instance_id2,
-                 'network_id': 1})
-        vif_ref3 = db.virtual_interface_create(c,
-                {'address': '34:56:78:90:12:34',
-                 'instance_id': instance_id3,
-                 'network_id': 1})
-
-        db.fixed_ip_create(c,
-                {'address': '1.1.1.1',
-                 'instance_id': instance_id1,
-                 'virtual_interface_id': vif_ref1['id']})
-        db.fixed_ip_create(c,
-                {'address': '1.1.2.1',
-                 'instance_id': instance_id2,
-                 'virtual_interface_id': vif_ref2['id']})
-        fix_addr = db.fixed_ip_create(c,
-                {'address': '1.1.3.1',
-                 'instance_id': instance_id3,
-                 'virtual_interface_id': vif_ref3['id']})
-        fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
-        flo_ref = db.floating_ip_create(c,
-                {'address': '10.0.0.2',
-                'fixed_ip_id': fix_ref['id']})
-
-        # ends up matching 2nd octet here.. so all 3 match
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*\.1'})
-        self.assertEqual(len(instances), 3)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip': '1.*'})
-        self.assertEqual(len(instances), 3)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*\.1.\d+$'})
-        self.assertEqual(len(instances), 1)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id1 in instance_ids)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*\.2.+'})
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id2)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip': '10.*'})
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id3)
-
-        db.virtual_interface_delete(c, vif_ref1['id'])
-        db.virtual_interface_delete(c, vif_ref2['id'])
-        db.virtual_interface_delete(c, vif_ref3['id'])
-        db.floating_ip_destroy(c, '10.0.0.2')
-        db.instance_destroy(c, instance_id1)
-        db.instance_destroy(c, instance_id2)
-        db.instance_destroy(c, instance_id3)
-
-    def test_get_all_by_ipv6_regexp(self):
-        """Test searching by IPv6 address"""
-
-        c = context.get_admin_context()
-        instance_id1 = self._create_instance({'display_name': 'woot'})
-        instance_id2 = self._create_instance({
-                'display_name': 'woo',
-                'id': 20})
-        instance_id3 = self._create_instance({
-                'display_name': 'not-woot',
-                'id': 30})
-
-        vif_ref1 = db.virtual_interface_create(c,
-                {'address': '12:34:56:78:90:12',
-                 'instance_id': instance_id1,
-                 'network_id': 1})
-        vif_ref2 = db.virtual_interface_create(c,
-                {'address': '90:12:34:56:78:90',
-                 'instance_id': instance_id2,
-                 'network_id': 1})
-        vif_ref3 = db.virtual_interface_create(c,
-                {'address': '34:56:78:90:12:34',
-                 'instance_id': instance_id3,
-                 'network_id': 1})
-
-        # This will create IPv6 addresses of:
-        # 1: fd00::1034:56ff:fe78:9012
-        # 20: fd00::9212:34ff:fe56:7890
-        # 30: fd00::3656:78ff:fe90:1234
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip6': '.*1034.*'})
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id1)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip6': '^fd00.*'})
-        self.assertEqual(len(instances), 3)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id1 in instance_ids)
-        self.assertTrue(instance_id2 in instance_ids)
-        self.assertTrue(instance_id3 in instance_ids)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'ip6': '^.*12.*34.*'})
-        self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
-        self.assertTrue(instance_id2 in instance_ids)
-        self.assertTrue(instance_id3 in instance_ids)
-
-        db.virtual_interface_delete(c, vif_ref1['id'])
-        db.virtual_interface_delete(c, vif_ref2['id'])
-        db.virtual_interface_delete(c, vif_ref3['id'])
-        db.instance_destroy(c, instance_id1)
-        db.instance_destroy(c, instance_id2)
-        db.instance_destroy(c, instance_id3)
-
     def test_get_all_by_multiple_options_at_once(self):
         """Test searching by multiple options at once"""
         c = context.get_admin_context()
-        instance_id1 = self._create_instance({'display_name': 'woot'})
+        network_manager = fake_network.FakeNetworkManager()
+        self.stubs.Set(self.compute_api.network_api,
+                       'get_instance_uuids_by_ip_filter',
+                       network_manager.get_instance_uuids_by_ip_filter)
+        self.stubs.Set(network_manager.db,
+                       'instance_get_id_to_uuid_mapping',
+                       db.instance_get_id_to_uuid_mapping)
+
+        instance_id1 = self._create_instance({'display_name': 'woot',
+                                              'id': 0})
         instance_id2 = self._create_instance({
                 'display_name': 'woo',
                 'id': 20})
         instance_id3 = self._create_instance({
                 'display_name': 'not-woot',
                 'id': 30})
-
-        vif_ref1 = db.virtual_interface_create(c,
-                {'address': '12:34:56:78:90:12',
-                 'instance_id': instance_id1,
-                 'network_id': 1})
-        vif_ref2 = db.virtual_interface_create(c,
-                {'address': '90:12:34:56:78:90',
-                 'instance_id': instance_id2,
-                 'network_id': 1})
-        vif_ref3 = db.virtual_interface_create(c,
-                {'address': '34:56:78:90:12:34',
-                 'instance_id': instance_id3,
-                 'network_id': 1})
-
-        db.fixed_ip_create(c,
-                {'address': '1.1.1.1',
-                 'instance_id': instance_id1,
-                 'virtual_interface_id': vif_ref1['id']})
-        db.fixed_ip_create(c,
-                {'address': '1.1.2.1',
-                 'instance_id': instance_id2,
-                 'virtual_interface_id': vif_ref2['id']})
-        fix_addr = db.fixed_ip_create(c,
-                {'address': '1.1.3.1',
-                 'instance_id': instance_id3,
-                 'virtual_interface_id': vif_ref3['id']})
-        fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
-        flo_ref = db.floating_ip_create(c,
-                {'address': '10.0.0.2',
-                'fixed_ip_id': fix_ref['id']})
 
         # ip ends up matching 2nd octet here.. so all 3 match ip
         # but 'name' only matches one
@@ -1230,18 +1052,18 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0].id, instance_id3)
 
-        # ip ends up matching any ip with a '2' in it.. so instance
-        # 2 and 3.. but name should only match #2
+        # ip ends up matching any ip with a '1' in the last octet..
+        # so instance 1 and 3.. but name should only match #1
         # but 'name' only matches one
         instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*2', 'name': '^woo.*'})
+                search_opts={'ip': '.*\.1$', 'name': '^woo.*'})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id2)
+        self.assertEqual(instances[0].id, instance_id1)
 
         # same as above but no match on name (name matches instance_id1
         # but the ip query doesn't
         instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*2.*', 'name': '^woot.*'})
+                search_opts={'ip': '.*\.2$', 'name': '^woot.*'})
         self.assertEqual(len(instances), 0)
 
         # ip matches all 3... ipv6 matches #2+#3...name matches #3
@@ -1252,10 +1074,6 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0].id, instance_id3)
 
-        db.virtual_interface_delete(c, vif_ref1['id'])
-        db.virtual_interface_delete(c, vif_ref2['id'])
-        db.virtual_interface_delete(c, vif_ref3['id'])
-        db.floating_ip_destroy(c, '10.0.0.2')
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
         db.instance_destroy(c, instance_id3)
@@ -1563,12 +1381,16 @@ class ComputeTestCase(test.TestCase):
             db.block_device_mapping_destroy(self.context, bdm['id'])
         self.compute.terminate_instance(self.context, instance_id)
 
-    def test_ephemeral_size(self):
+    def test_volume_size(self):
         local_size = 2
-        inst_type = {'local_gb': local_size}
-        self.assertEqual(self.compute_api._ephemeral_size(inst_type,
+        swap_size = 3
+        inst_type = {'local_gb': local_size, 'swap': swap_size}
+        self.assertEqual(self.compute_api._volume_size(inst_type,
                                                           'ephemeral0'),
                          local_size)
-        self.assertEqual(self.compute_api._ephemeral_size(inst_type,
-                                                          'ephemeral1'),
+        self.assertEqual(self.compute_api._volume_size(inst_type,
+                                                       'ephemeral1'),
                          0)
+        self.assertEqual(self.compute_api._volume_size(inst_type,
+                                                       'swap'),
+                         swap_size)
