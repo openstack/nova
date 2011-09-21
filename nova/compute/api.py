@@ -905,7 +905,7 @@ class API(base.Base):
         if 'reservation_id' in filters:
             recurse_zones = True
 
-        instances = self.db.instance_get_all_by_filters(context, filters)
+        instances = self._get_instances_by_filters(context, filters)
 
         if not recurse_zones:
             return instances
@@ -929,6 +929,18 @@ class API(base.Base):
                 instances.append(server._info)
 
         return instances
+
+    def _get_instances_by_filters(self, context, filters):
+        ids = None
+        if 'ip6' in filters or 'ip' in filters:
+            res = self.network_api.get_instance_uuids_by_ip_filter(context,
+                                                                   filters)
+            # NOTE(jkoelker) It is possible that we will get the same
+            #                instance uuid twice (one for ipv4 and ipv6)
+            uuids = set([r['instance_uuid'] for r in res])
+            filters['uuid'] = uuids
+
+        return self.db.instance_get_all_by_filters(context, filters)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):

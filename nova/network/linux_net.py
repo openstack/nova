@@ -524,6 +524,18 @@ def get_dhcp_hosts(context, network_ref):
     return '\n'.join(hosts)
 
 
+def _add_dnsmasq_accept_rules(dev):
+    """Allow DHCP and DNS traffic through to dnsmasq."""
+    table = iptables_manager.ipv4['filter']
+    for port in [67, 53]:
+        for proto in ['udp', 'tcp']:
+            args = {'dev': dev, 'port': port, 'proto': proto}
+            table.add_rule('INPUT',
+                           '-i %(dev)s -p %(proto)s -m %(proto)s '
+                           '--dport %(port)s -j ACCEPT' % args)
+    iptables_manager.apply()
+
+
 def get_dhcp_opts(context, network_ref):
     """Get network's hosts config in dhcp-opts format."""
     hosts = []
@@ -548,6 +560,10 @@ def get_dhcp_opts(context, network_ref):
                 if target_network_id != fixed_ip_ref['network_id']:
                     hosts.append(_host_dhcp_opts(fixed_ip_ref))
     return '\n'.join(hosts)
+
+
+def release_dhcp(dev, address, mac_address):
+    utils.execute('dhcp_release', dev, address, mac_address, run_as_root=True)
 
 
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
@@ -594,7 +610,6 @@ def update_dhcp(context, dev, network_ref):
            'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
-           '--interface=%s' % dev,
            '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(dev, 'pid'),
@@ -612,6 +627,8 @@ def update_dhcp(context, dev, network_ref):
         cmd += ['--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts')]
 
     _execute(*cmd, run_as_root=True)
+
+    _add_dnsmasq_accept_rules(dev)
 
 
 @utils.synchronized('radvd_start')
@@ -800,6 +817,10 @@ def unplug(network):
     return interface_driver.unplug(network)
 
 
+def get_dev(network):
+    return interface_driver.get_dev(network)
+
+
 class LinuxNetInterfaceDriver(object):
     """Abstract class that defines generic network host API"""
     """ for for all Linux interface drivers."""
@@ -810,6 +831,10 @@ class LinuxNetInterfaceDriver(object):
 
     def unplug(self, network):
         """Destory Linux device, return device name"""
+        raise NotImplementedError()
+
+    def get_dev(self, network):
+        """Get device name"""
         raise NotImplementedError()
 
 
@@ -833,6 +858,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         return network['bridge']
 
     def unplug(self, network):
+        return self.get_dev(network)
+
+    def get_dev(self, network):
         return network['bridge']
 
     @classmethod
@@ -957,6 +985,9 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         return dev
 
     def unplug(self, network):
+        return self.get_dev(network)
+
+    def get_dev(self, network):
         dev = "gw-" + str(network['id'])
         return dev
 

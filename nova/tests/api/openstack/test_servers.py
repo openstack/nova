@@ -1247,7 +1247,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(servers[0]['id'], 100)
 
     def test_tenant_id_filter_converts_to_project_id_for_admin(self):
-        def fake_get_all(context, filters=None):
+        def fake_get_all(context, filters=None, instances=None):
             self.assertNotEqual(filters, None)
             self.assertEqual(filters['project_id'], 'faketenant')
             self.assertFalse(filters.get('tenant_id'))
@@ -2193,6 +2193,58 @@ class ServersTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_malformed_entity(self):
+        self._setup_for_create_instance()
+        req = webob.Request.blank('/v1.1/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps({'server': 'string'})
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_malformed_body_string(self):
+        self._setup_for_create_instance()
+        req = webob.Request.blank('/v1.1/fake/servers')
+        req.method = 'POST'
+        req.body = 'string'
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_1_malformed_body_list(self):
+        self._setup_for_create_instance()
+        body = ['string']
+        req = webob.Request.blank('/v1.1/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(['string'])
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 422)
+
+    def test_create_instance_v1_0_malformed_entity(self):
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps({'server': 'string'})
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_0_malformed_body_string(self):
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = 'string'
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v1_0_malformed_body_list(self):
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(['string'])
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 422)
 
     def test_update_server_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
