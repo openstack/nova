@@ -56,6 +56,10 @@ def fake_instance_type_get_all(context, inactive=False, filters=None):
     return FAKE_FLAVORS.values()
 
 
+def empty_instance_type_get_all(context, inactive=False, filters=None):
+    return {}
+
+
 def return_instance_type_not_found(context, flavor_id):
     raise exception.InstanceTypeNotFound(flavor_id=flavor_id)
 
@@ -92,10 +96,8 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavors, expected)
 
     def test_get_empty_flavor_list_v1_0(self):
-        def _return_empty(self):
-            return {}
         self.stubs.Set(nova.db.api, "instance_type_get_all",
-                       _return_empty)
+                       empty_instance_type_get_all)
 
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
@@ -280,9 +282,8 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_empty_flavor_list_v1_1(self):
-        def _return_empty(self):
-            return {}
-        self.stubs.Set(nova.db.api, "instance_type_get_all", _return_empty)
+        eelf.stubs.Set(nova.db.api, "instance_type_get_all",
+                       empty_instance_type_get_all)
 
         req = webob.Request.blank('/v1.1/fake/flavors')
         res = req.get_response(fakes.wsgi_app())
