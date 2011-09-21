@@ -924,3 +924,10 @@ def timefunc(func):
             LOG.debug(_("timefunc: '%(name)s' took %(total_time).2f secs") %
                       dict(name=func.__name__, total_time=total_time))
     return inner
+
+
+def generate_glance_url():
+    """Generate the URL to glance."""
+    # TODO(jk0): This will eventually need to take SSL into consideration
+    # when supported in glance.
+    return "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)

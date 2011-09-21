@@ -92,6 +92,19 @@ def _is_able_to_shutdown(instance, instance_id):
     return True
 
 
+def _is_queued_delete(instance, instance_id):
+    vm_state = instance["vm_state"]
+    task_state = instance["task_state"]
+
+    if vm_state != vm_states.SOFT_DELETE:
+        LOG.warn(_("Instance %(instance_id)s is not in a 'soft delete' "
+                   "state. It is currently %(vm_state)s. Action aborted.") %
+                 locals())
+        return False
+
+    return True
+
+
 class API(base.Base):
     """API for interacting with the compute manager."""
 
@@ -752,13 +765,83 @@ class API(base.Base):
                         {'instance_id': instance_id, 'action_str': action_str})
             raise
 
+    @scheduler_api.reroute_compute("soft_delete")
+    def soft_delete(self, context, instance_id):
+        """Terminate an instance."""
+        LOG.debug(_("Going to try to soft delete %s"), instance_id)
+        instance = self._get_instance(context, instance_id, 'soft delete')
+
+        if not _is_able_to_shutdown(instance, instance_id):
+            return
+
+        # NOTE(jerdfelt): The compute daemon handles reclaiming instances
+        # that are in soft delete. If there is no host assigned, there is
+        # no daemon to reclaim, so delete it immediately.
+        host = instance['host']
+        if host:
+            self.update(context,
+                        instance_id,
+                        vm_state=vm_states.SOFT_DELETE,
+                        task_state=task_states.POWERING_OFF,
+                        deleted_at=utils.utcnow())
+
+            self._cast_compute_message('power_off_instance', context,
+                                       instance_id, host)
+        else:
+            LOG.warning(_("No host for instance %s, deleting immediately"),
+                        instance_id)
+            terminate_volumes(self.db, context, instance_id)
+            self.db.instance_destroy(context, instance_id)
+
     @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate %s"), instance_id)
-        instance = self._get_instance(context, instance_id, 'terminating')
+        instance = self._get_instance(context, instance_id, 'delete')
 
         if not _is_able_to_shutdown(instance, instance_id):
+            return
+
+        host = instance['host']
+        if host:
+            self.update(context,
+                        instance_id,
+                        task_state=task_states.DELETING)
+
+            self._cast_compute_message('terminate_instance', context,
+                                       instance_id, host)
+        else:
+            terminate_volumes(self.db, context, instance_id)
+            self.db.instance_destroy(context, instance_id)
+
+    @scheduler_api.reroute_compute("restore")
+    def restore(self, context, instance_id):
+        """Restore a previously deleted (but not reclaimed) instance."""
+        instance = self._get_instance(context, instance_id, 'restore')
+
+        if not _is_queued_delete(instance, instance_id):
+            return
+
+        self.update(context,
+                    instance_id,
+                    vm_state=vm_states.ACTIVE,
+                    task_state=None,
+                    deleted_at=None)
+
+        host = instance['host']
+        if host:
+            self.update(context,
+                        instance_id,
+                        task_state=task_states.POWERING_ON)
+            self._cast_compute_message('power_on_instance', context,
+                    instance_id, host)
+
+    @scheduler_api.reroute_compute("force_delete")
+    def force_delete(self, context, instance_id):
+        """Force delete a previously deleted (but not reclaimed) instance."""
+        instance = self._get_instance(context, instance_id, 'force delete')
+
+        if not _is_queued_delete(instance, instance_id):
             return
 
         self.update(context,
@@ -907,7 +990,7 @@ class API(base.Base):
         if 'reservation_id' in filters:
             recurse_zones = True
 
-        instances = self.db.instance_get_all_by_filters(context, filters)
+        instances = self._get_instances_by_filters(context, filters)
 
         if not recurse_zones:
             return instances
@@ -931,6 +1014,18 @@ class API(base.Base):
                 instances.append(server._info)
 
         return instances
+
+    def _get_instances_by_filters(self, context, filters):
+        ids = None
+        if 'ip6' in filters or 'ip' in filters:
+            res = self.network_api.get_instance_uuids_by_ip_filter(context,
+                                                                   filters)
+            # NOTE(jkoelker) It is possible that we will get the same
+            #                instance uuid twice (one for ipv4 and ipv6)
+            uuids = set([r['instance_uuid'] for r in res])
+            filters['uuid'] = uuids
+
+        return self.db.instance_get_all_by_filters(context, filters)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):

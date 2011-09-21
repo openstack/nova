@@ -50,6 +50,8 @@ PAUSING = 'pausing'
 UNPAUSING = 'unpausing'
 SUSPENDING = 'suspending'
 RESUMING = 'resuming'
+POWERING_OFF = 'powering-off'
+POWERING_ON = 'powering-on'
 
 RESCUING = 'rescuing'
 UNRESCUING = 'unrescuing'

@@ -1,4 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: tabstop=5 shiftwidth=4 softtabstop=4
 
 # Copyright 2010-2011 OpenStack LLC.
 # All Rights Reserved.
@@ -54,7 +54,7 @@ INSTANCE = {
              "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
              "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
              "security_groups": [{"id": 1, "name": "test"}],
-             "progress": 0
+             "progress": 0,
              "image_ref": 'http://foo.com/123',
              "instance_type": {"flavorid": '124'},
         }

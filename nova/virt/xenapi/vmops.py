@@ -38,6 +38,7 @@ from nova import ipv6
 from nova import log as logging
 from nova import utils
 
+from nova.compute import api as compute
 from nova.compute import power_state
 from nova.virt import driver
 from nova.virt.xenapi.network_utils import NetworkHelper
@@ -80,6 +81,7 @@ class VMOps(object):
     """
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
+        self.compute_api = compute.API()
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
@@ -1096,6 +1098,16 @@ class VMOps(object):
         self._release_bootlock(original_vm_ref)
         self._start(instance, original_vm_ref)
 
+    def power_off(self, instance):
+        """Power off the specified instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        self._shutdown(instance, vm_ref, hard=True)
+
+    def power_on(self, instance):
+        """Power on the specified instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        self._start(instance, vm_ref)
+
     def poll_rescued_instances(self, timeout):
         """Look for expirable rescued instances.
 
@@ -1134,6 +1146,27 @@ class VMOps(object):
             self._release_bootlock(original_vm_ref)
             self._session.call_xenapi("VM.start", original_vm_ref, False,
                                       False)
+
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
+        """Poll for unconfirmed resizes.
+
+        Look for any unconfirmed resizes that are older than
+        `resize_confirm_window` and automatically confirm them.
+        """
+        ctxt = nova_context.get_admin_context()
+        migrations = db.migration_get_all_unconfirmed(ctxt,
+            resize_confirm_window)
+
+        migrations_info = dict(migration_count=len(migrations),
+                confirm_window=FLAGS.resize_confirm_window)
+
+        if migrations_info["migration_count"] > 0:
+            LOG.info(_("Found %(migration_count)d unconfirmed migrations "
+                    "older than %(confirm_window)d seconds") % migrations_info)
+
+        for migration in migrations:
+            LOG.info(_("Automatically confirming migration %d"), migration.id)
+            self.compute_api.confirm_resize(ctxt, migration.instance_uuid)
 
     def get_info(self, instance):
         """Return data about VM instance."""

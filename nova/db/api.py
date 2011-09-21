@@ -323,6 +323,11 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
             status)
 
 
+def migration_get_all_unconfirmed(context, confirm_window):
+    """Finds all unconfirmed migrations within the confirmation window."""
+    return IMPL.migration_get_all_unconfirmed(context, confirm_window)
+
+
 ####################
 
 
@@ -460,6 +465,11 @@ def virtual_interface_delete(context, vif_id):
 def virtual_interface_delete_by_instance(context, instance_id):
     """Delete virtual interface records associated with instance."""
     return IMPL.virtual_interface_delete_by_instance(context, instance_id)
+
+
+def virtual_interface_get_all(context):
+    """Gets all virtual interfaces from the table"""
+    return IMPL.virtual_interface_get_all(context)
 
 
 ####################
@@ -604,6 +614,11 @@ def instance_action_create(context, values):
 def instance_get_actions(context, instance_id):
     """Get instance actions by instance id."""
     return IMPL.instance_get_actions(context, instance_id)
+
+
+def instance_get_id_to_uuid_mapping(context, ids):
+    """Return a dictionary containing 'ID: UUID' given the ids"""
+    return IMPL.instance_get_id_to_uuid_mapping(context, ids)
 
 
 ###################
