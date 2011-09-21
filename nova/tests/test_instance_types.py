@@ -161,3 +161,40 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertRaises(exception.InstanceTypeNotFound,
                           instance_types.get_instance_type_by_name,
                           self._nonexistent_flavor_id())
+
+
+class InstanceTypeFilteringTest(test.TestCase):
+    """Test cases for the filter option available for instance_type_get_all"""
+    def setUp(self):
+        super(InstanceTypeFilteringTest, self).setUp()
+        self.context = context.get_admin_context()
+
+    def assertFilterResults(self, filters, expected):
+        inst_types = db.api.instance_type_get_all(
+                self.context, filters=filters)
+        inst_names = [i['name'] for i in inst_types]
+        self.assertEqual(inst_names, expected)
+
+    def test_no_filters(self):
+        filters = None
+        expected = ['m1.large', 'm1.medium', 'm1.small', 'm1.tiny',
+                    'm1.xlarge']
+        self.assertFilterResults(filters, expected)
+
+    def test_min_memory_mb_filter(self):
+        """Exclude tiny instance which is 512 MB"""
+        filters = dict(min_memory_mb=513)
+        expected = ['m1.large', 'm1.medium', 'm1.small', 'm1.xlarge']
+        self.assertFilterResults(filters, expected)
+
+    def test_min_local_gb_filter(self):
+        """Exclude everything but large and xlarge which have >= 80 GB"""
+        filters = dict(min_local_gb=80)
+        expected = ['m1.large', 'm1.xlarge']
+        self.assertFilterResults(filters, expected)
+
+    def test_min_memory_mb_AND_local_gb_filter(self):
+        """Exclude everything but large and xlarge which have >= 80 GB"""
+        filters = dict(min_memory_mb=16384, min_local_gb=80)
+        expected = ['m1.xlarge']
+        self.assertFilterResults(filters, expected)
