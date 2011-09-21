@@ -52,13 +52,54 @@ flags.DEFINE_integer('timeout_nbd', 10,
 flags.DEFINE_integer('max_nbd_devices', 16,
                      'maximum number of possible nbd devices')
 
+# NOTE(yamahata): DEFINE_list() doesn't work because the command may
+#                 include ','. For example,
+#                 mkfs.ext3 -O dir_index,extent -E stride=8,stripe-width=16
+#                 --label %(fs_label)s %(target)s
+#
+#                 DEFINE_list() parses its argument by
+#                 [s.strip() for s in argument.split(self._token)]
+#                 where self._token = ','
+#                 No escape nor exceptional handling for ','.
+#                 DEFINE_list() doesn't give us what we need.
+flags.DEFINE_multistring('virt_mkfs',
+                         ['windows=mkfs.ntfs --fast --label %(fs_label)s '
+                          '%(target)s',
+                          # NOTE(yamahata): vfat case
+                          #'windows=mkfs.vfat -n %(fs_label)s %(target)s',
+                          'linux=mkfs.ext3 -L %(fs_label)s -F %(target)s',
+                          'default=mkfs.ext3 -L %(fs_label)s -F %(target)s'],
+                         'mkfs commands for ephemeral device. The format is'
+                         '<os_type>=<mkfs command>')
+
+
+_MKFS_COMMAND = {}
+_DEFAULT_MKFS_COMMAND = None
+
+
+for s in FLAGS.virt_mkfs:
+    # NOTE(yamahata): mkfs command may includes '=' for its options.
+    #                 So item.partition('=') doesn't work here
+    os_type, mkfs_command = s.split('=', 1)
+    if os_type:
+        _MKFS_COMMAND[os_type] = mkfs_command
+    if os_type == 'default':
+        _DEFAULT_MKFS_COMMAND = mkfs_command
+
+
+def mkfs(os_type, fs_label, target):
+    mkfs_command = (_MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND) or
+                    '') % locals()
+    if mkfs_command:
+        utils.execute(*mkfs_command.split())
+
 
 def extend(image, size):
     """Increase image to size"""
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
-    utils.execute('truncate', '-s', size, image)
+    utils.execute('qemu-img', 'resize', image, size)
     # NOTE(vish): attempts to resize filesystem
     utils.execute('e2fsck', '-fp', image, check_exit_code=False)
     utils.execute('resize2fs', image, check_exit_code=False)
@@ -148,15 +189,17 @@ def destroy_container(target, instance, nbd=False):
 
     LXC does not support qcow2 images yet.
     """
+    out, err = utils.execute('mount', run_as_root=True)
+    for loop in out.splitlines():
+        if instance['name'] in loop:
+            device = loop.split()[0]
+
     try:
         container_dir = '%s/rootfs' % target
         utils.execute('umount', container_dir, run_as_root=True)
-    finally:
-        out, err = utils.execute('losetup', '-a', run_as_root=True)
-        for loop in out.splitlines():
-            if instance['name'] in loop:
-                device = loop.split(loop, ':')
-                _unlink_device(device, nbd)
+        _unlink_device(device, nbd)
+    except Exception, exn:
+        LOG.exception(_('Failed to remove container: %s'), exn)
 
 
 def _link_device(image, nbd):
@@ -228,8 +271,8 @@ def _inject_metadata_into_fs(metadata, fs, execute=None):
     metadata_path = os.path.join(fs, "meta.js")
     metadata = dict([(m.key, m.value) for m in metadata])
 
-    utils.execute('sudo', 'tee', metadata_path,
-                  process_input=json.dumps(metadata))
+    utils.execute('tee', metadata_path,
+                  process_input=json.dumps(metadata), run_as_root=True)
 
 
 def _inject_key_into_fs(key, fs, execute=None):

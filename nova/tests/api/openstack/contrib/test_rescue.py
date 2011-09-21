@@ -16,11 +16,14 @@ import json
 import webob
 
 from nova import compute
+from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
 
+FLAGS = flags.FLAGS
 
-def rescue(self, context, instance_id):
+
+def rescue(self, context, instance_id, rescue_password=None):
     pass
 
 
@@ -34,7 +37,19 @@ class RescueTest(test.TestCase):
         self.stubs.Set(compute.api.API, "rescue", rescue)
         self.stubs.Set(compute.api.API, "unrescue", unrescue)
 
-    def test_rescue(self):
+    def test_rescue_with_preset_password(self):
+        body = {"rescue": {"adminPass": "AABBCC112233"}}
+        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 200)
+        resp_json = json.loads(resp.body)
+        self.assertEqual("AABBCC112233", resp_json['adminPass'])
+
+    def test_rescue_generates_password(self):
         body = dict(rescue=None)
         req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
@@ -43,6 +58,8 @@ class RescueTest(test.TestCase):
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
+        resp_json = json.loads(resp.body)
+        self.assertEqual(FLAGS.password_length, len(resp_json['adminPass']))
 
     def test_unrescue(self):
         body = dict(unrescue=None)
@@ -52,4 +69,4 @@ class RescueTest(test.TestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.status_int, 202)

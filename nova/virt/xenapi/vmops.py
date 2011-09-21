@@ -38,6 +38,7 @@ from nova import ipv6
 from nova import log as logging
 from nova import utils
 
+from nova.compute import api as compute
 from nova.compute import power_state
 from nova.virt import driver
 from nova.virt.xenapi.network_utils import NetworkHelper
@@ -48,9 +49,9 @@ XenAPI = None
 LOG = logging.getLogger("nova.virt.xenapi.vmops")
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('windows_version_timeout', 300,
-                     'number of seconds to wait for windows agent to be '
-                     'fully operational')
+flags.DEFINE_integer('agent_version_timeout', 300,
+                     'number of seconds to wait for agent to be fully '
+                     'operational')
 flags.DEFINE_string('xenapi_vif_driver',
                     'nova.virt.xenapi.vif.XenAPIBridgeDriver',
                     'The XenAPI VIF driver using XenServer Network APIs.')
@@ -77,6 +78,7 @@ class VMOps(object):
     """
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
+        self.compute_api = compute.API()
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
@@ -135,7 +137,7 @@ class VMOps(object):
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
     def _create_disks(self, context, instance):
-        disk_image_type = VMHelper.determine_disk_image_type(instance)
+        disk_image_type = VMHelper.determine_disk_image_type(instance, context)
         vdis = VMHelper.fetch_image(context, self._session,
                 instance, instance.image_ref,
                 instance.user_id, instance.project_id,
@@ -176,7 +178,7 @@ class VMOps(object):
                                   power_state.SHUTDOWN)
             return
 
-        disk_image_type = VMHelper.determine_disk_image_type(instance)
+        disk_image_type = VMHelper.determine_disk_image_type(instance, context)
         kernel = None
         ramdisk = None
         try:
@@ -253,6 +255,8 @@ class VMOps(object):
 
         self.create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
+        self.inject_hostname(instance, vm_ref, instance['hostname'])
+
         return vm_ref
 
     def _attach_disks(self, instance, disk_image_type, vm_ref, first_vdi_ref,
@@ -320,15 +324,8 @@ class VMOps(object):
 
         def _check_agent_version():
             LOG.debug(_("Querying agent version"))
-            if instance.os_type == 'windows':
-                # Windows will generally perform a setup process on first boot
-                # that can take a couple of minutes and then reboot. So we
-                # need to be more patient than normal as well as watch for
-                # domid changes
-                version = self.get_agent_version(instance,
-                                  timeout=FLAGS.windows_version_timeout)
-            else:
-                version = self.get_agent_version(instance)
+
+            version = self.get_agent_version(instance)
             if not version:
                 return
 
@@ -624,14 +621,25 @@ class VMOps(object):
                     str(new_disk_size))
             LOG.debug(_("Resize instance %s complete") % (instance.name))
 
-    def reboot(self, instance):
+    def reboot(self, instance, reboot_type):
         """Reboot VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
+
+        if reboot_type == "HARD":
+            task = self._session.call_xenapi('Async.VM.hard_reboot', vm_ref)
+        else:
+            task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
+
         self._session.wait_for_task(task, instance.id)
 
-    def get_agent_version(self, instance, timeout=None):
+    def get_agent_version(self, instance):
         """Get the version of the agent running on the VM instance."""
+
+        # The agent can be slow to start for a variety of reasons. On Windows,
+        # it will generally perform a setup process on first boot that can
+        # take a couple of minutes and then reboot. On Linux, the system can
+        # also take a while to boot. So we need to be more patient than
+        # normal as well as watch for domid changes
 
         def _call():
             # Send the encrypted password
@@ -646,27 +654,26 @@ class VMOps(object):
             # (ie CRLF escaped) for some reason. Strip that off.
             return resp['message'].replace('\\r\\n', '')
 
-        if timeout:
-            vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+
+        domid = vm_rec['domid']
+
+        expiration = time.time() + FLAGS.agent_version_timeout
+        while time.time() < expiration:
+            ret = _call()
+            if ret:
+                return ret
+
             vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+            if vm_rec['domid'] != domid:
+                LOG.info(_('domid changed from %(olddomid)s to '
+                           '%(newdomid)s') % {
+                               'olddomid': domid,
+                                'newdomid': vm_rec['domid']})
+                domid = vm_rec['domid']
 
-            domid = vm_rec['domid']
-
-            expiration = time.time() + timeout
-            while time.time() < expiration:
-                ret = _call()
-                if ret:
-                    return ret
-
-                vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
-                if vm_rec['domid'] != domid:
-                    LOG.info(_('domid changed from %(olddomid)s to '
-                               '%(newdomid)s') % {
-                                   'olddomid': domid,
-                                    'newdomid': vm_rec['domid']})
-                    domid = vm_rec['domid']
-        else:
-            return _call()
+        return None
 
     def agent_update(self, instance, url, md5sum):
         """Update agent on the VM instance."""
@@ -1034,6 +1041,27 @@ class VMOps(object):
             self._session.call_xenapi("VM.start", original_vm_ref, False,
                                       False)
 
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
+        """Poll for unconfirmed resizes.
+
+        Look for any unconfirmed resizes that are older than
+        `resize_confirm_window` and automatically confirm them.
+        """
+        ctxt = nova_context.get_admin_context()
+        migrations = db.migration_get_all_unconfirmed(ctxt,
+            resize_confirm_window)
+
+        migrations_info = dict(migration_count=len(migrations),
+                confirm_window=FLAGS.resize_confirm_window)
+
+        if migrations_info["migration_count"] > 0:
+            LOG.info(_("Found %(migration_count)d unconfirmed migrations "
+                    "older than %(confirm_window)d seconds") % migrations_info)
+
+        for migration in migrations:
+            LOG.info(_("Automatically confirming migration %d"), migration.id)
+            self.compute_api.confirm_resize(ctxt, migration.instance_uuid)
+
     def get_info(self, instance):
         """Return data about VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
@@ -1152,6 +1180,16 @@ class VMOps(object):
         #resp = self._make_agent_call('resetnetwork', instance, '', args)
         resp = self._make_plugin_call('agent', 'resetnetwork', instance, '',
                                                                args, vm_ref)
+
+    def inject_hostname(self, instance, vm_ref, hostname):
+        """Inject the hostname of the instance into the xenstore."""
+        if instance.os_type == "windows":
+            # NOTE(jk0): Windows hostnames can only be <= 15 chars.
+            hostname = hostname[:15]
+
+        logging.debug(_("injecting hostname to xs for vm: |%s|"), vm_ref)
+        self._session.call_xenapi_request("VM.add_to_xenstore_data",
+                (vm_ref, "vm-data/hostname", hostname))
 
     def list_from_xenstore(self, vm, path):
         """

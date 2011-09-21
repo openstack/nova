@@ -202,7 +202,8 @@ class API(base.Base):
         self._check_injected_file_quota(context, injected_files)
         self._check_requested_networks(context, requested_networks)
 
-        (image_service, image_id) = nova.image.get_image_service(image_href)
+        (image_service, image_id) = nova.image.get_image_service(context,
+                                                                 image_href)
         image = image_service.show(context, image_id)
 
         config_drive_id = None
@@ -286,18 +287,24 @@ class API(base.Base):
         return (num_instances, base_options, image)
 
     @staticmethod
-    def _ephemeral_size(instance_type, ephemeral_name):
-        num = block_device.ephemeral_num(ephemeral_name)
+    def _volume_size(instance_type, virtual_name):
+        size = 0
+        if virtual_name == 'swap':
+            size = instance_type.get('swap', 0)
+        elif block_device.is_ephemeral(virtual_name):
+            num = block_device.ephemeral_num(virtual_name)
 
-        # TODO(yamahata): ephemeralN where N > 0
-        # Only ephemeral0 is allowed for now because InstanceTypes
-        # table only allows single local disk, local_gb.
-        # In order to enhance it, we need to add a new columns to
-        # instance_types table.
-        if num > 0:
-            return 0
+            # TODO(yamahata): ephemeralN where N > 0
+            # Only ephemeral0 is allowed for now because InstanceTypes
+            # table only allows single local disk, local_gb.
+            # In order to enhance it, we need to add a new columns to
+            # instance_types table.
+            if num > 0:
+                return 0
 
-        return instance_type.get('local_gb')
+            size = instance_type.get('local_gb')
+
+        return size
 
     def _update_image_block_device_mapping(self, elevated_context,
                                            instance_type, instance_id,
@@ -318,12 +325,7 @@ class API(base.Base):
             if not block_device.is_swap_or_ephemeral(virtual_name):
                 continue
 
-            size = 0
-            if virtual_name == 'swap':
-                size = instance_type.get('swap', 0)
-            elif block_device.is_ephemeral(virtual_name):
-                size = self._ephemeral_size(instance_type, virtual_name)
-
+            size = self._volume_size(instance_type, virtual_name)
             if size == 0:
                 continue
 
@@ -353,8 +355,8 @@ class API(base.Base):
 
             virtual_name = bdm.get('virtual_name')
             if (virtual_name is not None and
-                block_device.is_ephemeral(virtual_name)):
-                size = self._ephemeral_size(instance_type, virtual_name)
+                block_device.is_swap_or_ephemeral(virtual_name)):
+                size = self._volume_size(instance_type, virtual_name)
                 if size == 0:
                     continue
                 values['volume_size'] = size
@@ -903,7 +905,7 @@ class API(base.Base):
         if 'reservation_id' in filters:
             recurse_zones = True
 
-        instances = self.db.instance_get_all_by_filters(context, filters)
+        instances = self._get_instances_by_filters(context, filters)
 
         if not recurse_zones:
             return instances
@@ -927,6 +929,18 @@ class API(base.Base):
                 instances.append(server._info)
 
         return instances
+
+    def _get_instances_by_filters(self, context, filters):
+        ids = None
+        if 'ip6' in filters or 'ip' in filters:
+            res = self.network_api.get_instance_uuids_by_ip_filter(context,
+                                                                   filters)
+            # NOTE(jkoelker) It is possible that we will get the same
+            #                instance uuid twice (one for ipv4 and ipv6)
+            uuids = set([r['instance_uuid'] for r in res])
+            filters['uuid'] = uuids
+
+        return self.db.instance_get_all_by_filters(context, filters)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):
@@ -1042,13 +1056,14 @@ class API(base.Base):
         return recv_meta
 
     @scheduler_api.reroute_compute("reboot")
-    def reboot(self, context, instance_id):
+    def reboot(self, context, instance_id, reboot_type):
         """Reboot the given instance."""
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.REBOOTING)
-        self._cast_compute_message('reboot_instance', context, instance_id)
+        self._cast_compute_message('reboot_instance', context, instance_id,
+                params={'reboot_type': reboot_type})
 
     @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance_id, image_href, admin_password,
@@ -1272,13 +1287,18 @@ class API(base.Base):
         self._cast_compute_message('resume_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("rescue")
-    def rescue(self, context, instance_id):
+    def rescue(self, context, instance_id, rescue_password=None):
         """Rescue the given instance."""
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.RESCUING)
-        self._cast_compute_message('rescue_instance', context, instance_id)
+
+        rescue_params = {
+            "rescue_password": rescue_password
+        }
+        self._cast_compute_message('rescue_instance', context, instance_id,
+                                    params=rescue_params)
 
     @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance_id):

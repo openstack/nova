@@ -203,9 +203,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(context, instance, image_id)
 
-    def reboot(self, instance, network_info):
+    def reboot(self, instance, network_info, reboot_type):
         """Reboot VM instance"""
-        self._vmops.reboot(instance)
+        self._vmops.reboot(instance, reboot_type)
 
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance"""
@@ -253,6 +253,10 @@ class XenAPIConnection(driver.ComputeDriver):
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""
         self._vmops.poll_rescued_instances(timeout)
+
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
+        """Poll for unconfirmed resizes"""
+        self._vmops.poll_unconfirmed_resizes(resize_confirm_window)
 
     def reset_network(self, instance):
         """reset networking for specified instance"""

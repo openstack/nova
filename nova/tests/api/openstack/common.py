@@ -34,3 +34,25 @@ def webob_factory(url):
             req.body = json.dumps(body)
         return req
     return web_request
+
+
+def compare_links(actual, expected):
+    """Compare xml atom links."""
+
+    return compare_tree_to_dict(actual, expected, ('rel', 'href', 'type'))
+
+
+def compare_media_types(actual, expected):
+    """Compare xml media types."""
+
+    return compare_tree_to_dict(actual, expected, ('base', 'type'))
+
+
+def compare_tree_to_dict(actual, expected, keys):
+    """Compare parts of lxml.etree objects to dicts."""
+
+    for elem, data in zip(actual, expected):
+        for key in keys:
+            if elem.get(key) != data.get(key):
+                return False
+    return True
