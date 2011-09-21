@@ -271,8 +271,10 @@ DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
 DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
 # NOTE(sirp): my_ip interpolation doesn't work within nested structures
+DEFINE_string('glance_host', _get_my_ip(), 'default glance host')
+DEFINE_integer('glance_port', 9292, 'default glance port')
 DEFINE_list('glance_api_servers',
-            ['%s:9292' % _get_my_ip()],
+            ['%s:%d' % (FLAGS.glance_host, FLAGS.glance_port)],
             'list of glance api servers available to nova (host:port)')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '$my_ip', 's3 host (for infrastructure)')

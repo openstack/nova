@@ -118,7 +118,8 @@ class AbstractScheduler(driver.Scheduler):
                 ". ReservationID=%(reservation_id)s") % locals())
         nova = None
         try:
-            nova = novaclient.Client(zone.username, zone.password, None, url)
+            nova = novaclient.Client(zone.username, zone.password, None, url,
+                                     token=context.auth_token)
             nova.authenticate()
         except novaclient_exceptions.BadRequest, e:
             raise exception.NotAuthorized(_("Bad credentials attempting "

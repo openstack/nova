@@ -33,7 +33,9 @@ from nova import context
 import nova.api.openstack
 from nova.api.openstack import images
 from nova.api.openstack import xmlutil
+from nova.api.openstack.views import images as images_view
 from nova import test
+from nova import utils
 from nova.tests.api.openstack import fakes
 
 
@@ -119,6 +121,7 @@ class ImagesTest(test.TestCase):
 
         href = "http://localhost/v1.1/fake/images/124"
         bookmark = "http://localhost/fake/images/124"
+        alternate = "%s/fake/images/124" % utils.generate_glance_url()
         server_href = "http://localhost/v1.1/servers/42"
         server_bookmark = "http://localhost/servers/42"
 
@@ -152,6 +155,11 @@ class ImagesTest(test.TestCase):
                 {
                     "rel": "bookmark",
                     "href": bookmark,
+                },
+                {
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image",
+                    "href": alternate
                 }],
             },
         }
@@ -289,6 +297,12 @@ class ImagesTest(test.TestCase):
                         "rel": "bookmark",
                         "href": "http://localhost/fake/images/123",
                     },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": "%s/fake/images/123" %
+                                utils.generate_glance_url()
+                    },
                 ],
             },
             {
@@ -302,6 +316,12 @@ class ImagesTest(test.TestCase):
                     {
                         "rel": "bookmark",
                         "href": "http://localhost/fake/images/124",
+                    },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": "%s/fake/images/124" %
+                                utils.generate_glance_url()
                     },
                 ],
             },
@@ -317,6 +337,12 @@ class ImagesTest(test.TestCase):
                         "rel": "bookmark",
                         "href": "http://localhost/fake/images/125",
                     },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": "%s/fake/images/125" %
+                                utils.generate_glance_url()
+                    },
                 ],
             },
             {
@@ -330,6 +356,12 @@ class ImagesTest(test.TestCase):
                     {
                         "rel": "bookmark",
                         "href": "http://localhost/fake/images/126",
+                    },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": "%s/fake/images/126" %
+                                utils.generate_glance_url()
                     },
                 ],
             },
@@ -345,6 +377,12 @@ class ImagesTest(test.TestCase):
                         "rel": "bookmark",
                         "href": "http://localhost/fake/images/127",
                     },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": "%s/fake/images/127" %
+                                utils.generate_glance_url()
+                    },
                 ],
             },
             {
@@ -358,6 +396,12 @@ class ImagesTest(test.TestCase):
                     {
                         "rel": "bookmark",
                         "href": "http://localhost/fake/images/128",
+                    },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": "%s/fake/images/128" %
+                                utils.generate_glance_url()
                     },
                 ],
             },
@@ -373,6 +417,12 @@ class ImagesTest(test.TestCase):
                         "rel": "bookmark",
                         "href": "http://localhost/fake/images/129",
                     },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": "%s/fake/images/129" %
+                                utils.generate_glance_url()
+                    },
                 ],
             },
             {
@@ -386,6 +436,12 @@ class ImagesTest(test.TestCase):
                     {
                         "rel": "bookmark",
                         "href": "http://localhost/fake/images/130",
+                    },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": "%s/fake/images/130" %
+                                utils.generate_glance_url()
                     },
                 ],
             },
@@ -493,6 +549,11 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "bookmark",
                 "href": "http://localhost/fake/images/123",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/123" % utils.generate_glance_url()
             }],
         },
         {
@@ -524,6 +585,11 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "bookmark",
                 "href": "http://localhost/fake/images/124",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/124" % utils.generate_glance_url()
             }],
         },
         {
@@ -555,6 +621,11 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "bookmark",
                 "href": "http://localhost/fake/images/125",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/125" % utils.generate_glance_url()
             }],
         },
         {
@@ -586,6 +657,11 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "bookmark",
                 "href": "http://localhost/fake/images/126",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/126" % utils.generate_glance_url()
             }],
         },
         {
@@ -617,6 +693,11 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "bookmark",
                 "href": "http://localhost/fake/images/127",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/127" % utils.generate_glance_url()
             }],
         },
         {
@@ -648,6 +729,11 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "bookmark",
                 "href": "http://localhost/fake/images/128",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/128" % utils.generate_glance_url()
             }],
         },
         {
@@ -679,6 +765,11 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "bookmark",
                 "href": "http://localhost/fake/images/129",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/129" % utils.generate_glance_url()
             }],
         },
         {
@@ -696,6 +787,11 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "bookmark",
                 "href": "http://localhost/fake/images/130",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": "%s/fake/images/130" % utils.generate_glance_url()
             }],
         },
         ]
@@ -962,6 +1058,12 @@ class ImagesTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
+
+    def test_generate_alternate(self):
+        view = images_view.ViewBuilderV11(1)
+        generated_url = view.generate_alternate(1)
+        actual_url = "%s//images/1" % utils.generate_glance_url()
+        self.assertEqual(generated_url, actual_url)
 
 
 class ImageXMLSerializationTest(test.TestCase):

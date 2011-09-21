@@ -278,7 +278,7 @@ class FloatingIpTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 400)
+        self.assertEqual(resp.status_int, 401)
 
     def test_associate_floating_ip_to_instance_no_project_id(self):
         def fake_fixed_ip_get_by_address(ctx, address, session=None):

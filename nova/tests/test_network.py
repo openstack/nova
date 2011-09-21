@@ -436,6 +436,52 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
                                               networks[0]['id'])
 
+    def test_ip_association_and_allocation_of_other_project(self):
+        """Makes sure that we cannot deallocaate or disassociate
+        a public ip of other project"""
+
+        context1 = context.RequestContext('user', 'project1')
+        context2 = context.RequestContext('user', 'project2')
+
+        address = '1.2.3.4'
+        float_addr = db.floating_ip_create(context1.elevated(),
+                {'address': address,
+                 'project_id': context1.project_id})
+
+        instance = db.instance_create(context1,
+                {'project_id': 'project1'})
+
+        fix_addr = db.fixed_ip_associate_pool(context1.elevated(),
+                1, instance['id'])
+
+        # Associate the IP with non-admin user context
+        self.assertRaises(exception.NotAuthorized,
+                          self.network.associate_floating_ip,
+                          context2,
+                          float_addr,
+                          fix_addr)
+
+        # Deallocate address from other project
+        self.assertRaises(exception.NotAuthorized,
+                          self.network.deallocate_floating_ip,
+                          context2,
+                          float_addr)
+
+        # Now Associates the address to the actual project
+        self.network.associate_floating_ip(context1, float_addr, fix_addr)
+
+        # Now try dis-associating from other project
+        self.assertRaises(exception.NotAuthorized,
+                          self.network.disassociate_floating_ip,
+                          context2,
+                          float_addr)
+
+        # Clean up the ip addresses
+        self.network.deallocate_floating_ip(context1, float_addr)
+        self.network.deallocate_fixed_ip(context1, fix_addr)
+        db.floating_ip_destroy(context1.elevated(), float_addr)
+        db.fixed_ip_disassociate(context1.elevated(), fix_addr)
+
 
 class CommonNetworkTestCase(test.TestCase):
     def fake_create_fixed_ips(self, context, network_id):

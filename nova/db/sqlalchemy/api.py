@@ -534,7 +534,6 @@ def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
     session = get_session()
     with session.begin():
-        # TODO(devcamcar): How to ensure floating_id belongs to user?
         floating_ip_ref = floating_ip_get_by_address(context,
                                                      floating_address,
                                                      session=session)
@@ -550,7 +549,6 @@ def floating_ip_fixed_ip_associate(context, floating_address,
 def floating_ip_deallocate(context, address):
     session = get_session()
     with session.begin():
-        # TODO(devcamcar): How to ensure floating id belongs to user?
         floating_ip_ref = floating_ip_get_by_address(context,
                                                      address,
                                                      session=session)
@@ -564,7 +562,6 @@ def floating_ip_deallocate(context, address):
 def floating_ip_destroy(context, address):
     session = get_session()
     with session.begin():
-        # TODO(devcamcar): Ensure address belongs to user.
         floating_ip_ref = floating_ip_get_by_address(context,
                                                      address,
                                                      session=session)
@@ -575,8 +572,6 @@ def floating_ip_destroy(context, address):
 def floating_ip_disassociate(context, address):
     session = get_session()
     with session.begin():
-        # TODO(devcamcar): Ensure address belongs to user.
-        #                  Does get_floating_ip_by_address handle this?
         floating_ip_ref = floating_ip_get_by_address(context,
                                                      address,
                                                      session=session)
@@ -645,17 +640,23 @@ def floating_ip_get_all_by_project(context, project_id):
 
 @require_context
 def floating_ip_get_by_address(context, address, session=None):
-    # TODO(devcamcar): Ensure the address belongs to user.
     if not session:
         session = get_session()
 
     result = session.query(models.FloatingIp).\
-                     options(joinedload_all('fixed_ip.network')).\
-                     filter_by(address=address).\
-                     filter_by(deleted=can_read_deleted(context)).\
-                     first()
+                options(joinedload_all('fixed_ip.network')).\
+                filter_by(address=address).\
+                filter_by(deleted=can_read_deleted(context)).\
+                first()
+
     if not result:
         raise exception.FloatingIpNotFoundForAddress(address=address)
+
+    # If the floating IP has a project ID set, check to make sure
+    # the non-admin user has access.
+    if result.project_id and is_user_context(context):
+        authorize_project_context(context, result.project_id)
+
     return result
 
 
