@@ -20,8 +20,12 @@ import tempfile
 
 import nova
 from nova import exception
+from nova import flags
 from nova import test
 from nova import utils
+
+
+FLAGS = flags.FLAGS
 
 
 class ExecuteTestCase(test.TestCase):
@@ -290,6 +294,11 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertFalse(utils.bool_from_str('0'))
         self.assertFalse(utils.bool_from_str(None))
         self.assertFalse(utils.bool_from_str('junk'))
+
+    def test_generate_glance_url(self):
+        generated_url = utils.generate_glance_url()
+        actual_url = "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
+        self.assertEqual(generated_url, actual_url)
 
 
 class IsUUIDLikeTestCase(test.TestCase):
