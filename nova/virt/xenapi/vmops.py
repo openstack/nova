@@ -1002,6 +1002,16 @@ class VMOps(object):
         self._release_bootlock(original_vm_ref)
         self._start(instance, original_vm_ref)
 
+    def power_off(self, instance):
+        """Power off the specified instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        self._shutdown(instance, vm_ref, hard=True)
+
+    def power_on(self, instance):
+        """Power on the specified instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        self._start(instance, vm_ref)
+
     def poll_rescued_instances(self, timeout):
         """Look for expirable rescued instances.
 
