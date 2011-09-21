@@ -474,7 +474,7 @@ def initialize_gateway_device(dev, network_ref):
     #             bridge for it to respond to reqests properly
     full_ip = '%s/%s' % (network_ref['dhcp_server'],
                          network_ref['cidr'].rpartition('/')[2])
-    new_ip_params = [[ full_ip, 'brd', network_ref['broadcast'] ]]
+    new_ip_params = [[full_ip, 'brd', network_ref['broadcast']]]
     old_ip_params = []
     out, err = _execute('ip', 'addr', 'show', 'dev', dev,
                         'scope', 'global', run_as_root=True)

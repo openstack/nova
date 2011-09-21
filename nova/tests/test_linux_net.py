@@ -349,6 +349,7 @@ class LinuxNetworkTestCase(test.TestCase):
     def _test_initialize_gateway(self, existing, expected):
         self.flags(fake_network=False)
         executes = []
+
         def fake_execute(*args, **kwargs):
             executes.append(args)
             if args[0] == 'ip' and args[1] == 'addr' and args[2] == 'show':
@@ -368,12 +369,18 @@ class LinuxNetworkTestCase(test.TestCase):
             "    inet 192.168.0.1/24 brd 192.168.0.255 scope global eth0\n"
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
-        expected = [('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-                    ('ip', 'addr', 'del', '192.168.0.1/24', 'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
-                    ('ip', 'addr', 'add', '192.168.1.1/24', 'brd', '192.168.1.255', 'dev', 'eth0'),
-                    ('ip', 'addr', 'add', '192.168.0.1/24', 'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
-                    ('ip', '-f', 'inet6', 'addr', 'change', '2001:db8::/64', 'dev', 'eth0'),
-                    ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on')]
+        expected = [
+            ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
+            ('ip', 'addr', 'del', '192.168.0.1/24',
+             'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
+            ('ip', 'addr', 'add', '192.168.1.1/24',
+             'brd', '192.168.1.255', 'dev', 'eth0'),
+            ('ip', 'addr', 'add', '192.168.0.1/24',
+             'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
+            ('ip', '-f', 'inet6', 'addr', 'change',
+             '2001:db8::/64', 'dev', 'eth0'),
+            ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on'),
+        ]
         self._test_initialize_gateway(existing, expected)
 
     def test_initialize_gateway_no_move_right_ip(self):
@@ -384,9 +391,12 @@ class LinuxNetworkTestCase(test.TestCase):
             "    inet 192.168.0.1/24 brd 192.168.0.255 scope global eth0\n"
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
-        expected = [('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-                    ('ip', '-f', 'inet6', 'addr', 'change', '2001:db8::/64', 'dev', 'eth0'),
-                    ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on')]
+        expected = [
+            ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
+            ('ip', '-f', 'inet6', 'addr', 'change',
+             '2001:db8::/64', 'dev', 'eth0'),
+            ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on'),
+        ]
         self._test_initialize_gateway(existing, expected)
 
     def test_initialize_gateway_add_if_blank(self):
@@ -395,8 +405,12 @@ class LinuxNetworkTestCase(test.TestCase):
             "    link/ether de:ad:be:ef:be:ef brd ff:ff:ff:ff:ff:ff\n"
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
-        expected = [('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-                    ('ip', 'addr', 'add', '192.168.1.1/24', 'brd', '192.168.1.255', 'dev', 'eth0'),
-                    ('ip', '-f', 'inet6', 'addr', 'change', '2001:db8::/64', 'dev', 'eth0'),
-                    ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on')]
+        expected = [
+            ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
+            ('ip', 'addr', 'add', '192.168.1.1/24',
+             'brd', '192.168.1.255', 'dev', 'eth0'),
+            ('ip', '-f', 'inet6', 'addr', 'change',
+             '2001:db8::/64', 'dev', 'eth0'),
+            ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on'),
+        ]
         self._test_initialize_gateway(existing, expected)
