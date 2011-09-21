@@ -472,22 +472,30 @@ def initialize_gateway_device(dev, network_ref):
 
     # NOTE(vish): The ip for dnsmasq has to be the first address on the
     #             bridge for it to respond to reqests properly
-    suffix = network_ref['cidr'].rpartition('/')[2]
-    out, err = _execute('ip', 'addr', 'add',
-                            '%s/%s' %
-                            (network_ref['dhcp_server'], suffix),
-                            'brd',
-                            network_ref['broadcast'],
-                            'dev',
-                            dev,
-                            run_as_root=True,
-                            check_exit_code=False)
-    if err and err != 'RTNETLINK answers: File exists\n':
-        raise exception.Error('Failed to add ip: %s' % err)
-    if FLAGS.send_arp_for_ha:
-        _execute('arping', '-U', network_ref['gateway'],
-                  '-A', '-I', dev,
-                  '-c', 1, run_as_root=True, check_exit_code=False)
+    full_ip = '%s/%s' % (network_ref['dhcp_server'],
+                         network_ref['cidr'].rpartition('/')[2])
+    new_ip_params = [[full_ip, 'brd', network_ref['broadcast']]]
+    old_ip_params = []
+    out, err = _execute('ip', 'addr', 'show', 'dev', dev,
+                        'scope', 'global', run_as_root=True)
+    for line in out.split('\n'):
+        fields = line.split()
+        if fields and fields[0] == 'inet':
+            ip_params = fields[1:-1]
+            old_ip_params.append(ip_params)
+            if ip_params[0] != full_ip:
+                new_ip_params.append(ip_params)
+    if not old_ip_params or old_ip_params[0][0] != full_ip:
+        for ip_params in old_ip_params:
+            _execute(*_ip_bridge_cmd('del', ip_params, dev),
+                        run_as_root=True)
+        for ip_params in new_ip_params:
+            _execute(*_ip_bridge_cmd('add', ip_params, dev),
+                        run_as_root=True)
+        if FLAGS.send_arp_for_ha:
+            _execute('arping', '-U', network_ref['dhcp_server'],
+                      '-A', '-I', dev,
+                      '-c', 1, run_as_root=True, check_exit_code=False)
     if(FLAGS.use_ipv6):
         _execute('ip', '-f', 'inet6', 'addr',
                      'change', network_ref['cidr_v6'],
