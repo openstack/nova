@@ -24,7 +24,7 @@ except ImportError:
 
 NOVA_VERSION = ['2011', '3']
 YEAR, COUNT = NOVA_VERSION
-FINAL = False   # This becomes true at Release Candidate time
+FINAL = True    # This becomes true at Release Candidate time
 
 
 def canonical_version_string():
