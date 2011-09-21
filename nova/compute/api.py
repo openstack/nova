@@ -995,10 +995,8 @@ class API(base.Base):
         if not recurse_zones:
             return instances
 
-        # Recurse zones.  Need admin context for this.  Send along
-        # the un-modified search options we received..
-        admin_context = context.elevated()
-        children = scheduler_api.call_zone_method(admin_context,
+        # Recurse zones. Send along the un-modified search options we received.
+        children = scheduler_api.call_zone_method(context,
                 "list",
                 errors_to_ignore=[novaclient.exceptions.NotFound],
                 novaclient_collection_name="servers",

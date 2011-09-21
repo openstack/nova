@@ -51,16 +51,18 @@ class ZoneState(object):
     def update_credentials(self, zone):
         """Update zone credentials from db"""
         self.zone_id = zone.id
+        self.name = zone.name
         self.api_url = zone.api_url
         self.username = zone.username
         self.password = zone.password
+        self.weight_offset = zone.weight_offset
+        self.weight_scale = zone.weight_scale
 
     def update_metadata(self, zone_metadata):
         """Update zone metadata after successful communications with
            child zone."""
         self.last_seen = utils.utcnow()
         self.attempt = 0
-        self.name = zone_metadata.get("name", "n/a")
         self.capabilities = ", ".join(["%s=%s" % (k, v)
                         for k, v in zone_metadata.iteritems() if k != 'name'])
         self.is_active = True
@@ -68,7 +70,8 @@ class ZoneState(object):
     def to_dict(self):
         return dict(name=self.name, capabilities=self.capabilities,
                     is_active=self.is_active, api_url=self.api_url,
-                    id=self.zone_id)
+                    id=self.zone_id, weight_scale=self.weight_scale,
+                    weight_offset=self.weight_offset)
 
     def log_error(self, exception):
         """Something went wrong. Check to see if zone should be
@@ -89,15 +92,19 @@ class ZoneState(object):
 
 
 def _call_novaclient(zone):
-    """Call novaclient. Broken out for testing purposes."""
+    """Call novaclient. Broken out for testing purposes. Note that
+    we have to use the admin credentials for this since there is no
+    available context."""
     client = novaclient.Client(zone.username, zone.password, None,
-                               zone.api_url)
+                               zone.api_url, region_name=zone.name)
     return client.zones.info()._info
 
 
 def _poll_zone(zone):
     """Eventlet worker to poll a zone."""
-    logging.debug(_("Polling zone: %s") % zone.api_url)
+    name = zone.name
+    url = zone.api_url
+    logging.debug(_("Polling zone: %(name)s @ %(url)s") % locals())
     try:
         zone.update_metadata(_call_novaclient(zone))
     except Exception, e:

@@ -11,7 +11,7 @@ eventlet
 kombu
 lockfile==0.8
 lxml==2.3
-python-novaclient==2.6.0
+python-novaclient==2.6.5
 python-daemon==1.5.5
 python-gflags==1.3
 redis==2.0.0

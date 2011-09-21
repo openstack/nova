@@ -46,7 +46,7 @@ def _filter_keys(item, keys):
 
 
 def _exclude_keys(item, keys):
-    return dict((k, v) for k, v in item.iteritems() if k not in keys)
+    return dict((k, v) for k, v in item.iteritems() if k and (k not in keys))
 
 
 def _scrub_zone(zone):

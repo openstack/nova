@@ -53,6 +53,10 @@ FAKE_UUID_NOT_FOUND = 'ffffffff-ffff-ffff-ffff-ffffffffffff'
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
+class FakeContext(object):
+    auth_token = None
+
+
 class TestDriver(driver.Scheduler):
     """Scheduler Driver for Tests"""
     def schedule(context, topic, *args, **kwargs):
@@ -956,11 +960,12 @@ class MultiDriverTestCase(SimpleDriverTestCase):
 
 
 class FakeZone(object):
-    def __init__(self, id, api_url, username, password):
+    def __init__(self, id, api_url, username, password, name='child'):
         self.id = id
         self.api_url = api_url
         self.username = username
         self.password = password
+        self.name = name
 
 
 ZONE_API_URL1 = "http://1.example.com"
@@ -986,7 +991,7 @@ class FakeRerouteCompute(api.reroute_compute):
         super(FakeRerouteCompute, self).__init__(method_name)
         self.id_to_return = id_to_return
 
-    def _call_child_zones(self, zones, function):
+    def _call_child_zones(self, context, zones, function):
         return []
 
     def get_collection_context_and_id(self, args, kwargs):
@@ -1071,8 +1076,8 @@ class ZoneRedirectTest(test.TestCase):
     def test_unmarshal_single_server(self):
         decorator = api.reroute_compute("foo")
         decorator.item_uuid = 'fake_uuid'
-        self.assertRaises(exception.InstanceNotFound,
-                decorator.unmarshall_result, [])
+        result = decorator.unmarshall_result([])
+        self.assertEquals(decorator.unmarshall_result([]), None)
         self.assertEquals(decorator.unmarshall_result(
                 [FakeResource(dict(a=1, b=2)), ]),
                 dict(server=dict(a=1, b=2)))
@@ -1092,35 +1097,8 @@ class ZoneRedirectTest(test.TestCase):
             return None
 
         class FakeNovaClientWithFailure(object):
-            def __init__(self, username, password, method, api_url):
-                self.api_url = api_url
-
-            def authenticate(self):
-                if self.api_url == ZONE_API_URL2:
-                    raise novaclient_exceptions.BadRequest('foo')
-
-        self.stubs.Set(api, '_issue_novaclient_command',
-                _fake_issue_novaclient_command)
-        self.stubs.Set(api.novaclient, 'Client', FakeNovaClientWithFailure)
-
-        @api.reroute_compute("get")
-        def do_get(self, context, uuid):
-            pass
-
-        self.assertRaises(exception.ZoneRequestError,
-                do_get, None, {}, FAKE_UUID)
-
-    def test_one_zone_down_got_instance(self):
-
-        def _fake_issue_novaclient_command(nova, zone, *args, **kwargs):
-            class FakeServer(object):
-                def __init__(self):
-                    self.id = FAKE_UUID
-                    self.test = '1234'
-            return FakeServer()
-
-        class FakeNovaClientWithFailure(object):
-            def __init__(self, username, password, method, api_url):
+            def __init__(self, username, password, method, api_url,
+                         token=None, region_name=None):
                 self.api_url = api_url
 
             def authenticate(self):
@@ -1136,14 +1114,46 @@ class ZoneRedirectTest(test.TestCase):
             pass
 
         try:
-            do_get(None, {}, FAKE_UUID)
+            do_get(None, FakeContext(), FAKE_UUID)
+            self.fail("Should have got redirect exception.")
+        except api.RedirectResult, e:
+            self.assertTrue(isinstance(e.results, exception.ZoneRequestError))
+
+    def test_one_zone_down_got_instance(self):
+
+        def _fake_issue_novaclient_command(nova, zone, *args, **kwargs):
+            class FakeServer(object):
+                def __init__(self):
+                    self.id = FAKE_UUID
+                    self.test = '1234'
+            return FakeServer()
+
+        class FakeNovaClientWithFailure(object):
+            def __init__(self, username, password, method, api_url,
+                         token=None, region_name=None):
+                self.api_url = api_url
+
+            def authenticate(self):
+                if self.api_url == ZONE_API_URL2:
+                    raise novaclient_exceptions.BadRequest('foo')
+
+        self.stubs.Set(api, '_issue_novaclient_command',
+                _fake_issue_novaclient_command)
+        self.stubs.Set(api.novaclient, 'Client', FakeNovaClientWithFailure)
+
+        @api.reroute_compute("get")
+        def do_get(self, context, uuid):
+            pass
+
+        try:
+            do_get(None, FakeContext(), FAKE_UUID)
         except api.RedirectResult, e:
             results = e.results
             self.assertIn('server', results)
             self.assertEqual(results['server']['id'], FAKE_UUID)
             self.assertEqual(results['server']['test'], '1234')
         except Exception, e:
-            self.fail(_("RedirectResult should have been raised"))
+            self.fail(_("RedirectResult should have been raised: %s" % e))
         else:
             self.fail(_("RedirectResult should have been raised"))
 
@@ -1153,7 +1163,8 @@ class ZoneRedirectTest(test.TestCase):
             return None
 
         class FakeNovaClientNoFailure(object):
-            def __init__(self, username, password, method, api_url):
+            def __init__(self, username, password, method, api_url,
+                         token=None, region_name=None):
                 pass
 
             def authenticate(self):
@@ -1167,8 +1178,11 @@ class ZoneRedirectTest(test.TestCase):
         def do_get(self, context, uuid):
             pass
 
-        self.assertRaises(exception.InstanceNotFound,
-                do_get, None, {}, FAKE_UUID)
+        try:
+            do_get(None, FakeContext(), FAKE_UUID)
+            self.fail("Expected redirect exception")
+        except api.RedirectResult, e:
+            self.assertEquals(e.results, None)
 
 
 class FakeServerCollection(object):
@@ -1209,17 +1223,19 @@ class DynamicNovaClientTest(test.TestCase):
 
     def test_issue_novaclient_command_not_found(self):
         zone = FakeZone(1, 'http://example.com', 'bob', 'xxx')
-        self.assertEquals(api._issue_novaclient_command(
-                    FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "get", 100), None)
+        try:
+            api._issue_novaclient_command(FakeNovaClient(
+                FakeEmptyServerCollection()), zone, "servers", "get", 100)
+            self.fail("Expected NotFound exception")
+        except novaclient_exceptions.NotFound, e:
+            pass
 
-        self.assertEquals(api._issue_novaclient_command(
-                    FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "find", name="test"), None)
-
-        self.assertEquals(api._issue_novaclient_command(
-                    FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "any", "name"), None)
+        try:
+            api._issue_novaclient_command(FakeNovaClient(
+                FakeEmptyServerCollection()), zone, "servers", "any", "name")
+            self.fail("Expected NotFound exception")
+        except novaclient_exceptions.NotFound, e:
+            pass
 
 
 class FakeZonesProxy(object):
@@ -1250,7 +1266,7 @@ class CallZoneMethodTest(test.TestCase):
         super(CallZoneMethodTest, self).tearDown()
 
     def test_call_zone_method(self):
-        context = {}
+        context = FakeContext()
         method = 'do_something'
         results = api.call_zone_method(context, method)
         self.assertEqual(len(results), 2)
@@ -1258,12 +1274,12 @@ class CallZoneMethodTest(test.TestCase):
         self.assertIn((2, 42), results)
 
     def test_call_zone_method_not_present(self):
-        context = {}
+        context = FakeContext()
         method = 'not_present'
         self.assertRaises(AttributeError, api.call_zone_method,
                           context, method)
 
     def test_call_zone_method_generates_exception(self):
-        context = {}
+        context = FakeContext()
         method = 'raises_exception'
         self.assertRaises(Exception, api.call_zone_method, context, method)
