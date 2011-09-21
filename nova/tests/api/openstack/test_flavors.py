@@ -282,7 +282,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_empty_flavor_list_v1_1(self):
-        eelf.stubs.Set(nova.db.api, "instance_type_get_all",
+        self.stubs.Set(nova.db.api, "instance_type_get_all",
                        empty_instance_type_get_all)
 
         req = webob.Request.blank('/v1.1/fake/flavors')
