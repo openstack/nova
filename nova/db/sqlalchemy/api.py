@@ -644,7 +644,7 @@ def floating_ip_get_by_address(context, address, session=None):
                      filter_by(address=address)
 
     if is_admin_context(context):
-        query = query.filter_by(deleted=can_read_deleted(context)))
+        query = query.filter_by(deleted=can_read_deleted(context))
     elif is_user_context(context):
         query = query.filter_by(project_id=context.project_id).\
                       filter_by(deleted=False)
