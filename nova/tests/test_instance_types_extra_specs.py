@@ -160,11 +160,11 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                         xpu_model="Tesla 2050")
 
         types = db.api.instance_type_get_all(self.context)
-        
+
         name2specs = {}
         for instance_type in types:
             name = instance_type['name']
             name2specs[name] = instance_type['extra_specs']
-       
+
         self.assertEquals(name2specs['cg1.4xlarge'], specs)
         self.assertEquals(name2specs['m1.small'], {})

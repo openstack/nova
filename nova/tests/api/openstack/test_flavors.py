@@ -47,6 +47,7 @@ FAKE_FLAVORS = {
     },
 }
 
+
 def return_instance_type_by_flavor_id(context, flavorid):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 

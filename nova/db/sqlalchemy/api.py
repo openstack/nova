@@ -3333,7 +3333,7 @@ def instance_type_get_all(context, inactive=False):
         partial = partial.filter_by(deleted=False)
 
     inst_types = partial.order_by("name").all()
-    
+
     return [_dict_with_extra_specs(i) for i in inst_types]
 
 
