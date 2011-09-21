@@ -32,25 +32,27 @@ NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 
 
-def stub_flavor(flavorid, name, memory_mb="256", local_gb="10"):
-    return {
-        "flavorid": str(flavorid),
-        "name": name,
-        "memory_mb": memory_mb,
-        "local_gb": local_gb,
-    }
-
+FAKE_FLAVORS = {
+    'flavor 1': {
+        "flavorid": '1',
+        "name": 'flavor 1',
+        "memory_mb": '256',
+        "local_gb": '10'
+    },
+    'flavor 2': {
+        "flavorid": '2',
+        "name": 'flavor 2',
+        "memory_mb": '256',
+        "local_gb": '10'
+    },
+}
 
 def return_instance_type_by_flavor_id(context, flavorid):
-    return stub_flavor(flavorid, "flavor %s" % (flavorid,))
+    return FAKE_FLAVORS['flavor %s' % flavorid]
 
 
 def return_instance_types(context, num=2):
-    instance_types = {}
-    for i in xrange(1, num + 1):
-        name = "flavor %s" % (i,)
-        instance_types[name] = stub_flavor(i, name)
-    return instance_types
+    return FAKE_FLAVORS.values()
 
 
 def return_instance_type_not_found(context, flavor_id):
@@ -131,13 +133,13 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavors, expected)
 
     def test_get_flavor_by_id_v1_0(self):
-        req = webob.Request.blank('/v1.0/flavors/12')
+        req = webob.Request.blank('/v1.0/flavors/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)["flavor"]
         expected = {
-            "id": "12",
-            "name": "flavor 12",
+            "id": "1",
+            "name": "flavor 1",
             "ram": "256",
             "disk": "10",
             "rxtx_cap": "",
@@ -155,15 +157,15 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_get_flavor_by_id_v1_1(self):
-        req = webob.Request.blank('/v1.1/fake/flavors/12')
+        req = webob.Request.blank('/v1.1/fake/flavors/1')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)
         expected = {
             "flavor": {
-                "id": "12",
-                "name": "flavor 12",
+                "id": "1",
+                "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
                 "rxtx_cap": "",
@@ -173,11 +175,11 @@ class FlavorsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/flavors/12",
+                        "href": "http://localhost/v1.1/fake/flavors/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/fake/flavors/12",
+                        "href": "http://localhost/fake/flavors/1",
                     },
                 ],
             },

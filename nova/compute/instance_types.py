@@ -91,8 +91,12 @@ def get_all_types(inactive=0):
     Pass true as argument if you want deleted instance types returned also.
 
     """
-    return db.instance_type_get_all(context.get_admin_context(), inactive)
-
+    ctxt = context.get_admin_context()
+    inst_types = db.instance_type_get_all(ctxt, inactive)
+    inst_type_dict = {}
+    for inst_type in inst_types:
+        inst_type_dict[inst_type['name']] = inst_type
+    return inst_type_dict
 
 get_all_flavors = get_all_types
 

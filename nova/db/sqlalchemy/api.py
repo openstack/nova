@@ -3353,27 +3353,20 @@ def _dict_with_extra_specs(inst_type_query):
 @require_context
 def instance_type_get_all(context, inactive=False):
     """
-    Returns a dict describing all instance_types with name as key.
+    Returns all instance types.
     """
     session = get_session()
-    if inactive:
-        inst_types = session.query(models.InstanceTypes).\
-                        options(joinedload('extra_specs')).\
-                        order_by("name").\
-                        all()
-    else:
-        inst_types = session.query(models.InstanceTypes).\
-                        options(joinedload('extra_specs')).\
-                        filter_by(deleted=False).\
-                        order_by("name").\
-                        all()
-    inst_dict = {}
-    if inst_types:
-        for i in inst_types:
-            inst_dict[i['name']] = _dict_with_extra_specs(i)
-    return inst_dict
+    partial = session.query(models.InstanceTypes)\
+                     .options(joinedload('extra_specs'))
+    if not inactive:
+        partial = partial.filter_by(deleted=False)
+
+    inst_types = partial.order_by("name").all()
+    
+    return [_dict_with_extra_specs(i) for i in inst_types]
 
 
+#TODO(sirp): refactor below to use parital query?
 @require_context
 def instance_type_get(context, id):
     """Returns a dict describing specific instance_type"""
