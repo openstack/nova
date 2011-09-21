@@ -130,10 +130,10 @@ class FakeConnection(driver.ComputeDriver):
     def poll_rescued_instances(self, timeout):
         pass
 
-    def poll_unconfirmed_resizes(self, resize_confirm_window):
+    def migrate_disk_and_power_off(self, context, instance, dest):
         pass
 
-    def migrate_disk_and_power_off(self, instance, dest):
+    def poll_unconfirmed_resizes(self, resize_confirm_window):
         pass
 
     def pause(self, instance, callback):

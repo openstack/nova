@@ -137,11 +137,11 @@ class ViewBuilderV11(ViewBuilder):
         response = super(ViewBuilderV11, self)._build_detail(inst)
         response['server']['created'] = utils.isotime(inst['created_at'])
         response['server']['updated'] = utils.isotime(inst['updated_at'])
-        if 'status' in response['server']:
-            if response['server']['status'] == "ACTIVE":
-                response['server']['progress'] = 100
-            elif response['server']['status'] == "BUILD":
-                response['server']['progress'] = 0
+
+        status = response['server'].get('status')
+        if status in ('ACTIVE', 'BUILD', 'REBUILD', 'RESIZE',
+                      'VERIFY_RESIZE'):
+            response['server']['progress'] = inst['progress'] or 0
 
         response['server']['accessIPv4'] = inst.get('access_ip_v4') or ""
         response['server']['accessIPv6'] = inst.get('access_ip_v6') or ""

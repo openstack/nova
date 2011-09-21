@@ -882,7 +882,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 migration_ref.instance_uuid)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.destroy(instance_ref, network_info)
+        self.driver.confirm_migration(
+                migration_ref, instance_ref, network_info)
+
         usage_info = utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host,
                             'compute.instance.resize.confirm',
@@ -937,7 +939,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               local_gb=instance_type['local_gb'],
                               instance_type_id=instance_type['id'])
 
-        self.driver.revert_migration(instance_ref)
+        self.driver.finish_revert_migration(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
         usage_info = utils.usage_from_instance(instance_ref)
@@ -961,7 +963,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # of the instance down
         instance_ref = self.db.instance_get_by_uuid(context, instance_id)
 
-        if instance_ref['host'] == FLAGS.host:
+        same_host = instance_ref['host'] == FLAGS.host
+        if same_host and not FLAGS.allow_resize_to_same_host:
             self._instance_update(context,
                                   instance_id,
                                   vm_state=vm_states.ERROR)
@@ -1012,7 +1015,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  {'status': 'migrating'})
 
         disk_info = self.driver.migrate_disk_and_power_off(
-                instance_ref, migration_ref['dest_host'])
+                context, instance_ref, migration_ref['dest_host'])
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'post-migrating'})
@@ -1057,8 +1060,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                             instance_ref.uuid)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.finish_migration(context, instance_ref, disk_info,
-                                     network_info, resize_instance)
+        self.driver.finish_migration(context, migration_ref, instance_ref,
+                                     disk_info, network_info, resize_instance)
 
         self._instance_update(context,
                               instance_id,

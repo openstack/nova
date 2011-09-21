@@ -846,7 +846,8 @@ class API(base.Base):
 
         self.update(context,
                     instance_id,
-                    task_state=task_states.DELETING)
+                    task_state=task_states.DELETING,
+                    progress=0)
 
         host = instance['host']
         if host:
@@ -869,7 +870,8 @@ class API(base.Base):
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.STOPPING,
-                    terminated_at=utils.utcnow())
+                    terminated_at=utils.utcnow(),
+                    progress=0)
 
         host = instance['host']
         if host:
@@ -1169,7 +1171,8 @@ class API(base.Base):
                     display_name=name,
                     image_ref=image_href,
                     vm_state=vm_states.ACTIVE,
-                    task_state=task_states.REBUILDING)
+                    task_state=task_states.REBUILDING,
+                    progress=0)
 
         rebuild_params = {
             "new_pass": admin_password,

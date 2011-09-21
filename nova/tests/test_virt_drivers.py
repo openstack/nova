@@ -185,7 +185,8 @@ class _VirtDriverTestCase(test.TestCase):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.migrate_disk_and_power_off(instance_ref, 'dest_host')
+        self.connection.migrate_disk_and_power_off(
+            self.ctxt, instance_ref, 'dest_host')
 
     @catch_notimplementederror
     def test_pause(self):
