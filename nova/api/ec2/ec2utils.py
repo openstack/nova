@@ -116,7 +116,7 @@ def dict_from_dotted_str(items):
     args = {}
     for key, value in items:
         parts = key.split(".")
-        key = camelcase_to_underscore(parts[0])
+        key = str(camelcase_to_underscore(parts[0]))
         if isinstance(value, str) or isinstance(value, unicode):
             # NOTE(vish): Automatically convert strings back
             #             into their respective values
