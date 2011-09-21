@@ -3346,7 +3346,6 @@ def instance_type_get_all(context, inactive=False, filters=None):
     return [_dict_with_extra_specs(i) for i in inst_types]
 
 
-#TODO(sirp): refactor below to use parital query?
 @require_context
 def instance_type_get(context, id):
     """Returns a dict describing specific instance_type"""

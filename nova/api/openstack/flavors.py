@@ -45,9 +45,16 @@ class Controller(object):
         """Helper function that returns a list of flavor dicts."""
         filters = {}
         if 'minRam' in req.params:
-            filters['min_memory_mb'] = req.params['minRam']
+            try:
+                filters['min_memory_mb'] = int(req.params['minRam'])
+            except ValueError:
+                pass  # ignore bogus values per spec
+
         if 'minDisk' in req.params:
-            filters['min_local_gb'] = req.params['minDisk']
+            try:
+                filters['min_local_gb'] = int(req.params['minDisk'])
+            except ValueError:
+                pass  # ignore bogus values per spec
 
         ctxt = req.environ['nova.context']
         inst_types = db.api.instance_type_get_all(ctxt, filters=filters)

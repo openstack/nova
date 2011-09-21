@@ -42,8 +42,8 @@ FAKE_FLAVORS = {
     'flavor 2': {
         "flavorid": '2',
         "name": 'flavor 2',
-        "memory_mb": '256',
-        "local_gb": '10'
+        "memory_mb": '512',
+        "local_gb": '20'
     },
 }
 
@@ -53,7 +53,18 @@ def fake_instance_type_get_by_flavor_id(context, flavorid):
 
 
 def fake_instance_type_get_all(context, inactive=False, filters=None):
-    return FAKE_FLAVORS.values()
+    def reject_min(db_attr, filter_attr):
+        return filter_attr in filters and\
+               int(flavor[db_attr]) < int(filters[filter_attr])
+
+    filters = filters or {}
+    for flavor in FAKE_FLAVORS.values():
+        if reject_min('memory_mb', 'min_memory_mb'):
+            continue
+        elif reject_min('local_gb', 'min_local_gb'):
+            continue
+
+        yield flavor
 
 
 def empty_instance_type_get_all(context, inactive=False, filters=None):
@@ -125,8 +136,8 @@ class FlavorsTest(test.TestCase):
             {
                 "id": "2",
                 "name": "flavor 2",
-                "ram": "256",
-                "disk": "10",
+                "ram": "512",
+                "disk": "20",
                 "rxtx_cap": "",
                 "rxtx_quota": "",
                 "swap": "",
@@ -260,8 +271,8 @@ class FlavorsTest(test.TestCase):
                 {
                     "id": "2",
                     "name": "flavor 2",
-                    "ram": "256",
-                    "disk": "10",
+                    "ram": "512",
+                    "disk": "20",
                     "rxtx_cap": "",
                     "rxtx_quota": "",
                     "swap": "",
@@ -291,6 +302,204 @@ class FlavorsTest(test.TestCase):
         flavors = json.loads(res.body)["flavors"]
         expected = []
         self.assertEqual(flavors, expected)
+
+    def test_get_flavor_list_filter_min_ram_v1_1(self):
+        """Flavor lists may be filtered by minRam"""
+        req = webob.Request.blank('/v1.1/fake/flavors?minRam=512')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavor = json.loads(res.body)
+        expected = {
+            "flavors": [
+                {
+                    "id": "2",
+                    "name": "flavor 2",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/fake/flavors/2",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/fake/flavors/2",
+                        },
+                    ],
+                },
+            ],
+        }
+        self.assertEqual(flavor, expected)
+
+    def test_get_flavor_list_filter_min_disk(self):
+        """Flavor lists may be filtered by minRam"""
+        req = webob.Request.blank('/v1.1/fake/flavors?minDisk=20')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavor = json.loads(res.body)
+        expected = {
+            "flavors": [
+                {
+                    "id": "2",
+                    "name": "flavor 2",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/fake/flavors/2",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/fake/flavors/2",
+                        },
+                    ],
+                },
+            ],
+        }
+        self.assertEqual(flavor, expected)
+
+    def test_get_flavor_list_detail_min_ram_and_min_disk_v1_1(self):
+        """Tests that filtering work on flavor details and that minRam and
+        minDisk filters can be combined
+        """
+        req = webob.Request.blank(
+            '/v1.1/fake/flavors/detail?minRam=256&minDisk=20')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavor = json.loads(res.body)
+        expected = {
+            "flavors": [
+                {
+                    "id": "2",
+                    "name": "flavor 2",
+                    "ram": "512",
+                    "disk": "20",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/fake/flavors/2",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/fake/flavors/2",
+                        },
+                    ],
+                },
+            ],
+        }
+        self.assertEqual(flavor, expected)
+
+    def test_get_flavor_list_detail_bogus_min_ram_v1_1(self):
+        """Tests that bogus minRam filtering values are ignored"""
+        req = webob.Request.blank(
+            '/v1.1/fake/flavors/detail?minRam=16GB')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavor = json.loads(res.body)
+        expected = {
+            "flavors": [
+                {
+                    "id": "1",
+                    "name": "flavor 1",
+                    "ram": "256",
+                    "disk": "10",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/fake/flavors/1",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/fake/flavors/1",
+                        },
+                    ],
+                },
+                {
+                    "id": "2",
+                    "name": "flavor 2",
+                    "ram": "512",
+                    "disk": "20",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/fake/flavors/2",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/fake/flavors/2",
+                        },
+                    ],
+                },
+            ],
+        }
+        self.assertEqual(flavor, expected)
+
+    def test_get_flavor_list_detail_bogus_min_disk_v1_1(self):
+        """Tests that bogus minDisk filtering values are ignored"""
+        req = webob.Request.blank(
+            '/v1.1/fake/flavors/detail?minDisk=16GB')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavor = json.loads(res.body)
+        expected = {
+            "flavors": [
+                {
+                    "id": "1",
+                    "name": "flavor 1",
+                    "ram": "256",
+                    "disk": "10",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/fake/flavors/1",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/fake/flavors/1",
+                        },
+                    ],
+                },
+                {
+                    "id": "2",
+                    "name": "flavor 2",
+                    "ram": "512",
+                    "disk": "20",
+                    "rxtx_cap": "",
+                    "rxtx_quota": "",
+                    "swap": "",
+                    "vcpus": "",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v1.1/fake/flavors/2",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/fake/flavors/2",
+                        },
+                    ],
+                },
+            ],
+        }
+        self.assertEqual(flavor, expected)
 
 
 class FlavorsXMLSerializationTest(test.TestCase):
