@@ -35,12 +35,13 @@ terminating it.
 
 """
 
+import datetime
+import functools
 import os
 import socket
 import sys
 import tempfile
 import time
-import functools
 
 from eventlet import greenthread
 
@@ -84,6 +85,8 @@ flags.DEFINE_integer("resize_confirm_window", 0,
                      " Set to 0 to disable.")
 flags.DEFINE_integer('host_state_interval', 120,
                      'Interval in seconds for querying the host status')
+flags.DEFINE_integer('reclaim_instance_interval', 0,
+                     'Interval in seconds for reclaiming deleted instances')
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -175,7 +178,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                             'nova-compute restart.'), locals())
                 self.reboot_instance(context, instance['id'])
             elif drv_state == power_state.RUNNING:
-                # Hyper-V and VMWareAPI drivers will raise and exception
+                # Hyper-V and VMWareAPI drivers will raise an exception
                 try:
                     net_info = self._get_instance_nw_info(context, instance)
                     self.driver.ensure_filtering_rules_for_instance(instance,
@@ -487,10 +490,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         if action_str == 'Terminating':
             terminate_volumes(self.db, context, instance_id)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def terminate_instance(self, context, instance_id):
-        """Terminate an instance on this host."""
+    def _delete_instance(self, context, instance_id):
+        """Delete an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Terminating')
         instance = self.db.instance_get(context.elevated(), instance_id)
         self._instance_update(context,
@@ -508,12 +509,42 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    def terminate_instance(self, context, instance_id):
+        """Terminate an instance on this host."""
+        self._delete_instance(context, instance_id)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
     def stop_instance(self, context, instance_id):
         """Stopping an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Stopping')
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.STOPPED,
+                              task_state=None)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
+    def power_off_instance(self, context, instance_id):
+        """Power off an instance on this host."""
+        instance = self.db.instance_get(context, instance_id)
+        self.driver.power_off(instance)
+        current_power_state = self._get_power_state(context, instance)
+        self._instance_update(context,
+                              instance_id,
+                              power_state=current_power_state,
+                              task_state=None)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
+    def power_on_instance(self, context, instance_id):
+        """Power on an instance on this host."""
+        instance = self.db.instance_get(context, instance_id)
+        self.driver.power_on(instance)
+        current_power_state = self._get_power_state(context, instance)
+        self._instance_update(context,
+                              instance_id,
+                              power_state=current_power_state,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1676,6 +1707,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.warning(_("Error during power_state sync: %s"), unicode(ex))
             error_list.append(ex)
 
+        try:
+            self._reclaim_queued_deletes(context)
+        except Exception as ex:
+            LOG.warning(_("Error during reclamation of queued deletes: %s"),
+                        unicode(ex))
+            error_list.append(ex)
+
         return error_list
 
     def _report_driver_status(self):
@@ -1725,3 +1763,17 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._instance_update(context,
                                   db_instance["id"],
                                   power_state=vm_power_state)
+
+    def _reclaim_queued_deletes(self, context):
+        """Reclaim instances that are queued for deletion."""
+
+        instances = self.db.instance_get_all_by_host(context, self.host)
+
+        queue_time = datetime.timedelta(
+                         seconds=FLAGS.reclaim_instance_interval)
+        curtime = utils.utcnow()
+        for instance in instances:
+            if instance['vm_state'] == vm_states.SOFT_DELETE and \
+               (curtime - instance['deleted_at']) >= queue_time:
+                LOG.info('Deleting %s' % instance['name'])
+                self._delete_instance(context, instance['id'])
