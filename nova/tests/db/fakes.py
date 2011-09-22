@@ -411,8 +411,8 @@ def stub_out_db_instance_api(stubs, injected=True):
                        'address_v6': 'fe80::a00:3',
                        'network_id': 'fake_flat'}
 
-    def fake_instance_type_get_all(context, inactive=0):
-        return INSTANCE_TYPES
+    def fake_instance_type_get_all(context, inactive=0, filters=None):
+        return INSTANCE_TYPES.values()
 
     def fake_instance_type_get_by_name(context, name):
         return INSTANCE_TYPES[name]

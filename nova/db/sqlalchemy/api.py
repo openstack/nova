@@ -3323,27 +3323,27 @@ def _dict_with_extra_specs(inst_type_query):
 
 
 @require_context
-def instance_type_get_all(context, inactive=False):
+def instance_type_get_all(context, inactive=False, filters=None):
     """
-    Returns a dict describing all instance_types with name as key.
+    Returns all instance types.
     """
+    filters = filters or {}
     session = get_session()
-    if inactive:
-        inst_types = session.query(models.InstanceTypes).\
-                        options(joinedload('extra_specs')).\
-                        order_by("name").\
-                        all()
-    else:
-        inst_types = session.query(models.InstanceTypes).\
-                        options(joinedload('extra_specs')).\
-                        filter_by(deleted=False).\
-                        order_by("name").\
-                        all()
-    inst_dict = {}
-    if inst_types:
-        for i in inst_types:
-            inst_dict[i['name']] = _dict_with_extra_specs(i)
-    return inst_dict
+    partial = session.query(models.InstanceTypes)\
+                     .options(joinedload('extra_specs'))
+    if not inactive:
+        partial = partial.filter_by(deleted=False)
+
+    if 'min_memory_mb' in filters:
+        partial = partial.filter(
+                models.InstanceTypes.memory_mb >= filters['min_memory_mb'])
+    if 'min_local_gb' in filters:
+        partial = partial.filter(
+                models.InstanceTypes.local_gb >= filters['min_local_gb'])
+
+    inst_types = partial.order_by("name").all()
+
+    return [_dict_with_extra_specs(i) for i in inst_types]
 
 
 @require_context

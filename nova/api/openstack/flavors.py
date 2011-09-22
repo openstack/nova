@@ -43,11 +43,24 @@ class Controller(object):
 
     def _get_flavors(self, req, is_detail=True):
         """Helper function that returns a list of flavor dicts."""
+        filters = {}
+        if 'minRam' in req.params:
+            try:
+                filters['min_memory_mb'] = int(req.params['minRam'])
+            except ValueError:
+                pass  # ignore bogus values per spec
+
+        if 'minDisk' in req.params:
+            try:
+                filters['min_local_gb'] = int(req.params['minDisk'])
+            except ValueError:
+                pass  # ignore bogus values per spec
+
         ctxt = req.environ['nova.context']
-        flavors = db.api.instance_type_get_all(ctxt)
+        inst_types = db.api.instance_type_get_all(ctxt, filters=filters)
         builder = self._get_view_builder(req)
-        items = [builder.build(flavor, is_detail=is_detail)
-                 for flavor in flavors.values()]
+        items = [builder.build(inst_type, is_detail=is_detail)
+                 for inst_type in inst_types]
         return items
 
     def show(self, req, id):
