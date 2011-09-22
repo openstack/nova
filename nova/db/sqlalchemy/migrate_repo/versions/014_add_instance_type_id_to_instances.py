@@ -32,7 +32,7 @@ c_instance_type_id = Column('instance_type_id',
                            nullable=True)
 
 instance_types = Table('instance_types', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         Column('name',
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False),

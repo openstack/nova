@@ -20,7 +20,7 @@ from sqlalchemy import Column, Integer, MetaData, String, Table
 meta = MetaData()
 
 networks = Table('networks', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 

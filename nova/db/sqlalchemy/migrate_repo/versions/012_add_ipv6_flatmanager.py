@@ -23,7 +23,7 @@ meta = MetaData()
 # actual definitions of instances or services.
 #
 instances = Table('instances', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 #
@@ -34,7 +34,7 @@ networks = Table('networks', meta,
         Column('updated_at', DateTime(timezone=False)),
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         Column('injected', Boolean(create_constraint=True, name=None)),
         Column('cidr',
                String(length=255, convert_unicode=False, assert_unicode=None,
@@ -89,7 +89,7 @@ fixed_ips = Table('fixed_ips', meta,
         Column('updated_at', DateTime(timezone=False)),
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         Column('address',
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),

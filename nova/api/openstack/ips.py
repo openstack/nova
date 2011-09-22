@@ -148,7 +148,7 @@ def create_resource(version):
 
     metadata = {
         'list_collections': {
-            'public':  {'item_name': 'ip', 'item_key': 'addr'},
+            'public': {'item_name': 'ip', 'item_key': 'addr'},
             'private': {'item_name': 'ip', 'item_key': 'addr'},
         },
     }

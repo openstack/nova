@@ -1064,7 +1064,7 @@ class ZoneRedirectTest(test.TestCase):
         self.assertEquals(decorator.get_collection_context_and_id(
             (None, 10, 20), {}), ("servers", 10, 20))
         self.assertEquals(decorator.get_collection_context_and_id(
-            (None, 11,),  dict(instance_id=21)), ("servers", 11, 21))
+            (None, 11,), dict(instance_id=21)), ("servers", 11, 21))
         self.assertEquals(decorator.get_collection_context_and_id(
             (None,), dict(context=12, instance_id=22)), ("servers", 12, 22))
 

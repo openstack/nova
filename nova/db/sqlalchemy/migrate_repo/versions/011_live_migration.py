@@ -23,7 +23,7 @@ from nova import log as logging
 meta = MetaData()
 
 instances = Table('instances', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 #
@@ -35,7 +35,7 @@ compute_nodes = Table('compute_nodes', meta,
         Column('updated_at', DateTime(timezone=False)),
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         Column('service_id', Integer(), nullable=False),
 
         Column('vcpus', Integer(), nullable=False),

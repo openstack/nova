@@ -939,10 +939,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 {'instance_uuid': instance_ref['uuid'],
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
-                 'dest_host':   self.driver.get_host_ip_addr(),
+                 'dest_host': self.driver.get_host_ip_addr(),
                  'old_instance_type_id': old_instance_type['id'],
                  'new_instance_type_id': instance_type_id,
-                 'status':      'pre-migrating'})
+                 'status': 'pre-migrating'})
 
         LOG.audit(_('instance %s: migrating'), instance_ref['uuid'],
                 context=context)

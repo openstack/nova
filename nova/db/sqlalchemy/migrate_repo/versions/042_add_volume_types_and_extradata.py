@@ -27,7 +27,7 @@ meta = MetaData()
 #
 
 volumes = Table('volumes', meta,
-       Column('id', Integer(),  primary_key=True, nullable=False),
+       Column('id', Integer(), primary_key=True, nullable=False),
        )
 
 volume_type_id = Column('volume_type_id', Integer(), nullable=True)

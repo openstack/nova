@@ -28,17 +28,17 @@ meta = MetaData()
 # Just for the ForeignKey and column creation to succeed, these are not the
 # actual definitions of instances or services.
 instances = Table('instances', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 
 services = Table('services', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 
 networks = Table('networks', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 
@@ -50,7 +50,7 @@ provider_fw_rules = Table('provider_fw_rules', meta,
         Column('updated_at', DateTime(timezone=False)),
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         Column('protocol',
                String(length=5, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),

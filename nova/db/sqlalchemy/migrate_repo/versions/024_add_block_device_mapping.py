@@ -27,11 +27,11 @@ instances = Table('instances', meta,
         )
 
 volumes = Table('volumes', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 snapshots = Table('snapshots', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 

@@ -696,7 +696,7 @@ class ServersTest(test.TestCase):
         self.assertEquals(ip.getAttribute('addr'), '1.2.3.4')
         (private,) = server.getElementsByTagName('private')
         (ip,) = private.getElementsByTagName('ip')
-        self.assertEquals(ip.getAttribute('addr'),  '192.168.0.3')
+        self.assertEquals(ip.getAttribute('addr'), '192.168.0.3')
 
     def test_get_server_by_id_with_addresses(self):
         private = "192.168.0.3"
