@@ -82,6 +82,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'image_ref': 1,
                   'kernel_id': 2,
                   'ramdisk_id': 3,
+                  'local_gb': 20,
                   'instance_type_id': '3',  # m1.large
                   'os_type': 'linux',
                   'architecture': 'x86-64'}
@@ -375,6 +376,7 @@ class XenAPIVMTestCase(test.TestCase):
                       'image_ref': image_ref,
                       'kernel_id': kernel_id,
                       'ramdisk_id': ramdisk_id,
+                      'local_gb': 20,
                       'instance_type_id': instance_type_id,
                       'os_type': os_type,
                       'hostname': hostname,
@@ -651,6 +653,7 @@ class XenAPIVMTestCase(test.TestCase):
             'image_ref': 1,
             'kernel_id': 2,
             'ramdisk_id': 3,
+            'local_gb': 20,
             'instance_type_id': '3',  # m1.large
             'os_type': 'linux',
             'architecture': 'x86-64'}
