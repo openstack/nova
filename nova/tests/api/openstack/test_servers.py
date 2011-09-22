@@ -20,6 +20,7 @@ import base64
 import datetime
 import json
 import unittest
+import urlparse
 from lxml import etree
 from xml.dom import minidom
 
@@ -1154,6 +1155,67 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         self.assertTrue('limit' in res.body)
 
+    def test_get_servers_with_limit_v1_1(self):
+        req = webob.Request.blank('/v1.1/fake/servers?limit=3')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        servers_links = json.loads(res.body)['servers_links']
+        self.assertEqual([s['id'] for s in servers], [0, 1, 2])
+        self.assertEqual(servers_links[0]['rel'], 'next')
+
+        href_parts = urlparse.urlparse(servers_links[0]['href'])
+        self.assertEqual('/v1.1/fake/servers', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
+
+        req = webob.Request.blank('/v1.1/fake/servers?limit=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('limit' in res.body)
+
+    def test_get_server_details_with_limit_v1_1(self):
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=3')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        servers_links = json.loads(res.body)['servers_links']
+        self.assertEqual([s['id'] for s in servers], [0, 1, 2])
+        self.assertEqual(servers_links[0]['rel'], 'next')
+
+        href_parts = urlparse.urlparse(servers_links[0]['href'])
+        self.assertEqual('/v1.1/fake/servers', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertDictMatch({'limit': ['3'], 'marker': ['2']}, params)
+
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('limit' in res.body)
+
+    def test_get_server_details_with_limit_and_other_params_v1_1(self):
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=3&blah=2:t')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        servers_links = json.loads(res.body)['servers_links']
+        self.assertEqual([s['id'] for s in servers], [0, 1, 2])
+        self.assertEqual(servers_links[0]['rel'], 'next')
+
+        href_parts = urlparse.urlparse(servers_links[0]['href'])
+        self.assertEqual('/v1.1/fake/servers', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertDictMatch({'limit': ['3'], 'blah': ['2:t'],
+                              'marker': ['2']}, params)
+
+        req = webob.Request.blank('/v1.1/fake/servers/detail?limit=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('limit' in res.body)
+
+    def test_get_servers_with_too_big_limit_v1_1(self):
+        req = webob.Request.blank('/v1.1/fake/servers?limit=30')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertTrue('servers_links' not in res_dict)
+
     def test_get_servers_with_offset(self):
         req = webob.Request.blank('/v1.0/servers?offset=2')
         res = req.get_response(fakes.wsgi_app())
@@ -1955,7 +2017,6 @@ class ServersTest(test.TestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
-        print res
         self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
         self.assertEqual(1, server['id'])
@@ -2483,6 +2544,7 @@ class ServersTest(test.TestCase):
         }
         req = webob.Request.blank('/v1.1/fake/servers/detail')
         res = req.get_response(fakes.wsgi_app())
+        print res.body
         res_dict = json.loads(res.body)
 
         for i, s in enumerate(res_dict['servers']):
@@ -4186,6 +4248,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_HREF = 'http://localhost/v1.1/servers/123'
+    SERVER_NEXT = 'http://localhost/v1.1/servers?limit=%s&marker=%s'
     SERVER_BOOKMARK = 'http://localhost/servers/123'
     IMAGE_BOOKMARK = 'http://localhost/images/5'
     FLAVOR_BOOKMARK = 'http://localhost/flavors/1'
@@ -4603,6 +4666,74 @@ class ServerXMLSerializationTest(test.TestCase):
             for i, link in enumerate(server_dict['links']):
                 for key, value in link.items():
                     self.assertEqual(link_nodes[i].get(key), value)
+
+    def test_index_with_servers_links(self):
+        serializer = servers.ServerXMLSerializer()
+
+        expected_server_href = 'http://localhost/v1.1/servers/1'
+        expected_server_next = self.SERVER_NEXT % (2, 2)
+        expected_server_bookmark = 'http://localhost/servers/1'
+        expected_server_href_2 = 'http://localhost/v1.1/servers/2'
+        expected_server_bookmark_2 = 'http://localhost/servers/2'
+        fixture = {"servers": [
+            {
+                "id": 1,
+                "name": "test_server",
+                'links': [
+                    {
+                        'href': expected_server_href,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': expected_server_bookmark,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+            {
+                "id": 2,
+                "name": "test_server_2",
+                'links': [
+                    {
+                        'href': expected_server_href_2,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': expected_server_bookmark_2,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+        ],
+        "servers_links": [
+            {
+                'rel': 'next',
+                'href': expected_server_next,
+            },
+        ]}
+
+        output = serializer.serialize(fixture, 'index')
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'servers_index')
+        server_elems = root.findall('{0}server'.format(NS))
+        self.assertEqual(len(server_elems), 2)
+        for i, server_elem in enumerate(server_elems):
+            server_dict = fixture['servers'][i]
+            for key in ['name', 'id']:
+                self.assertEqual(server_elem.get(key), str(server_dict[key]))
+
+            link_nodes = server_elem.findall('{0}link'.format(ATOMNS))
+            self.assertEqual(len(link_nodes), 2)
+            for i, link in enumerate(server_dict['links']):
+                for key, value in link.items():
+                    self.assertEqual(link_nodes[i].get(key), value)
+
+        # Check servers_links
+        servers_links = root.findall('{0}link'.format(ATOMNS))
+        for i, link in enumerate(fixture['servers_links']):
+            for key, value in link.items():
+                self.assertEqual(servers_links[i].get(key), value)
 
     def test_detail(self):
         serializer = servers.ServerXMLSerializer()
