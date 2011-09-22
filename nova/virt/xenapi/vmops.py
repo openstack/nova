@@ -140,6 +140,11 @@ class VMOps(object):
                 instance, instance.image_ref,
                 instance.user_id, instance.project_id,
                 disk_image_type)
+
+        for vdi in vdis:
+            if vdi["vdi_type"] == "os":
+                self.resize_instance(instance, vdi["vdi_uuid"])
+
         return vdis
 
     def spawn(self, context, instance, network_info):
