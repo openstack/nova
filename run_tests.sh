@@ -13,6 +13,7 @@ function usage {
   echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -p, --pep8               Just run pep8"
+  echo "  -P, --no-pep8            Don't run pep8"
   echo "  -c, --coverage           Generate coverage report"
   echo "  -h, --help               Print this usage message"
   echo "  --hide-elapsed           Don't print the elapsed time for each test along with slow test list"
@@ -32,6 +33,7 @@ function process_option {
     -n|--no-recreate-db) recreate_db=0;;
     -f|--force) force=1;;
     -p|--pep8) just_pep8=1;;
+    -P|--no-pep8) no_pep8=1;;
     -c|--coverage) coverage=1;;
     -*) noseopts="$noseopts $1";;
     *) noseargs="$noseargs $1"
@@ -47,6 +49,7 @@ noseargs=
 noseopts=
 wrapper=""
 just_pep8=0
+no_pep8=0
 coverage=0
 recreate_db=1
 
@@ -87,7 +90,8 @@ function run_pep8 {
   srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
   # Just run PEP8 in current environment
   ${wrapper} pep8 --repeat --show-pep8 --show-source \
-  --exclude=vcsversion.py ${srcfiles}
+    --ignore=E202 \
+    --exclude=vcsversion.py ${srcfiles}
 }
 
 NOSETESTS="python run_tests.py $noseopts $noseargs"
@@ -139,7 +143,9 @@ run_tests
 # distinguish between options (noseopts), which begin with a '-', and
 # arguments (noseargs).
 if [ -z "$noseargs" ]; then
-  run_pep8
+  if [ $no_pep8 -eq 0 ]; then
+    run_pep8
+  fi
 fi
 
 if [ $coverage -eq 1 ]; then

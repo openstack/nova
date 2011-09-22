@@ -72,7 +72,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
 
     class FakeDB:
         def fixed_ip_get_by_instance(self, context, instance_id):
-            return [dict(address='10.0.0.0'),  dict(address='10.0.0.1'),
+            return [dict(address='10.0.0.0'), dict(address='10.0.0.1'),
                     dict(address='10.0.0.2')]
 
         def network_get_by_cidr(self, context, cidr):

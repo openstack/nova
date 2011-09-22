@@ -17,7 +17,7 @@ from sqlalchemy import Column, Integer, MetaData, String, Table
 meta = MetaData()
 
 zones = Table('zones', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 name = Column('name', String(255))

@@ -109,7 +109,7 @@ class IPXMLSerializer(wsgi.XMLDictSerializer):
     def __init__(self, xmlns=wsgi.XMLNS_V11):
         super(IPXMLSerializer, self).__init__(xmlns=xmlns)
 
-    def populate_addresses_node(self, addresses_elem,  addresses_dict):
+    def populate_addresses_node(self, addresses_elem, addresses_dict):
         for (network_id, ip_dicts) in addresses_dict.items():
             network_elem = self._create_network_node(network_id, ip_dicts)
             addresses_elem.append(network_elem)
@@ -143,7 +143,7 @@ def create_resource(version):
 
     metadata = {
         'list_collections': {
-            'public':  {'item_name': 'ip', 'item_key': 'addr'},
+            'public': {'item_name': 'ip', 'item_key': 'addr'},
             'private': {'item_name': 'ip', 'item_key': 'addr'},
         },
     }

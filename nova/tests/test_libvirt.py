@@ -159,14 +159,14 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(instances_path='')
         self.call_libvirt_dependant_setup = False
 
-    test_instance = {'memory_kb':     '1024000',
-                     'basepath':      '/some/path',
-                     'bridge_name':   'br100',
-                     'vcpus':         2,
-                     'project_id':    'fake',
-                     'bridge':        'br101',
-                     'image_ref':     '123456',
-                     'local_gb':      20,
+    test_instance = {'memory_kb': '1024000',
+                     'basepath': '/some/path',
+                     'bridge_name': 'br100',
+                     'vcpus': 2,
+                     'project_id': 'fake',
+                     'bridge': 'br101',
+                     'image_ref': '123456',
+                     'local_gb': 20,
                      'instance_type_id': '5'}  # m1.small
 
     def lazy_load_library_exists(self):

@@ -24,7 +24,7 @@ meta = MetaData()
 # Just for the ForeignKey and column creation to succeed, these are not the
 # actual definitions of instances or services.
 instances = Table('instances', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 #

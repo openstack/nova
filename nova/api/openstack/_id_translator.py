@@ -1,5 +1,6 @@
 from nova import datastore
 
+
 class RackspaceAPIIdTranslator(object):
     """
     Converts Rackspace API ids to and from the id format for a given
@@ -21,7 +22,7 @@ class RackspaceAPIIdTranslator(object):
     def to_rs_id(self, opaque_id):
         """Convert an id from a strategy-specific one to a Rackspace one."""
         result = self._store.hget(self._fwd_key, str(opaque_id))
-        if result: # we have a mapping from opaque to RS for this strategy
+        if result:  # we have a mapping from opaque to RS for this strategy
             return int(result)
         else:
             # Store the mapping.

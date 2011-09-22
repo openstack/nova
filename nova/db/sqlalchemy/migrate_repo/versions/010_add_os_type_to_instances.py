@@ -19,7 +19,7 @@ from sqlalchemy import Column, Integer, MetaData, String, Table
 meta = MetaData()
 
 instances = Table('instances', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 instances_os_type = Column('os_type',

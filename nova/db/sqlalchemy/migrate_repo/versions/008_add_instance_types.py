@@ -32,14 +32,14 @@ instance_types = Table('instance_types', meta,
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False),
                       unique=True),
-        Column('id', Integer(),  primary_key=True, nullable=False),
-        Column('memory_mb', Integer(),  nullable=False),
-        Column('vcpus', Integer(),  nullable=False),
-        Column('local_gb', Integer(),  nullable=False),
-        Column('flavorid', Integer(),  nullable=False, unique=True),
-        Column('swap', Integer(),  nullable=False, default=0),
-        Column('rxtx_quota', Integer(),  nullable=False, default=0),
-        Column('rxtx_cap', Integer(),  nullable=False, default=0))
+        Column('id', Integer(), primary_key=True, nullable=False),
+        Column('memory_mb', Integer(), nullable=False),
+        Column('vcpus', Integer(), nullable=False),
+        Column('local_gb', Integer(), nullable=False),
+        Column('flavorid', Integer(), nullable=False, unique=True),
+        Column('swap', Integer(), nullable=False, default=0),
+        Column('rxtx_quota', Integer(), nullable=False, default=0),
+        Column('rxtx_cap', Integer(), nullable=False, default=0))
 
 
 def upgrade(migrate_engine):

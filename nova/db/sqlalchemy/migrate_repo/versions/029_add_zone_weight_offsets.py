@@ -17,7 +17,7 @@ from sqlalchemy import Column, Float, Integer, MetaData, Table
 meta = MetaData()
 
 zones = Table('zones', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('id', Integer(), primary_key=True, nullable=False),
         )
 
 weight_offset = Column('weight_offset', Float(), default=0.0)

@@ -641,7 +641,8 @@ class FlavorsXMLSerializationTest(test.TestCase):
                             "href": "http://localhost/fake/flavors/23",
                         },
                     ],
-                },        {
+                },
+                {
                     "id": "13",
                     "name": "flavor 13",
                     "ram": "256",
@@ -706,7 +707,8 @@ class FlavorsXMLSerializationTest(test.TestCase):
                             "href": "http://localhost/fake/flavors/23",
                         },
                     ],
-                },        {
+                },
+                {
                     "id": "13",
                     "name": "flavor 13",
                     "ram": "256",
