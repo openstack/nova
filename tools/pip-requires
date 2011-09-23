@@ -21,7 +21,6 @@ wsgiref==0.1.2
 mox==0.5.3
 greenlet==0.3.1
 nose
-bzr
 PasteDeploy
 paste
 sqlalchemy-migrate
@@ -33,6 +32,5 @@ nova-adminclient
 suds==0.4
 coverage
 nosexcover
-GitPython
 paramiko
 feedparser
