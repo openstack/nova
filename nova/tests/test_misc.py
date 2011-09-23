@@ -71,7 +71,7 @@ class ProjectTestCase(test.TestCase):
             for email in commands.getoutput('git log --format=%ae').split():
                 if not email:
                     continue
-                if "jenkins@review.openstack.org" in email:
+                if "jenkins" in email and "openstack.org" in email:
                     continue
                 email = '<' + email + '>'
                 contributors.add(str_dict_replace(email, mailmap))
