@@ -26,6 +26,7 @@ from nova import test
 from nova.api.openstack import versions
 from nova.api.openstack import views
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
 
@@ -240,6 +241,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
 
         version = etree.XML(res.body)
+        xmlutil.validate_schema(version, 'version')
+
         expected = VERSIONS['v1.0']
         self.assertTrue(version.xpath('/ns:version', namespaces=NS))
         media_types = version.xpath('ns:media-types/ns:media-type',
@@ -261,6 +264,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
 
         version = etree.XML(res.body)
+        xmlutil.validate_schema(version, 'version')
+
         expected = VERSIONS['v1.1']
         self.assertTrue(version.xpath('/ns:version', namespaces=NS))
         media_types = version.xpath('ns:media-types/ns:media-type',
@@ -282,6 +287,9 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
 
         root = etree.XML(res.body)
+        print res.body
+        xmlutil.validate_schema(root, 'versions')
+
         self.assertTrue(root.xpath('/ns:versions', namespaces=NS))
         versions = root.xpath('ns:version', namespaces=NS)
         self.assertEqual(len(versions), 2)
@@ -301,6 +309,8 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual("application/atom+xml", res.content_type)
+
+        xmlutil.validate_schema(etree.XML(res.body), 'atom')
 
         f = feedparser.parse(res.body)
         self.assertEqual(f.feed.title, 'About This Version')
@@ -340,6 +350,8 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual("application/atom+xml", res.content_type)
+
+        xmlutil.validate_schema(etree.XML(res.body), 'atom')
 
         f = feedparser.parse(res.body)
         self.assertEqual(f.feed.title, 'About This Version')
@@ -631,6 +643,8 @@ class VersionsSerializerTests(test.TestCase):
         response = serializer.index(versions_data)
 
         root = etree.XML(response)
+        xmlutil.validate_schema(root, 'versions')
+
         self.assertTrue(root.xpath('/ns:versions', namespaces=NS))
         version_elems = root.xpath('ns:version', namespaces=NS)
         self.assertEqual(len(version_elems), 1)

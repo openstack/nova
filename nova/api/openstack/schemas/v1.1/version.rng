@@ -1,0 +1,17 @@
+<element name="version" ns="http://docs.openstack.org/compute/api/v1.1"
+    xmlns="http://relaxng.org/ns/structure/1.0">
+  <attribute name="id"/>
+  <attribute name="status"/>
+  <attribute name="updated"/>
+  <element name="media-types">
+    <oneOrMore>
+      <element name="media-type">
+        <attribute name="base"/>
+        <attribute name="type"/>
+      </element>
+    </oneOrMore>
+  </element>
+  <zeroOrMore>
+    <externalRef href="../atom-link.rng"/>
+  </zeroOrMore>
+</element>
