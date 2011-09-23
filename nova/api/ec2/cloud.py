@@ -52,6 +52,7 @@ from nova.image import s3
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('dhcp_domain', 'nova.network.manager')
 flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
 LOG = logging.getLogger("nova.api.cloud")
@@ -326,7 +327,7 @@ class CloudController(object):
         instance_ref = db.instance_get(ctxt, instance_ref[0]['id'])
 
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
-        hostname = instance_ref['hostname']
+        hostname = "%s.%s" % (instance_ref['hostname'], FLAGS.dhcp_domain)
         host = instance_ref['host']
         availability_zone = self._get_availability_zone_by_host(ctxt, host)
         floating_ip = db.instance_get_floating_address(ctxt,

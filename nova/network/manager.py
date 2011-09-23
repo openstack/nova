@@ -112,6 +112,9 @@ flags.DEFINE_bool('fake_call', False,
                   'If True, skip using the queue and make local calls')
 flags.DEFINE_bool('force_dhcp_release', False,
                   'If True, send a dhcp release on instance termination')
+flags.DEFINE_string('dhcp_domain',
+                    'novalocal',
+                    'domain to use for building the hostnames')
 
 
 class AddressAlreadyAllocated(exception.Error):
