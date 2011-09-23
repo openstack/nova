@@ -9,6 +9,12 @@
     <attribute name="progress">   <text/> </attribute>
   </optional>
   <optional>
+    <attribute name="minDisk">   <text/> </attribute>
+  </optional>
+  <optional>
+    <attribute name="minRam">   <text/> </attribute>
+  </optional>
+  <optional>
     <element name="server">
       <attribute name="id"> <text/> </attribute>
       <zeroOrMore>

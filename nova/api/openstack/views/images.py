@@ -161,6 +161,11 @@ class ViewBuilderV11(ViewBuilder):
 
         if detail:
             image["metadata"] = image_obj.get("properties", {})
+            if 'min_ram' in image_obj:
+                image["minRam"] = image_obj.get("min_ram") or 0
+
+            if 'min_disk' in image_obj:
+                image["minDisk"] = image_obj.get("min_disk") or 0
 
         return image
 

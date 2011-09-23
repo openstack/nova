@@ -20,6 +20,8 @@
 Tests For Compute
 """
 
+from copy import copy
+
 from nova import compute
 from nova import context
 from nova import db
@@ -1394,3 +1396,92 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(self.compute_api._volume_size(inst_type,
                                                        'swap'),
                          swap_size)
+
+
+class ComputeTestMinRamMinDisk(test.TestCase):
+    def setUp(self):
+        super(ComputeTestMinRamMinDisk, self).setUp()
+        self.compute = utils.import_object(FLAGS.compute_manager)
+        self.compute_api = compute.API()
+        self.context = context.RequestContext('fake', 'fake')
+        self.fake_image = {
+            'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
+
+    def test_create_with_too_little_ram(self):
+        """Test an instance type with too little memory"""
+
+        inst_type = instance_types.get_default_instance_type()
+        inst_type['memory_mb'] = 1
+
+        def fake_show(*args):
+            img = copy(self.fake_image)
+            img['min_ram'] = 2
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        self.assertRaises(exception.InstanceTypeMemoryTooSmall,
+            self.compute_api.create, self.context, inst_type, None)
+
+        # Now increase the inst_type memory and make sure all is fine.
+        inst_type['memory_mb'] = 2
+        ref = self.compute_api.create(self.context, inst_type, None)
+        self.assertTrue(ref)
+
+        db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_create_with_too_little_disk(self):
+        """Test an instance type with too little disk space"""
+
+        inst_type = instance_types.get_default_instance_type()
+        inst_type['local_gb'] = 1
+
+        def fake_show(*args):
+            img = copy(self.fake_image)
+            img['min_disk'] = 2
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+            self.compute_api.create, self.context, inst_type, None)
+
+        # Now increase the inst_type disk space and make sure all is fine.
+        inst_type['local_gb'] = 2
+        ref = self.compute_api.create(self.context, inst_type, None)
+        self.assertTrue(ref)
+
+        db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_create_just_enough_ram_and_disk(self):
+        """Test an instance type with just enough ram and disk space"""
+
+        inst_type = instance_types.get_default_instance_type()
+        inst_type['local_gb'] = 2
+        inst_type['memory_mb'] = 2
+
+        def fake_show(*args):
+            img = copy(self.fake_image)
+            img['min_ram'] = 2
+            img['min_disk'] = 2
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        ref = self.compute_api.create(self.context, inst_type, None)
+        self.assertTrue(ref)
+
+        db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_create_with_no_ram_and_disk_reqs(self):
+        """Test an instance type with no min_ram or min_disk"""
+
+        inst_type = instance_types.get_default_instance_type()
+        inst_type['local_gb'] = 1
+        inst_type['memory_mb'] = 1
+
+        def fake_show(*args):
+            return copy(self.fake_image)
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        ref = self.compute_api.create(self.context, inst_type, None)
+        self.assertTrue(ref)
+
+        db.instance_destroy(self.context, ref[0]['id'])

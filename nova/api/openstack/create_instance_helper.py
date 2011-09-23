@@ -187,6 +187,10 @@ class CreateInstanceHelper(object):
                                   config_drive=config_drive,))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
+        except exception.InstanceTypeMemoryTooSmall as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
+        except exception.InstanceTypeDiskTooSmall as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)

@@ -113,6 +113,7 @@ class ImagesTest(test.TestCase):
         self.assertDictMatch(expected_image, actual_image)
 
     def test_get_image_v1_1(self):
+        self.maxDiff = None
         request = webob.Request.blank('/v1.1/fake/images/124')
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         response = request.get_response(app)
@@ -133,6 +134,8 @@ class ImagesTest(test.TestCase):
                 "created": NOW_API_FORMAT,
                 "status": "SAVING",
                 "progress": 0,
+                "minDisk": 0,
+                "minRam": 0,
                 'server': {
                     'id': '42',
                     "links": [{
@@ -542,6 +545,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
+            'minDisk': 0,
+            'minRam': 0,
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/fake/images/123",
@@ -567,6 +572,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
             'progress': 0,
+            'minDisk': 0,
+            'minRam': 0,
             'server': {
                 'id': '42',
                 "links": [{
@@ -603,6 +610,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
             'progress': 0,
+            'minDisk': 0,
+            'minRam': 0,
             'server': {
                 'id': '42',
                 "links": [{
@@ -639,6 +648,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
+            'minDisk': 0,
+            'minRam': 0,
             'server': {
                 'id': '42',
                 "links": [{
@@ -675,6 +686,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ERROR',
             'progress': 0,
+            'minDisk': 0,
+            'minRam': 0,
             'server': {
                 'id': '42',
                 "links": [{
@@ -711,6 +724,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'DELETED',
             'progress': 0,
+            'minDisk': 0,
+            'minRam': 0,
             'server': {
                 'id': '42',
                 "links": [{
@@ -747,6 +762,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'DELETED',
             'progress': 0,
+            'minDisk': 0,
+            'minRam': 0,
             'server': {
                 'id': '42',
                 "links": [{
@@ -780,6 +797,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
+            'minDisk': 0,
+            'minRam': 0,
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/fake/images/130",
@@ -805,6 +824,30 @@ class ImagesTest(test.TestCase):
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/images?name=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        self.mox.VerifyAll()
+
+    def test_image_filter_with_min_ram(self):
+        image_service = self.mox.CreateMockAnything()
+        context = self._get_fake_context()
+        filters = {'min_ram': '0'}
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?minRam=0')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        self.mox.VerifyAll()
+
+    def test_image_filter_with_min_disk(self):
+        image_service = self.mox.CreateMockAnything()
+        context = self._get_fake_context()
+        filters = {'min_disk': '7'}
+        image_service.index(context, filters=filters).AndReturn([])
+        self.mox.ReplayAll()
+        request = webob.Request.blank('/v1.1/images?minDisk=7')
         request.environ['nova.context'] = context
         controller = images.ControllerV11(image_service=image_service)
         controller.index(request)
@@ -1368,6 +1411,152 @@ class ImageXMLSerializationTest(test.TestCase):
 
         server_root = root.find('{0}server'.format(NS))
         self.assertEqual(server_root, None)
+
+    def test_show_with_min_ram(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixture = {
+            'image': {
+                'id': 1,
+                'name': 'Image1',
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                'status': 'ACTIVE',
+                'progress': 80,
+                'minRam': 256,
+                'server': {
+                    'id': '1',
+                    'links': [
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
+                'metadata': {
+                    'key1': 'value1',
+                },
+                'links': [
+                    {
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = fixture['image']
+
+        for key in ['name', 'id', 'updated', 'created', 'status', 'progress',
+                    'minRam']:
+            self.assertEqual(root.get(key), str(image_dict[key]))
+
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        metadata_root = root.find('{0}metadata'.format(NS))
+        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
+        self.assertEqual(len(metadata_elems), 1)
+        for i, metadata_elem in enumerate(metadata_elems):
+            (meta_key, meta_value) = image_dict['metadata'].items()[i]
+            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
+            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
+
+        server_root = root.find('{0}server'.format(NS))
+        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
+        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['server']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+    def test_show_with_min_disk(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixture = {
+            'image': {
+                'id': 1,
+                'name': 'Image1',
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                'status': 'ACTIVE',
+                'progress': 80,
+                'minDisk': 5,
+                'server': {
+                    'id': '1',
+                    'links': [
+                        {
+                            'href': self.SERVER_HREF,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.SERVER_BOOKMARK,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
+                'metadata': {
+                    'key1': 'value1',
+                },
+                'links': [
+                    {
+                        'href': self.IMAGE_HREF % 1,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.IMAGE_BOOKMARK % 1,
+                        'rel': 'bookmark',
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'image')
+        image_dict = fixture['image']
+
+        for key in ['name', 'id', 'updated', 'created', 'status', 'progress',
+                    'minDisk']:
+            self.assertEqual(root.get(key), str(image_dict[key]))
+
+        link_nodes = root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
+
+        metadata_root = root.find('{0}metadata'.format(NS))
+        metadata_elems = metadata_root.findall('{0}meta'.format(NS))
+        self.assertEqual(len(metadata_elems), 1)
+        for i, metadata_elem in enumerate(metadata_elems):
+            (meta_key, meta_value) = image_dict['metadata'].items()[i]
+            self.assertEqual(str(metadata_elem.get('key')), str(meta_key))
+            self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
+
+        server_root = root.find('{0}server'.format(NS))
+        self.assertEqual(server_root.get('id'), image_dict['server']['id'])
+        link_nodes = server_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 2)
+        for i, link in enumerate(image_dict['server']['links']):
+            for key, value in link.items():
+                self.assertEqual(link_nodes[i].get(key), value)
 
     def test_index(self):
         serializer = images.ImageXMLSerializer()
