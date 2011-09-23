@@ -298,6 +298,9 @@ class FakeSessionForMigrationTests(fake.SessionBase):
     def VM_set_name_label(self, *args):
         pass
 
+    def VDI_set_name_label(self, session_ref, vdi_ref, name_label):
+        pass
+
 
 def stub_out_migration_methods(stubs):
     def fake_create_snapshot(self, instance):

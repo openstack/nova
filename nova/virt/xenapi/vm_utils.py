@@ -314,6 +314,11 @@ class VMHelper(HelperBase):
         return vdi_ref
 
     @classmethod
+    def set_vdi_name_label(cls, session, vdi_uuid, name_label):
+        vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
+        session.get_xenapi().VDI.set_name_label(vdi_ref, name_label)
+
+    @classmethod
     def get_vdi_for_vm_safely(cls, session, vm_ref):
         """Retrieves the primary VDI for a VM"""
         vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
@@ -370,7 +375,8 @@ class VMHelper(HelperBase):
         return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
     @classmethod
-    def upload_image(cls, context, session, instance, vdi_uuids, image_id):
+    def upload_image(cls, context, session, instance, vdi_uuids, image_id,
+                     options=None):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
@@ -388,7 +394,8 @@ class VMHelper(HelperBase):
                   'glance_port': glance_port,
                   'sr_path': cls.get_sr_path(session),
                   'os_type': os_type,
-                  'auth_token': getattr(context, 'auth_token', None)}
+                  'auth_token': getattr(context, 'auth_token', None),
+                  'options': options}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
@@ -471,7 +478,7 @@ class VMHelper(HelperBase):
 
         # Set the name-label to ease debugging
         vdi_ref = session.get_xenapi().VDI.get_by_uuid(os_vdi_uuid)
-        primary_name_label = get_name_label_for_image(image)
+        primary_name_label = instance.name
         session.get_xenapi().VDI.set_name_label(vdi_ref, primary_name_label)
 
         cls._check_vdi_size(context, session, instance, os_vdi_uuid)
@@ -559,7 +566,7 @@ class VMHelper(HelperBase):
                 _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
                   "max %(max_size)d bytes") % locals())
 
-        name_label = get_name_label_for_image(image)
+        name_label = instance.name
         vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
         # From this point we have a VDI on Xen host;
         # If anything goes wrong, we need to remember its uuid.
@@ -1154,11 +1161,6 @@ def _write_partition(virtual_size, dev):
             run_as_root=True)
 
     LOG.debug(_('Writing partition table %s done.'), dest)
-
-
-def get_name_label_for_image(image):
-    # TODO(sirp): This should eventually be the URI for the Glance image
-    return _('Glance image %s') % image
 
 
 def _mount_filesystem(dev_path, dir):
