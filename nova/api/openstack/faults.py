@@ -87,7 +87,7 @@ class OverLimitFault(webob.exc.HTTPException):
         """
         Initialize new `OverLimitFault` with relevant information.
         """
-        self.wrapped_exc = webob.exc.HTTPForbidden()
+        self.wrapped_exc = webob.exc.HTTPRequestEntityTooLarge()
         self.content = {
             "overLimitFault": {
                 "code": self.wrapped_exc.status_int,
