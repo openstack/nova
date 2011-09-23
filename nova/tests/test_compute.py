@@ -76,7 +76,8 @@ class ComputeTestCase(test.TestCase):
         test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
+            return {'id': 1, 'min_disk': None, 'min_ram': None,
+                    'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
