@@ -23,7 +23,6 @@ Handles all requests relating to volumes.
 
 from eventlet import greenthread
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -180,12 +179,49 @@ class API(base.Base):
         if volume['status'] == "available":
             raise exception.ApiError(_("Volume is already detached"))
 
-    def remove_from_compute(self, context, volume_id, host):
+    def remove_from_compute(self, context, instance_id, volume_id, host):
         """Remove volume from specified compute host."""
         rpc.call(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "remove_volume",
-                  "args": {'volume_id': volume_id}})
+                 {"method": "remove_volume_connection",
+                  "args": {'instance_id': instance_id,
+                           'volume_id': volume_id}})
+
+    def attach(self, context, volume_id, instance_id, mountpoint):
+        volume = self.get(context, volume_id)
+        host = volume['host']
+        queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
+        return rpc.call(context, queue,
+                        {"method": "attach_volume",
+                         "args": {"volume_id": volume_id,
+                                  "instance_id": instance_id,
+                                  "mountpoint": mountpoint}})
+
+    def detach(self, context, volume_id):
+        volume = self.get(context, volume_id)
+        host = volume['host']
+        queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
+        return rpc.call(context, queue,
+                 {"method": "detach_volume",
+                  "args": {"volume_id": volume_id}})
+
+    def initialize_connection(self, context, volume_id, address):
+        volume = self.get(context, volume_id)
+        host = volume['host']
+        queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
+        return rpc.call(context, queue,
+                        {"method": "initialize_connection",
+                         "args": {"volume_id": volume_id,
+                                  "address": address}})
+
+    def terminate_connection(self, context, volume_id, address):
+        volume = self.get(context, volume_id)
+        host = volume['host']
+        queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
+        return rpc.call(context, queue,
+                        {"method": "terminate_connection",
+                         "args": {"volume_id": volume_id,
+                                  "address": address}})
 
     def _create_snapshot(self, context, volume_id, name, description,
                          force=False):

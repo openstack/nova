@@ -470,21 +470,7 @@ class BlockDeviceMapping(BASE, NovaBase):
     # for no device to suppress devices.
     no_device = Column(Boolean, nullable=True)
 
-
-class ExportDevice(BASE, NovaBase):
-    """Represates a shelf and blade that a volume can be exported on."""
-    __tablename__ = 'export_devices'
-    __table_args__ = (schema.UniqueConstraint("shelf_id", "blade_id"),
-                      {'mysql_engine': 'InnoDB'})
-    id = Column(Integer, primary_key=True)
-    shelf_id = Column(Integer)
-    blade_id = Column(Integer)
-    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
-    volume = relationship(Volume,
-                          backref=backref('export_device', uselist=False),
-                          foreign_keys=volume_id,
-                          primaryjoin='and_(ExportDevice.volume_id==Volume.id,'
-                                           'ExportDevice.deleted==False)')
+    connection_info = Column(Text, nullable=True)
 
 
 class IscsiTarget(BASE, NovaBase):

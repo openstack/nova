@@ -962,9 +962,8 @@ class VmCommands(object):
             msg = _('Only KVM and QEmu are supported for now. Sorry!')
             raise exception.Error(msg)
 
-        if (FLAGS.volume_driver != 'nova.volume.driver.AOEDriver' and \
-            FLAGS.volume_driver != 'nova.volume.driver.ISCSIDriver'):
-            msg = _("Support only AOEDriver and ISCSIDriver. Sorry!")
+        if FLAGS.volume_driver != 'nova.volume.driver.ISCSIDriver':
+            msg = _("Support only ISCSIDriver. Sorry!")
             raise exception.Error(msg)
 
         rpc.call(ctxt,

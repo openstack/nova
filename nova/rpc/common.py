@@ -10,7 +10,7 @@ flags.DEFINE_integer('rpc_conn_pool_size', 30,
                              'Size of RPC connection pool')
 
 
-class RemoteError(exception.Error):
+class RemoteError(exception.NovaException):
     """Signifies that a remote class has raised an exception.
 
     Containes a string representation of the type of the original exception,
@@ -19,11 +19,10 @@ class RemoteError(exception.Error):
     contains all of the relevent info.
 
     """
+    message = _("Remote error: %(exc_type)s %(value)s\n%(traceback)s.")
 
-    def __init__(self, exc_type, value, traceback):
+    def __init__(self, exc_type=None, value=None, traceback=None):
         self.exc_type = exc_type
         self.value = value
         self.traceback = traceback
-        super(RemoteError, self).__init__('%s %s\n%s' % (exc_type,
-                                                         value,
-                                                         traceback))
+        super(RemoteError, self).__init__(**self.__dict__)

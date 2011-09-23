@@ -37,7 +37,6 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova.compute.utils import terminate_volumes
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
@@ -790,7 +789,6 @@ class API(base.Base):
         else:
             LOG.warning(_("No host for instance %s, deleting immediately"),
                         instance_id)
-            terminate_volumes(self.db, context, instance_id)
             self.db.instance_destroy(context, instance_id)
 
     def _delete(self, context, instance):
@@ -804,7 +802,6 @@ class API(base.Base):
             self._cast_compute_message('terminate_instance', context,
                                        instance['id'], host)
         else:
-            terminate_volumes(self.db, context, instance['id'])
             self.db.instance_destroy(context, instance['id'])
 
     @scheduler_api.reroute_compute("delete")

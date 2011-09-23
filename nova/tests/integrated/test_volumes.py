@@ -263,22 +263,23 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
 
         LOG.debug("Logs: %s" % driver.LoggingVolumeDriver.all_logs())
 
-        # Discover_volume and undiscover_volume are called from compute
+        # prepare_attach and prepare_detach are called from compute
         #  on attach/detach
 
         disco_moves = driver.LoggingVolumeDriver.logs_like(
-                            'discover_volume',
+                            'initialize_connection',
                             id=volume_id)
-        LOG.debug("discover_volume actions: %s" % disco_moves)
+        LOG.debug("initialize_connection actions: %s" % disco_moves)
 
         self.assertEquals(1, len(disco_moves))
         disco_move = disco_moves[0]
         self.assertEquals(disco_move['id'], volume_id)
 
         last_days_of_disco_moves = driver.LoggingVolumeDriver.logs_like(
-                            'undiscover_volume',
+                            'terminate_connection',
                             id=volume_id)
-        LOG.debug("undiscover_volume actions: %s" % last_days_of_disco_moves)
+        LOG.debug("terminate_connection actions: %s" %
+                  last_days_of_disco_moves)
 
         self.assertEquals(1, len(last_days_of_disco_moves))
         undisco_move = last_days_of_disco_moves[0]

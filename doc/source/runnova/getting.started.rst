@@ -73,7 +73,6 @@ External unix tools that are required:
 * dnsmasq
 * vlan
 * open-iscsi and iscsitarget (if you use iscsi volumes)
-* aoetools and vblade-persist (if you use aoe-volumes)
 
 Nova uses cutting-edge versions of many packages. There are ubuntu packages in
 the nova-core trunk ppa.  You can use add this ppa to your sources list on an

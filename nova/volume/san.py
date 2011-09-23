@@ -61,9 +61,6 @@ class SanISCSIDriver(ISCSIDriver):
     def _build_iscsi_target_name(self, volume):
         return "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
 
-    # discover_volume is still OK
-    # undiscover_volume is still OK
-
     def _connect_to_ssh(self):
         ssh = paramiko.SSHClient()
         #TODO(justinsb): We need a better SSH key policy

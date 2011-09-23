@@ -99,6 +99,20 @@ class XenAPIVolumeTestCase(test.TestCase):
         vol['attach_status'] = "detached"
         return db.volume_create(self.context, vol)
 
+    @staticmethod
+    def _make_info():
+        return {
+            'driver_volume_type': 'iscsi',
+            'data': {
+                'volume_id': 1,
+                'target_iqn': 'iqn.2010-10.org.openstack:volume-00000001',
+                'target_portal': '127.0.0.1:3260,fake',
+                'auth_method': 'CHAP',
+                'auth_method': 'fake',
+                'auth_method': 'fake',
+            }
+        }
+
     def test_create_iscsi_storage(self):
         """This shows how to test helper classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
@@ -106,7 +120,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         helper = volume_utils.VolumeHelper
         helper.XenAPI = session.get_imported_xenapi()
         vol = self._create_volume()
-        info = helper.parse_volume_info(vol['id'], '/dev/sdc')
+        info = helper.parse_volume_info(self._make_info(), '/dev/sdc')
         label = 'SR-%s' % vol['id']
         description = 'Test-SR'
         sr_ref = helper.create_iscsi_storage(session, info, label, description)
@@ -124,8 +138,9 @@ class XenAPIVolumeTestCase(test.TestCase):
         # oops, wrong mount point!
         self.assertRaises(volume_utils.StorageError,
                           helper.parse_volume_info,
-                          vol['id'],
-                          '/dev/sd')
+                          self._make_info(),
+                          'dev/sd'
+                          )
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
     def test_attach_volume(self):
@@ -135,7 +150,8 @@ class XenAPIVolumeTestCase(test.TestCase):
         volume = self._create_volume()
         instance = db.instance_create(self.context, self.instance_values)
         vm = xenapi_fake.create_vm(instance.name, 'Running')
-        result = conn.attach_volume(instance.name, volume['id'], '/dev/sdc')
+        result = conn.attach_volume(self._make_info(),
+                                    instance.name, '/dev/sdc')
 
         def check():
             # check that the VM has a VBD attached to it

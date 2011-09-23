@@ -222,7 +222,8 @@ class XenAPIConnection(driver.ComputeDriver):
         """
         self._vmops.inject_file(instance, b64_path, b64_contents)
 
-    def destroy(self, instance, network_info, cleanup=True):
+    def destroy(self, instance, network_info, block_device_info=None,
+                cleanup=True):
         """Destroy VM instance"""
         self._vmops.destroy(instance, network_info)
 
@@ -302,15 +303,17 @@ class XenAPIConnection(driver.ComputeDriver):
         xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
         return xs_url.netloc
 
-    def attach_volume(self, instance_name, device_path, mountpoint):
+    def attach_volume(self, connection_info, instance_name, mountpoint):
         """Attach volume storage to VM instance"""
-        return self._volumeops.attach_volume(instance_name,
-                                               device_path,
-                                               mountpoint)
+        return self._volumeops.attach_volume(connection_info,
+                                             instance_name,
+                                             mountpoint)
 
-    def detach_volume(self, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance"""
-        return self._volumeops.detach_volume(instance_name, mountpoint)
+        return self._volumeops.detach_volume(connection_info,
+                                             instance_name,
+                                             mountpoint)
 
     def get_console_pool_info(self, console_type):
         xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)

@@ -374,7 +374,8 @@ class HyperVConnection(driver.ComputeDriver):
             raise exception.InstanceNotFound(instance_id=instance.id)
         self._set_vm_state(instance.name, 'Reboot')
 
-    def destroy(self, instance, network_info, cleanup=True):
+    def destroy(self, instance, network_info, block_device_info=None,
+                cleanup=True):
         """Destroy the VM. Also destroy the associated VHD disk files"""
         LOG.debug(_("Got request to destroy vm %s"), instance.name)
         vm = self._lookup(instance.name)
@@ -474,12 +475,12 @@ class HyperVConnection(driver.ComputeDriver):
             LOG.error(msg)
             raise Exception(msg)
 
-    def attach_volume(self, instance_name, device_path, mountpoint):
+    def attach_volume(self, connection_info, instance_name, mountpoint):
         vm = self._lookup(instance_name)
         if vm is None:
             raise exception.InstanceNotFound(instance_id=instance_name)
 
-    def detach_volume(self, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance_name, mountpoint):
         vm = self._lookup(instance_name)
         if vm is None:
             raise exception.InstanceNotFound(instance_id=instance_name)

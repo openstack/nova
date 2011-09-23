@@ -147,7 +147,7 @@ class VolumeHelper(HelperBase):
                                    % sr_ref)
 
     @classmethod
-    def parse_volume_info(cls, device_path, mountpoint):
+    def parse_volume_info(cls, connection_info, mountpoint):
         """
         Parse device_path and mountpoint as they can be used by XenAPI.
         In particular, the mountpoint (e.g. /dev/sdc) must be translated
@@ -161,11 +161,12 @@ class VolumeHelper(HelperBase):
         the iscsi driver to set them.
         """
         device_number = VolumeHelper.mountpoint_to_number(mountpoint)
-        volume_id = _get_volume_id(device_path)
-        (iscsi_name, iscsi_portal) = _get_target(volume_id)
-        target_host = _get_target_host(iscsi_portal)
-        target_port = _get_target_port(iscsi_portal)
-        target_iqn = _get_iqn(iscsi_name, volume_id)
+        data = connection_info['data']
+        volume_id = data['volume_id']
+        target_portal = data['target_portal']
+        target_host = _get_target_host(target_portal)
+        target_port = _get_target_port(target_portal)
+        target_iqn = data['target_iqn']
         LOG.debug('(vol_id,number,host,port,iqn): (%s,%s,%s,%s)',
                   volume_id, target_host, target_port, target_iqn)
         if (device_number < 0) or \
@@ -173,7 +174,7 @@ class VolumeHelper(HelperBase):
             (target_host is None) or \
             (target_iqn is None):
             raise StorageError(_('Unable to obtain target information'
-                    ' %(device_path)s, %(mountpoint)s') % locals())
+                    ' %(data)s, %(mountpoint)s') % locals())
         volume_info = {}
         volume_info['deviceNumber'] = device_number
         volume_info['volumeId'] = volume_id

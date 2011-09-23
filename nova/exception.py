@@ -394,16 +394,16 @@ class VolumeIsBusy(Error):
     message = _("deleting volume %(volume_name)s that has snapshot")
 
 
-class ExportDeviceNotFoundForVolume(NotFound):
-    message = _("No export device found for volume %(volume_id)s.")
-
-
 class ISCSITargetNotFoundForVolume(NotFound):
     message = _("No target id found for volume %(volume_id)s.")
 
 
 class DiskNotFound(NotFound):
     message = _("No disk at %(location)s")
+
+
+class VolumeDriverNotFound(NotFound):
+    message = _("Could not find a handler for %(driver_type)s volume.")
 
 
 class InvalidImageRef(Invalid):

@@ -28,20 +28,17 @@ intact.
 :volume_topic:  What :mod:`rpc` topic to listen to (default: `volume`).
 :volume_manager:  The module name of a class derived from
                   :class:`manager.Manager` (default:
-                  :class:`nova.volume.manager.AOEManager`).
+                  :class:`nova.volume.manager.Manager`).
 :storage_availability_zone:  Defaults to `nova`.
-:volume_driver:  Used by :class:`AOEManager`.  Defaults to
-                 :class:`nova.volume.driver.AOEDriver`.
-:num_shelves:  Number of shelves for AoE (default: 100).
-:num_blades:  Number of vblades per shelf to allocate AoE storage from
-              (default: 16).
+:volume_driver:  Used by :class:`Manager`.  Defaults to
+                 :class:`nova.volume.driver.ISCSIDriver`.
 :volume_group:  Name of the group that will contain exported volumes (default:
                 `nova-volumes`)
-:aoe_eth_dev:  Device name the volumes will be exported on (default: `eth0`).
-:num_shell_tries:  Number of times to attempt to run AoE commands (default: 3)
+:num_shell_tries:  Number of times to attempt to run commands (default: 3)
 
 """
 
+import sys
 
 from nova import context
 from nova import exception
@@ -126,10 +123,11 @@ class VolumeManager(manager.SchedulerDependentManager):
             if model_update:
                 self.db.volume_update(context, volume_ref['id'], model_update)
         except Exception:
+            exc_info = sys.exc_info()
             self.db.volume_update(context,
                                   volume_ref['id'], {'status': 'error'})
             self._notify_vsa(context, volume_ref, 'error')
-            raise
+            raise exc_info
 
         now = utils.utcnow()
         self.db.volume_update(context,
@@ -181,10 +179,11 @@ class VolumeManager(manager.SchedulerDependentManager):
                                   {'status': 'available'})
             return True
         except Exception:
+            exc_info = sys.exc_info()
             self.db.volume_update(context,
                                   volume_ref['id'],
                                   {'status': 'error_deleting'})
-            raise
+            raise exc_info
 
         self.db.volume_destroy(context, volume_id)
         LOG.debug(_("volume %s: deleted successfully"), volume_ref['name'])
@@ -233,26 +232,44 @@ class VolumeManager(manager.SchedulerDependentManager):
         LOG.debug(_("snapshot %s: deleted successfully"), snapshot_ref['name'])
         return True
 
-    def setup_compute_volume(self, context, volume_id):
-        """Setup remote volume on compute host.
+    def attach_volume(self, context, volume_id, instance_id, mountpoint):
+        """Updates db to show volume is attached"""
+        # TODO(vish): refactor this into a more general "reserve"
+        self.db.volume_attached(context,
+                                volume_id,
+                                instance_id,
+                                mountpoint)
 
-        Returns path to device."""
-        context = context.elevated()
-        volume_ref = self.db.volume_get(context, volume_id)
-        if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
-            path = self.driver.local_path(volume_ref)
-        else:
-            path = self.driver.discover_volume(context, volume_ref)
-        return path
+    def detach_volume(self, context, volume_id):
+        """Updates db to show volume is detached"""
+        # TODO(vish): refactor this into a more general "unreserve"
+        self.db.volume_detached(context, volume_id)
 
-    def remove_compute_volume(self, context, volume_id):
-        """Remove remote volume on compute host."""
-        context = context.elevated()
+    def initialize_connection(self, context, volume_id, address):
+        """Initialize volume to be connected from address.
+
+        This method calls the driver initialize_connection and returns
+        it to the caller.  The driver is responsible for doing any
+        necessary security setup and returning a connection_info dictionary
+        in the following format:
+            {'driver_volume_type': driver_volume_type
+             'data': data}
+
+        driver_volume_type: a string to identify the type of volume.  This
+                           can be used by the calling code to determine the
+                           strategy for connecting to the volume. This could
+                           be 'iscsi', 'rdb', 'sheepdog', etc.
+        data: this is the data that the calling code will use to connect
+              to the volume. Keep in mind that this will be serialized to
+              json in various places, so it should not contain any non-json
+              data types.
+        """
         volume_ref = self.db.volume_get(context, volume_id)
-        if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
-            return True
-        else:
-            self.driver.undiscover_volume(volume_ref)
+        return self.driver.initialize_connection(volume_ref, address)
+
+    def terminate_connection(self, context, volume_id, address):
+        volume_ref = self.db.volume_get(context, volume_id)
+        self.driver.terminate_connection(volume_ref, address)
 
     def check_for_export(self, context, instance_id):
         """Make sure whether volume is exported."""

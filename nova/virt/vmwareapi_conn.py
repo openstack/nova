@@ -137,7 +137,8 @@ class VMWareESXConnection(driver.ComputeDriver):
         """Reboot VM instance."""
         self._vmops.reboot(instance, network_info)
 
-    def destroy(self, instance, network_info, cleanup=True):
+    def destroy(self, instance, network_info, block_device_info=None,
+                cleanup=True):
         """Destroy VM instance."""
         self._vmops.destroy(instance, network_info)
 
@@ -173,11 +174,11 @@ class VMWareESXConnection(driver.ComputeDriver):
         """Return link to instance's ajax console."""
         return self._vmops.get_ajax_console(instance)
 
-    def attach_volume(self, instance_name, device_path, mountpoint):
+    def attach_volume(self, connection_info, instance_name, mountpoint):
         """Attach volume storage to VM instance."""
         pass
 
-    def detach_volume(self, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance."""
         pass
 

@@ -134,6 +134,12 @@ flags.DEFINE_string('libvirt_vif_type', 'bridge',
 flags.DEFINE_string('libvirt_vif_driver',
                     'nova.virt.libvirt.vif.LibvirtBridgeDriver',
                     'The libvirt VIF driver to configure the VIFs.')
+flags.DEFINE_list('libvirt_volume_drivers',
+                  ['iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
+                   'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
+                   'rdb=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
+                   'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver'],
+                  'Libvirt handlers for remote volumes.')
 flags.DEFINE_string('default_local_format',
                     None,
                     'The default format a local_volume will be formatted with '
@@ -184,6 +190,11 @@ class LibvirtConnection(driver.ComputeDriver):
         fw_class = utils.import_class(FLAGS.firewall_driver)
         self.firewall_driver = fw_class(get_connection=self._get_connection)
         self.vif_driver = utils.import_object(FLAGS.libvirt_vif_driver)
+        self.volume_drivers = {}
+        for driver_str in FLAGS.libvirt_volume_drivers:
+            driver_type, _sep, driver = driver_str.partition('=')
+            driver_class = utils.import_class(driver)
+            self.volume_drivers[driver_type] = driver_class(self)
 
     def init_host(self, host):
         # NOTE(nsokolov): moved instance restarting to ComputeManager
@@ -261,7 +272,8 @@ class LibvirtConnection(driver.ComputeDriver):
         for (network, mapping) in network_info:
             self.vif_driver.plug(instance, network, mapping)
 
-    def destroy(self, instance, network_info, cleanup=True):
+    def destroy(self, instance, network_info, block_device_info=None,
+                cleanup=True):
         instance_name = instance['name']
 
         try:
@@ -292,21 +304,21 @@ class LibvirtConnection(driver.ComputeDriver):
                                 locals())
                     raise
 
-            try:
-                # NOTE(justinsb): We remove the domain definition. We probably
-                # would do better to keep it if cleanup=False (e.g. volumes?)
-                # (e.g. #2 - not losing machines on failure)
-                virt_dom.undefine()
-            except libvirt.libvirtError as e:
-                errcode = e.get_error_code()
-                LOG.warning(_("Error from libvirt during undefine of "
-                              "%(instance_name)s. Code=%(errcode)s "
-                              "Error=%(e)s") %
-                            locals())
-                raise
+        try:
+            # NOTE(justinsb): We remove the domain definition. We probably
+            # would do better to keep it if cleanup=False (e.g. volumes?)
+            # (e.g. #2 - not losing machines on failure)
+            virt_dom.undefine()
+        except libvirt.libvirtError as e:
+            errcode = e.get_error_code()
+            LOG.warning(_("Error from libvirt during undefine of "
+                          "%(instance_name)s. Code=%(errcode)s "
+                          "Error=%(e)s") %
+                        locals())
+            raise
 
-            for (network, mapping) in network_info:
-                self.vif_driver.unplug(instance, network, mapping)
+        for (network, mapping) in network_info:
+            self.vif_driver.unplug(instance, network, mapping)
 
         def _wait_for_destroy():
             """Called at an interval until the VM is gone."""
@@ -325,6 +337,15 @@ class LibvirtConnection(driver.ComputeDriver):
         self.firewall_driver.unfilter_instance(instance,
                                                network_info=network_info)
 
+        # NOTE(vish): we disconnect from volumes regardless
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mountpoint = vol['mount_device']
+            xml = self.volume_driver_method('disconnect_volume',
+                                            connection_info,
+                                            mountpoint)
         if cleanup:
             self._cleanup(instance)
 
@@ -340,24 +361,22 @@ class LibvirtConnection(driver.ComputeDriver):
         if os.path.exists(target):
             shutil.rmtree(target)
 
+    def volume_driver_method(self, method_name, connection_info,
+                             *args, **kwargs):
+        driver_type = connection_info.get('driver_volume_type')
+        if not driver_type in self.volume_drivers:
+            raise exception.VolumeDriverNotFound(driver_type=driver_type)
+        driver = self.volume_drivers[driver_type]
+        method = getattr(driver, method_name)
+        return method(connection_info, *args, **kwargs)
+
     @exception.wrap_exception()
-    def attach_volume(self, instance_name, device_path, mountpoint):
+    def attach_volume(self, connection_info, instance_name, mountpoint):
         virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
-        (type, protocol, name) = \
-            self._get_volume_device_info(device_path)
-        if type == 'block':
-            xml = """<disk type='block'>
-                         <driver name='qemu' type='raw'/>
-                         <source dev='%s'/>
-                         <target dev='%s' bus='virtio'/>
-                     </disk>""" % (device_path, mount_device)
-        elif type == 'network':
-            xml = """<disk type='network'>
-                         <driver name='qemu' type='raw'/>
-                         <source protocol='%s' name='%s'/>
-                         <target dev='%s' bus='virtio'/>
-                     </disk>""" % (protocol, name, mount_device)
+        xml = self.volume_driver_method('connect_volume',
+                                        connection_info,
+                                        mount_device)
         virt_dom.attachDevice(xml)
 
     def _get_disk_xml(self, xml, device):
@@ -381,13 +400,21 @@ class LibvirtConnection(driver.ComputeDriver):
                 doc.freeDoc()
 
     @exception.wrap_exception()
-    def detach_volume(self, instance_name, mountpoint):
-        virt_dom = self._lookup_by_name(instance_name)
+    def detach_volume(self, connection_info, instance_name, mountpoint):
         mount_device = mountpoint.rpartition("/")[2]
-        xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
-        if not xml:
-            raise exception.DiskNotFound(location=mount_device)
-        virt_dom.detachDevice(xml)
+        try:
+            # NOTE(vish): This is called to cleanup volumes after live
+            #             migration, so we should still logout even if
+            #             the instance doesn't exist here anymore.
+            virt_dom = self._lookup_by_name(instance_name)
+            xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
+            if not xml:
+                raise exception.DiskNotFound(location=mount_device)
+            virt_dom.detachDevice(xml)
+        finally:
+            self.volume_driver_method('disconnect_volume',
+                                      connection_info,
+                                      mount_device)
 
     @exception.wrap_exception()
     def snapshot(self, context, instance, image_href):
@@ -1049,15 +1076,6 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.debug(_("block_device_list %s"), block_device_list)
         return block_device.strip_dev(mount_device) in block_device_list
 
-    def _get_volume_device_info(self, device_path):
-        if device_path.startswith('/dev/'):
-            return ('block', None, None)
-        elif ':' in device_path:
-            (protocol, name) = device_path.split(':')
-            return ('network', protocol, name)
-        else:
-            raise exception.InvalidDevicePath(path=device_path)
-
     def _prepare_xml_info(self, instance, network_info, rescue,
                           block_device_info=None):
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -1075,10 +1093,14 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             driver_type = 'raw'
 
+        volumes = []
         for vol in block_device_mapping:
-            vol['mount_device'] = block_device.strip_dev(vol['mount_device'])
-            (vol['type'], vol['protocol'], vol['name']) = \
-                self._get_volume_device_info(vol['device_path'])
+            connection_info = vol['connection_info']
+            mountpoint = vol['mount_device']
+            xml = self.volume_driver_method('connect_volume',
+                                            connection_info,
+                                            mountpoint)
+            volumes.append(xml)
 
         ebs_root = self._volume_in_mapping(self.default_root_device,
                                            block_device_info)
@@ -1111,7 +1133,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     'nics': nics,
                     'ebs_root': ebs_root,
                     'local_device': local_device,
-                    'volumes': block_device_mapping,
+                    'volumes': volumes,
                     'use_virtio_for_bridges':
                             FLAGS.libvirt_use_virtio_for_bridges,
                     'ephemerals': ephemerals}
@@ -1706,6 +1728,24 @@ class LibvirtConnection(driver.ComputeDriver):
 
         timer.f = wait_for_live_migration
         timer.start(interval=0.5, now=True)
+
+    def pre_live_migration(self, block_device_info):
+        """Preparation live migration.
+
+        :params block_device_info:
+            It must be the result of _get_instance_volume_bdms()
+            at compute manager.
+        """
+
+        # Establishing connection to volume server.
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mountpoint = vol['mount_device']
+            xml = self.volume_driver_method('connect_volume',
+                                            connection_info,
+                                            mountpoint)
 
     def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
         """Preparation block migration.

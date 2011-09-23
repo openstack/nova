@@ -40,18 +40,21 @@ class VolumeOps(object):
         VolumeHelper.XenAPI = self.XenAPI
         VMHelper.XenAPI = self.XenAPI
 
-    def attach_volume(self, instance_name, device_path, mountpoint):
+    def attach_volume(self, connection_info, instance_name, mountpoint):
         """Attach volume storage to VM instance"""
         # Before we start, check that the VM exists
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance_name)
         # NOTE: No Resource Pool concept so far
-        LOG.debug(_("Attach_volume: %(instance_name)s, %(device_path)s,"
+        LOG.debug(_("Attach_volume: %(connection_info)s, %(instance_name)s,"
                 " %(mountpoint)s") % locals())
+        driver_type = connection_info['driver_volume_type']
+        if driver_type != 'iscsi':
+            raise exception.VolumeDriverNotFound(driver_type=driver_type)
         # Create the iSCSI SR, and the PDB through which hosts access SRs.
         # But first, retrieve target info, like Host, IQN, LUN and SCSIID
-        vol_rec = VolumeHelper.parse_volume_info(device_path, mountpoint)
+        vol_rec = VolumeHelper.parse_volume_info(connection_info, mountpoint)
         label = 'SR-%s' % vol_rec['volumeId']
         description = 'Disk-for:%s' % instance_name
         # Create SR
@@ -92,7 +95,7 @@ class VolumeOps(object):
         LOG.info(_('Mountpoint %(mountpoint)s attached to'
                 ' instance %(instance_name)s') % locals())
 
-    def detach_volume(self, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance"""
         # Before we start, check that the VM exists
         vm_ref = VMHelper.lookup(self._session, instance_name)

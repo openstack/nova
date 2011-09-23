@@ -30,6 +30,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
@@ -38,10 +39,13 @@ from nova.compute import vm_states
 from nova.virt import driver
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
+from nova.virt.libvirt import volume
+from nova.volume import driver as volume_driver
 from nova.tests import fake_network
 
 libvirt = None
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.test_libvirt')
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 _ipv4_like = fake_network.ipv4_like
@@ -85,6 +89,71 @@ class FakeVirtDomain(object):
 
     def XMLDesc(self, *args):
         return self._fake_dom_xml
+
+
+class LibvirtVolumeTestCase(test.TestCase):
+
+    @staticmethod
+    def fake_execute(*cmd, **kwargs):
+        LOG.debug("FAKE EXECUTE: %s" % ' '.join(cmd))
+        return None, None
+
+    def setUp(self):
+        super(LibvirtVolumeTestCase, self).setUp()
+        self.stubs.Set(utils, 'execute', self.fake_execute)
+
+    def test_libvirt_iscsi_driver(self):
+        # NOTE(vish) exists is to make driver assume connecting worked
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        vol_driver = volume_driver.ISCSIDriver()
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver('fake')
+        name = 'volume-00000001'
+        vol = {'id': 1,
+               'name': name,
+               'provider_auth': None,
+               'provider_location': '10.0.2.15:3260,fake '
+                        'iqn.2010-10.org.openstack:volume-00000001'}
+        address = '127.0.0.1'
+        connection_info = vol_driver.initialize_connection(vol, address)
+        mount_device = "vde"
+        xml = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = xml_to_tree(xml)
+        dev_str = '/dev/disk/by-path/ip-10.0.2.15:3260-iscsi-iqn.' \
+                  '2010-10.org.openstack:%s-lun-0' % name
+        self.assertEqual(tree.get('type'), 'block')
+        self.assertEqual(tree.find('./source').get('dev'), dev_str)
+        libvirt_driver.disconnect_volume(connection_info, mount_device)
+
+    def test_libvirt_sheepdog_driver(self):
+        vol_driver = volume_driver.SheepdogDriver()
+        libvirt_driver = volume.LibvirtNetVolumeDriver('fake')
+        name = 'volume-00000001'
+        vol = {'id': 1, 'name': name}
+        address = '127.0.0.1'
+        connection_info = vol_driver.initialize_connection(vol, address)
+        mount_device = "vde"
+        xml = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = xml_to_tree(xml)
+        self.assertEqual(tree.get('type'), 'network')
+        self.assertEqual(tree.find('./source').get('protocol'), 'sheepdog')
+        self.assertEqual(tree.find('./source').get('name'), name)
+        libvirt_driver.disconnect_volume(connection_info, mount_device)
+
+    def test_libvirt_rbd_driver(self):
+        vol_driver = volume_driver.RBDDriver()
+        libvirt_driver = volume.LibvirtNetVolumeDriver('fake')
+        name = 'volume-00000001'
+        vol = {'id': 1, 'name': name}
+        address = '127.0.0.1'
+        connection_info = vol_driver.initialize_connection(vol, address)
+        mount_device = "vde"
+        xml = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = xml_to_tree(xml)
+        self.assertEqual(tree.get('type'), 'network')
+        self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
+        rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
+        self.assertEqual(tree.find('./source').get('name'), rbd_name)
+        libvirt_driver.disconnect_volume(connection_info, mount_device)
 
 
 class CacheConcurrencyTestCase(test.TestCase):
@@ -145,6 +214,20 @@ class CacheConcurrencyTestCase(test.TestCase):
             eventlet.sleep(0)
 
 
+class FakeVolumeDriver(object):
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def attach_volume(self, *args):
+        pass
+
+    def detach_volume(self, *args):
+        pass
+
+    def get_xml(self, *args):
+        return ""
+
+
 class LibvirtConnTestCase(test.TestCase):
 
     def setUp(self):
@@ -192,14 +275,14 @@ class LibvirtConnTestCase(test.TestCase):
                 return FakeVirtDomain()
 
         # Creating mocks
+        volume_driver = 'iscsi=nova.tests.test_libvirt.FakeVolumeDriver'
+        self.flags(libvirt_volume_drivers=[volume_driver])
         fake = FakeLibvirtConnection()
         # Customizing above fake if necessary
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
         self.flags(image_service='nova.image.fake.FakeImageService')
-        fw_driver = "nova.tests.fake_network.FakeIptablesFirewallDriver"
-        self.flags(firewall_driver=fw_driver)
         self.flags(libvirt_vif_driver="nova.tests.fake_network.FakeVIFDriver")
 
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
@@ -382,14 +465,16 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(snapshot['status'], 'active')
         self.assertEquals(snapshot['name'], snapshot_name)
 
-    def test_attach_invalid_device(self):
+    def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
         connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
         self.mox.ReplayAll()
         conn = connection.LibvirtConnection(False)
-        self.assertRaises(exception.InvalidDevicePath,
+        self.assertRaises(exception.VolumeDriverNotFound,
                           conn.attach_volume,
-                          "fake", "bad/device/path", "/dev/fake")
+                          {"driver_volume_type": "badtype"},
+                           "fake",
+                           "/dev/fake")
 
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
@@ -640,9 +725,15 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         try:
             conn = connection.LibvirtConnection(False)
-            conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
-            conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
-            conn.firewall_driver.setattr('instance_filter_exists', fake_none)
+            self.stubs.Set(conn.firewall_driver,
+                           'setup_basic_filtering',
+                           fake_none)
+            self.stubs.Set(conn.firewall_driver,
+                           'prepare_instance_filter',
+                           fake_none)
+            self.stubs.Set(conn.firewall_driver,
+                           'instance_filter_exists',
+                           fake_none)
             conn.ensure_filtering_rules_for_instance(instance_ref,
                                                      network_info,
                                                      time=fake_timer)
@@ -707,6 +798,27 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.volume_destroy(self.context, volume_ref['id'])
         db.instance_destroy(self.context, instance_ref['id'])
+
+    def test_pre_live_migration_works_correctly(self):
+        """Confirms pre_block_migration works correctly."""
+        # Creating testdata
+        vol = {'block_device_mapping': [
+                  {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
+                  {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
+        conn = connection.LibvirtConnection(False)
+
+        # Creating mocks
+        self.mox.StubOutWithMock(driver, "block_device_info_get_mapping")
+        driver.block_device_info_get_mapping(vol
+            ).AndReturn(vol['block_device_mapping'])
+        self.mox.StubOutWithMock(conn, "volume_driver_method")
+        for v in vol['block_device_mapping']:
+            conn.volume_driver_method('connect_volume',
+                                     v['connection_info'], v['mount_device'])
+
+        # Starting test
+        self.mox.ReplayAll()
+        self.assertEqual(conn.pre_live_migration(vol), None)
 
     def test_pre_block_migration_works_correctly(self):
         """Confirms pre_block_migration works correctly."""
@@ -822,8 +934,12 @@ class LibvirtConnTestCase(test.TestCase):
         # Start test
         self.mox.ReplayAll()
         conn = connection.LibvirtConnection(False)
-        conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
-        conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
+        self.stubs.Set(conn.firewall_driver,
+                       'setup_basic_filtering',
+                       fake_none)
+        self.stubs.Set(conn.firewall_driver,
+                       'prepare_instance_filter',
+                       fake_none)
 
         try:
             conn.spawn(self.context, instance, network_info)

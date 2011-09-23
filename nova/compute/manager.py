@@ -30,8 +30,6 @@ terminating it.
 :instances_path:  Where instances are kept on disk
 :compute_driver:  Name of class that is used to handle virtualization, loaded
                   by :func:`nova.utils.import_object`
-:volume_manager:  Name of class that handles persistent storage, loaded by
-                  :func:`nova.utils.import_object`
 
 """
 
@@ -60,7 +58,6 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.notifier import api as notifier
-from nova.compute.utils import terminate_volumes
 from nova.virt import driver
 
 
@@ -143,7 +140,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.network_api = network.API()
         self.network_manager = utils.import_object(FLAGS.network_manager)
-        self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self._last_host_check = 0
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -281,8 +277,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             if not ((bdm['snapshot_id'] is None) or
                     (bdm['volume_id'] is not None)):
                 LOG.error(_('corrupted state of block device mapping '
-                            'id: %(id)s '
-                            'snapshot: %(snapshot_id) volume: %(vollume_id)') %
+                            'id: %(id)s snapshot: %(snapshot_id)s '
+                            'volume: %(volume_id)s') %
                           {'id': bdm['id'],
                            'snapshot_id': bdm['snapshot'],
                            'volume_id': bdm['volume_id']})
@@ -292,10 +288,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             if bdm['volume_id'] is not None:
                 volume_api.check_attach(context,
                                         volume_id=bdm['volume_id'])
-                dev_path = self._attach_volume_boot(context, instance_id,
+                cinfo = self._attach_volume_boot(context, instance_id,
                                                     bdm['volume_id'],
                                                     bdm['device_name'])
-                block_device_mapping.append({'device_path': dev_path,
+                self.db.block_device_mapping_update(
+                        context, bdm['id'],
+                        {'connection_info': utils.dumps(cinfo)})
+                block_device_mapping.append({'connection_info': cinfo,
                                              'mount_device':
                                              bdm['device_name']})
 
@@ -476,6 +475,23 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # a per-line disable flag here for W602
                 raise type_, value, traceback
 
+    def _get_instance_volume_bdms(self, context, instance_id):
+        bdms = self.db.block_device_mapping_get_all_by_instance(context,
+                                                                instance_id)
+        return [bdm for bdm in bdms if bdm['volume_id']]
+
+    def _get_instance_volume_block_device_info(self, context, instance_id):
+        bdms = self._get_instance_volume_bdms(context, instance_id)
+        block_device_mapping = []
+        for bdm in bdms:
+            cinfo = utils.loads(bdm['connection_info'])
+            block_device_mapping.append({'connection_info': cinfo,
+                                         'mount_device':
+                                         bdm['device_name']})
+        ## NOTE(vish): The mapping is passed in so the driver can disconnect
+        ##             from remote volumes if necessary
+        return {'block_device_mapping': block_device_mapping}
+
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def run_instance(self, context, instance_id, **kwargs):
         self._run_instance(context, instance_id, **kwargs)
@@ -486,9 +502,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Starting an instance on this host."""
         # TODO(yamahata): injected_files isn't supported.
         #                 Anyway OSAPI doesn't support stop/start yet
+        # FIXME(vish): I've kept the files during stop instance, but
+        #              I think start will fail due to the files still
         self._run_instance(context, instance_id)
 
-    def _shutdown_instance(self, context, instance_id, action_str):
+    def _shutdown_instance(self, context, instance_id, action_str, cleanup):
         """Shutdown an instance on this host."""
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
@@ -500,22 +518,35 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not FLAGS.stub_network:
             self.network_api.deallocate_for_instance(context, instance)
 
-        volumes = instance.get('volumes') or []
-        for volume in volumes:
-            self._detach_volume(context, instance_id, volume['id'], False)
+        for bdm in self._get_instance_volume_bdms(context, instance_id):
+            volume_id = bdm['volume_id']
+            try:
+                self._detach_volume(context, instance_id, volume_id)
+            except exception.DiskNotFound as exc:
+                LOG.warn(_("Ignoring DiskNotFound: %s") % exc)
 
         if instance['power_state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
                                     ' instance: %s') % instance_id)
-        self.driver.destroy(instance, network_info)
+        block_device_info = self._get_instance_volume_block_device_info(
+            context, instance_id)
+        self.driver.destroy(instance, network_info, block_device_info, cleanup)
 
-        if action_str == 'Terminating':
-            terminate_volumes(self.db, context, instance_id)
+    def _cleanup_volumes(self, context, instance_id):
+        volume_api = volume.API()
+        bdms = self.db.block_device_mapping_get_all_by_instance(context,
+                                                                instance_id)
+        for bdm in bdms:
+            LOG.debug(_("terminating bdm %s") % bdm)
+            if bdm['volume_id'] and bdm['delete_on_termination']:
+                volume_api.delete(context, bdm['volume_id'])
+            # NOTE(vish): bdms will be deleted on instance destroy
 
     def _delete_instance(self, context, instance_id):
         """Delete an instance on this host."""
-        self._shutdown_instance(context, instance_id, 'Terminating')
+        self._shutdown_instance(context, instance_id, 'Terminating', True)
+        self._cleanup_volumes(context, instance_id)
         instance = self.db.instance_get(context.elevated(), instance_id)
         self._instance_update(context,
                               instance_id,
@@ -540,7 +571,11 @@ class ComputeManager(manager.SchedulerDependentManager):
     @checks_instance_lock
     def stop_instance(self, context, instance_id):
         """Stopping an instance on this host."""
-        self._shutdown_instance(context, instance_id, 'Stopping')
+        # FIXME(vish): I've kept the files during stop instance, but
+        #              I think start will fail due to the files still
+        #              existing.  I don't really know what the purpose of
+        #              stop and start are when compared to pause and unpause
+        self._shutdown_instance(context, instance_id, 'Stopping', False)
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.STOPPED,
@@ -612,7 +647,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                               instance_id,
                               vm_state=vm_states.REBUILDING,
                               task_state=task_states.SPAWNING)
-
         # pull in new password here since the original password isn't in the db
         instance_ref.admin_pass = kwargs.get('new_pass',
                 utils.generate_password(FLAGS.password_length))
@@ -1283,17 +1317,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Attach a volume to an instance at boot time. So actual attach
         is done by instance creation"""
 
-        # TODO(yamahata):
-        # should move check_attach to volume manager?
-        volume.API().check_attach(context, volume_id)
-
         context = context.elevated()
         LOG.audit(_("instance %(instance_id)s: booting with "
                     "volume %(volume_id)s at %(mountpoint)s") %
                   locals(), context=context)
-        dev_path = self.volume_manager.setup_compute_volume(context, volume_id)
-        self.db.volume_attached(context, volume_id, instance_id, mountpoint)
-        return dev_path
+        address = FLAGS.my_ip
+        volume_api = volume.API()
+        connection_info = volume_api.initialize_connection(context,
+                                                           volume_id,
+                                                           address)
+        volume_api.attach(context, volume_id, instance_id, mountpoint)
+        return connection_info
 
     @checks_instance_lock
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
@@ -1302,56 +1336,73 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("instance %(instance_id)s: attaching volume %(volume_id)s"
                 " to %(mountpoint)s") % locals(), context=context)
-        dev_path = self.volume_manager.setup_compute_volume(context,
-                                                            volume_id)
+        volume_api = volume.API()
+        address = FLAGS.my_ip
+        connection_info = volume_api.initialize_connection(context,
+                                                           volume_id,
+                                                           address)
         try:
-            self.driver.attach_volume(instance_ref['name'],
-                                      dev_path,
+            self.driver.attach_volume(connection_info,
+                                      instance_ref['name'],
                                       mountpoint)
-            self.db.volume_attached(context,
-                                    volume_id,
-                                    instance_id,
-                                    mountpoint)
-            values = {
-                'instance_id': instance_id,
-                'device_name': mountpoint,
-                'delete_on_termination': False,
-                'virtual_name': None,
-                'snapshot_id': None,
-                'volume_id': volume_id,
-                'volume_size': None,
-                'no_device': None}
-            self.db.block_device_mapping_create(context, values)
-        except Exception as exc:  # pylint: disable=W0702
+        except Exception:  # pylint: disable=W0702
+            exc = sys.exc_info()
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.
             LOG.exception(_("instance %(instance_id)s: attach failed"
                     " %(mountpoint)s, removing") % locals(), context=context)
-            self.volume_manager.remove_compute_volume(context,
-                                                      volume_id)
+            volume_api.terminate_connection(context, volume_id, address)
             raise exc
 
+        volume_api.attach(context, volume_id, instance_id, mountpoint)
+        values = {
+            'instance_id': instance_id,
+            'connection_info': utils.dumps(connection_info),
+            'device_name': mountpoint,
+            'delete_on_termination': False,
+            'virtual_name': None,
+            'snapshot_id': None,
+            'volume_id': volume_id,
+            'volume_size': None,
+            'no_device': None}
+        self.db.block_device_mapping_create(context, values)
         return True
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def _detach_volume(self, context, instance_id, volume_id, destroy_bdm):
+    def _detach_volume(self, context, instance_id, volume_id,
+                       destroy_bdm=False, mark_detached=True,
+                       force_detach=False):
         """Detach a volume from an instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        volume_ref = self.db.volume_get(context, volume_id)
-        mp = volume_ref['mountpoint']
+        bdms = self.db.block_device_mapping_get_all_by_instance(
+                context, instance_id)
+        for item in bdms:
+            # NOTE(vish): Comparing as strings because the os_api doesn't
+            #             convert to integer and we may wish to support uuids
+            #             in the future.
+            if str(item['volume_id']) == str(volume_id):
+                bdm = item
+                break
+        mp = bdm['device_name']
+
         LOG.audit(_("Detach volume %(volume_id)s from mountpoint %(mp)s"
                 " on instance %(instance_id)s") % locals(), context=context)
-        if instance_ref['name'] not in self.driver.list_instances():
+        volume_api = volume.API()
+        if (instance_ref['name'] not in self.driver.list_instances() and
+            not force_detach):
             LOG.warn(_("Detaching volume from unknown instance %s"),
                      instance_id, context=context)
         else:
-            self.driver.detach_volume(instance_ref['name'],
-                                      volume_ref['mountpoint'])
-        self.volume_manager.remove_compute_volume(context, volume_id)
-        self.db.volume_detached(context, volume_id)
+            self.driver.detach_volume(utils.loads(bdm['connection_info']),
+                                      instance_ref['name'],
+                                      bdm['device_name'])
+        address = FLAGS.my_ip
+        volume_api.terminate_connection(context, volume_id, address)
+        if mark_detached:
+            volume_api.detach(context, volume_id)
         if destroy_bdm:
             self.db.block_device_mapping_destroy_by_instance_and_volume(
                 context, instance_id, volume_id)
@@ -1361,13 +1412,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Detach a volume from an instance."""
         return self._detach_volume(context, instance_id, volume_id, True)
 
-    def remove_volume(self, context, volume_id):
-        """Remove volume on compute host.
-
-        :param context: security context
-        :param volume_id: volume ID
-        """
-        self.volume_manager.remove_compute_volume(context, volume_id)
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def remove_volume_connection(self, context, instance_id, volume_id):
+        """Detach a volume from an instance.,"""
+        # NOTE(vish): We don't want to actually mark the volume
+        #             detached, or delete the bdm, just remove the
+        #             connection from this host.
+        try:
+            self._detach_volume(context, instance_id, volume_id,
+                                False, False, True)
+        except exception.NotFound:
+            pass
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def compare_cpu(self, context, cpu_info):
@@ -1450,14 +1505,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # Getting instance info
         instance_ref = self.db.instance_get(context, instance_id)
-        hostname = instance_ref['hostname']
 
         # If any volume is mounted, prepare here.
-        if not instance_ref['volumes']:
-            LOG.info(_("%s has no volume."), hostname)
-        else:
-            for v in instance_ref['volumes']:
-                self.volume_manager.setup_compute_volume(context, v['id'])
+        block_device_info = \
+            self._get_instance_volume_block_device_info(context, instance_id)
+        if not block_device_info['block_device_mapping']:
+            LOG.info(_("%s has no volume."), instance_ref.name)
+
+        self.driver.pre_live_migration(block_device_info)
 
         # Bridge settings.
         # Call this method prior to ensure_filtering_rules_for_instance,
@@ -1493,7 +1548,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # In addition, this method is creating filtering rule
         # onto destination host.
         self.driver.ensure_filtering_rules_for_instance(instance_ref,
-                network_info)
+                                                        network_info)
 
         # Preparation for block migration
         if block_migration:
@@ -1517,7 +1572,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             # Checking volume node is working correctly when any volumes
             # are attached to instances.
-            if instance_ref['volumes']:
+            if self._get_instance_volume_bdms(context, instance_id):
                 rpc.call(context,
                           FLAGS.volume_topic,
                           {"method": "check_for_export",
@@ -1537,12 +1592,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                'disk': disk}})
 
         except Exception:
+            exc = sys.exc_info()
             i_name = instance_ref.name
             msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
-            LOG.error(msg % locals())
+            LOG.exception(msg % locals())
             self.rollback_live_migration(context, instance_ref,
                                          dest, block_migration)
-            raise
+            raise exc
 
         # Executing live migration
         # live_migration might raises exceptions, but
@@ -1570,11 +1626,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_id = instance_ref['id']
 
         # Detaching volumes.
-        try:
-            for vol in self.db.volume_get_all_by_instance(ctxt, instance_id):
-                self.volume_manager.remove_compute_volume(ctxt, vol['id'])
-        except exception.NotFound:
-            pass
+        for bdm in self._get_instance_volume_bdms(ctxt, instance_id):
+            # NOTE(vish): We don't want to actually mark the volume
+            #             detached, or delete the bdm, just remove the
+            #             connection from this host.
+            self.remove_volume_connection(ctxt, instance_id,
+                                          bdm['volume_id'])
 
         # Releasing vlan.
         # (not necessary in current implementation?)
@@ -1673,10 +1730,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
 
-        for volume_ref in instance_ref['volumes']:
-            volume_id = volume_ref['id']
+        for bdm in self._get_instance_volume_bdms(context, instance_ref['id']):
+            volume_id = bdm['volume_id']
             self.db.volume_update(context, volume_id, {'status': 'in-use'})
-            volume.API().remove_from_compute(context, volume_id, dest)
+            volume.API().remove_from_compute(context, instance_ref['id'],
+                                             volume_id, dest)
 
         # Block migration needs empty image at destination host
         # before migration starts, so if any failure occurs,
@@ -1693,9 +1751,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         """
-        instances_ref = self.db.instance_get(context, instance_id)
-        network_info = self._get_instance_nw_info(context, instances_ref)
-        self.driver.destroy(instances_ref, network_info)
+        instance_ref = self.db.instance_get(context, instance_id)
+        network_info = self._get_instance_nw_info(context, instance_ref)
+
+        # NOTE(vish): The mapping is passed in so the driver can disconnect
+        #             from remote volumes if necessary
+        block_device_info = \
+            self._get_instance_volume_block_device_info(context, instance_id)
+        self.driver.destroy(instance_ref, network_info,
+                            block_device_info, True)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""

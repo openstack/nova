@@ -56,18 +56,13 @@ IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')
 
 
-class NoMoreBlades(exception.Error):
-    """No more available blades."""
-    pass
-
-
 class NoMoreNetworks(exception.Error):
     """No more available networks."""
     pass
 
 
 class NoMoreTargets(exception.Error):
-    """No more available blades"""
+    """No more available targets"""
     pass
 
 
@@ -814,25 +809,6 @@ def queue_get_for(context, topic, physical_node_id):
 ###################
 
 
-def export_device_count(context):
-    """Return count of export devices."""
-    return IMPL.export_device_count(context)
-
-
-def export_device_create_safe(context, values):
-    """Create an export_device from the values dictionary.
-
-    The device is not returned. If the create violates the unique
-    constraints because the shelf_id and blade_id already exist,
-    no exception is raised.
-
-    """
-    return IMPL.export_device_create_safe(context, values)
-
-
-###################
-
-
 def iscsi_target_count_by_host(context, host):
     """Return count of export devices."""
     return IMPL.iscsi_target_count_by_host(context, host)
@@ -908,11 +884,6 @@ def quota_destroy_all_by_project(context, project_id):
 ###################
 
 
-def volume_allocate_shelf_and_blade(context, volume_id):
-    """Atomically allocate a free shelf and blade from the pool."""
-    return IMPL.volume_allocate_shelf_and_blade(context, volume_id)
-
-
 def volume_allocate_iscsi_target(context, volume_id, host):
     """Atomically allocate a free iscsi_target from the pool."""
     return IMPL.volume_allocate_iscsi_target(context, volume_id, host)
@@ -976,11 +947,6 @@ def volume_get_by_ec2_id(context, ec2_id):
 def volume_get_instance(context, volume_id):
     """Get the instance that a volume is attached to."""
     return IMPL.volume_get_instance(context, volume_id)
-
-
-def volume_get_shelf_and_blade(context, volume_id):
-    """Get the shelf and blade allocated to the volume."""
-    return IMPL.volume_get_shelf_and_blade(context, volume_id)
 
 
 def volume_get_iscsi_target_num(context, volume_id):

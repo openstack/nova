@@ -254,9 +254,11 @@ class _VirtDriverTestCase(test.TestCase):
         network_info = test_utils.get_test_network_info()
         instance_ref = test_utils.get_test_instance()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.attach_volume(instance_ref['name'],
-                                      '/dev/null', '/mnt/nova/something')
-        self.connection.detach_volume(instance_ref['name'],
+        self.connection.attach_volume({'driver_volume_type': 'fake'},
+                                      instance_ref['name'],
+                                      '/mnt/nova/something')
+        self.connection.detach_volume({'driver_volume_type': 'fake'},
+                                      instance_ref['name'],
                                       '/mnt/nova/something')
 
     @catch_notimplementederror

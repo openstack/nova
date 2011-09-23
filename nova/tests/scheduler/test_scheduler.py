@@ -1080,7 +1080,8 @@ class SimpleDriverTestCase(test.TestCase):
         rpc.call(mox.IgnoreArg(), mox.IgnoreArg(),
             {"method": 'compare_cpu',
             "args": {'cpu_info': s_ref2['compute_node'][0]['cpu_info']}}).\
-             AndRaise(rpc.RemoteError("doesn't have compatibility to", "", ""))
+            AndRaise(rpc.RemoteError(exception.InvalidCPUInfo,
+                                     exception.InvalidCPUInfo(reason='fake')))
 
         self.mox.ReplayAll()
         try:
@@ -1089,7 +1090,7 @@ class SimpleDriverTestCase(test.TestCase):
                                                                dest,
                                                                False)
         except rpc.RemoteError, e:
-            c = (e.message.find(_("doesn't have compatibility to")) >= 0)
+            c = (e.exc_type == exception.InvalidCPUInfo)
 
         self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)

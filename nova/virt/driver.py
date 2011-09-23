@@ -145,11 +145,13 @@ class ComputeDriver(object):
                          the creation of the new instance.
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
-        :param block_device_info:
+        :param block_device_info: Information about block devices to be
+                                  attached to the instance.
         """
         raise NotImplementedError()
 
-    def destroy(self, instance, network_info, cleanup=True):
+    def destroy(self, instance, network_info, block_device_info=None,
+                cleanup=True):
         """Destroy (shutdown and delete) the specified instance.
 
         If the instance is not found (for example if networking failed), this
@@ -159,6 +161,8 @@ class ComputeDriver(object):
         :param instance: Instance object as returned by DB layer.
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param block_device_info: Information about block devices that should
+                                  be detached from the instance.
         :param cleanup:
 
         """
@@ -203,12 +207,12 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def attach_volume(self, context, instance_id, volume_id, mountpoint):
-        """Attach the disk at device_path to the instance at mountpoint"""
+    def attach_volume(self, connection_info, instance_name, mountpoint):
+        """Attach the disk to the instance at mountpoint using info"""
         raise NotImplementedError()
 
-    def detach_volume(self, context, instance_id, volume_id):
-        """Detach the disk attached to the instance at mountpoint"""
+    def detach_volume(self, connection_info, instance_name, mountpoint):
+        """Detach the disk attached to the instance"""
         raise NotImplementedError()
 
     def compare_cpu(self, cpu_info):

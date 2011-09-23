@@ -80,30 +80,22 @@
                 <target dev='${local_device}' bus='${disk_bus}'/>
             </disk>
         #end if
-	#for $eph in $ephemerals
-	     <disk type='block'>
+        #for $eph in $ephemerals
+         <disk type='block'>
                 <driver type='${driver_type}'/>
                 <source dev='${basepath}/${eph.device_path}'/>
                 <target dev='${eph.device}' bus='${disk_bus}'/>
-	     </disk>
-	#end for
-	#if $getVar('swap_device', False)
+         </disk>
+        #end for
+        #if $getVar('swap_device', False)
             <disk type='file'>
                 <driver type='${driver_type}'/>
                 <source file='${basepath}/disk.swap'/>
                 <target dev='${swap_device}' bus='${disk_bus}'/>
             </disk>
-	#end if
+        #end if
         #for $vol in $volumes
-            <disk type='${vol.type}'>
-                <driver type='raw'/>
-                #if $vol.type == 'network'
-                <source protocol='${vol.protocol}' name='${vol.name}'/>
-                #else
-                <source dev='${vol.device_path}'/>
-                #end if
-                <target dev='${vol.mount_device}' bus='${disk_bus}'/>
-            </disk>
+            ${vol}
         #end for
     #end if
     #if $getVar('config_drive', False)

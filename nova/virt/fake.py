@@ -92,6 +92,10 @@ class FakeConnection(driver.ComputeDriver):
             info_list.append(self._map_to_instance_info(instance))
         return info_list
 
+    def plug_vifs(self, instance, network_info):
+        """Plugin VIFs into networks."""
+        pass
+
     def spawn(self, context, instance,
               network_info=None, block_device_info=None):
         name = instance.name
@@ -148,7 +152,8 @@ class FakeConnection(driver.ComputeDriver):
     def resume(self, instance, callback):
         pass
 
-    def destroy(self, instance, network_info, cleanup=True):
+    def destroy(self, instance, network_info, block_device_info=None,
+                cleanup=True):
         key = instance['name']
         if key in self.instances:
             del self.instances[key]
@@ -156,13 +161,15 @@ class FakeConnection(driver.ComputeDriver):
             LOG.warning("Key '%s' not in instances '%s'" %
                         (key, self.instances))
 
-    def attach_volume(self, instance_name, device_path, mountpoint):
+    def attach_volume(self, connection_info, instance_name, mountpoint):
+        """Attach the disk to the instance at mountpoint using info"""
         if not instance_name in self._mounts:
             self._mounts[instance_name] = {}
-        self._mounts[instance_name][mountpoint] = device_path
+        self._mounts[instance_name][mountpoint] = connection_info
         return True
 
-    def detach_volume(self, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance_name, mountpoint):
+        """Detach the disk attached to the instance"""
         try:
             del self._mounts[instance_name][mountpoint]
         except KeyError:
@@ -233,8 +240,16 @@ class FakeConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
+    def get_instance_disk_info(self, ctxt, instance_ref):
+        """This method is supported only by libvirt."""
+        return
+
     def live_migration(self, context, instance_ref, dest,
                        post_method, recover_method, block_migration=False):
+        """This method is supported only by libvirt."""
+        return
+
+    def pre_live_migration(self, block_device_info):
         """This method is supported only by libvirt."""
         return
 
