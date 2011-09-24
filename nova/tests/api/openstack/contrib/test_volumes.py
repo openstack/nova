@@ -29,8 +29,12 @@ FLAGS = flags.FLAGS
 
 
 def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
+    global _block_device_mapping_seen
+    _block_device_mapping_seen = kwargs.get('block_device_mapping')
+
     inst_type = instance_types.get_instance_type_by_flavor_id(2)
-    return [{'id': 1,
+    resv_id = None
+    return ([{'id': 1,
              'display_name': 'test_server',
              'uuid': fake_gen_uuid(),
              'instance_type': dict(inst_type),
@@ -42,7 +46,7 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
              'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
              'updated_at': datetime.datetime(2010, 11, 11, 11, 0, 0),
              'progress': 0
-             }]
+             }], resv_id)
 
 
 def fake_get_instance_nw_info(cls, context, instance):
@@ -73,6 +77,8 @@ class BootFromVolumeTest(test.TestCase):
                         delete_on_termination=False,
                         )]
                 ))
+        global _block_device_mapping_seen
+        _block_device_mapping_seen = None
         req = webob.Request.blank('/v1.1/fake/os-volumes_boot')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -85,3 +91,7 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(u'test_server', server['name'])
         self.assertEqual(3, int(server['image']['id']))
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
+        self.assertEqual(len(_block_device_mapping_seen), 1)
+        self.assertEqual(_block_device_mapping_seen[0]['volume_id'], 1)
+        self.assertEqual(_block_device_mapping_seen[0]['device_name'],
+                '/dev/vda')

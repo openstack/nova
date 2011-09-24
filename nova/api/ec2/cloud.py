@@ -1385,7 +1385,7 @@ class CloudController(object):
         if image_state != 'available':
             raise exception.ApiError(_('Image must be available'))
 
-        instances = self.compute_api.create(context,
+        (instances, resv_id) = self.compute_api.create(context,
             instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
             image_href=self._get_image(context, kwargs['image_id'])['id'],
@@ -1400,9 +1400,11 @@ class CloudController(object):
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
                                   'AvailabilityZone'),
-            block_device_mapping=kwargs.get('block_device_mapping', {}))
-        return self._format_run_instances(context,
-                reservation_id=instances[0]['reservation_id'])
+            block_device_mapping=kwargs.get('block_device_mapping', {}),
+            # NOTE(comstud): Unfortunately, EC2 requires that the
+            # instance DB entries have been created..
+            wait_for_instances=True)
+        return self._format_run_instances(context, resv_id)
 
     def _do_instance(self, action, context, ec2_id):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)

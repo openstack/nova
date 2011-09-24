@@ -16,6 +16,7 @@
 
 import json
 import httplib
+import urllib
 import urlparse
 
 from nova import log as logging
@@ -100,7 +101,7 @@ class TestOpenStackClient(object):
 
         relative_url = parsed_url.path
         if parsed_url.query:
-            relative_url = relative_url + parsed_url.query
+            relative_url = relative_url + "?" + parsed_url.query
         LOG.info(_("Doing %(method)s on %(relative_url)s") % locals())
         if body:
             LOG.info(_("Body: %s") % body)
@@ -205,12 +206,24 @@ class TestOpenStackClient(object):
     def get_server(self, server_id):
         return self.api_get('/servers/%s' % server_id)['server']
 
-    def get_servers(self, detail=True):
+    def get_servers(self, detail=True, search_opts=None):
         rel_url = '/servers/detail' if detail else '/servers'
+
+        if search_opts is not None:
+            qparams = {}
+            for opt, val in search_opts.iteritems():
+                qparams[opt] = val
+            if qparams:
+                query_string = "?%s" % urllib.urlencode(qparams)
+                rel_url += query_string
         return self.api_get(rel_url)['servers']
 
     def post_server(self, server):
-        return self.api_post('/servers', server)['server']
+        response = self.api_post('/servers', server)
+        if 'reservation_id' in response:
+            return response
+        else:
+            return response['server']
 
     def put_server(self, server_id, server):
         return self.api_put('/servers/%s' % server_id, server)

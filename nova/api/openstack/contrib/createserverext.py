@@ -15,7 +15,6 @@
 #    under the License
 
 from nova import utils
-from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import extensions
 from nova.api.openstack import servers
 from nova.api.openstack import wsgi
@@ -66,7 +65,7 @@ class Createserverext(extensions.ExtensionDescriptor):
         }
 
         body_deserializers = {
-            'application/xml': helper.ServerXMLDeserializerV11(),
+            'application/xml': servers.ServerXMLDeserializerV11(),
         }
 
         serializer = wsgi.ResponseSerializer(body_serializers,

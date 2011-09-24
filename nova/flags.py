@@ -438,3 +438,6 @@ DEFINE_list('monkey_patch_modules',
 DEFINE_bool('allow_resize_to_same_host', False,
             'Allow destination machine to match source for resize. Useful'
             ' when testing in environments with only one host machine.')
+
+DEFINE_string('stub_network', False,
+              'Stub network related code')

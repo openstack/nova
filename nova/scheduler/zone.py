@@ -35,7 +35,7 @@ class ZoneScheduler(driver.Scheduler):
         for topic and availability zone (if defined).
         """
 
-        if zone is None:
+        if not zone:
             return self.hosts_up(context, topic)
 
         services = db.service_get_all_by_topic(context, topic)
@@ -44,16 +44,34 @@ class ZoneScheduler(driver.Scheduler):
                 if self.service_is_up(service)
                 and service.availability_zone == zone]
 
-    def schedule(self, context, topic, *_args, **_kwargs):
+    def _schedule(self, context, topic, request_spec, **kwargs):
         """Picks a host that is up at random in selected
         availability zone (if defined).
         """
 
-        zone = _kwargs.get('availability_zone')
-        hosts = self.hosts_up_with_zone(context, topic, zone)
+        zone = kwargs.get('availability_zone')
+        if not zone and request_spec:
+            zone = request_spec['instance_properties'].get(
+                    'availability_zone')
+        hosts = self.hosts_up_with_zone(context.elevated(), topic, zone)
         if not hosts:
             raise driver.NoValidHost(_("Scheduler was unable to locate a host"
                                        " for this request. Is the appropriate"
                                        " service running?"))
-
         return hosts[int(random.random() * len(hosts))]
+
+    def schedule(self, context, topic, method, *_args, **kwargs):
+        host = self._schedule(context, topic, None, **kwargs)
+        driver.cast_to_host(context, topic, host, method, **kwargs)
+
+    def schedule_run_instance(self, context, request_spec, *_args, **kwargs):
+        """Builds and starts instances on selected hosts"""
+        num_instances = request_spec.get('num_instances', 1)
+        instances = []
+        for num in xrange(num_instances):
+            host = self._schedule(context, 'compute', request_spec, **kwargs)
+            instance = self.create_instance_db_entry(context, request_spec)
+            driver.cast_to_compute_host(context, host,
+                    'run_instance', instance_id=instance['id'], **kwargs)
+            instances.append(driver.encode_instance(instance))
+        return instances

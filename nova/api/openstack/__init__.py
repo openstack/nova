@@ -139,8 +139,7 @@ class APIRouter(base_wsgi.Router):
                         controller=zones.create_resource(version),
                         collection={'detail': 'GET',
                                     'info': 'GET',
-                                    'select': 'POST',
-                                    'boot': 'POST'})
+                                    'select': 'POST'})
 
         mapper.connect("versions", "/",
                     controller=versions.create_resource(version),

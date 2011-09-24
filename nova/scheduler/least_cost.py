@@ -160,8 +160,7 @@ class LeastCostScheduler(base_scheduler.BaseScheduler):
 
         weighted = []
         weight_log = []
-        for cost, (hostname, service) in zip(costs, hosts):
-            caps = service[topic]
+        for cost, (hostname, caps) in zip(costs, hosts):
             weight_log.append("%s: %s" % (hostname, "%.2f" % cost))
             weight_dict = dict(weight=cost, hostname=hostname,
                     capabilities=caps)

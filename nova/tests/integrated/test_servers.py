@@ -438,6 +438,42 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Cleanup
         self._delete_server(server_id)
 
+    def test_create_multiple_servers(self):
+        """Creates multiple servers and checks for reservation_id"""
+
+        # Create 2 servers, setting 'return_reservation_id, which should
+        # return a reservation_id
+        server = self._build_minimal_create_server_request()
+        server['min_count'] = 2
+        server['return_reservation_id'] = True
+        post = {'server': server}
+        response = self.api.post_server(post)
+        self.assertIn('reservation_id', response)
+        reservation_id = response['reservation_id']
+        self.assertNotIn(reservation_id, ['', None])
+
+        # Create 1 more server, which should not return a reservation_id
+        server = self._build_minimal_create_server_request()
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # lookup servers created by the first request.
+        servers = self.api.get_servers(detail=True,
+                search_opts={'reservation_id': reservation_id})
+        server_map = dict((server['id'], server) for server in servers)
+        found_server = server_map.get(created_server_id)
+        # The server from the 2nd request should not be there.
+        self.assertEqual(found_server, None)
+        # Should have found 2 servers.
+        self.assertEqual(len(server_map), 2)
+
+        # Cleanup
+        self._delete_server(created_server_id)
+        for server_id in server_map.iterkeys():
+            self._delete_server(server_id)
+
 
 if __name__ == "__main__":
     unittest.main()
