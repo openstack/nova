@@ -51,7 +51,8 @@ def main(command, vif_raw, net_type):
 
     vif_name, dom_id, vif_index = vif_raw.split('-')
     vif = "%s%s.%s" % (vif_name, dom_id, vif_index)
-    bridge = "xenbr%s" % vif_index
+
+    bridge = execute_get_output('/usr/bin/ovs-vsctl', 'iface-to-br', vif)
 
     xsls = execute_get_output('/usr/bin/xenstore-ls',
                               '/local/domain/%s/vm-data/networking' % dom_id)
