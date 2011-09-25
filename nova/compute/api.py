@@ -47,6 +47,7 @@ LOG = logging.getLogger('nova.compute.api')
 
 FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
+flags.DECLARE('reclaim_instance_interval', 'nova.compute.manager')
 flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
 
@@ -798,6 +799,20 @@ class API(base.Base):
             terminate_volumes(self.db, context, instance_id)
             self.db.instance_destroy(context, instance_id)
 
+    def _delete(self, context, instance):
+        host = instance['host']
+        if host:
+            self.update(context,
+                        instance['id'],
+                        task_state=task_states.DELETING,
+                        progress=0)
+
+            self._cast_compute_message('terminate_instance', context,
+                                       instance['id'], host)
+        else:
+            terminate_volumes(self.db, context, instance['id'])
+            self.db.instance_destroy(context, instance['id'])
+
     @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         """Terminate an instance."""
@@ -807,17 +822,7 @@ class API(base.Base):
         if not _is_able_to_shutdown(instance, instance_id):
             return
 
-        host = instance['host']
-        if host:
-            self.update(context,
-                        instance_id,
-                        task_state=task_states.DELETING)
-
-            self._cast_compute_message('terminate_instance', context,
-                                       instance_id, host)
-        else:
-            terminate_volumes(self.db, context, instance_id)
-            self.db.instance_destroy(context, instance_id)
+        self._delete(context, instance)
 
     @scheduler_api.reroute_compute("restore")
     def restore(self, context, instance_id):
@@ -849,18 +854,7 @@ class API(base.Base):
         if not _is_queued_delete(instance, instance_id):
             return
 
-        self.update(context,
-                    instance_id,
-                    task_state=task_states.DELETING,
-                    progress=0)
-
-        host = instance['host']
-        if host:
-            self._cast_compute_message('terminate_instance', context,
-                    instance_id, host)
-        else:
-            terminate_volumes(self.db, context, instance_id)
-            self.db.instance_destroy(context, instance_id)
+        self._delete(context, instance)
 
     @scheduler_api.reroute_compute("stop")
     def stop(self, context, instance_id):

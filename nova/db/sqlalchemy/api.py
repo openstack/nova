@@ -1277,6 +1277,18 @@ def instance_get_all_by_filters(context, filters):
         query_prefix = query_prefix.\
                             filter(models.Instance.updated_at > changes_since)
 
+    if 'deleted' in filters:
+        # Instances can be soft or hard deleted and the query needs to
+        # include or exclude both
+        if filters.pop('deleted'):
+            deleted = or_(models.Instance.deleted == True,
+                          models.Instance.vm_state == vm_states.SOFT_DELETE)
+            query_prefix = query_prefix.filter(deleted)
+        else:
+            query_prefix = query_prefix.\
+                    filter_by(deleted=False).\
+                    filter(models.Instance.vm_state != vm_states.SOFT_DELETE)
+
     if not context.is_admin:
         # If we're not admin context, add appropriate filter..
         if context.project_id:
@@ -1287,7 +1299,7 @@ def instance_get_all_by_filters(context, filters):
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
-            'vm_state', 'instance_type_id', 'deleted', 'uuid']
+            'vm_state', 'instance_type_id', 'uuid']
 
     query_filters = [key for key in filters.iterkeys()
             if key in exact_match_filter_names]
