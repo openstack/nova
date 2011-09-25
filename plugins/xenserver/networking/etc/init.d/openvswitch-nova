@@ -5,6 +5,7 @@
 # chkconfig: 2345 96 89
 # description: Apply initial OVS flows for Nova
 
+# Copyright 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack LLC.
 # Copyright (C) 2009, 2010, 2011 Nicira Networks, Inc.
 # All Rights Reserved.
@@ -59,11 +60,11 @@ case ${NETWORK_MODE:=openvswitch} in
 esac
 
 function run_ovs_conf_base_flows {
-    # expected format: DEVICE_BRIDGES="eth0:xenbr0 eth1:xenbr1"
-    for pair in $DEVICE_BRIDGES; do
-	# below in $info, physical device is [0], bridge name is [1]
-	info=${pair//:/ }
-	/usr/bin/python $OVS_CONFIGURE_BASE_FLOWS $1 ${info[0]} ${info[1]}
+    local action="$1"
+    local all_interfaces=$(cd /sys/class/net/; /bin/ls -d eth*)
+    local interfaces="${INTERFACES-$all_interfaces}"
+    for interface in $interfaces; do
+	/usr/bin/python $OVS_CONFIGURE_BASE_FLOWS $action $interface
     done
 }
 

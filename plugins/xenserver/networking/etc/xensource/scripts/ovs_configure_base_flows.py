@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
@@ -27,8 +28,11 @@ import sys
 from novalib import execute, execute_get_output
 
 
-def main(command, phys_dev_name, bridge_name):
+def main(command, phys_dev_name):
     ovs_ofctl = lambda *rule: execute('/usr/bin/ovs-ofctl', *rule)
+
+    bridge_name = \
+        execute_get_output('/usr/bin/ovs-vsctl', 'iface-to-br', phys_dev_name)
 
     # always clear all flows first
     ovs_ofctl('del-flows', bridge_name)
@@ -44,19 +48,27 @@ def main(command, phys_dev_name, bridge_name):
         ovs_ofctl('add-flow', bridge_name,
                   "priority=2,in_port=%s,actions=normal" % pnic_ofport)
 
+        # Allow traffic from dom0 if there is a management interface
+        # present (its IP address is on the bridge itself)
+        bridge_addr = \
+            execute_get_output('/sbin/ip', '-o', '-f', 'inet', 'addr', 'show',
+                               bridge_name)
+        if bridge_addr != '':
+            ovs_ofctl('add-flow', bridge_name,
+                      "priority=2,in_port=LOCAL,actions=normal")
+
         # default drop
         ovs_ofctl('add-flow', bridge_name, 'priority=1,actions=drop')
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4 or sys.argv[1] not in ('online', 'offline', 'reset'):
+    if len(sys.argv) != 3 or sys.argv[1] not in ('online', 'offline', 'reset'):
         print sys.argv
         script_name = os.path.basename(sys.argv[0])
         print "This script configures base ovs flows."
-        print "usage: %s [online|offline|reset] phys-dev-name bridge-name" \
-                % script_name
-        print "   ex: %s online eth0 xenbr0" % script_name
+        print "usage: %s [online|offline|reset] phys-dev-name" % script_name
+        print "   ex: %s online eth0" % script_name
         sys.exit(1)
     else:
-        command, phys_dev_name, bridge_name = sys.argv[1:4]
-        main(command, phys_dev_name, bridge_name)
+        command, phys_dev_name = sys.argv[1:3]
+        main(command, phys_dev_name)
