@@ -1305,6 +1305,20 @@ class ImagesTest(test.TestCase):
         actual_url = "%s//images/1" % utils.generate_glance_url()
         self.assertEqual(generated_url, actual_url)
 
+    def test_delete_image_v1_1(self):
+        request = webob.Request.blank('/v1.1/fake/images/124')
+        request.method = 'DELETE'
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
+        self.assertEqual(response.status_int, 204)
+
+    def test_delete_image_not_found_v1_1(self):
+        request = webob.Request.blank('/v1.1/fake/images/300')
+        request.method = 'DELETE'
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
+        self.assertEqual(response.status_int, 404)
+
 
 class ImageXMLSerializationTest(test.TestCase):
 

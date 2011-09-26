@@ -97,7 +97,11 @@ class Controller(object):
         :param id: Image identifier (integer)
         """
         context = req.environ['nova.context']
-        self._image_service.delete(context, id)
+        try:
+            self._image_service.delete(context, id)
+        except exception.ImageNotFound:
+            explanation = _("Image not found.")
+            raise webob.exc.HTTPNotFound(explanation=explanation)
         return webob.exc.HTTPNoContent()
 
     def get_builder(self, request):
