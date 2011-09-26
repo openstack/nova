@@ -817,3 +817,7 @@ class ZoneRequestError(Error):
         if message is None:
             message = _("1 or more Zones could not complete the request")
         super(ZoneRequestError, self).__init__(message=message)
+
+
+class InsufficientFreeMemory(NovaException):
+    message = _("Insufficient free memory on compute node to start %(uuid)s.")

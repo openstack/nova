@@ -169,12 +169,7 @@ class VMOps(object):
 
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
-            LOG.exception(_('instance %(instance_name)s: not enough free '
-                          'memory') % locals())
-            db.instance_set_state(nova_context.get_admin_context(),
-                                  instance['id'],
-                                  power_state.SHUTDOWN)
-            return
+            raise exception.InsufficientFreeMemory(uuid=instance.uuid)
 
         disk_image_type = VMHelper.determine_disk_image_type(instance, context)
         kernel = None
