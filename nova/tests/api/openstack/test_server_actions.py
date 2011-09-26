@@ -271,6 +271,20 @@ class ServerActionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_confirm_resize_migration_not_found(self):
+        req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
+
+        def confirm_resize_mock(*args):
+            raise exception.MigrationNotFoundByStatus(instance_id=1,
+                                                      status='finished')
+
+        self.stubs.Set(nova.compute.api.API,
+                       'confirm_resize',
+                       confirm_resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_revert_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(revertResize=None))
 
@@ -314,6 +328,20 @@ class ServerActionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
+
+    def test_revert_resize_migration_not_found(self):
+        req = self.webreq('/1/action', 'POST', dict(revertResize=None))
+
+        def revert_resize_mock(*args):
+            raise exception.MigrationNotFoundByStatus(instance_id=1,
+                                                      status='finished')
+
+        self.stubs.Set(nova.compute.api.API,
+                       'revert_resize',
+                       revert_resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
     def test_create_backup(self):
         """The happy path for creating backups"""
