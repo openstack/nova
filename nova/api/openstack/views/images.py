@@ -59,6 +59,15 @@ class ViewBuilder(object):
         """Return an href string pointing to this object."""
         return os.path.join(self.base_url, "images", str(image_id))
 
+    def build_list(self, image_objs, detail=False, **kwargs):
+        """Return a standardized image list structure for display."""
+        images = []
+        for image_obj in image_objs:
+            image = self.build(image_obj, detail=detail)
+            images.append(image)
+
+        return dict(images=images)
+
     def build(self, image_obj, detail=False):
         """Return a standardized image structure for display by the API."""
         self._format_dates(image_obj)
@@ -134,6 +143,33 @@ class ViewBuilderV11(ViewBuilder):
         """Return an href string pointing to this object."""
         return os.path.join(self.base_url, self.project_id,
                             "images", str(image_id))
+
+    def generate_next_link(self, image_id, params):
+        """ Return an href string with proper limit and marker params"""
+        params['marker'] = image_id
+        return "%s?%s" % (
+            os.path.join(self.base_url, self.project_id, "images"),
+            common.dict_to_query_str(params))
+
+    def build_list(self, image_objs, detail=False, **kwargs):
+        """Return a standardized image list structure for display."""
+        limit = kwargs.get('limit', None)
+        images = []
+        images_links = []
+
+        for image_obj in image_objs:
+            image = self.build(image_obj, detail=detail)
+            images.append(image)
+
+        if (len(images) and limit) and (limit == len(images)):
+            next_link = self.generate_next_link(images[-1]["id"], kwargs)
+            images_links = [dict(rel="next", href=next_link)]
+
+        reval = dict(images=images)
+        if len(images_links) > 0:
+            reval['images_links'] = images_links
+
+        return reval
 
     def build(self, image_obj, detail=False):
         """Return a standardized image structure for display by the API."""

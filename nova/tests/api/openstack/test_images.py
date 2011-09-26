@@ -21,12 +21,12 @@ and as a WSGI layer
 """
 
 import copy
+from lxml import etree
 import json
 import xml.dom.minidom as minidom
-
-from lxml import etree
 import mox
 import stubout
+import urlparse
 import webob
 
 from nova import context
@@ -284,10 +284,12 @@ class ImagesTest(test.TestCase):
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         response = request.get_response(app)
 
+        print response.body
         response_dict = json.loads(response.body)
         response_list = response_dict["images"]
+        self.assertTrue('images_links' not in response_dict)
 
-        expected = [
+        expected_images = [
             {
                 "id": "123",
                 "name": "public image",
@@ -450,7 +452,118 @@ class ImagesTest(test.TestCase):
             },
         ]
 
-        self.assertDictListMatch(response_list, expected)
+        self.assertDictListMatch(response_list, expected_images)
+
+    def test_get_image_index_v1_1_with_limit(self):
+        request = webob.Request.blank('/v1.1/fake/images?limit=3')
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
+
+        print response.body
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
+        response_links = response_dict["images_links"]
+        alternate = "%s/fake/images/%s"
+
+        expected_images = [
+            {
+                "id": "123",
+                "name": "public image",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/images/123",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/images/123",
+                    },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": alternate % (utils.generate_glance_url(), 123),
+                    },
+                ],
+            },
+            {
+                "id": "124",
+                "name": "queued snapshot",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/images/124",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/images/124",
+                    },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": alternate % (utils.generate_glance_url(), 124),
+                    },
+                ],
+            },
+            {
+                "id": "125",
+                "name": "saving snapshot",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/fake/images/125",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/images/125",
+                    },
+                    {
+                        "rel": "alternate",
+                        "type": "application/vnd.openstack.image",
+                        "href": alternate % (utils.generate_glance_url(), 125),
+                    },
+                ],
+            },
+        ]
+
+        self.assertDictListMatch(response_list, expected_images)
+        self.assertEqual(response_links[0]['rel'], 'next')
+
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual('/v1.1/fake/images', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertDictMatch({'limit': ['3'], 'marker': ['125']}, params)
+
+    def test_get_image_index_v1_1_with_limit_and_extra_params(self):
+        request = webob.Request.blank('/v1.1/fake/images?limit=3&extra=boo')
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
+
+        response_dict = json.loads(response.body)
+        response_links = response_dict["images_links"]
+
+        self.assertEqual(response_links[0]['rel'], 'next')
+
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual('/v1.1/fake/images', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertDictMatch(
+            {'limit': ['3'], 'marker': ['125'], 'extra': ['boo']},
+            params)
+
+    def test_get_image_index_v1_1_with_big_limit(self):
+        """
+        Make sure we don't get images_links if limit is set
+        and the number of images returned is < limit
+        """
+        request = webob.Request.blank('/v1.1/fake/images?limit=30')
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
+
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
+
+        self.assertTrue('images_links' not in response_dict)
+        self.assertEqual(len(response_list), 8)
 
     def test_get_image_details(self):
         request = webob.Request.blank('/v1.0/images/detail')
@@ -536,6 +649,7 @@ class ImagesTest(test.TestCase):
         response_list = response_dict["images"]
         server_href = "http://localhost/v1.1/servers/42"
         server_bookmark = "http://localhost/servers/42"
+        alternate = "%s/fake/images/%s"
 
         expected = [{
             'id': '123',
@@ -558,7 +672,7 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/123" % utils.generate_glance_url()
+                "href": alternate % (utils.generate_glance_url(), 123),
             }],
         },
         {
@@ -596,7 +710,7 @@ class ImagesTest(test.TestCase):
             {
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image",
-                "href": "%s/fake/images/124" % utils.generate_glance_url()
+                "href": alternate % (utils.generate_glance_url(), 124),
             }],
         },
         {
@@ -816,6 +930,89 @@ class ImagesTest(test.TestCase):
         ]
 
         self.assertDictListMatch(expected, response_list)
+
+    def test_get_image_details_with_limit_v1_1(self):
+        request = webob.Request.blank('/v1.1/fake/images/detail?limit=2')
+        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
+        response = request.get_response(app)
+
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
+        response_links = response_dict["images_links"]
+        server_href = "http://localhost/v1.1/servers/42"
+        server_bookmark = "http://localhost/servers/42"
+        alternate = "%s/fake/images/%s"
+
+        expected = [{
+            'id': '123',
+            'name': 'public image',
+            'metadata': {'key1': 'value1'},
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
+            'status': 'ACTIVE',
+            'minDisk': 0,
+            'progress': 100,
+            'minRam': 0,
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/fake/images/123",
+            },
+            {
+                "rel": "bookmark",
+                "href": "http://localhost/fake/images/123",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": alternate % (utils.generate_glance_url(), 123),
+            }],
+        },
+        {
+            'id': '124',
+            'name': 'queued snapshot',
+            'metadata': {
+                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'user_id': u'fake',
+            },
+            'updated': NOW_API_FORMAT,
+            'created': NOW_API_FORMAT,
+            'status': 'SAVING',
+            'minDisk': 0,
+            'progress': 0,
+            'minRam': 0,
+            'server': {
+                'id': '42',
+                "links": [{
+                    "rel": "self",
+                    "href": server_href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": server_bookmark,
+                }],
+            },
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/fake/images/124",
+            },
+            {
+                "rel": "bookmark",
+                "href": "http://localhost/fake/images/124",
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": alternate % (utils.generate_glance_url(), 124),
+            }],
+        }]
+
+        self.assertDictListMatch(expected, response_list)
+
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual('/v1.1/fake/images', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+
+        self.assertDictMatch({'limit': ['2'], 'marker': ['124']}, params)
 
     def test_image_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
@@ -1115,6 +1312,7 @@ class ImageXMLSerializationTest(test.TestCase):
     SERVER_HREF = 'http://localhost/v1.1/servers/123'
     SERVER_BOOKMARK = 'http://localhost/servers/123'
     IMAGE_HREF = 'http://localhost/v1.1/fake/images/%s'
+    IMAGE_NEXT = 'http://localhost/v1.1/fake/images?limit=%s&marker=%s'
     IMAGE_BOOKMARK = 'http://localhost/fake/images/%s'
 
     def test_xml_declaration(self):
@@ -1611,6 +1809,72 @@ class ImageXMLSerializationTest(test.TestCase):
             for i, link in enumerate(image_dict['links']):
                 for key, value in link.items():
                     self.assertEqual(link_nodes[i].get(key), value)
+
+    def test_index_with_links(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixture = {
+            'images': [
+                {
+                    'id': 1,
+                    'name': 'Image1',
+                    'links': [
+                        {
+                            'href': self.IMAGE_HREF % 1,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.IMAGE_BOOKMARK % 1,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
+                {
+                    'id': 2,
+                    'name': 'Image2',
+                    'links': [
+                        {
+                            'href': self.IMAGE_HREF % 2,
+                            'rel': 'self',
+                        },
+                        {
+                            'href': self.IMAGE_BOOKMARK % 2,
+                            'rel': 'bookmark',
+                        },
+                    ],
+                },
+            ],
+            'images_links': [
+                {
+                    'rel': 'next',
+                    'href': self.IMAGE_NEXT % (2, 2),
+                }
+            ],
+        }
+
+        output = serializer.serialize(fixture, 'index')
+        print output
+        root = etree.XML(output)
+        xmlutil.validate_schema(root, 'images_index')
+        image_elems = root.findall('{0}image'.format(NS))
+        self.assertEqual(len(image_elems), 2)
+        for i, image_elem in enumerate(image_elems):
+            image_dict = fixture['images'][i]
+
+            for key in ['name', 'id']:
+                self.assertEqual(image_elem.get(key), str(image_dict[key]))
+
+            link_nodes = image_elem.findall('{0}link'.format(ATOMNS))
+            self.assertEqual(len(link_nodes), 2)
+            for i, link in enumerate(image_dict['links']):
+                for key, value in link.items():
+                    self.assertEqual(link_nodes[i].get(key), value)
+
+            # Check images_links
+            images_links = root.findall('{0}link'.format(ATOMNS))
+            for i, link in enumerate(fixture['images_links']):
+                for key, value in link.items():
+                    self.assertEqual(images_links[i].get(key), value)
 
     def test_index_zero_images(self):
         serializer = images.ImageXMLSerializer()
