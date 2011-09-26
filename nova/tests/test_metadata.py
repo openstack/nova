@@ -23,11 +23,15 @@ import base64
 import webob
 
 from nova import exception
+from nova import flags
 from nova import test
 from nova.api.ec2 import metadatarequesthandler
 from nova.db.sqlalchemy import api
 from nova.tests import fake_network
 
+
+FLAGS = flags.FLAGS
+flags.DECLARE('dhcp_domain', 'nova.network.manager')
 
 USER_DATA_STRING = ("This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
@@ -122,3 +126,7 @@ class MetadataTestCase(test.TestCase):
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 200)
         self.assertEqual(response.body, USER_DATA_STRING)
+
+    def test_local_hostname_fqdn(self):
+        self.assertEqual(self.request('/meta-data/local-hostname'),
+            "%s.%s" % (self.instance['hostname'], FLAGS.dhcp_domain))
