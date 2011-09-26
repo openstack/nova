@@ -15,30 +15,16 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""
-Session Handling for SQLAlchemy backend
-"""
 
-import eventlet.patcher
-eventlet.patcher.monkey_patch()
+"""Session Handling for SQLAlchemy backend."""
 
-import eventlet.db_pool
 import sqlalchemy.orm
-import sqlalchemy.pool
 
 import nova.exception
 import nova.flags
-import nova.log
 
 
 FLAGS = nova.flags.FLAGS
-LOG = nova.log.getLogger("nova.db.sqlalchemy")
-
-
-try:
-    import MySQLdb
-except ImportError:
-    MySQLdb = None
 
 
 _ENGINE = None
@@ -70,24 +56,6 @@ def get_engine():
 
     if "sqlite" in connection_dict.drivername:
         engine_args["poolclass"] = sqlalchemy.pool.NullPool
-
-    elif MySQLdb and "mysql" in connection_dict.drivername:
-        LOG.info(_("Using mysql/eventlet db_pool."))
-        # MySQLdb won't accept 'None' in the password field
-        password = connection_dict.password or ''
-        pool_args = {
-            "db": connection_dict.database,
-            "passwd": password,
-            "host": connection_dict.host,
-            "user": connection_dict.username,
-            "min_size": FLAGS.sql_min_pool_size,
-            "max_size": FLAGS.sql_max_pool_size,
-            "max_idle": FLAGS.sql_idle_timeout,
-        }
-        creator = eventlet.db_pool.ConnectionPool(MySQLdb, **pool_args)
-        engine_args["pool_size"] = FLAGS.sql_max_pool_size
-        engine_args["pool_timeout"] = FLAGS.sql_pool_timeout
-        engine_args["creator"] = creator.create
 
     return sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
