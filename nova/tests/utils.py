@@ -25,6 +25,15 @@ def get_test_admin_context():
     return nova.context.get_admin_context()
 
 
+def get_test_image_info(context, instance_ref):
+    if not context:
+        context = get_test_admin_context()
+
+    image_ref = instance_ref['image_ref']
+    image_service, image_id = nova.image.get_image_service(context, image_ref)
+    return image_service.show(context, image_id)
+
+
 def get_test_instance(context=None):
     if not context:
         context = get_test_admin_context()
@@ -35,7 +44,7 @@ def get_test_instance(context=None):
                      'vcpus': 2,
                      'project_id': 'fake',
                      'bridge': 'br101',
-                     'image_ref': '1',
+                     'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
                      'instance_type_id': '5'}  # m1.small
 
     instance_ref = nova.db.instance_create(context, test_instance)

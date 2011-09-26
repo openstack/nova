@@ -55,6 +55,20 @@ class LibvirtVolumeDriver(object):
         pass
 
 
+class LibvirtFakeVolumeDriver(LibvirtVolumeDriver):
+    """Driver to attach Network volumes to libvirt."""
+
+    def connect_volume(self, connection_info, mount_device):
+        protocol = 'fake'
+        name = 'fake'
+        xml = """<disk type='network'>
+                     <driver name='qemu' type='raw'/>
+                     <source protocol='%s' name='%s'/>
+                     <target dev='%s' bus='virtio'/>
+                 </disk>""" % (protocol, name, mount_device)
+        return xml
+
+
 class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
 

@@ -59,6 +59,15 @@ class _VirtDriverTestCase(test.TestCase):
         self.ctxt = test_utils.get_test_admin_context()
         self.image_service = image.get_default_image_service()
 
+    def _get_running_instance(self):
+        instance_ref = test_utils.get_test_instance()
+        network_info = test_utils.get_test_network_info()
+        image_info = test_utils.get_test_image_info(None, instance_ref)
+        self.connection.spawn(self.ctxt, instance=instance_ref,
+                              image_meta=image_info,
+                              network_info=network_info)
+        return instance_ref, network_info
+
     @catch_notimplementederror
     def test_init_host(self):
         self.connection.init_host('myhostname')
@@ -73,10 +82,7 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_spawn(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
-
+        instance_ref, network_info = self._get_running_instance()
         domains = self.connection.list_instances()
         self.assertIn(instance_ref['name'], domains)
 
@@ -93,18 +99,14 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_snapshot_running(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
         img_ref = self.image_service.create(self.ctxt, {'name': 'snap-1'})
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.snapshot(self.ctxt, instance_ref, img_ref['id'])
 
     @catch_notimplementederror
     def test_reboot(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
         reboot_type = "SOFT"
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.reboot(instance_ref, network_info, reboot_type)
 
     @catch_notimplementederror
@@ -119,54 +121,40 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_resize_running(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.resize(instance_ref, 7)
 
     @catch_notimplementederror
     def test_set_admin_password(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.set_admin_password(instance_ref, 'p4ssw0rd')
 
     @catch_notimplementederror
     def test_inject_file(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.inject_file(instance_ref,
                                     base64.b64encode('/testfile'),
                                     base64.b64encode('testcontents'))
 
     @catch_notimplementederror
     def test_agent_update(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.agent_update(instance_ref, 'http://www.openstack.org/',
                                      'd41d8cd98f00b204e9800998ecf8427e')
 
     @catch_notimplementederror
     def test_rescue(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info)
 
     @catch_notimplementederror
     def test_unrescue_unrescued_instance(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.unrescue(instance_ref, network_info)
 
     @catch_notimplementederror
     def test_unrescue_rescued_instance(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info)
         self.connection.unrescue(instance_ref, network_info)
 
@@ -184,53 +172,39 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_migrate_disk_and_power_off(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.migrate_disk_and_power_off(
             self.ctxt, instance_ref, 'dest_host')
 
     @catch_notimplementederror
     def test_pause(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.pause(instance_ref)
 
     @catch_notimplementederror
     def test_unpause_unpaused_instance(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.unpause(instance_ref)
 
     @catch_notimplementederror
     def test_unpause_paused_instance(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.pause(instance_ref)
         self.connection.unpause(instance_ref)
 
     @catch_notimplementederror
     def test_suspend(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.suspend(instance_ref)
 
     @catch_notimplementederror
     def test_resume_unsuspended_instance(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.resume(instance_ref)
 
     @catch_notimplementederror
     def test_resume_suspended_instance(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.suspend(instance_ref)
         self.connection.resume(instance_ref)
 
@@ -242,9 +216,7 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_destroy_instance(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.assertIn(instance_ref['name'],
                       self.connection.list_instances())
         self.connection.destroy(instance_ref, network_info)
@@ -253,9 +225,7 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_attach_detach_volume(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.attach_volume({'driver_volume_type': 'fake'},
                                       instance_ref['name'],
                                       '/mnt/nova/something')
@@ -265,9 +235,7 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_get_info(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         info = self.connection.get_info(instance_ref['name'])
         self.assertIn('state', info)
         self.assertIn('max_mem', info)
@@ -282,54 +250,40 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_get_diagnostics(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.get_diagnostics(instance_ref['name'])
 
     @catch_notimplementederror
     def test_list_disks(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.list_disks(instance_ref['name'])
 
     @catch_notimplementederror
     def test_list_interfaces(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.list_interfaces(instance_ref['name'])
 
     @catch_notimplementederror
     def test_block_stats(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         stats = self.connection.block_stats(instance_ref['name'], 'someid')
         self.assertEquals(len(stats), 5)
 
     @catch_notimplementederror
     def test_interface_stats(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         stats = self.connection.interface_stats(instance_ref['name'], 'someid')
         self.assertEquals(len(stats), 8)
 
     @catch_notimplementederror
     def test_get_console_output(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         console_output = self.connection.get_console_output(instance_ref)
         self.assertTrue(isinstance(console_output, basestring))
 
     @catch_notimplementederror
     def test_get_ajax_console(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         ajax_console = self.connection.get_ajax_console(instance_ref)
         self.assertIn('token', ajax_console)
         self.assertIn('host', ajax_console)
@@ -337,9 +291,7 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_get_vnc_console(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         vnc_console = self.connection.get_vnc_console(instance_ref)
         self.assertIn('token', vnc_console)
         self.assertIn('host', vnc_console)
@@ -347,9 +299,7 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_get_console_pool_info(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         console_pool = self.connection.get_console_pool_info(instance_ref)
         self.assertIn('address', console_pool)
         self.assertIn('username', console_pool)
@@ -357,25 +307,19 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_refresh_security_group_rules(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
         # FIXME: Create security group and add the instance to it
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.refresh_security_group_rules(1)
 
     @catch_notimplementederror
     def test_refresh_security_group_members(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
         # FIXME: Create security group and add the instance to it
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.refresh_security_group_members(1)
 
     @catch_notimplementederror
     def test_refresh_provider_fw_rules(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.refresh_provider_fw_rules()
 
     @catch_notimplementederror
@@ -424,28 +368,16 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_live_migration(self):
-        network_info = test_utils.get_test_network_info()
-        instance_ref = test_utils.get_test_instance()
-        self.connection.spawn(self.ctxt, instance_ref, network_info)
+        instance_ref, network_info = self._get_running_instance()
         self.connection.live_migration(self.ctxt, instance_ref, 'otherhost',
                                        None, None)
 
     @catch_notimplementederror
     def _check_host_status_fields(self, host_status):
-        self.assertIn('host_name-description', host_status)
-        self.assertIn('host_hostname', host_status)
-        self.assertIn('host_memory_total', host_status)
-        self.assertIn('host_memory_overhead', host_status)
-        self.assertIn('host_memory_free', host_status)
-        self.assertIn('host_memory_free_computed', host_status)
-        self.assertIn('host_other_config', host_status)
-        self.assertIn('host_ip_address', host_status)
-        self.assertIn('host_cpu_info', host_status)
-        self.assertIn('disk_available', host_status)
         self.assertIn('disk_total', host_status)
         self.assertIn('disk_used', host_status)
-        self.assertIn('host_uuid', host_status)
-        self.assertIn('host_name_label', host_status)
+        self.assertIn('host_memory_total', host_status)
+        self.assertIn('host_memory_free', host_status)
 
     @catch_notimplementederror
     def test_update_host_status(self):
@@ -493,7 +425,42 @@ class FakeConnectionTestCase(_VirtDriverTestCase):
         self.driver_module = nova.virt.fake
         super(FakeConnectionTestCase, self).setUp()
 
-# Before long, we'll add the real hypervisor drivers here as well
-# with whatever instrumentation they need to work independently of
-# their hypervisor. This way, we can verify that they all act the
-# same.
+
+class LibvirtConnTestCase(_VirtDriverTestCase):
+    def setUp(self):
+        # Put fakelibvirt in place
+        if 'libvirt' in sys.modules:
+            self.saved_libvirt = sys.modules['libvirt']
+        else:
+            self.saved_libvirt = None
+
+        import fakelibvirt
+        import fake_libvirt_utils
+
+        sys.modules['libvirt'] = fakelibvirt
+
+        import nova.virt.libvirt.connection
+        import nova.virt.libvirt.firewall
+
+        nova.virt.libvirt.connection.libvirt = fakelibvirt
+        nova.virt.libvirt.connection.libvirt_utils = fake_libvirt_utils
+        nova.virt.libvirt.firewall.libvirt = fakelibvirt
+
+        # Point _VirtDriverTestCase at the right module
+        self.driver_module = nova.virt.libvirt.connection
+        super(LibvirtConnTestCase, self).setUp()
+        FLAGS.rescue_image_id = "2"
+        FLAGS.rescue_kernel_id = "3"
+        FLAGS.rescue_ramdisk_id = None
+
+    def tearDown(self):
+        super(LibvirtConnTestCase, self).setUp()
+
+        # Restore libvirt
+        import nova.virt.libvirt.connection
+        import nova.virt.libvirt.firewall
+        if self.saved_libvirt:
+            sys.modules['libvirt'] = self.saved_libvirt
+            nova.virt.libvirt.connection.libvirt = self.saved_libvirt
+            nova.virt.libvirt.connection.libvirt_utils = self.saved_libvirt
+            nova.virt.libvirt.firewall.libvirt = self.saved_libvirt

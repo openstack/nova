@@ -72,7 +72,7 @@ from nova.compute import power_state
 from nova.virt import disk
 from nova.virt import driver
 from nova.virt import images
-from nova.virt.libvirt import netutils
+from nova.virt.libvirt import utils as libvirt_utils
 
 
 libvirt = None
@@ -138,6 +138,7 @@ flags.DEFINE_string('libvirt_vif_driver',
 flags.DEFINE_list('libvirt_volume_drivers',
                   ['iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
                    'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
+                   'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
                    'rdb=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
                    'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver'],
                   'Libvirt handlers for remote volumes.')
@@ -187,6 +188,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
         self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
+        self._host_state = None
         self._wrapped_conn = None
         self.read_only = read_only
 
@@ -445,7 +447,10 @@ class LibvirtConnection(driver.ComputeDriver):
 
         This command only works with qemu 0.14+
         """
-        virt_dom = self._lookup_by_name(instance['name'])
+        try:
+            virt_dom = self._lookup_by_name(instance['name'])
+        except exception.InstanceNotFound:
+            raise exception.InstanceNotRunning()
 
         (image_service, image_id) = nova.image.get_image_service(
             context, instance['image_ref'])
@@ -504,20 +509,11 @@ class LibvirtConnection(driver.ComputeDriver):
         temp_dir = tempfile.mkdtemp()
         try:
             out_path = os.path.join(temp_dir, snapshot_name)
-            qemu_img_cmd = ('qemu-img',
-                            'convert',
-                            '-f',
-                            source_format,
-                            '-O',
-                            image_format,
-                            '-s',
-                            snapshot_name,
-                            disk_path,
-                            out_path)
-            utils.execute(*qemu_img_cmd)
-
+            libvirt_utils.extract_snapshot(disk_path, source_format,
+                                           snapshot_name, out_path,
+                                           image_format)
             # Upload that image to the image service
-            with open(out_path) as image_file:
+            with libvirt_utils.file_open(out_path) as image_file:
                 image_service.update(context,
                                      image_href,
                                      metadata,
@@ -536,6 +532,7 @@ class LibvirtConnection(driver.ComputeDriver):
         reboot happens, as the guest OS cannot ignore this action.
 
         """
+
         virt_dom = self._conn.lookupByName(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance
         # instead of using to_xml(instance, network_info). This is almost
@@ -612,9 +609,7 @@ class LibvirtConnection(driver.ComputeDriver):
         unrescue_xml_path = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          'unrescue.xml')
-        f = open(unrescue_xml_path, 'w')
-        f.write(unrescue_xml)
-        f.close()
+        libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
 
         xml = self.to_xml(instance, network_info, rescue=True)
         rescue_images = {
@@ -637,10 +632,8 @@ class LibvirtConnection(driver.ComputeDriver):
         unrescue_xml_path = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          'unrescue.xml')
-        f = open(unrescue_xml_path)
-        unrescue_xml = f.read()
-        f.close()
-        os.remove(unrescue_xml_path)
+        unrescue_xml = libvirt_utils.load_file(unrescue_xml_path)
+        libvirt_utils.file_delete(unrescue_xml_path)
         self.reboot(instance, network_info, xml=unrescue_xml)
 
     @exception.wrap_exception()
@@ -711,18 +704,12 @@ class LibvirtConnection(driver.ComputeDriver):
         fp.write(data)
         return fpath
 
-    def _dump_file(self, fpath):
-        fp = open(fpath, 'r+')
-        contents = fp.read()
-        LOG.info(_('Contents of file %(fpath)s: %(contents)r') % locals())
-        return contents
-
     @exception.wrap_exception()
     def get_console_output(self, instance):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
 
-        utils.execute('chown', os.getuid(), console_log, run_as_root=True)
+        libvirt_utils.chown(console_log, os.getuid())
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
@@ -736,23 +723,10 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             fpath = console_log
 
-        return self._dump_file(fpath)
+        return libvirt_utils.load_file(fpath)
 
     @exception.wrap_exception()
     def get_ajax_console(self, instance):
-        def get_open_port():
-            start_port, end_port = FLAGS.ajaxterm_portrange.split("-")
-            for i in xrange(0, 100):  # don't loop forever
-                port = random.randint(int(start_port), int(end_port))
-                # netcat will exit with 0 only if the port is in use,
-                # so a nonzero return value implies it is unused
-                cmd = 'netcat', '0.0.0.0', port, '-w', '1'
-                try:
-                    stdout, stderr = utils.execute(*cmd, process_input='')
-                except exception.ProcessExecutionError:
-                    return port
-            raise Exception(_('Unable to find an open port'))
-
         def get_pty_for_instance(instance_name):
             virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
@@ -763,17 +737,15 @@ class LibvirtConnection(driver.ComputeDriver):
                     source = serial.getElementsByTagName('source')[0]
                     return source.getAttribute('path')
 
-        port = get_open_port()
+        start_port, end_port = FLAGS.ajaxterm_portrange.split("-")
+        port = libvirt_utils.get_open_port(int(start_port), int(end_port))
         token = str(uuid.uuid4())
         host = instance['host']
 
         ajaxterm_cmd = 'sudo netcat - %s' \
                        % get_pty_for_instance(instance['name'])
 
-        cmd = ['%s/tools/ajaxterm/ajaxterm.py' % utils.novadir(),
-               '--command', ajaxterm_cmd, '-t', token, '-p', port]
-
-        utils.execute(cmd)
+        libvirt_utils.run_ajaxterm(ajaxterm_cmd, token, port)
         return {'token': token, 'host': host, 'port': port}
 
     def get_host_ip_addr(self):
@@ -816,7 +788,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if not os.path.exists(target):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
             if not os.path.exists(base_dir):
-                os.mkdir(base_dir)
+                libvirt_utils.ensure_tree(base_dir)
             base = os.path.join(base_dir, fname)
 
             @utils.synchronized(fname)
@@ -827,11 +799,9 @@ class LibvirtConnection(driver.ComputeDriver):
             call_if_not_exists(base, fn, *args, **kwargs)
 
             if cow:
-                utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o',
-                              'cluster_size=2M,backing_file=%s' % base,
-                              target)
+                libvirt_utils.create_cow_image(base, target)
             else:
-                utils.execute('cp', base, target)
+                libvirt_utils.copy_image(base, target)
 
     def _fetch_image(self, context, target, image_id, user_id, project_id,
                      size=None):
@@ -846,9 +816,10 @@ class LibvirtConnection(driver.ComputeDriver):
         if not fs_format:
             fs_format = FLAGS.default_local_format
 
-        utils.execute('truncate', target, '-s', "%d%c" % (local_size, unit))
+        libvirt_utils.create_image('raw', target,
+                                   '%d%c' % (local_size, unit))
         if fs_format:
-            utils.execute('mkfs', '-t', fs_format, target)
+            libvirt_utils.mkfs(fs_format, target)
 
     def _create_ephemeral(self, target, local_size, fs_label, os_type):
         self._create_local(target, local_size)
@@ -856,8 +827,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _create_swap(self, target, swap_mb):
         """Create a swap file of specified size"""
-        self._create_local(target, swap_mb, unit='M')
-        utils.execute('mkswap', target)
+        libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
+        libvirt_utils.mkfs(target, 'swap')
 
     def _create_image(self, context, inst, libvirt_xml, suffix='',
                       disk_images=None, network_info=None,
@@ -872,22 +843,17 @@ class LibvirtConnection(driver.ComputeDriver):
                                 fname + suffix)
 
         # ensure directories exist and are writable
-        utils.execute('mkdir', '-p', basepath(suffix=''))
+        libvirt_utils.ensure_tree(basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'])
-        f = open(basepath('libvirt.xml'), 'w')
-        f.write(libvirt_xml)
-        f.close()
+        libvirt_utils.write_to_file(basepath('libvirt.xml'), libvirt_xml)
 
         if FLAGS.libvirt_type == 'lxc':
             container_dir = '%s/rootfs' % basepath(suffix='')
-            utils.execute('mkdir', '-p', container_dir)
+            libvirt_utils.ensure_tree(container_dir)
 
         # NOTE(vish): No need add the suffix to console.log
-        console_log = basepath('console.log', '')
-        if os.path.exists(console_log):
-            utils.execute('chown', os.getuid(), console_log, run_as_root=True)
-        os.close(os.open(console_log, os.O_CREAT | os.O_WRONLY, 0660))
+        libvirt_utils.write_to_file(basepath('console.log', ''), '', 007)
 
         if not disk_images:
             disk_images = {'image_id': inst['image_ref'],
@@ -896,7 +862,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if disk_images['kernel_id']:
             fname = disk_images['kernel_id']
-            self._cache_image(fn=self._fetch_image,
+            self._cache_image(fn=libvirt_utils.fetch_image,
                               context=context,
                               target=basepath('kernel'),
                               fname=fname,
@@ -905,7 +871,7 @@ class LibvirtConnection(driver.ComputeDriver):
                               project_id=inst['project_id'])
             if disk_images['ramdisk_id']:
                 fname = disk_images['ramdisk_id']
-                self._cache_image(fn=self._fetch_image,
+                self._cache_image(fn=libvirt_utils.fetch_image,
                                   context=context,
                                   target=basepath('ramdisk'),
                                   fname=fname,
@@ -924,7 +890,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if not self._volume_in_mapping(self.default_root_device,
                                        block_device_info):
-            self._cache_image(fn=self._fetch_image,
+            self._cache_image(fn=libvirt_utils.fetch_image,
                               context=context,
                               target=basepath('disk'),
                               fname=root_fname,
@@ -990,7 +956,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if config_drive_id:
             fname = config_drive_id
-            self._cache_image(fn=self._fetch_image,
+            self._cache_image(fn=libvirt_utils.fetch_image,
                               target=basepath('disk.config'),
                               fname=fname,
                               image_id=config_drive_id,
@@ -1078,7 +1044,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                 nbd=FLAGS.use_cow_images)
 
         if FLAGS.libvirt_type == 'uml':
-            utils.execute('chown', 'root', basepath('disk'), run_as_root=True)
+            libvirt_utils.chown(basepath('disk'), 'root')
 
     def _volume_in_mapping(self, mount_device, block_device_info):
         block_device_list = [block_device.strip_dev(vol['mount_device'])
@@ -1267,10 +1233,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return domain
 
-    def get_diagnostics(self, instance_name):
-        raise exception.ApiError(_("diagnostics are not supported "
-                                   "for libvirt"))
-
     def get_disks(self, instance_name):
         """
         Note that this function takes an instance name.
@@ -1378,8 +1340,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
 
-        hddinfo = os.statvfs(FLAGS.instances_path)
-        return hddinfo.f_frsize * hddinfo.f_blocks / 1024 / 1024 / 1024
+        stats = libvirt_utils.get_fs_info(FLAGS.instances_path)
+        return stats['total'] / (1024 ** 3)
 
     def get_vcpu_used(self):
         """ Get vcpu usage number of physical computer.
@@ -1421,9 +1383,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
 
-        hddinfo = os.statvfs(FLAGS.instances_path)
-        avail = hddinfo.f_frsize * hddinfo.f_bavail / 1024 / 1024 / 1024
-        return self.get_local_gb_total() - avail
+        stats = libvirt_utils.get_fs_info(FLAGS.instances_path)
+        return stats['used'] / (1024 ** 3)
 
     def get_hypervisor_type(self):
         """Get hypervisor type.
@@ -1775,9 +1736,8 @@ class LibvirtConnection(driver.ComputeDriver):
             # create backing file in case of qcow2.
             instance_disk = os.path.join(instance_dir, base)
             if not info['backing_file']:
-                utils.execute('qemu-img', 'create', '-f', info['type'],
-                              instance_disk, info['local_gb'])
-
+                libvirt_utils.create_image(info['type'], instance_disk,
+                                           info['local_gb'])
             else:
                 # Creating backing file follows same way as spawning instances.
                 backing_file = os.path.join(FLAGS.instances_path,
@@ -1794,9 +1754,7 @@ class LibvirtConnection(driver.ComputeDriver):
                         project_id=instance_ref['project_id'],
                         size=instance_ref['local_gb'])
 
-                utils.execute('qemu-img', 'create', '-f', info['type'],
-                          '-o', 'backing_file=%s' % backing_file,
-                          instance_disk, info['local_gb'])
+                libvirt_utils.create_cow_image(backing_file, instance_disk)
 
         # if image has kernel and ramdisk, just download
         # following normal way.
@@ -1804,13 +1762,13 @@ class LibvirtConnection(driver.ComputeDriver):
             user = manager.AuthManager().get_user(instance_ref['user_id'])
             project = manager.AuthManager().get_project(
                 instance_ref['project_id'])
-            self._fetch_image(nova_context.get_admin_context(),
+            libvirt_utils.fetch_image(nova_context.get_admin_context(),
                               os.path.join(instance_dir, 'kernel'),
                               instance_ref['kernel_id'],
                               user,
                               project)
             if instance_ref['ramdisk_id']:
-                self._fetch_image(nova_context.get_admin_context(),
+                libvirt_utils.fetch_image(nova_context.get_admin_context(),
                                   os.path.join(instance_dir, 'ramdisk'),
                                   instance_ref['ramdisk_id'],
                                   user,
@@ -1879,18 +1837,11 @@ class LibvirtConnection(driver.ComputeDriver):
                 continue
 
             disk_type = driver_nodes[cnt].get('type')
+            size = libvirt_utils.get_disk_size(path)
             if disk_type == 'raw':
-                size = int(os.path.getsize(path))
                 backing_file = ""
             else:
-                out, err = utils.execute('qemu-img', 'info', path)
-                size = [i.split('(')[1].split()[0] for i in out.split('\n')
-                    if i.strip().find('virtual size') >= 0]
-                size = int(size[0])
-
-                backing_file = [i.split('actual path:')[1].strip()[:-1]
-                    for i in out.split('\n') if 0 <= i.find('backing file')]
-                backing_file = os.path.basename(backing_file[0])
+                backing_file = libvirt_utils.get_backing_file(path)
 
             # block migration needs same/larger size of empty image on the
             # destination host. since qemu-img creates bit smaller size image
@@ -1932,7 +1883,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""
-        pass
+        raise NotImplementedError()
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
@@ -1975,3 +1926,5 @@ class HostState(object):
         data["hypervisor_version"] = self.connection.get_hypervisor_version()
 
         self._stats = data
+
+        return data

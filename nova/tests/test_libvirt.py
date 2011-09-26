@@ -36,12 +36,16 @@ from nova import utils
 from nova.api.ec2 import cloud
 from nova.compute import power_state
 from nova.compute import vm_states
+from nova.virt import disk
+from nova.virt import images
 from nova.virt import driver
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import volume
 from nova.volume import driver as volume_driver
+from nova.virt.libvirt import utils as libvirt_utils
 from nova.tests import fake_network
+from nova.tests import fake_libvirt_utils
 
 
 try:
@@ -187,6 +191,11 @@ class CacheConcurrencyTestCase(test.TestCase):
 
         self.stubs.Set(os.path, 'exists', fake_exists)
         self.stubs.Set(utils, 'execute', fake_execute)
+        connection.libvirt_utils = fake_libvirt_utils
+
+    def tearDown(self):
+        connection.libvirt_utils = libvirt_utils
+        super(CacheConcurrencyTestCase, self).tearDown()
 
     def test_same_fname_concurrency(self):
         """Ensures that the same fname cache runs at a sequentially"""
@@ -260,6 +269,11 @@ class LibvirtConnTestCase(test.TestCase):
         self.context = context.get_admin_context()
         self.flags(instances_path='')
         self.call_libvirt_dependant_setup = False
+        connection.libvirt_utils = fake_libvirt_utils
+
+    def tearDown(self):
+        connection.libvirt_utils = libvirt_utils
+        super(LibvirtConnTestCase, self).tearDown()
 
     test_instance = {'memory_kb': '1024000',
                      'basepath': '/some/path',
@@ -905,10 +919,6 @@ class LibvirtConnTestCase(test.TestCase):
         # Preparing mocks
         # qemu-img should be mockd since test environment might not have
         # large disk space.
-        self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('qemu-img', 'create', '-f', 'raw',
-                      '%s/%s/disk' % (tmpdir, instance_ref.name), '10G')
-
         self.mox.ReplayAll()
         conn = connection.LibvirtConnection(False)
         conn.pre_block_migration(self.context, instance_ref,
@@ -937,12 +947,6 @@ class LibvirtConnTestCase(test.TestCase):
                     "<target dev='vdb' bus='virtio'/></disk>"
                     "</devices></domain>")
 
-        ret = ("image: /test/disk\nfile format: raw\n"
-               "virtual size: 20G (21474836480 bytes)\ndisk size: 3.1G\n"
-               "disk size: 102M\n"
-               "cluster_size: 2097152\n"
-               "backing file: /test/dummy (actual path: /backing/file)\n")
-
         # Preparing mocks
         vdmock = self.mox.CreateMock(libvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
@@ -953,27 +957,23 @@ class LibvirtConnTestCase(test.TestCase):
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
-        self.mox.StubOutWithMock(os.path, "getsize")
-        # based on above testdata, one is raw image, so getsize is mocked.
-        os.path.getsize("/test/disk").AndReturn(10 * 1024 * 1024 * 1024)
-        # another is qcow image, so qemu-img should be mocked.
-        self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('qemu-img', 'info', '/test/disk.local').\
-            AndReturn((ret, ''))
-
+        GB = 1024 * 1024 * 1024
+        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * GB
+        fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * GB
+        fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
         self.mox.ReplayAll()
         conn = connection.LibvirtConnection(False)
         info = conn.get_instance_disk_info(self.context, instance_ref)
         info = utils.loads(info)
 
-        self.assertTrue(info[0]['type'] == 'raw' and
-                        info[1]['type'] == 'qcow2' and
-                        info[0]['path'] == '/test/disk' and
-                        info[1]['path'] == '/test/disk.local' and
-                        info[0]['local_gb'] == '10G' and
-                        info[1]['local_gb'] == '20G' and
-                        info[0]['backing_file'] == "" and
-                        info[1]['backing_file'] == "file")
+        self.assertEquals(info[0]['type'], 'raw')
+        self.assertEquals(info[1]['type'], 'qcow2')
+        self.assertEquals(info[0]['path'], '/test/disk')
+        self.assertEquals(info[1]['path'], '/test/disk.local')
+        self.assertEquals(info[0]['local_gb'], '10G')
+        self.assertEquals(info[1]['local_gb'], '20G')
+        self.assertEquals(info[0]['backing_file'], "")
+        self.assertEquals(info[1]['backing_file'], "file")
 
         db.instance_destroy(self.context, instance_ref['id'])
 
@@ -1011,8 +1011,13 @@ class LibvirtConnTestCase(test.TestCase):
                                                      ', not int'))
             count = (0 <= str(e.message).find('Unexpected method call'))
 
-        shutil.rmtree(os.path.join(FLAGS.instances_path, instance.name))
-        shutil.rmtree(os.path.join(FLAGS.instances_path, '_base'))
+        path = os.path.join(FLAGS.instances_path, instance.name)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+
+        path = os.path.join(FLAGS.instances_path, '_base')
+        if os.path.isdir(path):
+            shutil.rmtree(os.path.join(FLAGS.instances_path, '_base'))
 
     def test_get_host_ip_addr(self):
         conn = connection.LibvirtConnection(False)
@@ -1054,50 +1059,6 @@ class LibvirtConnTestCase(test.TestCase):
         _assert_volume_in_mapping('sdf', True)
         _assert_volume_in_mapping('sdg', False)
         _assert_volume_in_mapping('sdh1', False)
-
-    def test_reboot_signature(self):
-        """Test that libvirt driver method sig matches interface"""
-        def fake_reboot_with_correct_sig(ignore, instance,
-                                         network_info, reboot_type):
-            pass
-
-        def fake_destroy(instance, network_info, cleanup=False):
-            pass
-
-        def fake_plug_vifs(instance, network_info):
-            pass
-
-        def fake_create_new_domain(xml):
-            return
-
-        def fake_none(self, instance):
-            return
-
-        instance = db.instance_create(self.context, self.test_instance)
-        network_info = _fake_network_info(self.stubs, 1)
-
-        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
-        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
-
-        conn = connection.LibvirtConnection(False)
-        self.stubs.Set(conn, 'destroy', fake_destroy)
-        self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
-        self.stubs.Set(conn.firewall_driver,
-                       'setup_basic_filtering',
-                       fake_none)
-        self.stubs.Set(conn.firewall_driver,
-                       'prepare_instance_filter',
-                       fake_none)
-        self.stubs.Set(conn, '_create_new_domain', fake_create_new_domain)
-        self.stubs.Set(conn.firewall_driver,
-                       'apply_instance_filter',
-                       fake_none)
-
-        args = [instance, network_info, 'SOFT']
-        conn.reboot(*args)
-
-        compute_driver = driver.ComputeDriver()
-        self.assertRaises(NotImplementedError, compute_driver.reboot, *args)
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_immediate_delete(self):
@@ -1732,3 +1693,181 @@ class NWFilterTestCase(test.TestCase):
         self.assertEqual(original_filter_count - len(fakefilter.filters), 2)
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])
+
+
+class LibvirtUtilsTestCase(test.TestCase):
+    def test_create_image(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('qemu-img', 'create', '-f', 'raw',
+                      '/some/path', '10G')
+        utils.execute('qemu-img', 'create', '-f', 'qcow2',
+                      '/some/stuff', '1234567891234')
+        # Start test
+        self.mox.ReplayAll()
+        libvirt_utils.create_image('raw', '/some/path', '10G')
+        libvirt_utils.create_image('qcow2', '/some/stuff', '1234567891234')
+
+    def test_create_cow_image(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('qemu-img', 'create', '-f', 'qcow2',
+                      '-o', 'cluster_size=2M,backing_file=/some/path',
+                      '/the/new/cow')
+        # Start test
+        self.mox.ReplayAll()
+        libvirt_utils.create_cow_image('/some/path', '/the/new/cow')
+
+    def test_get_disk_size(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('qemu-img',
+                      'info',
+                      '/some/path').AndReturn(('''image: 00000001
+file format: raw
+virtual size: 4.4M (4592640 bytes)
+disk size: 4.4M''', ''))
+
+        # Start test
+        self.mox.ReplayAll()
+        self.assertEquals(libvirt_utils.get_disk_size('/some/path'), 4592640)
+
+    def test_copy_image(self):
+        dst_fd, dst_path = tempfile.mkstemp()
+        try:
+            os.close(dst_fd)
+
+            src_fd, src_path = tempfile.mkstemp()
+            try:
+                with os.fdopen(src_fd, 'w') as fp:
+                    fp.write('canary')
+
+                libvirt_utils.copy_image(src_path, dst_path)
+                with open(dst_path, 'r') as fp:
+                    self.assertEquals(fp.read(), 'canary')
+            finally:
+                os.unlink(src_path)
+        finally:
+            os.unlink(dst_path)
+
+    def test_mkfs(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkfs', '-t', 'ext4', '/my/block/dev')
+        utils.execute('mkswap', '/my/swap/block/dev')
+        self.mox.ReplayAll()
+
+        libvirt_utils.mkfs('ext4', '/my/block/dev')
+        libvirt_utils.mkfs('swap', '/my/swap/block/dev')
+
+    def test_ensure_tree(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            testdir = '%s/foo/bar/baz' % (tmpdir,)
+            libvirt_utils.ensure_tree(testdir)
+            self.assertTrue(os.path.isdir(testdir))
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_write_to_file(self):
+        dst_fd, dst_path = tempfile.mkstemp()
+        try:
+            os.close(dst_fd)
+
+            libvirt_utils.write_to_file(dst_path, 'hello')
+            with open(dst_path, 'r') as fp:
+                self.assertEquals(fp.read(), 'hello')
+        finally:
+            os.unlink(dst_path)
+
+    def test_write_to_file_with_umask(self):
+        dst_fd, dst_path = tempfile.mkstemp()
+        try:
+            os.close(dst_fd)
+            os.unlink(dst_path)
+
+            libvirt_utils.write_to_file(dst_path, 'hello', umask=0277)
+            with open(dst_path, 'r') as fp:
+                self.assertEquals(fp.read(), 'hello')
+            mode = os.stat(dst_path).st_mode
+            self.assertEquals(mode & 0277, 0)
+        finally:
+            os.unlink(dst_path)
+
+    def test_chown(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('chown', 'soren', '/some/path', run_as_root=True)
+        self.mox.ReplayAll()
+        libvirt_utils.chown('/some/path', 'soren')
+
+    def test_extract_snapshot(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'raw',
+                      '-s', 'snap1', '/path/to/disk/image', '/extracted/snap')
+
+        # Start test
+        self.mox.ReplayAll()
+        libvirt_utils.extract_snapshot('/path/to/disk/image', 'qcow2',
+                                       'snap1', '/extracted/snap', 'raw')
+
+    def test_load_file(self):
+        dst_fd, dst_path = tempfile.mkstemp()
+        try:
+            os.close(dst_fd)
+
+            # We have a test for write_to_file. If that is sound, this suffices
+            libvirt_utils.write_to_file(dst_path, 'hello')
+            self.assertEquals(libvirt_utils.load_file(dst_path), 'hello')
+        finally:
+            os.unlink(dst_path)
+
+    def test_file_open(self):
+        dst_fd, dst_path = tempfile.mkstemp()
+        try:
+            os.close(dst_fd)
+
+            # We have a test for write_to_file. If that is sound, this suffices
+            libvirt_utils.write_to_file(dst_path, 'hello')
+            with libvirt_utils.file_open(dst_path, 'r') as fp:
+                self.assertEquals(fp.read(), 'hello')
+        finally:
+            os.unlink(dst_path)
+
+    def test_run_ajaxterm(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        token = 's3cr3tt0ken'
+        shell_cmd = 'shell-cmd.py'
+        port = 2048
+        utils.execute(mox.IgnoreArg(),
+                      '--command', shell_cmd,
+                      '-t', token,
+                      '-p', port)
+
+        # Start test
+        self.mox.ReplayAll()
+        libvirt_utils.run_ajaxterm(shell_cmd, token, port)
+
+    def test_get_fs_info(self):
+        stdout, stderr = utils.execute('df', '-B1', '/tmp')
+        info_line = ' '.join(stdout.split('\n')[1:])
+        _dev, total, used, free, _percentage, _mntpnt = info_line.split()
+
+        fs_info = libvirt_utils.get_fs_info('/tmp')
+        self.assertEquals(int(total), fs_info['total'])
+        self.assertEquals(int(free), fs_info['free'])
+        self.assertEquals(int(used), fs_info['used'])
+
+    def test_fetch_image(self):
+        self.mox.StubOutWithMock(images, 'fetch')
+        self.mox.StubOutWithMock(disk, 'extend')
+
+        context = 'opaque context'
+        target = '/tmp/targetfile'
+        image_id = '4'
+        user_id = 'fake'
+        project_id = 'fake'
+        images.fetch(context, image_id, target, user_id, project_id)
+        images.fetch(context, image_id, target, user_id, project_id)
+        disk.extend(target, '10G')
+
+        self.mox.ReplayAll()
+        libvirt_utils.fetch_image(context, target, image_id,
+                                  user_id, project_id)
+        libvirt_utils.fetch_image(context, target, image_id,
+                                  user_id, project_id, size='10G')
