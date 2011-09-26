@@ -255,7 +255,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
     conn.putrequest('HEAD', '/v1/images/%s' % image_id)
     if auth_token:
         conn.putheader('x-auth-token', auth_token)
-        conn.endheaders()
+    conn.endheaders()
 
     resp = conn.getresponse()
     if resp.status != httplib.OK:
