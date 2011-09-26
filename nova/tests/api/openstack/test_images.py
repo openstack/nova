@@ -659,8 +659,8 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
             'progress': 100,
-            'minDisk': 0,
-            'minRam': 0,
+            'minDisk': 10,
+            'minRam': 128,
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/fake/images/123",
@@ -950,9 +950,9 @@ class ImagesTest(test.TestCase):
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
             'status': 'ACTIVE',
-            'minDisk': 0,
+            'minDisk': 10,
             'progress': 100,
-            'minRam': 0,
+            'minRam': 128,
             "links": [{
                 "rel": "self",
                 "href": "http://localhost/v1.1/fake/images/123",
@@ -1371,6 +1371,8 @@ class ImageXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 'status': 'ACTIVE',
                 'progress': 80,
+                'minRam': 10,
+                'minDisk': 100,
                 'server': {
                     'id': '1',
                     'links': [
