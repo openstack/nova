@@ -818,3 +818,7 @@ class InstanceTypeMemoryTooSmall(NovaException):
 
 class InstanceTypeDiskTooSmall(NovaException):
     message = _("Instance type's disk is too small for requested image.")
+
+
+class InsufficientFreeMemory(NovaException):
+    message = _("Insufficient free memory on compute node to start %(uuid)s.")

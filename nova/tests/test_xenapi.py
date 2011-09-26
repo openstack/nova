@@ -413,7 +413,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.check_vm_params_for_linux()
 
     def test_spawn_not_enough_memory(self):
-        self.assertRaises(Exception,
+        self.assertRaises(exception.InsufficientFreeMemory,
                           self._test_spawn,
                           1, 2, 3, "4")  # m1.xlarge
 
