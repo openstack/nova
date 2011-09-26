@@ -2801,14 +2801,13 @@ def security_group_rule_get_by_security_group(context, security_group_id,
         result = session.query(models.SecurityGroupIngressRule).\
                          filter_by(deleted=can_read_deleted(context)).\
                          filter_by(parent_group_id=security_group_id).\
-                         options(joinedload_all('grantee_group')).\
+                         options(joinedload_all('grantee_group.instances')).\
                          all()
     else:
-        # TODO(vish): Join to group and check for project_id
         result = session.query(models.SecurityGroupIngressRule).\
                          filter_by(deleted=False).\
                          filter_by(parent_group_id=security_group_id).\
-                         options(joinedload_all('grantee_group')).\
+                         options(joinedload_all('grantee_group.instances')).\
                          all()
     return result
 
