@@ -219,7 +219,8 @@ def _make_image_fixtures():
 
     # Public image
     add_fixture(id=image_id, name='public image', is_public=True,
-                status='active', properties={'key1': 'value1'})
+                status='active', properties={'key1': 'value1'},
+                min_ram="128", min_disk="10")
     image_id += 1
 
     # Snapshot for User 1
