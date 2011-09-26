@@ -1,5 +1,5 @@
 #!/bin/sh -e
-# Copyright (c) 2010-2011 Gluster, Inc. <http://www.gluster.com> 
+# Copyright (c) 2010-2011 Gluster, Inc. <http://www.gluster.com>
 # This initial version of this file was taken from the source tree
 # of GlusterFS. It was not directly attributed, but is assumed to be
 # Copyright (c) 2010-2011 Gluster, Inc and release GPLv3
@@ -67,6 +67,11 @@ add_remote()
 
 check_remote()
 {
+    if [ -z "$USERNAME" ]
+    then
+      USERNAME=`git config review.username`
+    fi
+
     if ! git remote | grep gerrit >/dev/null 2>&1
     then
         origin_project=`git remote show origin | grep 'Fetch URL' | perl -nle '@fields = split(m|[:/]|); $len = $#fields; print $fields[$len-1], "/", $fields[$len];'`
