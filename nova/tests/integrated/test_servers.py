@@ -18,6 +18,7 @@
 import time
 import unittest
 
+import nova.virt.fake
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
@@ -51,6 +52,27 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         servers = self.api.get_servers()
         for server in servers:
             LOG.debug("server: %s" % server)
+
+    def test_create_server_with_error(self):
+        """Create a server which will enter error state."""
+        self.flags(stub_network=True)
+
+        def throw_error(*_):
+            raise Exception()
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'spawn', throw_error)
+
+        server = self._build_minimal_create_server_request()
+        created_server = self.api.post_server({"server": server})
+        created_server_id = created_server['id']
+
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+
+        found_server = self._wait_for_state_change(found_server, 'BUILD')
+
+        self.assertEqual('ERROR', found_server['status'])
+        self._delete_server(created_server_id)
 
     def test_create_and_delete_server(self):
         """Creates and deletes a server."""

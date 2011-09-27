@@ -436,11 +436,12 @@ class ComputeManager(manager.SchedulerDependentManager):
             try:
                 self.driver.spawn(context, instance,
                                   network_info, block_device_info)
-            except Exception as ex:  # pylint: disable=W0702
-                msg = _("Instance '%(instance_id)s' failed to spawn. Is "
-                        "virtualization enabled in the BIOS? Details: "
-                        "%(ex)s") % locals()
-                LOG.exception(msg)
+            except Exception as error:  # pylint: disable=W0702
+                LOG.exception(_("Instance '%(instance_id)s' failed to spawn. "
+                                "Details: %(error)s") % locals())
+                self._instance_update(context,
+                                      instance_id,
+                                      vm_state=vm_states.ERROR)
                 _deallocate_network()
                 return
 
