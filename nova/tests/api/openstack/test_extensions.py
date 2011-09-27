@@ -102,6 +102,7 @@ class ExtensionControllerTest(test.TestCase):
             "VirtualInterfaces",
             "Volumes",
             "VolumeTypes",
+            "DiskConfig",
             ]
         self.ext_list.sort()
 
