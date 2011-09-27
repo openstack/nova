@@ -22,6 +22,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import rpc
 from nova import test
 from nova import utils
 from nova.volume import volume_types
@@ -35,6 +36,10 @@ LOG = logging.getLogger('nova.tests.scheduler.vsa')
 scheduled_volumes = []
 scheduled_volume = {}
 global_volume = {}
+
+
+def fake_rpc_cast(*args, **kwargs):
+    pass
 
 
 class FakeVsaLeastUsedScheduler(
@@ -170,12 +175,10 @@ class VsaSchedulerTestCase(test.TestCase):
         LOG.debug(_("Test: provision vol %(name)s on host %(host)s"),
                     locals())
         LOG.debug(_("\t vol=%(vol)s"), locals())
-        pass
 
     def _fake_vsa_update(self, context, vsa_id, values):
         LOG.debug(_("Test: VSA update request: vsa_id=%(vsa_id)s "\
                     "values=%(values)s"), locals())
-        pass
 
     def _fake_volume_create(self, context, options):
         LOG.debug(_("Test: Volume create: %s"), options)
@@ -196,7 +199,6 @@ class VsaSchedulerTestCase(test.TestCase):
                     "values=%(values)s"), locals())
         global scheduled_volume
         scheduled_volume = {'id': volume_id, 'host': values['host']}
-        pass
 
     def _fake_service_get_by_args(self, context, host, binary):
         return "service"
@@ -209,7 +211,6 @@ class VsaSchedulerTestCase(test.TestCase):
 
     def setUp(self, sched_class=None):
         super(VsaSchedulerTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.context = context.get_admin_context()
 
         if sched_class is None:
@@ -220,6 +221,7 @@ class VsaSchedulerTestCase(test.TestCase):
         self.host_num = 10
         self.drive_type_num = 5
 
+        self.stubs.Set(rpc, 'cast', fake_rpc_cast)
         self.stubs.Set(self.sched,
                         '_get_service_states', self._fake_get_service_states)
         self.stubs.Set(self.sched,
@@ -234,8 +236,6 @@ class VsaSchedulerTestCase(test.TestCase):
     def tearDown(self):
         for name in self.created_types_lst:
             volume_types.purge(self.context, name)
-
-        self.stubs.UnsetAll()
         super(VsaSchedulerTestCase, self).tearDown()
 
     def test_vsa_sched_create_volumes_simple(self):
@@ -333,6 +333,8 @@ class VsaSchedulerTestCase(test.TestCase):
         self.stubs.Set(self.sched,
                         '_get_service_states', self._fake_get_service_states)
         self.stubs.Set(nova.db, 'volume_create', self._fake_volume_create)
+        self.stubs.Set(nova.db, 'volume_update', self._fake_volume_update)
+        self.stubs.Set(rpc, 'cast', fake_rpc_cast)
 
         self.sched.schedule_create_volumes(self.context,
                                            request_spec,
@@ -467,10 +469,9 @@ class VsaSchedulerTestCase(test.TestCase):
         self.stubs.Set(self.sched,
                         'service_is_up', self._fake_service_is_up_True)
 
-        host = self.sched.schedule_create_volume(self.context,
-                                                 123, availability_zone=None)
+        self.sched.schedule_create_volume(self.context,
+                123, availability_zone=None)
 
-        self.assertEqual(host, 'host_3')
         self.assertEqual(scheduled_volume['id'], 123)
         self.assertEqual(scheduled_volume['host'], 'host_3')
 
@@ -514,10 +515,9 @@ class VsaSchedulerTestCase(test.TestCase):
         global_volume['volume_type_id'] = volume_type['id']
         global_volume['size'] = 0
 
-        host = self.sched.schedule_create_volume(self.context,
-                                                 123, availability_zone=None)
+        self.sched.schedule_create_volume(self.context,
+                123, availability_zone=None)
 
-        self.assertEqual(host, 'host_2')
         self.assertEqual(scheduled_volume['id'], 123)
         self.assertEqual(scheduled_volume['host'], 'host_2')
 
@@ -529,7 +529,6 @@ class VsaSchedulerTestCaseMostAvail(VsaSchedulerTestCase):
                     FakeVsaMostAvailCapacityScheduler())
 
     def tearDown(self):
-        self.stubs.UnsetAll()
         super(VsaSchedulerTestCaseMostAvail, self).tearDown()
 
     def test_vsa_sched_create_single_volume(self):
@@ -558,10 +557,9 @@ class VsaSchedulerTestCaseMostAvail(VsaSchedulerTestCase):
         global_volume['volume_type_id'] = volume_type['id']
         global_volume['size'] = 0
 
-        host = self.sched.schedule_create_volume(self.context,
-                                                 123, availability_zone=None)
+        self.sched.schedule_create_volume(self.context,
+                123, availability_zone=None)
 
-        self.assertEqual(host, 'host_9')
         self.assertEqual(scheduled_volume['id'], 123)
         self.assertEqual(scheduled_volume['host'], 'host_9')
 

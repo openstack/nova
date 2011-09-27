@@ -77,6 +77,8 @@ The filtering (excluding compute nodes incapable of fulfilling the request) and 
 
 Requesting a new instance
 -------------------------
+(Note: The information below is out of date, as the `nova.compute.api.create_all_at_once()` functionality has merged into `nova.compute.api.create()` and the non-zone aware schedulers have been updated.)
+
 Prior to the `BaseScheduler`, to request a new instance, a call was made to `nova.compute.api.create()`. The type of instance created depended on the value of the `InstanceType` record being passed in. The `InstanceType` determined the amount of disk, CPU, RAM and network required for the instance. Administrators can add new `InstanceType` records to suit their needs. For more complicated instance requests we need to go beyond the default fields in the `InstanceType` table.
 
 `nova.compute.api.create()` performed the following actions:

@@ -65,7 +65,7 @@ def get_zone_list(context):
     for item in items:
         item['api_url'] = item['api_url'].replace('\\/', '/')
     if not items:
-        items = db.zone_get_all(context)
+        items = db.zone_get_all(context.elevated())
     return items
 
 
@@ -116,7 +116,7 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
     pool = greenpool.GreenPool()
     results = []
     if zones is None:
-        zones = db.zone_get_all(context)
+        zones = db.zone_get_all(context.elevated())
     for zone in zones:
         try:
             # Do this on behalf of the user ...

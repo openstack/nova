@@ -134,7 +134,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
 
         expected = []
         for idx, (hostname, services) in enumerate(hosts):
-            caps = copy.deepcopy(services["compute"])
+            caps = copy.deepcopy(services)
             # Costs are normalized so over 10 hosts, each host with increasing
             # free ram will cost 1/N more. Since the lowest cost host has some
             # free ram, we add in the 1/N for the base_cost

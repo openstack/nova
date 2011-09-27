@@ -334,47 +334,8 @@ class VolumeAttachmentController(object):
 class BootFromVolumeController(servers.ControllerV11):
     """The boot from volume API controller for the Openstack API."""
 
-    def _create_instance(self, context, instance_type, image_href, **kwargs):
-        try:
-            return self.compute_api.create(context, instance_type,
-                                           image_href, **kwargs)
-        except quota.QuotaError as error:
-            self.helper._handle_quota_error(error)
-        except exception.ImageNotFound as error:
-            msg = _("Can not find requested image")
-            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
-
-    def create(self, req, body):
-        """ Creates a new server for a given user """
-        extra_values = None
-        try:
-
-            def get_kwargs(context, instance_type, image_href, **kwargs):
-                kwargs['context'] = context
-                kwargs['instance_type'] = instance_type
-                kwargs['image_href'] = image_href
-                return kwargs
-
-            extra_values, kwargs = self.helper.create_instance(req, body,
-                                                               get_kwargs)
-
-            block_device_mapping = body['server'].get('block_device_mapping')
-            kwargs['block_device_mapping'] = block_device_mapping
-
-            instances = self._create_instance(**kwargs)
-        except faults.Fault, f:
-            return f
-
-        # We can only return 1 instance via the API, if we happen to
-        # build more than one...  instances is a list, so we'll just
-        # use the first one..
-        inst = instances[0]
-        for key in ['instance_type', 'image_ref']:
-            inst[key] = extra_values[key]
-
-        server = self._build_view(req, inst, is_detail=True)
-        server['server']['adminPass'] = extra_values['password']
-        return server
+    def _get_block_device_mapping(self, data):
+        return data.get('block_device_mapping')
 
 
 class Volumes(extensions.ExtensionDescriptor):

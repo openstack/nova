@@ -1,4 +1,5 @@
 # Copyright 2010 OpenStack LLC.
+# Copyright 2011 Piston Cloud Computing, Inc
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,18 +22,21 @@ from novaclient import exceptions as novaclient_exceptions
 from lxml import etree
 from webob import exc
 import webob
+from xml.dom import minidom
 
 from nova import compute
 from nova import network
 from nova import db
 from nova import exception
 from nova import flags
+from nova import image
 from nova import log as logging
 from nova import utils
+from nova import quota
 from nova.api.openstack import common
-from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import ips
 from nova.api.openstack import wsgi
+from nova.compute import instance_types
 from nova.scheduler import api as scheduler_api
 import nova.api.openstack
 import nova.api.openstack.views.addresses
@@ -40,6 +44,7 @@ import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
 from nova.api.openstack import xmlutil
+from nova.rpc import common as rpc_common
 
 
 LOG = logging.getLogger('nova.api.openstack.servers')
@@ -73,7 +78,6 @@ class Controller(object):
     def __init__(self):
         self.compute_api = compute.API()
         self.network_api = network.API()
-        self.helper = helper.CreateInstanceHelper(self)
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
@@ -107,10 +111,22 @@ class Controller(object):
     def _action_rebuild(self, info, request, instance_id):
         raise NotImplementedError()
 
+    def _get_block_device_mapping(self, data):
+        """Get block_device_mapping from 'server' dictionary.
+        Overidden by volumes controller.
+        """
+        return None
+
     def _get_networks_for_instance(self, req, instance):
         return ips._get_networks_for_instance(req.environ['nova.context'],
                                               self.network_api,
                                               instance)
+
+    def _get_block_device_mapping(self, data):
+        """Get block_device_mapping from 'server' dictionary.
+        Overidden by volumes controller.
+        """
+        return None
 
     def _get_servers(self, req, is_detail):
         """Returns a list of servers, taking into account any search
@@ -163,6 +179,181 @@ class Controller(object):
         limited_list = self._limit_items(instance_list, req)
         return self._build_list(req, limited_list, is_detail=is_detail)
 
+    def _handle_quota_error(self, error):
+        """
+        Reraise quota errors as api-specific http exceptions
+        """
+
+        code_mappings = {
+            "OnsetFileLimitExceeded":
+                    _("Personality file limit exceeded"),
+            "OnsetFilePathLimitExceeded":
+                    _("Personality file path too long"),
+            "OnsetFileContentLimitExceeded":
+                    _("Personality file content too long"),
+            "InstanceLimitExceeded":
+                    _("Instance quotas have been exceeded")}
+
+        expl = code_mappings.get(error.code)
+        if expl:
+            raise exc.HTTPRequestEntityTooLarge(explanation=expl,
+                                                headers={'Retry-After': 0})
+        # if the original error is okay, just reraise it
+        raise error
+
+    def _deserialize_create(self, request):
+        """
+        Deserialize a create request
+
+        Overrides normal behavior in the case of xml content
+        """
+        if request.content_type == "application/xml":
+            deserializer = ServerXMLDeserializer()
+            return deserializer.deserialize(request.body)
+        else:
+            return self._deserialize(request.body, request.get_content_type())
+
+    def _validate_server_name(self, value):
+        if not isinstance(value, basestring):
+            msg = _("Server name is not a string or unicode")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        if value.strip() == '':
+            msg = _("Server name is an empty string")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+    def _get_kernel_ramdisk_from_image(self, req, image_service, image_id):
+        """Fetch an image from the ImageService, then if present, return the
+        associated kernel and ramdisk image IDs.
+        """
+        context = req.environ['nova.context']
+        image_meta = image_service.show(context, image_id)
+        # NOTE(sirp): extracted to a separate method to aid unit-testing, the
+        # new method doesn't need a request obj or an ImageService stub
+        kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
+            image_meta)
+        return kernel_id, ramdisk_id
+
+    @staticmethod
+    def  _do_get_kernel_ramdisk_from_image(image_meta):
+        """Given an ImageService image_meta, return kernel and ramdisk image
+        ids if present.
+
+        This is only valid for `ami` style images.
+        """
+        image_id = image_meta['id']
+        if image_meta['status'] != 'active':
+            raise exception.ImageUnacceptable(image_id=image_id,
+                                              reason=_("status is not active"))
+
+        if image_meta.get('container_format') != 'ami':
+            return None, None
+
+        try:
+            kernel_id = image_meta['properties']['kernel_id']
+        except KeyError:
+            raise exception.KernelNotFoundForImage(image_id=image_id)
+
+        try:
+            ramdisk_id = image_meta['properties']['ramdisk_id']
+        except KeyError:
+            ramdisk_id = None
+
+        return kernel_id, ramdisk_id
+
+    def _get_injected_files(self, personality):
+        """
+        Create a list of injected files from the personality attribute
+
+        At this time, injected_files must be formatted as a list of
+        (file_path, file_content) pairs for compatibility with the
+        underlying compute service.
+        """
+        injected_files = []
+
+        for item in personality:
+            try:
+                path = item['path']
+                contents = item['contents']
+            except KeyError as key:
+                expl = _('Bad personality format: missing %s') % key
+                raise exc.HTTPBadRequest(explanation=expl)
+            except TypeError:
+                expl = _('Bad personality format')
+                raise exc.HTTPBadRequest(explanation=expl)
+            try:
+                contents = base64.b64decode(contents)
+            except TypeError:
+                expl = _('Personality content for %s cannot be decoded') % path
+                raise exc.HTTPBadRequest(explanation=expl)
+            injected_files.append((path, contents))
+        return injected_files
+
+    def _get_server_admin_password_old_style(self, server):
+        """ Determine the admin password for a server on creation """
+        return utils.generate_password(FLAGS.password_length)
+
+    def _get_server_admin_password_new_style(self, server):
+        """ Determine the admin password for a server on creation """
+        password = server.get('adminPass')
+
+        if password is None:
+            return utils.generate_password(FLAGS.password_length)
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            raise exc.HTTPBadRequest(explanation=msg)
+        return password
+
+    def _get_requested_networks(self, requested_networks):
+        """
+        Create a list of requested networks from the networks attribute
+        """
+        networks = []
+        for network in requested_networks:
+            try:
+                network_uuid = network['uuid']
+
+                if not utils.is_uuid_like(network_uuid):
+                    msg = _("Bad networks format: network uuid is not in"
+                         " proper format (%s)") % network_uuid
+                    raise exc.HTTPBadRequest(explanation=msg)
+
+                #fixed IP address is optional
+                #if the fixed IP address is not provided then
+                #it will use one of the available IP address from the network
+                address = network.get('fixed_ip', None)
+                if address is not None and not utils.is_valid_ipv4(address):
+                    msg = _("Invalid fixed IP address (%s)") % address
+                    raise exc.HTTPBadRequest(explanation=msg)
+                # check if the network id is already present in the list,
+                # we don't want duplicate networks to be passed
+                # at the boot time
+                for id, ip in networks:
+                    if id == network_uuid:
+                        expl = _("Duplicate networks (%s) are not allowed")\
+                                % network_uuid
+                        raise exc.HTTPBadRequest(explanation=expl)
+
+                networks.append((network_uuid, address))
+            except KeyError as key:
+                expl = _('Bad network format: missing %s') % key
+                raise exc.HTTPBadRequest(explanation=expl)
+            except TypeError:
+                expl = _('Bad networks format')
+                raise exc.HTTPBadRequest(explanation=expl)
+
+        return networks
+
+    def _validate_user_data(self, user_data):
+        """Check if the user_data is encoded properly"""
+        if not user_data:
+            return
+        try:
+            user_data = base64.b64decode(user_data)
+        except TypeError:
+            expl = _('Userdata content cannot be decoded')
+            raise exc.HTTPBadRequest(explanation=expl)
+
     @novaclient_exception_converter
     @scheduler_api.redirect_handler
     def show(self, req, id):
@@ -180,22 +371,172 @@ class Controller(object):
 
     def create(self, req, body):
         """ Creates a new server for a given user """
-        if 'server' in body:
-            body['server']['key_name'] = self._get_key_name(req, body)
 
-        extra_values = None
-        extra_values, instances = self.helper.create_instance(
-                req, body, self.compute_api.create)
+        if not body:
+            raise exc.HTTPUnprocessableEntity()
 
-        # We can only return 1 instance via the API, if we happen to
-        # build more than one...  instances is a list, so we'll just
-        # use the first one..
-        inst = instances[0]
-        for key in ['instance_type', 'image_ref']:
-            inst[key] = extra_values[key]
+        if not 'server' in body:
+            raise exc.HTTPUnprocessableEntity()
 
-        server = self._build_view(req, inst, is_detail=True)
-        server['server']['adminPass'] = extra_values['password']
+        body['server']['key_name'] = self._get_key_name(req, body)
+
+        context = req.environ['nova.context']
+        server_dict = body['server']
+        password = self._get_server_admin_password(server_dict)
+
+        if not 'name' in server_dict:
+            msg = _("Server name is not defined")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        name = server_dict['name']
+        self._validate_server_name(name)
+        name = name.strip()
+
+        image_href = self._image_ref_from_req_data(body)
+        # If the image href was generated by nova api, strip image_href
+        # down to an id and use the default glance connection params
+
+        if str(image_href).startswith(req.application_url):
+            image_href = image_href.split('/').pop()
+        try:
+            image_service, image_id = image.get_image_service(context,
+                    image_href)
+            kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
+                    req, image_service, image_id)
+            images = set([str(x['id']) for x in image_service.index(context)])
+            assert str(image_id) in images
+        except Exception, e:
+            msg = _("Cannot find requested image %(image_href)s: %(e)s" %
+                                                                    locals())
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        personality = server_dict.get('personality')
+        config_drive = server_dict.get('config_drive')
+
+        injected_files = []
+        if personality:
+            injected_files = self._get_injected_files(personality)
+
+        sg_names = []
+        security_groups = server_dict.get('security_groups')
+        if security_groups is not None:
+            sg_names = [sg['name'] for sg in security_groups if sg.get('name')]
+        if not sg_names:
+            sg_names.append('default')
+
+        sg_names = list(set(sg_names))
+
+        requested_networks = server_dict.get('networks')
+        if requested_networks is not None:
+            requested_networks = self._get_requested_networks(
+                                                    requested_networks)
+
+        try:
+            flavor_id = self._flavor_id_from_req_data(body)
+        except ValueError as error:
+            msg = _("Invalid flavorRef provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        zone_blob = server_dict.get('blob')
+
+        # optional openstack extensions:
+        key_name = server_dict.get('key_name')
+        user_data = server_dict.get('user_data')
+        self._validate_user_data(user_data)
+
+        availability_zone = server_dict.get('availability_zone')
+        name = server_dict['name']
+        self._validate_server_name(name)
+        name = name.strip()
+
+        block_device_mapping = self._get_block_device_mapping(server_dict)
+
+        # Only allow admins to specify their own reservation_ids
+        # This is really meant to allow zones to work.
+        reservation_id = server_dict.get('reservation_id')
+        if all([reservation_id is not None,
+                reservation_id != '',
+                not context.is_admin]):
+            reservation_id = None
+
+        ret_resv_id = server_dict.get('return_reservation_id', False)
+
+        min_count = server_dict.get('min_count')
+        max_count = server_dict.get('max_count')
+        # min_count and max_count are optional.  If they exist, they come
+        # in as strings.  We want to default 'min_count' to 1, and default
+        # 'max_count' to be 'min_count'.
+        min_count = int(min_count) if min_count else 1
+        max_count = int(max_count) if max_count else min_count
+        if min_count > max_count:
+            min_count = max_count
+
+        try:
+            inst_type = \
+                    instance_types.get_instance_type_by_flavor_id(flavor_id)
+
+            (instances, resv_id) = self.compute_api.create(context,
+                            inst_type,
+                            image_id,
+                            kernel_id=kernel_id,
+                            ramdisk_id=ramdisk_id,
+                            display_name=name,
+                            display_description=name,
+                            key_name=key_name,
+                            metadata=server_dict.get('metadata', {}),
+                            access_ip_v4=server_dict.get('accessIPv4'),
+                            access_ip_v6=server_dict.get('accessIPv6'),
+                            injected_files=injected_files,
+                            admin_password=password,
+                            zone_blob=zone_blob,
+                            reservation_id=reservation_id,
+                            min_count=min_count,
+                            max_count=max_count,
+                            requested_networks=requested_networks,
+                            security_group=sg_names,
+                            user_data=user_data,
+                            availability_zone=availability_zone,
+                            config_drive=config_drive,
+                            block_device_mapping=block_device_mapping,
+                            wait_for_instances=not ret_resv_id)
+        except quota.QuotaError as error:
+            self._handle_quota_error(error)
+        except exception.InstanceTypeMemoryTooSmall as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
+        except exception.InstanceTypeDiskTooSmall as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
+        except exception.ImageNotFound as error:
+            msg = _("Can not find requested image")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.FlavorNotFound as error:
+            msg = _("Invalid flavorRef provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.KeypairNotFound as error:
+            msg = _("Invalid key_name provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        except exception.SecurityGroupNotFound as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
+        except rpc_common.RemoteError as err:
+            msg = "%(err_type)s: %(err_msg)s" % \
+                  {'err_type': err.exc_type, 'err_msg': err.value}
+            raise exc.HTTPBadRequest(explanation=msg)
+        # Let the caller deal with unhandled exceptions.
+
+        # If the caller wanted a reservation_id, return it
+        if ret_resv_id:
+            return {'reservation_id': resv_id}
+
+        # Instances is a list
+        instance = instances[0]
+        if not instance.get('_is_precooked', False):
+            instance['instance_type'] = inst_type
+            instance['image_ref'] = image_href
+
+        server = self._build_view(req, instance, is_detail=True)
+        if '_is_precooked' in server['server']:
+            del server['server']['_is_precooked']
+        else:
+            server['server']['adminPass'] = password
         return server
 
     def _delete(self, context, id):
@@ -218,7 +559,7 @@ class Controller(object):
 
         if 'name' in body['server']:
             name = body['server']['name']
-            self.helper._validate_server_name(name)
+            self._validate_server_name(name)
             update_dict['display_name'] = name.strip()
 
         if 'accessIPv4' in body['server']:
@@ -290,17 +631,17 @@ class Controller(object):
 
         except KeyError as missing_key:
             msg = _("createBackup entity requires %s attribute") % missing_key
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         except TypeError:
             msg = _("Malformed createBackup entity")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             rotation = int(rotation)
         except ValueError:
             msg = _("createBackup attribute 'rotation' must be an integer")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         # preserve link to server in image properties
         server_ref = os.path.join(req.application_url,
@@ -315,7 +656,7 @@ class Controller(object):
             props.update(metadata)
         except ValueError:
             msg = _("Invalid metadata")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         image = self.compute_api.backup(context,
                                         instance_id,
@@ -696,7 +1037,7 @@ class ControllerV10(Controller):
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
-        return self.helper._get_server_admin_password_old_style(server)
+        return self._get_server_admin_password_old_style(server)
 
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin"""
@@ -884,11 +1225,11 @@ class ControllerV11(Controller):
 
         except KeyError:
             msg = _("createImage entity requires name attribute")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         except TypeError:
             msg = _("Malformed createImage entity")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         # preserve link to server in image properties
         server_ref = os.path.join(req.application_url,
@@ -903,7 +1244,7 @@ class ControllerV11(Controller):
             props.update(metadata)
         except ValueError:
             msg = _("Invalid metadata")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         image = self.compute_api.snapshot(context,
                                           instance_id,
@@ -923,7 +1264,7 @@ class ControllerV11(Controller):
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
-        return self.helper._get_server_admin_password_new_style(server)
+        return self._get_server_admin_password_new_style(server)
 
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin"""
@@ -1068,6 +1409,227 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         return self._to_xml(server)
 
 
+class ServerXMLDeserializer(wsgi.XMLDeserializer):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    metadata_deserializer = common.MetadataXMLDeserializer()
+
+    def create(self, string):
+        """Deserialize an xml-formatted server create request"""
+        dom = minidom.parseString(string)
+        server = self._extract_server(dom)
+        return {'body': {'server': server}}
+
+    def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
+        server = {}
+        server_node = self.find_first_child_named(node, 'server')
+
+        attributes = ["name", "imageId", "flavorId", "adminPass"]
+        for attr in attributes:
+            if server_node.getAttribute(attr):
+                server[attr] = server_node.getAttribute(attr)
+
+        metadata_node = self.find_first_child_named(server_node, "metadata")
+        server["metadata"] = self.metadata_deserializer.extract_metadata(
+                                                            metadata_node)
+
+        server["personality"] = self._extract_personality(server_node)
+
+        return server
+
+    def _extract_personality(self, server_node):
+        """Marshal the personality attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "personality")
+        personality = []
+        if node is not None:
+            for file_node in self.find_children_named(node, "file"):
+                item = {}
+                if file_node.hasAttribute("path"):
+                    item["path"] = file_node.getAttribute("path")
+                item["contents"] = self.extract_text(file_node)
+                personality.append(item)
+        return personality
+
+
+class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    metadata_deserializer = common.MetadataXMLDeserializer()
+
+    def action(self, string):
+        dom = minidom.parseString(string)
+        action_node = dom.childNodes[0]
+        action_name = action_node.tagName
+
+        action_deserializer = {
+            'createImage': self._action_create_image,
+            'createBackup': self._action_create_backup,
+            'changePassword': self._action_change_password,
+            'reboot': self._action_reboot,
+            'rebuild': self._action_rebuild,
+            'resize': self._action_resize,
+            'confirmResize': self._action_confirm_resize,
+            'revertResize': self._action_revert_resize,
+        }.get(action_name, self.default)
+
+        action_data = action_deserializer(action_node)
+
+        return {'body': {action_name: action_data}}
+
+    def _action_create_image(self, node):
+        return self._deserialize_image_action(node, ('name',))
+
+    def _action_create_backup(self, node):
+        attributes = ('name', 'backup_type', 'rotation')
+        return self._deserialize_image_action(node, attributes)
+
+    def _action_change_password(self, node):
+        if not node.hasAttribute("adminPass"):
+            raise AttributeError("No adminPass was specified in request")
+        return {"adminPass": node.getAttribute("adminPass")}
+
+    def _action_reboot(self, node):
+        if not node.hasAttribute("type"):
+            raise AttributeError("No reboot type was specified in request")
+        return {"type": node.getAttribute("type")}
+
+    def _action_rebuild(self, node):
+        rebuild = {}
+        if node.hasAttribute("name"):
+            rebuild['name'] = node.getAttribute("name")
+
+        metadata_node = self.find_first_child_named(node, "metadata")
+        if metadata_node is not None:
+            rebuild["metadata"] = self.extract_metadata(metadata_node)
+
+        personality = self._extract_personality(node)
+        if personality is not None:
+            rebuild["personality"] = personality
+
+        if not node.hasAttribute("imageRef"):
+            raise AttributeError("No imageRef was specified in request")
+        rebuild["imageRef"] = node.getAttribute("imageRef")
+
+        return rebuild
+
+    def _action_resize(self, node):
+        if not node.hasAttribute("flavorRef"):
+            raise AttributeError("No flavorRef was specified in request")
+        return {"flavorRef": node.getAttribute("flavorRef")}
+
+    def _action_confirm_resize(self, node):
+        return None
+
+    def _action_revert_resize(self, node):
+        return None
+
+    def _deserialize_image_action(self, node, allowed_attributes):
+        data = {}
+        for attribute in allowed_attributes:
+            value = node.getAttribute(attribute)
+            if value:
+                data[attribute] = value
+        metadata_node = self.find_first_child_named(node, 'metadata')
+        if metadata_node is not None:
+            metadata = self.metadata_deserializer.extract_metadata(
+                                                        metadata_node)
+            data['metadata'] = metadata
+        return data
+
+    def create(self, string):
+        """Deserialize an xml-formatted server create request"""
+        dom = minidom.parseString(string)
+        server = self._extract_server(dom)
+        return {'body': {'server': server}}
+
+    def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
+        server = {}
+        server_node = self.find_first_child_named(node, 'server')
+
+        attributes = ["name", "imageRef", "flavorRef", "adminPass",
+                      "accessIPv4", "accessIPv6"]
+        for attr in attributes:
+            if server_node.getAttribute(attr):
+                server[attr] = server_node.getAttribute(attr)
+
+        metadata_node = self.find_first_child_named(server_node, "metadata")
+        if metadata_node is not None:
+            server["metadata"] = self.extract_metadata(metadata_node)
+
+        personality = self._extract_personality(server_node)
+        if personality is not None:
+            server["personality"] = personality
+
+        networks = self._extract_networks(server_node)
+        if networks is not None:
+            server["networks"] = networks
+
+        security_groups = self._extract_security_groups(server_node)
+        if security_groups is not None:
+            server["security_groups"] = security_groups
+
+        return server
+
+    def _extract_personality(self, server_node):
+        """Marshal the personality attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "personality")
+        if node is not None:
+            personality = []
+            for file_node in self.find_children_named(node, "file"):
+                item = {}
+                if file_node.hasAttribute("path"):
+                    item["path"] = file_node.getAttribute("path")
+                item["contents"] = self.extract_text(file_node)
+                personality.append(item)
+            return personality
+        else:
+            return None
+
+    def _extract_networks(self, server_node):
+        """Marshal the networks attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "networks")
+        if node is not None:
+            networks = []
+            for network_node in self.find_children_named(node,
+                                                         "network"):
+                item = {}
+                if network_node.hasAttribute("uuid"):
+                    item["uuid"] = network_node.getAttribute("uuid")
+                if network_node.hasAttribute("fixed_ip"):
+                    item["fixed_ip"] = network_node.getAttribute("fixed_ip")
+                networks.append(item)
+            return networks
+        else:
+            return None
+
+    def _extract_security_groups(self, server_node):
+        """Marshal the security_groups attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "security_groups")
+        if node is not None:
+            security_groups = []
+            for sg_node in self.find_children_named(node, "security_group"):
+                item = {}
+                name_node = self.find_first_child_named(sg_node, "name")
+                if name_node:
+                    item["name"] = self.extract_text(name_node)
+                    security_groups.append(item)
+            return security_groups
+        else:
+            return None
+
+
 def create_resource(version='1.0'):
     controller = {
         '1.0': ControllerV10,
@@ -1107,8 +1669,8 @@ def create_resource(version='1.0'):
     }
 
     xml_deserializer = {
-        '1.0': helper.ServerXMLDeserializer(),
-        '1.1': helper.ServerXMLDeserializerV11(),
+        '1.0': ServerXMLDeserializer(),
+        '1.1': ServerXMLDeserializerV11(),
     }[version]
 
     body_deserializers = {

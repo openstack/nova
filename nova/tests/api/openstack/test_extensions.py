@@ -87,6 +87,7 @@ class ExtensionControllerTest(test.TestCase):
         self.ext_list = [
             "Createserverext",
             "DeferredDelete",
+            "DiskConfig",
             "FlavorExtraSpecs",
             "FlavorExtraData",
             "Floating_ips",
@@ -102,7 +103,7 @@ class ExtensionControllerTest(test.TestCase):
             "VirtualInterfaces",
             "Volumes",
             "VolumeTypes",
-            "DiskConfig",
+            "Zones",
             ]
         self.ext_list.sort()
 

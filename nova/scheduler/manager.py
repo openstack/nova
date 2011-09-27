@@ -81,37 +81,23 @@ class SchedulerManager(manager.Manager):
         """Select a list of hosts best matching the provided specs."""
         return self.driver.select(context, *args, **kwargs)
 
-    def get_scheduler_rules(self, context=None, *args, **kwargs):
-        """Ask the driver how requests should be made of it."""
-        return self.driver.get_scheduler_rules(context, *args, **kwargs)
-
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.
 
         Falls back to schedule(context, topic) if method doesn't exist.
         """
         driver_method = 'schedule_%s' % method
-        elevated = context.elevated()
         try:
             real_meth = getattr(self.driver, driver_method)
-            args = (elevated,) + args
+            args = (context,) + args
         except AttributeError, e:
             LOG.warning(_("Driver Method %(driver_method)s missing: %(e)s."
                           "Reverting to schedule()") % locals())
             real_meth = self.driver.schedule
-            args = (elevated, topic) + args
-        host = real_meth(*args, **kwargs)
+            args = (context, topic, method) + args
 
-        if not host:
-            LOG.debug(_("%(topic)s %(method)s handled in Scheduler")
-                        % locals())
-            return
-
-        rpc.cast(context,
-                 db.queue_get_for(context, topic, host),
-                 {"method": method,
-                  "args": kwargs})
-        LOG.debug(_("Casted to %(topic)s %(host)s for %(method)s") % locals())
+        # Scheduler methods are responsible for casting.
+        return real_meth(*args, **kwargs)
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
     #                    Based on bexar design summit discussion,

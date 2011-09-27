@@ -20,6 +20,7 @@ import json
 
 import nova.db
 
+from nova import context
 from nova import exception
 from nova import rpc
 from nova import test
@@ -102,7 +103,7 @@ def fake_empty_call_zone_method(context, method, specs, zones):
 was_called = False
 
 
-def fake_provision_resource(context, item, instance_id, request_spec, kwargs):
+def fake_provision_resource(context, item, request_spec, kwargs):
     global was_called
     was_called = True
 
@@ -118,8 +119,7 @@ def fake_provision_resource_locally(context, build_plan, request_spec, kwargs):
     was_called = True
 
 
-def fake_provision_resource_from_blob(context, item, instance_id,
-                                      request_spec, kwargs):
+def fake_provision_resource_from_blob(context, item, request_spec, kwargs):
     global was_called
     was_called = True
 
@@ -185,7 +185,7 @@ class AbstractSchedulerTestCase(test.TestCase):
         zm = FakeZoneManager()
         sched.set_zone_manager(zm)
 
-        fake_context = {}
+        fake_context = context.RequestContext('user', 'project')
         build_plan = sched.select(fake_context,
                 {'instance_type': {'memory_mb': 512},
                     'num_instances': 4})
@@ -229,9 +229,10 @@ class AbstractSchedulerTestCase(test.TestCase):
         zm = FakeEmptyZoneManager()
         sched.set_zone_manager(zm)
 
-        fake_context = {}
+        fake_context = context.RequestContext('user', 'project')
+        request_spec = {}
         self.assertRaises(driver.NoValidHost, sched.schedule_run_instance,
-                          fake_context, 1,
+                          fake_context, request_spec,
                           dict(host_filter=None, instance_type={}))
 
     def test_schedule_do_not_schedule_with_hint(self):
@@ -250,8 +251,8 @@ class AbstractSchedulerTestCase(test.TestCase):
                 'blob': "Non-None blob data",
             }
 
-        result = sched.schedule_run_instance(None, 1, request_spec)
-        self.assertEquals(None, result)
+        instances = sched.schedule_run_instance(None, request_spec)
+        self.assertTrue(instances)
         self.assertTrue(was_called)
 
     def test_provision_resource_local(self):
@@ -263,7 +264,7 @@ class AbstractSchedulerTestCase(test.TestCase):
                        fake_provision_resource_locally)
 
         request_spec = {'hostname': "foo"}
-        sched._provision_resource(None, request_spec, 1, request_spec, {})
+        sched._provision_resource(None, request_spec, request_spec, {})
         self.assertTrue(was_called)
 
     def test_provision_resource_remote(self):
@@ -275,7 +276,7 @@ class AbstractSchedulerTestCase(test.TestCase):
                        fake_provision_resource_from_blob)
 
         request_spec = {}
-        sched._provision_resource(None, request_spec, 1, request_spec, {})
+        sched._provision_resource(None, request_spec, request_spec, {})
         self.assertTrue(was_called)
 
     def test_provision_resource_from_blob_empty(self):
@@ -285,7 +286,7 @@ class AbstractSchedulerTestCase(test.TestCase):
         request_spec = {}
         self.assertRaises(abstract_scheduler.InvalidBlob,
                           sched._provision_resource_from_blob,
-                          None, {}, 1, {}, {})
+                          None, {}, {}, {})
 
     def test_provision_resource_from_blob_with_local_blob(self):
         """
@@ -303,20 +304,21 @@ class AbstractSchedulerTestCase(test.TestCase):
             # return fake instances
             return {'id': 1, 'uuid': 'f874093c-7b17-49c0-89c3-22a5348497f9'}
 
-        def fake_rpc_cast(*args, **kwargs):
+        def fake_cast_to_compute_host(*args, **kwargs):
             pass
 
         self.stubs.Set(sched, '_decrypt_blob',
                        fake_decrypt_blob_returns_local_info)
+        self.stubs.Set(driver, 'cast_to_compute_host',
+                       fake_cast_to_compute_host)
         self.stubs.Set(compute_api.API,
                 'create_db_entry_for_new_instance',
                 fake_create_db_entry_for_new_instance)
-        self.stubs.Set(rpc, 'cast', fake_rpc_cast)
 
         build_plan_item = {'blob': "Non-None blob data"}
         request_spec = {'image': {}, 'instance_properties': {}}
 
-        sched._provision_resource_from_blob(None, build_plan_item, 1,
+        sched._provision_resource_from_blob(None, build_plan_item,
                                             request_spec, {})
         self.assertTrue(was_called)
 
@@ -335,7 +337,7 @@ class AbstractSchedulerTestCase(test.TestCase):
 
         request_spec = {'blob': "Non-None blob data"}
 
-        sched._provision_resource_from_blob(None, request_spec, 1,
+        sched._provision_resource_from_blob(None, request_spec,
                                             request_spec, {})
         self.assertTrue(was_called)
 
@@ -352,7 +354,7 @@ class AbstractSchedulerTestCase(test.TestCase):
 
         request_spec = {'child_blob': True, 'child_zone': True}
 
-        sched._provision_resource_from_blob(None, request_spec, 1,
+        sched._provision_resource_from_blob(None, request_spec,
                                             request_spec, {})
         self.assertTrue(was_called)
 
@@ -386,13 +388,52 @@ class AbstractSchedulerTestCase(test.TestCase):
         zm.service_states = {}
         sched.set_zone_manager(zm)
 
-        fake_context = {}
+        fake_context = context.RequestContext('user', 'project')
         build_plan = sched.select(fake_context,
                 {'instance_type': {'memory_mb': 512},
                     'num_instances': 4})
 
         # 0 from local zones, 12 from remotes
         self.assertEqual(12, len(build_plan))
+
+    def test_run_instance_non_admin(self):
+        """Test creating an instance locally using run_instance, passing
+        a non-admin context.  DB actions should work."""
+        sched = FakeAbstractScheduler()
+
+        def fake_cast_to_compute_host(*args, **kwargs):
+            pass
+
+        def fake_zone_get_all_zero(context):
+            # make sure this is called with admin context, even though
+            # we're using user context below
+            self.assertTrue(context.is_admin)
+            return []
+
+        self.stubs.Set(driver, 'cast_to_compute_host',
+                       fake_cast_to_compute_host)
+        self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
+        self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all_zero)
+
+        zm = FakeZoneManager()
+        sched.set_zone_manager(zm)
+
+        fake_context = context.RequestContext('user', 'project')
+
+        request_spec = {
+                'image': {'properties': {}},
+                'security_group': [],
+                'instance_properties': {
+                        'project_id': fake_context.project_id,
+                        'user_id': fake_context.user_id},
+                'instance_type': {'memory_mb': 256},
+                'filter_driver': 'nova.scheduler.host_filter.AllHostsFilter'
+            }
+
+        instances = sched.schedule_run_instance(fake_context, request_spec)
+        self.assertEqual(len(instances), 1)
+        self.assertFalse(instances[0].get('_is_precooked', False))
+        nova.db.instance_destroy(fake_context, instances[0]['id'])
 
 
 class BaseSchedulerTestCase(test.TestCase):

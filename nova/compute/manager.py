@@ -69,8 +69,6 @@ flags.DEFINE_string('instances_path', '$state_path/instances',
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
-flags.DEFINE_string('stub_network', False,
-                    'Stub network related code')
 flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
