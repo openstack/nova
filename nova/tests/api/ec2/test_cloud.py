@@ -507,10 +507,12 @@ class CloudTestCase(test.TestCase):
         """Makes sure describe_instances works and filters results."""
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': 1,
-                                                  'host': 'host1'})
+                                                  'host': 'host1',
+                                                  'vm_state': 'active'})
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': 1,
-                                                  'host': 'host2'})
+                                                  'host': 'host2',
+                                                  'vm_state': 'active'})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'availability_zone': 'zone1',
                                                  'topic': "compute"})
@@ -535,9 +537,15 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp2['id'])
 
     def test_describe_instances_deleted(self):
-        args1 = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
+        args1 = {'reservation_id': 'a',
+                 'image_ref': 1,
+                 'host': 'host1',
+                 'vm_state': 'active'}
         inst1 = db.instance_create(self.context, args1)
-        args2 = {'reservation_id': 'b', 'image_ref': 1, 'host': 'host1'}
+        args2 = {'reservation_id': 'b',
+                 'image_ref': 1,
+                 'host': 'host1',
+                 'vm_state': 'active'}
         inst2 = db.instance_create(self.context, args2)
         db.instance_destroy(self.context, inst1.id)
         result = self.cloud.describe_instances(self.context)
