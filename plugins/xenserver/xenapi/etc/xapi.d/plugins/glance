@@ -293,7 +293,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
         'x-image-meta-container-format': 'ovf',
         'x-image-meta-property-os-type': os_type}
 
-    if options.get('managed_disk'):
+    if options and options.get('managed_disk'):
         headers['x-image-meta-property-managed-disk'] = options['managed_disk']
 
     # If we have an auth_token, set an x-auth-token header
