@@ -1,8 +1,7 @@
 *.pyc
 *.DS_Store
 local_settings.py
-CA/index.txt
-CA/serial
+CA/
 keeper
 instances
 keys
@@ -10,3 +9,5 @@ build/*
 build-stamp
 nova.egg-info
 .nova-venv
+*.sqlite
+*.log
