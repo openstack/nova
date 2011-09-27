@@ -1028,6 +1028,14 @@ class API(base.Base):
 
         """
         instance = self.db.instance_get(context, instance_id)
+        task_state = instance["task_state"]
+
+        if task_state == task_states.IMAGE_BACKUP:
+            raise exception.InstanceBackingUp(instance_id=instance_id)
+
+        if task_state == task_states.IMAGE_SNAPSHOT:
+            raise exception.InstanceSnapshotting(instance_id=instance_id)
+
         properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
                       'image_state': 'creating',

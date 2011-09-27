@@ -124,10 +124,15 @@ class ControllerV10(Controller):
 
         context = req.environ["nova.context"]
         props = {'instance_id': instance_id}
-        image = self._compute_service.snapshot(context,
-                                          instance_id,
-                                          image_name,
-                                          extra_properties=props)
+
+        try:
+            image = self._compute_service.snapshot(context,
+                                              instance_id,
+                                              image_name,
+                                              extra_properties=props)
+        except exception.InstanceBusy:
+            msg = _("Server is currently creating an image. Please wait.")
+            raise webob.exc.HTTPConflict(explanation=msg)
 
         return dict(image=self.get_builder(req).build(image, detail=True))
 

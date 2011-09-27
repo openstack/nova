@@ -811,10 +811,14 @@ class ControllerV11(Controller):
             msg = _("Invalid metadata")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        image = self.compute_api.snapshot(context,
-                                          instance_id,
-                                          image_name,
-                                          extra_properties=props)
+        try:
+            image = self.compute_api.snapshot(context,
+                                              instance_id,
+                                              image_name,
+                                              extra_properties=props)
+        except exception.InstanceBusy:
+            msg = _("Server is currently creating an image. Please wait.")
+            raise webob.exc.HTTPConflict(explanation=msg)
 
         # build location of newly-created image entity
         image_id = str(image['id'])

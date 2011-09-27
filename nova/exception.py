@@ -182,6 +182,18 @@ class AdminRequired(NotAuthorized):
     message = _("User does not have admin privileges")
 
 
+class InstanceBusy(NovaException):
+    message = _("Instance %(instance_id)s is busy. (%(task_state)s)")
+
+
+class InstanceSnapshotting(InstanceBusy):
+    message = _("Instance %(instance_id)s is currently snapshotting.")
+
+
+class InstanceBackingUp(InstanceBusy):
+    message = _("Instance %(instance_id)s is currently being backed up.")
+
+
 class Invalid(NovaException):
     message = _("Unacceptable parameters.")
 

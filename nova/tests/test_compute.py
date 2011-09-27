@@ -24,6 +24,7 @@ from nova import compute
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -351,6 +352,36 @@ class ComputeTestCase(test.TestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.snapshot_instance(self.context, instance_id, name)
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_snapshot_conflict_backup(self):
+        """Can't backup an instance which is already being backed up."""
+        instance_id = self._create_instance()
+        instance_values = {'task_state': task_states.IMAGE_BACKUP}
+        db.instance_update(self.context, instance_id, instance_values)
+
+        self.assertRaises(exception.InstanceBackingUp,
+                          self.compute_api.backup,
+                          self.context,
+                          instance_id,
+                          None,
+                          None,
+                          None)
+
+        db.instance_destroy(self.context, instance_id)
+
+    def test_snapshot_conflict_snapshot(self):
+        """Can't snapshot an instance which is already being snapshotted."""
+        instance_id = self._create_instance()
+        instance_values = {'task_state': task_states.IMAGE_SNAPSHOT}
+        db.instance_update(self.context, instance_id, instance_values)
+
+        self.assertRaises(exception.InstanceSnapshotting,
+                          self.compute_api.snapshot,
+                          self.context,
+                          instance_id,
+                          None)
+
+        db.instance_destroy(self.context, instance_id)
 
     def test_console_output(self):
         """Make sure we can get console output from instance"""
