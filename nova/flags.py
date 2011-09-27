@@ -435,3 +435,10 @@ DEFINE_bool('allow_resize_to_same_host', False,
 
 DEFINE_string('stub_network', False,
               'Stub network related code')
+
+DEFINE_integer('reclaim_instance_interval', 0,
+               'Interval in seconds for reclaiming deleted instances')
+
+DEFINE_integer('zombie_instance_updated_at_window', 172800,
+               'Limit in seconds that a zombie instance can exist before '
+               'being cleaned up.')

@@ -83,8 +83,6 @@ flags.DEFINE_integer("resize_confirm_window", 0,
                      " Set to 0 to disable.")
 flags.DEFINE_integer('host_state_interval', 120,
                      'Interval in seconds for querying the host status')
-flags.DEFINE_integer('reclaim_instance_interval', 0,
-                     'Interval in seconds for reclaiming deleted instances')
 
 LOG = logging.getLogger('nova.compute.manager')
 
