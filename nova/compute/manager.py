@@ -360,6 +360,42 @@ class ComputeManager(manager.SchedulerDependentManager):
                            % locals())
                 raise exception.ImageTooLarge()
 
+        def _make_network_info():
+            if FLAGS.stub_network:
+                # TODO(tr3buchet) not really sure how this should be handled.
+                # virt requires network_info to be passed in but stub_network
+                # is enabled. Setting to [] for now will cause virt to skip
+                # all vif creation and network injection, maybe this is correct
+                network_info = []
+            else:
+                # NOTE(vish): This could be a cast because we don't do
+                # anything with the address currently, but I'm leaving it as a
+                # call to ensure that network setup completes.  We will
+                # eventually also need to save the address here.
+                network_info = self.network_api.allocate_for_instance(context,
+                                    instance, vpn=is_vpn,
+                                    requested_networks=requested_networks)
+                LOG.debug(_("instance network_info: |%s|"), network_info)
+            return network_info
+
+        def _make_block_device_info():
+            (swap, ephemerals,
+             block_device_mapping) = self._setup_block_device_mapping(
+                context, instance_id)
+            block_device_info = {
+                'root_device_name': instance['root_device_name'],
+                'swap': swap,
+                'ephemerals': ephemerals,
+                'block_device_mapping': block_device_mapping}
+            return block_device_info
+
+        def _deallocate_network():
+            if not FLAGS.stub_network:
+                LOG.debug(_("deallocating network for instance: %s"),
+                          instance['id'])
+                self.network_api.deallocate_for_instance(context,
+                                    instance)
+
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
 
@@ -382,36 +418,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance['admin_pass'] = kwargs.get('admin_password', None)
 
         is_vpn = instance['image_ref'] == str(FLAGS.vpn_image_id)
+        network_info = _make_network_info()
         try:
-            # NOTE(vish): This could be a cast because we don't do anything
-            #             with the address currently, but I'm leaving it as
-            #             a call to ensure that network setup completes.  We
-            #             will eventually also need to save the address here.
-            if not FLAGS.stub_network:
-                network_info = self.network_api.allocate_for_instance(context,
-                                    instance, vpn=is_vpn,
-                                    requested_networks=requested_networks)
-                LOG.debug(_("instance network_info: |%s|"), network_info)
-            else:
-                # TODO(tr3buchet) not really sure how this should be handled.
-                # virt requires network_info to be passed in but stub_network
-                # is enabled. Setting to [] for now will cause virt to skip
-                # all vif creation and network injection, maybe this is correct
-                network_info = []
-
             self._instance_update(context,
                                   instance_id,
                                   vm_state=vm_states.BUILDING,
                                   task_state=task_states.BLOCK_DEVICE_MAPPING)
 
-            (swap, ephemerals,
-             block_device_mapping) = self._setup_block_device_mapping(
-                context, instance_id)
-            block_device_info = {
-                'root_device_name': instance['root_device_name'],
-                'swap': swap,
-                'ephemerals': ephemerals,
-                'block_device_mapping': block_device_mapping}
+            block_device_info = _make_block_device_info()
 
             self._instance_update(context,
                                   instance_id,
@@ -427,6 +441,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         "virtualization enabled in the BIOS? Details: "
                         "%(ex)s") % locals()
                 LOG.exception(msg)
+                _deallocate_network()
                 return
 
             current_power_state = self._get_power_state(context, instance)
@@ -448,6 +463,17 @@ class ComputeManager(manager.SchedulerDependentManager):
             # deleted before it actually got created.  This should
             # be fixed once we have no-db-messaging
             pass
+        except:
+            # NOTE(sirp): 3-arg raise needed since Eventlet clears exceptions
+            # when switching between greenthreads.
+            type_, value, traceback = sys.exc_info()
+            try:
+                _deallocate_network()
+            finally:
+                # FIXME(sirp): when/if
+                # https://github.com/jcrocholl/pep8/pull/27 merges, we can add
+                # a per-line disable flag here for W602
+                raise type_, value, traceback
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def run_instance(self, context, instance_id, **kwargs):
