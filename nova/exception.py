@@ -138,17 +138,17 @@ class NovaException(Exception):
     """
     message = _("An unknown exception occurred.")
 
-    def __init__(self, **kwargs):
+    def __init__(self, message=None, **kwargs):
         self.kwargs = kwargs
-        try:
-            self._error_string = self.message % kwargs
+        if not message:
+            try:
+                message = self.message % kwargs
 
-        except Exception:
-            # at least get the core message out if something happened
-            self._error_string = self.message
+            except Exception as e:
+                # at least get the core message out if something happened
+                message = self.message
 
-    def __str__(self):
-        return self._error_string
+        super(NovaException, self).__init__(message)
 
 
 class ImagePaginationFailed(NovaException):
@@ -168,7 +168,7 @@ class NotAuthorized(NovaException):
     message = _("Not authorized.")
 
     def __init__(self, *args, **kwargs):
-        super(NotAuthorized, self).__init__(**kwargs)
+        super(NotAuthorized, self).__init__(*args, **kwargs)
 
 
 class AdminRequired(NotAuthorized):
@@ -317,7 +317,7 @@ class NotFound(NovaException):
     message = _("Resource could not be found.")
 
     def __init__(self, *args, **kwargs):
-        super(NotFound, self).__init__(**kwargs)
+        super(NotFound, self).__init__(*args, **kwargs)
 
 
 class FlagNotSet(NotFound):
