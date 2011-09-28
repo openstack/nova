@@ -18,11 +18,12 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
+from nova.db import base
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
-from nova.db import base
+from nova.rpc import common as rpc_common
 
 
 FLAGS = flags.FLAGS
@@ -205,9 +206,25 @@ class API(base.Base):
         args = {'instance_id': instance['id'],
                 'instance_type_id': instance['instance_type_id'],
                 'host': instance['host']}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'get_instance_nw_info',
-                         'args': args})
+        try:
+            return rpc.call(context, FLAGS.network_topic,
+                    {'method': 'get_instance_nw_info',
+                    'args': args})
+        # FIXME(comstud) rpc calls raise RemoteError if the remote raises
+        # an exception.  In the case here, because of a race condition,
+        # it's possible the remote will raise a InstanceNotFound when
+        # someone deletes the instance while this call is in progress.
+        #
+        # Unfortunately, we don't have access to the original exception
+        # class now.. but we do have the exception class's name.  So,
+        # we're checking it here and raising a new exception.
+        #
+        # Ultimately we need RPC to be able to serialize more things like
+        # classes.
+        except rpc_common.RemoteError as err:
+            if err.exc_type == 'InstanceNotFound':
+                raise exception.InstanceNotFound(instance_id=instance['id'])
+            raise
 
     def validate_networks(self, context, requested_networks):
         """validate the networks passed at the time of creating

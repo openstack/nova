@@ -49,16 +49,6 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
              }], resv_id)
 
 
-def fake_get_instance_nw_info(cls, context, instance):
-    return [(None, {'label': 'public',
-                    'ips': [{'ip': '10.0.0.1'}],
-                    'ip6s': []})]
-
-
-def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
-    return ['172.16.0.1']
-
-
 class BootFromVolumeTest(test.TestCase):
 
     def setUp(self):

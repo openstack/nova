@@ -19,11 +19,11 @@
 import hashlib
 import os
 
+from nova.api.openstack import common
+from nova.compute import vm_states
 from nova import exception
 from nova import log as logging
 from nova import utils
-from nova.api.openstack import common
-from nova.compute import vm_states
 
 
 LOG = logging.getLogger('nova.api.openstack.views.servers')
@@ -37,16 +37,17 @@ class ViewBuilder(object):
 
     """
 
-    def __init__(self, addresses_builder):
+    def __init__(self, context, addresses_builder):
+        self.context = context
         self.addresses_builder = addresses_builder
 
-    def build(self, inst, networks, is_detail=False):
+    def build(self, inst, is_detail=False):
         """Return a dict that represenst a server."""
         if inst.get('_is_precooked', False):
             server = dict(server=inst)
         else:
             if is_detail:
-                server = self._build_detail(inst, networks)
+                server = self._build_detail(inst)
             else:
                 server = self._build_simple(inst)
 
@@ -59,9 +60,8 @@ class ViewBuilder(object):
         servers = []
         servers_links = []
 
-        for server_obj, networks in server_objs:
-            servers.append(self.build(server_obj, networks,
-                                      is_detail)['server'])
+        for server_obj in server_objs:
+            servers.append(self.build(server_obj, is_detail)['server'])
 
         return dict(servers=servers)
 
@@ -69,7 +69,7 @@ class ViewBuilder(object):
         """Return a simple model of a server."""
         return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
-    def _build_detail(self, inst, networks):
+    def _build_detail(self, inst):
         """Returns a detailed model of a server."""
         vm_state = inst.get('vm_state', vm_states.BUILDING)
         task_state = inst.get('task_state')
@@ -93,6 +93,7 @@ class ViewBuilder(object):
 
         self._build_image(inst_dict, inst)
         self._build_flavor(inst_dict, inst)
+        networks = common.get_networks_for_instance(self.context, inst)
         self._build_addresses(inst_dict, networks)
 
         return dict(server=inst_dict)
@@ -133,16 +134,16 @@ class ViewBuilderV10(ViewBuilder):
 
 class ViewBuilderV11(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
-    def __init__(self, addresses_builder, flavor_builder, image_builder,
-                 base_url, project_id=""):
-        ViewBuilder.__init__(self, addresses_builder)
+    def __init__(self, context, addresses_builder, flavor_builder,
+            image_builder, base_url, project_id=""):
+        super(ViewBuilderV11, self).__init__(context, addresses_builder)
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
         self.base_url = base_url
         self.project_id = project_id
 
-    def _build_detail(self, inst, network):
-        response = super(ViewBuilderV11, self)._build_detail(inst, network)
+    def _build_detail(self, inst):
+        response = super(ViewBuilderV11, self)._build_detail(inst)
         response['server']['created'] = utils.isotime(inst['created_at'])
         response['server']['updated'] = utils.isotime(inst['updated_at'])
 
@@ -214,9 +215,8 @@ class ViewBuilderV11(ViewBuilder):
         servers = []
         servers_links = []
 
-        for server_obj, networks in server_objs:
-            servers.append(self.build(server_obj, networks,
-                                      is_detail)['server'])
+        for server_obj in server_objs:
+            servers.append(self.build(server_obj, is_detail)['server'])
 
         if (len(servers) and limit) and (limit == len(servers)):
             next_link = self.generate_next_link(servers[-1]['id'],

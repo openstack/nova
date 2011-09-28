@@ -19,14 +19,14 @@
 """Tests for the testing the metadata code."""
 
 import base64
-
 import webob
 
-from nova import exception
-from nova import flags
-from nova import test
 from nova.api.ec2 import metadatarequesthandler
 from nova.db.sqlalchemy import api
+from nova import exception
+from nova import flags
+from nova import network
+from nova import test
 from nova.tests import fake_network
 
 
@@ -55,9 +55,19 @@ class MetadataTestCase(test.TestCase):
                          'reservation_id': 'r-xxxxxxxx',
                          'user_data': '',
                          'image_ref': 7,
+                         'vcpus': 1,
                          'fixed_ips': [],
                          'root_device_name': '/dev/sda1',
                          'hostname': 'test'})
+
+        def fake_get_instance_nw_info(self, context, instance):
+            return [(None, {'label': 'public',
+                            'ips': [{'ip': '192.168.0.3'},
+                                    {'ip': '192.168.0.4'}],
+                            'ip6s': [{'ip': 'fe80::beef'}]})]
+
+        def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
+            return ['1.2.3.4', '5.6.7.8']
 
         def instance_get(*args, **kwargs):
             return self.instance
@@ -68,6 +78,10 @@ class MetadataTestCase(test.TestCase):
         def floating_get(*args, **kwargs):
             return '99.99.99.99'
 
+        self.stubs.Set(network.API, 'get_instance_nw_info',
+                fake_get_instance_nw_info)
+        self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
+                fake_get_floating_ips_by_fixed_address)
         self.stubs.Set(api, 'instance_get', instance_get)
         self.stubs.Set(api, 'instance_get_all_by_filters', instance_get_list)
         self.stubs.Set(api, 'instance_get_floating_address', floating_get)

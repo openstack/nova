@@ -238,14 +238,58 @@ class CloudController(object):
             utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
             os.chdir(start)
 
+    def _get_floaters_for_fixed_ip(self, context, fixed_ip):
+        """Return all floating IPs given a fixed IP"""
+        return self.network_api.get_floating_ips_by_fixed_address(context,
+                fixed_ip)
+
+    def _get_fixed_ips_for_instance(self, context, instance):
+        """Return a list of all fixed IPs for an instance"""
+
+        ret_ips = []
+        ret_ip6s = []
+        nw_info = self.network_api.get_instance_nw_info(context, instance)
+        for net, info in nw_info:
+            if not info:
+                continue
+            ips = info.get('ips', [])
+            for ip in ips:
+                try:
+                    ret_ips.append(ip['ip'])
+                except KeyError:
+                    pass
+            if FLAGS.use_ipv6:
+                ip6s = info.get('ip6s', [])
+                for ip6 in ip6s:
+                    try:
+                        ret_ip6s.append(ip6['ip'])
+                    except KeyError:
+                        pass
+        return (ret_ips, ret_ip6s)
+
+    def _get_floaters_for_instance(self, context, instance, return_all=True):
+        """Return all floating IPs for an instance"""
+
+        ret_floaters = []
+        fixed_ips = self._get_fixed_ips_for_instance(context, instance)
+        for ip in fixed_ips:
+            floaters = self._get_floaters_for_fixed_ip(context, ip)
+            # Allows a short circuit if we just need any floater.
+            if floaters and not return_all:
+                return floaters
+            ret_floaters.extend(floaters)
+            if floaters and only_one:
+                return ret_floaters
+        return ret_floaters
+
     def _get_mpi_data(self, context, project_id):
         result = {}
         search_opts = {'project_id': project_id}
         for instance in self.compute_api.get_all(context,
                 search_opts=search_opts):
-            if instance['fixed_ips']:
-                line = '%s slots=%d' % (instance['fixed_ips'][0]['address'],
-                                        instance['vcpus'])
+            fixed_ips = self._get_fixed_ips_for_instance(context, instance)[0]
+            if fixed_ips:
+                line = '%s slots=%d' % (fixed_ips[0], instance['vcpus'])
                 key = str(instance['key_name'])
                 if key in result:
                     result[key].append(line)
@@ -331,8 +375,11 @@ class CloudController(object):
         hostname = "%s.%s" % (instance_ref['hostname'], FLAGS.dhcp_domain)
         host = instance_ref['host']
         availability_zone = self._get_availability_zone_by_host(ctxt, host)
-        floating_ip = db.instance_get_floating_address(ctxt,
-                                                       instance_ref['id'])
+
+        floaters = self._get_floaters_for_instance(ctxt, instance_ref,
+                return_all=False)
+        floating_ip = floaters and floaters[0] or ''
+
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
         image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
         security_groups = db.security_group_get_by_instance(ctxt,
@@ -354,7 +401,7 @@ class CloudController(object):
                 'local-ipv4': address,
                 'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
-                'public-ipv4': floating_ip or '',
+                'public-ipv4': floating_ip,
                 'reservation-id': instance_ref['reservation_id'],
                 'security-groups': security_groups,
                 'mpi': mpi}}
@@ -1257,23 +1304,27 @@ class CloudController(object):
             i['instanceState'] = {
                 'code': instance['power_state'],
                 'name': state_description_from_vm_state(instance['vm_state'])}
-            fixed_addr = None
-            floating_addr = None
-            if instance['fixed_ips']:
-                fixed = instance['fixed_ips'][0]
-                fixed_addr = fixed['address']
-                if fixed['floating_ips']:
-                    floating_addr = fixed['floating_ips'][0]['address']
-                if fixed['network'] and use_v6:
-                    i['dnsNameV6'] = ipv6.to_global(
-                        fixed['network']['cidr_v6'],
-                        fixed['virtual_interface']['address'],
-                        instance['project_id'])
 
-            i['privateDnsName'] = fixed_addr
-            i['privateIpAddress'] = fixed_addr
-            i['publicDnsName'] = floating_addr
-            i['ipAddress'] = floating_addr or fixed_addr
+            fixed_ip = None
+            floating_ip = None
+            (fixed_ips, fixed_ip6s) = self._get_fixed_ips_for_instance(context,
+                    instance)
+            if fixed_ips:
+                fixed_ip = fixed_ips[0]
+                # Now look for a floater.
+                for ip in fixed_ips:
+                    floating_ips = self._get_floaters_for_fixed_ip(context, ip)
+                    # NOTE(comstud): Will it float?
+                    if floating_ips:
+                        floating_ip = floating_ips[0]
+                        # Got one, exit out.
+                        break
+            if fixed_ip6s:
+                i['dnsNameV6'] = fixed_ip6s[0]
+            i['privateDnsName'] = fixed_ip
+            i['privateIpAddress'] = fixed_ip
+            i['publicDnsName'] = floating_ip
+            i['ipAddress'] = floating_ip or fixed_ip
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
