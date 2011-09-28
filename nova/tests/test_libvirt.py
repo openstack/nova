@@ -794,7 +794,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Test data
         instance_ref = db.instance_create(self.context, self.test_instance)
-        dummyjson = '[{"path": "%s/disk", "local_gb": "10G", "type": "raw"}]'
+        dummyjson = ('[{"path": "%s/disk", "local_gb": "10G",'
+                     ' "type": "raw", "backing_file": ""}]')
 
         # Preparing mocks
         # qemu-img should be mockd since test environment might not have
@@ -835,7 +836,10 @@ class LibvirtConnTestCase(test.TestCase):
                     "</devices></domain>")
 
         ret = ("image: /test/disk\nfile format: raw\n"
-               "virtual size: 20G (21474836480 bytes)\ndisk size: 3.1G\n")
+               "virtual size: 20G (21474836480 bytes)\ndisk size: 3.1G\n"
+               "disk size: 102M\n"
+               "cluster_size: 2097152\n"
+               "backing file: /test/dummy (actual path: /backing/file)\n")
 
         # Preparing mocks
         vdmock = self.mox.CreateMock(libvirt.virDomain)
@@ -865,7 +869,9 @@ class LibvirtConnTestCase(test.TestCase):
                         info[0]['path'] == '/test/disk' and
                         info[1]['path'] == '/test/disk.local' and
                         info[0]['local_gb'] == '10G' and
-                        info[1]['local_gb'] == '20G')
+                        info[1]['local_gb'] == '20G' and
+                        info[0]['backing_file'] == "" and
+                        info[1]['backing_file'] == "file")
 
         db.instance_destroy(self.context, instance_ref['id'])
 
