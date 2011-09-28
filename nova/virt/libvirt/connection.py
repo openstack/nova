@@ -445,29 +445,31 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # Export the snapshot to a raw image
         temp_dir = tempfile.mkdtemp()
-        out_path = os.path.join(temp_dir, snapshot_name)
-        qemu_img_cmd = ('qemu-img',
-                        'convert',
-                        '-f',
-                        source_format,
-                        '-O',
-                        image_format,
-                        '-s',
-                        snapshot_name,
-                        disk_path,
-                        out_path)
-        utils.execute(*qemu_img_cmd)
+        try:
+            out_path = os.path.join(temp_dir, snapshot_name)
+            qemu_img_cmd = ('qemu-img',
+                            'convert',
+                            '-f',
+                            source_format,
+                            '-O',
+                            image_format,
+                            '-s',
+                            snapshot_name,
+                            disk_path,
+                            out_path)
+            utils.execute(*qemu_img_cmd)
 
-        # Upload that image to the image service
-        with open(out_path) as image_file:
-            image_service.update(context,
-                                 image_href,
-                                 metadata,
-                                 image_file)
+            # Upload that image to the image service
+            with open(out_path) as image_file:
+                image_service.update(context,
+                                     image_href,
+                                     metadata,
+                                     image_file)
 
-        # Clean up
-        shutil.rmtree(temp_dir)
-        snapshot_ptr.delete(0)
+        finally:
+            # Clean up
+            shutil.rmtree(temp_dir)
+            snapshot_ptr.delete(0)
 
     @exception.wrap_exception()
     def reboot(self, instance, network_info, xml=None):
