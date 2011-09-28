@@ -67,6 +67,8 @@ class Signer(object):
         self.hmac = hmac.new(secret_key, digestmod=hashlib.sha1)
         if hashlib.sha256:
             self.hmac_256 = hmac.new(secret_key, digestmod=hashlib.sha256)
+        else:
+            self.hmac_256 = None
 
     def s3_authorization(self, headers, verb, path):
         """Generate S3 authorization string."""
@@ -77,7 +79,12 @@ class Signer(object):
         return b64_hmac
 
     def generate(self, params, verb, server_string, path):
-        """Generate auth string according to what SignatureVersion is given."""
+        """Generate auth string according to what SignatureVersion is given.
+
+        The signature method defaults to SHA256 if available, or falls back to
+        SHA1 if not.
+
+        """
         if params['SignatureVersion'] == '0':
             return self._calc_signature_0(params)
         if params['SignatureVersion'] == '1':
@@ -150,6 +157,5 @@ class Signer(object):
 
 
 if __name__ == '__main__':
-    print Signer('foo').generate({'SignatureMethod': 'HmacSHA256',
-                                  'SignatureVersion': '2'},
-                                 'get', 'server', '/foo')
+    print Signer('foo').generate({'SignatureVersion': '2'}, 'get', 'server',
+                                  '/foo')
