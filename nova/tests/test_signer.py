@@ -86,7 +86,7 @@ class SignerTestCase(test.TestCase):
                               'GET', 'server', '/foo'))
 
     def test_generate_unknown_version(self):
-        with self.assertRaises(exception.Error):
-            self.signer.generate({'SignatureMethod': 'HmacSHA256',
-                                  'SignatureVersion': '9'},
-                                 'GET', 'server', '/foo')
+        self.assertRaises(exception.Error,
+                self.signer.generate,
+                {'SignatureMethod': 'HmacSHA256', 'SignatureVersion': '9'},
+                'GET', 'server', '/foo')
