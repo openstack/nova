@@ -140,9 +140,9 @@ class Controller(object):
         remove_invalid_options(context, search_opts,
                 self._get_server_search_options())
 
-        # Convert recurse_zones into a boolean
-        search_opts['recurse_zones'] = utils.bool_from_str(
-                search_opts.get('recurse_zones', False))
+        # Convert local_zone_only into a boolean
+        search_opts['local_zone_only'] = utils.bool_from_str(
+                search_opts.get('local_zone_only', False))
 
         # If search by 'status', we need to convert it to 'vm_state'
         # to pass on to child zones.
@@ -1041,7 +1041,7 @@ class ControllerV10(Controller):
 
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin"""
-        return 'reservation_id', 'fixed_ip', 'name', 'recurse_zones'
+        return 'reservation_id', 'fixed_ip', 'name', 'local_zone_only'
 
 
 class ControllerV11(Controller):
@@ -1272,7 +1272,7 @@ class ControllerV11(Controller):
 
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin"""
-        return ('reservation_id', 'name', 'recurse_zones',
+        return ('reservation_id', 'name', 'local_zone_only',
                 'status', 'image', 'flavor', 'changes-since')
 
 
