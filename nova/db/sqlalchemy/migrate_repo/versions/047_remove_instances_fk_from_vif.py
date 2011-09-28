@@ -32,7 +32,7 @@ def upgrade(migrate_engine):
     vifs = Table('virtual_interfaces', meta, autoload=True)
 
     try:
-        fkey_name = vifs.c.instance_id.foreign_keys[0].constraint.name
+        fkey_name = list(vifs.c.instance_id.foreign_keys)[0].constraint.name
         ForeignKeyConstraint(columns=[vifs.c.instance_id],
                              refcolumns=[instances.c.id],
                              name=fkey_name).drop()
