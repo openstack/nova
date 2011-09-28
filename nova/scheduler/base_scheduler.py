@@ -54,6 +54,9 @@ class BaseScheduler(abstract_scheduler.AbstractScheduler):
         """Derived classes may override this to provide more sophisticated
         scheduling objectives
         """
+        # Make sure if there are compute hosts to serve the request.
+        if not hosts:
+            return []
         # NOTE(sirp): The default logic is the same as the NoopCostFunction
         hosts = [dict(weight=1, hostname=hostname, capabilities=capabilities)
                  for hostname, capabilities in hosts]
