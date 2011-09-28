@@ -1,4 +1,4 @@
-SQLAlchemy==0.6.3
+SQLAlchemy
 pep8==0.6.1
 pylint==0.19
 Cheetah==2.4.4
