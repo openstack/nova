@@ -378,6 +378,12 @@ class SessionBase(object):
     def host_call_plugin(self, *args):
         return 'herp'
 
+    def VDI_resize_online(self, *args):
+        return 'derp'
+
+    def VM_clean_reboot(self, *args):
+        return 'burp'
+
     def network_get_all_records_where(self, _1, filter):
         return self.xenapi.network.get_all_records()
 
