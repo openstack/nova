@@ -19,18 +19,18 @@ import functools
 from lxml import etree
 import re
 import urlparse
+import webob
 from xml.dom import minidom
 
-import webob
-
-from nova import exception
-from nova import flags
-from nova import log as logging
-from nova import quota
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import vm_states
 from nova.compute import task_states
+from nova import exception
+from nova import flags
+from nova import log as logging
+import nova.network
+from nova import quota
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
@@ -270,6 +270,55 @@ def dict_to_query_str(params):
         param_str = param_str + '='.join([str(key), str(val)]) + '&'
 
     return param_str.rstrip('&')
+
+
+def get_networks_for_instance(context, instance):
+    """Returns a prepared nw_info list for passing into the view
+    builders
+
+    We end up with a datastructure like:
+    {'public': {'ips': [{'addr': '10.0.0.1', 'version': 4},
+                        {'addr': '2001::1', 'version': 6}],
+                'floating_ips': [{'addr': '172.16.0.1', 'version': 4},
+                                 {'addr': '172.16.2.1', 'version': 4}]},
+     ...}
+    """
+
+    network_api = nova.network.API()
+
+    def _get_floats(ip):
+        return network_api.get_floating_ips_by_fixed_address(context, ip)
+
+    def _emit_addr(ip, version):
+        return {'addr': ip, 'version': version}
+
+    nw_info = network_api.get_instance_nw_info(context, instance)
+
+    networks = {}
+    for net, info in nw_info:
+        if not info:
+            continue
+        try:
+            network = {'ips': []}
+            network['floating_ips'] = []
+            for ip in info['ips']:
+                network['ips'].append(_emit_addr(ip['ip'], 4))
+                floats = [_emit_addr(addr, 4)
+                        for addr in _get_floats(ip['ip'])]
+                network['floating_ips'].extend(floats)
+            if FLAGS.use_ipv6 and 'ip6s' in info:
+                network['ips'].extend([_emit_addr(ip['ip'], 6)
+                        for ip in info['ip6s']])
+        # NOTE(comstud): These exception checks are for lp830817
+        # (Restoring them after a refactoring removed)
+        except TypeError:
+            raise
+            continue
+        except KeyError:
+            raise
+            continue
+        networks[info['label']] = network
+    return networks
 
 
 class MetadataXMLDeserializer(wsgi.XMLDeserializer):

@@ -24,27 +24,27 @@ from webob import exc
 import webob
 from xml.dom import minidom
 
+import nova.api.openstack
+from nova.api.openstack import common
+from nova.api.openstack import ips
+from nova.api.openstack.views import addresses as views_addresses
+from nova.api.openstack.views import flavors as views_flavors
+from nova.api.openstack.views import images as views_images
+from nova.api.openstack.views import servers as views_servers
+from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova import compute
+from nova.compute import instance_types
 from nova import network
 from nova import db
 from nova import exception
 from nova import flags
 from nova import image
 from nova import log as logging
-from nova import utils
 from nova import quota
-from nova.api.openstack import common
-from nova.api.openstack import ips
-from nova.api.openstack import wsgi
-from nova.compute import instance_types
-from nova.scheduler import api as scheduler_api
-import nova.api.openstack
-import nova.api.openstack.views.addresses
-import nova.api.openstack.views.flavors
-import nova.api.openstack.views.images
-import nova.api.openstack.views.servers
-from nova.api.openstack import xmlutil
 from nova.rpc import common as rpc_common
+from nova.scheduler import api as scheduler_api
+from nova import utils
 
 
 LOG = logging.getLogger('nova.api.openstack.servers')
@@ -116,11 +116,6 @@ class Controller(object):
         Overidden by volumes controller.
         """
         return None
-
-    def _get_networks_for_instance(self, req, instance):
-        return ips._get_networks_for_instance(req.environ['nova.context'],
-                                              self.network_api,
-                                              instance)
 
     def _get_block_device_mapping(self, data):
         """Get block_device_mapping from 'server' dictionary.
@@ -984,17 +979,16 @@ class ControllerV10(Controller):
         return data['server']['flavorId']
 
     def _build_view(self, req, instance, is_detail=False):
-        addresses = nova.api.openstack.views.addresses.ViewBuilderV10()
-        builder = nova.api.openstack.views.servers.ViewBuilderV10(addresses)
-        networks = self._get_networks_for_instance(req, instance)
-        return builder.build(instance, networks, is_detail=is_detail)
+        context = req.environ['nova.context']
+        addresses = views_addresses.ViewBuilderV10()
+        builder = views_servers.ViewBuilderV10(context, addresses)
+        return builder.build(instance, is_detail=is_detail)
 
     def _build_list(self, req, instances, is_detail=False):
-        addresses = nova.api.openstack.views.addresses.ViewBuilderV10()
-        builder = nova.api.openstack.views.servers.ViewBuilderV10(addresses)
-        get_nw = self._get_networks_for_instance
-        inst_data = [(inst, get_nw(req, inst)) for inst in instances]
-        return builder.build_list(inst_data, is_detail=is_detail)
+        context = req.environ['nova.context']
+        addresses = views_addresses.ViewBuilderV10()
+        builder = views_servers.ViewBuilderV10(context, addresses)
+        return builder.build_list(instances, is_detail=is_detail)
 
     def _limit_items(self, items, req):
         return common.limited(items, req)
@@ -1081,18 +1075,15 @@ class ControllerV11(Controller):
         return common.get_id_from_href(flavor_ref)
 
     def _build_view(self, req, instance, is_detail=False):
-        project_id = getattr(req.environ['nova.context'], 'project_id', '')
+        context = req.environ['nova.context']
+        project_id = getattr(context, 'project_id', '')
         base_url = req.application_url
-        flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
-            base_url, project_id)
-        image_builder = nova.api.openstack.views.images.ViewBuilderV11(
-            base_url, project_id)
-        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
-        builder = nova.api.openstack.views.servers.ViewBuilderV11(
-            addresses_builder, flavor_builder, image_builder,
-            base_url, project_id)
-        networks = self._get_networks_for_instance(req, instance)
-        return builder.build(instance, networks, is_detail=is_detail)
+        flavor_builder = views_flavors.ViewBuilderV11(base_url, project_id)
+        image_builder = views_images.ViewBuilderV11(base_url, project_id)
+        addresses_builder = views_addresses.ViewBuilderV11()
+        builder = views_servers.ViewBuilderV11(context, addresses_builder,
+                flavor_builder, image_builder, base_url, project_id)
+        return builder.build(instance, is_detail=is_detail)
 
     def _build_list(self, req, instances, is_detail=False):
         params = req.GET.copy()
@@ -1101,19 +1092,15 @@ class ControllerV11(Controller):
         for key, val in pagination_params.iteritems():
             params[key] = val
 
-        project_id = getattr(req.environ['nova.context'], 'project_id', '')
+        context = req.environ['nova.context']
+        project_id = getattr(context, 'project_id', '')
         base_url = req.application_url
-        flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
-            base_url, project_id)
-        image_builder = nova.api.openstack.views.images.ViewBuilderV11(
-            base_url, project_id)
-        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
-        builder = nova.api.openstack.views.servers.ViewBuilderV11(
-            addresses_builder, flavor_builder, image_builder,
-            base_url, project_id)
-        get_nw = self._get_networks_for_instance
-        inst_data = [(inst, get_nw(req, inst)) for inst in instances]
-        return builder.build_list(inst_data, is_detail=is_detail, **params)
+        flavor_builder = views_flavors.ViewBuilderV11(base_url, project_id)
+        image_builder = views_images.ViewBuilderV11(base_url, project_id)
+        addresses_builder = views_addresses.ViewBuilderV11()
+        builder = views_servers.ViewBuilderV11(context, addresses_builder,
+                flavor_builder, image_builder, base_url, project_id)
+        return builder.build_list(instances, is_detail=is_detail, **params)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']

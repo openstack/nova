@@ -20,11 +20,12 @@ from lxml import etree
 from webob import exc
 
 import nova
-import nova.api.openstack.views.addresses
-from nova import log as logging
-from nova import flags
+from nova.api.openstack import common
+from nova.api.openstack.views import addresses as views_addresses
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova import log as logging
+from nova import flags
 
 
 LOG = logging.getLogger('nova.api.openstack.ips')
@@ -36,7 +37,6 @@ class Controller(object):
 
     def __init__(self):
         self.compute_api = nova.compute.API()
-        self.network_api = nova.network.API()
 
     def _get_instance(self, context, server_id):
         try:
@@ -58,16 +58,14 @@ class ControllerV10(Controller):
     def index(self, req, server_id):
         context = req.environ['nova.context']
         instance = self._get_instance(context, server_id)
-        networks = _get_networks_for_instance(context, self.network_api,
-                                              instance)
-        builder = nova.api.openstack.views.addresses.ViewBuilderV10()
+        networks = common.get_networks_for_instance(context, instance)
+        builder = self._get_view_builder(req)
         return {'addresses': builder.build(networks)}
 
     def show(self, req, server_id, id):
         context = req.environ['nova.context']
         instance = self._get_instance(context, server_id)
-        networks = _get_networks_for_instance(context, self.network_api,
-                                              instance)
+        networks = common.get_networks_for_instance(context, instance)
         builder = self._get_view_builder(req)
         if id == 'private':
             view = builder.build_private_parts(networks)
@@ -80,7 +78,7 @@ class ControllerV10(Controller):
         return {id: view}
 
     def _get_view_builder(self, req):
-        return nova.api.openstack.views.addresses.ViewBuilderV10()
+        return views_addresses.ViewBuilderV10()
 
 
 class ControllerV11(Controller):
@@ -88,16 +86,13 @@ class ControllerV11(Controller):
     def index(self, req, server_id):
         context = req.environ['nova.context']
         instance = self._get_instance(context, server_id)
-        networks = _get_networks_for_instance(context, self.network_api,
-                                              instance)
+        networks = common.get_networks_for_instance(context, instance)
         return {'addresses': self._get_view_builder(req).build(networks)}
 
     def show(self, req, server_id, id):
         context = req.environ['nova.context']
         instance = self._get_instance(context, server_id)
-        networks = _get_networks_for_instance(context, self.network_api,
-                                              instance)
-
+        networks = common.get_networks_for_instance(context, instance)
         network = self._get_view_builder(req).build_network(networks, id)
 
         if network is None:
@@ -107,7 +102,7 @@ class ControllerV11(Controller):
         return network
 
     def _get_view_builder(self, req):
-        return nova.api.openstack.views.addresses.ViewBuilderV11()
+        return views_addresses.ViewBuilderV11()
 
 
 class IPXMLSerializer(wsgi.XMLDictSerializer):
@@ -141,45 +136,6 @@ class IPXMLSerializer(wsgi.XMLDictSerializer):
         self.populate_addresses_node(addresses,
                                      addresses_dict.get('addresses', {}))
         return self._to_xml(addresses)
-
-
-def _get_networks_for_instance(context, network_api, instance):
-    """Returns a prepared nw_info list for passing into the view
-    builders
-
-    We end up with a datastructure like:
-    {'public': {'ips': [{'addr': '10.0.0.1', 'version': 4},
-                        {'addr': '2001::1', 'version': 6}],
-                'floating_ips': [{'addr': '172.16.0.1', 'version': 4},
-                                 {'addr': '172.16.2.1', 'version': 4}]},
-     ...}
-    """
-    def _get_floats(ip):
-        return network_api.get_floating_ips_by_fixed_address(context, ip)
-
-    def _emit_addr(ip, version):
-        return {'addr': ip, 'version': version}
-
-    if FLAGS.stub_network:
-        return {}
-
-    nw_info = network_api.get_instance_nw_info(context, instance)
-
-    networks = {}
-    for net, info in nw_info:
-        network = {'ips': []}
-        network['floating_ips'] = []
-        if 'ip6s' in info:
-            network['ips'].extend([_emit_addr(ip['ip'],
-                                              6) for ip in info['ip6s']])
-
-        for ip in info['ips']:
-            network['ips'].append(_emit_addr(ip['ip'], 4))
-            floats = [_emit_addr(addr,
-                                 4) for addr in _get_floats(ip['ip'])]
-            network['floating_ips'].extend(floats)
-        networks[info['label']] = network
-    return networks
 
 
 def create_resource(version):

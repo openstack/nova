@@ -77,13 +77,6 @@ def return_server_with_attributes(**kwargs):
     return _return_server
 
 
-def return_server_with_addresses(private, public):
-    def _return_server(context, id):
-        return stub_instance(id, private_address=private,
-                             public_addresses=public)
-    return _return_server
-
-
 def return_server_with_state(vm_state, task_state=None):
     def _return_server(context, id):
         return stub_instance(id, vm_state=vm_state, task_state=task_state)
@@ -143,22 +136,15 @@ def instance_addresses(context, instance_id):
     return None
 
 
-def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
-                  public_addresses=None, host=None,
+def stub_instance(id, user_id='fake', project_id='fake', host=None,
                   vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
-                  flavor_id="1", interfaces=None, name=None, key_name='',
+                  flavor_id="1", name=None, key_name='',
                   access_ipv4=None, access_ipv6=None, progress=0):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
-    if interfaces is None:
-        interfaces = []
-
     inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
-
-    if public_addresses is None:
-        public_addresses = list()
 
     if host is not None:
         host = str(host)
@@ -208,12 +194,7 @@ def stub_instance(id, user_id='fake', project_id='fake', private_address=None,
         "access_ip_v4": access_ipv4,
         "access_ip_v6": access_ipv6,
         "uuid": uuid,
-        "virtual_interfaces": interfaces,
         "progress": progress}
-
-    instance["fixed_ips"] = {
-        "address": private_address,
-        "floating_ips": [{"address":ip} for ip in public_addresses]}
 
     return instance
 
@@ -704,10 +685,10 @@ class ServersTest(test.TestCase):
         self.assertDictMatch(res_dict, expected_server)
 
     def test_get_server_by_id_with_addresses_xml(self):
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private, public)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        private = '192.168.1.2'
+        publics = ['1.2.3.4']
+        fakes.stub_out_nw_api(self.stubs, private=private, publics=publics)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         req = webob.Request.blank('/v1.0/servers/1')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
@@ -716,84 +697,83 @@ class ServersTest(test.TestCase):
         self.assertEquals(server.nodeName, 'server')
         self.assertEquals(server.getAttribute('id'), '1')
         self.assertEquals(server.getAttribute('name'), 'server1')
-        (public,) = server.getElementsByTagName('public')
-        (ip,) = public.getElementsByTagName('ip')
-        self.assertEquals(ip.getAttribute('addr'), '1.2.3.4')
-        (private,) = server.getElementsByTagName('private')
-        (ip,) = private.getElementsByTagName('ip')
-        self.assertEquals(ip.getAttribute('addr'), '192.168.0.3')
+        (public_elem,) = server.getElementsByTagName('public')
+        (ip,) = public_elem.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), publics[0])
+        (private_elem,) = server.getElementsByTagName('private')
+        (ip,) = private_elem.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_by_id_with_addresses(self):
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private, public)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        private = '192.168.1.2'
+        publics = ['1.2.3.4']
+        fakes.stub_out_nw_api(self.stubs, private=private, publics=publics)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
         addresses = res_dict['server']['addresses']
-        self.assertEqual(len(addresses["public"]), len(public))
-        self.assertEqual(addresses["public"][0], public[0])
+        self.assertEqual(len(addresses["public"]), len(publics))
+        self.assertEqual(addresses["public"][0], publics[0])
         self.assertEqual(len(addresses["private"]), 1)
         self.assertEqual(addresses["private"][0], private)
 
     def test_get_server_addresses_v1_0(self):
-        private = '192.168.0.3'
-        public = ['1.2.3.4']
-        new_return_server = return_server_with_addresses(private, public)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        private = '192.168.1.2'
+        publics = ['1.2.3.4']
+        fakes.stub_out_nw_api(self.stubs, private=private, publics=publics)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         req = webob.Request.blank('/v1.0/servers/1/ips')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict, {
-            'addresses': {'public': public, 'private': [private]}})
+            'addresses': {'public': publics, 'private': [private]}})
 
     def test_get_server_addresses_xml_v1_0(self):
-        private_expected = "192.168.0.3"
-        public_expected = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private_expected,
-                                                         public_expected)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        private = '192.168.1.2'
+        publics = ['1.2.3.4']
+        fakes.stub_out_nw_api(self.stubs, private=private, publics=publics)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         req = webob.Request.blank('/v1.0/servers/1/ips')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
         dom = minidom.parseString(res.body)
         (addresses,) = dom.childNodes
         self.assertEquals(addresses.nodeName, 'addresses')
-        (public,) = addresses.getElementsByTagName('public')
-        (ip,) = public.getElementsByTagName('ip')
-        self.assertEquals(ip.getAttribute('addr'), public_expected[0])
-        (private,) = addresses.getElementsByTagName('private')
-        (ip,) = private.getElementsByTagName('ip')
-        self.assertEquals(ip.getAttribute('addr'), private_expected)
+        (public_elem,) = addresses.getElementsByTagName('public')
+        (ip,) = public_elem.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), publics[0])
+        (private_elem,) = addresses.getElementsByTagName('private')
+        (ip,) = private_elem.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), private)
 
     def test_get_server_addresses_public_v1_0(self):
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private, public)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        private = '192.168.1.2'
+        publics = ['1.2.3.4']
+        fakes.stub_out_nw_api(self.stubs, private=private, publics=publics)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         req = webob.Request.blank('/v1.0/servers/1/ips/public')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict, {'public': public})
+        self.assertEqual(res_dict, {'public': publics})
 
     def test_get_server_addresses_private_v1_0(self):
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private, public)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        private = '192.168.1.2'
+        publics = ['1.2.3.4']
+        fakes.stub_out_nw_api(self.stubs, private=private, publics=publics)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         req = webob.Request.blank('/v1.0/servers/1/ips/private')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict, {'private': [private]})
 
     def test_get_server_addresses_public_xml_v1_0(self):
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private, public)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        private = '192.168.1.2'
+        publics = ['1.2.3.4']
+        fakes.stub_out_nw_api(self.stubs, private=private, publics=publics)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         req = webob.Request.blank('/v1.0/servers/1/ips/public')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
@@ -801,13 +781,13 @@ class ServersTest(test.TestCase):
         (public_node,) = dom.childNodes
         self.assertEquals(public_node.nodeName, 'public')
         (ip,) = public_node.getElementsByTagName('ip')
-        self.assertEquals(ip.getAttribute('addr'), public[0])
+        self.assertEquals(ip.getAttribute('addr'), publics[0])
 
     def test_get_server_addresses_private_xml_v1_0(self):
-        private = "192.168.0.3"
-        public = ["1.2.3.4"]
-        new_return_server = return_server_with_addresses(private, public)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        private = '192.168.1.2'
+        publics = ['1.2.3.4']
+        fakes.stub_out_nw_api(self.stubs, private=private, publics=publics)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         req = webob.Request.blank('/v1.0/servers/1/ips/private')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
@@ -819,17 +799,20 @@ class ServersTest(test.TestCase):
 
     # NOTE(bcwaldon): lp830817
     def test_get_server_by_id_malformed_networks_v1_1(self):
-        ifaces = [
-            {
-                'network': None,
-                'fixed_ips': [
-                    {'address': '192.168.0.3'},
-                    {'address': '192.168.0.4'},
-                ],
-            },
-        ]
-        new_return_server = return_server_with_attributes(interfaces=ifaces)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        nw_info = [(None, None), (None, None)]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
+
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
 
         req = webob.Request.blank('/v1.1/fake/servers/1')
         res = req.get_response(fakes.wsgi_app())
@@ -2678,7 +2661,7 @@ class ServersTest(test.TestCase):
         '''
 
         def return_servers_with_host(context, *args, **kwargs):
-            return [stub_instance(i, 'fake', 'fake', None, None, i % 2)
+            return [stub_instance(i, 'fake', 'fake', i % 2)
                     for i in xrange(5)]
 
         self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
@@ -3959,11 +3942,29 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
 class ServersViewBuilderV11Test(test.TestCase):
 
     def setUp(self):
+        super(ServersViewBuilderV11Test, self).setUp()
+        self.flags(use_ipv6=True)
         self.instance = self._get_instance()
         self.view_builder = self._get_view_builder()
 
-    def tearDown(self):
-        pass
+        public_ip = '192.168.0.3'
+        private_ip = '172.19.0.1'
+
+        nw_info = [(None, {'label': 'public',
+                           'ips': [{'ip': public_ip}],
+                           'ip6s': [{'ip': 'fe80::beef'}]}),
+                   (None, {'label': 'private',
+                           'ips': [{'ip': private_ip}]})]
+
+        def get_nw_info(*args, **kwargs):
+            return nw_info
+
+        def get_floats(self, context, fixed_ip):
+            return []
+
+        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, get_nw_info)
+        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
+                                                                get_floats)
 
     def _get_instance(self):
         created_at = datetime.datetime(2010, 10, 10, 12, 0, 0)
@@ -4017,13 +4018,14 @@ class ServersViewBuilderV11Test(test.TestCase):
         flavor_builder = views.flavors.ViewBuilderV11(base_url, project_id)
         image_builder = views.images.ViewBuilderV11(base_url, project_id)
 
+        ctxt = context.RequestContext('fake_user', project_id)
         view_builder = nova.api.openstack.views.servers.ViewBuilderV11(
-            address_builder,
-            flavor_builder,
-            image_builder,
-            base_url,
-            project_id,
-        )
+                ctxt,
+                address_builder,
+                flavor_builder,
+                image_builder,
+                base_url,
+                project_id)
         return view_builder
 
     def test_build_server(self):
@@ -4045,7 +4047,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, {}, False)
+        output = self.view_builder.build(self.instance, False)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_with_project_id(self):
@@ -4068,7 +4070,7 @@ class ServersViewBuilderV11Test(test.TestCase):
         }
 
         view_builder = self._get_view_builder(project_id='fake')
-        output = view_builder.build(self.instance, {}, False)
+        output = view_builder.build(self.instance, False)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail(self):
@@ -4107,7 +4109,12 @@ class ServersViewBuilderV11Test(test.TestCase):
                       },
                   ],
                 },
-                "addresses": {},
+                "addresses": {'private': [
+                                {'version': 4, 'addr': '172.19.0.1'}],
+                              'public': [
+                                {'version': 4, 'addr': '192.168.0.3'},
+                                {'version': 6, 'addr': 'fe80::beef'}]
+                             },
                 "metadata": {},
                 "config_drive": None,
                 "links": [
@@ -4123,7 +4130,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, {}, True)
+        output = self.view_builder.build(self.instance, True)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_active_status(self):
@@ -4165,7 +4172,12 @@ class ServersViewBuilderV11Test(test.TestCase):
                       },
                   ],
                 },
-                "addresses": {},
+                "addresses": {'private': [
+                                {'version': 4, 'addr': '172.19.0.1'}],
+                              'public': [
+                                {'version': 4, 'addr': '192.168.0.3'},
+                                {'version': 6, 'addr': 'fe80::beef'}]
+                             },
                 "metadata": {},
                 "config_drive": None,
                 "links": [
@@ -4181,7 +4193,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, {}, True)
+        output = self.view_builder.build(self.instance, True)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_with_accessipv4(self):
@@ -4221,7 +4233,12 @@ class ServersViewBuilderV11Test(test.TestCase):
                         },
                     ],
                 },
-                "addresses": {},
+                "addresses": {'private': [
+                                {'version': 4, 'addr': '172.19.0.1'}],
+                              'public': [
+                                {'version': 4, 'addr': '192.168.0.3'},
+                                {'version': 6, 'addr': 'fe80::beef'}]
+                             },
                 "metadata": {},
                 "config_drive": None,
                 "accessIPv4": "1.2.3.4",
@@ -4239,7 +4256,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, {}, True)
+        output = self.view_builder.build(self.instance, True)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_with_accessipv6(self):
@@ -4279,7 +4296,12 @@ class ServersViewBuilderV11Test(test.TestCase):
                         },
                     ],
                 },
-                "addresses": {},
+                "addresses": {'private': [
+                                {'version': 4, 'addr': '172.19.0.1'}],
+                              'public': [
+                                {'version': 4, 'addr': '192.168.0.3'},
+                                {'version': 6, 'addr': 'fe80::beef'}]
+                             },
                 "metadata": {},
                 "config_drive": None,
                 "accessIPv4": "",
@@ -4297,7 +4319,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, {}, True)
+        output = self.view_builder.build(self.instance, True)
         self.assertDictMatch(output, expected_server)
 
     def test_build_server_detail_with_metadata(self):
@@ -4342,7 +4364,12 @@ class ServersViewBuilderV11Test(test.TestCase):
                         },
                     ],
                 },
-                "addresses": {},
+                "addresses": {'private': [
+                                {'version': 4, 'addr': '172.19.0.1'}],
+                              'public': [
+                                {'version': 4, 'addr': '192.168.0.3'},
+                                {'version': 6, 'addr': 'fe80::beef'}]
+                             },
                 "metadata": {
                     "Open": "Stack",
                     "Number": "1",
@@ -4361,7 +4388,7 @@ class ServersViewBuilderV11Test(test.TestCase):
             }
         }
 
-        output = self.view_builder.build(self.instance, {}, True)
+        output = self.view_builder.build(self.instance, True)
         self.assertDictMatch(output, expected_server)
 
 

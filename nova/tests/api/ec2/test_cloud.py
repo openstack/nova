@@ -505,12 +505,30 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
+        self.flags(use_ipv6=True)
+
+        def fake_get_instance_nw_info(self, context, instance):
+            return [(None, {'label': 'public',
+                            'ips': [{'ip': '192.168.0.3'},
+                                    {'ip': '192.168.0.4'}],
+                            'ip6s': [{'ip': 'fe80::beef'}]})]
+
+        def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
+            return ['1.2.3.4', '5.6.7.8']
+
+        self.stubs.Set(network.API, 'get_instance_nw_info',
+                fake_get_instance_nw_info)
+        self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
+                fake_get_floating_ips_by_fixed_address)
+
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': 1,
+                                                  'instance_type_id': 1,
                                                   'host': 'host1',
                                                   'vm_state': 'active'})
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': 1,
+                                                  'instance_type_id': 1,
                                                   'host': 'host2',
                                                   'vm_state': 'active'})
         comp1 = db.service_create(self.context, {'host': 'host1',
@@ -522,28 +540,77 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]
         self.assertEqual(len(result['instancesSet']), 2)
+
+        # Now try filtering.
         instance_id = ec2utils.id_to_ec2_id(inst2['id'])
         result = self.cloud.describe_instances(self.context,
                                              instance_id=[instance_id])
         result = result['reservationSet'][0]
         self.assertEqual(len(result['instancesSet']), 1)
-        self.assertEqual(result['instancesSet'][0]['instanceId'],
-                         instance_id)
-        self.assertEqual(result['instancesSet'][0]
-                         ['placement']['availabilityZone'], 'zone2')
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['instanceId'], instance_id)
+        self.assertEqual(instance['placement']['availabilityZone'],
+                'zone2')
+        self.assertEqual(instance['publicDnsName'], '1.2.3.4')
+        self.assertEqual(instance['ipAddress'], '1.2.3.4')
+        self.assertEqual(instance['dnsName'], '1.2.3.4')
+        self.assertEqual(instance['privateDnsName'], '192.168.0.3')
+        self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
+        self.assertEqual(instance['dnsNameV6'], 'fe80::beef')
         db.instance_destroy(self.context, inst1['id'])
         db.instance_destroy(self.context, inst2['id'])
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
+    def test_describe_instances_no_ipv6(self):
+        """Makes sure describe_instances w/ no ipv6 works."""
+        self.flags(use_ipv6=False)
+
+        def fake_get_instance_nw_info(self, context, instance):
+            return [(None, {'label': 'public',
+                            'ips': [{'ip': '192.168.0.3'},
+                                    {'ip': '192.168.0.4'}],
+                            'ip6s': [{'ip': 'fe80::beef'}]})]
+
+        def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
+            return ['1.2.3.4', '5.6.7.8']
+
+        self.stubs.Set(network.API, 'get_instance_nw_info',
+                fake_get_instance_nw_info)
+        self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
+                fake_get_floating_ips_by_fixed_address)
+
+        inst1 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'image_ref': 1,
+                                                  'instance_type_id': 1,
+                                                  'vm_state': 'active'})
+        comp1 = db.service_create(self.context, {'host': 'host1',
+                                                 'topic': "compute"})
+        result = self.cloud.describe_instances(self.context)
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 1)
+        instance = result['instancesSet'][0]
+        instance_id = ec2utils.id_to_ec2_id(inst1['id'])
+        self.assertEqual(instance['instanceId'], instance_id)
+        self.assertEqual(instance['publicDnsName'], '1.2.3.4')
+        self.assertEqual(instance['ipAddress'], '1.2.3.4')
+        self.assertEqual(instance['dnsName'], '1.2.3.4')
+        self.assertEqual(instance['privateDnsName'], '192.168.0.3')
+        self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
+        self.assertNotIn('dnsNameV6', instance)
+        db.instance_destroy(self.context, inst1['id'])
+        db.service_destroy(self.context, comp1['id'])
+
     def test_describe_instances_deleted(self):
         args1 = {'reservation_id': 'a',
                  'image_ref': 1,
+                 'instance_type_id': 1,
                  'host': 'host1',
                  'vm_state': 'active'}
         inst1 = db.instance_create(self.context, args1)
         args2 = {'reservation_id': 'b',
                  'image_ref': 1,
+                 'instance_type_id': 1,
                  'host': 'host1',
                  'vm_state': 'active'}
         inst2 = db.instance_create(self.context, args2)
@@ -575,9 +642,11 @@ class CloudTestCase(test.TestCase):
     def _setUpBlockDeviceMapping(self):
         inst1 = db.instance_create(self.context,
                                   {'image_ref': 1,
+                                   'instance_type_id': 1,
                                    'root_device_name': '/dev/sdb1'})
         inst2 = db.instance_create(self.context,
                                   {'image_ref': 2,
+                                   'instance_type_id': 1,
                                    'root_device_name': '/dev/sdc1'})
 
         instance_id = inst1['id']

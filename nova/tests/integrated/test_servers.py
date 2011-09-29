@@ -31,7 +31,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
     def _wait_for_state_change(self, server, status):
         for i in xrange(0, 50):
             server = self.api.get_server(server['id'])
-            print server
             if server['status'] != status:
                 break
             time.sleep(.1)

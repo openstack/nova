@@ -190,19 +190,23 @@ def stub_out_nw_api_get_floating_ips_by_fixed_address(stubs, func=None):
     stubs.Set(nova.network.API, 'get_floating_ips_by_fixed_address', func)
 
 
-def stub_out_nw_api(stubs, cls=None):
+def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
+    if not private:
+        private = '192.168.0.3'
+    if not publics:
+        publics = ['1.2.3.4']
+
     class Fake:
         def get_instance_nw_info(*args, **kwargs):
-            pass
+            return [(None, {'label': 'private',
+                            'ips': [{'ip': private}]})]
 
         def get_floating_ips_by_fixed_address(*args, **kwargs):
-            pass
+            return publics
 
     if cls is None:
         cls = Fake
     stubs.Set(nova.network, 'API', cls)
-    stub_out_nw_api_get_floating_ips_by_fixed_address(stubs)
-    stub_out_nw_api_get_instance_nw_info(stubs)
 
 
 def _make_image_fixtures():
