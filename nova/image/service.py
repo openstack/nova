@@ -151,6 +151,9 @@ class BaseImageService(object):
 
         properties = image_meta['properties']
 
+        if context.project_id and ('owner_id' in properties):
+            return str(properties['owner_id']) == str(context.project_id)
+
         if context.project_id and ('project_id' in properties):
             return str(properties['project_id']) == str(context.project_id)
 
