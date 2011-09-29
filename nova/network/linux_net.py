@@ -793,8 +793,11 @@ def _dnsmasq_pid_for(dev):
     pid_file = _dhcp_file(dev, 'pid')
 
     if os.path.exists(pid_file):
-        with open(pid_file, 'r') as f:
-            return int(f.read())
+        try:
+            with open(pid_file, 'r') as f:
+                return int(f.read())
+        except (ValueError, IOError):
+            return None
 
 
 def _ra_pid_for(dev):
