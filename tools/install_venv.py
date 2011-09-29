@@ -98,7 +98,8 @@ def create_virtualenv(venv=VENV):
 
 
 def pip_install(*args):
-    run_command(['tools/with_venv.sh', 'pip', 'install'] + list(args),
+    run_command(['tools/with_venv.sh',
+                 'pip', 'install', '--upgrade'] + list(args),
                 redirect_output=False)
 
 
