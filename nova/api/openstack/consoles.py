@@ -57,7 +57,7 @@ class Controller(object):
         return dict(consoles=[_translate_keys(console)
                               for console in consoles])
 
-    def create(self, req, server_id, body):
+    def create(self, req, server_id):
         """Creates a new console"""
         self.console_api.create_console(
                                 req.environ['nova.context'],
