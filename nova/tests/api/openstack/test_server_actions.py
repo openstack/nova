@@ -871,7 +871,7 @@ class ServerActionsTestV11(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(202, response.status_int)
         location = response.headers['Location']
-        self.assertEqual('http://localhost/v1.1/images/123', location)
+        self.assertEqual('http://localhost/v1.1/fake/images/123', location)
 
     def test_create_image_snapshots_disabled(self):
         """Don't permit a snapshot if the allow_instance_snapshots flag is
@@ -904,7 +904,7 @@ class ServerActionsTestV11(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(202, response.status_int)
         location = response.headers['Location']
-        self.assertEqual('http://localhost/v1.1/images/123', location)
+        self.assertEqual('http://localhost/v1.1/fake/images/123', location)
 
     def test_create_image_with_too_much_metadata(self):
         body = {
