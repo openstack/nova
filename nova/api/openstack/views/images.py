@@ -37,6 +37,10 @@ class ViewBuilder(object):
 
     def _format_status(self, image):
         """Update the status field to standardize format."""
+
+        if 'status' not in image:
+            return
+
         status_mapping = {
             'active': 'ACTIVE',
             'queued': 'SAVING',
@@ -50,6 +54,14 @@ class ViewBuilder(object):
             image['status'] = status_mapping[image['status']]
         except KeyError:
             image['status'] = 'UNKNOWN'
+
+    def _get_progress_for_status(self, status):
+        progress_map = {
+            'queued': 25,
+            'saving': 50,
+            'active': 100,
+        }
+        return progress_map.get(status, 0)
 
     def _build_server(self, image, image_obj):
         """Indicates that you must use a ViewBuilder subclass."""
@@ -72,8 +84,8 @@ class ViewBuilder(object):
         """Return a standardized image structure for display by the API."""
         self._format_dates(image_obj)
 
-        if "status" in image_obj:
-            self._format_status(image_obj)
+        orig_status = image_obj.get('status', '').lower()
+        self._format_status(image_obj)
 
         image = {
             "id": image_obj.get("id"),
@@ -89,11 +101,7 @@ class ViewBuilder(object):
                 "updated": image_obj.get("updated_at"),
                 "status": image_obj.get("status"),
             })
-
-            if image["status"].upper() == "ACTIVE":
-                image["progress"] = 100
-            else:
-                image["progress"] = 0
+            image["progress"] = self._get_progress_for_status(orig_status)
 
         return image
 
