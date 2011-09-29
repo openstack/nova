@@ -822,7 +822,10 @@ class ControllerV11(Controller):
 
         # build location of newly-created image entity
         image_id = str(image['id'])
-        image_ref = os.path.join(req.application_url, 'images', image_id)
+        image_ref = os.path.join(req.application_url,
+                                 context.project_id,
+                                 'images',
+                                 image_id)
 
         resp = webob.Response(status_int=202)
         resp.headers['Location'] = image_ref
