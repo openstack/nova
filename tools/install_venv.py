@@ -97,14 +97,19 @@ def create_virtualenv(venv=VENV):
     print 'done.'
 
 
+def pip_install(*args):
+    run_command(['tools/with_venv.sh', 'pip', 'install'] + list(args),
+                redirect_output=False)
+
+
 def install_dependencies(venv=VENV):
     print 'Installing dependencies with pip (this can take a while)...'
+
     # Install greenlet by hand - just listing it in the requires file does not
     # get it in stalled in the right order
-    run_command(['tools/with_venv.sh', 'pip', 'install', '-E', venv,
-              'greenlet'], redirect_output=False)
-    run_command(['tools/with_venv.sh', 'pip', 'install', '-E', venv, '-r',
-              PIP_REQUIRES], redirect_output=False)
+    pip_install('greenlet')
+
+    pip_install('-r', PIP_REQUIRES)
 
     # Tell the virtual env how to "import nova"
     pthfile = os.path.join(venv, "lib", PY_VERSION, "site-packages",
