@@ -86,6 +86,9 @@ class Distro(object):
             ' requires virtualenv, please install it using your'
             ' favorite package management tool')
 
+    def install_m2crypto(self):
+        pip_install('M2Crypto')
+
 
 class Fedora(Distro):
 
@@ -104,6 +107,14 @@ class Fedora(Distro):
             self.yum_install('python-virtualenv', check_exit_code=False)
 
         super(Fedora, self).install_virtualenv()
+
+    #
+    # pip install M2Crypto fails on Fedora because of
+    # weird differences with OpenSSL headers
+    #
+    def install_m2crypto(self):
+        if not self.check_pkg('m2crypto'):
+            self.yum_install('m2crypto')
 
 
 def get_distro():
@@ -144,6 +155,8 @@ def install_dependencies(venv=VENV):
     pip_install('greenlet')
 
     pip_install('-r', PIP_REQUIRES)
+
+    get_distro().install_m2crypto()
 
     # Tell the virtual env how to "import nova"
     pthfile = os.path.join(venv, "lib", PY_VERSION, "site-packages",
