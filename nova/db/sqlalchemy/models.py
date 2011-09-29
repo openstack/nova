@@ -169,7 +169,21 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        base_name = FLAGS.instance_name_template % self.id
+        try:
+            base_name = FLAGS.instance_name_template % self.id
+        except TypeError:
+            # Support templates like "uuid-%(uuid)s", etc.
+            info = {}
+            for key, value in self.iteritems():
+                # prevent recursion if someone specifies %(name)s
+                # %(name)s will not be valid.
+                if key == 'name':
+                    continue
+                info[key] = value
+            try:
+                base_name = FLAGS.instance_name_template % info
+            except KeyError:
+                base_name = self.uuid
         if getattr(self, '_rescue', False):
             base_name += "-rescue"
         return base_name
