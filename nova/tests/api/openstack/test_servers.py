@@ -242,10 +242,6 @@ class ServersTest(test.TestCase):
                        instance_addresses)
         self.stubs.Set(nova.db.api, 'instance_get_floating_address',
                        instance_addresses)
-        self.stubs.Set(nova.compute.API, 'pause', fake_compute_api)
-        self.stubs.Set(nova.compute.API, 'unpause', fake_compute_api)
-        self.stubs.Set(nova.compute.API, 'suspend', fake_compute_api)
-        self.stubs.Set(nova.compute.API, 'resume', fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
 
@@ -2683,55 +2679,6 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['imageId'], 10)
             self.assertEqual(s['flavorId'], 1)
 
-    def test_server_pause(self):
-        self.flags(allow_admin_api=True)
-        req = webob.Request.blank('/v1.0/servers/1/pause')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-
-    def test_server_unpause(self):
-        self.flags(allow_admin_api=True)
-        req = webob.Request.blank('/v1.0/servers/1/unpause')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-
-    def test_server_suspend(self):
-        self.flags(allow_admin_api=True)
-        req = webob.Request.blank('/v1.0/servers/1/suspend')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-
-    def test_server_resume(self):
-        self.flags(allow_admin_api=True)
-        req = webob.Request.blank('/v1.0/servers/1/resume')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-
-    def test_server_reset_network(self):
-        self.flags(allow_admin_api=True)
-        req = webob.Request.blank('/v1.0/servers/1/reset_network')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-
-    def test_server_inject_network_info(self):
-        self.flags(allow_admin_api=True)
-        req = webob.Request.blank(
-              '/v1.0/servers/1/inject_network_info')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-
     def test_server_diagnostics(self):
         self.flags(allow_admin_api=False)
         req = webob.Request.blank("/v1.0/servers/1/diagnostics")
@@ -2761,66 +2708,6 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
-
-    def test_rescue_generates_password(self):
-        self.flags(allow_admin_api=True)
-
-        self.called = False
-
-        def rescue_mock(*args, **kwargs):
-            self.called = True
-
-        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
-        req = webob.Request.blank('/v1.0/servers/1/rescue')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-
-        res = req.get_response(fakes.wsgi_app())
-
-        self.assertEqual(self.called, True)
-        self.assertEqual(res.status_int, 200)
-        res_body = json.loads(res.body)
-        self.assertTrue('adminPass' in res_body)
-        self.assertEqual(FLAGS.password_length, len(res_body['adminPass']))
-
-    def test_rescue_with_preset_password(self):
-        self.flags(allow_admin_api=True)
-
-        self.called = False
-
-        def rescue_mock(*args, **kwargs):
-            self.called = True
-
-        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
-        req = webob.Request.blank('/v1.0/servers/1/rescue')
-        req.method = 'POST'
-        body = {"rescue": {"adminPass": "AABBCC112233"}}
-        req.body = json.dumps(body)
-        req.content_type = 'application/json'
-
-        res = req.get_response(fakes.wsgi_app())
-
-        self.assertEqual(self.called, True)
-        self.assertEqual(res.status_int, 200)
-        res_body = json.loads(res.body)
-        self.assertTrue('adminPass' in res_body)
-        self.assertEqual('AABBCC112233', res_body['adminPass'])
-
-    def test_rescue_raises_handled(self):
-        self.flags(allow_admin_api=True)
-        body = {}
-
-        def rescue_mock(*args, **kwargs):
-            raise Exception('Who cares?')
-
-        self.stubs.Set(nova.compute.api.API, 'rescue', rescue_mock)
-        req = webob.Request.blank('/v1.0/servers/1/rescue')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-
-        res = req.get_response(fakes.wsgi_app())
-
-        self.assertEqual(res.status_int, 422)
 
     def test_delete_server_instance_v1_1(self):
         req = webob.Request.blank('/v1.1/fake/servers/1')

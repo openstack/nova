@@ -24,7 +24,6 @@ from nova import log as logging
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import faults
-from nova.api.openstack.contrib import admin_only
 from nova.scheduler import api as scheduler_api
 
 
@@ -105,12 +104,15 @@ class HostController(object):
             raise webob.exc.HTTPBadRequest(explanation=e.msg)
         return {"host": host, "power_action": result}
 
+    @extensions.admin_only
     def startup(self, req, id):
         return self._host_power_action(req, host=id, action="startup")
 
+    @extensions.admin_only
     def shutdown(self, req, id):
         return self._host_power_action(req, host=id, action="shutdown")
 
+    @extensions.admin_only
     def reboot(self, req, id):
         return self._host_power_action(req, host=id, action="reboot")
 
@@ -131,7 +133,6 @@ class Hosts(extensions.ExtensionDescriptor):
     def get_updated(self):
         return "2011-06-29T00:00:00+00:00"
 
-    @admin_only.admin_only
     def get_resources(self):
         resources = [extensions.ResourceExtension('os-hosts',
                 HostController(), collection_actions={'update': 'PUT'},

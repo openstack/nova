@@ -29,23 +29,13 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.contrib.rescue")
 
 
-def wrap_errors(fn):
-    """"Ensure errors are not passed along."""
-    def wrapped(*args):
-        try:
-            return fn(*args)
-        except Exception, e:
-            return faults.Fault(exc.HTTPInternalServerError())
-    return wrapped
-
-
 class Rescue(exts.ExtensionDescriptor):
     """The Rescue controller for the OpenStack API."""
     def __init__(self):
         super(Rescue, self).__init__()
         self.compute_api = compute.API()
 
-    @wrap_errors
+    @exts.wrap_errors
     def _rescue(self, input_dict, req, instance_id):
         """Rescue an instance."""
         context = req.environ["nova.context"]
@@ -57,7 +47,7 @@ class Rescue(exts.ExtensionDescriptor):
 
         return {'adminPass': password}
 
-    @wrap_errors
+    @exts.wrap_errors
     def _unrescue(self, input_dict, req, instance_id):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
