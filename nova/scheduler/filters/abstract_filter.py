@@ -15,11 +15,6 @@
 
 
 import nova.scheduler
-from nova import flags
-
-FLAGS = flags.FLAGS
-flags.DEFINE_string('default_host_filter', 'AllHostsFilter',
-        'Which filter to use for filtering hosts')
 
 
 class AbstractHostFilter(object):
@@ -28,7 +23,7 @@ class AbstractHostFilter(object):
         """Convert instance_type into a filter for most common use-case."""
         raise NotImplementedError()
 
-    def filter_hosts(self, zone_manager, query):
+    def filter_hosts(self, host_list, query):
         """Return a list of hosts that fulfill the filter."""
         raise NotImplementedError()
 

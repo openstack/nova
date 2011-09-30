@@ -114,10 +114,13 @@ class LeastCostScheduler(base_scheduler.BaseScheduler):
         self.cost_fns_cache = {}
         super(LeastCostScheduler, self).__init__(*args, **kwargs)
 
-    def get_cost_fns(self, topic):
+    def get_cost_fns(self, topic=None):
         """Returns a list of tuples containing weights and cost functions to
         use for weighing hosts
         """
+        if topic is None:
+            # Schedulers only support compute right now.
+            topic = "compute"
         if topic in self.cost_fns_cache:
             return self.cost_fns_cache[topic]
         cost_fns = []
@@ -151,11 +154,11 @@ class LeastCostScheduler(base_scheduler.BaseScheduler):
         self.cost_fns_cache[topic] = cost_fns
         return cost_fns
 
-    def weigh_hosts(self, topic, request_spec, hosts):
+    def weigh_hosts(self, request_spec, hosts):
         """Returns a list of dictionaries of form:
            [ {weight: weight, hostname: hostname, capabilities: capabs} ]
         """
-        cost_fns = self.get_cost_fns(topic)
+        cost_fns = self.get_cost_fns()
         costs = weighted_sum(domain=hosts, weighted_fns=cost_fns)
 
         weighted = []

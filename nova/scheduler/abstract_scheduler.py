@@ -271,7 +271,7 @@ class AbstractScheduler(driver.Scheduler):
         # weigh the selected hosts.
         # weighted_hosts = [{weight=weight, hostname=hostname,
         #         capabilities=capabs}, ...]
-        weighted_hosts = self.weigh_hosts(topic, request_spec, filtered_hosts)
+        weighted_hosts = self.weigh_hosts(request_spec, filtered_hosts)
         # Next, tack on the host weights from the child zones
         json_spec = json.dumps(request_spec)
         all_zones = db.zone_get_all(context.elevated())
@@ -306,7 +306,7 @@ class AbstractScheduler(driver.Scheduler):
         return [(host, services) for host, services in host_list
                 if basic_ram_filter(host, services, request_spec)]
 
-    def weigh_hosts(self, topic, request_spec, hosts):
+    def weigh_hosts(self, request_spec, hosts):
         """This version assigns a weight of 1 to all hosts, making selection
         of any host basically a random event. Override this method in your
         subclass to add logic to prefer one potential host over another.

@@ -271,6 +271,7 @@ def cleanup(dct):
 #    avv["major"] = safe_int(dct.get("API-version-major", ""))
 #    avv["minor"] = safe_int(dct.get("API-version-minor", ""))
 
+    out["enabled"] = dct.get("enabled", True)
     out["host_uuid"] = dct.get("uuid", None)
     out["host_name-label"] = dct.get("name-label", "")
     out["host_name-description"] = dct.get("name-description", "")
