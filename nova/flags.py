@@ -406,6 +406,10 @@ DEFINE_list('zone_capabilities',
                  'Key/Multi-value list representng capabilities of this zone')
 DEFINE_string('build_plan_encryption_key', None,
         '128bit (hex) encryption key for scheduler build plans.')
+DEFINE_string('instance_usage_audit_period', 'month',
+              'time period to generate instance usages for.')
+DEFINE_integer('bandwith_poll_interval', 600,
+               'interval to pull bandwidth usage info')
 
 DEFINE_bool('start_guests_on_host_boot', False,
             'Whether to restart guests when the host reboots')

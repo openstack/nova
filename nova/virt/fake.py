@@ -189,6 +189,12 @@ class FakeConnection(driver.ComputeDriver):
     def get_diagnostics(self, instance_name):
         return {}
 
+    def get_all_bw_usage(self, start_time, stop_time=None):
+        """Return bandwidth usage info for each interface on each
+           running VM"""
+        bwusage = []
+        return bwusage
+
     def list_disks(self, instance_name):
         return ['A_DISK']
 

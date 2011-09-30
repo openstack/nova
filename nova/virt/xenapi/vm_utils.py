@@ -21,6 +21,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import json
+import math
 import os
 import pickle
 import re
@@ -29,6 +30,7 @@ import tempfile
 import time
 import urllib
 import uuid
+from decimal import Decimal
 from xml.dom import minidom
 
 from nova import db
@@ -810,6 +812,24 @@ class VMHelper(HelperBase):
             return {"Unable to retrieve diagnostics": e}
 
     @classmethod
+    def compile_metrics(cls, session, start_time, stop_time=None):
+        """Compile bandwidth usage, cpu, and disk metrics for all VMs on
+           this host"""
+        start_time = int(start_time)
+        try:
+            host = session.get_xenapi_host()
+            host_ip = session.get_xenapi().host.get_record(host)["address"]
+        except (cls.XenAPI.Failure, KeyError) as e:
+            raise exception.CouldNotFetchMetrics()
+
+        xml = get_rrd_updates(host_ip, start_time)
+        if xml:
+            doc = minidom.parseString(xml)
+            return parse_rrd_update(doc, start_time, stop_time)
+
+        raise exception.CouldNotFetchMetrics()
+
+    @classmethod
     def scan_sr(cls, session, instance_id=None, sr_ref=None):
         """Scans the SR specified by sr_ref"""
         if sr_ref:
@@ -835,6 +855,88 @@ def get_rrd(host, vm_uuid):
         return xml.read()
     except IOError:
         return None
+
+
+def get_rrd_updates(host, start_time):
+    """Return the RRD updates XML as a string"""
+    try:
+        xml = urllib.urlopen("http://%s:%s@%s/rrd_updates?start=%s" % (
+            FLAGS.xenapi_connection_username,
+            FLAGS.xenapi_connection_password,
+            host,
+            start_time))
+        return xml.read()
+    except IOError:
+        return None
+
+
+def parse_rrd_meta(doc):
+    data = {}
+    meta = doc.getElementsByTagName('meta')[0]
+    for tag in ('start', 'end', 'step'):
+        data[tag] = int(meta.getElementsByTagName(tag)[0].firstChild.data)
+    legend = meta.getElementsByTagName('legend')[0]
+    data['legend'] = [child.firstChild.data for child in legend.childNodes]
+    return data
+
+
+def parse_rrd_data(doc):
+    dnode = doc.getElementsByTagName('data')[0]
+    return [dict(
+            time=int(child.getElementsByTagName('t')[0].firstChild.data),
+            values=[Decimal(valnode.firstChild.data)
+                  for valnode in child.getElementsByTagName('v')])
+            for child in dnode.childNodes]
+
+
+def parse_rrd_update(doc, start, until=None):
+    sum_data = {}
+    meta = parse_rrd_meta(doc)
+    data = parse_rrd_data(doc)
+    for col, collabel in enumerate(meta['legend']):
+        datatype, objtype, uuid, name = collabel.split(':')
+        vm_data = sum_data.get(uuid, dict())
+        if name.startswith('vif'):
+            vm_data[name] = integrate_series(data, col, start, until)
+        else:
+            vm_data[name] = average_series(data, col, start, until)
+        sum_data[uuid] = vm_data
+    return sum_data
+
+
+def average_series(data, col, start, until=None):
+    vals = [row['values'][col] for row in data
+            if (not until or (row['time'] <= until)) and
+                not row['values'][col].is_nan()]
+    if vals:
+        return (sum(vals) / len(vals)).quantize(Decimal('1.0000'))
+    else:
+        return Decimal('0.0000')
+
+
+def integrate_series(data, col, start, until=None):
+    total = Decimal('0.0000')
+    prev_time = int(start)
+    prev_val = None
+    for row in reversed(data):
+        if not until or (row['time'] <= until):
+            time = row['time']
+            val = row['values'][col]
+            if val.is_nan():
+                val = Decimal('0.0000')
+            if prev_val is None:
+                prev_val = val
+            if prev_val >= val:
+                total += ((val * (time - prev_time)) +
+                          (Decimal('0.5000') * (prev_val - val) *
+                          (time - prev_time)))
+            else:
+                total += ((prev_val * (time - prev_time)) +
+                          (Decimal('0.5000') * (val - prev_val) *
+                          (time - prev_time)))
+            prev_time = time
+            prev_val = val
+    return total.quantize(Decimal('1.0000'))
 
 
 #TODO(sirp): This code comes from XS5.6 pluginlib.py, we should refactor to

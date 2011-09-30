@@ -1438,6 +1438,30 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 
+def bw_usage_get_by_instance(context, instance_id, start_period):
+    """Return bw usages for an instance in a given audit period."""
+    return IMPL.bw_usage_get_by_instance(context, instance_id, start_period)
+
+
+def bw_usage_update(context,
+                    instance_id,
+                    network_label,
+                    start_period,
+                    bw_in, bw_out,
+                    session=None):
+    """Update cached bw usage for an instance and network
+       Creates new record if needed."""
+    return IMPL.bw_usage_update(context,
+                                instance_id,
+                                network_label,
+                                start_period,
+                                bw_in, bw_out,
+                                session=None)
+
+
+####################
+
+
 def instance_type_extra_specs_get(context, instance_type_id):
     """Get all extra specs for an instance type."""
     return IMPL.instance_type_extra_specs_get(context, instance_type_id)

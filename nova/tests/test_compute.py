@@ -33,6 +33,7 @@ from nova.scheduler import driver as scheduler_driver
 from nova import rpc
 from nova import test
 from nova import utils
+import nova
 
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
@@ -448,6 +449,48 @@ class ComputeTestCase(test.TestCase):
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_add_fixed_ip_usage_notification(self):
+        def dummy(*args, **kwargs):
+            pass
+
+        self.stubs.Set(nova.network.API, 'add_fixed_ip_to_instance',
+                       dummy)
+        self.stubs.Set(nova.compute.manager.ComputeManager,
+                       'inject_network_info', dummy)
+        self.stubs.Set(nova.compute.manager.ComputeManager,
+                       'reset_network', dummy)
+
+        instance_id = self._create_instance()
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
+        self.compute.add_fixed_ip_to_instance(self.context,
+                                              instance_id,
+                                              1)
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_remove_fixed_ip_usage_notification(self):
+        def dummy(*args, **kwargs):
+            pass
+
+        self.stubs.Set(nova.network.API, 'remove_fixed_ip_from_instance',
+                       dummy)
+        self.stubs.Set(nova.compute.manager.ComputeManager,
+                       'inject_network_info', dummy)
+        self.stubs.Set(nova.compute.manager.ComputeManager,
+                       'reset_network', dummy)
+
+        instance_id = self._create_instance()
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
+        self.compute.remove_fixed_ip_from_instance(self.context,
+                                              instance_id,
+                                              1)
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_run_instance_usage_notification(self):
         """Ensure run instance generates apropriate usage notification"""
         instance_id = self._create_instance()
@@ -457,7 +500,7 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.create')
         payload = msg['payload']
-        self.assertEquals(payload['project_id'], self.project_id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
@@ -476,12 +519,16 @@ class ComputeTestCase(test.TestCase):
         test_notifier.NOTIFICATIONS = []
         self.compute.terminate_instance(self.context, instance_id)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'compute.instance.exists')
+
+        msg = test_notifier.NOTIFICATIONS[1]
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.delete')
         payload = msg['payload']
-        self.assertEquals(payload['project_id'], self.project_id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
@@ -564,7 +611,7 @@ class ComputeTestCase(test.TestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.resize.prep')
         payload = msg['payload']
-        self.assertEquals(payload['project_id'], self.project_id)
+        self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], instance_id)
         self.assertEquals(payload['instance_type'], 'm1.tiny')

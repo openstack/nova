@@ -1189,6 +1189,38 @@ class VMOps(object):
         vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
         return VMHelper.compile_diagnostics(self._session, vm_rec)
 
+    def get_all_bw_usage(self, start_time, stop_time=None):
+        """Return bandwidth usage info for each interface on each
+           running VM"""
+        try:
+            metrics = VMHelper.compile_metrics(self._session,
+                                               start_time,
+                                               stop_time)
+        except exception.CouldNotFetchMetrics:
+            LOG.exception(_("Could not get bandwidth info."),
+                          exc_info=sys.exc_info())
+        bw = {}
+        for uuid, data in metrics.iteritems():
+            vm_ref = self._session.get_xenapi().VM.get_by_uuid(uuid)
+            vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+            vif_map = {}
+            for vif in [self._session.get_xenapi().VIF.get_record(vrec)
+                        for vrec in vm_rec['VIFs']]:
+                vif_map[vif['device']] = vif['MAC']
+            name = vm_rec['name_label']
+            if name.startswith('Control domain'):
+                continue
+            vifs_bw = bw.setdefault(name, {})
+            for key, val in data.iteritems():
+                if key.startswith('vif_'):
+                    vname = key.split('_')[1]
+                    vif_bw = vifs_bw.setdefault(vif_map[vname], {})
+                    if key.endswith('tx'):
+                        vif_bw['bw_out'] = int(val)
+                    if key.endswith('rx'):
+                        vif_bw['bw_in'] = int(val)
+        return bw
+
     def get_console_output(self, instance):
         """Return snapshot of console."""
         # TODO: implement this to fix pylint!

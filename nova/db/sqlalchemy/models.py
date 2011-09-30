@@ -21,7 +21,7 @@ SQLAlchemy models for nova data.
 """
 
 from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy import Column, Integer, String, schema
+from sqlalchemy import Column, Integer, BigInteger, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -844,6 +844,18 @@ class AgentBuild(BASE, NovaBase):
     version = Column(String(255))
     url = Column(String(255))
     md5hash = Column(String(255))
+
+
+class BandwidthUsage(BASE, NovaBase):
+    """Cache for instance bandwidth usage data pulled from the hypervisor"""
+    __tablename__ = 'bw_usage_cache'
+    id = Column(Integer, primary_key=True, nullable=False)
+    instance_id = Column(Integer, nullable=False)
+    network_label = Column(String(255))
+    start_period = Column(DateTime, nullable=False)
+    last_refreshed = Column(DateTime)
+    bw_in = Column(BigInteger)
+    bw_out = Column(BigInteger)
 
 
 def register_models():

@@ -3619,6 +3619,42 @@ def agent_build_update(context, agent_build_id, values):
 
 ####################
 
+@require_context
+def bw_usage_get_by_instance(context, instance_id, start_period):
+    session = get_session()
+    return session.query(models.BandwidthUsage).\
+                   filter_by(instance_id=instance_id).\
+                   filter_by(start_period=start_period).\
+                   all()
+
+
+@require_context
+def bw_usage_update(context,
+                    instance_id,
+                    network_label,
+                    start_period,
+                    bw_in, bw_out,
+                    session=None):
+    session = session if session else get_session()
+    with session.begin():
+        bwusage = session.query(models.BandwidthUsage).\
+                      filter_by(instance_id=instance_id).\
+                      filter_by(start_period=start_period).\
+                      filter_by(network_label=network_label).\
+                      first()
+        if not bwusage:
+            bwusage = models.BandwidthUsage()
+            bwusage.instance_id = instance_id
+            bwusage.start_period = start_period
+            bwusage.network_label = network_label
+        bwusage.last_refreshed = utils.utcnow()
+        bwusage.bw_in = bw_in
+        bwusage.bw_out = bw_out
+        bwusage.save(session=session)
+
+
+####################
+
 
 @require_context
 def instance_type_extra_specs_get(context, instance_type_id):

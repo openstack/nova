@@ -853,3 +853,7 @@ class InstanceTypeDiskTooSmall(NovaException):
 
 class InsufficientFreeMemory(NovaException):
     message = _("Insufficient free memory on compute node to start %(uuid)s.")
+
+
+class CouldNotFetchMetrics(NovaException):
+    message = _("Could not fetch bandwidth/cpu/disk metrics for this host.")

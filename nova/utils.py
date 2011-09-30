@@ -294,9 +294,46 @@ EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
                            'ABCDEFGHJKLMNPQRSTUVWXYZ')  # Removed: I, O
 
 
+def current_audit_period(unit=None):
+    if not unit:
+        unit = FLAGS.instance_usage_audit_period
+    rightnow = utcnow()
+    if unit not in ('month', 'day', 'year', 'hour'):
+        raise ValueError('Time period must be hour, day, month or year')
+    n = 1  # we are currently only using multiples of 1 unit (mdragon)
+    if unit == 'month':
+        year = rightnow.year - (n // 12)
+        n = n % 12
+        if n >= rightnow.month:
+            year -= 1
+            month = 12 + (rightnow.month - n)
+        else:
+            month = rightnow.month - n
+        begin = datetime.datetime(day=1, month=month, year=year)
+        end = datetime.datetime(day=1,
+                                month=rightnow.month,
+                                year=rightnow.year)
+
+    elif unit == 'year':
+        begin = datetime.datetime(day=1, month=1, year=rightnow.year - n)
+        end = datetime.datetime(day=1, month=1, year=rightnow.year)
+
+    elif unit == 'day':
+        b = rightnow - datetime.timedelta(days=n)
+        begin = datetime.datetime(day=b.day, month=b.month, year=b.year)
+        end = datetime.datetime(day=rightnow.day,
+                               month=rightnow.month,
+                               year=rightnow.year)
+    elif unit == 'hour':
+        end = rightnow.replace(minute=0, second=0, microsecond=0)
+        begin = end - datetime.timedelta(hours=n)
+
+    return (begin, end)
+
+
 def usage_from_instance(instance_ref, **kw):
     usage_info = dict(
-          project_id=instance_ref['project_id'],
+          tenant_id=instance_ref['project_id'],
           user_id=instance_ref['user_id'],
           instance_id=instance_ref['id'],
           instance_type=instance_ref['instance_type']['name'],
@@ -305,7 +342,11 @@ def usage_from_instance(instance_ref, **kw):
           created_at=str(instance_ref['created_at']),
           launched_at=str(instance_ref['launched_at']) \
                       if instance_ref['launched_at'] else '',
-          image_ref=instance_ref['image_ref'])
+          image_ref=instance_ref['image_ref'],
+          state=instance_ref['vm_state'],
+          state_description=instance_ref['task_state'] \
+                             if instance_ref['task_state'] else '',
+          fixed_ips=[a.address for a in instance_ref['fixed_ips']])
     usage_info.update(kw)
     return usage_info
 
@@ -324,7 +365,7 @@ def last_octet(address):
     return int(address.split('.')[-1])
 
 
-def  get_my_linklocal(interface):
+def get_my_linklocal(interface):
     try:
         if_str = execute('ip', '-f', 'inet6', '-o', 'addr', 'show', interface)
         condition = '\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link'
