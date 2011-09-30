@@ -403,7 +403,7 @@ def init_host():
 
 def bind_floating_ip(floating_ip, check_exit_code=True):
     """Bind ip to public interface."""
-    _execute('ip', 'addr', 'add', floating_ip,
+    _execute('ip', 'addr', 'add', str(floating_ip) + '/32',
              'dev', FLAGS.public_interface,
              run_as_root=True, check_exit_code=check_exit_code)
     if FLAGS.send_arp_for_ha:
@@ -414,7 +414,7 @@ def bind_floating_ip(floating_ip, check_exit_code=True):
 
 def unbind_floating_ip(floating_ip):
     """Unbind a public ip from public interface."""
-    _execute('ip', 'addr', 'del', floating_ip,
+    _execute('ip', 'addr', 'del', str(floating_ip) + '/32',
              'dev', FLAGS.public_interface, run_as_root=True)
 
 
