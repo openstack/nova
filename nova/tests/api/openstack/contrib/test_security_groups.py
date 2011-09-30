@@ -532,6 +532,47 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertNotEquals(security_group_rule['id'], 0)
         self.assertEquals(security_group_rule['parent_group_id'], 2)
 
+    def test_create_by_invalid_cidr_json(self):
+        rules = {
+                  "security_group_rule": {
+                        "ip_protocol": "tcp",
+                        "from_port": "22",
+                        "to_port": "22",
+                        "parent_group_id": 2,
+                        "cidr": "10.2.3.124/2433"}}
+        rule = security_group_rule_template(
+                ip_protocol="tcp",
+                from_port=22,
+                to_port=22,
+                parent_group_id=2,
+                cidr="10.2.3.124/2433")
+        req = fakes.HTTPRequest.blank('/v1.1/123/os-security-group-rules')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'security_group_rule': rule})
+
+    def test_create_by_invalid_tcp_port_json(self):
+        rule = security_group_rule_template(
+                ip_protocol="tcp",
+                from_port=75534,
+                to_port=22,
+                parent_group_id=2,
+                cidr="10.2.3.124/24")
+
+        req = fakes.HTTPRequest.blank('/v1.1/123/os-security-group-rules')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'security_group_rule': rule})
+
+    def test_create_by_invalid_icmp_port_json(self):
+        rule = security_group_rule_template(
+                ip_protocol="icmp",
+                from_port=1,
+                to_port=256,
+                parent_group_id=2,
+                cidr="10.2.3.124/24")
+        req = fakes.HTTPRequest.blank('/v1.1/123/os-security-group-rules')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'security_group_rule': rule})
+
     def test_create_add_existing_rules(self):
         rule = security_group_rule_template(cidr='10.0.0.0/24')
 
