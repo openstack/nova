@@ -987,9 +987,14 @@ class NetworkManager(manager.SchedulerDependentManager):
                 self._create_fixed_ips(context, network['id'])
         return networks
 
-    def delete_network(self, context, fixed_range, require_disassociated=True):
+    def delete_network(self, context, fixed_range, uuid,
+            require_disassociated=True):
 
-        network = db.network_get_by_cidr(context, fixed_range)
+        # Prefer uuid but we'll also take cidr for backwards compatibility
+        if uuid:
+            network = db.network_get_by_uuid(context.elevated(), uuid)
+        elif fixed_range:
+            network = db.network_get_by_cidr(context.elevated(), fixed_range)
 
         if require_disassociated and network.project_id is not None:
             raise ValueError(_('Network must be disassociated from project %s'

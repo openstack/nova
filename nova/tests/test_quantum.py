@@ -196,7 +196,11 @@ class QuantumTestCaseBase(object):
     def _delete_nets(self):
         for n in networks:
             ctx = context.RequestContext('user1', n['project_id'])
-            self.net_man.delete_network(ctx, n['cidr'])
+            db_nets = db.network_get_all(ctx.elevated())
+            for x in db_nets:
+                if x['label'] == n['label']:
+                    n['uuid'] = x['uuid']
+            self.net_man.delete_network(ctx, None, n['uuid'])
 
     def test_allocate_and_deallocate_instance_static(self):
         self._create_nets()

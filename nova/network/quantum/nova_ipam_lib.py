@@ -93,7 +93,8 @@ class QuantumNovaIPAMLib(object):
         if not network:
             raise Exception(_("No network with net_id = %s" % net_id))
         manager.FlatManager.delete_network(self.net_manager,
-                                           admin_context, network['cidr'],
+                                           admin_context, None,
+                                           network['uuid'],
                                            require_disassociated=False)
 
     def get_project_and_global_net_ids(self, context, project_id):
