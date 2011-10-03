@@ -442,3 +442,5 @@ DEFINE_integer('reclaim_instance_interval', 0,
 DEFINE_integer('zombie_instance_updated_at_window', 172800,
                'Limit in seconds that a zombie instance can exist before '
                'being cleaned up.')
+
+DEFINE_boolean('allow_ec2_admin_api', False, 'Enable/Disable EC2 Admin API')
