@@ -926,7 +926,10 @@ class LibvirtConnTestCase(test.TestCase):
             return
 
         self.create_fake_libvirt_mock()
-        instance = db.instance_create(self.context, self.test_instance)
+
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
+        instance = db.instance_create(self.context, instance_ref)
 
         # Start test
         self.mox.ReplayAll()
@@ -939,7 +942,10 @@ class LibvirtConnTestCase(test.TestCase):
         try:
             conn.spawn(self.context, instance, network_info)
         except Exception, e:
-            count = (0 <= str(e.message).find('Unexpected method call'))
+            # assert that no exception is raised due to sha1 receiving an int
+            self.assertEqual(-1, str(e).find('must be string or buffer'
+                                             ', not int'))
+            count = (0 <= str(e).find('Unexpected method call'))
 
         shutil.rmtree(os.path.join(FLAGS.instances_path, instance.name))
         shutil.rmtree(os.path.join(FLAGS.instances_path, '_base'))
