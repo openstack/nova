@@ -195,8 +195,12 @@ class ExtensionsResource(wsgi.Resource):
         return dict(extensions=extensions)
 
     def show(self, req, id):
-        # NOTE(dprince): the extensions alias is used as the 'id' for show
-        ext = self.extension_manager.extensions[id]
+        try:
+            # NOTE(dprince): the extensions alias is used as the 'id' for show
+            ext = self.extension_manager.extensions[id]
+        except KeyError:
+            return faults.Fault(webob.exc.HTTPNotFound())
+
         return dict(extension=self._translate(ext))
 
     def delete(self, req, id):
