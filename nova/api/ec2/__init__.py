@@ -36,6 +36,7 @@ from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
+from nova.api.ec2 import faults
 from nova.auth import manager
 
 FLAGS = flags.FLAGS
@@ -47,6 +48,19 @@ flags.DEFINE_integer('lockout_minutes', 15,
 flags.DEFINE_integer('lockout_window', 15,
                      'Number of minutes for lockout window.')
 flags.DECLARE('use_forwarded_for', 'nova.api.auth')
+
+
+## Fault Wrapper around all EC2 requests ##
+class FaultWrapper(wsgi.Middleware):
+    """Calls the middleware stack, captures any exceptions into faults."""
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        try:
+            return req.get_response(self.application)
+        except Exception as ex:
+            LOG.exception(_("FaultWrapper: %s"), unicode(ex))
+            return faults.Fault(webob.exc.HTTPInternalServerError())
 
 
 class RequestLogging(wsgi.Middleware):
