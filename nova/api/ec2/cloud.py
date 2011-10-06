@@ -271,7 +271,8 @@ class CloudController(object):
         """Return all floating IPs for an instance"""
 
         ret_floaters = []
-        fixed_ips = self._get_fixed_ips_for_instance(context, instance)
+        # only loop through ipv4 addresses
+        fixed_ips = self._get_fixed_ips_for_instance(context, instance)[0]
         for ip in fixed_ips:
             floaters = self._get_floaters_for_fixed_ip(context, ip)
             # Allows a short circuit if we just need any floater.
@@ -287,6 +288,7 @@ class CloudController(object):
         search_opts = {'project_id': project_id}
         for instance in self.compute_api.get_all(context,
                 search_opts=search_opts):
+            # only look at ipv4 addresses
             fixed_ips = self._get_fixed_ips_for_instance(context, instance)[0]
             if fixed_ips:
                 line = '%s slots=%d' % (fixed_ips[0], instance['vcpus'])
