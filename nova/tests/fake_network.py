@@ -89,6 +89,12 @@ class FakeNetworkManager(network_manager.NetworkManager):
         def network_get_all(self, context):
             raise exception.NoNetworksFound()
 
+        def network_get_all_by_uuids(self, context):
+            raise exception.NoNetworksFound()
+
+        def network_disassociate(self, context, network_id):
+            return True
+
         def virtual_interface_get_all(self, context):
             floats = [{'address': '172.16.1.1'},
                       {'address': '172.16.1.2'},

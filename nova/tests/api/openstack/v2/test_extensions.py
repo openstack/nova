@@ -122,6 +122,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Volumes",
             "VolumeTypes",
             "Zones",
+            "Networks",
             ]
         self.ext_list.sort()
 
