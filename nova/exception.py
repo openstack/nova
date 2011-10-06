@@ -727,7 +727,7 @@ class NetworkAdapterNotFound(NotFound):
 
 
 class ClassNotFound(NotFound):
-    message = _("Class %(class_name)s could not be found")
+    message = _("Class %(class_name)s could not be found: %(exception)s")
 
 
 class NotAllowed(NovaException):
