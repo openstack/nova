@@ -20,6 +20,7 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
+import contextlib
 import json
 import os
 import pickle
@@ -402,6 +403,50 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
+    def generate_swap(cls, session, instance, vm_ref, userdevice, swap_mb):
+        """
+        Steps to programmatically generate swap:
+
+            1. Create VDI of desired swap size
+
+            2. Attach VDI to compute worker
+
+            3. Create swap partition
+
+            4. Create VBD between instance VM and swap VDI
+        """
+        # 1. Create VDI
+        sr_ref = safe_find_sr(session)
+        name_label = instance.name + "-swap"
+        ONE_MEG = 1024 * 1024
+        virtual_size = swap_mb * ONE_MEG
+        vdi_ref = cls.create_vdi(
+            session, sr_ref, name_label, virtual_size, read_only=False)
+
+        try:
+            # 2. Attach VDI to compute worker (VBD hotplug)
+            with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+                # 3. Create swap partition
+                dev_path = utils.make_dev_path(dev)
+                utils.execute('parted', '--script', dev_path,
+                              'mklabel', 'msdos', run_as_root=True)
+
+                partition_start = 0
+                partition_end = swap_mb
+                utils.execute('parted', '--script', dev_path, 'mkpartfs',
+                              'primary', 'linux-swap',
+                              str(partition_start),
+                              str(partition_end),
+                              run_as_root=True)
+
+            # 4. Create VBD between instance VM and swap VDI
+            cls.create_vbd(session, vm_ref, vdi_ref, userdevice,
+                           bootable=False)
+        except:
+            with utils.original_exception_raised():
+                cls.destroy_vdi(session, vdi_ref)
+
+    @classmethod
     def fetch_blank_disk(cls, session, instance_type_id):
         # Size the blank harddrive to suit the machine type:
         one_gig = 1024 * 1024 * 1024
@@ -573,10 +618,10 @@ class VMHelper(HelperBase):
         try:
             filename = None
             vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
-            with_vdi_attached_here(session, vdi_ref, False,
-                                   lambda dev:
-                                   _stream_disk(dev, image_type,
-                                                virtual_size, image_file))
+
+            with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+                _stream_disk(dev, image_type, virtual_size, image_file)
+
             if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
                 # We need to invoke a plugin for copying the
                 # content of the VDI into the proper path.
@@ -688,7 +733,8 @@ class VMHelper(HelperBase):
                 is_pv = True
         elif disk_image_type == ImageType.DISK_RAW:
             # 2. RAW
-            is_pv = with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
+            with vdi_attached_here(session, vdi_ref, read_only=True) as dev:
+                is_pv = _is_vdi_pv(dev)
         elif disk_image_type == ImageType.DISK:
             # 3. Disk
             is_pv = True
@@ -754,9 +800,8 @@ class VMHelper(HelperBase):
         if not mount_required:
             return
 
-        with_vdi_attached_here(session, vdi_ref, False,
-                               lambda dev: _mounted_processing(dev, key, net,
-                                                               metadata))
+        with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+            _mounted_processing(dev, key, net, metadata)
 
     @classmethod
     def lookup_kernel_ramdisk(cls, session, vm):
@@ -1024,14 +1069,16 @@ def remap_vbd_dev(dev):
 def _wait_for_device(dev):
     """Wait for device node to appear"""
     for i in xrange(0, FLAGS.block_device_creation_timeout):
-        if os.path.exists('/dev/%s' % dev):
+        dev_path = utils.make_dev_path(dev)
+        if os.path.exists(dev_path):
             return
         time.sleep(1)
 
     raise StorageError(_('Timeout waiting for device %s to be created') % dev)
 
 
-def with_vdi_attached_here(session, vdi_ref, read_only, f):
+@contextlib.contextmanager
+def vdi_attached_here(session, vdi_ref, read_only=False):
     this_vm_ref = get_this_vm_ref(session)
     vbd_rec = {}
     vbd_rec['VM'] = this_vm_ref
@@ -1052,22 +1099,24 @@ def with_vdi_attached_here(session, vdi_ref, read_only, f):
     try:
         LOG.debug(_('Plugging VBD %s ... '), vbd_ref)
         session.get_xenapi().VBD.plug(vbd_ref)
-        LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
-        orig_dev = session.get_xenapi().VBD.get_device(vbd_ref)
-        LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s') % locals())
-        dev = remap_vbd_dev(orig_dev)
-        if dev != orig_dev:
-            LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
-                        'remapping to %(dev)s') % locals())
-        if dev != 'autodetect':
-            # NOTE(johannes): Unit tests will end up with a device called
-            # 'autodetect' which obviously won't exist. It's not ideal,
-            # but the alternatives were much messier
-            _wait_for_device(dev)
-        return f(dev)
+        try:
+            LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
+            orig_dev = session.get_xenapi().VBD.get_device(vbd_ref)
+            LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s') % locals())
+            dev = remap_vbd_dev(orig_dev)
+            if dev != orig_dev:
+                LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
+                            'remapping to %(dev)s') % locals())
+            if dev != 'autodetect':
+                # NOTE(johannes): Unit tests will end up with a device called
+                # 'autodetect' which obviously won't exist. It's not ideal,
+                # but the alternatives were much messier
+                _wait_for_device(dev)
+            yield dev
+        finally:
+            LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
+            vbd_unplug_with_retry(session, vbd_ref)
     finally:
-        LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
-        vbd_unplug_with_retry(session, vbd_ref)
         ignore_failure(session.get_xenapi().VBD.destroy, vbd_ref)
         LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
 
@@ -1118,7 +1167,8 @@ def get_this_vm_ref(session):
 
 def _is_vdi_pv(dev):
     LOG.debug(_("Running pygrub against %s"), dev)
-    output = os.popen('pygrub -qn /dev/%s' % dev)
+    dev_path = utils.make_dev_path(dev)
+    output = os.popen('pygrub -qn %s' % dev_path)
     for line in output.readlines():
         #try to find kernel string
         m = re.search('(?<=kernel:)/.*(?:>)', line)
@@ -1135,32 +1185,34 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
         offset = MBR_SIZE_BYTES
         _write_partition(virtual_size, dev)
 
-    utils.execute('chown', os.getuid(), '/dev/%s' % dev, run_as_root=True)
+    dev_path = utils.make_dev_path(dev)
+    utils.execute('chown', os.getuid(), dev_path, run_as_root=True)
 
-    with open('/dev/%s' % dev, 'wb') as f:
+    with open(dev_path, 'wb') as f:
         f.seek(offset)
         for chunk in image_file:
             f.write(chunk)
 
 
 def _write_partition(virtual_size, dev):
-    dest = '/dev/%s' % dev
+    dev_path = utils.make_dev_path(dev)
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
     LOG.debug(_('Writing partition table %(primary_first)d %(primary_last)d'
-            ' to %(dest)s...') % locals())
+            ' to %(dev_path)s...') % locals())
 
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
-    execute('parted', '--script', dest, 'mklabel', 'msdos', run_as_root=True)
-    execute('parted', '--script', dest, 'mkpart', 'primary',
+    execute('parted', '--script', dev_path, 'mklabel', 'msdos',
+            run_as_root=True)
+    execute('parted', '--script', dev_path, 'mkpart', 'primary',
             '%ds' % primary_first,
             '%ds' % primary_last,
             run_as_root=True)
 
-    LOG.debug(_('Writing partition table %s done.'), dest)
+    LOG.debug(_('Writing partition table %s done.'), dev_path)
 
 
 def _mount_filesystem(dev_path, dir):
@@ -1205,8 +1257,8 @@ def _find_guest_agent(base_dir, agent_rel_path):
 
 def _mounted_processing(device, key, net, metadata):
     """Callback which runs with the image VDI attached"""
-
-    dev_path = '/dev/' + device + '1'  # NB: Partition 1 hardcoded
+    # NB: Partition 1 hardcoded
+    dev_path = utils.make_dev_path(device, partition=1)
     tmpdir = tempfile.mkdtemp()
     try:
         # Mount only Linux filesystems, to avoid disturbing NTFS images
