@@ -148,6 +148,7 @@ def find_orphaned_instances(session, verbose=False):
             # anything about the particular instance, print a warning and let
             # the operator handle it manually.
             print >> sys.stderr, "Instance %s not found" % instance_id
+            continue
 
         # NOTE(jk0): A zombie VM is an instance that is not active and hasn't
         # been updated in over the specified period.
