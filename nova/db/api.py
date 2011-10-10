@@ -372,6 +372,11 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
+def fixed_ip_get(context, id):
+    """Get fixed ip by id or raise if it does not exist."""
+    return IMPL.fixed_ip_get(context, id)
+
+
 def fixed_ip_get_all(context):
     """Get all defined fixed ips."""
     return IMPL.fixed_ip_get_all(context)

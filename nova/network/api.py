@@ -34,17 +34,27 @@ class API(base.Base):
     """API for interacting with the network manager."""
 
     def get_floating_ip(self, context, id):
-        rv = self.db.floating_ip_get(context, id)
-        return dict(rv.iteritems())
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_floating_ip',
+                         'args': {'id': id}})
 
-    def get_floating_ip_by_ip(self, context, address):
-        res = self.db.floating_ip_get_by_address(context, address)
-        return dict(res.iteritems())
+    def get_floating_ip_by_address(self, context, address):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_floating_ip_by_address',
+                         'args': {'address': address}})
 
-    def list_floating_ips(self, context):
-        ips = self.db.floating_ip_get_all_by_project(context,
-                                                     context.project_id)
-        return ips
+    def get_floating_ips_by_project(self, context):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_floating_ips_by_project'})
+
+    def get_floating_ips_by_fixed_address(self, context, fixed_address):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_floating_ips_by_fixed_address',
+                         'args': {'address': address}})
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         return rpc.call(context,
@@ -53,12 +63,13 @@ class API(base.Base):
                          'args': {'fixed_address': fixed_address}})
 
     def get_vifs_by_instance(self, context, instance_id):
-        return rpc.call(context, FLAGS.network_topic,
+        return rpc.call(context,
+                        FLAGS.network_topic,
                         {'method': 'get_vifs_by_instance',
                          'args': {'instance_id': instance_id}})
 
     def allocate_floating_ip(self, context):
-        """Adds a floating ip to a project."""
+        """Adds a floating ip to a project. (allocates)"""
         # NOTE(vish): We don't know which network host should get the ip
         #             when we allocate, so just send it to any one.  This
         #             will probably need to move into a network supervisor
@@ -70,89 +81,33 @@ class API(base.Base):
 
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
-        """Removes floating ip with address from a project."""
-        floating_ip = self.db.floating_ip_get_by_address(context, address)
-        if floating_ip['fixed_ip']:
-            raise exception.ApiError(_('Floating ip is in use.  '
-                             'Disassociate it before releasing.'))
-        if not affect_auto_assigned and floating_ip.get('auto_assigned'):
-            return
-        # NOTE(vish): We don't know which network host should get the ip
-        #             when we deallocate, so just send it to any one.  This
-        #             will probably need to move into a network supervisor
-        #             at some point.
+        """Removes floating ip with address from a project. (deallocates)"""
         rpc.cast(context,
                  FLAGS.network_topic,
                  {'method': 'deallocate_floating_ip',
-                  'args': {'floating_address': floating_ip['address']}})
+                  'args': {'floating_address': address,
+                           'affect_auto_assigned': affect_auto_assigned}})
 
-    def associate_floating_ip(self, context, floating_ip, fixed_ip,
-                                       affect_auto_assigned=False):
+    def associate_floating_ip(self, context, floating_address, fixed_address,
+                                                 affect_auto_assigned=False):
         """Associates a floating ip with a fixed ip.
 
         ensures floating ip is allocated to the project in context
-
-        :param fixed_ip: is either fixed_ip object or a string fixed ip address
-        :param floating_ip: is a string floating ip address
         """
-        # NOTE(tr3buchet): i don't like the "either or" argument type
-        # funcationility but i've left it alone for now
-        # TODO(tr3buchet): this function needs to be rewritten to move
-        # the network related db lookups into the network host code
-        if isinstance(fixed_ip, basestring):
-            fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_ip)
-        floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
-        if not affect_auto_assigned and floating_ip.get('auto_assigned'):
-            return
-        # Check if the floating ip address is allocated
-        if floating_ip['project_id'] is None:
-            raise exception.ApiError(_('Address (%s) is not allocated') %
-                                       floating_ip['address'])
-        # Check if the floating ip address is allocated to the same project
-        if floating_ip['project_id'] != context.project_id:
-            LOG.warn(_('Address (%(address)s) is not allocated to your '
-                       'project (%(project)s)'),
-                       {'address': floating_ip['address'],
-                       'project': context.project_id})
-            raise exception.ApiError(_('Address (%(address)s) is not '
-                                       'allocated to your project'
-                                       '(%(project)s)') %
-                                        {'address': floating_ip['address'],
-                                        'project': context.project_id})
-
-        # If this address has been previously associated to a
-        # different instance, disassociate the floating_ip
-        if floating_ip['fixed_ip'] and floating_ip['fixed_ip'] is not fixed_ip:
-            self.disassociate_floating_ip(context, floating_ip['address'])
-
-        # NOTE(vish): if we are multi_host, send to the instances host
-        if fixed_ip['network']['multi_host']:
-            host = fixed_ip['instance']['host']
-        else:
-            host = fixed_ip['network']['host']
         rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.network_topic, host),
+                 FLAGS.network_topic,
                  {'method': 'associate_floating_ip',
-                  'args': {'floating_address': floating_ip['address'],
-                           'fixed_address': fixed_ip['address']}})
+                  'args': {'floating_address': floating_address,
+                           'fixed_address': fixed_address,
+                           'affect_auto_assigned': affect_auto_assigned}})
 
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
         """Disassociates a floating ip from fixed ip it is associated with."""
-        floating_ip = self.db.floating_ip_get_by_address(context, address)
-        if not affect_auto_assigned and floating_ip.get('auto_assigned'):
-            return
-        if not floating_ip.get('fixed_ip'):
-            raise exception.ApiError('Address is not associated.')
-        # NOTE(vish): if we are multi_host, send to the instances host
-        if floating_ip['fixed_ip']['network']['multi_host']:
-            host = floating_ip['fixed_ip']['instance']['host']
-        else:
-            host = floating_ip['fixed_ip']['network']['host']
-        rpc.call(context,
-                 self.db.queue_get_for(context, FLAGS.network_topic, host),
+        rpc.cast(context,
+                 FLAGS.network_topic,
                  {'method': 'disassociate_floating_ip',
-                  'args': {'floating_address': floating_ip['address']}})
+                  'args': {'address': address}})
 
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocates all network structures for an instance.

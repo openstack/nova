@@ -36,12 +36,12 @@ def network_api_get_floating_ip(self, context, id):
             'fixed_ip': None}
 
 
-def network_api_get_floating_ip_by_ip(self, context, address):
+def network_api_get_floating_ip_by_address(self, context, address):
     return {'id': 1, 'address': '10.10.10.10',
-            'fixed_ip': {'address': '10.0.0.1', 'instance_id': 1}},
+            'fixed_ip': {'address': '10.0.0.1', 'instance_id': 1}}
 
 
-def network_api_list_floating_ips(self, context):
+def network_api_get_floating_ips_by_project(self, context):
     return [{'id': 1,
              'address': '10.10.10.10',
              'fixed_ip': {'address': '10.0.0.1', 'instance_id': 1}},
@@ -57,11 +57,11 @@ def network_api_release(self, context, address):
     pass
 
 
-def compute_api_associate(self, context, instance_id, floating_ip):
+def compute_api_associate(self, context, instance_id, address):
     pass
 
 
-def network_api_associate(self, context, floating_ip, fixed_ip):
+def network_api_associate(self, context, floating_address, fixed_address):
     pass
 
 
@@ -110,10 +110,10 @@ class FloatingIpTest(test.TestCase):
         super(FloatingIpTest, self).setUp()
         self.stubs.Set(network.api.API, "get_floating_ip",
                        network_api_get_floating_ip)
-        self.stubs.Set(network.api.API, "get_floating_ip_by_ip",
-                       network_api_get_floating_ip)
-        self.stubs.Set(network.api.API, "list_floating_ips",
-                       network_api_list_floating_ips)
+        self.stubs.Set(network.api.API, "get_floating_ip_by_address",
+                       network_api_get_floating_ip_by_address)
+        self.stubs.Set(network.api.API, "get_floating_ips_by_project",
+                       network_api_get_floating_ips_by_project)
         self.stubs.Set(network.api.API, "release_floating_ip",
                        network_api_release)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
@@ -184,6 +184,7 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
         self.assertEqual(res_dict['floating_ip']['instance_id'], 1)
 
+# test floating ip allocate/release(deallocate)
     def test_floating_ip_allocate_no_free_ips(self):
         def fake_call(*args, **kwargs):
             raise(rpc.RemoteError('NoMoreFloatingIps', '', ''))
@@ -196,8 +197,16 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_floating_ip_allocate(self):
+        def fake1(*args, **kwargs):
+            pass
+
+        def fake2(*args, **kwargs):
+            return {'id': 1, 'address': '10.10.10.10'}
+
         self.stubs.Set(network.api.API, "allocate_floating_ip",
-                       network_api_allocate)
+                       fake1)
+        self.stubs.Set(network.api.API, "get_floating_ip_by_address",
+                       fake2)
         req = webob.Request.blank('/v1.1/123/os-floating-ips')
         req.method = 'POST'
         req.headers['Content-Type'] = 'application/json'
@@ -212,50 +221,16 @@ class FloatingIpTest(test.TestCase):
             "fixed_ip": None}
         self.assertEqual(ip, expected)
 
-    def test_floating_ip_release_associated(self):
-        self.disassociated = False
-
-        def get_floating_ip(ignore, context, id):
-            return {'id': 1, 'address': '10.10.10.10',
-                    'fixed_ip': {'id': 1}}
-
-        def disassociate(ignore, context, floating_address):
-            self.disassociated = True
-
-        self.stubs.Set(network.api.API, "get_floating_ip",
-                       get_floating_ip)
-        self.stubs.Set(network.api.API, "disassociate_floating_ip",
-                       disassociate)
+    def test_floating_ip_release(self):
         req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
-        self.assertTrue(self.disassociated)
 
-    def test_floating_ip_release_disassociated(self):
-        self.disassociated = False
+# test floating ip add/remove -> associate/disassociate
 
-        def fake_get_floating_ip(ignore, context, id):
-            return {'id': 1, 'address': '10.10.10.10',
-                    'fixed_ip': None}
-
-        def fake_disassociate(ignore, context, floating_address):
-            self.disassociated = True
-
-        self.stubs.Set(network.api.API, "get_floating_ip",
-                       fake_get_floating_ip)
-        self.stubs.Set(network.api.API, "disassociate_floating_ip",
-                       fake_disassociate)
-        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
-        req.method = 'DELETE'
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
-        self.assertFalse(self.disassociated)
-
-    def test_add_floating_ip_to_instance(self):
-        self.stubs.Set(network.api.API, "associate_floating_ip",
-                       network_api_associate)
-        body = dict(addFloatingIp=dict(address='11.0.0.1'))
+    def test_floating_ip_associate(self):
+        body = dict(addFloatingIp=dict(address=self.address))
         req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
@@ -264,79 +239,7 @@ class FloatingIpTest(test.TestCase):
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
 
-    def test_associate_floating_ip_to_instance_wrong_project_id(self):
-        def fake_fixed_ip_get_by_address(ctx, address, session=None):
-            return {'address': address, 'network': {'multi_host': None,
-                                                    'host': 'fake'}}
-        self.stubs.Set(db.api, "fixed_ip_get_by_address",
-                       fake_fixed_ip_get_by_address)
-        db.floating_ip_update(self.context, self.address, {'project_id': 'bad',
-                                                           'fixed_ip_id': 1})
-        body = dict(addFloatingIp=dict(address=self.address))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
-        req.method = "POST"
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 401)
-
-    def test_associate_floating_ip_to_instance_no_project_id(self):
-        def fake_fixed_ip_get_by_address(ctx, address, session=None):
-            return {'address': address, 'network': {'multi_host': None,
-                                                    'host': 'fake'}}
-        self.stubs.Set(db.api, "fixed_ip_get_by_address",
-                       fake_fixed_ip_get_by_address)
-        db.floating_ip_update(self.context, self.address, {'project_id': None,
-                                                           'fixed_ip_id': 1})
-        body = dict(addFloatingIp=dict(address=self.address))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
-        req.method = "POST"
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 400)
-
-    def test_add_associated_floating_ip_to_instance(self):
-        def fake_fixed_ip_get_by_address(ctx, address, session=None):
-            return {'address': address, 'network': {'multi_host': None,
-                                                    'host': 'fake'}}
-
-        self.disassociated = False
-
-        def fake_network_api_disassociate(local_self, ctx, floating_address):
-            self.disassociated = True
-
-        db.floating_ip_update(self.context, self.address, {'project_id': '123',
-                                                           'fixed_ip_id': 1})
-        self.stubs.Set(network.api.API, "disassociate_floating_ip",
-                       fake_network_api_disassociate)
-        self.stubs.Set(db.api, "fixed_ip_get_by_address",
-                       fake_fixed_ip_get_by_address)
-
-        body = dict(addFloatingIp=dict(address=self.address))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
-        req.method = "POST"
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 202)
-        self.assertTrue(self.disassociated)
-
-    def test_remove_associated_floating_ip_from_instance(self):
-        self.disassociated = False
-
-        def fake_get_floating_ip_by_ip(ignore, context, ip):
-            return {'id': 1, 'address': '10.10.10.10',
-                    'fixed_ip': {'id': 1}}
-
-        def fake_disassociate(ignore, context, floating_address):
-            self.disassociated = True
-
-        self.stubs.Set(network.api.API, "get_floating_ip_by_ip",
-                       fake_get_floating_ip_by_ip)
-        self.stubs.Set(network.api.API, "disassociate_floating_ip",
-                       fake_disassociate)
+    def test_floating_ip_disassociate(self):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
         req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
@@ -345,31 +248,8 @@ class FloatingIpTest(test.TestCase):
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
-        self.assertTrue(self.disassociated)
 
-    def test_remove_disassociated_floating_ip_from_instance(self):
-        self.disassociated = False
-
-        def fake_get_floating_ip_by_ip(ignore, context, ip):
-            return {'id': 1, 'address': '10.10.10.10',
-                    'fixed_ip': None}
-
-        def fake_disassociate(ignore, context, floating_address):
-            self.disassociated = True
-
-        self.stubs.Set(network.api.API, "get_floating_ip_by_ip",
-                       fake_get_floating_ip_by_ip)
-        self.stubs.Set(network.api.API, "disassociate_floating_ip",
-                       fake_disassociate)
-        body = dict(removeFloatingIp=dict(address='10.10.10.10'))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
-        req.method = "POST"
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 202)
-        self.assertFalse(self.disassociated)
+# these are a few bad param tests
 
     def test_bad_address_param_in_remove_floating_ip(self):
         body = dict(removeFloatingIp=dict(badparam='11.0.0.1'))
@@ -383,16 +263,6 @@ class FloatingIpTest(test.TestCase):
 
     def test_missing_dict_param_in_remove_floating_ip(self):
         body = dict(removeFloatingIp='11.0.0.1')
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
-        req.method = "POST"
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 400)
-
-    def test_bad_address_param_in_add_floating_ip(self):
-        body = dict(addFloatingIp=dict(badparam='11.0.0.1'))
         req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)

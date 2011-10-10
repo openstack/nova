@@ -1520,8 +1520,8 @@ class API(base.Base):
             LOG.warning(_("multiple fixed_ips exist, using the first: %s"),
                                                          fixed_ip_addrs[0])
         self.network_api.associate_floating_ip(context,
-                                               floating_ip=address,
-                                               fixed_ip=fixed_ip_addrs[0])
+                                               floating_address=address,
+                                               fixed_address=fixed_ip_addrs[0])
 
     def get_instance_metadata(self, context, instance_id):
         """Get all metadata associated with an instance."""
