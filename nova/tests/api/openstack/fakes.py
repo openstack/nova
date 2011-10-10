@@ -17,7 +17,6 @@
 
 import webob
 import webob.dec
-from paste import urlmap
 
 from glance import client as glance_client
 
@@ -32,6 +31,7 @@ from nova.api.openstack import auth
 from nova.api.openstack import extensions
 from nova.api.openstack import versions
 from nova.api.openstack import limits
+from nova.api.openstack import urlmap
 from nova.auth.manager import User, Project
 import nova.image.fake
 from nova.tests.glance import stubs as glance_stubs

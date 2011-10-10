@@ -47,11 +47,11 @@ VERSIONS = {
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute-v1.0+xml",
+                "type": "application/vnd.openstack.compute+xml;version=1.0",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute-v1.0+json",
+                "type": "application/vnd.openstack.compute+json;version=1.0",
             }
         ],
     },
@@ -76,11 +76,11 @@ VERSIONS = {
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute-v1.1+xml",
+                "type": "application/vnd.openstack.compute+xml;version=1.1",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute-v1.1+json",
+                "type": "application/vnd.openstack.compute+json;version=1.1",
             }
         ],
     },
@@ -106,13 +106,7 @@ class Versions(wsgi.Resource):
             body_serializers=body_serializers,
             headers_serializer=headers_serializer)
 
-        supported_content_types = ('application/json',
-                                   'application/vnd.openstack.compute+json',
-                                   'application/xml',
-                                   'application/vnd.openstack.compute+xml',
-                                   'application/atom+xml')
-        deserializer = VersionsRequestDeserializer(
-            supported_content_types=supported_content_types)
+        deserializer = VersionsRequestDeserializer()
 
         wsgi.Resource.__init__(self, None, serializer=serializer,
                                deserializer=deserializer)
@@ -141,15 +135,6 @@ class VersionV11(object):
 
 
 class VersionsRequestDeserializer(wsgi.RequestDeserializer):
-    def get_expected_content_type(self, request):
-        supported_content_types = list(self.supported_content_types)
-        if request.path != '/':
-            # Remove atom+xml accept type for 300 responses
-            if 'application/atom+xml' in supported_content_types:
-                supported_content_types.remove('application/atom+xml')
-
-        return request.best_match_content_type(supported_content_types)
-
     def get_action_args(self, request_environment):
         """Parse dictionary created by routes library."""
         args = {}
@@ -309,13 +294,7 @@ def create_resource(version='1.0'):
     }
     serializer = wsgi.ResponseSerializer(body_serializers)
 
-    supported_content_types = ('application/json',
-                               'application/vnd.openstack.compute+json',
-                               'application/xml',
-                               'application/vnd.openstack.compute+xml',
-                               'application/atom+xml')
-    deserializer = wsgi.RequestDeserializer(
-        supported_content_types=supported_content_types)
+    deserializer = wsgi.RequestDeserializer()
 
     return wsgi.Resource(controller, serializer=serializer,
                          deserializer=deserializer)

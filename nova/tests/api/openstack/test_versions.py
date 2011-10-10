@@ -56,11 +56,11 @@ VERSIONS = {
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute-v1.0+xml",
+                "type": "application/vnd.openstack.compute+xml;version=1.0",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute-v1.0+json",
+                "type": "application/vnd.openstack.compute+json;version=1.0",
             },
         ],
     },
@@ -85,11 +85,11 @@ VERSIONS = {
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute-v1.1+xml",
+                "type": "application/vnd.openstack.compute+xml;version=1.1",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute-v1.1+json",
+                "type": "application/vnd.openstack.compute+json;version=1.1",
             },
         ],
     },
@@ -175,12 +175,12 @@ class VersionsTest(test.TestCase):
                     {
                         "base": "application/xml",
                         "type": "application/"
-                                "vnd.openstack.compute-v1.0+xml",
+                                "vnd.openstack.compute+xml;version=1.0",
                     },
                     {
                         "base": "application/json",
                         "type": "application/"
-                                "vnd.openstack.compute-v1.0+json",
+                                "vnd.openstack.compute+json;version=1.0",
                     },
                 ],
             },
@@ -221,12 +221,58 @@ class VersionsTest(test.TestCase):
                     {
                         "base": "application/xml",
                         "type": "application/"
-                                "vnd.openstack.compute-v1.1+xml",
+                                "vnd.openstack.compute+xml;version=1.1",
                     },
                     {
                         "base": "application/json",
                         "type": "application/"
-                                "vnd.openstack.compute-v1.1+json",
+                                "vnd.openstack.compute+json;version=1.1",
+                    },
+                ],
+            },
+        }
+        self.assertEqual(expected, version)
+
+    def test_get_version_1_1_detail_content_type(self):
+        req = webob.Request.blank('/')
+        req.accept = "application/json;version=1.1"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        version = json.loads(res.body)
+        expected = {
+            "version": {
+                "id": "v1.1",
+                "status": "CURRENT",
+                "updated": "2011-01-21T11:33:21Z",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/",
+                    },
+                    {
+                        "rel": "describedby",
+                        "type": "application/pdf",
+                        "href": "http://docs.rackspacecloud.com/"
+                                "servers/api/v1.1/cs-devguide-20110125.pdf",
+                    },
+                    {
+                        "rel": "describedby",
+                        "type": "application/vnd.sun.wadl+xml",
+                        "href": "http://docs.rackspacecloud.com/"
+                                "servers/api/v1.1/application.wadl",
+                    },
+                ],
+                "media-types": [
+                    {
+                        "base": "application/xml",
+                        "type": "application/"
+                                "vnd.openstack.compute+xml;version=1.1",
+                    },
+                    {
+                        "base": "application/json",
+                        "type": "application/"
+                                "vnd.openstack.compute+json;version=1.1",
                     },
                 ],
             },
@@ -445,11 +491,13 @@ class VersionsTest(test.TestCase):
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/vnd.openstack.compute-v1.1+xml"
+                        "type": "application/vnd.openstack.compute+xml"
+                                ";version=1.1"
                     },
                     {
                         "base": "application/json",
-                        "type": "application/vnd.openstack.compute-v1.1+json"
+                        "type": "application/vnd.openstack.compute+json"
+                                ";version=1.1"
                     },
                 ],
             },
@@ -465,11 +513,13 @@ class VersionsTest(test.TestCase):
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/vnd.openstack.compute-v1.0+xml"
+                        "type": "application/vnd.openstack.compute+xml"
+                                ";version=1.0"
                     },
                     {
                         "base": "application/json",
-                        "type": "application/vnd.openstack.compute-v1.0+json"
+                        "type": "application/vnd.openstack.compute+json"
+                                ";version=1.0"
                     },
                 ],
             },
@@ -543,11 +593,13 @@ class VersionsTest(test.TestCase):
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/vnd.openstack.compute-v1.1+xml"
+                        "type": "application/vnd.openstack.compute+xml"
+                                ";version=1.1"
                     },
                     {
                         "base": "application/json",
-                        "type": "application/vnd.openstack.compute-v1.1+json"
+                        "type": "application/vnd.openstack.compute+json"
+                                ";version=1.1"
                     },
                 ],
             },
@@ -563,11 +615,13 @@ class VersionsTest(test.TestCase):
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/vnd.openstack.compute-v1.0+xml"
+                        "type": "application/vnd.openstack.compute+xml"
+                                ";version=1.0"
                     },
                     {
                         "base": "application/json",
-                        "type": "application/vnd.openstack.compute-v1.0+json"
+                        "type": "application/vnd.openstack.compute+json"
+                                ";version=1.0"
                     },
                 ],
             },
@@ -727,11 +781,13 @@ class VersionsSerializerTests(test.TestCase):
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/vnd.openstack.compute-v1.0+xml",
+                        "type": "application/vnd.openstack.compute+xml"
+                                ";version=1.0",
                     },
                     {
                         "base": "application/json",
-                        "type": "application/vnd.openstack.compute-v1.0+json",
+                        "type": "application/vnd.openstack.compute+json"
+                                ";version=1.0",
                     },
                 ],
             },
@@ -831,11 +887,13 @@ class VersionsSerializerTests(test.TestCase):
                 "media-types": [
                     {
                         "base": "application/xml",
-                        "type": "application/vnd.openstack.compute-v1.1+xml",
+                        "type": "application/vnd.openstack.compute+xml"
+                                ";version=1.1",
                     },
                     {
                         "base": "application/json",
-                        "type": "application/vnd.openstack.compute-v1.1+json",
+                        "type": "application/vnd.openstack.compute+json"
+                                ";version=1.1",
                     }
                 ],
             },
