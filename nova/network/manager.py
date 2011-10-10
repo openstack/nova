@@ -437,12 +437,6 @@ class FloatingIP(object):
                                                                 fixed_address)
         return [floating_ip['address'] for floating_ip in floating_ips]
 
-    def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        """Returns the floating IPs associated with a fixed_address"""
-        floating_ips = self.db.floating_ip_get_by_fixed_address(context,
-                                                                fixed_address)
-        return [floating_ip['address'] for floating_ip in floating_ips]
-
 
 class NetworkManager(manager.SchedulerDependentManager):
     """Implements common network manager functionality.
