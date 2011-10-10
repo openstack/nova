@@ -27,7 +27,7 @@ from nova import exception
 from nova import flags
 from nova import utils
 
-from nova.virt.xenapi import vmops
+from nova.virt import xenapi_conn
 
 
 flags.DECLARE("resize_confirm_window", "nova.compute.manager")
@@ -130,6 +130,8 @@ def get_instance_id_from_name_label(name_label, template):
 def find_orphaned_instances(session, verbose=False):
     """Find and return a list of orphaned instances."""
     ctxt = context.get_admin_context()
+    ctxt.read_deleted = True
+
     orphaned_instances = []
 
     for vm_rec in _get_applicable_vm_recs(session):
@@ -145,17 +147,23 @@ def find_orphaned_instances(session, verbose=False):
             instance = db.api.instance_get(ctxt, instance_id)
         except exception.InstanceNotFound:
             # NOTE(jk0): Err on the side of caution here. If we don't know
-            # anything about the particular instance, print a warning and let
-            # the operator handle it manually.
-            print >> sys.stderr, "Instance %s not found" % instance_id
+            # anything about the particular instance, ignore it.
+            print_xen_object("INFO: Ignoring VM", vm_rec, indent_level=0,
+                    verbose=verbose)
             continue
+
+        # NOTE(jk0): This would be triggered if a VM was deleted but the
+        # actual deletion process failed somewhere along the line.
+        is_active_and_deleting = (instance.vm_state == "active" and
+                instance.task_state == "deleting")
 
         # NOTE(jk0): A zombie VM is an instance that is not active and hasn't
         # been updated in over the specified period.
         is_zombie_vm = (instance.vm_state != "active"
                 and utils.is_older_than(instance.updated_at,
                         FLAGS.zombie_instance_updated_at_window))
-        if is_zombie_vm:
+
+        if is_active_and_deleting or is_zombie_vm:
             orphaned_instances.append(instance)
 
     return orphaned_instances
@@ -163,9 +171,9 @@ def find_orphaned_instances(session, verbose=False):
 
 def cleanup_instance(session, instance):
     """Delete orphaned instances."""
-    vmops = VMOps(session)
     network_info = None
-    vmops.destroy(instance, network_info)
+    connection = xenapi_conn.get_connection(_)
+    connection.destroy(instance, network_info)
 
 
 def _get_applicable_vm_recs(session):
