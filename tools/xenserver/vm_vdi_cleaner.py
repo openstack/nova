@@ -321,9 +321,9 @@ def list_orphaned_instances(orphaned_instances, verbose=False):
     """List orphaned instances."""
     for orphaned_instance in orphaned_instances:
         if verbose:
-            print "ORPHANED INSTANCE (%s)" % instance.name
+            print "ORPHANED INSTANCE (%s)" % orphaned_instance.name
         else:
-            print instance.name
+            print orphaned_instance.name
 
 
 def clean_orphaned_instances(session, orphaned_instances, verbose=False):
