@@ -71,15 +71,6 @@ class ViewBuilder(object):
         """Return an href string pointing to this object."""
         return os.path.join(self.base_url, "images", str(image_id))
 
-    def build_list(self, image_objs, detail=False, **kwargs):
-        """Return a standardized image list structure for display."""
-        images = []
-        for image_obj in image_objs:
-            image = self.build(image_obj, detail=detail)
-            images.append(image)
-
-        return dict(images=images)
-
     def build(self, image_obj, detail=False):
         """Return a standardized image structure for display by the API."""
         self._format_dates(image_obj)
@@ -95,6 +86,27 @@ class ViewBuilder(object):
         self._build_server(image, image_obj)
         self._build_image_id(image, image_obj)
 
+        href = self.generate_href(image_obj["id"])
+        bookmark = self.generate_bookmark(image_obj["id"])
+        alternate = self.generate_alternate(image_obj["id"])
+
+        image["links"] = [
+            {
+                "rel": "self",
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "href": bookmark,
+            },
+            {
+                "rel": "alternate",
+                "type": "application/vnd.openstack.image",
+                "href": alternate,
+            },
+
+        ]
+
         if detail:
             image.update({
                 "created": image_obj.get("created_at"),
@@ -103,27 +115,23 @@ class ViewBuilder(object):
             })
             image["progress"] = self._get_progress_for_status(orig_status)
 
+            image["metadata"] = image_obj.get("properties", {})
+
+            min_ram = image_obj.get('min_ram') or 0
+            try:
+                min_ram = int(min_ram)
+            except ValueError:
+                min_ram = 0
+            image['minRam'] = min_ram
+
+            min_disk = image_obj.get('min_disk') or 0
+            try:
+                min_disk = int(min_disk)
+            except ValueError:
+                min_disk = 0
+            image['minDisk'] = min_disk
+
         return image
-
-
-class ViewBuilderV10(ViewBuilder):
-    """OpenStack API v1.0 Image Builder"""
-
-    def _build_server(self, image, image_obj):
-        try:
-            image['serverId'] = int(image_obj['properties']['instance_id'])
-        except (KeyError, ValueError):
-            pass
-
-    def _build_image_id(self, image, image_obj):
-        try:
-            image['id'] = int(image_obj['id'])
-        except ValueError:
-            pass
-
-
-class ViewBuilderV11(ViewBuilder):
-    """OpenStack API v1.1 Image Builder"""
 
     def _build_server(self, image, image_obj):
         try:
@@ -178,49 +186,6 @@ class ViewBuilderV11(ViewBuilder):
             reval['images_links'] = images_links
 
         return reval
-
-    def build(self, image_obj, detail=False):
-        """Return a standardized image structure for display by the API."""
-        image = ViewBuilder.build(self, image_obj, detail)
-        href = self.generate_href(image_obj["id"])
-        bookmark = self.generate_bookmark(image_obj["id"])
-        alternate = self.generate_alternate(image_obj["id"])
-
-        image["links"] = [
-            {
-                "rel": "self",
-                "href": href,
-            },
-            {
-                "rel": "bookmark",
-                "href": bookmark,
-            },
-            {
-                "rel": "alternate",
-                "type": "application/vnd.openstack.image",
-                "href": alternate,
-            },
-
-        ]
-
-        if detail:
-            image["metadata"] = image_obj.get("properties", {})
-
-            min_ram = image_obj.get('min_ram') or 0
-            try:
-                min_ram = int(min_ram)
-            except ValueError:
-                min_ram = 0
-            image['minRam'] = min_ram
-
-            min_disk = image_obj.get('min_disk') or 0
-            try:
-                min_disk = int(min_disk)
-            except ValueError:
-                min_disk = 0
-            image['minDisk'] = min_disk
-
-        return image
 
     def generate_bookmark(self, image_id):
         """Create a URL that refers to a specific flavor id."""

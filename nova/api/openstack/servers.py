@@ -85,18 +85,6 @@ class Controller(object):
             return exc.HTTPNotFound()
         return servers
 
-    def _build_view(self, req, instance, is_detail=False):
-        raise NotImplementedError()
-
-    def _build_list(self, req, instances, is_detail=False):
-        raise NotImplementedError()
-
-    def _limit_items(self, items, req):
-        raise NotImplementedError()
-
-    def _action_rebuild(self, info, request, instance_id):
-        raise NotImplementedError()
-
     def _get_block_device_mapping(self, data):
         """Get block_device_mapping from 'server' dictionary.
         Overidden by volumes controller.
@@ -346,10 +334,6 @@ class Controller(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-    def _get_key_name(self, req, body):
-        """ Get default keypair if not set """
-        raise NotImplementedError()
-
     def create(self, req, body):
         """ Creates a new server for a given user """
 
@@ -556,10 +540,8 @@ class Controller(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        return self._update(ctxt, req, id, body)
-
-    def _update(self, context, req, id, inst_dict):
-        return exc.HTTPNotImplemented()
+        instance = self.compute_api.routing_get(ctxt, id)
+        return self._build_view(req, instance, is_detail=True)
 
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
@@ -654,13 +636,6 @@ class Controller(object):
         resp.headers['Location'] = image_ref
         return resp
 
-    @common.check_snapshots_enabled
-    def _action_create_image(self, input_dict, req, id):
-        return exc.HTTPNotImplemented()
-
-    def _action_change_password(self, input_dict, req, id):
-        return exc.HTTPNotImplemented()
-
     def _action_confirm_resize(self, input_dict, req, id):
         try:
             self.compute_api.confirm_resize(req.environ['nova.context'], id)
@@ -682,9 +657,6 @@ class Controller(object):
             LOG.exception(_("Error in revert-resize %s"), e)
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
-
-    def _action_resize(self, input_dict, req, id):
-        return exc.HTTPNotImplemented()
 
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
@@ -783,96 +755,6 @@ class Controller(object):
 
         return webob.Response(status_int=202)
 
-
-class ControllerV10(Controller):
-    """v1.0 OpenStack API controller"""
-
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
-    def delete(self, req, id):
-        """ Destroys a server """
-        try:
-            self._delete(req.environ['nova.context'], id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
-        return webob.Response(status_int=202)
-
-    def _get_key_name(self, req, body):
-        context = req.environ["nova.context"]
-        keypairs = db.key_pair_get_all_by_user(context,
-                                               context.user_id)
-        if keypairs:
-            return keypairs[0]['name']
-
-    def _image_ref_from_req_data(self, data):
-        return data['server']['imageId']
-
-    def _flavor_id_from_req_data(self, data):
-        return data['server']['flavorId']
-
-    def _build_view(self, req, instance, is_detail=False):
-        context = req.environ['nova.context']
-        addresses = views_addresses.ViewBuilderV10()
-        builder = views_servers.ViewBuilderV10(context, addresses)
-        return builder.build(instance, is_detail=is_detail)
-
-    def _build_list(self, req, instances, is_detail=False):
-        context = req.environ['nova.context']
-        addresses = views_addresses.ViewBuilderV10()
-        builder = views_servers.ViewBuilderV10(context, addresses)
-        return builder.build_list(instances, is_detail=is_detail)
-
-    def _limit_items(self, items, req):
-        return common.limited(items, req)
-
-    def _update(self, context, req, id, inst_dict):
-        if 'adminPass' in inst_dict['server']:
-            self.compute_api.set_admin_password(context, id,
-                    inst_dict['server']['adminPass'])
-        return exc.HTTPNoContent()
-
-    def _action_resize(self, input_dict, req, id):
-        """ Resizes a given instance to the flavor size requested """
-        try:
-            flavor_id = input_dict["resize"]["flavorId"]
-        except (KeyError, TypeError):
-            msg = _("Resize requests require 'flavorId' attribute.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        return self.resize(req, id, flavor_id)
-
-    def _action_rebuild(self, info, request, instance_id):
-        context = request.environ['nova.context']
-
-        try:
-            image_id = info["rebuild"]["imageId"]
-        except (KeyError, TypeError):
-            msg = _("Could not parse imageId from request.")
-            LOG.debug(msg)
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        password = utils.generate_password(FLAGS.password_length)
-
-        try:
-            self.compute_api.rebuild(context, instance_id, image_id, password)
-        except exception.RebuildRequiresActiveInstance:
-            msg = _("Instance %s must be active to rebuild.") % instance_id
-            raise exc.HTTPConflict(explanation=msg)
-
-        return webob.Response(status_int=202)
-
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        return self._get_server_admin_password_old_style(server)
-
-    def _get_server_search_options(self):
-        """Return server search options allowed by non-admin"""
-        return 'reservation_id', 'fixed_ip', 'name', 'local_zone_only'
-
-
-class ControllerV11(Controller):
-    """v1.1 OpenStack API controller"""
-
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -910,10 +792,10 @@ class ControllerV11(Controller):
         context = req.environ['nova.context']
         project_id = getattr(context, 'project_id', '')
         base_url = req.application_url
-        flavor_builder = views_flavors.ViewBuilderV11(base_url, project_id)
-        image_builder = views_images.ViewBuilderV11(base_url, project_id)
-        addresses_builder = views_addresses.ViewBuilderV11()
-        builder = views_servers.ViewBuilderV11(context, addresses_builder,
+        flavor_builder = views_flavors.ViewBuilder(base_url, project_id)
+        image_builder = views_images.ViewBuilder(base_url, project_id)
+        addresses_builder = views_addresses.ViewBuilder()
+        builder = views_servers.ViewBuilder(context, addresses_builder,
                 flavor_builder, image_builder, base_url, project_id)
         return builder.build(instance, is_detail=is_detail)
 
@@ -927,10 +809,10 @@ class ControllerV11(Controller):
         context = req.environ['nova.context']
         project_id = getattr(context, 'project_id', '')
         base_url = req.application_url
-        flavor_builder = views_flavors.ViewBuilderV11(base_url, project_id)
-        image_builder = views_images.ViewBuilderV11(base_url, project_id)
-        addresses_builder = views_addresses.ViewBuilderV11()
-        builder = views_servers.ViewBuilderV11(context, addresses_builder,
+        flavor_builder = views_flavors.ViewBuilder(base_url, project_id)
+        image_builder = views_images.ViewBuilder(base_url, project_id)
+        addresses_builder = views_addresses.ViewBuilder()
+        builder = views_servers.ViewBuilder(context, addresses_builder,
                 flavor_builder, image_builder, base_url, project_id)
         return builder.build_list(instances, is_detail=is_detail, **params)
 
@@ -976,10 +858,6 @@ class ControllerV11(Controller):
                 msg = _("Personality content could not be Base64 decoded.")
                 LOG.info(msg)
                 raise exc.HTTPBadRequest(explanation=msg)
-
-    def _update(self, context, req, id, inst_dict):
-        instance = self.compute_api.routing_get(context, id)
-        return self._build_view(req, instance, is_detail=True)
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
@@ -1235,55 +1113,7 @@ class ServerXMLSerializer(wsgi.XMLDictSerializer):
         return self._to_xml(server)
 
 
-class ServerXMLDeserializer(wsgi.XMLDeserializer):
-    """
-    Deserializer to handle xml-formatted server create requests.
-
-    Handles standard server attributes as well as optional metadata
-    and personality attributes
-    """
-
-    metadata_deserializer = common.MetadataXMLDeserializer()
-
-    def create(self, string):
-        """Deserialize an xml-formatted server create request"""
-        dom = minidom.parseString(string)
-        server = self._extract_server(dom)
-        return {'body': {'server': server}}
-
-    def _extract_server(self, node):
-        """Marshal the server attribute of a parsed request"""
-        server = {}
-        server_node = self.find_first_child_named(node, 'server')
-
-        attributes = ["name", "imageId", "flavorId", "adminPass"]
-        for attr in attributes:
-            if server_node.getAttribute(attr):
-                server[attr] = server_node.getAttribute(attr)
-
-        metadata_node = self.find_first_child_named(server_node, "metadata")
-        server["metadata"] = self.metadata_deserializer.extract_metadata(
-                                                            metadata_node)
-
-        server["personality"] = self._extract_personality(server_node)
-
-        return server
-
-    def _extract_personality(self, server_node):
-        """Marshal the personality attribute of a parsed request"""
-        node = self.find_first_child_named(server_node, "personality")
-        personality = []
-        if node is not None:
-            for file_node in self.find_children_named(node, "file"):
-                item = {}
-                if file_node.hasAttribute("path"):
-                    item["path"] = file_node.getAttribute("path")
-                item["contents"] = self.extract_text(file_node)
-                personality.append(item)
-        return personality
-
-
-class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
+class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
     """
     Deserializer to handle xml-formatted server create requests.
 
@@ -1456,57 +1286,13 @@ class ServerXMLDeserializerV11(wsgi.MetadataXMLDeserializer):
             return None
 
 
-def create_resource(version='1.0'):
-    controller = {
-        '1.0': ControllerV10,
-        '1.1': ControllerV11,
-    }[version]()
-
-    metadata = {
-        "attributes": {
-            "server": ["id", "imageId", "name", "flavorId", "hostId",
-                       "status", "progress", "adminPass", "flavorRef",
-                       "imageRef", "userId", "tenantId"],
-            "link": ["rel", "type", "href"],
-        },
-        "dict_collections": {
-            "metadata": {"item_name": "meta", "item_key": "key"},
-        },
-        "list_collections": {
-            "public": {"item_name": "ip", "item_key": "addr"},
-            "private": {"item_name": "ip", "item_key": "addr"},
-        },
-    }
-
-    xmlns = {
-        '1.0': wsgi.XMLNS_V10,
-        '1.1': wsgi.XMLNS_V11,
-    }[version]
-
+def create_resource():
     headers_serializer = HeadersSerializer()
-
-    xml_serializer = {
-        '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
-        '1.1': ServerXMLSerializer(),
-    }[version]
-
-    body_serializers = {
-        'application/xml': xml_serializer,
-    }
-
-    xml_deserializer = {
-        '1.0': ServerXMLDeserializer(),
-        '1.1': ServerXMLDeserializerV11(),
-    }[version]
-
-    body_deserializers = {
-        'application/xml': xml_deserializer,
-    }
-
+    body_serializers = {'application/xml': ServerXMLSerializer()}
     serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
+    body_deserializers = {'application/xml': ServerXMLDeserializer()}
     deserializer = wsgi.RequestDeserializer(body_deserializers)
-
-    return wsgi.Resource(controller, deserializer, serializer)
+    return wsgi.Resource(Controller(), deserializer, serializer)
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):

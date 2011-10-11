@@ -72,149 +72,15 @@ class BaseLimitTestSuite(unittest.TestCase):
         return self.time
 
 
-class LimitsControllerV10Test(BaseLimitTestSuite):
+class LimitsControllerTest(BaseLimitTestSuite):
     """
-    Tests for `limits.LimitsControllerV10` class.
-    """
-
-    def setUp(self):
-        """Run before each test."""
-        BaseLimitTestSuite.setUp(self)
-        self.controller = limits.create_resource('1.0')
-
-    def _get_index_request(self, accept_header="application/json"):
-        """Helper to set routing arguments."""
-        request = webob.Request.blank("/")
-        request.accept = accept_header
-        request.environ["wsgiorg.routing_args"] = (None, {
-            "action": "index",
-            "controller": "",
-        })
-        context = nova.context.RequestContext('testuser', 'testproject')
-        request.environ["nova.context"] = context
-        return request
-
-    def _populate_limits(self, request):
-        """Put limit info into a request."""
-        _limits = [
-            limits.Limit("GET", "*", ".*", 10, 60).display(),
-            limits.Limit("POST", "*", ".*", 5, 60 * 60).display(),
-        ]
-        request.environ["nova.limits"] = _limits
-        return request
-
-    def _setup_absolute_limits(self):
-        self.absolute_limits = {
-            'instances': 5,
-            'cores': 8,
-            'ram': 2 ** 13,
-            'volumes': 21,
-            'gigabytes': 34,
-            'metadata_items': 55,
-            'injected_files': 89,
-            'injected_file_content_bytes': 144,
-        }
-
-    def test_empty_index_json(self):
-        """Test getting empty limit details in JSON."""
-        request = self._get_index_request()
-        response = request.get_response(self.controller)
-        expected = {
-            "limits": {
-                "rate": [],
-                "absolute": {},
-            },
-        }
-        body = json.loads(response.body)
-        self.assertEqual(expected, body)
-
-    def test_index_json(self):
-        """Test getting limit details in JSON."""
-        request = self._get_index_request()
-        request = self._populate_limits(request)
-        self._setup_absolute_limits()
-        response = request.get_response(self.controller)
-        expected = {
-            "limits": {
-                "rate": [{
-                    "regex": ".*",
-                    "resetTime": 0,
-                    "URI": "*",
-                    "value": 10,
-                    "verb": "GET",
-                    "remaining": 10,
-                    "unit": "MINUTE",
-                },
-                {
-                    "regex": ".*",
-                    "resetTime": 0,
-                    "URI": "*",
-                    "value": 5,
-                    "verb": "POST",
-                    "remaining": 5,
-                    "unit": "HOUR",
-                }],
-                "absolute": {
-                    "maxTotalInstances": 5,
-                    "maxTotalCores": 8,
-                    "maxTotalRAMSize": 2 ** 13,
-                    "maxServerMeta": 55,
-                    "maxImageMeta": 55,
-                    "maxPersonality": 89,
-                    "maxPersonalitySize": 144,
-                },
-            },
-        }
-        body = json.loads(response.body)
-        self.assertEqual(expected, body)
-
-    def test_empty_index_xml(self):
-        """Test getting limit details in XML."""
-        request = self._get_index_request("application/xml")
-        response = request.get_response(self.controller)
-
-        expected = minidom.parseString("""
-            <limits xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
-                <rate/>
-                <absolute/>
-            </limits>
-        """.replace("  ", "").replace("\n", ""))
-
-        body = minidom.parseString(response.body.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), body.toxml())
-
-    def test_index_xml(self):
-        """Test getting limit details in XML."""
-        request = self._get_index_request("application/xml")
-        request = self._populate_limits(request)
-        response = request.get_response(self.controller)
-
-        expected = minidom.parseString("""
-            <limits xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
-                <rate>
-                    <limit URI="*" regex=".*" remaining="10" resetTime="0"
-                         unit="MINUTE" value="10" verb="GET"/>
-                    <limit URI="*" regex=".*" remaining="5" resetTime="0"
-                         unit="HOUR" value="5" verb="POST"/>
-                </rate>
-                <absolute/>
-            </limits>
-        """.replace("  ", "").replace("\n", ""))
-        body = minidom.parseString(response.body.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), body.toxml())
-
-
-class LimitsControllerV11Test(BaseLimitTestSuite):
-    """
-    Tests for `limits.LimitsControllerV11` class.
+    Tests for `limits.LimitsController` class.
     """
 
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.controller = limits.create_resource('1.1')
+        self.controller = limits.create_resource()
         self.maxDiff = None
 
     def _get_index_request(self, accept_header="application/json"):
@@ -915,10 +781,10 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
         self.assertEqual((delay, error), expected)
 
 
-class LimitsViewBuilderV11Test(test.TestCase):
+class LimitsViewBuilderTest(test.TestCase):
 
     def setUp(self):
-        self.view_builder = views.limits.ViewBuilderV11()
+        self.view_builder = views.limits.ViewBuilder()
         self.rate_limits = [{"URI": "*",
                              "regex": ".*",
                              "value": 10,

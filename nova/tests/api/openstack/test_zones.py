@@ -105,7 +105,7 @@ class ZonesTest(test.TestCase):
 
     def test_get_zone_list_scheduler(self):
         self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler)
-        req = webob.Request.blank('/v1.0/zones')
+        req = webob.Request.blank('/v1.1/fake/zones')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -115,7 +115,7 @@ class ZonesTest(test.TestCase):
     def test_get_zone_list_db(self):
         self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler_empty)
         self.stubs.Set(nova.db, 'zone_get_all', zone_get_all_db)
-        req = webob.Request.blank('/v1.0/zones')
+        req = webob.Request.blank('/v1.1/fake/zones')
         req.headers["Content-Type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
 
@@ -124,7 +124,7 @@ class ZonesTest(test.TestCase):
         self.assertEqual(len(res_dict['zones']), 2)
 
     def test_get_zone_by_id(self):
-        req = webob.Request.blank('/v1.0/zones/1')
+        req = webob.Request.blank('/v1.1/fake/zones/1')
         req.headers["Content-Type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
 
@@ -135,7 +135,7 @@ class ZonesTest(test.TestCase):
         self.assertFalse('password' in res_dict['zone'])
 
     def test_zone_delete(self):
-        req = webob.Request.blank('/v1.0/zones/1')
+        req = webob.Request.blank('/v1.1/fake/zones/1')
         req.headers["Content-Type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
 
@@ -144,7 +144,7 @@ class ZonesTest(test.TestCase):
     def test_zone_create(self):
         body = dict(zone=dict(api_url='http://example.com', username='fred',
                         password='fubar'))
-        req = webob.Request.blank('/v1.0/zones')
+        req = webob.Request.blank('/v1.1/fake/zones')
         req.headers["Content-Type"] = "application/json"
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -159,7 +159,7 @@ class ZonesTest(test.TestCase):
 
     def test_zone_update(self):
         body = dict(zone=dict(username='zeb', password='sneaky'))
-        req = webob.Request.blank('/v1.0/zones/1')
+        req = webob.Request.blank('/v1.1/fake/zones/1')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
@@ -178,7 +178,7 @@ class ZonesTest(test.TestCase):
         self.stubs.Set(api, '_call_scheduler', zone_capabilities)
 
         body = dict(zone=dict(username='zeb', password='sneaky'))
-        req = webob.Request.blank('/v1.0/zones/info')
+        req = webob.Request.blank('/v1.1/fake/zones/info')
 
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
@@ -192,7 +192,7 @@ class ZonesTest(test.TestCase):
         self.flags(build_plan_encryption_key=key)
         self.stubs.Set(api, 'select', zone_select)
 
-        req = webob.Request.blank('/v1.0/zones/select')
+        req = webob.Request.blank('/v1.1/fake/zones/select')
         req.method = 'POST'
         req.headers["Content-Type"] = "application/json"
         # Select queries end up being JSON encoded twice.

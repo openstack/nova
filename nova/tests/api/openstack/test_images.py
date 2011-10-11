@@ -71,48 +71,7 @@ class ImagesTest(test.TestCase):
             auth_token = True
         return Context()
 
-    def test_get_image_index(self):
-        request = webob.Request.blank('/v1.0/images')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-
-        response_dict = json.loads(response.body)
-        response_list = response_dict["images"]
-
-        expected = [{'id': 123, 'name': 'public image'},
-                    {'id': 124, 'name': 'queued snapshot'},
-                    {'id': 125, 'name': 'saving snapshot'},
-                    {'id': 126, 'name': 'active snapshot'},
-                    {'id': 127, 'name': 'killed snapshot'},
-                    {'id': 128, 'name': 'deleted snapshot'},
-                    {'id': 129, 'name': 'pending_delete snapshot'},
-                    {'id': 130, 'name': None}]
-
-        self.assertDictListMatch(response_list, expected)
-
     def test_get_image(self):
-        request = webob.Request.blank('/v1.0/images/123')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-
-        self.assertEqual(200, response.status_int)
-
-        actual_image = json.loads(response.body)
-
-        expected_image = {
-            "image": {
-                "id": 123,
-                "name": "public image",
-                "updated": NOW_API_FORMAT,
-                "created": NOW_API_FORMAT,
-                "status": "ACTIVE",
-                "progress": 100,
-            },
-        }
-
-        self.assertDictMatch(expected_image, actual_image)
-
-    def test_get_image_v1_1(self):
         self.maxDiff = None
         request = webob.Request.blank('/v1.1/fake/images/124')
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
@@ -169,82 +128,7 @@ class ImagesTest(test.TestCase):
 
         self.assertEqual(expected_image, actual_image)
 
-    def test_get_image_xml(self):
-        request = webob.Request.blank('/v1.0/images/123')
-        request.accept = "application/xml"
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-
-        actual_image = minidom.parseString(response.body.replace("  ", ""))
-
-        expected_now = NOW_API_FORMAT
-        expected_image = minidom.parseString("""
-            <image id="123"
-                    name="public image"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="ACTIVE"
-                    progress="100"
-                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
-        """ % (locals()))
-
-        self.assertEqual(expected_image.toxml(), actual_image.toxml())
-
-    def test_get_image_xml_no_name(self):
-        request = webob.Request.blank('/v1.0/images/130')
-        request.accept = "application/xml"
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-
-        actual_image = minidom.parseString(response.body.replace("  ", ""))
-
-        expected_now = NOW_API_FORMAT
-        expected_image = minidom.parseString("""
-            <image id="130"
-                    name="None"
-                    updated="%(expected_now)s"
-                    created="%(expected_now)s"
-                    status="ACTIVE"
-                    progress="100"
-                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
-        """ % (locals()))
-
-        self.assertEqual(expected_image.toxml(), actual_image.toxml())
-
     def test_get_image_404_json(self):
-        request = webob.Request.blank('/v1.0/images/NonExistantImage')
-        response = request.get_response(fakes.wsgi_app())
-        self.assertEqual(404, response.status_int)
-
-        expected = {
-            "itemNotFound": {
-                "message": "Image not found.",
-                "code": 404,
-            },
-        }
-
-        actual = json.loads(response.body)
-
-        self.assertEqual(expected, actual)
-
-    def test_get_image_404_xml(self):
-        request = webob.Request.blank('/v1.0/images/NonExistantImage')
-        request.accept = "application/xml"
-        response = request.get_response(fakes.wsgi_app())
-        self.assertEqual(404, response.status_int)
-
-        expected = minidom.parseString("""
-            <itemNotFound code="404"
-                 xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
-                <message>Image not found.</message>
-            </itemNotFound>
-        """.replace("  ", "").replace("\n", ""))
-
-        actual = minidom.parseString(response.body.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_get_image_404_v1_1_json(self):
         request = webob.Request.blank('/v1.1/fake/images/NonExistantImage')
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
@@ -260,7 +144,7 @@ class ImagesTest(test.TestCase):
 
         self.assertEqual(expected, actual)
 
-    def test_get_image_404_v1_1_xml(self):
+    def test_get_image_404_xml(self):
         request = webob.Request.blank('/v1.1/fake/images/NonExistantImage')
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
@@ -279,7 +163,7 @@ class ImagesTest(test.TestCase):
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
-    def test_get_image_index_v1_1(self):
+    def test_get_image_index(self):
         request = webob.Request.blank('/v1.1/fake/images')
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         response = request.get_response(app)
@@ -454,7 +338,7 @@ class ImagesTest(test.TestCase):
 
         self.assertDictListMatch(response_list, expected_images)
 
-    def test_get_image_index_v1_1_with_limit(self):
+    def test_get_image_index_with_limit(self):
         request = webob.Request.blank('/v1.1/fake/images?limit=3')
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         response = request.get_response(app)
@@ -533,7 +417,7 @@ class ImagesTest(test.TestCase):
         params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch({'limit': ['3'], 'marker': ['125']}, params)
 
-    def test_get_image_index_v1_1_with_limit_and_extra_params(self):
+    def test_get_image_index_with_limit_and_extra_params(self):
         request = webob.Request.blank('/v1.1/fake/images?limit=3&extra=boo')
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         response = request.get_response(app)
@@ -550,7 +434,7 @@ class ImagesTest(test.TestCase):
             {'limit': ['3'], 'marker': ['125'], 'extra': ['boo']},
             params)
 
-    def test_get_image_index_v1_1_with_big_limit(self):
+    def test_get_image_index_with_big_limit(self):
         """
         Make sure we don't get images_links if limit is set
         and the number of images returned is < limit
@@ -566,81 +450,6 @@ class ImagesTest(test.TestCase):
         self.assertEqual(len(response_list), 8)
 
     def test_get_image_details(self):
-        request = webob.Request.blank('/v1.0/images/detail')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-
-        response_dict = json.loads(response.body)
-        response_list = response_dict["images"]
-
-        expected = [{
-            'id': 123,
-            'name': 'public image',
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ACTIVE',
-            'progress': 100,
-        },
-        {
-            'id': 124,
-            'name': 'queued snapshot',
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'SAVING',
-            'progress': 25,
-        },
-        {
-            'id': 125,
-            'name': 'saving snapshot',
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'SAVING',
-            'progress': 50,
-        },
-        {
-            'id': 126,
-            'name': 'active snapshot',
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ACTIVE',
-            'progress': 100,
-        },
-        {
-            'id': 127,
-            'name': 'killed snapshot',
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ERROR',
-            'progress': 0,
-        },
-        {
-            'id': 128,
-            'name': 'deleted snapshot',
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'DELETED',
-            'progress': 0,
-        },
-        {
-            'id': 129,
-            'name': 'pending_delete snapshot',
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'DELETED',
-            'progress': 0,
-        },
-        {
-            'id': 130,
-            'name': None,
-            'updated': NOW_API_FORMAT,
-            'created': NOW_API_FORMAT,
-            'status': 'ACTIVE',
-            'progress': 100,
-        }]
-
-        self.assertDictListMatch(expected, response_list)
-
-    def test_get_image_details_v1_1(self):
         request = webob.Request.blank('/v1.1/fake/images/detail')
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         response = request.get_response(app)
@@ -931,7 +740,7 @@ class ImagesTest(test.TestCase):
 
         self.assertDictListMatch(expected, response_list)
 
-    def test_get_image_details_with_limit_v1_1(self):
+    def test_get_image_details_with_limit(self):
         request = webob.Request.blank('/v1.1/fake/images/detail?limit=2')
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         response = request.get_response(app)
@@ -1022,7 +831,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/images?name=testname')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1034,7 +843,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/images?minRam=0')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1046,7 +855,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/images?minDisk=7')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1058,7 +867,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/images?status=ACTIVE')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1070,7 +879,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/images?property-test=3')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1084,7 +893,7 @@ class ImagesTest(test.TestCase):
         request = webob.Request.blank('/v1.1/images?server='
                                       'http://localhost:8774/servers/12')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1097,7 +906,7 @@ class ImagesTest(test.TestCase):
         request = webob.Request.blank('/v1.1/images?changes-since='
                                       '2011-01-24T17:08Z')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1109,7 +918,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/images?type=BASE')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1122,7 +931,7 @@ class ImagesTest(test.TestCase):
         request = webob.Request.blank('/v1.1/images?status=ACTIVE&'
                                       'UNSUPPORTEDFILTER=testname')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
@@ -1136,7 +945,7 @@ class ImagesTest(test.TestCase):
         request = webob.Request.blank(
             '/v1.1/images')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1148,7 +957,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/fake/images/detail?name=testname')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
@@ -1160,7 +969,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/fake/images/detail?status=ACTIVE')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
@@ -1173,7 +982,7 @@ class ImagesTest(test.TestCase):
         request = webob.Request.blank(
             '/v1.1/fake/images/detail?property-test=3')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
@@ -1187,7 +996,7 @@ class ImagesTest(test.TestCase):
         request = webob.Request.blank('/v1.1/fake/images/detail?server='
                                       'http://localhost:8774/servers/12')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1200,7 +1009,7 @@ class ImagesTest(test.TestCase):
         request = webob.Request.blank('/v1.1/fake/images/detail?changes-since='
                                       '2011-01-24T17:08Z')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1212,7 +1021,7 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/fake/images/detail?type=BASE')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
@@ -1225,7 +1034,7 @@ class ImagesTest(test.TestCase):
         request = webob.Request.blank('/v1.1/fake/images/detail?status=ACTIVE&'
                                       'UNSUPPORTEDFILTER=testname')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
@@ -1237,82 +1046,24 @@ class ImagesTest(test.TestCase):
         self.mox.ReplayAll()
         request = webob.Request.blank('/v1.1/fake/images/detail')
         request.environ['nova.context'] = context
-        controller = images.ControllerV11(image_service=image_service)
+        controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
-    def test_get_image_found(self):
-        req = webob.Request.blank('/v1.0/images/123')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        res = req.get_response(app)
-        image_meta = json.loads(res.body)['image']
-        expected = {'id': 123, 'name': 'public image',
-                    'updated': NOW_API_FORMAT,
-                    'created': NOW_API_FORMAT, 'status': 'ACTIVE',
-                    'progress': 100}
-        self.assertDictMatch(image_meta, expected)
-
-    def test_get_image_non_existent(self):
-        req = webob.Request.blank('/v1.0/images/4242')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 404)
-
-    def test_create_image(self):
-        body = dict(image=dict(serverId='123', name='Snapshot 1'))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(200, response.status_int)
-        image_meta = json.loads(response.body)['image']
-        self.assertEqual(123, image_meta['serverId'])
-        self.assertEqual('Snapshot 1', image_meta['name'])
-
-    def test_create_snapshot_no_name(self):
-        """Name is required for snapshots"""
-        body = dict(image=dict(serverId='123'))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_image_no_server_id(self):
-
-        body = dict(image=dict(name='Snapshot 1'))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_create_image_snapshots_disabled(self):
-        self.flags(allow_instance_snapshots=False)
-        body = dict(image=dict(serverId='123', name='Snapshot 1'))
-        req = webob.Request.blank('/v1.0/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_generate_alternate(self):
-        view = images_view.ViewBuilderV11(1)
+    def test_generate_alternate_link(self):
+        view = images_view.ViewBuilder(1)
         generated_url = view.generate_alternate(1)
         actual_url = "%s//images/1" % utils.generate_glance_url()
         self.assertEqual(generated_url, actual_url)
 
-    def test_delete_image_v1_1(self):
+    def test_delete_image(self):
         request = webob.Request.blank('/v1.1/fake/images/124')
         request.method = 'DELETE'
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
         response = request.get_response(app)
         self.assertEqual(response.status_int, 204)
 
-    def test_delete_image_not_found_v1_1(self):
+    def test_delete_image_not_found(self):
         request = webob.Request.blank('/v1.1/fake/images/300')
         request.method = 'DELETE'
         app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())

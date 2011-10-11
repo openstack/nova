@@ -52,37 +52,6 @@ class Controller(object):
     def delete(self, req, server_id, id):
         raise exc.HTTPNotImplemented()
 
-
-class ControllerV10(Controller):
-
-    def index(self, req, server_id):
-        context = req.environ['nova.context']
-        instance = self._get_instance(context, server_id)
-        networks = common.get_networks_for_instance(context, instance)
-        builder = self._get_view_builder(req)
-        return {'addresses': builder.build(networks)}
-
-    def show(self, req, server_id, id):
-        context = req.environ['nova.context']
-        instance = self._get_instance(context, server_id)
-        networks = common.get_networks_for_instance(context, instance)
-        builder = self._get_view_builder(req)
-        if id == 'private':
-            view = builder.build_private_parts(networks)
-        elif id == 'public':
-            view = builder.build_public_parts(networks)
-        else:
-            msg = _("Only private and public networks available")
-            raise exc.HTTPNotFound(explanation=msg)
-
-        return {id: view}
-
-    def _get_view_builder(self, req):
-        return views_addresses.ViewBuilderV10()
-
-
-class ControllerV11(Controller):
-
     def index(self, req, server_id):
         context = req.environ['nova.context']
         instance = self._get_instance(context, server_id)
@@ -102,7 +71,7 @@ class ControllerV11(Controller):
         return network
 
     def _get_view_builder(self, req):
-        return views_addresses.ViewBuilderV11()
+        return views_addresses.ViewBuilder()
 
 
 class IPXMLSerializer(wsgi.XMLDictSerializer):
@@ -138,24 +107,7 @@ class IPXMLSerializer(wsgi.XMLDictSerializer):
         return self._to_xml(addresses)
 
 
-def create_resource(version):
-    controller = {
-        '1.0': ControllerV10,
-        '1.1': ControllerV11,
-    }[version]()
-
-    metadata = {
-        'list_collections': {
-            'public': {'item_name': 'ip', 'item_key': 'addr'},
-            'private': {'item_name': 'ip', 'item_key': 'addr'},
-        },
-    }
-
-    xml_serializer = {
-        '1.0': wsgi.XMLDictSerializer(metadata=metadata, xmlns=wsgi.XMLNS_V11),
-        '1.1': IPXMLSerializer(),
-    }[version]
-
-    serializer = wsgi.ResponseSerializer({'application/xml': xml_serializer})
-
-    return wsgi.Resource(controller, serializer=serializer)
+def create_resource():
+    body_serializers = {'application/xml': IPXMLSerializer()}
+    serializer = wsgi.ResponseSerializer(body_serializers)
+    return wsgi.Resource(Controller(), serializer=serializer)

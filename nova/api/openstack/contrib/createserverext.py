@@ -20,7 +20,7 @@ from nova.api.openstack import servers
 from nova.api.openstack import wsgi
 
 
-class CreateServerController(servers.ControllerV11):
+class CreateServerController(servers.Controller):
     def _build_view(self, req, instance, is_detail=False):
         server = super(CreateServerController, self)._build_view(req,
                                                              instance,
@@ -65,7 +65,7 @@ class Createserverext(extensions.ExtensionDescriptor):
         }
 
         body_deserializers = {
-            'application/xml': servers.ServerXMLDeserializerV11(),
+            'application/xml': servers.ServerXMLDeserializer(),
         }
 
         serializer = wsgi.ResponseSerializer(body_serializers,

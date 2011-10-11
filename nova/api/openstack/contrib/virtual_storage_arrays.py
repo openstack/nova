@@ -489,7 +489,7 @@ class VsaVPoolController(object):
         return faults.Fault(exc.HTTPBadRequest())
 
 
-class VsaVCController(servers.ControllerV11):
+class VsaVCController(servers.Controller):
     """The VSA Virtual Controller API controller for the OpenStack API."""
 
     def __init__(self):

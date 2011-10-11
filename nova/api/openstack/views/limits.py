@@ -25,12 +25,6 @@ from nova import utils
 class ViewBuilder(object):
     """Openstack API base limits view builder."""
 
-    def _build_rate_limits(self, rate_limits):
-        raise NotImplementedError()
-
-    def _build_rate_limit(self, rate_limit):
-        raise NotImplementedError()
-
     def build(self, rate_limits, absolute_limits):
         rate_limits = self._build_rate_limits(rate_limits)
         absolute_limits = self._build_absolute_limits(absolute_limits)
@@ -65,28 +59,6 @@ class ViewBuilder(object):
                 for name in limit_names[name]:
                     limits[name] = value
         return limits
-
-
-class ViewBuilderV10(ViewBuilder):
-    """Openstack API v1.0 limits view builder."""
-
-    def _build_rate_limits(self, rate_limits):
-        return [self._build_rate_limit(r) for r in rate_limits]
-
-    def _build_rate_limit(self, rate_limit):
-        return {
-            "verb": rate_limit["verb"],
-            "URI": rate_limit["URI"],
-            "regex": rate_limit["regex"],
-            "value": rate_limit["value"],
-            "remaining": int(rate_limit["remaining"]),
-            "unit": rate_limit["unit"],
-            "resetTime": rate_limit["resetTime"],
-        }
-
-
-class ViewBuilderV11(ViewBuilder):
-    """Openstack API v1.1 limits view builder."""
 
     def _build_rate_limits(self, rate_limits):
         limits = []

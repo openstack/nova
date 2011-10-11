@@ -75,19 +75,10 @@ class Controller(object):
         values = builder.build(flavor, is_detail=True)
         return dict(flavor=values)
 
-
-class ControllerV10(Controller):
-
-    def _get_view_builder(self, req):
-        return views.flavors.ViewBuilder()
-
-
-class ControllerV11(Controller):
-
     def _get_view_builder(self, req):
         base_url = req.application_url
         project_id = getattr(req.environ['nova.context'], 'project_id', '')
-        return views.flavors.ViewBuilderV11(base_url, project_id)
+        return views.flavors.ViewBuilder(base_url, project_id)
 
 
 class FlavorXMLSerializer(wsgi.XMLDictSerializer):
@@ -136,21 +127,7 @@ class FlavorXMLSerializer(wsgi.XMLDictSerializer):
         return self._to_xml(flavors)
 
 
-def create_resource(version='1.0'):
-    controller = {
-        '1.0': ControllerV10,
-        '1.1': ControllerV11,
-    }[version]()
-
-    xml_serializer = {
-        '1.0': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V10),
-        '1.1': FlavorXMLSerializer(),
-    }[version]
-
-    body_serializers = {
-        'application/xml': xml_serializer,
-    }
-
+def create_resource():
+    body_serializers = {'application/xml': FlavorXMLSerializer()}
     serializer = wsgi.ResponseSerializer(body_serializers)
-
-    return wsgi.Resource(controller, serializer=serializer)
+    return wsgi.Resource(Controller(), serializer=serializer)

@@ -23,6 +23,13 @@ from nova.api.openstack import common
 
 class ViewBuilder(object):
 
+    def __init__(self, base_url, project_id=""):
+        """
+        :param base_url: url of the root wsgi application
+        """
+        self.base_url = base_url
+        self.project_id = project_id
+
     def build(self, flavor_obj, is_detail=False):
         """Generic method used to generate a flavor entity."""
         if is_detail:
@@ -30,7 +37,7 @@ class ViewBuilder(object):
         else:
             flavor = self._build_simple(flavor_obj)
 
-        self._build_extra(flavor)
+        flavor["links"] = self._build_links(flavor)
 
         return flavor
 
@@ -57,26 +64,9 @@ class ViewBuilder(object):
 
         return detail
 
-    def _build_extra(self, flavor_obj):
-        """Hook for version-specific changes to newly created flavor object."""
-        pass
-
-
-class ViewBuilderV11(ViewBuilder):
-    """Openstack API v1.1 flavors view builder."""
-
-    def __init__(self, base_url, project_id=""):
-        """
-        :param base_url: url of the root wsgi application
-        """
-        self.base_url = base_url
-        self.project_id = project_id
-
-    def _build_extra(self, flavor_obj):
-        flavor_obj["links"] = self._build_links(flavor_obj)
-
     def _build_links(self, flavor_obj):
         """Generate a container of links that refer to the provided flavor."""
+        print flavor_obj
         href = self.generate_href(flavor_obj["id"])
         bookmark = self.generate_bookmark(flavor_obj["id"])
 

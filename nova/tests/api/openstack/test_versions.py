@@ -35,35 +35,6 @@ NS = {
     'ns': 'http://docs.openstack.org/compute/api/v1.1'
 }
 VERSIONS = {
-    "v1.0": {
-        "id": "v1.0",
-        "status": "DEPRECATED",
-        "updated": "2011-01-21T11:33:21Z",
-        "links": [
-            {
-                "rel": "describedby",
-                "type": "application/pdf",
-                "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.0/cs-devguide-20110125.pdf",
-            },
-            {
-                "rel": "describedby",
-                "type": "application/vnd.sun.wadl+xml",
-                "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.0/application.wadl",
-            },
-        ],
-        "media-types": [
-            {
-                "base": "application/xml",
-                "type": "application/vnd.openstack.compute+xml;version=1.0",
-            },
-            {
-                "base": "application/json",
-                "type": "application/vnd.openstack.compute+json;version=1.0",
-            },
-        ],
-    },
     "v1.1": {
         "id": "v1.1",
         "status": "CURRENT",
@@ -119,16 +90,6 @@ class VersionsTest(test.TestCase):
         versions = json.loads(res.body)["versions"]
         expected = [
             {
-                "id": "v1.0",
-                "status": "DEPRECATED",
-                "updated": "2011-01-21T11:33:21Z",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v1.0/",
-                    }],
-            },
-            {
                 "id": "v1.1",
                 "status": "CURRENT",
                 "updated": "2011-01-21T11:33:21Z",
@@ -140,52 +101,6 @@ class VersionsTest(test.TestCase):
             },
         ]
         self.assertEqual(versions, expected)
-
-    def test_get_version_1_0_detail(self):
-        req = webob.Request.blank('/v1.0/')
-        req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/json")
-        version = json.loads(res.body)
-        expected = {
-            "version": {
-                "id": "v1.0",
-                "status": "DEPRECATED",
-                "updated": "2011-01-21T11:33:21Z",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v1.0/",
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/cs-devguide-20110125.pdf",
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/application.wadl",
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/xml",
-                        "type": "application/"
-                                "vnd.openstack.compute+xml;version=1.0",
-                    },
-                    {
-                        "base": "application/json",
-                        "type": "application/"
-                                "vnd.openstack.compute+json;version=1.0",
-                    },
-                ],
-            },
-        }
-        self.assertEqual(expected, version)
 
     def test_get_version_1_1_detail(self):
         req = webob.Request.blank('/v1.1/')
@@ -279,29 +194,6 @@ class VersionsTest(test.TestCase):
         }
         self.assertEqual(expected, version)
 
-    def test_get_version_1_0_detail_xml(self):
-        req = webob.Request.blank('/v1.0/')
-        req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/xml")
-
-        version = etree.XML(res.body)
-        xmlutil.validate_schema(version, 'version')
-
-        expected = VERSIONS['v1.0']
-        self.assertTrue(version.xpath('/ns:version', namespaces=NS))
-        media_types = version.xpath('ns:media-types/ns:media-type',
-                                    namespaces=NS)
-        self.assertTrue(common.compare_media_types(media_types,
-                                             expected['media-types']))
-        for key in ['id', 'status', 'updated']:
-            self.assertEqual(version.get(key), expected[key])
-        links = version.xpath('atom:link', namespaces=NS)
-        self.assertTrue(common.compare_links(links,
-            [{'rel': 'self', 'href': 'http://localhost/v1.0/'}]
-            + expected['links']))
-
     def test_get_version_1_1_detail_xml(self):
         req = webob.Request.blank('/v1.1/')
         req.accept = "application/xml"
@@ -338,9 +230,9 @@ class VersionsTest(test.TestCase):
 
         self.assertTrue(root.xpath('/ns:versions', namespaces=NS))
         versions = root.xpath('ns:version', namespaces=NS)
-        self.assertEqual(len(versions), 2)
+        self.assertEqual(len(versions), 1)
 
-        for i, v in enumerate(['v1.0', 'v1.1']):
+        for i, v in enumerate(['v1.1']):
             version = versions[i]
             expected = VERSIONS[v]
             for key in ['id', 'status', 'updated']:
@@ -348,47 +240,6 @@ class VersionsTest(test.TestCase):
             (link,) = version.xpath('atom:link', namespaces=NS)
             self.assertTrue(common.compare_links(link,
                 [{'rel': 'self', 'href': 'http://localhost/%s/' % v}]))
-
-    def test_get_version_1_0_detail_atom(self):
-        req = webob.Request.blank('/v1.0/')
-        req.accept = "application/atom+xml"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual("application/atom+xml", res.content_type)
-
-        xmlutil.validate_schema(etree.XML(res.body), 'atom')
-
-        f = feedparser.parse(res.body)
-        self.assertEqual(f.feed.title, 'About This Version')
-        self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
-        self.assertEqual(f.feed.id, 'http://localhost/v1.0/')
-        self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href,
-                         'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links[0]['href'], 'http://localhost/v1.0/')
-        self.assertEqual(f.feed.links[0]['rel'], 'self')
-
-        self.assertEqual(len(f.entries), 1)
-        entry = f.entries[0]
-        self.assertEqual(entry.id, 'http://localhost/v1.0/')
-        self.assertEqual(entry.title, 'Version v1.0')
-        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
-        self.assertEqual(len(entry.content), 1)
-        self.assertEqual(entry.content[0].value,
-            'Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)')
-        self.assertEqual(len(entry.links), 3)
-        self.assertEqual(entry.links[0]['href'], 'http://localhost/v1.0/')
-        self.assertEqual(entry.links[0]['rel'], 'self')
-        self.assertEqual(entry.links[1], {
-            'href': 'http://docs.rackspacecloud.com/servers/api/v1.0/'\
-                    'cs-devguide-20110125.pdf',
-            'type': 'application/pdf',
-            'rel': 'describedby'})
-        self.assertEqual(entry.links[2], {
-            'href': 'http://docs.rackspacecloud.com/servers/api/v1.0/'\
-                    'application.wadl',
-            'type': 'application/vnd.sun.wadl+xml',
-            'rel': 'describedby'})
 
     def test_get_version_1_1_detail_atom(self):
         req = webob.Request.blank('/v1.1/')
@@ -448,18 +299,8 @@ class VersionsTest(test.TestCase):
         self.assertEqual(f.feed.links[0]['href'], 'http://localhost/')
         self.assertEqual(f.feed.links[0]['rel'], 'self')
 
-        self.assertEqual(len(f.entries), 2)
+        self.assertEqual(len(f.entries), 1)
         entry = f.entries[0]
-        self.assertEqual(entry.id, 'http://localhost/v1.0/')
-        self.assertEqual(entry.title, 'Version v1.0')
-        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
-        self.assertEqual(len(entry.content), 1)
-        self.assertEqual(entry.content[0].value,
-            'Version v1.0 DEPRECATED (2011-01-21T11:33:21Z)')
-        self.assertEqual(len(entry.links), 1)
-        self.assertEqual(entry.links[0]['href'], 'http://localhost/v1.0/')
-        self.assertEqual(entry.links[0]['rel'], 'self')
-        entry = f.entries[1]
         self.assertEqual(entry.id, 'http://localhost/v1.1/')
         self.assertEqual(entry.title, 'Version v1.1')
         self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
@@ -501,28 +342,6 @@ class VersionsTest(test.TestCase):
                     },
                 ],
             },
-            {
-                "id": "v1.0",
-                "status": "DEPRECATED",
-                "links": [
-                    {
-                        "href": "http://localhost/v1.0/images/1",
-                        "rel": "self",
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/xml",
-                        "type": "application/vnd.openstack.compute+xml"
-                                ";version=1.0"
-                    },
-                    {
-                        "base": "application/json",
-                        "type": "application/vnd.openstack.compute+json"
-                                ";version=1.0"
-                    },
-                ],
-            },
         ], }
 
         self.assertDictMatch(expected, json.loads(res.body))
@@ -537,7 +356,7 @@ class VersionsTest(test.TestCase):
         root = etree.XML(res.body)
         self.assertTrue(root.xpath('/ns:choices', namespaces=NS))
         versions = root.xpath('ns:version', namespaces=NS)
-        self.assertEqual(len(versions), 2)
+        self.assertEqual(len(versions), 1)
 
         version = versions[0]
         self.assertEqual(version.get('id'), 'v1.1')
@@ -549,17 +368,6 @@ class VersionsTest(test.TestCase):
         links = version.xpath('atom:link', namespaces=NS)
         self.assertTrue(common.compare_links(links,
             [{'rel': 'self', 'href': 'http://localhost/v1.1/images/1'}]))
-
-        version = versions[1]
-        self.assertEqual(version.get('id'), 'v1.0')
-        self.assertEqual(version.get('status'), 'DEPRECATED')
-        media_types = version.xpath('ns:media-types/ns:media-type',
-                                    namespaces=NS)
-        self.assertTrue(common.compare_media_types(media_types,
-                                             VERSIONS['v1.0']['media-types']))
-        links = version.xpath('atom:link', namespaces=NS)
-        self.assertTrue(common.compare_links(links,
-            [{'rel': 'self', 'href': 'http://localhost/v1.0/images/1'}]))
 
     def test_multi_choice_server_atom(self):
         """
@@ -600,28 +408,6 @@ class VersionsTest(test.TestCase):
                         "base": "application/json",
                         "type": "application/vnd.openstack.compute+json"
                                 ";version=1.1"
-                    },
-                ],
-            },
-            {
-                "id": "v1.0",
-                "status": "DEPRECATED",
-                "links": [
-                    {
-                        "href": "http://localhost/v1.0/servers/2",
-                        "rel": "self",
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/xml",
-                        "type": "application/vnd.openstack.compute+xml"
-                                ";version=1.0"
-                    },
-                    {
-                        "base": "application/json",
-                        "type": "application/vnd.openstack.compute+json"
-                                ";version=1.0"
                     },
                 ],
             },
@@ -753,70 +539,6 @@ class VersionsSerializerTests(test.TestCase):
         (link,) = version.xpath('atom:link', namespaces=NS)
         self.assertTrue(common.compare_links(link,
                                        versions_data['choices'][0]['links']))
-
-    def test_version_detail_xml_serializer(self):
-        version_data = {
-            "version": {
-                "id": "v1.0",
-                "status": "CURRENT",
-                "updated": "2011-01-21T11:33:21Z",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v1.0/",
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/cs-devguide-20110125.pdf",
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.0/application.wadl",
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/xml",
-                        "type": "application/vnd.openstack.compute+xml"
-                                ";version=1.0",
-                    },
-                    {
-                        "base": "application/json",
-                        "type": "application/vnd.openstack.compute+json"
-                                ";version=1.0",
-                    },
-                ],
-            },
-        }
-
-        serializer = versions.VersionsXMLSerializer()
-        response = serializer.show(version_data)
-
-        root = etree.XML(response)
-        self.assertEqual(root.tag.split('}')[1], "version")
-        self.assertEqual(root.tag.split('}')[0].strip('{'), wsgi.XMLNS_V11)
-
-        children = list(root)
-        media_types = children[0]
-        media_type_nodes = list(media_types)
-        links = (children[1], children[2], children[3])
-
-        self.assertEqual(media_types.tag.split('}')[1], 'media-types')
-        for i, media_node in enumerate(media_type_nodes):
-            self.assertEqual(media_node.tag.split('}')[1], 'media-type')
-            for key, val in version_data['version']['media-types'][i].items():
-                self.assertEqual(val, media_node.get(key))
-
-        for i, link in enumerate(links):
-            self.assertEqual(link.tag.split('}')[0].strip('{'),
-                             'http://www.w3.org/2005/Atom')
-            self.assertEqual(link.tag.split('}')[1], 'link')
-            for key, val in version_data['version']['links'][i].items():
-                self.assertEqual(val, link.get(key))
 
     def test_versions_list_atom_serializer(self):
         versions_data = {

@@ -26,35 +26,6 @@ from nova.api.openstack import xmlutil
 
 
 VERSIONS = {
-    "v1.0": {
-        "id": "v1.0",
-        "status": "DEPRECATED",
-        "updated": "2011-01-21T11:33:21Z",
-        "links": [
-            {
-                "rel": "describedby",
-                "type": "application/pdf",
-                "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.0/cs-devguide-20110125.pdf",
-            },
-            {
-                "rel": "describedby",
-                "type": "application/vnd.sun.wadl+xml",
-                "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.0/application.wadl",
-            },
-        ],
-        "media-types": [
-            {
-                "base": "application/xml",
-                "type": "application/vnd.openstack.compute+xml;version=1.0",
-            },
-            {
-                "base": "application/json",
-                "type": "application/vnd.openstack.compute+json;version=1.0",
-            }
-        ],
-    },
     "v1.1": {
         "id": "v1.1",
         "status": "CURRENT",
@@ -120,12 +91,6 @@ class Versions(wsgi.Resource):
         else:
             # Versions Multiple Choice
             return builder.build_choices(VERSIONS, request)
-
-
-class VersionV10(object):
-    def show(self, req):
-        builder = nova.api.openstack.views.versions.get_view_builder(req)
-        return builder.build_version(VERSIONS['v1.0'])
 
 
 class VersionV11(object):
@@ -282,12 +247,7 @@ class VersionsHeadersSerializer(wsgi.ResponseHeadersSerializer):
         response.status_int = 300
 
 
-def create_resource(version='1.0'):
-    controller = {
-        '1.0': VersionV10,
-        '1.1': VersionV11,
-    }[version]()
-
+def create_resource():
     body_serializers = {
         'application/xml': VersionsXMLSerializer(),
         'application/atom+xml': VersionsAtomSerializer(),
@@ -296,5 +256,5 @@ def create_resource(version='1.0'):
 
     deserializer = wsgi.RequestDeserializer()
 
-    return wsgi.Resource(controller, serializer=serializer,
+    return wsgi.Resource(VersionV11(), serializer=serializer,
                          deserializer=deserializer)

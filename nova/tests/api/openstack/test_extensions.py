@@ -109,7 +109,7 @@ class ExtensionControllerTest(test.TestCase):
         self.ext_list.sort()
 
     def test_list_extensions_json(self):
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/123/extensions")
         response = request.get_response(ext_midware)
@@ -135,7 +135,7 @@ class ExtensionControllerTest(test.TestCase):
         )
 
     def test_get_extension_json(self):
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/123/extensions/FOXNSOX")
         response = request.get_response(ext_midware)
@@ -151,14 +151,14 @@ class ExtensionControllerTest(test.TestCase):
                 "links": []})
 
     def test_get_non_existing_extension_json(self):
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/123/extensions/4")
         response = request.get_response(ext_midware)
         self.assertEqual(404, response.status_int)
 
     def test_list_extensions_xml(self):
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/123/extensions")
         request.accept = "application/xml"
@@ -185,7 +185,7 @@ class ExtensionControllerTest(test.TestCase):
         xmlutil.validate_schema(root, 'extensions')
 
     def test_get_extension_xml(self):
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/123/extensions/FOXNSOX")
         request.accept = "application/xml"
@@ -216,7 +216,7 @@ class ResourceExtensionTest(test.TestCase):
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/blah")
         response = request.get_response(ext_midware)
@@ -226,7 +226,7 @@ class ResourceExtensionTest(test.TestCase):
         res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/123/tweedles")
         response = request.get_response(ext_midware)
@@ -237,7 +237,7 @@ class ResourceExtensionTest(test.TestCase):
         res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/123/tweedles")
         response = request.get_response(ext_midware)
@@ -261,7 +261,7 @@ class ExtensionManagerTest(test.TestCase):
         self.flags(osapi_extensions_path=ext_path)
 
     def test_get_resources(self):
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/123/foxnsocks")
         response = request.get_response(ext_midware)
@@ -269,7 +269,7 @@ class ExtensionManagerTest(test.TestCase):
         self.assertEqual(response_body, response.body)
 
     def test_invalid_extensions(self):
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         ext_mgr = ext_midware.ext_mgr
         ext_mgr.add_extension(InvalidExtension())
@@ -285,7 +285,7 @@ class ActionExtensionTest(test.TestCase):
         self.flags(osapi_extensions_path=ext_path)
 
     def _send_server_action_request(self, url, body):
-        app = openstack.APIRouterV11()
+        app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank(url)
         request.method = 'POST'

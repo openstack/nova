@@ -104,83 +104,11 @@ class Controller(object):
             raise webob.exc.HTTPNotFound(explanation=explanation)
         return webob.exc.HTTPNoContent()
 
-    def get_builder(self, request):
-        """Indicates that you must use a Controller subclass."""
-        raise NotImplementedError()
-
-
-class ControllerV10(Controller):
-    """Version 1.0 specific controller logic."""
-
-    @common.check_snapshots_enabled
-    def create(self, req, body):
-        """Snapshot a server instance and save the image."""
-        try:
-            image = body["image"]
-        except (KeyError, TypeError):
-            msg = _("Invalid image entity")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            image_name = image["name"]
-            instance_id = image["serverId"]
-        except KeyError as missing_key:
-            msg = _("Image entity requires %s") % missing_key
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
-        context = req.environ["nova.context"]
-        props = {'instance_id': instance_id}
-
-        try:
-            image = self._compute_service.snapshot(context,
-                                              instance_id,
-                                              image_name,
-                                              extra_properties=props)
-        except exception.InstanceBusy:
-            msg = _("Server is currently creating an image. Please wait.")
-            raise webob.exc.HTTPConflict(explanation=msg)
-
-        return dict(image=self.get_builder(req).build(image, detail=True))
-
-    def get_builder(self, request):
-        """Property to get the ViewBuilder class we need to use."""
-        base_url = request.application_url
-        return images_view.ViewBuilderV10(base_url)
-
-    def index(self, req):
-        """Return an index listing of images available to the request.
-
-        :param req: `wsgi.Request` object
-
-        """
-        context = req.environ['nova.context']
-        filters = self._get_filters(req)
-        images = self._image_service.index(context, filters=filters)
-        images = common.limited(images, req)
-        return self.get_builder(req).build_list(images)
-
-    def detail(self, req):
-        """Return a detailed index listing of images available to the request.
-
-        :param req: `wsgi.Request` object.
-
-        """
-        context = req.environ['nova.context']
-        filters = self._get_filters(req)
-        images = self._image_service.detail(context, filters=filters)
-        images = common.limited(images, req)
-        builder = self.get_builder(req).build
-        return dict(images=[builder(image, detail=True) for image in images])
-
-
-class ControllerV11(Controller):
-    """Version 1.1 specific controller logic."""
-
     def get_builder(self, req):
         """Property to get the ViewBuilder class we need to use."""
         base_url = req.application_url
         project_id = getattr(req.environ['nova.context'], 'project_id', '')
-        return images_view.ViewBuilderV11(base_url, project_id)
+        return images_view.ViewBuilder(base_url, project_id)
 
     def index(self, req):
         """Return an index listing of images available to the request.
@@ -298,29 +226,7 @@ class ImageXMLSerializer(wsgi.XMLDictSerializer):
         return self._to_xml(image)
 
 
-def create_resource(version='1.0'):
-    controller = {
-        '1.0': ControllerV10,
-        '1.1': ControllerV11,
-    }[version]()
-
-    metadata = {
-        "attributes": {
-            "image": ["id", "name", "updated", "created", "status",
-                      "serverId", "progress", "serverRef"],
-            "link": ["rel", "type", "href"],
-        },
-    }
-
-    xml_serializer = {
-        '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
-        '1.1': ImageXMLSerializer(),
-    }[version]
-
-    body_serializers = {
-        'application/xml': xml_serializer,
-    }
-
+def create_resource():
+    body_serializers = {'application/xml': ImageXMLSerializer()}
     serializer = wsgi.ResponseSerializer(body_serializers)
-
-    return wsgi.Resource(controller, serializer=serializer)
+    return wsgi.Resource(Controller(), serializer=serializer)

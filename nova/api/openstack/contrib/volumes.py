@@ -331,7 +331,7 @@ class VolumeAttachmentController(object):
         return {'volumeAttachments': res}
 
 
-class BootFromVolumeController(servers.ControllerV11):
+class BootFromVolumeController(servers.Controller):
     """The boot from volume API controller for the Openstack API."""
 
     def _get_block_device_mapping(self, data):

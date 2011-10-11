@@ -96,18 +96,15 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        # Add a valid imageId/imageRef
-        server['imageId'] = good_server.get('imageId')
+        # Add a valid imageRef
         server['imageRef'] = good_server.get('imageRef')
 
-        # Without flavorId, this throws 500
+        # Without flavorRef, this throws 500
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        # Set a valid flavorId/flavorRef
         server['flavorRef'] = good_server.get('flavorRef')
-        server['flavorId'] = good_server.get('flavorId')
 
         # Without a name, this throws 500
         # TODO(justinsb): Check whatever the spec says should be thrown here

@@ -65,17 +65,7 @@ class LimitsController(object):
         return builder.build(rate_limits, abs_limits)
 
     def _get_view_builder(self, req):
-        raise NotImplementedError()
-
-
-class LimitsControllerV10(LimitsController):
-    def _get_view_builder(self, req):
-        return limits_views.ViewBuilderV10()
-
-
-class LimitsControllerV11(LimitsController):
-    def _get_view_builder(self, req):
-        return limits_views.ViewBuilderV11()
+        return limits_views.ViewBuilder()
 
 
 class LimitsXMLSerializer(wsgi.XMLDictSerializer):
@@ -127,39 +117,10 @@ class LimitsXMLSerializer(wsgi.XMLDictSerializer):
         return self._to_xml(limits)
 
 
-def create_resource(version='1.0'):
-    controller = {
-        '1.0': LimitsControllerV10,
-        '1.1': LimitsControllerV11,
-    }[version]()
-
-    xmlns = {
-        '1.0': wsgi.XMLNS_V10,
-        '1.1': wsgi.XMLNS_V11,
-    }[version]
-
-    metadata = {
-        "attributes": {
-            "limit": ["verb", "URI", "uri", "regex", "value", "unit",
-                "resetTime", "next-available", "remaining", "name"],
-        },
-        "plurals": {
-            "rate": "limit",
-        },
-    }
-
-    xml_serializer = {
-        '1.0': wsgi.XMLDictSerializer(xmlns=xmlns, metadata=metadata),
-        '1.1': LimitsXMLSerializer(),
-    }[version]
-
-    body_serializers = {
-        'application/xml': xml_serializer,
-    }
-
+def create_resource():
+    body_serializers = {'application/xml': LimitsXMLSerializer()}
     serializer = wsgi.ResponseSerializer(body_serializers)
-
-    return wsgi.Resource(controller, serializer=serializer)
+    return wsgi.Resource(LimitsController(), serializer=serializer)
 
 
 class Limit(object):

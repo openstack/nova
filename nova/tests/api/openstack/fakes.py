@@ -65,32 +65,24 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app(inner_app10=None, inner_app11=None, fake_auth=True,
-        fake_auth_context=None):
-    if not inner_app10:
-        inner_app10 = openstack.APIRouterV10()
+def wsgi_app(inner_app11=None, fake_auth=True, fake_auth_context=None):
     if not inner_app11:
-        inner_app11 = openstack.APIRouterV11()
+        inner_app11 = openstack.APIRouter()
 
     if fake_auth:
         if fake_auth_context is not None:
             ctxt = fake_auth_context
         else:
             ctxt = context.RequestContext('fake', 'fake', auth_token=True)
-        api10 = openstack.FaultWrapper(api_auth.InjectContext(ctxt,
-              limits.RateLimitingMiddleware(inner_app10)))
         api11 = openstack.FaultWrapper(api_auth.InjectContext(ctxt,
               limits.RateLimitingMiddleware(
                   extensions.ExtensionMiddleware(inner_app11))))
     else:
-        api10 = openstack.FaultWrapper(auth.AuthMiddleware(
-              limits.RateLimitingMiddleware(inner_app10)))
         api11 = openstack.FaultWrapper(auth.AuthMiddleware(
               limits.RateLimitingMiddleware(
                   extensions.ExtensionMiddleware(inner_app11))))
         Auth = auth
     mapper = urlmap.URLMap()
-    mapper['/v1.0'] = api10
     mapper['/v1.1'] = api11
     mapper['/'] = openstack.FaultWrapper(versions.Versions())
     return mapper
@@ -401,7 +393,7 @@ class FakeAuthManager(object):
         if p:
             return p
         else:
-            raise exc.NotFound
+            raise exc.ProjectNotFound(project_id=pid)
 
     def get_projects(self, user_id=None):
         if not user_id:

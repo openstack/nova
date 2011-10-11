@@ -143,7 +143,7 @@ class Controller(object):
         return cooked
 
 
-def create_resource(version):
+def create_resource():
     metadata = {
         "attributes": {
             "zone": ["id", "api_url", "name", "capabilities"],
@@ -151,7 +151,7 @@ def create_resource(version):
     }
 
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V10,
+        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11,
                                                   metadata=metadata),
     }
     serializer = wsgi.ResponseSerializer(body_serializers)

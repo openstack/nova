@@ -56,7 +56,7 @@ class UsersTest(test.TestCase):
         fakemgr.add_user(User('id2', 'guy2', 'acc2', 'secret2', True))
 
     def test_get_user_list(self):
-        req = webob.Request.blank('/v1.0/users')
+        req = webob.Request.blank('/v1.1/fake/users')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -64,7 +64,7 @@ class UsersTest(test.TestCase):
         self.assertEqual(len(res_dict['users']), 2)
 
     def test_get_user_by_id(self):
-        req = webob.Request.blank('/v1.0/users/id2')
+        req = webob.Request.blank('/v1.1/fake/users/id2')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -76,7 +76,7 @@ class UsersTest(test.TestCase):
 
     def test_user_delete(self):
         # Check the user exists
-        req = webob.Request.blank('/v1.0/users/id1')
+        req = webob.Request.blank('/v1.1/fake/users/id1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -84,7 +84,7 @@ class UsersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
 
         # Delete the user
-        req = webob.Request.blank('/v1.0/users/id1')
+        req = webob.Request.blank('/v1.1/fake/users/id1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertTrue('id1' not in [u.id for u in
@@ -92,7 +92,7 @@ class UsersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
 
         # Check the user is not returned (and returns 404)
-        req = webob.Request.blank('/v1.0/users/id1')
+        req = webob.Request.blank('/v1.1/fake/users/id1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res.status_int, 404)
@@ -103,7 +103,7 @@ class UsersTest(test.TestCase):
                               access='acc3',
                               secret=secret,
                               admin=True))
-        req = webob.Request.blank('/v1.0/users')
+        req = webob.Request.blank('/v1.1/fake/users')
         req.headers["Content-Type"] = "application/json"
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -130,7 +130,7 @@ class UsersTest(test.TestCase):
         body = dict(user=dict(name='guy2',
                               access='acc2',
                               secret=new_secret))
-        req = webob.Request.blank('/v1.0/users/id2')
+        req = webob.Request.blank('/v1.1/fake/users/id2')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)

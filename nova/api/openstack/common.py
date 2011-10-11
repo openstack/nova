@@ -37,7 +37,6 @@ LOG = logging.getLogger('nova.api.openstack.common')
 FLAGS = flags.FLAGS
 
 
-XML_NS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
 

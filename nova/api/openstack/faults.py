@@ -60,13 +60,9 @@ class Fault(webob.exc.HTTPException):
         # 'code' is an attribute on the fault tag itself
         metadata = {'attributes': {fault_name: 'code'}}
 
+        xml_serializer = wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V11)
+
         content_type = req.best_match_content_type()
-
-        xml_serializer = {
-            '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
-            '1.1': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V11),
-        }[common.get_version_from_href(req.url)]
-
         serializer = {
             'application/xml': xml_serializer,
             'application/json': wsgi.JSONDictSerializer(),
@@ -105,11 +101,7 @@ class OverLimitFault(webob.exc.HTTPException):
         content_type = request.best_match_content_type()
         metadata = {"attributes": {"overLimitFault": "code"}}
 
-        xml_serializer = {
-            '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
-            '1.1': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V11),
-        }[common.get_version_from_href(request.url)]
-
+        xml_serializer = wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V11)
         serializer = {
             'application/xml': xml_serializer,
             'application/json': wsgi.JSONDictSerializer(),

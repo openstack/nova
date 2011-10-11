@@ -50,7 +50,7 @@ class Test(test.TestCase):
         user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
         f.add_user(user)
 
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
@@ -67,21 +67,21 @@ class Test(test.TestCase):
         f.add_user(user)
         f.create_project('user1_project', user)
 
-        req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
+        req = webob.Request.blank('/v1.1/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-Server-Management-Url'],
-            "http://foo/v1.0")
+            "http://foo/v1.1/user1_project")
         self.assertEqual(result.headers['X-CDN-Management-Url'],
             "")
         self.assertEqual(result.headers['X-Storage-Url'], "")
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/user1_project')
+        self.stubs.Set(nova.api.openstack, 'APIRouter', fakes.FakeRouter)
+        req = webob.Request.blank('/v1.1/user1_project')
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '200 OK')
@@ -105,7 +105,7 @@ class Test(test.TestCase):
         self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_get',
             bad_token)
 
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-Token'] = 'token_hash'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
@@ -118,23 +118,22 @@ class Test(test.TestCase):
         f.create_project('user1_project', user)
         f.create_project('user2_project', user)
 
-        req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
+        req = webob.Request.blank('/v1.1/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/')
+        self.stubs.Set(nova.api.openstack, 'APIRouter', fakes.FakeRouter)
+        req = webob.Request.blank('/v1.1/user2_project')
         req.headers['X-Auth-Token'] = token
-        req.headers['X-Auth-Project-Id'] = 'user2_project'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
 
     def test_bad_user_bad_key(self):
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-User'] = 'unknown_user'
         req.headers['X-Auth-Key'] = 'unknown_user_key'
         req.headers['X-Auth-Project-Id'] = 'user_project'
@@ -146,19 +145,19 @@ class Test(test.TestCase):
         user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
         f.add_user(user)
 
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-User'] = 'unknown_user'
         req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_no_user(self):
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_bad_token(self):
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-Token'] = 'unknown_token'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
@@ -172,17 +171,16 @@ class Test(test.TestCase):
         f.create_project('user1_project', user1)
         f.create_project('user2_project', user2)
 
-        req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
+        req = webob.Request.blank('/v1.1/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/fake')
+        self.stubs.Set(nova.api.openstack, 'APIRouter', fakes.FakeRouter)
+        req = webob.Request.blank('/v1.1/user2_project')
         req.headers['X-Auth-Token'] = token
-        req.headers['X-Auth-Project-Id'] = 'user2_project'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
@@ -192,17 +190,16 @@ class Test(test.TestCase):
         f.add_user(user1)
         f.create_project('user1_project', user1)
 
-        req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
+        req = webob.Request.blank('/v1.1/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/fake')
+        self.stubs.Set(nova.api.openstack, 'APIRouter', fakes.FakeRouter)
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-Token'] = token
-        req.headers['X-Auth-Project-Id'] = 'unknown_project'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
@@ -222,13 +219,13 @@ class TestFunctional(test.TestCase):
                 created_at=datetime.datetime(2000, 1, 1, 12, 0, 0),
                 ))
 
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-Token'] = 'test_token_hash'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_token_doesnotexist(self):
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-Token'] = 'nonexistant_token_hash'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
@@ -254,15 +251,15 @@ class TestLimiter(test.TestCase):
         f.add_user(user)
         f.create_project('test', user)
 
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.1/')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/fake')
+        self.stubs.Set(nova.api.openstack, 'APIRouter', fakes.FakeRouter)
+        req = webob.Request.blank('/v1.1/test')
         req.method = 'POST'
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app(fake_auth=False))

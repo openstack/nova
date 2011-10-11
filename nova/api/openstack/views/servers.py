@@ -30,16 +30,16 @@ LOG = logging.getLogger('nova.api.openstack.views.servers')
 
 
 class ViewBuilder(object):
-    """Model a server response as a python dictionary.
+    """Model a server response as a python dictionary."""
 
-    Public methods: build
-    Abstract methods: _build_image, _build_flavor
-
-    """
-
-    def __init__(self, context, addresses_builder):
+    def __init__(self, context, addresses_builder, flavor_builder,
+                 image_builder, base_url, project_id=""):
         self.context = context
         self.addresses_builder = addresses_builder
+        self.flavor_builder = flavor_builder
+        self.image_builder = image_builder
+        self.base_url = base_url
+        self.project_id = project_id
 
     def build(self, inst, is_detail=False):
         """Return a dict that represenst a server."""
@@ -51,19 +51,10 @@ class ViewBuilder(object):
             else:
                 server = self._build_simple(inst)
 
-            self._build_extra(server['server'], inst)
+            self._build_links(server['server'], inst)
+            server['server']['uuid'] = inst['uuid']
 
         return server
-
-    def build_list(self, server_objs, is_detail=False, **kwargs):
-        limit = kwargs.get('limit', None)
-        servers = []
-        servers_links = []
-
-        for server_obj in server_objs:
-            servers.append(self.build(server_obj, is_detail)['server'])
-
-        return dict(servers=servers)
 
     def _build_simple(self, inst):
         """Return a simple model of a server."""
@@ -96,68 +87,24 @@ class ViewBuilder(object):
         networks = common.get_networks_for_instance(self.context, inst)
         self._build_addresses(inst_dict, networks)
 
+        inst_dict['created'] = utils.isotime(inst['created_at'])
+        inst_dict['updated'] = utils.isotime(inst['updated_at'])
+
+        status = inst_dict.get('status')
+        if status in ('ACTIVE', 'BUILD', 'REBUILD', 'RESIZE',
+                      'VERIFY_RESIZE'):
+            inst_dict['progress'] = inst['progress'] or 0
+
+        inst_dict['accessIPv4'] = inst.get('access_ip_v4') or ""
+        inst_dict['accessIPv6'] = inst.get('access_ip_v6') or ""
+        inst_dict['key_name'] = inst.get('key_name', '')
+        inst_dict['config_drive'] = inst.get('config_drive')
+
         return dict(server=inst_dict)
 
     def _build_addresses(self, response, networks):
         """Return the addresses sub-resource of a server."""
         response['addresses'] = self.addresses_builder.build(networks)
-
-    def _build_image(self, response, inst):
-        """Return the image sub-resource of a server."""
-        raise NotImplementedError()
-
-    def _build_flavor(self, response, inst):
-        """Return the flavor sub-resource of a server."""
-        raise NotImplementedError()
-
-    def _build_extra(self, response, inst):
-        pass
-
-
-class ViewBuilderV10(ViewBuilder):
-    """Model an Openstack API V1.0 server response."""
-
-    def _build_extra(self, response, inst):
-        response['uuid'] = inst['uuid']
-
-    def _build_image(self, response, inst):
-        if inst.get('image_ref', None):
-            image_ref = inst['image_ref']
-            if str(image_ref).startswith('http'):
-                raise exception.ListingImageRefsNotSupported()
-            response['imageId'] = int(image_ref)
-
-    def _build_flavor(self, response, inst):
-        if inst.get('instance_type', None):
-            response['flavorId'] = inst['instance_type']['flavorid']
-
-
-class ViewBuilderV11(ViewBuilder):
-    """Model an Openstack API V1.0 server response."""
-    def __init__(self, context, addresses_builder, flavor_builder,
-            image_builder, base_url, project_id=""):
-        super(ViewBuilderV11, self).__init__(context, addresses_builder)
-        self.flavor_builder = flavor_builder
-        self.image_builder = image_builder
-        self.base_url = base_url
-        self.project_id = project_id
-
-    def _build_detail(self, inst):
-        response = super(ViewBuilderV11, self)._build_detail(inst)
-        response['server']['created'] = utils.isotime(inst['created_at'])
-        response['server']['updated'] = utils.isotime(inst['updated_at'])
-
-        status = response['server'].get('status')
-        if status in ('ACTIVE', 'BUILD', 'REBUILD', 'RESIZE',
-                      'VERIFY_RESIZE'):
-            response['server']['progress'] = inst['progress'] or 0
-
-        response['server']['accessIPv4'] = inst.get('access_ip_v4') or ""
-        response['server']['accessIPv6'] = inst.get('access_ip_v6') or ""
-        response['server']['key_name'] = inst.get('key_name', '')
-        response['server']['config_drive'] = inst.get('config_drive')
-
-        return response
 
     def _build_image(self, response, inst):
         if inst.get("image_ref", None):
@@ -188,10 +135,6 @@ class ViewBuilderV11(ViewBuilder):
                     },
                 ]
             }
-
-    def _build_extra(self, response, inst):
-        self._build_links(response, inst)
-        response['uuid'] = inst['uuid']
 
     def _build_links(self, response, inst):
         href = self.generate_href(inst["id"])

@@ -28,9 +28,6 @@ LOG = logging.getLogger('nova.api.openstack.views.addresses')
 class ViewBuilder(object):
     """Models a server addresses response as a python dictionary."""
 
-    def build(self, inst):
-        raise NotImplementedError()
-
     def _extract_ips(self, network, key=None):
         if key:
             chain = network[key]
@@ -40,28 +37,6 @@ class ViewBuilder(object):
             if not FLAGS.use_ipv6 and ip['version'] == 6:
                 continue
             yield ip
-
-
-class ViewBuilderV10(ViewBuilder):
-
-    def build(self, networks):
-        if not networks:
-            return dict(public=[], private=[])
-
-        return dict(public=self.build_public_parts(networks),
-                    private=self.build_private_parts(networks))
-
-    def build_public_parts(self, nets):
-        ips = [self._extract_ips(nets[label],
-                                 key='floating_ips') for label in nets]
-        return [ip['addr'] for ip in itertools.chain(*ips)]
-
-    def build_private_parts(self, nets):
-        ips = [self._extract_ips(nets[label], key='ips') for label in nets]
-        return [ip['addr'] for ip in itertools.chain(*ips)]
-
-
-class ViewBuilderV11(ViewBuilder):
 
     def build(self, networks):
         result = {}

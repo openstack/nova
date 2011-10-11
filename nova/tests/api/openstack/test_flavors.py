@@ -89,90 +89,15 @@ class FlavorsTest(test.TestCase):
         self.stubs.UnsetAll()
         super(FlavorsTest, self).tearDown()
 
-    def test_get_flavor_list_v1_0(self):
-        req = webob.Request.blank('/v1.0/flavors')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        flavors = json.loads(res.body)["flavors"]
-        expected = [
-            {
-                "id": "1",
-                "name": "flavor 1",
-            },
-            {
-                "id": "2",
-                "name": "flavor 2",
-            },
-        ]
-        self.assertEqual(flavors, expected)
-
-    def test_get_empty_flavor_list_v1_0(self):
-        self.stubs.Set(nova.db.api, "instance_type_get_all",
-                       empty_instance_type_get_all)
-
-        req = webob.Request.blank('/v1.0/flavors')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        flavors = json.loads(res.body)["flavors"]
-        expected = []
-        self.assertEqual(flavors, expected)
-
-    def test_get_flavor_list_detail_v1_0(self):
-        req = webob.Request.blank('/v1.0/flavors/detail')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        flavors = json.loads(res.body)["flavors"]
-        expected = [
-            {
-                "id": "1",
-                "name": "flavor 1",
-                "ram": "256",
-                "disk": "10",
-                "rxtx_cap": "",
-                "rxtx_quota": "",
-                "swap": "",
-                "vcpus": "",
-            },
-            {
-                "id": "2",
-                "name": "flavor 2",
-                "ram": "512",
-                "disk": "20",
-                "rxtx_cap": "",
-                "rxtx_quota": "",
-                "swap": "",
-                "vcpus": "",
-            },
-        ]
-        self.assertEqual(flavors, expected)
-
-    def test_get_flavor_by_id_v1_0(self):
-        req = webob.Request.blank('/v1.0/flavors/1')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        flavor = json.loads(res.body)["flavor"]
-        expected = {
-            "id": "1",
-            "name": "flavor 1",
-            "ram": "256",
-            "disk": "10",
-            "rxtx_cap": "",
-            "rxtx_quota": "",
-            "swap": "",
-            "vcpus": "",
-        }
-        self.assertEqual(flavor, expected)
-
     def test_get_flavor_by_invalid_id(self):
         self.stubs.Set(nova.db.api, "instance_type_get_by_flavor_id",
                        return_instance_type_not_found)
-        req = webob.Request.blank('/v1.0/flavors/asdf')
+        req = webob.Request.blank('/v1.1/fake/flavors/asdf')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
-    def test_get_flavor_by_id_v1_1(self):
+    def test_get_flavor_by_id(self):
         req = webob.Request.blank('/v1.1/fake/flavors/1')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)
@@ -200,9 +125,8 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
-    def test_get_flavor_list_v1_1(self):
+    def test_get_flavor_list(self):
         req = webob.Request.blank('/v1.1/fake/flavors')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)
@@ -240,9 +164,8 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
-    def test_get_flavor_list_detail_v1_1(self):
+    def test_get_flavor_list_detail(self):
         req = webob.Request.blank('/v1.1/fake/flavors/detail')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)
@@ -292,7 +215,7 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
-    def test_get_empty_flavor_list_v1_1(self):
+    def test_get_empty_flavor_list(self):
         self.stubs.Set(nova.db.api, "instance_type_get_all",
                        empty_instance_type_get_all)
 
@@ -303,10 +226,9 @@ class FlavorsTest(test.TestCase):
         expected = []
         self.assertEqual(flavors, expected)
 
-    def test_get_flavor_list_filter_min_ram_v1_1(self):
+    def test_get_flavor_list_filter_min_ram(self):
         """Flavor lists may be filtered by minRam"""
         req = webob.Request.blank('/v1.1/fake/flavors?minRam=512')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)
@@ -333,7 +255,6 @@ class FlavorsTest(test.TestCase):
     def test_get_flavor_list_filter_min_disk(self):
         """Flavor lists may be filtered by minRam"""
         req = webob.Request.blank('/v1.1/fake/flavors?minDisk=20')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)
@@ -357,13 +278,12 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
-    def test_get_flavor_list_detail_min_ram_and_min_disk_v1_1(self):
+    def test_get_flavor_list_detail_min_ram_and_min_disk(self):
         """Tests that filtering work on flavor details and that minRam and
         minDisk filters can be combined
         """
         req = webob.Request.blank(
             '/v1.1/fake/flavors/detail?minRam=256&minDisk=20')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)
@@ -393,11 +313,10 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
-    def test_get_flavor_list_detail_bogus_min_ram_v1_1(self):
+    def test_get_flavor_list_detail_bogus_min_ram(self):
         """Tests that bogus minRam filtering values are ignored"""
         req = webob.Request.blank(
             '/v1.1/fake/flavors/detail?minRam=16GB')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)
@@ -447,11 +366,10 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
-    def test_get_flavor_list_detail_bogus_min_disk_v1_1(self):
+    def test_get_flavor_list_detail_bogus_min_disk(self):
         """Tests that bogus minDisk filtering values are ignored"""
         req = webob.Request.blank(
             '/v1.1/fake/flavors/detail?minDisk=16GB')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         flavor = json.loads(res.body)

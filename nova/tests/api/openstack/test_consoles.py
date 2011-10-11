@@ -106,7 +106,7 @@ class ConsolesTest(test.TestCase):
         super(ConsolesTest, self).setUp()
         self.flags(verbose=True)
         self.stubs.Set(db.api, 'instance_get', return_server_by_id)
-        self.webreq = common.webob_factory('/v1.0/servers')
+        self.webreq = common.webob_factory('/v1.1/fake/servers')
 
     def test_create_console(self):
         def fake_create_console(cons_self, context, instance_id):
@@ -114,7 +114,7 @@ class ConsolesTest(test.TestCase):
             return {}
         self.stubs.Set(console.API, 'create_console', fake_create_console)
 
-        req = webob.Request.blank('/v1.0/servers/10/consoles')
+        req = webob.Request.blank('/v1.1/fake/servers/10/consoles')
         req.method = "POST"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -136,7 +136,7 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'get_console', fake_get_console)
 
-        req = webob.Request.blank('/v1.0/servers/10/consoles/20')
+        req = webob.Request.blank('/v1.1/fake/servers/10/consoles/20')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -148,7 +148,7 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'get_console', fake_get_console)
 
-        req = webob.Request.blank('/v1.0/servers/10/consoles/20')
+        req = webob.Request.blank('/v1.1/fake/servers/10/consoles/20')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -158,7 +158,7 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'get_console', fake_get_console)
 
-        req = webob.Request.blank('/v1.0/servers/10/consoles/20')
+        req = webob.Request.blank('/v1.1/fake/servers/10/consoles/20')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
@@ -182,7 +182,7 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'get_consoles', fake_get_consoles)
 
-        req = webob.Request.blank('/v1.0/servers/10/consoles')
+        req = webob.Request.blank('/v1.1/fake/servers/10/consoles')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -204,7 +204,7 @@ class ConsolesTest(test.TestCase):
         self.stubs.Set(console.API, 'get_console', fake_get_console)
         self.stubs.Set(console.API, 'delete_console', fake_delete_console)
 
-        req = webob.Request.blank('/v1.0/servers/10/consoles/20')
+        req = webob.Request.blank('/v1.1/fake/servers/10/consoles/20')
         req.method = "DELETE"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
@@ -215,7 +215,7 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'delete_console', fake_delete_console)
 
-        req = webob.Request.blank('/v1.0/servers/10/consoles/20')
+        req = webob.Request.blank('/v1.1/fake/servers/10/consoles/20')
         req.method = "DELETE"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
@@ -226,7 +226,7 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'delete_console', fake_delete_console)
 
-        req = webob.Request.blank('/v1.0/servers/10/consoles/20')
+        req = webob.Request.blank('/v1.1/fake/servers/10/consoles/20')
         req.method = "DELETE"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)

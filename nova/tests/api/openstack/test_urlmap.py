@@ -28,16 +28,6 @@ class UrlmapTest(test.TestCase):
         super(UrlmapTest, self).setUp()
         fakes.stub_out_rate_limiting(self.stubs)
 
-    def test_path_version_v1_0(self):
-        """Test URL path specifying v1.0 returns v1.0 content."""
-        req = webob.Request.blank('/v1.0/')
-        req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/json")
-        body = json.loads(res.body)
-        self.assertEqual(body['version']['id'], 'v1.0')
-
     def test_path_version_v1_1(self):
         """Test URL path specifying v1.1 returns v1.1 content."""
         req = webob.Request.blank('/v1.1/')
@@ -47,17 +37,6 @@ class UrlmapTest(test.TestCase):
         self.assertEqual(res.content_type, "application/json")
         body = json.loads(res.body)
         self.assertEqual(body['version']['id'], 'v1.1')
-
-    def test_content_type_version_v1_0(self):
-        """Test Content-Type specifying v1.0 returns v1.0 content."""
-        req = webob.Request.blank('/')
-        req.content_type = "application/json;version=1.0"
-        req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/json")
-        body = json.loads(res.body)
-        self.assertEqual(body['version']['id'], 'v1.0')
 
     def test_content_type_version_v1_1(self):
         """Test Content-Type specifying v1.1 returns v1.1 content."""
@@ -69,16 +48,6 @@ class UrlmapTest(test.TestCase):
         self.assertEqual(res.content_type, "application/json")
         body = json.loads(res.body)
         self.assertEqual(body['version']['id'], 'v1.1')
-
-    def test_accept_version_v1_0(self):
-        """Test Accept header specifying v1.0 returns v1.0 content."""
-        req = webob.Request.blank('/')
-        req.accept = "application/json;version=1.0"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/json")
-        body = json.loads(res.body)
-        self.assertEqual(body['version']['id'], 'v1.0')
 
     def test_accept_version_v1_1(self):
         """Test Accept header specifying v1.1 returns v1.1 content."""
