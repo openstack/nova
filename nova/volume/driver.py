@@ -213,6 +213,10 @@ class VolumeDriver(object):
            True, run the update first."""
         return None
 
+    def do_setup(self, context):
+        """Any initialization the volume driver does while starting"""
+        pass
+
 
 class ISCSIDriver(VolumeDriver):
     """Executes commands relating to ISCSI volumes.
