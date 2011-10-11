@@ -126,11 +126,11 @@ class VMHelper(HelperBase):
 
             3. Using hardware virtualization
         """
-
         inst_type_id = instance.instance_type_id
         instance_type = instance_types.get_instance_type(inst_type_id)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
+
         rec = {
             'actions_after_crash': 'destroy',
             'actions_after_reboot': 'restart',
@@ -167,6 +167,10 @@ class VMHelper(HelperBase):
             'VCPUs_max': vcpus,
             'VCPUs_params': {},
             'xenstore_data': {}}
+
+        if instance_type.get("vcpu_weight"):
+            rec["VCPUs_params"]["weight"] = instance_type["vcpu_weight"]
+
         # Complete VM configuration record according to the image type
         # non-raw/raw with PV kernel/raw in HVM mode
         if use_pv_kernel:
