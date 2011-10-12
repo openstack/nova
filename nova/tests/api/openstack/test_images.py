@@ -133,7 +133,7 @@ class ImagesTest(test.TestCase):
                 "updated": NOW_API_FORMAT,
                 "created": NOW_API_FORMAT,
                 "status": "SAVING",
-                "progress": 0,
+                "progress": 25,
                 "minDisk": 0,
                 "minRam": 0,
                 'server': {
@@ -587,7 +587,7 @@ class ImagesTest(test.TestCase):
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
-            'progress': 0,
+            'progress': 25,
         },
         {
             'id': 125,
@@ -595,7 +595,7 @@ class ImagesTest(test.TestCase):
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
-            'progress': 0,
+            'progress': 50,
         },
         {
             'id': 126,
@@ -685,7 +685,7 @@ class ImagesTest(test.TestCase):
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
-            'progress': 0,
+            'progress': 25,
             'minDisk': 0,
             'minRam': 0,
             'server': {
@@ -723,7 +723,7 @@ class ImagesTest(test.TestCase):
             'updated': NOW_API_FORMAT,
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
-            'progress': 0,
+            'progress': 50,
             'minDisk': 0,
             'minRam': 0,
             'server': {
@@ -978,7 +978,7 @@ class ImagesTest(test.TestCase):
             'created': NOW_API_FORMAT,
             'status': 'SAVING',
             'minDisk': 0,
-            'progress': 0,
+            'progress': 25,
             'minRam': 0,
             'server': {
                 'id': '42',
