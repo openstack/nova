@@ -27,6 +27,8 @@ Imports
   # vim: tabstop=4 shiftwidth=4 softtabstop=4
   {{stdlib imports in human alphabetical order}}
   \n
+  {{third-party lib imports in human alphabetical order}}
+  \n
   {{nova imports in human alphabetical order}}
   \n
   \n
@@ -42,6 +44,9 @@ Human Alphabetical Order Examples
   import StringIO
   import time
   import unittest
+
+  import eventlet
+  import webob.exc
 
   import nova.api.ec2
   from nova.api import openstack
