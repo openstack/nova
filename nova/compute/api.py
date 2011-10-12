@@ -929,6 +929,9 @@ class API(base.Base):
 
         If there is no filter and the context is an admin, it will retreive
         all instances in the system.
+
+        Deleted instances will be returned by default, unless there is a
+        search option that says otherwise.
         """
 
         if search_opts is None:
