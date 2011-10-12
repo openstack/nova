@@ -285,7 +285,7 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
-        search_opts = {'project_id': project_id}
+        search_opts = {'project_id': project_id, 'deleted': False}
         for instance in self.compute_api.get_all(context,
                 search_opts=search_opts):
             # only look at ipv4 addresses
@@ -360,7 +360,7 @@ class CloudController(object):
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
-        search_opts = {'fixed_ip': address}
+        search_opts = {'fixed_ip': address, 'deleted': False}
         try:
             instance_ref = self.compute_api.get_all(ctxt,
                     search_opts=search_opts)
