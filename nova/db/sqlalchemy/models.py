@@ -303,7 +303,7 @@ class InstanceTypes(BASE, NovaBase):
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
     local_gb = Column(Integer)
-    flavorid = Column(Integer, unique=True)
+    flavorid = Column(String(255), unique=True)
     swap = Column(Integer, nullable=False, default=0)
     rxtx_quota = Column(Integer, nullable=False, default=0)
     rxtx_cap = Column(Integer, nullable=False, default=0)

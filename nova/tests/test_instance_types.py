@@ -37,27 +37,18 @@ class InstanceTypeTestCase(test.TestCase):
     def setUp(self):
         super(InstanceTypeTestCase, self).setUp()
         session = get_session()
-        max_flavorid = session.query(models.InstanceTypes).\
-                                     order_by("flavorid desc").\
-                                     first()
-        max_id = session.query(models.InstanceTypes).\
-                                     order_by("id desc").\
-                                     first()
-        self.flavorid = max_flavorid["flavorid"] + 1
-        self.id = max_id["id"] + 1
-        self.name = str(int(time.time()))
 
-    def _nonexistent_flavor_name(self):
-        """return an instance type name not in the DB"""
-        nonexistent_flavor = "sdfsfsdf"
+    def _generate_name(self):
+        """return a name not in the DB"""
+        nonexistent_flavor = str(int(time.time()))
         flavors = instance_types.get_all_types()
         while nonexistent_flavor in flavors:
             nonexistent_flavor += "z"
         else:
             return nonexistent_flavor
 
-    def _nonexistent_flavor_id(self):
-        """return an instance type ID not in the DB"""
+    def _generate_flavorid(self):
+        """return a flavorid not in the DB"""
         nonexistent_flavor = 2700
         flavor_ids = [value["id"] for key, value in\
                     instance_types.get_all_types().iteritems()]
@@ -72,95 +63,160 @@ class InstanceTypeTestCase(test.TestCase):
 
     def test_instance_type_create_then_delete(self):
         """Ensure instance types can be created"""
-        starting_inst_list = instance_types.get_all_types()
-        instance_types.create(self.name, 256, 1, 120, self.flavorid)
-        new = instance_types.get_all_types()
-        self.assertNotEqual(len(starting_inst_list),
-                            len(new),
+        name = 'Small Flavor'
+        flavorid = 'flavor1'
+
+        original_list = instance_types.get_all_types()
+
+        # create new type and make sure values stick
+        inst_type = instance_types.create(name, 256, 1, 120, flavorid)
+        inst_type_id = inst_type['id']
+        self.assertEqual(inst_type['flavorid'], flavorid)
+        self.assertEqual(inst_type['name'], name)
+        self.assertEqual(inst_type['memory_mb'], 256)
+        self.assertEqual(inst_type['vcpus'], 1)
+        self.assertEqual(inst_type['local_gb'], 120)
+        self.assertEqual(inst_type['swap'], 0)
+        self.assertEqual(inst_type['rxtx_quota'], 0)
+        self.assertEqual(inst_type['rxtx_cap'], 0)
+
+        # make sure new type shows up in list
+        new_list = instance_types.get_all_types()
+        self.assertNotEqual(len(original_list), len(new_list),
                             'instance type was not created')
-        instance_types.destroy(self.name)
-        self.assertEqual(1,
-                    instance_types.get_instance_type(self.id)["deleted"])
-        self.assertEqual(starting_inst_list, instance_types.get_all_types())
-        instance_types.purge(self.name)
-        self.assertEqual(len(starting_inst_list),
-                         len(instance_types.get_all_types()),
+
+        # destroy instance and make sure deleted flag is set to True
+        instance_types.destroy(name)
+        inst_type = instance_types.get_instance_type(inst_type_id)
+        self.assertEqual(1, inst_type["deleted"])
+
+        # deleted instance should not be in list anymoer
+        new_list = instance_types.get_all_types()
+        self.assertEqual(original_list, new_list)
+
+        # ensure instances are gone after purge
+        instance_types.purge(name)
+        new_list = instance_types.get_all_types()
+        self.assertEqual(original_list, new_list,
                          'instance type not purged')
 
     def test_get_all_instance_types(self):
         """Ensures that all instance types can be retrieved"""
         session = get_session()
-        total_instance_types = session.query(models.InstanceTypes).\
-                                            count()
+        total_instance_types = session.query(models.InstanceTypes).count()
         inst_types = instance_types.get_all_types()
         self.assertEqual(total_instance_types, len(inst_types))
 
     def test_invalid_create_args_should_fail(self):
         """Ensures that instance type creation fails with invalid args"""
-        self.assertRaises(
-                exception.InvalidInput,
-                instance_types.create, self.name, 0, 1, 120, self.flavorid)
-        self.assertRaises(
-                exception.InvalidInput,
-                instance_types.create, self.name, 256, -1, 120, self.flavorid)
-        self.assertRaises(
-                exception.InvalidInput,
-                instance_types.create, self.name, 256, 1, "aa", self.flavorid)
+        invalid_sigs = [
+            (('Zero memory', 0, 1, 10, 'flavor1'), {}),
+            (('Negative memory', -256, 1, 10, 'flavor1'), {}),
+            (('Non-integer memory', 'asdf', 1, 10, 'flavor1'), {}),
+
+            (('Zero vcpus', 256, 0, 10, 'flavor1'), {}),
+            (('Negative vcpus', 256, -1, 10, 'flavor1'), {}),
+            (('Non-integer vcpus', 256, 'a', 10, 'flavor1'), {}),
+
+            (('Negative storage', 256, 1, -1, 'flavor1'), {}),
+            (('Non-integer storage', 256, 1, 'a', 'flavor1'), {}),
+
+            (('Negative swap', 256, 1, 10, 'flavor1'), {'swap': -1}),
+            (('Non-integer swap', 256, 1, 10, 'flavor1'), {'swap': -1}),
+
+            (('Negative rxtx_quota', 256, 1, 10, 'f1'), {'rxtx_quota': -1}),
+            (('Non-integer rxtx_quota', 256, 1, 10, 'f1'), {'rxtx_quota': -1}),
+
+            (('Negative rxtx_cap', 256, 1, 10, 'f1'), {'rxtx_cap': -1}),
+            (('Non-integer rxtx_cap', 256, 1, 10, 'f1'), {'rxtx_cap': 'a'}),
+        ]
+
+        for (args, kwargs) in invalid_sigs:
+            self.assertRaises(exception.InvalidInput,
+                              instance_types.create, *args, **kwargs)
 
     def test_non_existent_inst_type_shouldnt_delete(self):
         """Ensures that instance type creation fails with invalid args"""
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeNotFoundByName,
                           instance_types.destroy,
-                          self._nonexistent_flavor_name())
+                          'unknown_flavor')
 
-    def test_repeated_inst_types_should_raise_api_error(self):
-        """Ensures that instance duplicates raises ApiError"""
-        new_name = self.name + "dup"
-        instance_types.create(new_name, 256, 1, 120, self.flavorid + 1)
-        instance_types.destroy(new_name)
-        self.assertRaises(
-                exception.ApiError,
-                instance_types.create, new_name, 256, 1, 120, self.flavorid)
+    def test_duplicate_names_fail(self):
+        """Ensures that name duplicates raise ApiError"""
+        name = 'some_name'
+        instance_types.create(name, 256, 1, 120, 'flavor1')
+        self.assertRaises(exception.ApiError,
+                          instance_types.create,
+                          name, 256, 1, 120, 'flavor2')
+
+    def test_duplicate_flavorids_fail(self):
+        """Ensures that flavorid duplicates raise ApiError"""
+        flavorid = 'flavor1'
+        instance_types.create('name one', 256, 1, 120, flavorid)
+        self.assertRaises(exception.ApiError,
+                          instance_types.create,
+                          'name two', 256, 1, 120, flavorid)
 
     def test_will_not_destroy_with_no_name(self):
         """Ensure destroy sad path of no name raises error"""
-        self.assertRaises(exception.ApiError,
-                          instance_types.destroy,
-                          self._nonexistent_flavor_name())
+        self.assertRaises(exception.InstanceTypeNotFoundByName,
+                          instance_types.destroy, None)
 
     def test_will_not_purge_without_name(self):
         """Ensure purge without a name raises error"""
-        self.assertRaises(exception.InvalidInstanceType,
+        self.assertRaises(exception.InstanceTypeNotFoundByName,
                           instance_types.purge, None)
 
     def test_will_not_purge_with_wrong_name(self):
         """Ensure purge without correct name raises error"""
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeNotFound,
                           instance_types.purge,
-                          self._nonexistent_flavor_name())
+                          'unknown_flavor')
 
     def test_will_not_get_bad_default_instance_type(self):
         """ensures error raised on bad default instance type"""
-        FLAGS.default_instance_type = self._nonexistent_flavor_name()
+        FLAGS.default_instance_type = 'unknown_flavor'
         self.assertRaises(exception.InstanceTypeNotFoundByName,
                           instance_types.get_default_instance_type)
 
-    def test_will_not_get_instance_type_by_name_with_no_name(self):
+    def test_will_get_instance_type_by_id(self):
+        default_instance_type = instance_types.get_default_instance_type()
+        instance_type_id = default_instance_type['id']
+        fetched = instance_types.get_instance_type(instance_type_id)
+        self.assertEqual(default_instance_type, fetched)
+
+    def test_will_not_get_instance_type_by_unknown_id(self):
         """Ensure get by name returns default flavor with no name"""
-        self.assertEqual(instance_types.get_default_instance_type(),
-                              instance_types.get_instance_type_by_name(None))
+        self.assertRaises(exception.InstanceTypeNotFound,
+                         instance_types.get_instance_type, 10000)
+
+    def test_will_not_get_instance_type_with_bad_id(self):
+        """Ensure get by name returns default flavor with bad name"""
+        self.assertRaises(exception.InstanceTypeNotFound,
+                          instance_types.get_instance_type, 'asdf')
+
+    def test_instance_type_get_by_None_name_returns_default(self):
+        """Ensure get by name returns default flavor with no name"""
+        default = instance_types.get_default_instance_type()
+        actual = instance_types.get_instance_type_by_name(None)
+        self.assertEqual(default, actual)
 
     def test_will_not_get_instance_type_with_bad_name(self):
         """Ensure get by name returns default flavor with bad name"""
-        self.assertRaises(exception.InstanceTypeNotFound,
-                          instance_types.get_instance_type,
-                          self._nonexistent_flavor_name())
+        self.assertRaises(exception.InstanceTypeNotFoundByName,
+                          instance_types.get_instance_type_by_name, 10000)
 
-    def test_will_not_get_flavor_by_bad_flavor_id(self):
+    def test_will_not_get_instance_by_unknown_flavor_id(self):
         """Ensure get by flavor raises error with wrong flavorid"""
-        self.assertRaises(exception.InstanceTypeNotFound,
-                          instance_types.get_instance_type_by_name,
-                          self._nonexistent_flavor_id())
+        self.assertRaises(exception.FlavorNotFound,
+                          instance_types.get_instance_type_by_flavor_id,
+                          'unknown_flavor')
+
+    def test_will_get_instance_by_flavor_id(self):
+        default_instance_type = instance_types.get_default_instance_type()
+        flavorid = default_instance_type['flavorid']
+        fetched = instance_types.get_instance_type_by_flavor_id(flavorid)
+        self.assertEqual(default_instance_type, fetched)
 
 
 class InstanceTypeFilteringTest(test.TestCase):

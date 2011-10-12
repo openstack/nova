@@ -905,7 +905,7 @@ class API(base.Base):
 
     def get_instance_type(self, context, instance_type_id):
         """Get an instance type by instance type id."""
-        return self.db.instance_type_get(context, instance_type_id)
+        return instance_types.get_instance_type(instance_type_id)
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
@@ -948,8 +948,8 @@ class API(base.Base):
         filters = {}
 
         def _remap_flavor_filter(flavor_id):
-            instance_type = self.db.instance_type_get_by_flavor_id(
-                    context, flavor_id)
+            instance_type = instance_types.get_instance_type_by_flavor_id(
+                    flavor_id)
             filters['instance_type_id'] = instance_type['id']
 
         def _remap_fixed_ip_filter(fixed_ip):
@@ -1258,8 +1258,8 @@ class API(base.Base):
             LOG.debug(_("flavor_id is None. Assuming migration."))
             new_instance_type = current_instance_type
         else:
-            new_instance_type = self.db.instance_type_get_by_flavor_id(
-                    context, flavor_id)
+            new_instance_type = instance_types.get_instance_type_by_flavor_id(
+                    flavor_id)
 
         current_instance_type_name = current_instance_type['name']
         new_instance_type_name = new_instance_type['name']

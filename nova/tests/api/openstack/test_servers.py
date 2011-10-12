@@ -19,11 +19,11 @@
 import base64
 import datetime
 import json
-from lxml import etree
 import unittest
 import urlparse
 from xml.dom import minidom
 
+from lxml import etree
 import webob
 
 import nova.api.openstack
@@ -40,13 +40,13 @@ import nova.db.api
 from nova.db.sqlalchemy.models import InstanceMetadata
 from nova import exception
 from nova import flags
+import nova.image.fake
+import nova.rpc
 import nova.scheduler.api
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
 from nova import utils
-import nova.image.fake
-import nova.rpc
 
 
 FLAGS = flags.FLAGS
@@ -2615,7 +2615,7 @@ class ServersViewBuilderTest(test.TestCase):
             "hostname": "",
             "host": "",
             "instance_type": {
-               "flavorid": 1,
+               "flavorid": '1',
             },
             "user_data": "",
             "reservation_id": "",

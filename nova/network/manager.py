@@ -48,10 +48,13 @@ import datetime
 import itertools
 import math
 import netaddr
+import random
 import re
 import socket
 from eventlet import greenpool
 
+from nova.compute import api as compute_api
+from nova.compute import instance_types
 from nova import context
 from nova import db
 from nova import exception
@@ -59,12 +62,10 @@ from nova import flags
 from nova import ipv6
 from nova import log as logging
 from nova import manager
+from nova.network import api as network_api
 from nova import quota
 from nova import utils
 from nova import rpc
-from nova.network import api as network_api
-from nova.compute import api as compute_api
-import random
 
 
 LOG = logging.getLogger("nova.network.manager")
@@ -661,7 +662,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             fixed_ips = []
 
         vifs = self.db.virtual_interface_get_by_instance(context, instance_id)
-        flavor = self.db.instance_type_get(context, instance_type_id)
+        instance_type = instance_types.get_instance_type(instance_type_id)
         network_info = []
         # a vif has an address, instance_id, and network_id
         # it is also joined to the instance and network given by those IDs
@@ -711,7 +712,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'broadcast': network['broadcast'],
                 'mac': vif['address'],
                 'vif_uuid': vif['uuid'],
-                'rxtx_cap': flavor['rxtx_cap'],
+                'rxtx_cap': instance_type['rxtx_cap'],
                 'dns': [],
                 'ips': [ip_dict(ip) for ip in network_IPs],
                 'should_create_bridge': self.SHOULD_CREATE_BRIDGE,

@@ -18,11 +18,12 @@
 import webob
 from lxml import etree
 
-from nova import db
-from nova import exception
 from nova.api.openstack import views
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.compute import instance_types
+from nova import db
+from nova import exception
 
 
 class Controller(object):
@@ -57,17 +58,17 @@ class Controller(object):
                 pass  # ignore bogus values per spec
 
         ctxt = req.environ['nova.context']
-        inst_types = db.api.instance_type_get_all(ctxt, filters=filters)
+        inst_types = instance_types.get_all_types(filters=filters)
         builder = self._get_view_builder(req)
         items = [builder.build(inst_type, is_detail=is_detail)
-                 for inst_type in inst_types]
+                 for inst_type in inst_types.values()]
         return items
 
     def show(self, req, id):
         """Return data about the given flavor id."""
         try:
             ctxt = req.environ['nova.context']
-            flavor = db.api.instance_type_get_by_flavor_id(ctxt, id)
+            flavor = instance_types.get_instance_type_by_flavor_id(id)
         except exception.NotFound:
             return webob.exc.HTTPNotFound()
 

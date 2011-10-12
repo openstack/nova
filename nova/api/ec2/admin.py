@@ -25,6 +25,7 @@ import netaddr
 import urllib
 
 from nova import compute
+from nova.compute import instance_types
 from nova import db
 from nova import exception
 from nova import flags
@@ -126,8 +127,8 @@ class AdminController(object):
 
     def describe_instance_types(self, context, **_kwargs):
         """Returns all active instance types data (vcpus, memory, etc.)"""
-        inst_types = db.instance_type_get_all(context)
-        inst_type_dicts = [instance_dict(i) for i in inst_types]
+        inst_types = instance_types.get_all_types()
+        inst_type_dicts = [instance_dict(i) for i in inst_types.values()]
         return {'instanceTypeSet': inst_type_dicts}
 
     def describe_user(self, _context, name, **_kwargs):
