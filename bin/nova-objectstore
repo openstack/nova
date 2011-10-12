@@ -38,22 +38,14 @@ from nova import flags
 from nova import log as logging
 from nova import service
 from nova import utils
-from nova import wsgi
 from nova.objectstore import s3server
-
-
-FLAGS = flags.FLAGS
 
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    FLAGS(sys.argv)
+    flags.FLAGS(sys.argv)
     logging.setup()
     utils.monkey_patch()
-    router = s3server.S3Application(FLAGS.buckets_path)
-    server = wsgi.Server("S3 Objectstore",
-                         router,
-                         port=FLAGS.s3_port,
-                         host=FLAGS.s3_host)
+    server = s3server.get_wsgi_server()
     service.serve(server)
     service.wait()

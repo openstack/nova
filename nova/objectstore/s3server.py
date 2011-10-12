@@ -55,6 +55,13 @@ flags.DEFINE_string('buckets_path', '$state_path/buckets',
                     'path to s3 buckets')
 
 
+def get_wsgi_server():
+    return wsgi.Server("S3 Objectstore",
+                       S3Application(FLAGS.buckets_path),
+                       port=FLAGS.s3_port,
+                       host=FLAGS.s3_host)
+
+
 class S3Application(wsgi.Router):
     """Implementation of an S3-like storage server based on local files.
 

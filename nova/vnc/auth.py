@@ -22,19 +22,16 @@ import time
 import urlparse
 import webob
 
-from webob import Request
-
 from nova import context
 from nova import flags
 from nova import log as logging
 from nova import manager
 from nova import rpc
 from nova import utils
-from nova import wsgi
 from nova import vnc
 
 
-LOG = logging.getLogger('nova.vnc-proxy')
+LOG = logging.getLogger('nova.vncproxy')
 FLAGS = flags.FLAGS
 
 
