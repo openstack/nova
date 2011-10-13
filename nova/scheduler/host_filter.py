@@ -32,17 +32,16 @@ from nova import exception
 from nova import flags
 import nova.scheduler
 
-# NOTE(Vek): Even though we don't use filters in here anywhere, we
-#            depend on default_host_filter being available in FLAGS,
-#            and that happens only when filters/abstract_filter.py is
-#            imported.
 from nova.scheduler import filters
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_list('default_host_filters', ['AllHostsFilter'],
+        'Which filters to use for filtering hosts when not specified '
+        'in the request.')
 
 
-def _get_filters():
+def _get_filter_classes():
     # Imported here to avoid circular imports
     from nova.scheduler import filters
 
@@ -55,15 +54,29 @@ def _get_filters():
             and get_itm(itm) is not filters.AbstractHostFilter]
 
 
-def choose_host_filter(filter_name=None):
-    """Since the caller may specify which filter to use we need
+def choose_host_filters(filters=None):
+    """Since the caller may specify which filters to use we need
     to have an authoritative list of what is permissible. This
-    function checks the filter name against a predefined set
+    function checks the filter names against a predefined set
     of acceptable filters.
     """
-    if not filter_name:
-        filter_name = FLAGS.default_host_filter
-    for filter_class in _get_filters():
-        if filter_class.__name__ == filter_name:
-            return filter_class()
-    raise exception.SchedulerHostFilterNotFound(filter_name=filter_name)
+    if not filters:
+        filters = FLAGS.default_host_filters
+    if not isinstance(filters, (list, tuple)):
+        filters = [filters]
+    good_filters = []
+    bad_filters = []
+    filter_classes = _get_filter_classes()
+    for filter_name in filters:
+        found_class = False
+        for cls in filter_classes:
+            if cls.__name__ == filter_name:
+                good_filters.append(cls())
+                found_class = True
+                break
+        if not found_class:
+            bad_filters.append(filter_name)
+    if bad_filters:
+        msg = ", ".join(bad_filters)
+        raise exception.SchedulerHostFilterNotFound(filter_name=msg)
+    return good_filters

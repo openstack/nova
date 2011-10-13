@@ -15,7 +15,7 @@
 
 
 import nova.scheduler
-from nova.scheduler.filters import abstract_filter
+import abstract_filter
 
 
 class AllHostsFilter(abstract_filter.AbstractHostFilter):
@@ -24,9 +24,8 @@ class AllHostsFilter(abstract_filter.AbstractHostFilter):
         """Return anything to prevent base-class from raising
         exception.
         """
-        return (self._full_name(), instance_type)
+        return instance_type
 
-    def filter_hosts(self, zone_manager, query):
-        """Return a list of hosts from ZoneManager list."""
-        return [(host, services)
-               for host, services in zone_manager.service_states.iteritems()]
+    def filter_hosts(self, host_list, query):
+        """Return the entire list of supplied hosts."""
+        return list(host_list)

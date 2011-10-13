@@ -38,9 +38,20 @@ class BaseScheduler(abstract_scheduler.AbstractScheduler):
     """
     def filter_hosts(self, topic, request_spec, hosts=None):
         """Filter the full host list (from the ZoneManager)"""
-        filter_name = request_spec.get('filter', None)
-        # Make sure that the requested filter is legitimate.
-        selected_filter = host_filter.choose_host_filter(filter_name)
+        filters = request_spec.get('filter')
+        if filters is None:
+            # Not specified; use the default
+            filters = FLAGS.default_host_filters
+        if not isinstance(filters, (list, tuple)):
+            filters = [filters]
+        if hosts is None:
+            # Get the full list (only considering 'compute' services)
+            all_hosts = self.zone_manager.service_states.iteritems()
+            hosts = [(host, services["compute"])
+                    for host, services in all_hosts
+                    if "compute" in services]
+        # Make sure that the requested filters are legitimate.
+        selected_filters = host_filter.choose_host_filters(filters)
 
         # TODO(sandy): We're only using InstanceType-based specs
         # currently. Later we'll need to snoop for more detailed
@@ -48,11 +59,13 @@ class BaseScheduler(abstract_scheduler.AbstractScheduler):
         instance_type = request_spec.get("instance_type", None)
         if instance_type is None:
             # No way to select; return the specified hosts
-            return hosts or []
-        name, query = selected_filter.instance_type_to_filter(instance_type)
-        return selected_filter.filter_hosts(self.zone_manager, query)
+            return hosts
+        for selected_filter in selected_filters:
+            query = selected_filter.instance_type_to_filter(instance_type)
+            hosts = selected_filter.filter_hosts(hosts, query)
+        return hosts
 
-    def weigh_hosts(self, topic, request_spec, hosts):
+    def weigh_hosts(self, request_spec, hosts):
         """Derived classes may override this to provide more sophisticated
         scheduling objectives
         """

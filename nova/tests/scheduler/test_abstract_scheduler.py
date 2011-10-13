@@ -455,8 +455,7 @@ class BaseSchedulerTestCase(test.TestCase):
 
         # Call weigh_hosts()
         num_instances = len(hostlist) * 2 + len(hostlist) / 2
-        instlist = sched.weigh_hosts('compute',
-                                     dict(num_instances=num_instances),
+        instlist = sched.weigh_hosts(dict(num_instances=num_instances),
                                      hostlist)
 
         # Should be enough entries to cover all instances

@@ -94,7 +94,7 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         query = ['and',
                 ['>=', '$compute.host_memory_free', required_ram],
                 ['>=', '$compute.disk_available', required_disk]]
-        return (self._full_name(), json.dumps(query))
+        return json.dumps(query)
 
     def _parse_string(self, string, host, services):
         """Strings prefixed with $ are capability lookups in the
@@ -112,7 +112,7 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
                 return None
         return services
 
-    def _process_filter(self, zone_manager, query, host, services):
+    def _process_filter(self, query, host, services):
         """Recursively parse the query structure."""
         if not query:
             return True
@@ -121,7 +121,7 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         cooked_args = []
         for arg in query[1:]:
             if isinstance(arg, list):
-                arg = self._process_filter(zone_manager, arg, host, services)
+                arg = self._process_filter(arg, host, services)
             elif isinstance(arg, basestring):
                 arg = self._parse_string(arg, host, services)
             if arg is not None:
@@ -129,18 +129,22 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         result = method(self, cooked_args)
         return result
 
-    def filter_hosts(self, zone_manager, query):
+    def filter_hosts(self, host_list, query):
         """Return a list of hosts that can fulfill the requirements
         specified in the query.
         """
         expanded = json.loads(query)
         filtered_hosts = []
-        for host, services in zone_manager.service_states.iteritems():
-            result = self._process_filter(zone_manager, expanded, host,
-                    services)
+        for host, capabilities in host_list:
+            if not capabilities:
+                continue
+            if not capabilities.get("enabled", True):
+                # Host is disabled
+                continue
+            result = self._process_filter(expanded, host, capabilities)
             if isinstance(result, list):
                 # If any succeeded, include the host
                 result = any(result)
             if result:
-                filtered_hosts.append((host, services))
+                filtered_hosts.append((host, capabilities))
         return filtered_hosts

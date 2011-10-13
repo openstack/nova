@@ -22,7 +22,7 @@ class InstanceTypeFilter(abstract_filter.AbstractHostFilter):
     """HostFilter hard-coded to work with InstanceType records."""
     def instance_type_to_filter(self, instance_type):
         """Use instance_type to filter hosts."""
-        return (self._full_name(), instance_type)
+        return instance_type
 
     def _satisfies_extra_specs(self, capabilities, instance_type):
         """Check that the capabilities provided by the compute service
@@ -40,13 +40,18 @@ class InstanceTypeFilter(abstract_filter.AbstractHostFilter):
             return False
         return True
 
-    def filter_hosts(self, zone_manager, query):
+    def filter_hosts(self, host_list, query):
         """Return a list of hosts that can create instance_type."""
         instance_type = query
         selected_hosts = []
-        for host, services in zone_manager.service_states.iteritems():
-            capabilities = services.get('compute', {})
+        for host, capabilities in host_list:
+            # In case the capabilities have not yet been extracted from
+            # the zone manager's services dict...
+            capabilities = capabilities.get("compute", capabilities)
             if not capabilities:
+                continue
+            if not capabilities.get("enabled", True):
+                # Host is disabled
                 continue
             host_ram_mb = capabilities['host_memory_free']
             disk_bytes = capabilities['disk_available']
@@ -70,6 +75,7 @@ class InstanceTypeFilter(abstract_filter.AbstractHostFilter):
 #    'host_other_config': {},
 #    'host_ip_address': '192.168.1.109',
 #    'host_cpu_info': {},
+#    'enabled': True,
 #    'disk_available': 32954957824,
 #    'disk_total': 50394562560,
 #    'disk_used': 17439604736,
