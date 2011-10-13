@@ -58,6 +58,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.notifier import api as notifier
+from nova.compute.utils import notify_usage_exists
 from nova.virt import driver
 
 
@@ -141,6 +142,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api = network.API()
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self._last_host_check = 0
+        self._last_bw_usage_poll = 0
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -565,6 +567,9 @@ class ComputeManager(manager.SchedulerDependentManager):
     @checks_instance_lock
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this host."""
+        #generate usage info.
+        instance = self.db.instance_get(context.elevated(), instance_id)
+        notify_usage_exists(instance, current_period=True)
         self._delete_instance(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1137,6 +1142,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.network_api.add_fixed_ip_to_instance(context, instance_id,
                                                   self.host, network_id)
+        instance_ref = self.db.instance_get(context, instance_id)
+        usage = utils.usage_from_instance(instance_ref)
+        notifier.notify('compute.%s' % self.host,
+                        'compute.instance.create_ip',
+                        notifier.INFO, usage)
+
         self.inject_network_info(context, instance_id)
         self.reset_network(context, instance_id)
 
@@ -1149,6 +1160,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.network_api.remove_fixed_ip_from_instance(context, instance_id,
                                                        address)
+        instance_ref = self.db.instance_get(context, instance_id)
+        usage = utils.usage_from_instance(instance_ref)
+        notifier.notify('compute.%s' % self.host,
+                        'compute.instance.delete_ip',
+                        notifier.INFO, usage)
+
         self.inject_network_info(context, instance_id)
         self.reset_network(context, instance_id)
 
@@ -1803,8 +1820,34 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.warning(_("Error during reclamation of queued deletes: %s"),
                         unicode(ex))
             error_list.append(ex)
+        try:
+            start = utils.current_audit_period()[1]
+            self._update_bandwidth_usage(context, start)
+        except NotImplementedError:
+            # Not all hypervisors have bandwidth polling implemented yet.
+            # If they don't id doesn't break anything, they just don't get the
+            # info in the usage events. (mdragon)
+            pass
+        except Exception as ex:
+            LOG.warning(_("Error updating bandwidth usage: %s"),
+                        unicode(ex))
+            error_list.append(ex)
 
         return error_list
+
+    def _update_bandwidth_usage(self, context, start_time, stop_time=None):
+        curr_time = time.time()
+        if curr_time - self._last_bw_usage_poll > FLAGS.bandwith_poll_interval:
+            self._last_bw_usage_poll = curr_time
+            LOG.info(_("Updating bandwidth usage cache"))
+            bw_usage = self.driver.get_all_bw_usage(start_time, stop_time)
+            for usage in bw_usage:
+                vif = usage['virtual_interface']
+                self.db.bw_usage_update(context,
+                                        vif.instance_id,
+                                        vif.network.label,
+                                        start_time,
+                                        usage['bw_in'], usage['bw_out'])
 
     def _report_driver_status(self):
         curr_time = time.time()

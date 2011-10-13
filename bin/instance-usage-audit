@@ -24,14 +24,13 @@
    system consuming usage notification feeds to calculate instance usage
    for each tenant.
 
-   Time periods are specified like so:
-   <number>[mdy]
+   Time periods are specified as 'hour', 'month', 'day' or 'year'
 
-   1m = previous month. If the script is run April 1, it will generate usages
-        for March 1 thry March 31.
-   3m = 3 previous months.
-   90d = previous 90 days.
-   1y = previous year. If run on Jan 1, it generates usages for
+   hour = previous hour. If run at 9:07am, will generate usage for 8-9am.
+   month = previous month. If the script is run April 1, it will generate
+           usages for March 1 thry March 31.
+   day = previous day. if run on July 4th, it generates usages for July 3rd.
+   year = previous year. If run on Jan 1, it generates usages for
         Jan 1 thru Dec 31 of the previous year.
 """
 
@@ -59,57 +58,20 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 
-from nova.notifier import api as notifier_api
+from nova.compute.utils import notify_usage_exists
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('instance_usage_audit_period', '1m',
-                    'time period to generate instance usages for.')
-
-
-def time_period(period):
-    today = datetime.date.today()
-    unit = period[-1]
-    if unit not in 'mdy':
-        raise ValueError('Time period must be m, d, or y')
-    n = int(period[:-1])
-    if unit == 'm':
-        year = today.year - (n // 12)
-        n = n % 12
-        if n >= today.month:
-            year -= 1
-            month = 12 + (today.month - n)
-        else:
-            month = today.month - n
-        begin = datetime.datetime(day=1, month=month, year=year)
-        end = datetime.datetime(day=1, month=today.month, year=today.year)
-
-    elif unit == 'y':
-        begin = datetime.datetime(day=1, month=1, year=today.year - n)
-        end = datetime.datetime(day=1, month=1, year=today.year)
-
-    elif unit == 'd':
-        b = today - datetime.timedelta(days=n)
-        begin = datetime.datetime(day=b.day, month=b.month, year=b.year)
-        end = datetime.datetime(day=today.day,
-                               month=today.month,
-                               year=today.year)
-
-    return (begin, end)
 
 if __name__ == '__main__':
+    admin_context = context.get_admin_context()
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
-    begin, end = time_period(FLAGS.instance_usage_audit_period)
+    begin, end = utils.current_audit_period()
     print "Creating usages for %s until %s" % (str(begin), str(end))
-    ctxt = context.get_admin_context()
-    instances = db.instance_get_active_by_window_joined(ctxt, begin, end)
+    instances = db.instance_get_active_by_window_joined(admin_context,
+                                                        begin,
+                                                        end)
     print "%s instances" % len(instances)
     for instance_ref in instances:
-        usage_info = utils.usage_from_instance(instance_ref,
-                              audit_period_begining=str(begin),
-                              audit_period_ending=str(end))
-        notifier_api.notify('compute.%s' % FLAGS.host,
-                            'compute.instance.exists',
-                            notifier_api.INFO,
-                            usage_info)
+        notify_usage_exists(instance_ref)

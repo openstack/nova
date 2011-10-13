@@ -60,6 +60,7 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 import json
 import random
 import sys
+import time
 import urlparse
 import xmlrpclib
 
@@ -290,6 +291,25 @@ class XenAPIConnection(driver.ComputeDriver):
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
         return self._vmops.get_diagnostics(instance)
+
+    def get_all_bw_usage(self, start_time, stop_time=None):
+        """Return bandwidth usage info for each interface on each
+           running VM"""
+        bwusage = []
+        start_time = time.mktime(start_time.timetuple())
+        if stop_time:
+            stop_time = time.mktime(stop_time.timetuple())
+        for iusage in self._vmops.get_all_bw_usage(start_time, stop_time).\
+                      values():
+            for macaddr, usage in iusage.iteritems():
+                vi = db.virtual_interface_get_by_address(
+                                    context.get_admin_context(),
+                                    macaddr)
+                if vi:
+                    bwusage.append(dict(virtual_interface=vi,
+                                        bw_in=usage['bw_in'],
+                                        bw_out=usage['bw_out']))
+        return bwusage
 
     def get_console_output(self, instance):
         """Return snapshot of console"""
