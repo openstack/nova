@@ -1022,22 +1022,6 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
     return parent_uuid
 
 
-def get_vdi_for_vm_safely(session, vm_ref):
-    vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
-    if vdi_refs is None:
-        raise Exception(_("No VDIs found for VM %s") % vm_ref)
-    else:
-        num_vdis = len(vdi_refs)
-        if num_vdis != 1:
-            raise exception.Error(_("Unexpected number of VDIs"
-                    "(%(num_vdis)s) found"
-                    " for VM %(vm_ref)s") % locals())
-
-    vdi_ref = vdi_refs[0]
-    vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
-    return vdi_ref, vdi_rec
-
-
 def safe_find_sr(session):
     """Same as find_sr except raises a NotFound exception if SR cannot be
     determined
