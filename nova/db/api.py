@@ -585,6 +585,12 @@ def instance_get_project_vpn(context, project_id):
     return IMPL.instance_get_project_vpn(context, project_id)
 
 
+def instance_get_all_hung_in_rebooting(context, reboot_window, session=None):
+    """Get all instances stuck in a rebooting state."""
+    return IMPL.instance_get_all_hung_in_rebooting(context, reboot_window,
+            session)
+
+
 def instance_set_state(context, instance_id, state, description=None):
     """Set the state of an instance."""
     return IMPL.instance_set_state(context, instance_id, state, description)

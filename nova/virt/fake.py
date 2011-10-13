@@ -131,6 +131,9 @@ class FakeConnection(driver.ComputeDriver):
     def unrescue(self, instance, callback, network_info):
         pass
 
+    def poll_rebooting_instances(self, timeout):
+        pass
+
     def poll_rescued_instances(self, timeout):
         pass
 

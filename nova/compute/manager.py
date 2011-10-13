@@ -73,6 +73,10 @@ flags.DEFINE_string('console_host', socket.gethostname(),
 flags.DEFINE_integer('live_migration_retry_count', 30,
                      "Retry count needed in live_migration."
                      " sleep 1 sec for each count")
+flags.DEFINE_integer("reboot_timeout", 0,
+                     "Automatically hard reboot an instance if it has been "
+                     "stuck in a rebooting state longer than N seconds."
+                     " Set to 0 to disable.")
 flags.DEFINE_integer("rescue_timeout", 0,
                      "Automatically unrescue an instance after N seconds."
                      " Set to 0 to disable.")
@@ -1783,6 +1787,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         error_list = super(ComputeManager, self).periodic_tasks(context)
         if error_list is None:
             error_list = []
+
+        try:
+            if FLAGS.reboot_timeout > 0:
+                self.driver.poll_rebooting_instances(FLAGS.reboot_timeout)
+        except Exception as ex:
+            LOG.warning(_("Error during poll_rebooting_instances: %s"),
+                    unicode(ex))
+            error_list.append(ex)
 
         try:
             if FLAGS.rescue_timeout > 0:

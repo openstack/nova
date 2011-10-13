@@ -1117,6 +1117,26 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         self._start(instance, vm_ref)
 
+    def poll_rebooting_instances(self, timeout):
+        """Look for expirable rebooting instances.
+
+            - issue a "hard" reboot to any instance that has been stuck in a
+              reboot state for >= the given timeout
+        """
+        ctxt = nova_context.get_admin_context()
+        instances = db.instance_get_all_hung_in_rebooting(ctxt, timeout)
+
+        instances_info = dict(instance_count=len(instances),
+                timeout=timeout)
+
+        if instances_info["instance_count"] > 0:
+            LOG.info(_("Found %(instance_count)d hung reboots "
+                    "older than %(timeout)d seconds") % instances_info)
+
+        for instance in instances:
+            LOG.info(_("Automatically hard rebooting %d"), instance.id)
+            self.compute_api.reboot(ctxt, instance.id, "HARD")
+
     def poll_rescued_instances(self, timeout):
         """Look for expirable rescued instances.
 
