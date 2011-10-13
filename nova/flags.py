@@ -415,6 +415,9 @@ DEFINE_bool('resume_guests_state_on_host_boot', False,
 DEFINE_string('root_helper', 'sudo',
               'Command prefix to use for running commands as root')
 
+DEFINE_string('network_driver', 'nova.network.linux_net',
+              'Driver to use for network creation')
+
 DEFINE_bool('use_ipv6', False, 'use ipv6')
 
 DEFINE_integer('password_length', 12,
