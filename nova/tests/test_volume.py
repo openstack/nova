@@ -270,8 +270,7 @@ class DriverTestCase(test.TestCase):
         def _fake_execute(_command, *_args, **_kwargs):
             """Fake _execute."""
             return self.output, None
-        self.volume.driver._execute = _fake_execute
-        self.volume.driver._sync_execute = _fake_execute
+        self.volume.driver.set_execute(_fake_execute)
 
         log = logging.getLogger()
         self.stream = cStringIO.StringIO()
@@ -334,12 +333,10 @@ class ISCSITestCase(DriverTestCase):
         """No log message when all the processes are running."""
         volume_id_list = self._attach_volume()
 
-        self.mox.StubOutWithMock(self.volume.driver, '_execute')
+        self.mox.StubOutWithMock(self.volume.driver.tgtadm, 'show_target')
         for i in volume_id_list:
             tid = db.volume_get_iscsi_target_num(self.context, i)
-            self.volume.driver._execute("ietadm", "--op", "show",
-                                        "--tid=%(tid)d" % locals(),
-                                        run_as_root=True)
+            self.volume.driver.tgtadm.show_target(tid)
 
         self.stream.truncate(0)
         self.mox.ReplayAll()
@@ -355,11 +352,9 @@ class ISCSITestCase(DriverTestCase):
         volume_id_list = self._attach_volume()
 
         tid = db.volume_get_iscsi_target_num(self.context, volume_id_list[0])
-        self.mox.StubOutWithMock(self.volume.driver, '_execute')
-        self.volume.driver._execute("ietadm", "--op", "show",
-                                    "--tid=%(tid)d" % locals(),
-                                    run_as_root=True).AndRaise(
-                                            exception.ProcessExecutionError())
+        self.mox.StubOutWithMock(self.volume.driver.tgtadm, 'show_target')
+        self.volume.driver.tgtadm.show_target(tid).AndRaise(
+            exception.ProcessExecutionError())
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ProcessExecutionError,

@@ -28,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.volume import iscsi
 from nova.volume import volume_types
 
 
@@ -52,12 +53,13 @@ flags.DEFINE_string('rbd_pool', 'rbd',
 
 class VolumeDriver(object):
     """Executes commands relating to Volumes."""
-    def __init__(self, execute=utils.execute,
-                 sync_exec=utils.execute, *args, **kwargs):
+    def __init__(self, execute=utils.execute, *args, **kwargs):
         # NOTE(vish): db is set by Manager
         self.db = None
+        self.set_execute(execute)
+
+    def set_execute(self, execute):
         self._execute = execute
-        self._sync_exec = sync_exec
 
     def _try_execute(self, *command, **kwargs):
         # NOTE(vish): Volume commands can partially fail due to timing, but
@@ -226,6 +228,14 @@ class ISCSIDriver(VolumeDriver):
                        `CHAP` is the only auth_method in use at the moment.
     """
 
+    def __init__(self, *args, **kwargs):
+        self.tgtadm = iscsi.get_target_admin()
+        super(ISCSIDriver, self).__init__(*args, **kwargs)
+
+    def set_execute(self, execute):
+        super(ISCSIDriver, self).set_execute(execute)
+        self.tgtadm.set_execute(execute)
+
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
         try:
@@ -238,19 +248,10 @@ class ISCSIDriver(VolumeDriver):
 
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        self._sync_exec('ietadm', '--op', 'new',
-                        "--tid=%s" % iscsi_target,
-                        '--params',
-                        "Name=%s" % iscsi_name,
-                        run_as_root=True,
-                        check_exit_code=False)
-        self._sync_exec('ietadm', '--op', 'new',
-                        "--tid=%s" % iscsi_target,
-                        '--lun=0',
-                        '--params',
-                        "Path=%s,Type=fileio" % volume_path,
-                        run_as_root=True,
-                        check_exit_code=False)
+
+        self.tgtadm.new_target(iscsi_name, iscsi_target, check_exit_code=False)
+        self.tgtadm.new_logicalunit(iscsi_target, 0, volume_path,
+                                    check_exit_code=False)
 
     def _ensure_iscsi_targets(self, context, host):
         """Ensure that target ids have been created in datastore."""
@@ -270,13 +271,9 @@ class ISCSIDriver(VolumeDriver):
                                                       volume['host'])
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        self._execute('ietadm', '--op', 'new',
-                      '--tid=%s' % iscsi_target,
-                      '--params', 'Name=%s' % iscsi_name, run_as_root=True)
-        self._execute('ietadm', '--op', 'new',
-                      '--tid=%s' % iscsi_target,
-                      '--lun=0', '--params',
-                      'Path=%s,Type=fileio' % volume_path, run_as_root=True)
+
+        self.tgtadm.new_target(iscsi_name, iscsi_target)
+        self.tgtadm.new_logicalunit(iscsi_target, 0, volume_path)
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
@@ -291,18 +288,14 @@ class ISCSIDriver(VolumeDriver):
         try:
             # ietadm show will exit with an error
             # this export has already been removed
-            self._execute('ietadm', '--op', 'show',
-                          '--tid=%s' % iscsi_target, run_as_root=True)
+            self.tgtadm.show_target(iscsi_target)
         except Exception as e:
             LOG.info(_("Skipping remove_export. No iscsi_target " +
                        "is presently exported for volume: %d"), volume['id'])
             return
 
-        self._execute('ietadm', '--op', 'delete',
-                      '--tid=%s' % iscsi_target,
-                      '--lun=0', run_as_root=True)
-        self._execute('ietadm', '--op', 'delete',
-                      '--tid=%s' % iscsi_target, run_as_root=True)
+        self.tgtadm.delete_logicalunit(iscsi_target, 0)
+        self.tgtadm.delete_target(iscsi_target)
 
     def _do_iscsi_discovery(self, volume):
         #TODO(justinsb): Deprecate discovery and use stored info
@@ -424,8 +417,7 @@ class ISCSIDriver(VolumeDriver):
 
         tid = self.db.volume_get_iscsi_target_num(context, volume_id)
         try:
-            self._execute('ietadm', '--op', 'show',
-                          '--tid=%(tid)d' % locals(), run_as_root=True)
+            self.tgtadm.show_target(tid)
         except exception.ProcessExecutionError, e:
             # Instances remount read-only in this case.
             # /etc/init.d/iscsitarget restart and rebooting nova-volume
@@ -439,7 +431,6 @@ class FakeISCSIDriver(ISCSIDriver):
     """Logs calls instead of executing."""
     def __init__(self, *args, **kwargs):
         super(FakeISCSIDriver, self).__init__(execute=self.fake_execute,
-                                              sync_exec=self.fake_execute,
                                               *args, **kwargs)
 
     def check_for_setup_error(self):
@@ -718,14 +709,14 @@ class ZadaraBEDriver(ISCSIDriver):
                 break
 
         try:
-            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
-                            'create_qospart',
-                            '--qos', qosstr,
-                            '--pname', volume['name'],
-                            '--psize', sizestr,
-                            '--vsaid', vsa_id,
-                            run_as_root=True,
-                            check_exit_code=0)
+            self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                          'create_qospart',
+                          '--qos', qosstr,
+                          '--pname', volume['name'],
+                          '--psize', sizestr,
+                          '--vsaid', vsa_id,
+                          run_as_root=True,
+                          check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE create_volume for %s failed"), volume['name'])
             raise
@@ -743,11 +734,11 @@ class ZadaraBEDriver(ISCSIDriver):
             return
 
         try:
-            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
-                            'delete_partition',
-                            '--pname', volume['name'],
-                            run_as_root=True,
-                            check_exit_code=0)
+            self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                          'delete_partition',
+                          '--pname', volume['name'],
+                          run_as_root=True,
+                          check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE delete_volume for %s failed"), volume['name'])
             return
@@ -883,12 +874,12 @@ class ZadaraBEDriver(ISCSIDriver):
             return
 
         try:
-            self._sync_exec('/var/lib/zadara/bin/zadara_sncfg',
-                        'remove_export',
-                        '--pname', volume['name'],
-                        '--tid', iscsi_target,
-                        run_as_root=True,
-                        check_exit_code=0)
+            self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                          'remove_export',
+                          '--pname', volume['name'],
+                          '--tid', iscsi_target,
+                          run_as_root=True,
+                          check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("VSA BE remove_export for %s failed"), volume['name'])
             return
@@ -913,13 +904,12 @@ class ZadaraBEDriver(ISCSIDriver):
         Common logic that asks zadara_sncfg to setup iSCSI target/lun for
         this volume
         """
-        (out, err) = self._sync_exec(
-                                '/var/lib/zadara/bin/zadara_sncfg',
-                                'create_export',
-                                '--pname', volume['name'],
-                                '--tid', iscsi_target,
-                                run_as_root=True,
-                                check_exit_code=0)
+        (out, err) = self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                                   'create_export',
+                                   '--pname', volume['name'],
+                                   '--tid', iscsi_target,
+                                   run_as_root=True,
+                                   check_exit_code=0)
 
         result_xml = ElementTree.fromstring(out)
         response_node = result_xml.find("Sn")
@@ -940,11 +930,10 @@ class ZadaraBEDriver(ISCSIDriver):
     def _get_qosgroup_summary(self):
         """gets the list of qosgroups from Zadara BE"""
         try:
-            (out, err) = self._sync_exec(
-                                        '/var/lib/zadara/bin/zadara_sncfg',
-                                        'get_qosgroups_xml',
-                                        run_as_root=True,
-                                        check_exit_code=0)
+            (out, err) = self._execute('/var/lib/zadara/bin/zadara_sncfg',
+                                       'get_qosgroups_xml',
+                                       run_as_root=True,
+                                       check_exit_code=0)
         except exception.ProcessExecutionError:
             LOG.debug(_("Failed to retrieve QoS info"))
             return {}
