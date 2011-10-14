@@ -307,6 +307,7 @@ class InstanceTypes(BASE, NovaBase):
     swap = Column(Integer, nullable=False, default=0)
     rxtx_quota = Column(Integer, nullable=False, default=0)
     rxtx_cap = Column(Integer, nullable=False, default=0)
+    vcpu_weight = Column(Integer, nullable=True)
 
     instances = relationship(Instance,
                            backref=backref('instance_type', uselist=False),
