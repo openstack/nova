@@ -48,8 +48,8 @@ class _FakeImageService(object):
                  'deleted': False,
                  'status': 'active',
                  'is_public': False,
-#                 'container_format': 'ami',
-#                 'disk_format': 'raw',
+                 'container_format': 'raw',
+                 'disk_format': 'raw',
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel,
                                 'architecture': 'x86_64'}}
@@ -62,8 +62,8 @@ class _FakeImageService(object):
                  'deleted': False,
                  'status': 'active',
                  'is_public': True,
-#                 'container_format': 'ami',
-#                 'disk_format': 'raw',
+                 'container_format': 'ami',
+                 'disk_format': 'ami',
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
@@ -75,8 +75,8 @@ class _FakeImageService(object):
                  'deleted': False,
                  'status': 'active',
                  'is_public': True,
-#                 'container_format': 'ami',
-#                 'disk_format': 'raw',
+                 'container_format': None,
+                 'disk_format': None,
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
@@ -88,8 +88,8 @@ class _FakeImageService(object):
                  'deleted': False,
                  'status': 'active',
                  'is_public': True,
-#                 'container_format': 'ami',
-#                 'disk_format': 'raw',
+                 'container_format': 'ami',
+                 'disk_format': 'ami',
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
@@ -101,8 +101,8 @@ class _FakeImageService(object):
                  'deleted': False,
                  'status': 'active',
                  'is_public': True,
-#                 'container_format': 'ami',
-#                 'disk_format': 'raw',
+                 'container_format': 'ami',
+                 'disk_format': 'ami',
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
