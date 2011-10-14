@@ -1133,12 +1133,27 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         self._start(instance, vm_ref)
 
+    def _cancel_stale_tasks(self, timeout, task):
+        """Cancel the given tasks that are older than the given timeout."""
+        task_refs = self._session.get_xenapi().task.get_by_name_label(task)
+        for task_ref in task_refs:
+            task_rec = self._session.get_xenapi().task.get_record(task_ref)
+            task_created = utils.parse_strtime(task_rec["created"].value,
+                    "%Y%m%dT%H:%M:%SZ")
+
+            if utils.is_older_than(task_created, timeout):
+                self._session.get_xenapi().task.cancel(task_ref)
+
     def poll_rebooting_instances(self, timeout):
         """Look for expirable rebooting instances.
 
             - issue a "hard" reboot to any instance that has been stuck in a
               reboot state for >= the given timeout
         """
+        # NOTE(jk0): All existing clean_reboot tasks must be cancelled before
+        # we can kick off the hard_reboot tasks.
+        self._cancel_stale_tasks(timeout, "Async.VM.clean_reboot")
+
         ctxt = nova_context.get_admin_context()
         instances = db.instance_get_all_hung_in_rebooting(ctxt, timeout)
 
