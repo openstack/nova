@@ -1529,6 +1529,21 @@ def instance_get_floating_address(context, instance_id):
     return fixed_ip_refs[0].floating_ips[0]['address']
 
 
+@require_admin_context
+def instance_get_all_hung_in_rebooting(context, reboot_window, session=None):
+    reboot_window = datetime.datetime.utcnow() - datetime.timedelta(
+            seconds=reboot_window)
+
+    if not session:
+        session = get_session()
+
+    results = session.query(models.Instance).\
+            filter(models.Instance.updated_at <= reboot_window).\
+            filter_by(task_state="rebooting").all()
+
+    return results
+
+
 @require_context
 def instance_update(context, instance_id, values):
     session = get_session()

@@ -123,3 +123,27 @@ class DbApiTestCase(test.TestCase):
         results = db.migration_get_all_unconfirmed(ctxt, 10)
         self.assertEqual(0, len(results))
         db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
+
+    def test_instance_get_all_hung_in_rebooting(self):
+        ctxt = context.get_admin_context()
+
+        # Ensure no instances are returned.
+        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
+        self.assertEqual(0, len(results))
+
+        # Ensure one rebooting instance with updated_at older than 10 seconds
+        # is returned.
+        updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
+        values = {"task_state": "rebooting", "updated_at": updated_at}
+        instance = db.instance_create(ctxt, values)
+        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
+        self.assertEqual(1, len(results))
+        db.instance_update(ctxt, instance.id, {"task_state": None})
+
+        # Ensure the newly rebooted instance is not returned.
+        updated_at = datetime.datetime.utcnow()
+        values = {"task_state": "rebooting", "updated_at": updated_at}
+        instance = db.instance_create(ctxt, values)
+        results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
+        self.assertEqual(0, len(results))
+        db.instance_update(ctxt, instance.id, {"task_state": None})

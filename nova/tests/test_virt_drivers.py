@@ -173,6 +173,10 @@ class _VirtDriverTestCase(test.TestCase):
         self.connection.unrescue(instance_ref, lambda x: None, network_info)
 
     @catch_notimplementederror
+    def test_poll_rebooting_instances(self):
+        self.connection.poll_rebooting_instances(10)
+
+    @catch_notimplementederror
     def test_poll_rescued_instances(self):
         self.connection.poll_rescued_instances(10)
 

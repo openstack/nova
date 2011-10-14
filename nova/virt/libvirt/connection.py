@@ -614,6 +614,10 @@ class LibvirtConnection(driver.ComputeDriver):
         self.reboot(instance, network_info, xml=unrescue_xml)
 
     @exception.wrap_exception()
+    def poll_rebooting_instances(self, timeout):
+        pass
+
+    @exception.wrap_exception()
     def poll_rescued_instances(self, timeout):
         pass
 

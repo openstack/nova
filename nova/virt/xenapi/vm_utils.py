@@ -759,7 +759,7 @@ class VMHelper(HelperBase):
 
     @classmethod
     def lookup(cls, session, name_label):
-        """Look the instance i up, and returns it if available"""
+        """Look the instance up and return it if available"""
         vm_refs = session.get_xenapi().VM.get_by_name_label(name_label)
         n = len(vm_refs)
         if n == 0:
