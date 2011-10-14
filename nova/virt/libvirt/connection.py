@@ -420,10 +420,17 @@ class LibvirtConnection(driver.ComputeDriver):
             metadata['properties']['architecture'] = arch
 
         source_format = base.get('disk_format') or 'raw'
+        if source_format == 'ami':
+            # NOTE(vish): assume amis are raw
+            source_format = 'raw'
         image_format = FLAGS.snapshot_image_format or source_format
         if FLAGS.use_cow_images:
             source_format = 'qcow2'
-        metadata['disk_format'] = image_format
+        # NOTE(vish): glance forces ami disk format to be ami
+        if base.get('disk_format') == 'ami':
+            metadata['disk_format'] = 'ami'
+        else:
+            metadata['disk_format'] = image_format
 
         if 'container_format' in base:
             metadata['container_format'] = base['container_format']
