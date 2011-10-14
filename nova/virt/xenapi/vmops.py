@@ -55,6 +55,11 @@ flags.DEFINE_integer('agent_version_timeout', 300,
 flags.DEFINE_string('xenapi_vif_driver',
                     'nova.virt.xenapi.vif.XenAPIBridgeDriver',
                     'The XenAPI VIF driver using XenServer Network APIs.')
+flags.DEFINE_bool('xenapi_generate_swap',
+                  False,
+                  'Whether to generate swap (False means fetching it'
+                  ' from OVA)')
+
 
 RESIZE_TOTAL_STEPS = 5
 BUILD_TOTAL_STEPS = 4
@@ -339,10 +344,20 @@ class VMOps(object):
             # userdevice 1 is reserved for rescue and we've used '0'
             userdevice = 2
 
+        ctx = nova_context.get_admin_context()
+        instance_type = db.instance_type_get(ctx, instance.instance_type_id)
+        swap_mb = instance_type['swap']
+        generate_swap = swap_mb and FLAGS.xenapi_generate_swap
+        if generate_swap:
+            VMHelper.generate_swap(session=self._session, instance=instance,
+                                   vm_ref=vm_ref, userdevice=userdevice,
+                                   swap_mb=swap_mb)
+            userdevice += 1
+
         # Attach any other disks
         for vdi in vdis[1:]:
-            # vdi['vdi_type'] is either 'os' or 'swap', but we don't
-            # really care what it is right here.
+            if generate_swap and vdi['vdi_type'] == 'swap':
+                continue
             vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                     vdi['vdi_uuid'])
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
@@ -445,7 +460,8 @@ class VMOps(object):
         resources = []
         if spawn_error.args:
             last_arg = spawn_error.args[-1]
-            resources = last_arg
+            if isinstance(last_arg, list):
+                resources = last_arg
         if vdis:
             for vdi in vdis:
                 resources.append(dict(vdi_type=vdi['vdi_type'],

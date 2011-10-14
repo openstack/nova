@@ -19,6 +19,7 @@
 
 """Utilities and helper functions."""
 
+import contextlib
 import datetime
 import functools
 import inspect
@@ -972,3 +973,36 @@ def generate_glance_url():
     # TODO(jk0): This will eventually need to take SSL into consideration
     # when supported in glance.
     return "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
+
+
+@contextlib.contextmanager
+def original_exception_raised():
+    """Run some code, then re-raise the original exception.
+
+    This is needed because when Eventlet switches greenthreads, it clears the
+    exception context. This means if exception handler code blocks, we'll lose
+    the helpful exception traceback information.
+
+    To work around this, we save the exception state, run handler code, and
+    then re-raise the original exception.
+    """
+    type_, value, traceback = sys.exc_info()
+    try:
+        yield
+    finally:
+        raise type_, value, traceback
+
+
+def make_dev_path(dev, partition=None, base='/dev'):
+    """Return a path to a particular device.
+
+    >>> make_dev_path('xvdc')
+    /dev/xvdc
+
+    >>> make_dev_path('xvdc', 1)
+    /dev/xvdc1
+    """
+    path = os.path.join(base, dev)
+    if partition:
+        path += str(partition)
+    return path

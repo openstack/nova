@@ -16,6 +16,7 @@
 
 """Test suite for XenAPI."""
 
+import contextlib
 import functools
 import json
 import os
@@ -55,10 +56,30 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
     """
     @functools.wraps(function)
     def decorated_function(self, *args, **kwargs):
-        orig_with_vdi_attached_here = vm_utils.with_vdi_attached_here
-        vm_utils.with_vdi_attached_here = lambda *x: should_return
-        function(self, *args, **kwargs)
-        vm_utils.with_vdi_attached_here = orig_with_vdi_attached_here
+        @contextlib.contextmanager
+        def fake_vdi_attached_here(*args, **kwargs):
+            fake_dev = 'fakedev'
+            yield fake_dev
+
+        def fake_stream_disk(*args, **kwargs):
+            pass
+
+        def fake_is_vdi_pv(*args, **kwargs):
+            return should_return
+
+        orig_vdi_attached_here = vm_utils.vdi_attached_here
+        orig_stream_disk = vm_utils._stream_disk
+        orig_is_vdi_pv = vm_utils._is_vdi_pv
+        try:
+            vm_utils.vdi_attached_here = fake_vdi_attached_here
+            vm_utils._stream_disk = fake_stream_disk
+            vm_utils._is_vdi_pv = fake_is_vdi_pv
+            return function(self, *args, **kwargs)
+        finally:
+            vm_utils._is_vdi_pv = orig_is_vdi_pv
+            vm_utils._stream_disk = orig_stream_disk
+            vm_utils.vdi_attached_here = orig_vdi_attached_here
+
     return decorated_function
 
 

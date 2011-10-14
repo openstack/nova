@@ -466,16 +466,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # be fixed once we have no-db-messaging
             pass
         except:
-            # NOTE(sirp): 3-arg raise needed since Eventlet clears exceptions
-            # when switching between greenthreads.
-            type_, value, traceback = sys.exc_info()
-            try:
+            with utils.original_exception_raised():
                 _deallocate_network()
-            finally:
-                # FIXME(sirp): when/if
-                # https://github.com/jcrocholl/pep8/pull/27 merges, we can add
-                # a per-line disable flag here for W602
-                raise type_, value, traceback
 
     def _get_instance_volume_bdms(self, context, instance_id):
         bdms = self.db.block_device_mapping_get_all_by_instance(context,
