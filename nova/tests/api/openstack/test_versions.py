@@ -102,6 +102,14 @@ class VersionsTest(test.TestCase):
         ]
         self.assertEqual(versions, expected)
 
+    def test_get_version_list_302(self):
+        req = webob.Request.blank('/v1.1')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 302)
+        redirect_req = webob.Request.blank('/v1.1/')
+        self.assertEqual(res.location, redirect_req.url)
+
     def test_get_version_1_1_detail(self):
         req = webob.Request.blank('/v1.1/')
         req.accept = "application/json"
