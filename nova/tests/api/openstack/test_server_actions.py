@@ -136,6 +136,7 @@ class ServerActionsTest(test.TestCase):
 
     def tearDown(self):
         self.stubs.UnsetAll()
+        super(ServerActionsTest, self).tearDown()
 
     def test_server_bad_body(self):
         body = {}
