@@ -146,7 +146,11 @@ class Controller(object):
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
-        self.compute_api.delete_instance_metadata(context, server_id, id)
+        try:
+            self.compute_api.delete_instance_metadata(context, server_id, id)
+        except exception.InstanceNotFound:
+            msg = _('Server does not exist')
+            raise exc.HTTPNotFound(explanation=msg)
 
     def _handle_quota_error(self, error):
         """Reraise quota errors as api-specific http exceptions."""
