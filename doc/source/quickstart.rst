@@ -43,11 +43,14 @@ Nova is hosted on launchpad.  You can get the code with the following command
 
 ::
 
-    bzr clone lp:nova
+    git clone https://github.com/openstack/nova.git
 
 The `contrib/nova.sh` file in the source distribution is a script that
 will quickly set up nova to run on a single machine.  It is tested against
-Ubuntu only, but other distributions are forthcoming.
+Ubuntu only, but other distributions are forthcoming. 
+
+A more recent shell script for setting up an OpenStack development environment
+can be found at http://devstack.org
 
 Environment Variables
 ---------------------
@@ -152,7 +155,7 @@ virsh instances and attempt to delete all vlans and bridges.
 
 	./nova.sh scrub
 
-You can edit files in the install directory or do a bzr pull to pick up new versions. You only need to do
+You can edit files in the install directory or do a git pull to pick up new versions. You only need to do
 
 ::
 

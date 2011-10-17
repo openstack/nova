@@ -56,13 +56,18 @@ to write drafts for specs or documentation, describe a blueprint, or collaborate
 
 `OpenStack Wiki <http://wiki.openstack.org/>`_
 
+
+Nova on Github
+--------------
+Github is a code hosting service that hosts the Nova source code. 
+
+* `Github Nova page <http://github.com/openstack/nova>`_
+
 Nova on Launchpad
 -----------------
 
-Launchpad is a code hosting service that hosts the Nova source code. From
-Launchpad you can report bugs, ask questions, and register blueprints (feature requests). 
+From Launchpad you can report bugs, ask questions, and register blueprints (feature requests). 
 
-* `Learn about how to use bzr with launchpad <http://wiki.openstack.org/LifeWithBzrAndLaunchpad>`_
 * `Launchpad Nova Page <http://launchpad.net/nova>`_
 
 OpenStack Blog
@@ -90,6 +95,6 @@ OpenStack Docs Site
 The `nova.openstack.org <http://nova.openstack.org>`_ site is geared towards developer documentation, 
 and the `docs.openstack.org <http://docs.openstack.org>`_  site is intended for cloud administrators 
 who are standing up and running OpenStack Compute in production. You can contribute to the Docs Site
-by using bzr and Launchpad and contributing to the openstack-manuals project at http://launchpad.net/openstack-manuals.
+by using git and Gerrit and contributing to the openstack-manuals project at http://github.com/openstack/openstack-manuals.
 
 
