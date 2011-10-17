@@ -74,37 +74,40 @@ class Controller(object):
         return views_addresses.ViewBuilder()
 
 
-class IPXMLSerializer(wsgi.XMLDictSerializer):
+def make_network(elem):
+    elem.set('id', 0)
 
-    NSMAP = {None: xmlutil.XMLNS_V11}
+    ip = xmlutil.SubTemplateElement(elem, 'ip', selector=1)
+    ip.set('version')
+    ip.set('addr')
 
-    def __init__(self, xmlns=wsgi.XMLNS_V11):
-        super(IPXMLSerializer, self).__init__(xmlns=xmlns)
 
-    def populate_addresses_node(self, addresses_elem, addresses_dict):
-        for (network_id, ip_dicts) in addresses_dict.items():
-            network_elem = self._create_network_node(network_id, ip_dicts)
-            addresses_elem.append(network_elem)
+network_nsmap = {None: xmlutil.XMLNS_V11}
 
-    def _create_network_node(self, network_id, ip_dicts):
-        network_elem = etree.Element('network', nsmap=self.NSMAP)
-        network_elem.set('id', str(network_id))
-        for ip_dict in ip_dicts:
-            ip_elem = etree.SubElement(network_elem, 'ip')
-            ip_elem.set('version', str(ip_dict['version']))
-            ip_elem.set('addr', ip_dict['addr'])
-        return network_elem
 
-    def show(self, network_dict):
-        (network_id, ip_dicts) = network_dict.items()[0]
-        network = self._create_network_node(network_id, ip_dicts)
-        return self._to_xml(network)
+class NetworkTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        sel = xmlutil.Selector(xmlutil.get_items, 0)
+        root = xmlutil.TemplateElement('network', selector=sel)
+        make_network(root)
+        return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
 
-    def index(self, addresses_dict):
-        addresses = etree.Element('addresses', nsmap=self.NSMAP)
-        self.populate_addresses_node(addresses,
-                                     addresses_dict.get('addresses', {}))
-        return self._to_xml(addresses)
+
+class AddressesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('addresses', selector='addresses')
+        elem = xmlutil.SubTemplateElement(root, 'network',
+                                          selector=xmlutil.get_items)
+        make_network(elem)
+        return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
+
+
+class IPXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def show(self):
+        return NetworkTemplate()
+
+    def index(self):
+        return AddressesTemplate()
 
 
 def create_resource():

@@ -81,50 +81,54 @@ class Controller(object):
         return views.flavors.ViewBuilder(base_url, project_id)
 
 
-class FlavorXMLSerializer(wsgi.XMLDictSerializer):
+def make_flavor(elem, detailed=False):
+    elem.set('name')
+    elem.set('id')
+    if detailed:
+        elem.set('ram')
+        elem.set('disk')
 
-    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+        for attr in ("vcpus", "swap", "rxtx_quota", "rxtx_cap"):
+            elem.set(attr, xmlutil.EmptyStringSelector(attr))
 
-    def __init__(self):
-        super(FlavorXMLSerializer, self).__init__(xmlns=wsgi.XMLNS_V11)
+    xmlutil.make_links(elem, 'links')
 
-    def _populate_flavor(self, flavor_elem, flavor_dict, detailed=False):
-        """Populate a flavor xml element from a dict."""
 
-        flavor_elem.set('name', flavor_dict['name'])
-        flavor_elem.set('id', str(flavor_dict['id']))
-        if detailed:
-            flavor_elem.set('ram', str(flavor_dict['ram']))
-            flavor_elem.set('disk', str(flavor_dict['disk']))
+flavor_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
-            for attr in ("vcpus", "swap", "rxtx_quota", "rxtx_cap"):
-                flavor_elem.set(attr, str(flavor_dict.get(attr, "")))
 
-        for link in flavor_dict.get('links', []):
-            elem = etree.SubElement(flavor_elem,
-                                    '{%s}link' % xmlutil.XMLNS_ATOM)
-            elem.set('rel', link['rel'])
-            elem.set('href', link['href'])
-        return flavor_elem
+class FlavorTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('flavor', selector='flavor')
+        make_flavor(root, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=flavor_nsmap)
 
-    def show(self, flavor_container):
-        flavor = etree.Element('flavor', nsmap=self.NSMAP)
-        self._populate_flavor(flavor, flavor_container['flavor'], True)
-        return self._to_xml(flavor)
 
-    def detail(self, flavors_dict):
-        flavors = etree.Element('flavors', nsmap=self.NSMAP)
-        for flavor_dict in flavors_dict['flavors']:
-            flavor = etree.SubElement(flavors, 'flavor')
-            self._populate_flavor(flavor, flavor_dict, True)
-        return self._to_xml(flavors)
+class MinimalFlavorsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('flavors')
+        elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
+        make_flavor(elem)
+        return xmlutil.MasterTemplate(root, 1, nsmap=flavor_nsmap)
 
-    def index(self, flavors_dict):
-        flavors = etree.Element('flavors', nsmap=self.NSMAP)
-        for flavor_dict in flavors_dict['flavors']:
-            flavor = etree.SubElement(flavors, 'flavor')
-            self._populate_flavor(flavor, flavor_dict, False)
-        return self._to_xml(flavors)
+
+class FlavorsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('flavors')
+        elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
+        make_flavor(elem, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=flavor_nsmap)
+
+
+class FlavorXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def show(self):
+        return FlavorTemplate()
+
+    def detail(self):
+        return FlavorsTemplate()
+
+    def index(self):
+        return MinimalFlavorsTemplate()
 
 
 def create_resource():

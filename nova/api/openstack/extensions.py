@@ -30,6 +30,7 @@ import webob.exc
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import utils
 from nova import wsgi as base_wsgi
 import nova.api.openstack
 from nova.api.openstack import common
@@ -159,9 +160,20 @@ class RequestExtensionController(object):
 
     def process(self, req, *args, **kwargs):
         res = req.get_response(self.application)
+
+        # Deserialize the response body, if any
+        body = None
+        if res.body:
+            body = utils.loads(res.body)
+
         # currently request handlers are un-ordered
         for handler in self.handlers:
-            res = handler(req, res)
+            res = handler(req, res, body)
+
+        # Reserialize the response body
+        if body is not None:
+            res.body = utils.dumps(body)
+
         return res
 
 

@@ -215,20 +215,23 @@ class RequestHeadersDeserializerTest(test.TestCase):
         self.assertEqual(deserializer.deserialize(req, 'update'), {'a': 'b'})
 
 
+class JSONSerializer(object):
+    def serialize(self, data, action='default'):
+        return 'pew_json'
+
+
+class XMLSerializer(object):
+    def serialize(self, data, action='default'):
+        return 'pew_xml'
+
+
+class HeadersSerializer(object):
+    def serialize(self, response, data, action):
+        response.status_int = 404
+
+
 class ResponseSerializerTest(test.TestCase):
     def setUp(self):
-        class JSONSerializer(object):
-            def serialize(self, data, action='default'):
-                return 'pew_json'
-
-        class XMLSerializer(object):
-            def serialize(self, data, action='default'):
-                return 'pew_xml'
-
-        class HeadersSerializer(object):
-            def serialize(self, response, data, action):
-                response.status_int = 404
-
         self.body_serializers = {
             'application/json': JSONSerializer(),
             'application/xml': XMLSerializer(),
@@ -253,7 +256,8 @@ class ResponseSerializerTest(test.TestCase):
     def test_serialize_response_json(self):
         for content_type in ('application/json',
                              'application/vnd.openstack.compute+json'):
-            response = self.serializer.serialize({}, content_type)
+            request = wsgi.Request.blank('/')
+            response = self.serializer.serialize(request, {}, content_type)
             self.assertEqual(response.headers['Content-Type'], content_type)
             self.assertEqual(response.body, 'pew_json')
             self.assertEqual(response.status_int, 404)
@@ -261,21 +265,72 @@ class ResponseSerializerTest(test.TestCase):
     def test_serialize_response_xml(self):
         for content_type in ('application/xml',
                              'application/vnd.openstack.compute+xml'):
-            response = self.serializer.serialize({}, content_type)
+            request = wsgi.Request.blank('/')
+            response = self.serializer.serialize(request, {}, content_type)
             self.assertEqual(response.headers['Content-Type'], content_type)
             self.assertEqual(response.body, 'pew_xml')
             self.assertEqual(response.status_int, 404)
 
     def test_serialize_response_None(self):
-        response = self.serializer.serialize(None, 'application/json')
+        request = wsgi.Request.blank('/')
+        response = self.serializer.serialize(request, None, 'application/json')
         self.assertEqual(response.headers['Content-Type'], 'application/json')
         self.assertEqual(response.body, '')
         self.assertEqual(response.status_int, 404)
 
     def test_serialize_response_dict_to_unknown_content_type(self):
+        request = wsgi.Request.blank('/')
         self.assertRaises(exception.InvalidContentType,
                           self.serializer.serialize,
-                          {}, 'application/unknown')
+                          request, {}, 'application/unknown')
+
+
+class LazySerializationTest(test.TestCase):
+    def setUp(self):
+        self.body_serializers = {
+            'application/json': JSONSerializer(),
+            'application/xml': XMLSerializer(),
+        }
+
+        self.serializer = wsgi.ResponseSerializer(self.body_serializers,
+                                                  HeadersSerializer())
+
+    def tearDown(self):
+        pass
+
+    def test_serialize_response_json(self):
+        for content_type in ('application/json',
+                             'application/vnd.openstack.compute+json'):
+            request = wsgi.Request.blank('/')
+            request.environ['nova.lazy_serialize'] = True
+            response = self.serializer.serialize(request, {}, content_type)
+            self.assertEqual(response.headers['Content-Type'], content_type)
+            self.assertEqual(response.status_int, 404)
+            body = json.loads(response.body)
+            self.assertEqual(body, {})
+            serializer = request.environ['nova.serializer']
+            self.assertEqual(serializer.serialize(body), 'pew_json')
+
+    def test_serialize_response_xml(self):
+        for content_type in ('application/xml',
+                             'application/vnd.openstack.compute+xml'):
+            request = wsgi.Request.blank('/')
+            request.environ['nova.lazy_serialize'] = True
+            response = self.serializer.serialize(request, {}, content_type)
+            self.assertEqual(response.headers['Content-Type'], content_type)
+            self.assertEqual(response.status_int, 404)
+            body = json.loads(response.body)
+            self.assertEqual(body, {})
+            serializer = request.environ['nova.serializer']
+            self.assertEqual(serializer.serialize(body), 'pew_xml')
+
+    def test_serialize_response_None(self):
+        request = wsgi.Request.blank('/')
+        request.environ['nova.lazy_serialize'] = True
+        response = self.serializer.serialize(request, None, 'application/json')
+        self.assertEqual(response.headers['Content-Type'], 'application/json')
+        self.assertEqual(response.status_int, 404)
+        self.assertEqual(response.body, '')
 
 
 class RequestDeserializerTest(test.TestCase):

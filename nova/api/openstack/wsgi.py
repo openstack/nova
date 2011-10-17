@@ -449,7 +449,8 @@ class ResponseSerializer(object):
         self.headers_serializer = headers_serializer or \
                                     ResponseHeadersSerializer()
 
-    def serialize(self, response_data, content_type, action='default'):
+    def serialize(self, request, response_data, content_type,
+                  action='default'):
         """Serialize a dict into a string and wrap in a wsgi.Request object.
 
         :param response_data: dict produced by the Controller
@@ -458,17 +459,28 @@ class ResponseSerializer(object):
         """
         response = webob.Response()
         self.serialize_headers(response, response_data, action)
-        self.serialize_body(response, response_data, content_type, action)
+        self.serialize_body(request, response, response_data, content_type,
+                            action)
         return response
 
     def serialize_headers(self, response, data, action):
         self.headers_serializer.serialize(response, data, action)
 
-    def serialize_body(self, response, data, content_type, action):
+    def serialize_body(self, request, response, data, content_type, action):
         response.headers['Content-Type'] = content_type
         if data is not None:
             serializer = self.get_body_serializer(content_type)
-            response.body = serializer.serialize(data, action)
+            lazy_serialize = request.environ.get('nova.lazy_serialize', False)
+            if lazy_serialize:
+                response.body = utils.dumps(data)
+                request.environ['nova.serializer'] = serializer
+                request.environ['nova.action'] = action
+                if (hasattr(serializer, 'get_template') and
+                    'nova.template' not in request.environ):
+                    template = serializer.get_template(action)
+                    request.environ['nova.template'] = template
+            else:
+                response.body = serializer.serialize(data, action)
 
     def get_body_serializer(self, content_type):
         try:
@@ -476,6 +488,32 @@ class ResponseSerializer(object):
             return self.body_serializers[ctype]
         except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
+
+
+class LazySerializationMiddleware(wsgi.Middleware):
+    """Lazy serialization middleware."""
+    @webob.dec.wsgify(RequestClass=Request)
+    def __call__(self, req):
+        # Request lazy serialization
+        req.environ['nova.lazy_serialize'] = True
+
+        response = req.get_response(self.application)
+
+        # See if there's a serializer...
+        serializer = req.environ.get('nova.serializer')
+        if serializer is None:
+            return response
+
+        # OK, build up the arguments for the serialize() method
+        kwargs = dict(action=req.environ['nova.action'])
+        if 'nova.template' in req.environ:
+            kwargs['template'] = req.environ['nova.template']
+
+        # Re-serialize the body
+        response.body = serializer.serialize(utils.loads(response.body),
+                                             **kwargs)
+
+        return response
 
 
 class Resource(wsgi.Application):
@@ -531,7 +569,8 @@ class Resource(wsgi.Application):
             action_result = faults.Fault(ex)
 
         if type(action_result) is dict or action_result is None:
-            response = self.serializer.serialize(action_result,
+            response = self.serializer.serialize(request,
+                                                 action_result,
                                                  accept,
                                                  action=action)
         else:

@@ -21,6 +21,7 @@ import webob
 from nova import console
 from nova import exception
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 
 
 def _translate_keys(cons):
@@ -89,5 +90,51 @@ class Controller(object):
         return webob.Response(status_int=202)
 
 
+class ConsoleTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('console', selector='console')
+
+        id_elem = xmlutil.SubTemplateElement(root, 'id', selector='id')
+        id_elem.text = xmlutil.Selector()
+
+        port_elem = xmlutil.SubTemplateElement(root, 'port', selector='port')
+        port_elem.text = xmlutil.Selector()
+
+        host_elem = xmlutil.SubTemplateElement(root, 'host', selector='host')
+        host_elem.text = xmlutil.Selector()
+
+        passwd_elem = xmlutil.SubTemplateElement(root, 'password',
+                                                 selector='password')
+        passwd_elem.text = xmlutil.Selector()
+
+        constype_elem = xmlutil.SubTemplateElement(root, 'console_type',
+                                                   selector='console_type')
+        constype_elem.text = xmlutil.Selector()
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class ConsolesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('consoles')
+        console = xmlutil.SubTemplateElement(root, 'console',
+                                             selector='consoles')
+        console.append(ConsoleTemplate())
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class ConsoleXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return ConsolesTemplate()
+
+    def show(self):
+        return ConsoleTemplate()
+
+
 def create_resource():
-    return wsgi.Resource(Controller())
+    body_serializers = {
+        'application/xml': ConsoleXMLSerializer(),
+        }
+    serializer = wsgi.ResponseSerializer(body_serializers)
+    return wsgi.Resource(Controller(), serializer=serializer)

@@ -15,6 +15,7 @@
 
 import json
 
+from lxml import etree
 import webob
 
 from nova import test
@@ -63,6 +64,19 @@ class UsersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(len(res_dict['users']), 2)
 
+    def test_get_user_list_xml(self):
+        req = webob.Request.blank('/v1.1/fake/users.xml')
+        res = req.get_response(fakes.wsgi_app())
+        res_tree = etree.fromstring(res.body)
+
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res_tree.tag, 'users')
+        self.assertEqual(len(res_tree), 2)
+        self.assertEqual(res_tree[0].tag, 'user')
+        self.assertEqual(res_tree[0].get('id'), 'id1')
+        self.assertEqual(res_tree[1].tag, 'user')
+        self.assertEqual(res_tree[1].get('id'), 'id2')
+
     def test_get_user_by_id(self):
         req = webob.Request.blank('/v1.1/fake/users/id2')
         res = req.get_response(fakes.wsgi_app())
@@ -73,6 +87,18 @@ class UsersTest(test.TestCase):
         self.assertEqual(res_dict['user']['secret'], 'secret2')
         self.assertEqual(res_dict['user']['admin'], True)
         self.assertEqual(res.status_int, 200)
+
+    def test_get_user_by_id_xml(self):
+        req = webob.Request.blank('/v1.1/fake/users/id2.xml')
+        res = req.get_response(fakes.wsgi_app())
+        res_tree = etree.fromstring(res.body)
+
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res_tree.tag, 'user')
+        self.assertEqual(res_tree.get('id'), 'id2')
+        self.assertEqual(res_tree.get('name'), 'guy2')
+        self.assertEqual(res_tree.get('secret'), 'secret2')
+        self.assertEqual(res_tree.get('admin'), 'True')
 
     def test_user_delete(self):
         # Check the user exists
@@ -125,6 +151,35 @@ class UsersTest(test.TestCase):
                         fakes.FakeAuthManager.auth_data])
         self.assertEqual(len(fakes.FakeAuthManager.auth_data), 3)
 
+    def test_user_create_xml(self):
+        secret = utils.generate_password()
+        body = dict(user=dict(name='test_guy',
+                              access='acc3',
+                              secret=secret,
+                              admin=True))
+        req = webob.Request.blank('/v1.1/fake/users.xml')
+        req.headers["Content-Type"] = "application/json"
+        req.method = 'POST'
+        req.body = json.dumps(body)
+
+        res = req.get_response(fakes.wsgi_app())
+        res_tree = etree.fromstring(res.body)
+
+        self.assertEqual(res.status_int, 200)
+
+        # NOTE(justinsb): This is a questionable assertion in general
+        # fake sets id=name, but others might not...
+        self.assertEqual(res_tree.tag, 'user')
+        self.assertEqual(res_tree.get('id'), 'test_guy')
+
+        self.assertEqual(res_tree.get('name'), 'test_guy')
+        self.assertEqual(res_tree.get('access'), 'acc3')
+        self.assertEqual(res_tree.get('secret'), secret)
+        self.assertEqual(res_tree.get('admin'), 'True')
+        self.assertTrue('test_guy' in [u.id for u in
+                        fakes.FakeAuthManager.auth_data])
+        self.assertEqual(len(fakes.FakeAuthManager.auth_data), 3)
+
     def test_user_update(self):
         new_secret = utils.generate_password()
         body = dict(user=dict(name='guy2',
@@ -144,3 +199,24 @@ class UsersTest(test.TestCase):
         self.assertEqual(res_dict['user']['access'], 'acc2')
         self.assertEqual(res_dict['user']['secret'], new_secret)
         self.assertEqual(res_dict['user']['admin'], True)
+
+    def test_user_update_xml(self):
+        new_secret = utils.generate_password()
+        body = dict(user=dict(name='guy2',
+                              access='acc2',
+                              secret=new_secret))
+        req = webob.Request.blank('/v1.1/fake/users/id2.xml')
+        req.headers["Content-Type"] = "application/json"
+        req.method = 'PUT'
+        req.body = json.dumps(body)
+
+        res = req.get_response(fakes.wsgi_app())
+        res_tree = etree.fromstring(res.body)
+
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res_tree.tag, 'user')
+        self.assertEqual(res_tree.get('id'), 'id2')
+        self.assertEqual(res_tree.get('name'), 'guy2')
+        self.assertEqual(res_tree.get('access'), 'acc2')
+        self.assertEqual(res_tree.get('secret'), new_secret)
+        self.assertEqual(res_tree.get('admin'), 'True')

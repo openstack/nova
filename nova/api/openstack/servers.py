@@ -988,129 +988,107 @@ class HeadersSerializer(wsgi.ResponseHeadersSerializer):
         response.status_int = 202
 
 
-class ServerXMLSerializer(wsgi.XMLDictSerializer):
+class SecurityGroupsTemplateElement(xmlutil.TemplateElement):
+    def will_render(self, datum):
+        return 'security_groups' in datum
 
-    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
-    def __init__(self):
-        self.metadata_serializer = common.MetadataXMLSerializer()
-        self.addresses_serializer = ips.IPXMLSerializer()
+def make_server(elem, detailed=False):
+    elem.set('name')
+    elem.set('id')
 
-    def _create_metadata_node(self, metadata_dict):
-        metadata_elem = etree.Element('metadata', nsmap=self.NSMAP)
-        self.metadata_serializer.populate_metadata(metadata_elem,
-                                                   metadata_dict)
-        return metadata_elem
+    if detailed:
+        elem.set('uuid')
+        elem.set('userId', 'user_id')
+        elem.set('tenantId', 'tenant_id')
+        elem.set('updated')
+        elem.set('created')
+        elem.set('hostId')
+        elem.set('accessIPv4')
+        elem.set('accessIPv6')
+        elem.set('status')
+        elem.set('progress')
 
-    def _create_image_node(self, image_dict):
-        image_elem = etree.Element('image', nsmap=self.NSMAP)
-        image_elem.set('id', str(image_dict['id']))
-        for link in image_dict.get('links', []):
-            elem = etree.SubElement(image_elem,
-                                    '{%s}link' % xmlutil.XMLNS_ATOM)
-            elem.set('rel', link['rel'])
-            elem.set('href', link['href'])
-        return image_elem
+        # Attach image node
+        image = xmlutil.SubTemplateElement(elem, 'image', selector='image')
+        image.set('id')
+        xmlutil.make_links(image, 'links')
 
-    def _create_flavor_node(self, flavor_dict):
-        flavor_elem = etree.Element('flavor', nsmap=self.NSMAP)
-        flavor_elem.set('id', str(flavor_dict['id']))
-        for link in flavor_dict.get('links', []):
-            elem = etree.SubElement(flavor_elem,
-                                    '{%s}link' % xmlutil.XMLNS_ATOM)
-            elem.set('rel', link['rel'])
-            elem.set('href', link['href'])
-        return flavor_elem
+        # Attach flavor node
+        flavor = xmlutil.SubTemplateElement(elem, 'flavor', selector='flavor')
+        flavor.set('id')
+        xmlutil.make_links(flavor, 'links')
 
-    def _create_addresses_node(self, addresses_dict):
-        addresses_elem = etree.Element('addresses', nsmap=self.NSMAP)
-        self.addresses_serializer.populate_addresses_node(addresses_elem,
-                                                          addresses_dict)
-        return addresses_elem
+        # Attach metadata node
+        elem.append(common.MetadataTemplate())
 
-    def _populate_server(self, server_elem, server_dict, detailed=False):
-        """Populate a server xml element from a dict."""
+        # Attach addresses node
+        elem.append(ips.AddressesTemplate())
 
-        server_elem.set('name', server_dict['name'])
-        server_elem.set('id', str(server_dict['id']))
-        if detailed:
-            server_elem.set('uuid', str(server_dict['uuid']))
-            server_elem.set('userId', str(server_dict['user_id']))
-            server_elem.set('tenantId', str(server_dict['tenant_id']))
-            server_elem.set('updated', str(server_dict['updated']))
-            server_elem.set('created', str(server_dict['created']))
-            server_elem.set('hostId', str(server_dict['hostId']))
-            server_elem.set('accessIPv4', str(server_dict['accessIPv4']))
-            server_elem.set('accessIPv6', str(server_dict['accessIPv6']))
-            server_elem.set('status', str(server_dict['status']))
-            if 'progress' in server_dict:
-                server_elem.set('progress', str(server_dict['progress']))
-            image_elem = self._create_image_node(server_dict['image'])
-            server_elem.append(image_elem)
+        # Attach security groups node
+        secgrps = SecurityGroupsTemplateElement('security_groups')
+        elem.append(secgrps)
+        secgrp = xmlutil.SubTemplateElement(secgrps, 'security_group',
+                                            selector='security_groups')
+        secgrp.set('name')
 
-            flavor_elem = self._create_flavor_node(server_dict['flavor'])
-            server_elem.append(flavor_elem)
+    xmlutil.make_links(elem, 'links')
 
-            meta_elem = self._create_metadata_node(
-                            server_dict.get('metadata', {}))
-            server_elem.append(meta_elem)
 
-            addresses_elem = self._create_addresses_node(
-                            server_dict.get('addresses', {}))
-            server_elem.append(addresses_elem)
-            groups = server_dict.get('security_groups')
-            if groups:
-                groups_elem = etree.SubElement(server_elem, 'security_groups')
-                for group in groups:
-                    group_elem = etree.SubElement(groups_elem,
-                                                  'security_group')
-                    group_elem.set('name', group['name'])
+server_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
-        self._populate_links(server_elem, server_dict.get('links', []))
 
-    def _populate_links(self, parent, links):
-        for link in links:
-            elem = etree.SubElement(parent,
-                                    '{%s}link' % xmlutil.XMLNS_ATOM)
-            elem.set('rel', link['rel'])
-            elem.set('href', link['href'])
+class ServerTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server', selector='server')
+        make_server(root, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
 
-    def index(self, servers_dict):
-        servers = etree.Element('servers', nsmap=self.NSMAP)
-        for server_dict in servers_dict['servers']:
-            server = etree.SubElement(servers, 'server')
-            self._populate_server(server, server_dict, False)
 
-        self._populate_links(servers, servers_dict.get('servers_links', []))
-        return self._to_xml(servers)
+class MinimalServersTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('servers')
+        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
+        make_server(elem)
+        xmlutil.make_links(root, 'servers_links')
+        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
 
-    def detail(self, servers_dict):
-        servers = etree.Element('servers', nsmap=self.NSMAP)
-        for server_dict in servers_dict['servers']:
-            server = etree.SubElement(servers, 'server')
-            self._populate_server(server, server_dict, True)
-        return self._to_xml(servers)
 
-    def show(self, server_dict):
-        server = etree.Element('server', nsmap=self.NSMAP)
-        self._populate_server(server, server_dict['server'], True)
-        return self._to_xml(server)
+class ServersTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('servers')
+        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
+        make_server(elem, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
 
-    def create(self, server_dict):
-        server = etree.Element('server', nsmap=self.NSMAP)
-        self._populate_server(server, server_dict['server'], True)
-        server.set('adminPass', server_dict['server']['adminPass'])
-        return self._to_xml(server)
 
-    def action(self, server_dict):
-        #NOTE(bcwaldon): We need a way to serialize actions individually. This
-        # assumes all actions return a server entity
-        return self.create(server_dict)
+class ServerAdminPassTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server')
+        root.set('adminPass')
+        return xmlutil.SlaveTemplate(root, 1, nsmap=server_nsmap)
 
-    def update(self, server_dict):
-        server = etree.Element('server', nsmap=self.NSMAP)
-        self._populate_server(server, server_dict['server'], True)
-        return self._to_xml(server)
+
+class ServerXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return MinimalServersTemplate()
+
+    def detail(self):
+        return ServersTemplate()
+
+    def show(self):
+        return ServerTemplate()
+
+    def update(self):
+        return ServerTemplate()
+
+    def create(self):
+        master = ServerTemplate()
+        master.attach(ServerAdminPassTemplate())
+        return master
+
+    def action(self):
+        return self.create()
 
 
 class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
