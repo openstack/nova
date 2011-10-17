@@ -64,12 +64,10 @@ class Foxinsocks(object):
     def get_request_extensions(self):
         request_exts = []
 
-        def _goose_handler(req, res):
+        def _goose_handler(req, res, body):
             #NOTE: This only handles JSON responses.
             # You can use content type header to test for XML.
-            data = json.loads(res.body)
-            data['flavor']['googoose'] = req.GET.get('chewing')
-            res.body = json.dumps(data)
+            body['flavor']['googoose'] = req.GET.get('chewing')
             return res
 
         req_ext1 = extensions.RequestExtension('GET',
@@ -77,12 +75,10 @@ class Foxinsocks(object):
                                      _goose_handler)
         request_exts.append(req_ext1)
 
-        def _bands_handler(req, res):
+        def _bands_handler(req, res, body):
             #NOTE: This only handles JSON responses.
             # You can use content type header to test for XML.
-            data = json.loads(res.body)
-            data['big_bands'] = 'Pig Bands!'
-            res.body = json.dumps(data)
+            body['big_bands'] = 'Pig Bands!'
             return res
 
         req_ext2 = extensions.RequestExtension('GET',

@@ -29,9 +29,10 @@ from nova.api import openstack
 from nova.api import auth as api_auth
 from nova.api.openstack import auth
 from nova.api.openstack import extensions
-from nova.api.openstack import versions
 from nova.api.openstack import limits
 from nova.api.openstack import urlmap
+from nova.api.openstack import versions
+from nova.api.openstack import wsgi as os_wsgi
 from nova.auth.manager import User, Project
 import nova.image.fake
 from nova.tests.glance import stubs as glance_stubs
@@ -65,7 +66,8 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app(inner_app11=None, fake_auth=True, fake_auth_context=None):
+def wsgi_app(inner_app11=None, fake_auth=True, fake_auth_context=None,
+        serialization=os_wsgi.LazySerializationMiddleware):
     if not inner_app11:
         inner_app11 = openstack.APIRouter()
 
@@ -76,11 +78,13 @@ def wsgi_app(inner_app11=None, fake_auth=True, fake_auth_context=None):
             ctxt = context.RequestContext('fake', 'fake', auth_token=True)
         api11 = openstack.FaultWrapper(api_auth.InjectContext(ctxt,
               limits.RateLimitingMiddleware(
-                  extensions.ExtensionMiddleware(inner_app11))))
+                  serialization(
+                      extensions.ExtensionMiddleware(inner_app11)))))
     else:
         api11 = openstack.FaultWrapper(auth.AuthMiddleware(
               limits.RateLimitingMiddleware(
-                  extensions.ExtensionMiddleware(inner_app11))))
+                  serialization(
+                      extensions.ExtensionMiddleware(inner_app11)))))
         Auth = auth
     mapper = urlmap.URLMap()
     mapper['/v1.1'] = api11

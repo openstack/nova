@@ -148,82 +148,63 @@ class Controller(object):
         raise webob.exc.HTTPMethodNotAllowed()
 
 
-class ImageXMLSerializer(wsgi.XMLDictSerializer):
+def make_image(elem, detailed=False):
+    elem.set('name')
+    elem.set('id')
 
-    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+    if detailed:
+        elem.set('updated')
+        elem.set('created')
+        elem.set('status')
+        elem.set('progress')
+        elem.set('minRam')
+        elem.set('minDisk')
 
-    def __init__(self):
-        self.metadata_serializer = common.MetadataXMLSerializer()
+        server = xmlutil.SubTemplateElement(elem, 'server', selector='server')
+        server.set('id')
+        xmlutil.make_links(server, 'links')
 
-    def _create_metadata_node(self, metadata_dict):
-        metadata_elem = etree.Element('metadata', nsmap=self.NSMAP)
-        self.metadata_serializer.populate_metadata(metadata_elem,
-                                                   metadata_dict)
-        return metadata_elem
+        elem.append(common.MetadataTemplate())
 
-    def _create_server_node(self, server_dict):
-        server_elem = etree.Element('server', nsmap=self.NSMAP)
-        server_elem.set('id', str(server_dict['id']))
-        for link in server_dict.get('links', []):
-            elem = etree.SubElement(server_elem,
-                                    '{%s}link' % xmlutil.XMLNS_ATOM)
-            elem.set('rel', link['rel'])
-            elem.set('href', link['href'])
-        return server_elem
+    xmlutil.make_links(elem, 'links')
 
-    def _populate_image(self, image_elem, image_dict, detailed=False):
-        """Populate an image xml element from a dict."""
 
-        image_elem.set('name', image_dict['name'])
-        image_elem.set('id', str(image_dict['id']))
-        if detailed:
-            image_elem.set('updated', str(image_dict['updated']))
-            image_elem.set('created', str(image_dict['created']))
-            image_elem.set('status', str(image_dict['status']))
-            if 'progress' in image_dict:
-                image_elem.set('progress', str(image_dict['progress']))
-            if 'minRam' in image_dict:
-                image_elem.set('minRam', str(image_dict['minRam']))
-            if 'minDisk' in image_dict:
-                image_elem.set('minDisk', str(image_dict['minDisk']))
-            if 'server' in image_dict:
-                server_elem = self._create_server_node(image_dict['server'])
-                image_elem.append(server_elem)
+image_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
-            meta_elem = self._create_metadata_node(
-                            image_dict.get('metadata', {}))
-            image_elem.append(meta_elem)
 
-        self._populate_links(image_elem, image_dict.get('links', []))
+class ImageTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('image', selector='image')
+        make_image(root, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
 
-    def _populate_links(self, parent, links):
-        for link in links:
-            elem = etree.SubElement(parent, '{%s}link' % xmlutil.XMLNS_ATOM)
-            elem.set('rel', link['rel'])
-            if 'type' in link:
-                elem.set('type', link['type'])
-            elem.set('href', link['href'])
 
-    def index(self, images_dict):
-        images = etree.Element('images', nsmap=self.NSMAP)
-        for image_dict in images_dict['images']:
-            image = etree.SubElement(images, 'image')
-            self._populate_image(image, image_dict, False)
+class MinimalImagesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('images')
+        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
+        make_image(elem)
+        xmlutil.make_links(root, 'images_links')
+        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
 
-        self._populate_links(images, images_dict.get('images_links', []))
-        return self._to_xml(images)
 
-    def detail(self, images_dict):
-        images = etree.Element('images', nsmap=self.NSMAP)
-        for image_dict in images_dict['images']:
-            image = etree.SubElement(images, 'image')
-            self._populate_image(image, image_dict, True)
-        return self._to_xml(images)
+class ImagesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('images')
+        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
+        make_image(elem, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
 
-    def show(self, image_dict):
-        image = etree.Element('image', nsmap=self.NSMAP)
-        self._populate_image(image, image_dict['image'], True)
-        return self._to_xml(image)
+
+class ImageXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return MinimalImagesTemplate()
+
+    def detail(self):
+        return ImagesTemplate()
+
+    def show(self):
+        return ImageTemplate()
 
 
 def create_resource():

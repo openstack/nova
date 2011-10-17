@@ -20,6 +20,7 @@ from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova.auth import manager
 
 
@@ -97,15 +98,40 @@ class Controller(object):
         return dict(user=_translate_keys(self.manager.get_user(id)))
 
 
-def create_resource():
-    metadata = {
-        "attributes": {
-            "user": ["id", "name", "access", "secret", "admin"],
-        },
-    }
+def make_user(elem):
+    elem.set('id')
+    elem.set('name')
+    elem.set('access')
+    elem.set('secret')
+    elem.set('admin')
 
+
+class UserTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('user', selector='user')
+        make_user(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class UsersTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('users')
+        elem = xmlutil.SubTemplateElement(root, 'user', selector='users')
+        make_user(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class UserXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return UsersTemplate()
+
+    def default(self):
+        return UserTemplate()
+
+
+def create_resource():
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
+        'application/xml': UserXMLSerializer(),
     }
 
     serializer = wsgi.ResponseSerializer(body_serializers)

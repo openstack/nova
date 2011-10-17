@@ -22,6 +22,7 @@ from nova import log as logging
 from nova.auth import manager
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 
 
 FLAGS = flags.FLAGS
@@ -80,15 +81,25 @@ class Controller(object):
         return dict(account=_translate_keys(account))
 
 
-def create_resource():
-    metadata = {
-        "attributes": {
-            "account": ["id", "name", "description", "manager"],
-        },
-    }
+class AccountTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('account', selector='account')
+        root.set('id', 'id')
+        root.set('name', 'name')
+        root.set('description', 'description')
+        root.set('manager', 'manager')
 
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class AccountXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def default(self):
+        return AccountTemplate()
+
+
+def create_resource():
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
+        'application/xml': AccountXMLSerializer(),
     }
     serializer = wsgi.ResponseSerializer(body_serializers)
     return wsgi.Resource(Controller(), serializer=serializer)

@@ -27,6 +27,7 @@ from nova.scheduler import api
 
 from nova.api.openstack import common
 from nova.api.openstack import servers
+from nova.api.openstack import xmlutil
 from nova.api.openstack import wsgi
 
 
@@ -143,16 +144,70 @@ class Controller(object):
         return cooked
 
 
-def create_resource():
-    metadata = {
-        "attributes": {
-            "zone": ["id", "api_url", "name", "capabilities"],
-        },
-    }
+class CapabilitySelector(object):
+    def __call__(self, obj, do_raise=False):
+        return [(k, v) for k, v in obj.items()
+                if k not in ('id', 'api_url', 'name', 'capabilities')]
 
+
+def make_zone(elem):
+    #elem = xmlutil.SubTemplateElement(parent, 'zone', selector=selector)
+    elem.set('id')
+    elem.set('api_url')
+    elem.set('name')
+    elem.set('capabilities')
+
+    cap = xmlutil.SubTemplateElement(elem, xmlutil.Selector(0),
+                                     selector=CapabilitySelector())
+    cap.text = 1
+
+
+zone_nsmap = {None: wsgi.XMLNS_V10}
+
+
+class ZoneTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('zone', selector='zone')
+        make_zone(root)
+        return xmlutil.MasterTemplate(root, 1, nsmap=zone_nsmap)
+
+
+class ZonesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('zones')
+        elem = xmlutil.SubTemplateElement(root, 'zone', selector='zones')
+        make_zone(elem)
+        return xmlutil.MasterTemplate(root, 1, nsmap=zone_nsmap)
+
+
+class WeightsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('weights')
+        weight = xmlutil.SubTemplateElement(root, 'weight', selector='weights')
+        blob = xmlutil.SubTemplateElement(weight, 'blob')
+        blob.text = 'blob'
+        inner_weight = xmlutil.SubTemplateElement(weight, 'weight')
+        inner_weight.text = 'weight'
+        return xmlutil.MasterTemplate(root, 1, nsmap=zone_nsmap)
+
+
+class ZonesXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return ZonesTemplate()
+
+    def detail(self):
+        return ZonesTemplate()
+
+    def select(self):
+        return WeightsTemplate()
+
+    def default(self):
+        return ZoneTemplate()
+
+
+def create_resource():
     body_serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11,
-                                                  metadata=metadata),
+        'application/xml': ZonesXMLSerializer(),
     }
     serializer = wsgi.ResponseSerializer(body_serializers)
 

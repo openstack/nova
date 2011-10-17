@@ -30,6 +30,7 @@ from xml.dom import minidom
 import nova.context
 from nova.api.openstack import limits
 from nova.api.openstack import views
+from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import test
 
@@ -80,7 +81,8 @@ class LimitsControllerTest(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.controller = limits.create_resource()
+        self.controller = wsgi.LazySerializationMiddleware(
+            limits.create_resource())
         self.maxDiff = None
 
     def _get_index_request(self, accept_header="application/json"):

@@ -20,6 +20,7 @@ import os.path
 from lxml import etree
 
 from nova import utils
+from nova.api.openstack import wsgi
 
 
 XMLNS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
@@ -38,3 +39,857 @@ def validate_schema(xml, schema_name):
     schema_doc = etree.parse(schema_path)
     relaxng = etree.RelaxNG(schema_doc)
     relaxng.assertValid(xml)
+
+
+class Selector(object):
+    """Selects datum to operate on from an object."""
+
+    def __init__(self, *chain):
+        """Initialize the selector.
+
+        Each argument is a subsequent index into the object.
+        """
+
+        self.chain = chain
+
+    def __repr__(self):
+        """Return a representation of the selector."""
+
+        return "Selector" + repr(self.chain)
+
+    def __call__(self, obj, do_raise=False):
+        """Select a datum to operate on.
+
+        Selects the relevant datum within the object.
+
+        :param obj: The object from which to select the object.
+        :param do_raise: If False (the default), return None if the
+                         indexed datum does not exist.  Otherwise,
+                         raise a KeyError.
+        """
+
+        # Walk the selector list
+        for elem in self.chain:
+            # If it's callable, call it
+            if callable(elem):
+                obj = elem(obj)
+            else:
+                # Use indexing
+                try:
+                    obj = obj[elem]
+                except (KeyError, IndexError):
+                    # No sense going any further
+                    if do_raise:
+                        # Convert to a KeyError, for consistency
+                        raise KeyError(elem)
+                    return None
+
+        # Return the finally-selected object
+        return obj
+
+
+def get_items(obj):
+    """Get items in obj."""
+
+    return list(obj.items())
+
+
+class EmptyStringSelector(Selector):
+    """Returns the empty string if Selector would return None."""
+    def __call__(self, obj, do_raise=False):
+        """Returns empty string if the selected value does not exist."""
+
+        try:
+            return super(EmptyStringSelector, self).__call__(obj, True)
+        except KeyError:
+            return ""
+
+
+class ConstantSelector(object):
+    """Returns a constant."""
+
+    def __init__(self, value):
+        """Initialize the selector.
+
+        :param value: The value to return.
+        """
+
+        self.value = value
+
+    def __repr__(self):
+        """Return a representation of the selector."""
+
+        return repr(self.value)
+
+    def __call__(self, _obj, _do_raise=False):
+        """Select a datum to operate on.
+
+        Returns a constant value.  Compatible with
+        Selector.__call__().
+        """
+
+        return self.value
+
+
+class TemplateElement(object):
+    """Represent an element in the template."""
+
+    def __init__(self, tag, attrib=None, selector=None, **extra):
+        """Initialize an element.
+
+        Initializes an element in the template.  Keyword arguments
+        specify attributes to be set on the element; values must be
+        callables.  See TemplateElement.set() for more information.
+
+        :param tag: The name of the tag to create.
+        :param attrib: An optional dictionary of element attributes.
+        :param selector: An optional callable taking an object and
+                         optional boolean do_raise indicator and
+                         returning the object bound to the element.
+        """
+
+        # Convert selector into a Selector
+        if selector is None:
+            selector = Selector()
+        elif not callable(selector):
+            selector = Selector(selector)
+
+        self.tag = tag
+        self.selector = selector
+        self.attrib = {}
+        self._text = None
+        self._children = []
+        self._childmap = {}
+
+        # Run the incoming attributes through set() so that they
+        # become selectorized
+        if not attrib:
+            attrib = {}
+        attrib.update(extra)
+        for k, v in attrib.items():
+            self.set(k, v)
+
+    def __repr__(self):
+        """Return a representation of the template element."""
+
+        return ('<%s.%s %r at %#x>' %
+                (self.__class__.__module__, self.__class__.__name__,
+                 self.tag, id(self)))
+
+    def __len__(self):
+        """Return the number of child elements."""
+
+        return len(self._children)
+
+    def __contains__(self, key):
+        """Determine whether a child node named by key exists."""
+
+        return key in self._childmap
+
+    def __getitem__(self, idx):
+        """Retrieve a child node by index or name."""
+
+        if isinstance(idx, basestring):
+            # Allow access by node name
+            return self._childmap[idx]
+        else:
+            return self._children[idx]
+
+    def append(self, elem):
+        """Append a child to the element."""
+
+        # Unwrap templates...
+        elem = elem.unwrap()
+
+        # Avoid duplications
+        if elem.tag in self._childmap:
+            raise KeyError(elem.tag)
+
+        self._children.append(elem)
+        self._childmap[elem.tag] = elem
+
+    def extend(self, elems):
+        """Append children to the element."""
+
+        # Pre-evaluate the elements
+        elemmap = {}
+        elemlist = []
+        for elem in elems:
+            # Unwrap templates...
+            elem = elem.unwrap()
+
+            # Avoid duplications
+            if elem.tag in self._childmap or elem.tag in elemmap:
+                raise KeyError(elem.tag)
+
+            elemmap[elem.tag] = elem
+            elemlist.append(elem)
+
+        # Update the children
+        self._children.extend(elemlist)
+        self._childmap.update(elemmap)
+
+    def insert(self, idx, elem):
+        """Insert a child element at the given index."""
+
+        # Unwrap templates...
+        elem = elem.unwrap()
+
+        # Avoid duplications
+        if elem.tag in self._childmap:
+            raise KeyError(elem.tag)
+
+        self._children.insert(idx, elem)
+        self._childmap[elem.tag] = elem
+
+    def remove(self, elem):
+        """Remove a child element."""
+
+        # Unwrap templates...
+        elem = elem.unwrap()
+
+        # Check if element exists
+        if elem.tag not in self._childmap or self._childmap[elem.tag] != elem:
+            raise ValueError(_('element is not a child'))
+
+        self._children.remove(elem)
+        del self._childmap[elem.tag]
+
+    def get(self, key):
+        """Get an attribute.
+
+        Returns a callable which performs datum selection.
+
+        :param key: The name of the attribute to get.
+        """
+
+        return self.attrib[key]
+
+    def set(self, key, value=None):
+        """Set an attribute.
+
+        :param key: The name of the attribute to set.
+
+        :param value: A callable taking an object and optional boolean
+                      do_raise indicator and returning the datum bound
+                      to the attribute.  If None, a Selector() will be
+                      constructed from the key.  If a string, a
+                      Selector() will be constructed from the string.
+        """
+
+        # Convert value to a selector
+        if value is None:
+            value = Selector(key)
+        elif not callable(value):
+            value = Selector(value)
+
+        self.attrib[key] = value
+
+    def keys(self):
+        """Return the attribute names."""
+
+        return self.attrib.keys()
+
+    def items(self):
+        """Return the attribute names and values."""
+
+        return self.attrib.items()
+
+    def unwrap(self):
+        """Unwraps a template to return a template element."""
+
+        # We are a template element
+        return self
+
+    def wrap(self):
+        """Wraps a template element to return a template."""
+
+        # Wrap in a basic Template
+        return Template(self)
+
+    def apply(self, elem, obj):
+        """Apply text and attributes to an etree.Element.
+
+        Applies the text and attribute instructions in the template
+        element to an etree.Element instance.
+
+        :param elem: An etree.Element instance.
+        :param obj: The base object associated with this template
+                    element.
+        """
+
+        # Start with the text...
+        if self.text is not None:
+            elem.text = unicode(self.text(obj))
+
+        # Now set up all the attributes...
+        for key, value in self.attrib.items():
+            try:
+                elem.set(key, unicode(value(obj, True)))
+            except KeyError:
+                # Attribute has no value, so don't include it
+                pass
+
+    def _render(self, parent, datum, patches, nsmap):
+        """Internal rendering.
+
+        Renders the template node into an etree.Element object.
+        Returns the etree.Element object.
+
+        :param parent: The parent etree.Element instance.
+        :param datum: The datum associated with this template element.
+        :param patches: A list of other template elements that must
+                        also be applied.
+        :param nsmap: An optional namespace dictionary to be
+                      associated with the etree.Element instance.
+        """
+
+        # Allocate a node
+        if callable(self.tag):
+            tagname = self.tag(datum)
+        else:
+            tagname = self.tag
+        elem = etree.Element(tagname, nsmap=nsmap)
+
+        # If we have a parent, append the node to the parent
+        if parent is not None:
+            parent.append(elem)
+
+        # If the datum is None, do nothing else
+        if datum is None:
+            return elem
+
+        # Apply this template element to the element
+        self.apply(elem, datum)
+
+        # Additionally, apply the patches
+        for patch in patches:
+            patch.apply(elem, datum)
+
+        # We have fully rendered the element; return it
+        return elem
+
+    def render(self, parent, obj, patches=[], nsmap=None):
+        """Render an object.
+
+        Renders an object against this template node.  Returns a list
+        of two-item tuples, where the first item is an etree.Element
+        instance and the second item is the datum associated with that
+        instance.
+
+        :param parent: The parent for the etree.Element instances.
+        :param obj: The object to render this template element
+                    against.
+        :param patches: A list of other template elements to apply
+                        when rendering this template element.
+        :param nsmap: An optional namespace dictionary to attach to
+                      the etree.Element instances.
+        """
+
+        # First, get the datum we're rendering
+        data = None if obj is None else self.selector(obj)
+
+        # Check if we should render at all
+        if not self.will_render(data):
+            return []
+        elif data is None:
+            return [(self._render(parent, None, patches, nsmap), None)]
+
+        # Make the data into a list if it isn't already
+        if not isinstance(data, list):
+            data = [data]
+        elif parent is None:
+            raise ValueError(_('root element selecting a list'))
+
+        # Render all the elements
+        elems = []
+        for datum in data:
+            elems.append((self._render(parent, datum, patches, nsmap), datum))
+
+        # Return all the elements rendered, as well as the
+        # corresponding datum for the next step down the tree
+        return elems
+
+    def will_render(self, datum):
+        """Hook method.
+
+        An overridable hook method to determine whether this template
+        element will be rendered at all.  By default, returns False
+        (inhibiting rendering) if the datum is None.
+
+        :param datum: The datum associated with this template element.
+        """
+
+        # Don't render if datum is None
+        return datum is not None
+
+    def _text_get(self):
+        """Template element text.
+
+        Either None or a callable taking an object and optional
+        boolean do_raise indicator and returning the datum bound to
+        the text of the template element.
+        """
+
+        return self._text
+
+    def _text_set(self, value):
+        # Convert value to a selector
+        if value is not None and not callable(value):
+            value = Selector(value)
+
+        self._text = value
+
+    def _text_del(self):
+        self._text = None
+
+    text = property(_text_get, _text_set, _text_del)
+
+    def tree(self):
+        """Return string representation of the template tree.
+
+        Returns a representation of the template rooted at this
+        element as a string, suitable for inclusion in debug logs.
+        """
+
+        # Build the inner contents of the tag...
+        contents = [self.tag, '!selector=%r' % self.selector]
+
+        # Add the text...
+        if self.text is not None:
+            contents.append('!text=%r' % self.text)
+
+        # Add all the other attributes
+        for key, value in self.attrib.items():
+            contents.append('%s=%r' % (key, value))
+
+        # If there are no children, return it as a closed tag
+        if len(self) == 0:
+            return '<%s/>' % ' '.join(contents)
+
+        # OK, recurse to our children
+        children = [c.tree() for c in self]
+
+        # Return the result
+        return ('<%s>%s</%s>' %
+                (' '.join(contents), ''.join(children), self.tag))
+
+
+def SubTemplateElement(parent, tag, attrib=None, selector=None, **extra):
+    """Create a template element as a child of another.
+
+    Corresponds to the etree.SubElement interface.  Parameters are as
+    for TemplateElement, with the addition of the parent.
+    """
+
+    # Convert attributes
+    attrib = attrib or {}
+    attrib.update(extra)
+
+    # Get a TemplateElement
+    elem = TemplateElement(tag, attrib=attrib, selector=selector)
+
+    # Append the parent safely
+    if parent is not None:
+        parent.append(elem)
+
+    return elem
+
+
+class Template(object):
+    """Represent a template."""
+
+    def __init__(self, root, nsmap=None):
+        """Initialize a template.
+
+        :param root: The root element of the template.
+        :param nsmap: An optional namespace dictionary to be
+                      associated with the root element of the
+                      template.
+        """
+
+        self.root = root.unwrap() if root is not None else None
+        self.nsmap = nsmap or {}
+
+    def _serialize(self, parent, obj, siblings, nsmap=None):
+        """Internal serialization.
+
+        Recursive routine to build a tree of etree.Element instances
+        from an object based on the template.  Returns the first
+        etree.Element instance rendered, or None.
+
+        :param parent: The parent etree.Element instance.  Can be
+                       None.
+        :param obj: The object to render.
+        :param siblings: The TemplateElement instances against which
+                         to render the object.
+        :param nsmap: An optional namespace dictionary to be
+                      associated with the etree.Element instance
+                      rendered.
+        """
+
+        # First step, render the element
+        elems = siblings[0].render(parent, obj, siblings[1:], nsmap)
+
+        # Now, recurse to all child elements
+        seen = set()
+        for idx, sibling in enumerate(siblings):
+            for child in sibling:
+                # Have we handled this child already?
+                if child.tag in seen:
+                    continue
+                seen.add(child.tag)
+
+                # Determine the child's siblings
+                nieces = [child]
+                for sib in siblings[idx + 1:]:
+                    if child.tag in sib:
+                        nieces.append(sib[child.tag])
+
+                # Now we recurse for every data element
+                for elem, datum in elems:
+                    self._serialize(elem, datum, nieces)
+
+        # Return the first element; at the top level, this will be the
+        # root element
+        if elems:
+            return elems[0][0]
+
+    def serialize(self, obj, *args, **kwargs):
+        """Serialize an object.
+
+        Serializes an object against the template.  Returns a string
+        with the serialized XML.  Positional and keyword arguments are
+        passed to etree.tostring().
+
+        :param obj: The object to serialize.
+        """
+
+        elem = self.make_tree(obj)
+        if elem is None:
+            return ''
+
+        # Serialize it into XML
+        return etree.tostring(elem, *args, **kwargs)
+
+    def make_tree(self, obj):
+        """Create a tree.
+
+        Serializes an object against the template.  Returns an Element
+        node with appropriate children.
+
+        :param obj: The object to serialize.
+        """
+
+        # If the template is empty, return the empty string
+        if self.root is None:
+            return None
+
+        # Get the siblings and nsmap of the root element
+        siblings = self._siblings()
+        nsmap = self._nsmap()
+
+        # Form the element tree
+        return self._serialize(None, obj, siblings, nsmap)
+
+    def _siblings(self):
+        """Hook method for computing root siblings.
+
+        An overridable hook method to return the siblings of the root
+        element.  By default, this is the root element itself.
+        """
+
+        return [self.root]
+
+    def _nsmap(self):
+        """Hook method for computing the namespace dictionary.
+
+        An overridable hook method to return the namespace dictionary.
+        """
+
+        return self.nsmap.copy()
+
+    def unwrap(self):
+        """Unwraps a template to return a template element."""
+
+        # Return the root element
+        return self.root
+
+    def wrap(self):
+        """Wraps a template element to return a template."""
+
+        # We are a template
+        return self
+
+    def apply(self, master):
+        """Hook method for determining slave applicability.
+
+        An overridable hook method used to determine if this template
+        is applicable as a slave to a given master template.
+
+        :param master: The master template to test.
+        """
+
+        return True
+
+    def tree(self):
+        """Return string representation of the template tree.
+
+        Returns a representation of the template as a string, suitable
+        for inclusion in debug logs.
+        """
+
+        return "%r: %s" % (self, self.root.tree())
+
+
+class MasterTemplate(Template):
+    """Represent a master template.
+
+    Master templates are versioned derivatives of templates that
+    additionally allow slave templates to be attached.  Slave
+    templates allow modification of the serialized result without
+    directly changing the master.
+    """
+
+    def __init__(self, root, version, nsmap=None):
+        """Initialize a master template.
+
+        :param root: The root element of the template.
+        :param version: The version number of the template.
+        :param nsmap: An optional namespace dictionary to be
+                      associated with the root element of the
+                      template.
+        """
+
+        super(MasterTemplate, self).__init__(root, nsmap)
+        self.version = version
+        self.slaves = []
+
+    def __repr__(self):
+        """Return string representation of the template."""
+
+        return ("<%s.%s object version %s at %#x>" %
+                (self.__class__.__module__, self.__class__.__name__,
+                 self.version, id(self)))
+
+    def _siblings(self):
+        """Hook method for computing root siblings.
+
+        An overridable hook method to return the siblings of the root
+        element.  This is the root element plus the root elements of
+        all the slave templates.
+        """
+
+        return [self.root] + [slave.root for slave in self.slaves]
+
+    def _nsmap(self):
+        """Hook method for computing the namespace dictionary.
+
+        An overridable hook method to return the namespace dictionary.
+        The namespace dictionary is computed by taking the master
+        template's namespace dictionary and updating it from all the
+        slave templates.
+        """
+
+        nsmap = self.nsmap.copy()
+        for slave in self.slaves:
+            nsmap.update(slave._nsmap())
+        return nsmap
+
+    def attach(self, *slaves):
+        """Attach one or more slave templates.
+
+        Attaches one or more slave templates to the master template.
+        Slave templates must have a root element with the same tag as
+        the master template.  The slave template's apply() method will
+        be called to determine if the slave should be applied to this
+        master; if it returns False, that slave will be skipped.
+        (This allows filtering of slaves based on the version of the
+        master template.)
+        """
+
+        slave_list = []
+        for slave in slaves:
+            slave = slave.wrap()
+
+            # Make sure we have a tree match
+            if slave.root.tag != self.root.tag:
+                slavetag = slave.root.tag
+                mastertag = self.root.tag
+                msg = _("Template tree mismatch; adding slave %(slavetag)s "
+                        "to master %(mastertag)s") % locals()
+                raise ValueError(msg)
+
+            # Make sure slave applies to this template
+            if not slave.apply(self):
+                continue
+
+            slave_list.append(slave)
+
+        # Add the slaves
+        self.slaves.extend(slave_list)
+
+    def copy(self):
+        """Return a copy of this master template."""
+
+        # Return a copy of the MasterTemplate
+        tmp = self.__class__(self.root, self.version, self.nsmap)
+        tmp.slaves = self.slaves[:]
+        return tmp
+
+
+class SlaveTemplate(Template):
+    """Represent a slave template.
+
+    Slave templates are versioned derivatives of templates.  Each
+    slave has a minimum version and optional maximum version of the
+    master template to which they can be attached.
+    """
+
+    def __init__(self, root, min_vers, max_vers=None, nsmap=None):
+        """Initialize a slave template.
+
+        :param root: The root element of the template.
+        :param min_vers: The minimum permissible version of the master
+                         template for this slave template to apply.
+        :param max_vers: An optional upper bound for the master
+                         template version.
+        :param nsmap: An optional namespace dictionary to be
+                      associated with the root element of the
+                      template.
+        """
+
+        super(SlaveTemplate, self).__init__(root, nsmap)
+        self.min_vers = min_vers
+        self.max_vers = max_vers
+
+    def __repr__(self):
+        """Return string representation of the template."""
+
+        return ("<%s.%s object versions %s-%s at %#x>" %
+                (self.__class__.__module__, self.__class__.__name__,
+                 self.min_vers, self.max_vers, id(self)))
+
+    def apply(self, master):
+        """Hook method for determining slave applicability.
+
+        An overridable hook method used to determine if this template
+        is applicable as a slave to a given master template.  This
+        version requires the master template to have a version number
+        between min_vers and max_vers.
+
+        :param master: The master template to test.
+        """
+
+        # Does the master meet our minimum version requirement?
+        if master.version < self.min_vers:
+            return False
+
+        # How about our maximum version requirement?
+        if self.max_vers is not None and master.version > self.max_vers:
+            return False
+
+        return True
+
+
+class TemplateBuilder(object):
+    """Template builder.
+
+    This class exists to allow templates to be lazily built without
+    having to build them each time they are needed.  It must be
+    subclassed, and the subclass must implement the construct()
+    method, which must return a Template (or subclass) instance.  The
+    constructor will always return the template returned by
+    construct(), or, if it has a copy() method, a copy of that
+    template.
+    """
+
+    _tmpl = None
+
+    def __new__(cls, copy=True):
+        """Construct and return a template.
+
+        :param copy: If True (the default), a copy of the template
+                     will be constructed and returned, if possible.
+        """
+
+        # Do we need to construct the template?
+        if cls._tmpl is None:
+            tmp = super(TemplateBuilder, cls).__new__(cls)
+
+            # Construct the template
+            cls._tmpl = tmp.construct()
+
+        # If the template has a copy attribute, return the result of
+        # calling it
+        if copy and hasattr(cls._tmpl, 'copy'):
+            return cls._tmpl.copy()
+
+        # Return the template
+        return cls._tmpl
+
+    def construct(self):
+        """Construct a template.
+
+        Called to construct a template instance, which it must return.
+        Only called once.
+        """
+
+        raise NotImplementedError(_("subclasses must implement construct()!"))
+
+
+class XMLTemplateSerializer(wsgi.ActionDispatcher):
+    """Template-based XML serializer.
+
+    Data serializer that uses templates to perform its serialization.
+    """
+
+    def get_template(self, action='default'):
+        """Retrieve the template to use for serialization."""
+
+        return self.dispatch(action=action)
+
+    def serialize(self, data, action='default', template=None):
+        """Serialize data.
+
+        :param data: The data to serialize.
+        :param action: The action, for identifying the template to
+                       use.  If no template is provided,
+                       get_template() will be called with this action
+                       to retrieve the template.
+        :param template: The template to use in serialization.
+        """
+
+        # No template provided, look one up
+        if template is None:
+            template = self.get_template(action)
+
+        # Still couldn't find a template; try the base
+        # XMLDictSerializer
+        if template is None:
+            serial = wsgi.XMLDictSerializer()
+            return serial.serialize(data, action=action)
+
+        # Serialize the template
+        return template.serialize(data, encoding='UTF-8',
+                                  xml_declaration=True)
+
+    def default(self):
+        """Retrieve the default template to use."""
+
+        return None
+
+
+def make_links(parent, selector=None):
+    """
+    Attach an Atom <links> element to the parent.
+    """
+
+    elem = SubTemplateElement(parent, '{%s}link' % XMLNS_ATOM,
+                              selector=selector)
+    elem.set('rel')
+    elem.set('type')
+    elem.set('href')
+
+    # Just for completeness...
+    return elem

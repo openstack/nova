@@ -356,52 +356,51 @@ class MetadataHeadersSerializer(wsgi.ResponseHeadersSerializer):
         response.status_int = 204
 
 
-class MetadataXMLSerializer(wsgi.XMLDictSerializer):
+metadata_nsmap = {None: xmlutil.XMLNS_V11}
 
-    NSMAP = {None: xmlutil.XMLNS_V11}
 
-    def __init__(self, xmlns=wsgi.XMLNS_V11):
-        super(MetadataXMLSerializer, self).__init__(xmlns=xmlns)
+class MetaItemTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        sel = xmlutil.Selector('meta', xmlutil.get_items, 0)
+        root = xmlutil.TemplateElement('meta', selector=sel)
+        root.set('key', 0)
+        root.text = 1
+        return xmlutil.MasterTemplate(root, 1, nsmap=metadata_nsmap)
 
-    def populate_metadata(self, metadata_elem, meta_dict):
-        for (key, value) in meta_dict.items():
-            elem = etree.SubElement(metadata_elem, 'meta')
-            elem.set('key', str(key))
-            elem.text = value
 
-    def _populate_meta_item(self, meta_elem, meta_item_dict):
-        """Populate a meta xml element from a dict."""
-        (key, value) = meta_item_dict.items()[0]
-        meta_elem.set('key', str(key))
-        meta_elem.text = value
+class MetadataTemplateElement(xmlutil.TemplateElement):
+    def will_render(self, datum):
+        return True
 
-    def index(self, metadata_dict):
-        metadata = etree.Element('metadata', nsmap=self.NSMAP)
-        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
-        return self._to_xml(metadata)
 
-    def create(self, metadata_dict):
-        metadata = etree.Element('metadata', nsmap=self.NSMAP)
-        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
-        return self._to_xml(metadata)
+class MetadataTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = MetadataTemplateElement('metadata', selector='metadata')
+        elem = xmlutil.SubTemplateElement(root, 'meta',
+                                          selector=xmlutil.get_items)
+        elem.set('key', 0)
+        elem.text = 1
+        return xmlutil.MasterTemplate(root, 1, nsmap=metadata_nsmap)
 
-    def update_all(self, metadata_dict):
-        metadata = etree.Element('metadata', nsmap=self.NSMAP)
-        self.populate_metadata(metadata, metadata_dict.get('metadata', {}))
-        return self._to_xml(metadata)
 
-    def show(self, meta_item_dict):
-        meta = etree.Element('meta', nsmap=self.NSMAP)
-        self._populate_meta_item(meta, meta_item_dict['meta'])
-        return self._to_xml(meta)
+class MetadataXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return MetadataTemplate()
 
-    def update(self, meta_item_dict):
-        meta = etree.Element('meta', nsmap=self.NSMAP)
-        self._populate_meta_item(meta, meta_item_dict['meta'])
-        return self._to_xml(meta)
+    def create(self):
+        return MetadataTemplate()
 
-    def default(self, *args, **kwargs):
-        return ''
+    def update_all(self):
+        return MetadataTemplate()
+
+    def show(self):
+        return MetaItemTemplate()
+
+    def update(self):
+        return MetaItemTemplate()
+
+    def default(self):
+        return xmlutil.MasterTemplate(None, 1)
 
 
 def check_snapshots_enabled(f):

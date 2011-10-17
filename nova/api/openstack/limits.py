@@ -68,53 +68,37 @@ class LimitsController(object):
         return limits_views.ViewBuilder()
 
 
-class LimitsXMLSerializer(wsgi.XMLDictSerializer):
+limits_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
-    xmlns = wsgi.XMLNS_V11
 
-    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+class LimitsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('limits', selector='limits')
 
-    def __init__(self):
-        pass
+        rates = xmlutil.SubTemplateElement(root, 'rates')
+        rate = xmlutil.SubTemplateElement(rates, 'rate', selector='rate')
+        rate.set('uri', 'uri')
+        rate.set('regex', 'regex')
+        limit = xmlutil.SubTemplateElement(rate, 'limit', selector='limit')
+        limit.set('value', 'value')
+        limit.set('verb', 'verb')
+        limit.set('remaining', 'remaining')
+        limit.set('unit', 'unit')
+        limit.set('next-available', 'next-available')
 
-    def _create_rates_node(self, rates):
-        rates_elem = etree.Element('rates', nsmap=self.NSMAP)
-        for rate in rates:
-            rate_node = etree.SubElement(rates_elem, 'rate')
-            rate_node.set('uri', rate['uri'])
-            rate_node.set('regex', rate['regex'])
-            for limit in rate['limit']:
-                limit_elem = etree.SubElement(rate_node, 'limit')
-                limit_elem.set('value', str(limit['value']))
-                limit_elem.set('verb', str(limit['verb']))
-                limit_elem.set('remaining', str(limit['remaining']))
-                limit_elem.set('unit', str(limit['unit']))
-                limit_elem.set('next-available', str(limit['next-available']))
-        return rates_elem
+        absolute = xmlutil.SubTemplateElement(root, 'absolute',
+                                              selector='absolute')
+        limit = xmlutil.SubTemplateElement(absolute, 'limit',
+                                           selector=xmlutil.get_items)
+        limit.set('name', 0)
+        limit.set('value', 1)
 
-    def _create_absolute_node(self, absolute_dict):
-        absolute_elem = etree.Element('absolute', nsmap=self.NSMAP)
-        for key, value in absolute_dict.items():
-            limit_elem = etree.SubElement(absolute_elem, 'limit')
-            limit_elem.set('name', str(key))
-            limit_elem.set('value', str(value))
-        return absolute_elem
+        return xmlutil.MasterTemplate(root, 1, nsmap=limits_nsmap)
 
-    def _populate_limits(self, limits_elem, limits_dict):
-        """Populate a limits xml element from a dict."""
 
-        rates_elem = self._create_rates_node(
-                        limits_dict.get('rate', []))
-        limits_elem.append(rates_elem)
-
-        absolutes_elem = self._create_absolute_node(
-                        limits_dict.get('absolute', {}))
-        limits_elem.append(absolutes_elem)
-
-    def index(self, limits_dict):
-        limits = etree.Element('limits', nsmap=self.NSMAP)
-        self._populate_limits(limits, limits_dict['limits'])
-        return self._to_xml(limits)
+class LimitsXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return LimitsTemplate()
 
 
 def create_resource():
