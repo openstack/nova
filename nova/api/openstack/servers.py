@@ -70,9 +70,9 @@ class Controller(object):
         try:
             servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(explanation=str(err))
+            raise exc.HTTPBadRequest(explanation=str(err))
         except exception.NotFound:
-            return exc.HTTPNotFound()
+            raise exc.HTTPNotFound()
         return servers
 
     def detail(self, req):
@@ -80,9 +80,9 @@ class Controller(object):
         try:
             servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(explanation=str(err))
+            raise exc.HTTPBadRequest(explanation=str(err))
         except exception.NotFound as err:
-            return exc.HTTPNotFound()
+            raise exc.HTTPNotFound()
         return servers
 
     def _get_block_device_mapping(self, data):

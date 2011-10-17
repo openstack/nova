@@ -633,6 +633,23 @@ class ServerActionsTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, response.status_int)
 
+    def test_create_image_conflict_snapshot(self):
+        """Attempt to create image when image is already being created."""
+        def snapshot(*args, **kwargs):
+            raise exception.InstanceSnapshotting
+        self.stubs.Set(nova.compute.API, 'snapshot', snapshot)
+
+        req = webob.Request.blank('/v1.1/fakes/servers/1/action')
+        req.method = 'POST'
+        req.body = json.dumps({
+            "createImage": {
+                "name": "test_snapshot",
+            },
+        })
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 409)
+
     def test_create_backup(self):
         """The happy path for creating backups"""
         self.flags(allow_admin_api=True)

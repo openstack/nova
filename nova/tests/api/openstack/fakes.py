@@ -272,21 +272,21 @@ class FakeToken(object):
             setattr(self, k, v)
 
 
-class FakeRequestContext(object):
-    def __init__(self, user, project, *args, **kwargs):
-        self.user_id = user
-        self.project_id = project
-        self.is_admin = kwargs.get('is_admin', False)
-        self.auth_token = 'fake_auth_token'
+class FakeRequestContext(context.RequestContext):
+    def __init__(self, *args, **kwargs):
+        kwargs['auth_token'] = kwargs.get('auth_token', 'fake_auth_token')
+        return super(FakeRequestContext, self).__init__(*args, **kwargs)
 
 
-class HTTPRequest(webob.request.BaseRequest):
+class HTTPRequest(webob.Request):
 
     @classmethod
     def blank(cls, *args, **kwargs):
         kwargs['base_url'] = 'http://localhost/v1.1'
-        out = webob.request.BaseRequest.blank(*args, **kwargs)
-        out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake')
+        use_admin_context = kwargs.pop('use_admin_context', False)
+        out = webob.Request.blank(*args, **kwargs)
+        out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
+                is_admin=use_admin_context)
         return out
 
 
