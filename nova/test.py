@@ -128,7 +128,6 @@ class TestCase(unittest.TestCase):
         # because it screws with our generators
         self.mox = mox.Mox()
         self.stubs = stubout.StubOutForTesting()
-        self.flag_overrides = {}
         self.injected = []
         self._services = []
         self._original_flags = FLAGS.FlagValuesDict()
@@ -173,9 +172,6 @@ class TestCase(unittest.TestCase):
     def flags(self, **kw):
         """Override flag variables for a test."""
         for k, v in kw.iteritems():
-            # Store original flag value if it's not been overriden yet
-            if k not in self.flag_overrides:
-                self.flag_overrides[k] = getattr(FLAGS, k)
             setattr(FLAGS, k, v)
 
     def reset_flags(self):
