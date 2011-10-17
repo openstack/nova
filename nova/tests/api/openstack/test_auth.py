@@ -184,11 +184,15 @@ class Test(test.TestCase):
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
-    def test_not_existing_project(self):
+    def test_not_authorized_project(self):
         f = fakes.FakeAuthManager()
         user1 = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
         f.add_user(user1)
         f.create_project('user1_project', user1)
+
+        user2 = nova.auth.manager.User('id2', 'user2', 'user2_key', None, None)
+        f.add_user(user2)
+        f.create_project('user2_project', user2)
 
         req = webob.Request.blank('/v1.1/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'user1'
@@ -198,7 +202,7 @@ class Test(test.TestCase):
 
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack, 'APIRouter', fakes.FakeRouter)
-        req = webob.Request.blank('/v1.1/')
+        req = webob.Request.blank('/v1.1/user2_project')
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')

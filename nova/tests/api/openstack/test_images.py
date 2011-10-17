@@ -20,17 +20,11 @@ Tests of the new image services, both as a service layer,
 and as a WSGI layer
 """
 
-import copy
 from lxml import etree
-import json
-import xml.dom.minidom as minidom
-import mox
 import stubout
 import urlparse
 import webob
 
-from nova import context
-import nova.api.openstack
 from nova.api.openstack import images
 from nova.api.openstack import xmlutil
 from nova.api.openstack.views import images as images_view
@@ -44,14 +38,15 @@ ATOMNS = "{http://www.w3.org/2005/Atom}"
 NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
 
-class ImagesTest(test.TestCase):
+class ImagesControllerTest(test.TestCase):
     """
     Test of the OpenStack API /images application controller w/Glance.
     """
 
     def setUp(self):
         """Run before each test."""
-        super(ImagesTest, self).setUp()
+        super(ImagesControllerTest, self).setUp()
+        self.maxDiff = None
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -60,24 +55,16 @@ class ImagesTest(test.TestCase):
         fakes.stub_out_compute_api_backup(self.stubs)
         fakes.stub_out_glance(self.stubs)
 
+        self.controller = images.Controller()
+
     def tearDown(self):
         """Run after each test."""
         self.stubs.UnsetAll()
-        super(ImagesTest, self).tearDown()
-
-    def _get_fake_context(self):
-        class Context(object):
-            project_id = 'fake'
-            auth_token = True
-        return Context()
+        super(ImagesControllerTest, self).tearDown()
 
     def test_get_image(self):
-        self.maxDiff = None
-        request = webob.Request.blank('/v1.1/fake/images/124')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-
-        actual_image = json.loads(response.body)
+        fake_req = fakes.HTTPRequest.blank('/v1.1/fake/images/123')
+        actual_image = self.controller.show(fake_req, '124')
 
         href = "http://localhost/v1.1/fake/images/124"
         bookmark = "http://localhost/fake/images/124"
@@ -128,50 +115,14 @@ class ImagesTest(test.TestCase):
 
         self.assertEqual(expected_image, actual_image)
 
-    def test_get_image_404_json(self):
-        request = webob.Request.blank('/v1.1/fake/images/NonExistantImage')
-        response = request.get_response(fakes.wsgi_app())
-        self.assertEqual(404, response.status_int)
-
-        expected = {
-            "itemNotFound": {
-                "message": "Image not found.",
-                "code": 404,
-            },
-        }
-
-        actual = json.loads(response.body)
-
-        self.assertEqual(expected, actual)
-
-    def test_get_image_404_xml(self):
-        request = webob.Request.blank('/v1.1/fake/images/NonExistantImage')
-        request.accept = "application/xml"
-        response = request.get_response(fakes.wsgi_app())
-        self.assertEqual(404, response.status_int)
-
-        # NOTE(justinsb): I believe this should still use the v1.0 XSD,
-        # because the element hasn't changed definition
-        expected = minidom.parseString("""
-            <itemNotFound code="404"
-                 xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <message>Image not found.</message>
-            </itemNotFound>
-        """.replace("  ", "").replace("\n", ""))
-
-        actual = minidom.parseString(response.body.replace("  ", ""))
-
-        self.assertEqual(expected.toxml(), actual.toxml())
+    def test_get_image_404(self):
+        fake_req = fakes.HTTPRequest.blank('/v1.1/fake/images/unknown')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, fake_req, 'unknown')
 
     def test_get_image_index(self):
-        request = webob.Request.blank('/v1.1/fake/images')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-
-        print response.body
-        response_dict = json.loads(response.body)
-        response_list = response_dict["images"]
-        self.assertTrue('images_links' not in response_dict)
+        fake_req = fakes.HTTPRequest.blank('/v1.1/fake/images')
+        response_list = self.controller.index(fake_req)['images']
 
         expected_images = [
             {
@@ -339,14 +290,11 @@ class ImagesTest(test.TestCase):
         self.assertDictListMatch(response_list, expected_images)
 
     def test_get_image_index_with_limit(self):
-        request = webob.Request.blank('/v1.1/fake/images?limit=3')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images?limit=3')
+        response = self.controller.index(request)
+        response_list = response["images"]
+        response_links = response["images_links"]
 
-        print response.body
-        response_dict = json.loads(response.body)
-        response_list = response_dict["images"]
-        response_links = response_dict["images_links"]
         alternate = "%s/fake/images/%s"
 
         expected_images = [
@@ -418,12 +366,9 @@ class ImagesTest(test.TestCase):
         self.assertDictMatch({'limit': ['3'], 'marker': ['125']}, params)
 
     def test_get_image_index_with_limit_and_extra_params(self):
-        request = webob.Request.blank('/v1.1/fake/images?limit=3&extra=boo')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-
-        response_dict = json.loads(response.body)
-        response_links = response_dict["images_links"]
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images?limit=3&extra=bo')
+        response = self.controller.index(request)
+        response_links = response["images_links"]
 
         self.assertEqual(response_links[0]['rel'], 'next')
 
@@ -431,7 +376,7 @@ class ImagesTest(test.TestCase):
         self.assertEqual('/v1.1/fake/images', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch(
-            {'limit': ['3'], 'marker': ['125'], 'extra': ['boo']},
+            {'limit': ['3'], 'marker': ['125'], 'extra': ['bo']},
             params)
 
     def test_get_image_index_with_big_limit(self):
@@ -439,23 +384,17 @@ class ImagesTest(test.TestCase):
         Make sure we don't get images_links if limit is set
         and the number of images returned is < limit
         """
-        request = webob.Request.blank('/v1.1/fake/images?limit=30')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images?limit=30')
+        response = self.controller.index(request)
 
-        response_dict = json.loads(response.body)
-        response_list = response_dict["images"]
-
-        self.assertTrue('images_links' not in response_dict)
-        self.assertEqual(len(response_list), 8)
+        self.assertEqual(response.keys(), ['images'])
+        self.assertEqual(len(response['images']), 8)
 
     def test_get_image_details(self):
-        request = webob.Request.blank('/v1.1/fake/images/detail')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail')
+        response = self.controller.detail(request)
+        response_list = response["images"]
 
-        response_dict = json.loads(response.body)
-        response_list = response_dict["images"]
         server_href = "http://localhost/v1.1/servers/42"
         server_bookmark = "http://localhost/servers/42"
         alternate = "%s/fake/images/%s"
@@ -741,13 +680,11 @@ class ImagesTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
     def test_get_image_details_with_limit(self):
-        request = webob.Request.blank('/v1.1/fake/images/detail?limit=2')
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail?limit=2')
+        response = self.controller.detail(request)
+        response_list = response["images"]
+        response_links = response["images_links"]
 
-        response_dict = json.loads(response.body)
-        response_list = response_dict["images"]
-        response_links = response_dict["images_links"]
         server_href = "http://localhost/v1.1/servers/42"
         server_bookmark = "http://localhost/servers/42"
         alternate = "%s/fake/images/%s"
@@ -825,227 +762,209 @@ class ImagesTest(test.TestCase):
 
     def test_image_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'name': 'testname'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?name=testname')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?name=testname')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_filter_with_min_ram(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'min_ram': '0'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?minRam=0')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?minRam=0')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_filter_with_min_disk(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'min_disk': '7'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?minDisk=7')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?minDisk=7')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'status': 'ACTIVE'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?status=ACTIVE')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?status=ACTIVE')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_filter_with_property(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'property-test': '3'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?property-test=3')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?property-test=3')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_filter_server(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         # 'server' should be converted to 'property-instance_ref'
         filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?server='
+                                         'http://localhost:8774/servers/12')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?server='
-                                      'http://localhost:8774/servers/12')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_filter_changes_since(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'changes-since': '2011-01-24T17:08Z'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?changes-since='
+                                          '2011-01-24T17:08Z')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?changes-since='
-                                      '2011-01-24T17:08Z')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_filter_with_type(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'property-image_type': 'BASE'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?type=BASE')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?type=BASE')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'status': 'ACTIVE'}
+        request = fakes.HTTPRequest.blank('/v1.1/images?status=ACTIVE&'
+                                          'UNSUPPORTEDFILTER=testname')
+        context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/images?status=ACTIVE&'
-                                      'UNSUPPORTEDFILTER=testname')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
     def test_image_no_filters(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {}
-        image_service.index(
-            context, filters=filters).AndReturn([])
+        request = fakes.HTTPRequest.blank('/v1.1/images')
+        context = request.environ['nova.context']
+        image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/images')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_detail_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'name': 'testname'}
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail'
+                                          '?name=testname')
+        context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/fake/images/detail?name=testname')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
     def test_image_detail_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'status': 'ACTIVE'}
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail'
+                                          '?status=ACTIVE')
+        context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/fake/images/detail?status=ACTIVE')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
     def test_image_detail_filter_with_property(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'property-test': '3'}
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail'
+                                          '?property-test=3')
+        context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank(
-            '/v1.1/fake/images/detail?property-test=3')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
     def test_image_detail_filter_server(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         # 'server' should be converted to 'property-instance_ref'
         filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail?server='
+                                          'http://localhost:8774/servers/12')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/fake/images/detail?server='
-                                      'http://localhost:8774/servers/12')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_detail_filter_changes_since(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'changes-since': '2011-01-24T17:08Z'}
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail'
+                                          '?changes-since=2011-01-24T17:08Z')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/fake/images/detail?changes-since='
-                                      '2011-01-24T17:08Z')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_detail_filter_with_type(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'property-image_type': 'BASE'}
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail?type=BASE')
+        context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/fake/images/detail?type=BASE')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.index(request)
         self.mox.VerifyAll()
 
     def test_image_detail_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {'status': 'ACTIVE'}
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail?status='
+                                          'ACTIVE&UNSUPPORTEDFILTER=testname')
+        context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/fake/images/detail?status=ACTIVE&'
-                                      'UNSUPPORTEDFILTER=testname')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
 
     def test_image_detail_no_filters(self):
         image_service = self.mox.CreateMockAnything()
-        context = self._get_fake_context()
         filters = {}
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail')
+        context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
-        request = webob.Request.blank('/v1.1/fake/images/detail')
-        request.environ['nova.context'] = context
         controller = images.Controller(image_service=image_service)
         controller.detail(request)
         self.mox.VerifyAll()
@@ -1057,18 +976,16 @@ class ImagesTest(test.TestCase):
         self.assertEqual(generated_url, actual_url)
 
     def test_delete_image(self):
-        request = webob.Request.blank('/v1.1/fake/images/124')
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/124')
         request.method = 'DELETE'
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
+        response = self.controller.delete(request, '124')
         self.assertEqual(response.status_int, 204)
 
     def test_delete_image_not_found(self):
-        request = webob.Request.blank('/v1.1/fake/images/300')
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/300')
         request.method = 'DELETE'
-        app = fakes.wsgi_app(fake_auth_context=self._get_fake_context())
-        response = request.get_response(app)
-        self.assertEqual(response.status_int, 404)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.delete, request, '300')
 
 
 class ImageXMLSerializationTest(test.TestCase):
@@ -1121,7 +1038,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        print output
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
@@ -1168,7 +1084,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1236,7 +1151,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1250,7 +1164,6 @@ class ImageXMLSerializationTest(test.TestCase):
             for key, value in link.items():
                 self.assertEqual(link_nodes[i].get(key), value)
 
-        metadata_root = root.find('{0}metadata'.format(NS))
         meta_nodes = root.findall('{0}meta'.format(ATOMNS))
         self.assertEqual(len(meta_nodes), 0)
 
@@ -1299,7 +1212,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1313,7 +1225,6 @@ class ImageXMLSerializationTest(test.TestCase):
             for key, value in link.items():
                 self.assertEqual(link_nodes[i].get(key), value)
 
-        metadata_root = root.find('{0}metadata'.format(NS))
         meta_nodes = root.findall('{0}meta'.format(ATOMNS))
         self.assertEqual(len(meta_nodes), 0)
 
@@ -1352,7 +1263,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1419,7 +1329,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1492,7 +1401,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'show')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1560,7 +1468,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'index')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images_index')
         image_elems = root.findall('{0}image'.format(NS))
@@ -1620,7 +1527,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'index')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images_index')
         image_elems = root.findall('{0}image'.format(NS))
@@ -1651,7 +1557,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixtures, 'index')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images_index')
         image_elems = root.findall('{0}image'.format(NS))
@@ -1717,7 +1622,6 @@ class ImageXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture, 'detail')
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images')
         image_elems = root.findall('{0}image'.format(NS))
@@ -1733,6 +1637,3 @@ class ImageXMLSerializationTest(test.TestCase):
             for i, link in enumerate(image_dict['links']):
                 for key, value in link.items():
                     self.assertEqual(link_nodes[i].get(key), value)
-
-            metadata_root = image_elem.find('{0}metadata'.format(NS))
-            metadata_elems = metadata_root.findall('{0}meta'.format(NS))

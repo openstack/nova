@@ -17,6 +17,7 @@
 
 import webob
 import webob.dec
+import webob.request
 
 from glance import client as glance_client
 
@@ -273,8 +274,20 @@ class FakeToken(object):
 
 class FakeRequestContext(object):
     def __init__(self, user, project, *args, **kwargs):
-        self.user_id = 1
-        self.project_id = 1
+        self.user_id = user
+        self.project_id = project
+        self.is_admin = kwargs.get('is_admin', False)
+        self.auth_token = 'fake_auth_token'
+
+
+class HTTPRequest(webob.request.BaseRequest):
+
+    @classmethod
+    def blank(cls, *args, **kwargs):
+        kwargs['base_url'] = 'http://localhost/v1.1'
+        out = webob.request.BaseRequest.blank(*args, **kwargs)
+        out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake')
+        return out
 
 
 class FakeAuthDatabase(object):
@@ -393,7 +406,7 @@ class FakeAuthManager(object):
         if p:
             return p
         else:
-            raise exc.ProjectNotFound(project_id=pid)
+            raise exc.NotFound
 
     def get_projects(self, user_id=None):
         if not user_id:
