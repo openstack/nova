@@ -315,6 +315,7 @@ class VMOps(object):
 
     def _attach_disks(self, instance, disk_image_type, vm_ref, first_vdi_ref,
             vdis):
+        instance_id = instance.id
         # device 0 reserved for RW disk
         userdevice = 0
 
@@ -338,8 +339,19 @@ class VMOps(object):
             # set user device to next free value
             userdevice += 1
         else:
+            if instance.managed_disk:
+                LOG.debug(_("Managed disk set for instance %(instance_id)s,"
+                            " attempting to resize partition") % locals())
+                VMHelper.create_managed_disk(session=self._session,
+                                             vdi_ref=first_vdi_ref)
+            else:
+                LOG.debug(_("Managed disk NOT set for instance"
+                            " %(instance_id)s, skipping resize partition")
+                            % locals())
+
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=True)
+
             # set user device to next free value
             # userdevice 1 is reserved for rescue and we've used '0'
             userdevice = 2

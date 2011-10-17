@@ -1095,3 +1095,93 @@ class HostStateTestCase(test.TestCase):
         self.assertEquals(stats['host_memory_overhead'], 20)
         self.assertEquals(stats['host_memory_free'], 30)
         self.assertEquals(stats['host_memory_free_computed'], 40)
+
+
+class XenAPIManagedDiskTestCase(test.TestCase):
+    def setUp(self):
+        super(XenAPIManagedDiskTestCase, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        self.flags(target_host='127.0.0.1',
+                   xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        xenapi_fake.reset()
+        self.conn = xenapi_conn.get_connection(False)
+
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+
+        self.instance_values = {'id': 1,
+                  'project_id': self.project_id,
+                  'user_id': self.user_id,
+                  'image_ref': 1,
+                  'kernel_id': 2,
+                  'ramdisk_id': 3,
+                  'local_gb': 20,
+                  'instance_type_id': '3',  # m1.large
+                  'os_type': 'linux',
+                  'architecture': 'x86-64'}
+
+        self.context = context.RequestContext(self.user_id, self.project_id)
+
+        @classmethod
+        def fake_create_vbd(cls, session, vm_ref, vdi_ref, userdevice,
+                bootable=True):
+            pass
+
+        self.stubs.Set(vm_utils.VMHelper, "create_vbd", fake_create_vbd)
+
+    def assertIsPartitionCalled(self, called):
+        marker = {"partition_called": False}
+
+        @classmethod
+        def fake_resize_partition_fs(cls, dev_path, partition_path):
+            marker["partition_called"] = True
+
+        self.stubs.Set(vm_utils.VMHelper, "_resize_partition_and_fs",
+                       fake_resize_partition_fs)
+
+        instance = db.instance_create(self.context, self.instance_values)
+        disk_image_type = vm_utils.ImageType.DISK_VHD
+        vm_ref = "blah"
+        first_vdi_ref = "blah"
+        vdis = ["blah"]
+
+        self.conn._vmops._attach_disks(
+            instance, disk_image_type, vm_ref, first_vdi_ref, vdis)
+
+        self.assertEqual(marker["partition_called"], called)
+
+    def test_instance_not_managed(self):
+        """Should not partition unless instance is marked as managed_disk"""
+        self.instance_values['managed_disk'] = False
+        self.assertIsPartitionCalled(False)
+
+    @stub_vm_utils_with_vdi_attached_here
+    def test_instance_managed_doesnt_pass_fail_safes(self):
+        """Should not partition unless fail safes pass"""
+        self.instance_values['managed_disk'] = True
+
+        @classmethod
+        def fake_resize_partition_allowed(cls, dev_path, partition_path):
+            return False
+
+        self.stubs.Set(vm_utils.VMHelper, "_resize_partition_allowed",
+                       fake_resize_partition_allowed)
+
+        self.assertIsPartitionCalled(False)
+
+    @stub_vm_utils_with_vdi_attached_here
+    def test_instance_managed_passes_fail_safes(self):
+        """Should partition if instance is marked as managed_disk=True and
+        virt-layer specific fail-safe checks pass.
+        """
+        self.instance_values['managed_disk'] = True
+
+        @classmethod
+        def fake_resize_partition_allowed(cls, dev_path, partition_path):
+            return True
+        self.stubs.Set(vm_utils.VMHelper, "_resize_partition_allowed",
+                       fake_resize_partition_allowed)
+
+        self.assertIsPartitionCalled(True)

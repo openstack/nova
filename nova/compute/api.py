@@ -254,6 +254,10 @@ class API(base.Base):
         vm_mode = None
         if 'properties' in image and 'vm_mode' in image['properties']:
             vm_mode = image['properties']['vm_mode']
+        managed_disk = False
+        if 'properties' in image and 'managed_disk' in image['properties']:
+            managed_disk = utils.bool_from_str(
+                image['properties']['managed_disk'])
 
         if kernel_id is None:
             kernel_id = image['properties'].get('kernel_id', None)
@@ -316,7 +320,8 @@ class API(base.Base):
             'os_type': os_type,
             'architecture': architecture,
             'vm_mode': vm_mode,
-            'root_device_name': root_device_name}
+            'root_device_name': root_device_name,
+            'managed_disk': managed_disk}
 
         LOG.debug(_("Going to run %s instances...") % num_instances)
 

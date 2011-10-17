@@ -152,6 +152,8 @@ def execute(*cmd, **kwargs):
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
     run_as_root = kwargs.pop('run_as_root', False)
+    shell = kwargs.pop('shell', False)
+
     if len(kwargs):
         raise exception.Error(_('Got unknown keyword args '
                                 'to utils.execute: %r') % kwargs)
@@ -169,7 +171,8 @@ def execute(*cmd, **kwargs):
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
-                                   close_fds=True)
+                                   close_fds=True,
+                                   shell=shell)
             result = None
             if process_input is not None:
                 result = obj.communicate(process_input)
