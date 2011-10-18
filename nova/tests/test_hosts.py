@@ -94,14 +94,17 @@ class HostTestCase(test.TestCase):
         self.assertEqual(result_c2["status"], "disabled")
 
     def test_host_startup(self):
+        self.flags(allow_admin_api=True)
         result = self.controller.startup(self.req, "host_c1")
         self.assertEqual(result["power_action"], "startup")
 
     def test_host_shutdown(self):
+        self.flags(allow_admin_api=True)
         result = self.controller.shutdown(self.req, "host_c1")
         self.assertEqual(result["power_action"], "shutdown")
 
     def test_host_reboot(self):
+        self.flags(allow_admin_api=True)
         result = self.controller.reboot(self.req, "host_c1")
         self.assertEqual(result["power_action"], "reboot")
 
