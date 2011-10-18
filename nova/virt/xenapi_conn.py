@@ -119,6 +119,8 @@ flags.DEFINE_string('xenapi_agent_path',
                     '  and flat_injected=True')
 flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
                     'Base path to the storage repository')
+flags.DEFINE_bool('xenapi_log_instance_actions', False,
+                  'Log all instance calls to XenAPI in the database.')
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -449,29 +451,37 @@ class XenAPISession(object):
             action was completed successfully or not.
             """
             try:
+                ctxt = context.get_admin_context()
                 name = self._session.xenapi.task.get_name_label(task)
                 status = self._session.xenapi.task.get_status(task)
+
                 # Ensure action is never > 255
                 action = dict(action=name[:255], error=None)
-                if id:
+                log_instance_actions = FLAGS.xenapi_log_instance_actions and id
+                if log_instance_actions:
                     action["instance_id"] = int(id)
+
                 if status == "pending":
                     return
                 elif status == "success":
                     result = self._session.xenapi.task.get_result(task)
                     LOG.info(_("Task [%(name)s] %(task)s status:"
                             " success    %(result)s") % locals())
+
+                    if log_instance_actions:
+                        db.instance_action_create(ctxt, action)
+
                     done.send(_parse_xmlrpc_value(result))
                 else:
                     error_info = self._session.xenapi.task.get_error_info(task)
-                    action["error"] = str(error_info)
                     LOG.warn(_("Task [%(name)s] %(task)s status:"
                             " %(status)s    %(error_info)s") % locals())
-                    done.send_exception(self.XenAPI.Failure(error_info))
 
-                if id:
-                    db.instance_action_create(context.get_admin_context(),
-                            action)
+                    if log_instance_actions:
+                        action["error"] = str(error_info)
+                        db.instance_action_create(ctxt, action)
+
+                    done.send_exception(self.XenAPI.Failure(error_info))
             except self.XenAPI.Failure, exc:
                 LOG.warn(exc)
                 done.send_exception(*sys.exc_info())
