@@ -20,7 +20,7 @@
 # <http://www.gnu.org/licenses/>.
 
 
-branch="master";
+branch="stable/diablo";
 
 set_hooks_commit_msg()
 {
