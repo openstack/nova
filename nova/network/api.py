@@ -79,7 +79,7 @@ class API(base.Base):
         rpc.cast(context,
                  FLAGS.network_topic,
                  {'method': 'deallocate_floating_ip',
-                  'args': {'floating_address': address,
+                  'args': {'address': address,
                            'affect_auto_assigned': affect_auto_assigned}})
 
     def associate_floating_ip(self, context, floating_address, fixed_address,
