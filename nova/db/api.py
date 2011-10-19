@@ -591,11 +591,6 @@ def instance_get_all_hung_in_rebooting(context, reboot_window, session=None):
             session)
 
 
-def instance_set_state(context, instance_id, state, description=None):
-    """Set the state of an instance."""
-    return IMPL.instance_set_state(context, instance_id, state, description)
-
-
 def instance_update(context, instance_id, values):
     """Set the given properties on an instance and update it.
 
