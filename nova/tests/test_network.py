@@ -972,3 +972,30 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
+
+
+class TestFloatingIPManager(network_manager.FloatingIP,
+        network_manager.NetworkManager):
+    """Dummy manager that implements FloatingIP"""
+
+
+class FloatingIPTestCase(test.TestCase):
+    """Tests nova.network.manager.FloatingIP"""
+    def setUp(self):
+        super(FloatingIPTestCase, self).setUp()
+        self.network = TestFloatingIPManager()
+        self.network.db = db
+        self.project_id = 'testproject'
+        self.context = context.RequestContext('testuser', self.project_id,
+            is_admin=False)
+
+    def test_double_deallocation(self):
+        instance_ref = db.api.instance_create(self.context,
+                {"project_id": self.project_id})
+        # Run it twice to make it fault if it does not handle
+        # instances without fixed networks
+        # If this fails in either, it does not handle having no addresses
+        self.network.deallocate_for_instance(self.context,
+                instance_id=instance_ref['id'])
+        self.network.deallocate_for_instance(self.context,
+                instance_id=instance_ref['id'])
