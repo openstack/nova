@@ -763,17 +763,6 @@ def _device_exists(device):
     return not err
 
 
-def _stop_dnsmasq(dev):
-    """Stops the dnsmasq instance for a given network."""
-    pid = _dnsmasq_pid_for(dev)
-
-    if pid:
-        try:
-            _execute('kill', '-TERM', pid, run_as_root=True)
-        except Exception as exc:  # pylint: disable=W0703
-            LOG.debug(_('Killing dnsmasq threw %s'), exc)
-
-
 def _dhcp_file(dev, kind):
     """Return path to a pid, leases or conf file for a bridge/device."""
     if not os.path.exists(FLAGS.networks_path):
