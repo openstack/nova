@@ -57,6 +57,7 @@ Concept: Virtualization
 * XEN
 * HyperV
 * qemu
+* LXC
 
 
 Concept: Instances

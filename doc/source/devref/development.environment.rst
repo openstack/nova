@@ -18,14 +18,14 @@
 Setting Up a Development Environment
 ====================================
 
-This page describes how to setup a working Python development environment that can be used in developing on OpenStack on Ubuntu or Mac OSX. These instructions assume you're already familiar with bzr and can pull down the code with an existing Launchpad account. Refer to http://wiki.openstack.org/LifeWithBzrAndLaunchpad for additional information.
+This page describes how to setup a working Python development environment that can be used in developing on OpenStack on Ubuntu or Mac OSX. These instructions assume you're already familiar with git. Refer to http://wiki.openstack.org/GettingTheCode for additional information.
 
 Linux Systems
 -------------
 
 Note: This section is tested for Nova on Ubuntu 10.10-64. Feel free to add notes and change according to your experiences or operating system.
 
-Bring down the Nova source with bzr, then:
+Bring down the Nova source with git, then:
 ::
   cd <your_src_dir>/nova
   sudo apt-get install python-dev swig libssl-dev python-pip
@@ -72,7 +72,7 @@ First, install Virtual Env, which creates an isolated "standalone" Python enviro
 
 Here's how to setup the code initially::
 
-    bzr branch lp:nova
+    git clone https://github.com/openstack/nova.git
     cd nova
     python tools/install_venv.py
     source .nova_venv/bin/activate
@@ -84,7 +84,7 @@ If you have installed OpenSSL 1.0.0a on MacOS, which can happen when installing 
 Here's how to get the latest code::
 
   cd nova
-  bzr pull # get the latest stuff...
+  git pull # get the latest stuff...
   source .nova_venv/bin/activate
   ./run_tests.sh
 
@@ -93,10 +93,4 @@ Then you can do cleaning work or hack hack hack with a branched named cleaning.
 Contributing Your Work
 ----------------------
 
-Once your work is complete you may wish to contribute it to the project.  Add your name and email address to the `Authors` file, and also to the `.mailmap` file if you use multiple email addresses. Your contributions can not be merged into trunk unless you are listed in the Authors file.  Now, push the branch to Launchpad::
-
-    bzr push lp:~launchpaduserid/nova/cleaning
-
-To submit the merge/patch that you hacked upon:
- * Navigate to https://code.launchpad.net/~launchpaduserid/nova/cleaning.
- * Click on the link "Propose for merging".
+Once your work is complete you may wish to contribute it to the project.  Add your name and email address to the `Authors` file, and also to the `.mailmap` file if you use multiple email addresses. Your contributions can not be merged into trunk unless you are listed in the Authors file. Nova uses the Gerrit code review system. For information on how to submit your branch to Gerrit, see http://wiki.openstack.org/GerritWorkflow 
