@@ -61,7 +61,7 @@ def _create_instance_dict(**kwargs):
     inst = {}
     # NOTE(jk0): If an integer is passed as the image_ref, the image
     # service will use the default image service (in this case, the fake).
-    inst['image_ref'] = '1'
+    inst['image_ref'] = 'cedef40a-ed67-4d10-800e-17455edce175'
     inst['reservation_id'] = 'r-fakeres'
     inst['user_id'] = kwargs.get('user_id', 'admin')
     inst['project_id'] = kwargs.get('project_id', 'fake')

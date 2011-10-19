@@ -4017,4 +4017,42 @@ def vsa_get_all_by_project(context, project_id):
                    all()
 
 
-    ####################
+####################
+
+
+def s3_image_get(context, image_id):
+    """Find local s3 image represented by the provided id"""
+    session = get_session()
+    res = session.query(models.S3Image)\
+                 .filter_by(id=image_id)\
+                 .first()
+
+    if not res:
+        raise exception.ImageNotFound(image_id=image_id)
+
+    return res
+
+
+def s3_image_get_by_uuid(context, image_uuid):
+    """Find local s3 image represented by the provided uuid"""
+    session = get_session()
+    res = session.query(models.S3Image)\
+                 .filter_by(uuid=image_uuid)\
+                 .first()
+
+    if not res:
+        raise exception.ImageNotFound(image_id=image_uuid)
+
+    return res
+
+
+def s3_image_create(context, image_uuid):
+    """Create local s3 image represented by provided uuid"""
+    try:
+        s3_image_ref = models.S3Image()
+        s3_image_ref.update({'uuid': image_uuid})
+        s3_image_ref.save()
+    except Exception, e:
+        raise exception.DBError(e)
+
+    return s3_image_ref

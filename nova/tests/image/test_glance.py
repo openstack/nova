@@ -541,18 +541,11 @@ class TestGlanceImageService(test.TestCase):
         fixture = self._make_fixture(name='test image')
         image_id = self.service.create(self.context, fixture)['id']
         client, same_id = glance.get_glance_client(self.context, image_id)
-        self.assertEquals(same_id, int(image_id))
+        self.assertEquals(same_id, image_id)
 
     def test_glance_client_image_ref(self):
         fixture = self._make_fixture(name='test image')
         image_id = self.service.create(self.context, fixture)['id']
         image_url = 'http://foo/%s' % image_id
         client, same_id = glance.get_glance_client(self.context, image_url)
-        self.assertEquals(same_id, int(image_id))
-
-    def test_glance_client_invalid_image_ref(self):
-        fixture = self._make_fixture(name='test image')
-        image_id = self.service.create(self.context, fixture)['id']
-        image_url = 'khan'
-        self.assertRaises(exception.InvalidImageRef, glance.get_glance_client,
-                self.context, 'khan')
+        self.assertEquals(same_id, image_id)

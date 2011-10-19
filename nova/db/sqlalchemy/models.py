@@ -873,6 +873,13 @@ class BandwidthUsage(BASE, NovaBase):
     bw_out = Column(BigInteger)
 
 
+class S3Image(BASE, NovaBase):
+    """Compatibility layer for the S3 image service talking to Glance"""
+    __tablename__ = 's3_images'
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = Column(String(36), nullable=False)
+
+
 def register_models():
     """Register Models and create metadata.
 

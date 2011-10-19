@@ -54,7 +54,7 @@ def _parse_image_ref(image_href):
     o = urlparse(image_href)
     port = o.port or 80
     host = o.netloc.split(':', 1)[0]
-    image_id = int(o.path.split('/')[-1])
+    image_id = o.path.split('/')[-1]
     return (image_id, host, port)
 
 
@@ -99,20 +99,25 @@ def get_glance_client(context, image_href):
     :returns: a tuple of the form (glance_client, image_id)
 
     """
-    image_href = image_href or 0
     glance_host, glance_port = pick_glance_api_server()
 
-    if str(image_href).isdigit():
-        glance_client = _create_glance_client(context, glance_host,
+    # check if this is an id
+    if '/' not in str(image_href):
+        glance_client = _create_glance_client(context,
+                                              glance_host,
                                               glance_port)
-        return (glance_client, int(image_href))
+        return (glance_client, image_href)
 
-    try:
-        (image_id, host, port) = _parse_image_ref(image_href)
-    except ValueError:
-        raise exception.InvalidImageRef(image_href=image_href)
-    glance_client = _create_glance_client(context, glance_host, glance_port)
-    return (glance_client, image_id)
+    else:
+        try:
+            (image_id, host, port) = _parse_image_ref(image_href)
+        except ValueError:
+            raise exception.InvalidImageRef(image_href=image_href)
+
+        glance_client = _create_glance_client(context,
+                                              glance_host,
+                                              glance_port)
+        return (glance_client, image_id)
 
 
 class GlanceImageService(object):

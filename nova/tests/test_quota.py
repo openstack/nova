@@ -72,7 +72,7 @@ class QuotaTestCase(test.TestCase):
     def _create_instance(self, cores=2):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 1
+        inst['image_id'] = 'cedef40a-ed67-4d10-800e-17455edce175'
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
@@ -218,12 +218,13 @@ class QuotaTestCase(test.TestCase):
             instance_id = self._create_instance()
             instance_ids.append(instance_id)
         inst_type = instance_types.get_instance_type_by_name('m1.small')
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
                                             instance_type=inst_type,
-                                            image_href=1)
+                                            image_href=image_uuid)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -232,12 +233,13 @@ class QuotaTestCase(test.TestCase):
         instance_id = self._create_instance(cores=4)
         instance_ids.append(instance_id)
         inst_type = instance_types.get_instance_type_by_name('m1.small')
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
                                             instance_type=inst_type,
-                                            image_href=1)
+                                            image_href=image_uuid)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -286,12 +288,13 @@ class QuotaTestCase(test.TestCase):
         for i in range(FLAGS.quota_metadata_items + 1):
             metadata['key%s' % i] = 'value%s' % i
         inst_type = instance_types.get_instance_type_by_name('m1.small')
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
                                             instance_type=inst_type,
-                                            image_href='fake',
+                                            image_href=image_uuid,
                                             metadata=metadata)
 
     def test_default_allowed_injected_files(self):
@@ -340,15 +343,19 @@ class QuotaTestCase(test.TestCase):
         self.flags(image_service='nova.image.fake.FakeImageService')
         api = compute.API(image_service=self.StubImageService())
         inst_type = instance_types.get_instance_type_by_name('m1.small')
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context, min_count=1, max_count=1,
-                instance_type=inst_type, image_href='3',
+                instance_type=inst_type, image_href=image_uuid,
                 injected_files=files)
 
     def test_no_injected_files(self):
         self.flags(image_service='nova.image.fake.FakeImageService')
         api = compute.API(image_service=self.StubImageService())
         inst_type = instance_types.get_instance_type_by_name('m1.small')
-        api.create(self.context, instance_type=inst_type, image_href='3')
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        api.create(self.context,
+                   instance_type=inst_type,
+                   image_href=image_uuid)
 
     def test_max_injected_files(self):
         files = []

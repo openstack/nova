@@ -24,6 +24,7 @@ import random
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import utils
 
 
 LOG = logging.getLogger('nova.image.fake')
@@ -40,7 +41,9 @@ class _FakeImageService(object):
         # NOTE(justinsb): The OpenStack API can't upload an image?
         # So, make sure we've got one..
         timestamp = datetime.datetime(2011, 01, 01, 01, 02, 03)
-        image1 = {'id': '123456',
+
+        # NOTE(bcwaldon): was image '123456'
+        image1 = {'id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
                  'updated_at': timestamp,
@@ -54,7 +57,8 @@ class _FakeImageService(object):
                                 'ramdisk_id': FLAGS.null_kernel,
                                 'architecture': 'x86_64'}}
 
-        image2 = {'id': 'fake',
+        # NOTE(bcwaldon): was image 'fake'
+        image2 = {'id': 'a2459075-d96c-40d5-893e-577ff92e721c',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
                  'updated_at': timestamp,
@@ -67,7 +71,8 @@ class _FakeImageService(object):
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
-        image3 = {'id': '2',
+        # NOTE(bcwaldon): was image '2'
+        image3 = {'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
                  'updated_at': timestamp,
@@ -80,7 +85,8 @@ class _FakeImageService(object):
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
-        image4 = {'id': '1',
+        # NOTE(bcwaldon): was image '1'
+        image4 = {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
                  'updated_at': timestamp,
@@ -93,7 +99,8 @@ class _FakeImageService(object):
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
-        image5 = {'id': '3',
+        # NOTE(bcwaldon): was image '3'
+        image5 = {'id': 'c905cedb-7281-47e4-8a62-f26bc5fc4c77',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
                  'updated_at': timestamp,
@@ -152,20 +159,10 @@ class _FakeImageService(object):
         :raises: Duplicate if the image already exist.
 
         """
-        try:
-            image_id = metadata['id']
-        except KeyError:
-            while True:
-                image_id = random.randint(0, 2 ** 31 - 1)
-                if not self.images.get(str(image_id)):
-                    break
-
-        image_id = str(image_id)
-
-        if self.images.get(image_id):
-            raise exception.Duplicate()
-
+        image_id = str(metadata.get('id', utils.gen_uuid()))
         metadata['id'] = image_id
+        if image_id in self.images:
+            raise exception.Duplicate()
         self.images[image_id] = copy.deepcopy(metadata)
         return self.images[image_id]
 
