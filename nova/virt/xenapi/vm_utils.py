@@ -409,6 +409,80 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
+    def create_managed_disk(cls, session, vdi_ref):
+        """A 'managed disk' means that we'll resize the partition and fs to
+        match the size specified by instance_types.local_gb.
+        """
+        with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+            dev_path = utils.make_dev_path(dev)
+            partition_path = utils.make_dev_path(dev, partition=1)
+            if cls._resize_partition_allowed(dev_path, partition_path):
+                cls._resize_partition_and_fs(dev_path, partition_path)
+
+    @classmethod
+    def _resize_partition_allowed(cls, dev_path, partition_path):
+        """Determine whether we should resize the partition and the fs.
+
+        This is a fail-safe to prevent accidentally destroying data on a disk
+        erroneously marked as managed_disk=True.
+
+        The criteria for allowing resize are:
+
+            1. 'managed_disk' must be true for the instance (and image). (If
+                we've made it here, then managed_disk=True.)
+
+            2. The disk must have only one partition.
+
+            3. The file-system on the one partition must be ext3 or ext4.
+        """
+        out, err = utils.execute("parted", "--script", "--machine",
+                                 partition_path, "print", run_as_root=True)
+        lines = [line for line in out.split('\n') if line]
+        partitions = lines[2:]
+
+        num_partitions = len(partitions)
+        fs_type = partitions[0].split(':')[4]
+        LOG.debug(_("Found %(num_partitions)s partitions, the first with"
+                    " fs_type '%(fs_type)s'") % locals())
+
+        allowed_fs = fs_type in ('ext3', 'ext4')
+        return num_partitions == 1 and allowed_fs
+
+    @classmethod
+    def _resize_partition_and_fs(cls, dev_path, partition_path):
+        """Resize partition and fileystem.
+
+        This assumes we are dealing with a single primary partition and using
+        ext3 or ext4.
+        """
+        # 1. Delete and recreate partition to end of disk
+        root_helper = FLAGS.root_helper
+        cmd = """echo "d
+n
+p
+1
+
+
+w
+" | %(root_helper)s fdisk %(dev_path)s""" % locals()
+        utils.execute(cmd, run_as_root=False, shell=True)
+
+        # 2. Remove ext3 journal (making it ext2)
+        utils.execute("tune2fs", "-O ^has_journal", partition_path,
+                      run_as_root=True)
+
+        # 3. fsck the disk
+        # NOTE(sirp): using -p here to automatically repair filesystem, is
+        # this okay?
+        utils.execute("e2fsck", "-f", "-p", partition_path, run_as_root=True)
+
+        # 4. Resize the disk
+        utils.execute("resize2fs", partition_path, run_as_root=True)
+
+        # 5. Add back journal
+        utils.execute("tune2fs", "-j", partition_path, run_as_root=True)
+
+    @classmethod
     def generate_swap(cls, session, instance, vm_ref, userdevice, swap_mb):
         """
         Steps to programmatically generate swap:
