@@ -285,7 +285,6 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         undisco_move = last_days_of_disco_moves[0]
         self.assertEquals(undisco_move['id'], volume_id)
         self.assertEquals(undisco_move['mountpoint'], device)
-        self.assertEquals(undisco_move['instance_id'], server_id)
 
     def test_create_volume_with_metadata(self):
         """Creates and deletes a volume."""

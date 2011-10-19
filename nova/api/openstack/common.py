@@ -113,19 +113,29 @@ def get_pagination_params(request):
 
     """
     params = {}
-    for param in ['marker', 'limit']:
-        if not param in request.GET:
-            continue
-        try:
-            params[param] = int(request.GET[param])
-        except ValueError:
-            msg = _('%s param must be an integer') % param
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        if params[param] < 0:
-            msg = _('%s param must be positive') % param
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
+    if 'limit' in request.GET:
+        params['limit'] = _get_limit_param(request)
+    if 'marker' in request.GET:
+        params['marker'] = _get_marker_param(request)
     return params
+
+
+def _get_limit_param(request):
+    """Extract integer limit from request or fail"""
+    try:
+        limit = int(request.GET['limit'])
+    except ValueError:
+        msg = _('limit param must be an integer')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
+    if limit < 0:
+        msg = _('limit param must be positive')
+        raise webob.exc.HTTPBadRequest(explanation=msg)
+    return limit
+
+
+def _get_marker_param(request):
+    """Extract marker id from request or fail"""
+    return request.GET['marker']
 
 
 def limited(items, request, max_limit=FLAGS.osapi_max_limit):
@@ -178,7 +188,7 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
     if marker:
         start_index = -1
         for i, item in enumerate(items):
-            if item['id'] == marker:
+            if item['id'] == marker or item.get('uuid') == marker:
                 start_index = i + 1
                 break
         if start_index < 0:

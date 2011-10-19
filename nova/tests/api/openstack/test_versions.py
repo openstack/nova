@@ -15,25 +15,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import feedparser
 import json
+
+import feedparser
+from lxml import etree
 import stubout
 import webob
-from lxml import etree
 
-from nova import context
-from nova import test
 from nova.api.openstack import versions
 from nova.api.openstack import views
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova import context
+from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
+from nova import utils
+
 
 NS = {
     'atom': 'http://www.w3.org/2005/Atom',
     'ns': 'http://docs.openstack.org/compute/api/v1.1'
 }
+
 VERSIONS = {
     "v1.1": {
         "id": "v1.1",
@@ -382,14 +386,15 @@ class VersionsTest(test.TestCase):
         Make sure multi choice responses do not have content-type
         application/atom+xml (should use default of json)
         """
-        req = webob.Request.blank('/servers/2')
+        req = webob.Request.blank('/servers')
         req.accept = "application/atom+xml"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 300)
         self.assertEqual(res.content_type, "application/json")
 
     def test_multi_choice_server(self):
-        req = webob.Request.blank('/servers/2')
+        uuid = str(utils.gen_uuid())
+        req = webob.Request.blank('/servers/' + uuid)
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 300)
@@ -402,7 +407,7 @@ class VersionsTest(test.TestCase):
                 "status": "CURRENT",
                 "links": [
                     {
-                        "href": "http://localhost/v1.1/servers/2",
+                        "href": "http://localhost/v1.1/servers/" + uuid,
                         "rel": "self",
                     },
                 ],
