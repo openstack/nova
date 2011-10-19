@@ -166,7 +166,7 @@ class VolumeController(object):
 
         metadata = vol.get('metadata', None)
 
-        new_volume = self.volume_api.create(context, size, None,
+        new_volume = self.volume_api.create(context, size, vol.get('snapshot_id'),
                                             vol.get('display_name'),
                                             vol.get('display_description'),
                                             volume_type=vol_type,
