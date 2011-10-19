@@ -147,3 +147,12 @@ class DbApiTestCase(test.TestCase):
         results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
         self.assertEqual(0, len(results))
         db.instance_update(ctxt, instance.id, {"task_state": None})
+
+    def test_network_create_safe(self):
+        ctxt = context.get_admin_context()
+        values = {'host': 'localhost', 'project_id': 'project1'}
+        network = db.network_create_safe(ctxt, values)
+        self.assertNotEqual(None, network.uuid)
+        self.assertEqual(36, len(network.uuid))
+        db_network = db.network_get(ctxt, network.id)
+        self.assertEqual(network.uuid, db_network.uuid)
