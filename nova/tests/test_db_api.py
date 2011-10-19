@@ -95,3 +95,12 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(result[0].id, inst2.id)
         self.assertEqual(result[1].id, inst1.id)
         self.assertTrue(result[1].deleted)
+
+    def test_network_create_safe(self):
+        ctxt = context.get_admin_context()
+        values = {'host': 'localhost', 'project_id': 'project1'}
+        network = db.network_create_safe(ctxt, values)
+        self.assertNotEqual(None, network.uuid)
+        self.assertEqual(36, len(network.uuid))
+        db_network = db.network_get(ctxt, network.id)
+        self.assertEqual(network.uuid, db_network.uuid)
