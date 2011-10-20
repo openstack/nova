@@ -17,10 +17,11 @@
 
 """Handles ConsoleProxy API requests."""
 
+from nova.db import base
 from nova import exception
 from nova import flags
 from nova import rpc
-from nova.db import base
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -33,12 +34,15 @@ class API(base.Base):
         super(API, self).__init__(**kwargs)
 
     def get_consoles(self, context, instance_id):
+        instance_id = self._translate_uuid_if_necessary(context, instance_id)
         return self.db.console_get_all_by_instance(context, instance_id)
 
     def get_console(self, context, instance_id, console_id):
+        instance_id = self._translate_uuid_if_necessary(context, instance_id)
         return self.db.console_get(context, console_id, instance_id)
 
     def delete_console(self, context, instance_id, console_id):
+        instance_id = self._translate_uuid_if_necessary(context, instance_id)
         console = self.db.console_get(context,
                                       console_id,
                                       instance_id)
@@ -51,16 +55,16 @@ class API(base.Base):
                   'args': {'console_id': console['id']}})
 
     def create_console(self, context, instance_id):
-        instance = self.db.instance_get(context, instance_id)
         #NOTE(mdragon): If we wanted to return this the console info
         #               here, as we would need to do a call.
         #               They can just do an index later to fetch
         #               console info. I am not sure which is better
         #               here.
+        instance = self._get_instance(context, instance_id)
         rpc.cast(context,
                  self._get_console_topic(context, instance['host']),
                  {'method': 'add_console',
-                  'args': {'instance_id': instance_id}})
+                  'args': {'instance_id': instance['id']}})
 
     def _get_console_topic(self, context, instance_host):
         topic = self.db.queue_get_for(context,
@@ -68,3 +72,16 @@ class API(base.Base):
                                       instance_host)
         return rpc.call(context, topic, {'method': 'get_console_topic',
                                          'args': {'fake': 1}})
+
+    def _translate_uuid_if_necessary(self, context, instance_id):
+        if utils.is_uuid_like(instance_id):
+            instance = self.db.instance_get_by_uuid(context, instance_id)
+            instance_id = instance['id']
+        return instance_id
+
+    def _get_instance(self, context, instance_id):
+        if utils.is_uuid_like(instance_id):
+            instance = self.db.instance_get_by_uuid(context, instance_id)
+        else:
+            instance = self.db.instance_get(context, instance_id)
+        return instance
