@@ -21,12 +21,10 @@ Tests For Scheduler
 
 import datetime
 import mox
-import stubout
 
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
 
-from mox import IgnoreArg
 from nova import context
 from nova import db
 from nova import exception
@@ -35,13 +33,10 @@ from nova import service
 from nova import test
 from nova import rpc
 from nova import utils
-from nova.db.sqlalchemy import models
 from nova.scheduler import api
 from nova.scheduler import driver
 from nova.scheduler import manager
-from nova.scheduler import multi
 from nova.scheduler.simple import SimpleScheduler
-from nova.scheduler.zone import ZoneScheduler
 from nova.compute import power_state
 from nova.compute import vm_states
 
@@ -84,7 +79,7 @@ def _create_volume():
     """Create a test volume"""
     vol = {}
     vol['size'] = 1
-    vol['availability_zone'] = 'test'
+    vol['availability_zone'] = 'nova'
     ctxt = context.get_admin_context()
     return db.volume_create(ctxt, vol)['id']
 
@@ -250,77 +245,6 @@ class SchedulerTestCase(test.TestCase):
         db.instance_destroy(ctxt, i_ref2['id'])
 
 
-class ZoneSchedulerTestCase(test.TestCase):
-    """Test case for zone scheduler"""
-    def setUp(self):
-        super(ZoneSchedulerTestCase, self).setUp()
-        self.flags(
-            scheduler_driver='nova.scheduler.multi.MultiScheduler',
-            compute_scheduler_driver='nova.scheduler.zone.ZoneScheduler',
-            volume_scheduler_driver='nova.scheduler.zone.ZoneScheduler')
-
-    def _create_service_model(self, **kwargs):
-        service = db.sqlalchemy.models.Service()
-        service.host = kwargs['host']
-        service.disabled = False
-        service.deleted = False
-        service.report_count = 0
-        service.binary = 'nova-compute'
-        service.topic = 'compute'
-        service.id = kwargs['id']
-        service.availability_zone = kwargs['zone']
-        service.created_at = utils.utcnow()
-        return service
-
-    def test_with_two_zones(self):
-        scheduler = manager.SchedulerManager()
-        ctxt = context.RequestContext('user', 'project')
-        service_list = [self._create_service_model(id=1,
-                                                   host='host1',
-                                                   zone='zone1'),
-                        self._create_service_model(id=2,
-                                                   host='host2',
-                                                   zone='zone2'),
-                        self._create_service_model(id=3,
-                                                   host='host3',
-                                                   zone='zone2'),
-                        self._create_service_model(id=4,
-                                                   host='host4',
-                                                   zone='zone2'),
-                        self._create_service_model(id=5,
-                                                   host='host5',
-                                                   zone='zone2')]
-
-        request_spec = _create_request_spec(availability_zone='zone1')
-
-        fake_instance = _create_instance_dict(
-                    **request_spec['instance_properties'])
-        fake_instance['id'] = 100
-        fake_instance['uuid'] = FAKE_UUID
-
-        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        self.mox.StubOutWithMock(db, 'instance_update')
-        # Assumes we're testing with MultiScheduler
-        compute_sched_driver = scheduler.driver.drivers['compute']
-        self.mox.StubOutWithMock(compute_sched_driver,
-                'create_instance_db_entry')
-        self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-
-        arg = IgnoreArg()
-        db.service_get_all_by_topic(arg, arg).AndReturn(service_list)
-        compute_sched_driver.create_instance_db_entry(arg,
-                request_spec).AndReturn(fake_instance)
-        db.instance_update(arg, 100, {'host': 'host1', 'scheduled_at': arg})
-        rpc.cast(arg,
-                 'compute.host1',
-                 {'method': 'run_instance',
-                  'args': {'instance_id': 100}})
-        self.mox.ReplayAll()
-        scheduler.run_instance(ctxt,
-                               'compute',
-                               request_spec=request_spec)
-
-
 class SimpleDriverTestCase(test.TestCase):
     """Test case for simple driver"""
     def setUp(self):
@@ -444,7 +368,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute2.kill()
 
     def test_specific_host_gets_instance_no_queue(self):
-        """Ensures if you set availability_zone it launches on that zone"""
+        """Ensures if you set zone:host it launches on that host"""
         compute1 = service.Service('host1',
                                    'nova-compute',
                                    'compute',
@@ -532,6 +456,78 @@ class SimpleDriverTestCase(test.TestCase):
         self.assertEqual(len(instance_ids), 1)
         compute1.terminate_instance(self.context, instance_ids[0])
         compute1.kill()
+
+    def test_specific_zone_gets_instance_no_queue(self):
+        """Ensures if you set availability_zone it launches on that zone"""
+        self.flags(node_availability_zone='zone1')
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        self.flags(node_availability_zone='zone2')
+        compute2 = service.Service('host2',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute2.start()
+
+        global instance_ids
+        instance_ids = []
+        instance_ids.append(_create_instance()['id'])
+        compute1.run_instance(self.context, instance_ids[0])
+
+        self.stubs.Set(SimpleScheduler,
+                'create_instance_db_entry', _fake_create_instance_db_entry)
+        global _picked_host
+        _picked_host = None
+        self.stubs.Set(driver,
+                'cast_to_compute_host', _fake_cast_to_compute_host)
+
+        request_spec = _create_request_spec(availability_zone='zone1')
+        instances = self.scheduler.driver.schedule_run_instance(
+                self.context, request_spec)
+        self.assertEqual(_picked_host, 'host1')
+        self.assertEqual(len(instance_ids), 2)
+
+        compute1.terminate_instance(self.context, instance_ids[0])
+        compute1.terminate_instance(self.context, instance_ids[1])
+        compute1.kill()
+        compute2.kill()
+
+    def test_bad_instance_zone_fails(self):
+        self.flags(node_availability_zone='zone1')
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        request_spec = _create_request_spec(availability_zone='zone2')
+        try:
+            self.assertRaises(driver.NoValidHost,
+                              self.scheduler.driver.schedule_run_instance,
+                              self.context,
+                              request_spec)
+        finally:
+            compute1.kill()
+
+    def test_bad_volume_zone_fails(self):
+        self.flags(node_availability_zone='zone1')
+        volume1 = service.Service('host1',
+                                  'nova-volume',
+                                  'volume',
+                                   FLAGS.volume_manager)
+        volume1.start()
+        # uses 'nova' for zone
+        volume_id = _create_volume()
+        try:
+            self.assertRaises(driver.NoValidHost,
+                              self.scheduler.driver.schedule_create_volume,
+                              self.context,
+                              volume_id)
+        finally:
+            db.volume_destroy(self.context, volume_id)
+            volume1.kill()
 
     def test_too_many_cores_no_queue(self):
         """Ensures we don't go over max cores"""

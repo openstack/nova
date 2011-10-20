@@ -23,7 +23,6 @@ Simple Scheduler
 
 from nova import db
 from nova import flags
-from nova import utils
 from nova.scheduler import driver
 from nova.scheduler import chance
 
@@ -44,9 +43,11 @@ class SimpleScheduler(chance.ChanceScheduler):
 
         availability_zone = instance_opts.get('availability_zone')
 
-        if availability_zone and context.is_admin and \
-                (':' in availability_zone):
-            zone, host = availability_zone.split(':', 1)
+        zone, host = None, None
+        if availability_zone:
+            zone, _x, host = availability_zone.partition(':')
+
+        if host and context.is_admin:
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-compute')
             if not self.service_is_up(service):
@@ -54,6 +55,9 @@ class SimpleScheduler(chance.ChanceScheduler):
             return host
 
         results = db.service_get_all_compute_sorted(context)
+        if zone:
+            results = [(service, cores) for (service, cores) in results
+                       if service['availability_zone'] == zone]
         for result in results:
             (service, instance_cores) = result
             if instance_cores + instance_opts['vcpus'] > FLAGS.max_cores:
@@ -82,15 +86,17 @@ class SimpleScheduler(chance.ChanceScheduler):
         host = self._schedule_instance(context, instance_ref,
                 *_args, **_kwargs)
         driver.cast_to_compute_host(context, host, 'start_instance',
-                instance_id=intance_id, **_kwargs)
+                instance_id=instance_id, **_kwargs)
 
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
         volume_ref = db.volume_get(context, volume_id)
-        if (volume_ref['availability_zone']
-            and ':' in volume_ref['availability_zone']
-            and context.is_admin):
-            zone, _x, host = volume_ref['availability_zone'].partition(':')
+        availability_zone = volume_ref.get('availability_zone')
+
+        zone, host = None, None
+        if availability_zone:
+            zone, _x, host = availability_zone.partition(':')
+        if host and context.is_admin:
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-volume')
             if not self.service_is_up(service):
@@ -98,7 +104,11 @@ class SimpleScheduler(chance.ChanceScheduler):
             driver.cast_to_volume_host(context, host, 'create_volume',
                     volume_id=volume_id, **_kwargs)
             return None
+
         results = db.service_get_all_volume_sorted(context)
+        if zone:
+            results = [(service, gigs) for (service, gigs) in results
+                       if service['availability_zone'] == zone]
         for result in results:
             (service, volume_gigabytes) = result
             if volume_gigabytes + volume_ref['size'] > FLAGS.max_gigabytes:
