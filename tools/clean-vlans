@@ -22,4 +22,4 @@ export LC_ALL=C
 sudo ifconfig -a | grep br | grep -v bridge | cut -f1 -d" " | xargs -n1 -ifoo ifconfig foo down
 sudo ifconfig -a | grep br | grep -v bridge | cut -f1 -d" " | xargs -n1 -ifoo brctl delbr foo
 sudo ifconfig -a | grep vlan | cut -f1 -d" " | xargs -n1 -ifoo ifconfig foo down
-sudo ifconfig -a | grep vlan | cut -f1 -d" " | xargs -n1 -ifoo vconfig rem foo
+sudo ifconfig -a | grep vlan | cut -f1 -d" " | xargs -n1 -ifoo ip link del foo

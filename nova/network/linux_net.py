@@ -911,10 +911,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         interface = 'vlan%s' % vlan_num
         if not _device_exists(interface):
             LOG.debug(_('Starting VLAN inteface %s'), interface)
-            _execute('vconfig', 'set_name_type',
-                     'VLAN_PLUS_VID_NO_PAD', run_as_root=True)
-            _execute('vconfig', 'add', bridge_interface,
-                        vlan_num, run_as_root=True)
+            _execute('ip', 'link', 'add', 'link', bridge_interface,
+                     'name', interface, 'type', 'vlan',
+                     'id', vlan_num, run_as_root=True)
             # (danwent) the bridge will inherit this address, so we want to
             # make sure it is the value set from the NetworkManager
             if mac_address:
