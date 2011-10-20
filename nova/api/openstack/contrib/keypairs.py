@@ -117,22 +117,12 @@ class KeypairController(object):
 
 
 class Keypairs(extensions.ExtensionDescriptor):
+    """Keypair Support"""
 
-    def get_name(self):
-        return "Keypairs"
-
-    def get_alias(self):
-        return "os-keypairs"
-
-    def get_description(self):
-        return "Keypair Support"
-
-    def get_namespace(self):
-        return \
-         "http://docs.openstack.org/ext/keypairs/api/v1.1"
-
-    def get_updated(self):
-        return "2011-08-08T00:00:00+00:00"
+    name = "Keypairs"
+    alias = "os-keypairs"
+    namespace = "http://docs.openstack.org/ext/keypairs/api/v1.1"
+    updated = "2011-08-08T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

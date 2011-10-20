@@ -339,20 +339,12 @@ class BootFromVolumeController(servers.Controller):
 
 
 class Volumes(extensions.ExtensionDescriptor):
-    def get_name(self):
-        return "Volumes"
+    """Volumes support"""
 
-    def get_alias(self):
-        return "os-volumes"
-
-    def get_description(self):
-        return "Volumes support"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/volumes/api/v1.1"
-
-    def get_updated(self):
-        return "2011-03-25T00:00:00+00:00"
+    name = "Volumes"
+    alias = "os-volumes"
+    namespace = "http://docs.openstack.org/ext/volumes/api/v1.1"
+    updated = "2011-03-25T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

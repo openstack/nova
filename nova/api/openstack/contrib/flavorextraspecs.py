@@ -98,22 +98,12 @@ class FlavorExtraSpecsController(object):
 
 
 class Flavorextraspecs(extensions.ExtensionDescriptor):
+    """Instance type (flavor) extra specs"""
 
-    def get_name(self):
-        return "FlavorExtraSpecs"
-
-    def get_alias(self):
-        return "os-flavor-extra-specs"
-
-    def get_description(self):
-        return "Instance type (flavor) extra specs"
-
-    def get_namespace(self):
-        return \
-         "http://docs.openstack.org/ext/flavor_extra_specs/api/v1.1"
-
-    def get_updated(self):
-        return "2011-06-23T00:00:00+00:00"
+    name = "FlavorExtraSpecs"
+    alias = "os-flavor-extra-specs"
+    namespace = "http://docs.openstack.org/ext/flavor_extra_specs/api/v1.1"
+    updated = "2011-06-23T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

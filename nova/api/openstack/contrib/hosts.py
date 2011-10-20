@@ -118,20 +118,12 @@ class HostController(object):
 
 
 class Hosts(extensions.ExtensionDescriptor):
-    def get_name(self):
-        return "Hosts"
+    """Host administration"""
 
-    def get_alias(self):
-        return "os-hosts"
-
-    def get_description(self):
-        return "Host administration"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/hosts/api/v1.1"
-
-    def get_updated(self):
-        return "2011-06-29T00:00:00+00:00"
+    name = "Hosts"
+    alias = "os-hosts"
+    namespace = "http://docs.openstack.org/ext/hosts/api/v1.1"
+    updated = "2011-06-29T00:00:00+00:00"
 
     def get_resources(self):
         resources = [extensions.ResourceExtension('os-hosts',

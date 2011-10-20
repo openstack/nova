@@ -53,46 +53,26 @@ class ExtensionDescriptor(object):
 
     """
 
-    def get_name(self):
-        """The name of the extension.
+    # The name of the extension, e.g., 'Fox In Socks'
+    name = None
 
-        e.g. 'Fox In Socks'
+    # The alias for the extension, e.g., 'FOXNSOX'
+    alias = None
 
-        """
-        raise NotImplementedError()
+    # Description comes from the docstring for the class
 
-    def get_alias(self):
-        """The alias for the extension.
+    # The XML namespace for the extension, e.g.,
+    # 'http://www.fox.in.socks/api/ext/pie/v1.0'
+    namespace = None
 
-        e.g. 'FOXNSOX'
+    # The timestamp when the extension was last updated, e.g.,
+    # '2011-01-22T13:25:27-06:00'
+    updated = None
 
-        """
-        raise NotImplementedError()
+    def __init__(self, ext_mgr):
+        """Register extension with the extension manager."""
 
-    def get_description(self):
-        """Friendly description for the extension.
-
-        e.g. 'The Fox In Socks Extension'
-
-        """
-        raise NotImplementedError()
-
-    def get_namespace(self):
-        """The XML namespace for the extension.
-
-        e.g. 'http://www.fox.in.socks/api/ext/pie/v1.0'
-
-        """
-        raise NotImplementedError()
-
-    def get_updated(self):
-        """The timestamp when the extension was last updated.
-
-        e.g. '2011-01-22T13:25:27-06:00'
-
-        """
-        # NOTE(justinsb): Not sure of the purpose of this is, vs the XML NS
-        raise NotImplementedError()
+        ext_mgr.register(self)
 
     def get_resources(self):
         """List of extensions.ResourceExtension extension objects.
@@ -194,11 +174,11 @@ class ExtensionsResource(wsgi.Resource):
 
     def _translate(self, ext):
         ext_data = {}
-        ext_data['name'] = ext.get_name()
-        ext_data['alias'] = ext.get_alias()
-        ext_data['description'] = ext.get_description()
-        ext_data['namespace'] = ext.get_namespace()
-        ext_data['updated'] = ext.get_updated()
+        ext_data['name'] = ext.name
+        ext_data['alias'] = ext.alias
+        ext_data['description'] = ext.__doc__
+        ext_data['namespace'] = ext.namespace
+        ext_data['updated'] = ext.updated
         ext_data['links'] = []  # TODO(dprince): implement extension links
         return ext_data
 
@@ -275,7 +255,7 @@ class ExtensionMiddleware(base_wsgi.Middleware):
     def __init__(self, application, ext_mgr=None):
 
         if ext_mgr is None:
-            ext_mgr = ExtensionManager(FLAGS.osapi_extensions_path)
+            ext_mgr = ExtensionManager()
         self.ext_mgr = ext_mgr
 
         mapper = nova.api.openstack.ProjectMapper()
@@ -352,19 +332,30 @@ class ExtensionManager(object):
 
     """
 
-    def __init__(self, path):
+    def __init__(self):
         LOG.audit(_('Initializing extension manager.'))
 
-        self.path = path
         self.extensions = {}
-        self._load_all_extensions()
+        self._load_extensions()
+
+    def register(self, ext):
+        # Do nothing if the extension doesn't check out
+        if not self._check_extension(ext):
+            return
+
+        alias = ext.alias
+        LOG.audit(_('Loaded extension: %s'), alias)
+
+        if alias in self.extensions:
+            raise exception.Error("Found duplicate extension: %s" % alias)
+        self.extensions[alias] = ext
 
     def get_resources(self):
         """Returns a list of ResourceExtension objects."""
         resources = []
         resources.append(ResourceExtension('extensions',
                                             ExtensionsResource(self)))
-        for alias, ext in self.extensions.iteritems():
+        for ext in self.extensions.values():
             try:
                 resources.extend(ext.get_resources())
             except AttributeError:
@@ -376,7 +367,7 @@ class ExtensionManager(object):
     def get_actions(self):
         """Returns a list of ActionExtension objects."""
         actions = []
-        for alias, ext in self.extensions.iteritems():
+        for ext in self.extensions.values():
             try:
                 actions.extend(ext.get_actions())
             except AttributeError:
@@ -388,7 +379,7 @@ class ExtensionManager(object):
     def get_request_extensions(self):
         """Returns a list of RequestExtension objects."""
         request_exts = []
-        for alias, ext in self.extensions.iteritems():
+        for ext in self.extensions.values():
             try:
                 request_exts.extend(ext.get_request_extensions())
             except AttributeError:
@@ -400,66 +391,44 @@ class ExtensionManager(object):
     def _check_extension(self, extension):
         """Checks for required methods in extension objects."""
         try:
-            LOG.debug(_('Ext name: %s'), extension.get_name())
-            LOG.debug(_('Ext alias: %s'), extension.get_alias())
-            LOG.debug(_('Ext description: %s'), extension.get_description())
-            LOG.debug(_('Ext namespace: %s'), extension.get_namespace())
-            LOG.debug(_('Ext updated: %s'), extension.get_updated())
+            LOG.debug(_('Ext name: %s'), extension.name)
+            LOG.debug(_('Ext alias: %s'), extension.alias)
+            LOG.debug(_('Ext description: %s'),
+                      ' '.join(extension.__doc__.strip().split()))
+            LOG.debug(_('Ext namespace: %s'), extension.namespace)
+            LOG.debug(_('Ext updated: %s'), extension.updated)
         except AttributeError as ex:
             LOG.exception(_("Exception loading extension: %s"), unicode(ex))
             return False
         return True
 
-    def _load_all_extensions(self):
-        """Load extensions from the configured path.
+    def load_extension(self, ext_factory):
+        """Execute an extension factory.
 
-        Load extensions from the configured path. The extension name is
-        constructed from the module_name. If your extension module was named
-        widgets.py the extension class within that module should be
-        'Widgets'.
-
-        In addition, extensions are loaded from the 'contrib' directory.
-
-        See nova/tests/api/openstack/extensions/foxinsocks.py for an example
-        extension implementation.
-
+        Loads an extension.  The 'ext_factory' is the name of a
+        callable that will be imported and called with one
+        argument--the extension manager.  The factory callable is
+        expected to call the register() method at least once.
         """
-        if os.path.exists(self.path):
-            self._load_all_extensions_from_path(self.path)
 
-        contrib_path = os.path.join(os.path.dirname(__file__), "contrib")
-        if os.path.exists(contrib_path):
-            self._load_all_extensions_from_path(contrib_path)
+        LOG.debug(_("Loading extension %s"), ext_factory)
 
-    def _load_all_extensions_from_path(self, path):
-        for f in os.listdir(path):
-            LOG.audit(_('Loading extension file: %s'), f)
-            mod_name, file_ext = os.path.splitext(os.path.split(f)[-1])
-            ext_path = os.path.join(path, f)
-            if file_ext.lower() == '.py' and not mod_name.startswith('_'):
-                mod = imp.load_source(mod_name, ext_path)
-                ext_name = mod_name[0].upper() + mod_name[1:]
-                new_ext_class = getattr(mod, ext_name, None)
-                if not new_ext_class:
-                    LOG.warn(_('Did not find expected name '
-                               '"%(ext_name)s" in %(file)s'),
-                             {'ext_name': ext_name,
-                              'file': ext_path})
-                    continue
-                new_ext = new_ext_class()
-                self.add_extension(new_ext)
+        # Load the factory
+        factory = utils.import_class(ext_factory)
 
-    def add_extension(self, ext):
-        # Do nothing if the extension doesn't check out
-        if not self._check_extension(ext):
-            return
+        # Call it
+        LOG.debug(_("Calling extension factory %s"), ext_factory)
+        factory(self)
 
-        alias = ext.get_alias()
-        LOG.audit(_('Loaded extension: %s'), alias)
+    def _load_extensions(self):
+        """Load extensions specified on the command line."""
 
-        if alias in self.extensions:
-            raise exception.Error("Found duplicate extension: %s" % alias)
-        self.extensions[alias] = ext
+        for ext_factory in FLAGS.osapi_extension:
+            try:
+                self.load_extension(ext_factory)
+            except Exception as exc:
+                LOG.warn(_('Failed to load extension %(ext_factory)s: '
+                           '%(exc)s') % locals())
 
 
 class RequestExtension(object):

@@ -26,21 +26,11 @@ from nova.api.openstack import extensions
 
 
 class Flavorextradata(extensions.ExtensionDescriptor):
-    """The Flavor extra data extension for the OpenStack API."""
+    """Provide additional data for flavors"""
 
-    def get_name(self):
-        return "FlavorExtraData"
-
-    def get_alias(self):
-        return "os-flavor-extra-data"
-
-    def get_description(self):
-        return "Provide additional data for flavors"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/flavor_extra_data/api/v1.1"
-
-    def get_updated(self):
-        return "2011-09-14T00:00:00+00:00"
+    name = "FlavorExtraData"
+    alias = "os-flavor-extra-data"
+    namespace = "http://docs.openstack.org/ext/flavor_extra_data/api/v1.1"
+    updated = "2011-09-14T00:00:00+00:00"
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4

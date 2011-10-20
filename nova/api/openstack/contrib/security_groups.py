@@ -332,25 +332,16 @@ class SecurityGroupRulesController(SecurityGroupController):
 
 
 class Security_groups(extensions.ExtensionDescriptor):
+    """Security group support"""
 
-    def __init__(self):
+    name = "SecurityGroups"
+    alias = "security_groups"
+    namespace = "http://docs.openstack.org/ext/securitygroups/api/v1.1"
+    updated = "2011-07-21T00:00:00+00:00"
+
+    def __init__(self, ext_mgr):
         self.compute_api = compute.API()
-        super(Security_groups, self).__init__()
-
-    def get_name(self):
-        return "SecurityGroups"
-
-    def get_alias(self):
-        return "security_groups"
-
-    def get_description(self):
-        return "Security group support"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/securitygroups/api/v1.1"
-
-    def get_updated(self):
-        return "2011-07-21T00:00:00+00:00"
+        super(Security_groups, self).__init__(ext_mgr)
 
     def _addSecurityGroup(self, input_dict, req, instance_id):
         context = req.environ['nova.context']

@@ -73,21 +73,12 @@ class QuotaSetsController(object):
 
 
 class Quotas(extensions.ExtensionDescriptor):
+    """Quotas management support"""
 
-    def get_name(self):
-        return "Quotas"
-
-    def get_alias(self):
-        return "os-quota-sets"
-
-    def get_description(self):
-        return "Quotas management support"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/quotas-sets/api/v1.1"
-
-    def get_updated(self):
-        return "2011-08-08T00:00:00+00:00"
+    name = "Quotas"
+    alias = "os-quota-sets"
+    namespace = "http://docs.openstack.org/ext/quotas-sets/api/v1.1"
+    updated = "2011-08-08T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

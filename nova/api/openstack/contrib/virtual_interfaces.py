@@ -64,21 +64,12 @@ class ServerVirtualInterfaceController(object):
 
 
 class Virtual_interfaces(extensions.ExtensionDescriptor):
+    """Virtual interface support"""
 
-    def get_name(self):
-        return "VirtualInterfaces"
-
-    def get_alias(self):
-        return "virtual_interfaces"
-
-    def get_description(self):
-        return "Virtual interface support"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/virtual_interfaces/api/v1.1"
-
-    def get_updated(self):
-        return "2011-08-17T00:00:00+00:00"
+    name = "VirtualInterfaces"
+    alias = "virtual_interfaces"
+    namespace = "http://docs.openstack.org/ext/virtual_interfaces/api/v1.1"
+    updated = "2011-08-17T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

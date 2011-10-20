@@ -31,8 +31,15 @@ LOG = logging.getLogger("nova.api.contrib.deferred-delete")
 
 
 class Deferred_delete(extensions.ExtensionDescriptor):
-    def __init__(self):
-        super(Deferred_delete, self).__init__()
+    """Instance deferred delete"""
+
+    name = "DeferredDelete"
+    alias = "os-deferred-delete"
+    namespace = "http://docs.openstack.org/ext/deferred-delete/api/v1.1"
+    updated = "2011-09-01T00:00:00+00:00"
+
+    def __init__(self, ext_mgr):
+        super(Deferred_delete, self).__init__(ext_mgr)
         self.compute_api = compute.API()
 
     def _restore(self, input_dict, req, instance_id):
@@ -48,21 +55,6 @@ class Deferred_delete(extensions.ExtensionDescriptor):
         context = req.environ["nova.context"]
         self.compute_api.force_delete(context, instance_id)
         return webob.Response(status_int=202)
-
-    def get_name(self):
-        return "DeferredDelete"
-
-    def get_alias(self):
-        return "os-deferred-delete"
-
-    def get_description(self):
-        return "Instance deferred delete"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/deferred-delete/api/v1.1"
-
-    def get_updated(self):
-        return "2011-09-01T00:00:00+00:00"
 
     def get_actions(self):
         """Return the actions the extension adds, as required by contract."""

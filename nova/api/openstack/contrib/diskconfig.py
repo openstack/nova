@@ -92,23 +92,12 @@ class ImageDiskConfigController(object):
 
 
 class Diskconfig(extensions.ExtensionDescriptor):
-    def __init__(self):
-        super(Diskconfig, self).__init__()
+    """Disk Configuration support"""
 
-    def get_name(self):
-        return "DiskConfig"
-
-    def get_alias(self):
-        return "OS-DCFG"
-
-    def get_description(self):
-        return "Disk Configuration support"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/disk_config/api/v1.1"
-
-    def get_updated(self):
-        return "2011-08-31T00:00:00+00:00"
+    name = "DiskConfig"
+    alias = "OS-DCFG"
+    namespace = "http://docs.openstack.org/ext/disk_config/api/v1.1"
+    updated = "2011-08-31T00:00:00+00:00"
 
     def _server_extension_controller(self):
         metadata = {
