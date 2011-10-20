@@ -1161,7 +1161,7 @@ def _mount_filesystem(dev_path, dir):
     """mounts the device specified by dev_path in dir"""
     try:
         out, err = utils.execute('mount',
-                                 '-t', 'ext2,ext3',
+                                 '-t', 'ext2,ext3,ext4,reiserfs',
                                  dev_path, dir, run_as_root=True)
     except exception.ProcessExecutionError as e:
         err = str(e)
