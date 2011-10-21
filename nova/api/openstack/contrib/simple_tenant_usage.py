@@ -211,20 +211,12 @@ class SimpleTenantUsageController(object):
 
 
 class Simple_tenant_usage(extensions.ExtensionDescriptor):
-    def get_name(self):
-        return "SimpleTenantUsage"
+    """Simple tenant usage extension"""
 
-    def get_alias(self):
-        return "os-simple-tenant-usage"
-
-    def get_description(self):
-        return "Simple tenant usage extension"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/os-simple-tenant-usage/api/v1.1"
-
-    def get_updated(self):
-        return "2011-08-19T00:00:00+00:00"
+    name = "SimpleTenantUsage"
+    alias = "os-simple-tenant-usage"
+    namespace = "http://docs.openstack.org/ext/os-simple-tenant-usage/api/v1.1"
+    updated = "2011-08-19T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

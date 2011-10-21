@@ -21,6 +21,7 @@ import webob
 from lxml import etree
 
 from nova import context
+from nova import flags
 from nova import test
 from nova import wsgi as base_wsgi
 from nova.api import openstack
@@ -29,6 +30,8 @@ from nova.api.openstack import flavors
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.tests.api.openstack import fakes
+
+FLAGS = flags.FLAGS
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
@@ -45,20 +48,15 @@ class StubController(object):
 
 
 class StubExtensionManager(object):
+    """Provides access to Tweedle Beetles"""
+
+    name = "Tweedle Beetle Extension"
+    alias = "TWDLBETL"
 
     def __init__(self, resource_ext=None, action_ext=None, request_ext=None):
         self.resource_ext = resource_ext
         self.action_ext = action_ext
         self.request_ext = request_ext
-
-    def get_name(self):
-        return "Tweedle Beetle Extension"
-
-    def get_alias(self):
-        return "TWDLBETL"
-
-    def get_description(self):
-        return "Provides access to Tweedle Beetles"
 
     def get_resources(self):
         resource_exts = []
@@ -79,12 +77,19 @@ class StubExtensionManager(object):
         return request_extensions
 
 
-class ExtensionControllerTest(test.TestCase):
+class ExtensionTestCase(test.TestCase):
+    def setUp(self):
+        super(ExtensionTestCase, self).setUp()
+        ext_list = FLAGS.osapi_extension[:]
+        ext_list.append('nova.tests.api.openstack.extensions.'
+                        'foxinsocks.Foxinsocks')
+        self.flags(osapi_extension=ext_list)
+
+
+class ExtensionControllerTest(ExtensionTestCase):
 
     def setUp(self):
         super(ExtensionControllerTest, self).setUp()
-        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
-        self.flags(osapi_extensions_path=ext_path)
         self.ext_list = [
             "AdminActions",
             "Createserverext",
@@ -212,12 +217,7 @@ class ExtensionControllerTest(test.TestCase):
         xmlutil.validate_schema(root, 'extension')
 
 
-class ResourceExtensionTest(test.TestCase):
-
-    def setUp(self):
-        super(ResourceExtensionTest, self).setUp()
-        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
-        self.flags(osapi_extensions_path=ext_path)
+class ResourceExtensionTest(ExtensionTestCase):
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
@@ -255,18 +255,12 @@ class ResourceExtensionTest(test.TestCase):
 
 class InvalidExtension(object):
 
-    def get_alias(self):
-        return "THIRD"
+    alias = "THIRD"
 
 
-class ExtensionManagerTest(test.TestCase):
+class ExtensionManagerTest(ExtensionTestCase):
 
     response_body = "Try to say this Mr. Knox, sir..."
-
-    def setUp(self):
-        super(ExtensionManagerTest, self).setUp()
-        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
-        self.flags(osapi_extensions_path=ext_path)
 
     def test_get_resources(self):
         app = openstack.APIRouter()
@@ -283,17 +277,12 @@ class ExtensionManagerTest(test.TestCase):
         app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         ext_mgr = ext_midware.ext_mgr
-        ext_mgr.add_extension(InvalidExtension())
+        ext_mgr.register(InvalidExtension())
         self.assertTrue('FOXNSOX' in ext_mgr.extensions)
         self.assertTrue('THIRD' not in ext_mgr.extensions)
 
 
-class ActionExtensionTest(test.TestCase):
-
-    def setUp(self):
-        super(ActionExtensionTest, self).setUp()
-        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
-        self.flags(osapi_extensions_path=ext_path)
+class ActionExtensionTest(ExtensionTestCase):
 
     def _send_server_action_request(self, url, body):
         app = openstack.APIRouter()
@@ -331,12 +320,7 @@ class ActionExtensionTest(test.TestCase):
         self.assertEqual(404, response.status_int)
 
 
-class RequestExtensionTest(test.TestCase):
-
-    def setUp(self):
-        super(RequestExtensionTest, self).setUp()
-        ext_path = os.path.join(os.path.dirname(__file__), "extensions")
-        self.flags(osapi_extensions_path=ext_path)
+class RequestExtensionTest(ExtensionTestCase):
 
     def test_get_resources_with_stub_mgr(self):
 

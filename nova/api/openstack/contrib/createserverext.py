@@ -40,21 +40,12 @@ class CreateServerController(servers.Controller):
 
 
 class Createserverext(extensions.ExtensionDescriptor):
-    """The servers create ext"""
-    def get_name(self):
-        return "Createserverext"
+    """Extended support to the Create Server v1.1 API"""
 
-    def get_alias(self):
-        return "os-create-server-ext"
-
-    def get_description(self):
-        return "Extended support to the Create Server v1.1 API"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/createserverext/api/v1.1"
-
-    def get_updated(self):
-        return "2011-07-19T00:00:00+00:00"
+    name = "Createserverext"
+    alias = "os-create-server-ext"
+    namespace = "http://docs.openstack.org/ext/createserverext/api/v1.1"
+    updated = "2011-07-19T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

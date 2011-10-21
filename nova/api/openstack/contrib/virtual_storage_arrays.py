@@ -545,21 +545,12 @@ class VsaVCController(servers.Controller):
 
 
 class Virtual_storage_arrays(extensions.ExtensionDescriptor):
+    """Virtual Storage Arrays support"""
 
-    def get_name(self):
-        return "VSAs"
-
-    def get_alias(self):
-        return "zadr-vsa"
-
-    def get_description(self):
-        return "Virtual Storage Arrays support"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/vsa/api/v1.1"
-
-    def get_updated(self):
-        return "2011-08-25T00:00:00+00:00"
+    name = "VSAs"
+    alias = "zadr-vsa"
+    namespace = "http://docs.openstack.org/ext/vsa/api/v1.1"
+    updated = "2011-08-25T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

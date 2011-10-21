@@ -163,22 +163,12 @@ class VolumeTypeExtraSpecsController(object):
 
 
 class Volumetypes(extensions.ExtensionDescriptor):
+    """Volume types support"""
 
-    def get_name(self):
-        return "VolumeTypes"
-
-    def get_alias(self):
-        return "os-volume-types"
-
-    def get_description(self):
-        return "Volume types support"
-
-    def get_namespace(self):
-        return \
-         "http://docs.openstack.org/ext/volume_types/api/v1.1"
-
-    def get_updated(self):
-        return "2011-08-24T00:00:00+00:00"
+    name = "VolumeTypes"
+    alias = "os-volume-types"
+    namespace = "http://docs.openstack.org/ext/volume_types/api/v1.1"
+    updated = "2011-08-24T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

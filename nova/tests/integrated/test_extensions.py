@@ -17,18 +17,21 @@
 
 import os
 
+from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.integrated')
 
 
 class ExtensionsTest(integrated_helpers._IntegratedTestBase):
     def _get_flags(self):
         f = super(ExtensionsTest, self)._get_flags()
-        f['osapi_extensions_path'] = os.path.join(os.path.dirname(__file__),
-                                                "../api/openstack/extensions")
+        f['osapi_extension'] = FLAGS.osapi_extension[:]
+        f['osapi_extension'].append('nova.tests.api.openstack.extensions.'
+                                    'foxinsocks.Foxinsocks')
         return f
 
     def test_get_foxnsocks(self):

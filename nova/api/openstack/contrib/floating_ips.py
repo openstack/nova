@@ -121,10 +121,17 @@ class FloatingIPController(object):
 
 
 class Floating_ips(extensions.ExtensionDescriptor):
-    def __init__(self):
+    """Floating IPs support"""
+
+    name = "Floating_ips"
+    alias = "os-floating-ips"
+    namespace = "http://docs.openstack.org/ext/floating_ips/api/v1.1"
+    updated = "2011-06-16T00:00:00+00:00"
+
+    def __init__(self, ext_mgr):
         self.compute_api = compute.API()
         self.network_api = network.API()
-        super(Floating_ips, self).__init__()
+        super(Floating_ips, self).__init__(ext_mgr)
 
     def _add_floating_ip(self, input_dict, req, instance_id):
         """Associate floating_ip to an instance."""
@@ -171,21 +178,6 @@ class Floating_ips(extensions.ExtensionDescriptor):
                 raise webob.exc.HTTPUnauthorized()
 
         return webob.Response(status_int=202)
-
-    def get_name(self):
-        return "Floating_ips"
-
-    def get_alias(self):
-        return "os-floating-ips"
-
-    def get_description(self):
-        return "Floating IPs support"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/floating_ips/api/v1.1"
-
-    def get_updated(self):
-        return "2011-06-16T00:00:00+00:00"
 
     def get_resources(self):
         resources = []

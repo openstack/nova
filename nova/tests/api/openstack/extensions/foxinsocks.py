@@ -27,24 +27,15 @@ class FoxInSocksController(object):
 
 
 class Foxinsocks(object):
+    """The Fox In Socks Extension"""
 
-    def __init__(self):
-        pass
+    name = "Fox In Socks"
+    alias = "FOXNSOX"
+    namespace = "http://www.fox.in.socks/api/ext/pie/v1.0"
+    updated = "2011-01-22T13:25:27-06:00"
 
-    def get_name(self):
-        return "Fox In Socks"
-
-    def get_alias(self):
-        return "FOXNSOX"
-
-    def get_description(self):
-        return "The Fox In Socks Extension"
-
-    def get_namespace(self):
-        return "http://www.fox.in.socks/api/ext/pie/v1.0"
-
-    def get_updated(self):
-        return "2011-01-22T13:25:27-06:00"
+    def __init__(self, ext_mgr):
+        ext_mgr.register(self)
 
     def get_resources(self):
         resources = []

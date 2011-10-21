@@ -34,10 +34,17 @@ LOG = logging.getLogger("nova.api.openstack.contrib.admin_actions")
 
 
 class Admin_actions(extensions.ExtensionDescriptor):
-    """Adds a set of admin-only actions to servers"""
+    """Adds admin-only server actions: pause, unpause, suspend,
+    resume, migrate, resetNetwork, injectNetworkInfo, lock and unlock
+    """
 
-    def __init__(self):
-        super(Admin_actions, self).__init__()
+    name = "AdminActions"
+    alias = "os-admin-actions"
+    namespace = "http://docs.openstack.org/ext/admin-actions/api/v1.1"
+    updated = "2011-09-20T00:00:00+00:00"
+
+    def __init__(self, ext_mgr):
+        super(Admin_actions, self).__init__(ext_mgr)
         self.compute_api = compute.API()
 
     @extensions.admin_only
@@ -163,23 +170,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             LOG.exception(_("Compute.api::unlock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
-
-    def get_name(self):
-        return "AdminActions"
-
-    def get_alias(self):
-        return "os-admin-actions"
-
-    def get_description(self):
-        return "Adds admin-only server actions: pause, unpause, " + \
-               "suspend, resume, migrate, resetNetwork, " +\
-               "injectNetworkInfo, lock and unlock"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/admin-actions/api/v1.1"
-
-    def get_updated(self):
-        return "2011-09-20T00:00:00+00:00"
 
     def get_actions(self):
         actions = [

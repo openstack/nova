@@ -28,22 +28,15 @@ FLAGS = flags.FLAGS
 
 
 class Zones(extensions.ExtensionDescriptor):
-    def get_name(self):
-        return "Zones"
+    """Enables zones-related functionality such as adding child zones,
+    listing child zones, getting the capabilities of the local zone,
+    and returning build plans to parent zones' schedulers
+    """
 
-    def get_alias(self):
-        return "os-zones"
-
-    def get_description(self):
-        return """Enables zones-related functionality such as adding
-child zones, listing child zones, getting the capabilities of the
-local zone, and returning build plans to parent zones' schedulers"""
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/zones/api/v1.1"
-
-    def get_updated(self):
-        return "2011-09-21T00:00:00+00:00"
+    name = "Zones"
+    alias = "os-zones"
+    namespace = "http://docs.openstack.org/ext/zones/api/v1.1"
+    updated = "2011-09-21T00:00:00+00:00"
 
     def get_resources(self):
         # Nothing yet.

@@ -30,9 +30,15 @@ LOG = logging.getLogger("nova.api.contrib.rescue")
 
 
 class Rescue(exts.ExtensionDescriptor):
-    """The Rescue controller for the OpenStack API."""
-    def __init__(self):
-        super(Rescue, self).__init__()
+    """Instance rescue mode"""
+
+    name = "Rescue"
+    alias = "os-rescue"
+    namespace = "http://docs.openstack.org/ext/rescue/api/v1.1"
+    updated = "2011-08-18T00:00:00+00:00"
+
+    def __init__(self, ext_mgr):
+        super(Rescue, self).__init__(ext_mgr)
         self.compute_api = compute.API()
 
     @exts.wrap_errors
@@ -54,21 +60,6 @@ class Rescue(exts.ExtensionDescriptor):
         self.compute_api.unrescue(context, instance_id)
 
         return webob.Response(status_int=202)
-
-    def get_name(self):
-        return "Rescue"
-
-    def get_alias(self):
-        return "os-rescue"
-
-    def get_description(self):
-        return "Instance rescue mode"
-
-    def get_namespace(self):
-        return "http://docs.openstack.org/ext/rescue/api/v1.1"
-
-    def get_updated(self):
-        return "2011-08-18T00:00:00+00:00"
 
     def get_actions(self):
         """Return the actions the extension adds, as required by contract."""
