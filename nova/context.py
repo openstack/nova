@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright 2011 OpenStack LLC.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -20,6 +21,7 @@
 
 import uuid
 
+from nova import local
 from nova import utils
 
 
@@ -51,6 +53,7 @@ class RequestContext(object):
         self.request_id = request_id
         self.auth_token = auth_token
         self.strategy = strategy
+        local.store.context = self
 
     def to_dict(self):
         return {'user_id': self.user_id,
