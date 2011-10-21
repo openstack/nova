@@ -50,11 +50,40 @@ flags.DEFINE_string('ajax_proxy_manager',
         'nova.tests.api.ec2.test_cloud.AjaxProxyManager', '')
 
 
-# Fake ajax proxy service, so that an 'rpc.call' will work.
 class AjaxProxyManager(manager.SchedulerDependentManager):
+    """Fake ajax proxy service, so that an 'rpc.call' will work."""
     @staticmethod
     def authorize_ajax_console(context, **kwargs):
         return None
+
+
+def get_fake_fixed_ips():
+    vif = {'address': 'aa:bb:cc:dd:ee:ff'}
+    network = {'label': 'private',
+               'project_id': 'fake',
+               'cidr_v6': 'fe80:b33f::/64'}
+    floating_ips = [{'address': '1.2.3.4'},
+                    {'address': '5.6.7.8'}]
+    fixed_ip1 = {'address': '192.168.0.3',
+                 'floating_ips': floating_ips,
+                 'virtual_interface': vif,
+                 'network': network}
+    fixed_ip2 = {'address': '192.168.0.4',
+                 'network': network}
+    return [fixed_ip1, fixed_ip2]
+
+
+def get_instances_with_fixed_ips(orig_func, *args, **kwargs):
+    """Kludge fixed_ips into instance(s) without having to create DB
+    entries
+    """
+    instances = orig_func(*args, **kwargs)
+    if isinstance(instances, list):
+        for instance in instances:
+            instance['fixed_ips'] = get_fake_fixed_ips()
+    else:
+        instances['fixed_ips'] = get_fake_fixed_ips()
+    return instances
 
 
 class CloudTestCase(test.TestCase):
@@ -91,6 +120,13 @@ class CloudTestCase(test.TestCase):
         # NOTE(comstud): Make 'cast' behave like a 'call' which will
         # ensure that operations complete
         self.stubs.Set(rpc, 'cast', rpc.call)
+
+    def _stub_instance_get_with_fixed_ips(self, func_name):
+        orig_func = getattr(self.cloud.compute_api, func_name)
+
+        def fake_get(*args, **kwargs):
+            return get_instances_with_fixed_ips(orig_func, *args, **kwargs)
+        self.stubs.Set(self.cloud.compute_api, func_name, fake_get)
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
@@ -501,19 +537,8 @@ class CloudTestCase(test.TestCase):
         """Makes sure describe_instances works and filters results."""
         self.flags(use_ipv6=True)
 
-        def fake_get_instance_nw_info(self, context, instance):
-            return [(None, {'label': 'public',
-                            'ips': [{'ip': '192.168.0.3'},
-                                    {'ip': '192.168.0.4'}],
-                            'ip6s': [{'ip': 'fe80::beef'}]})]
-
-        def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
-            return ['1.2.3.4', '5.6.7.8']
-
-        self.stubs.Set(network.API, 'get_instance_nw_info',
-                fake_get_instance_nw_info)
-        self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
-                fake_get_floating_ips_by_fixed_address)
+        self._stub_instance_get_with_fixed_ips('get_all')
+        self._stub_instance_get_with_fixed_ips('get')
 
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': 1,
@@ -550,7 +575,8 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['dnsName'], '1.2.3.4')
         self.assertEqual(instance['privateDnsName'], '192.168.0.3')
         self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
-        self.assertEqual(instance['dnsNameV6'], 'fe80::beef')
+        self.assertEqual(instance['dnsNameV6'],
+                'fe80:b33f::a8bb:ccff:fedd:eeff')
         db.instance_destroy(self.context, inst1['id'])
         db.instance_destroy(self.context, inst2['id'])
         db.service_destroy(self.context, comp1['id'])
@@ -560,19 +586,8 @@ class CloudTestCase(test.TestCase):
         """Makes sure describe_instances w/ no ipv6 works."""
         self.flags(use_ipv6=False)
 
-        def fake_get_instance_nw_info(self, context, instance):
-            return [(None, {'label': 'public',
-                            'ips': [{'ip': '192.168.0.3'},
-                                    {'ip': '192.168.0.4'}],
-                            'ip6s': [{'ip': 'fe80::beef'}]})]
-
-        def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
-            return ['1.2.3.4', '5.6.7.8']
-
-        self.stubs.Set(network.API, 'get_instance_nw_info',
-                fake_get_instance_nw_info)
-        self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
-                fake_get_floating_ips_by_fixed_address)
+        self._stub_instance_get_with_fixed_ips('get_all')
+        self._stub_instance_get_with_fixed_ips('get')
 
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': 1,

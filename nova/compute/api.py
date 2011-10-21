@@ -917,7 +917,11 @@ class API(base.Base):
             instance = self.db.instance_get_by_uuid(context, uuid)
         else:
             instance = self.db.instance_get(context, instance_id)
-        return dict(instance.iteritems())
+
+        inst = dict(instance.iteritems())
+        # NOTE(comstud): Doesn't get returned with iteritems
+        inst['name'] = instance['name']
+        return inst
 
     @scheduler_api.reroute_compute("get")
     def routing_get(self, context, instance_id):
@@ -986,7 +990,15 @@ class API(base.Base):
 
         local_zone_only = search_opts.get('local_zone_only', False)
 
-        instances = self._get_instances_by_filters(context, filters)
+        inst_models = self._get_instances_by_filters(context, filters)
+
+        # Convert the models to dictionaries
+        instances = []
+        for inst_model in inst_models:
+            instance = dict(inst_model.iteritems())
+            # NOTE(comstud): Doesn't get returned by iteritems
+            instance['name'] = inst_model['name']
+            instances.append(instance)
 
         if local_zone_only:
             return instances

@@ -1217,12 +1217,13 @@ def _build_instance_get(context, session=None):
         session = get_session()
 
     partial = session.query(models.Instance).\
-                     options(joinedload_all('fixed_ips.floating_ips')).\
-                     options(joinedload_all('fixed_ips.network')).\
-                     options(joinedload_all('security_groups.rules')).\
-                     options(joinedload('volumes')).\
-                     options(joinedload('metadata')).\
-                     options(joinedload('instance_type'))
+            options(joinedload_all('fixed_ips.floating_ips')).\
+            options(joinedload_all('fixed_ips.network')).\
+            options(joinedload_all('fixed_ips.virtual_interface')).\
+            options(joinedload_all('security_groups.rules')).\
+            options(joinedload('volumes')).\
+            options(joinedload('metadata')).\
+            options(joinedload('instance_type'))
 
     if is_admin_context(context):
         partial = partial.filter_by(deleted=can_read_deleted(context))
@@ -1287,10 +1288,13 @@ def instance_get_all_by_filters(context, filters):
 
     session = get_session()
     query_prefix = session.query(models.Instance).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload('metadata')).\
-                   options(joinedload('instance_type')).\
-                   order_by(desc(models.Instance.created_at))
+            options(joinedload_all('fixed_ips.floating_ips')).\
+            options(joinedload_all('fixed_ips.network')).\
+            options(joinedload_all('fixed_ips.virtual_interface')).\
+            options(joinedload('security_groups')).\
+            options(joinedload('metadata')).\
+            options(joinedload('instance_type')).\
+            order_by(desc(models.Instance.created_at))
 
     # Make a copy of the filters dictionary to use going forward, as we'll
     # be modifying it and we shouldn't affect the caller's use of it.

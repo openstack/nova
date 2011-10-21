@@ -950,27 +950,27 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'name': 'woo.*'})
         self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertTrue(instance_id1 in instance_ids)
         self.assertTrue(instance_id2 in instance_ids)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'name': 'woot.*'})
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertEqual(len(instances), 1)
         self.assertTrue(instance_id1 in instance_ids)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'name': '.*oot.*'})
         self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertTrue(instance_id1 in instance_ids)
         self.assertTrue(instance_id3 in instance_ids)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'name': 'n.*'})
         self.assertEqual(len(instances), 1)
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertTrue(instance_id3 in instance_ids)
 
         instances = self.compute_api.get_all(c,
@@ -997,14 +997,14 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'instance_name': '.*\-\d$'})
         self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertTrue(instance_id1 in instance_ids)
         self.assertTrue(instance_id2 in instance_ids)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'instance_name': 'i.*2'})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id2)
+        self.assertEqual(instances[0]['id'], instance_id2)
 
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
@@ -1035,7 +1035,7 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'ip': '.*\.1', 'name': 'not.*'})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id3)
+        self.assertEqual(instances[0]['id'], instance_id3)
 
         # ip ends up matching any ip with a '1' in the last octet..
         # so instance 1 and 3.. but name should only match #1
@@ -1043,7 +1043,7 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'ip': '.*\.1$', 'name': '^woo.*'})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id1)
+        self.assertEqual(instances[0]['id'], instance_id1)
 
         # same as above but no match on name (name matches instance_id1
         # but the ip query doesn't
@@ -1057,7 +1057,7 @@ class ComputeTestCase(test.TestCase):
                              'name': 'not.*',
                              'ip6': '^.*12.*34.*'})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id3)
+        self.assertEqual(instances[0]['id'], instance_id3)
 
         db.instance_destroy(c, instance_id1)
         db.instance_destroy(c, instance_id2)
@@ -1082,12 +1082,12 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'image': '1234'})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id1)
+        self.assertEqual(instances[0]['id'], instance_id1)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'image': '4567'})
         self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertTrue(instance_id2 in instance_ids)
         self.assertTrue(instance_id3 in instance_ids)
 
@@ -1132,12 +1132,12 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'flavor': 3})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id1)
+        self.assertEqual(instances[0]['id'], instance_id1)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'flavor': 1})
         self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertTrue(instance_id2 in instance_ids)
         self.assertTrue(instance_id3 in instance_ids)
 
@@ -1167,12 +1167,12 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'power_state': power_state.SHUTDOWN})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id1)
+        self.assertEqual(instances[0]['id'], instance_id1)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'power_state': power_state.RUNNING})
         self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertTrue(instance_id2 in instance_ids)
         self.assertTrue(instance_id3 in instance_ids)
 
@@ -1220,12 +1220,12 @@ class ComputeTestCase(test.TestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'metadata': {'key2': 'value2'}})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id2)
+        self.assertEqual(instances[0]['id'], instance_id2)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'metadata': {'key3': 'value3'}})
         self.assertEqual(len(instances), 2)
-        instance_ids = [instance.id for instance in instances]
+        instance_ids = [instance['id'] for instance in instances]
         self.assertTrue(instance_id3 in instance_ids)
         self.assertTrue(instance_id4 in instance_ids)
 
@@ -1234,14 +1234,14 @@ class ComputeTestCase(test.TestCase):
                 search_opts={'metadata': {'key3': 'value3',
                                           'key4': 'value4'}})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id4)
+        self.assertEqual(instances[0]['id'], instance_id4)
 
         # multiple criterias as a list
         instances = self.compute_api.get_all(c,
                 search_opts={'metadata': [{'key4': 'value4'},
                                           {'key3': 'value3'}]})
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, instance_id4)
+        self.assertEqual(instances[0]['id'], instance_id4)
 
         db.instance_destroy(c, instance_id0)
         db.instance_destroy(c, instance_id1)

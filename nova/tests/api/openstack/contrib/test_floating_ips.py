@@ -89,6 +89,7 @@ def network_get_instance_nw_info(self, context, instance):
 def fake_instance_get(context, instance_id):
         return {
         "id": 1,
+        "name": 'fake',
         "user_id": 'fakeuser',
         "project_id": '123'}
 
