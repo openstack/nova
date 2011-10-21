@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright 2011 OpenStack LLC.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -38,6 +39,7 @@ import traceback
 
 import nova
 from nova import flags
+from nova import local
 from nova import version
 
 
@@ -152,6 +154,8 @@ class NovaLogger(logging.Logger):
         """Extract context from any log call."""
         if not extra:
             extra = {}
+        if context is None:
+            context = getattr(local.store, 'context', None)
         if context:
             extra.update(_dictify_context(context))
         extra.update({"nova_version": version.version_string_with_vcs()})
