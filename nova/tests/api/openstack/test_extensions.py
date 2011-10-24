@@ -297,7 +297,7 @@ class ActionExtensionTest(ExtensionTestCase):
 
     def test_extended_action(self):
         body = dict(add_tweedle=dict(name="test"))
-        url = "/123/servers/1/action"
+        url = "/123/servers/abcd/action"
         response = self._send_server_action_request(url, body)
         self.assertEqual(200, response.status_int)
         self.assertEqual("Tweedle Beetle Added.", response.body)
@@ -309,7 +309,7 @@ class ActionExtensionTest(ExtensionTestCase):
 
     def test_invalid_action_body(self):
         body = dict(blah=dict(name="test"))  # Doesn't exist
-        url = "/123/servers/1/action"
+        url = "/123/servers/abcd/action"
         response = self._send_server_action_request(url, body)
         self.assertEqual(400, response.status_int)
 

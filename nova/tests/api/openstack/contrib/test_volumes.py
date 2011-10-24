@@ -22,10 +22,12 @@ from nova import flags
 from nova import test
 from nova.compute import instance_types
 from nova.tests.api.openstack import fakes
-from nova.tests.api.openstack.test_servers import fake_gen_uuid
 
 
 FLAGS = flags.FLAGS
+
+
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
 def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
@@ -36,7 +38,7 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
     resv_id = None
     return ([{'id': 1,
              'display_name': 'test_server',
-             'uuid': fake_gen_uuid(),
+             'uuid': FAKE_UUID,
              'instance_type': dict(inst_type),
              'access_ip_v4': '1.2.3.4',
              'access_ip_v6': 'fead::1234',
@@ -76,7 +78,7 @@ class BootFromVolumeTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
-        self.assertEqual(1, server['id'])
+        self.assertEqual(FAKE_UUID, server['id'])
         self.assertEqual(2, int(server['flavor']['id']))
         self.assertEqual(u'test_server', server['name'])
         self.assertEqual(3, int(server['image']['id']))

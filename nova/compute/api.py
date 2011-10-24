@@ -1481,7 +1481,7 @@ class API(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "attach_volume",
                   "args": {"volume_id": volume_id,
-                           "instance_id": instance_id,
+                           "instance_id": instance['id'],
                            "mountpoint": device}})
 
     def detach_volume(self, context, volume_id):

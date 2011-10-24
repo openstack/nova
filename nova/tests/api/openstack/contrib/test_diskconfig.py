@@ -27,18 +27,23 @@ from nova.tests.api.openstack import fakes
 
 class DiskConfigTest(test.TestCase):
 
+    def setUp(self):
+        super(DiskConfigTest, self).setUp()
+        self.uuid = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
+        self.url = '/v1.1/openstack/servers/%s/os-disk-config' % self.uuid
+
     def test_retrieve_disk_config(self):
         def fake_compute_get(*args, **kwargs):
             return {'managed_disk': True}
 
         self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
-        req = webob.Request.blank('/v1.1/openstack/servers/50/os-disk-config')
+        req = webob.Request.blank(self.url)
         req.headers['Accept'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         body = json.loads(res.body)
         self.assertEqual(body['server']['managed_disk'], True)
-        self.assertEqual(int(body['server']['id']), 50)
+        self.assertEqual(body['server']['id'], self.uuid)
 
     def test_set_disk_config(self):
         def fake_compute_get(*args, **kwargs):
@@ -50,7 +55,7 @@ class DiskConfigTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'update', fake_compute_update)
         self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
 
-        req = webob.Request.blank('/v1.1/openstack/servers/50/os-disk-config')
+        req = webob.Request.blank(self.url)
         req.method = 'PUT'
         req.headers['Accept'] = 'application/json'
         req.headers['Content-Type'] = 'application/json'
@@ -60,14 +65,14 @@ class DiskConfigTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         body = json.loads(res.body)
         self.assertEqual(body['server']['managed_disk'], False)
-        self.assertEqual(int(body['server']['id']), 50)
+        self.assertEqual(body['server']['id'], self.uuid)
 
     def test_retrieve_disk_config_bad_server_fails(self):
         def fake_compute_get(*args, **kwargs):
             raise exception.NotFound()
 
         self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
-        req = webob.Request.blank('/v1.1/openstack/servers/50/os-disk-config')
+        req = webob.Request.blank(self.url)
         req.headers['Accept'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
@@ -84,7 +89,7 @@ class DiskConfigTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'update', fake_compute_update)
         self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
 
-        req = webob.Request.blank('/v1.1/openstack/servers/50/os-disk-config')
+        req = webob.Request.blank(self.url)
         req.method = 'PUT'
         req.headers['Accept'] = 'application/json'
         req.headers['Content-Type'] = 'application/json'

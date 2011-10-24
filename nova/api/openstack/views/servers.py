@@ -52,13 +52,12 @@ class ViewBuilder(object):
                 server = self._build_simple(inst)
 
             self._build_links(server['server'], inst)
-            server['server']['uuid'] = inst['uuid']
 
         return server
 
     def _build_simple(self, inst):
         """Return a simple model of a server."""
-        return dict(server=dict(id=inst['id'], name=inst['display_name']))
+        return dict(server=dict(id=inst['uuid'], name=inst['display_name']))
 
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
@@ -66,7 +65,7 @@ class ViewBuilder(object):
         task_state = inst.get('task_state')
 
         inst_dict = {
-            'id': inst['id'],
+            'id': inst['uuid'],
             'name': inst['display_name'],
             'user_id': inst.get('user_id', ''),
             'tenant_id': inst.get('project_id', ''),
@@ -137,8 +136,8 @@ class ViewBuilder(object):
             }
 
     def _build_links(self, response, inst):
-        href = self.generate_href(inst["id"])
-        bookmark = self.generate_bookmark(inst["id"])
+        href = self.generate_href(inst["uuid"])
+        bookmark = self.generate_bookmark(inst["uuid"])
 
         links = [
             {

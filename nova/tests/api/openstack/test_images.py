@@ -69,8 +69,9 @@ class ImagesControllerTest(test.TestCase):
         href = "http://localhost/v1.1/fake/images/124"
         bookmark = "http://localhost/fake/images/124"
         alternate = "%s/fake/images/124" % utils.generate_glance_url()
-        server_href = "http://localhost/v1.1/servers/42"
-        server_bookmark = "http://localhost/servers/42"
+        server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
+        server_href = "http://localhost/v1.1/servers/" + server_uuid
+        server_bookmark = "http://localhost/servers/" + server_uuid
 
         expected_image = {
             "image": {
@@ -83,7 +84,7 @@ class ImagesControllerTest(test.TestCase):
                 "minDisk": 0,
                 "minRam": 0,
                 'server': {
-                    'id': '42',
+                    'id': server_uuid,
                     "links": [{
                         "rel": "self",
                         "href": server_href,
@@ -94,7 +95,7 @@ class ImagesControllerTest(test.TestCase):
                     }],
                 },
                 "metadata": {
-                    "instance_ref": "http://localhost/v1.1/servers/42",
+                    "instance_ref": server_href,
                     "user_id": "fake",
                 },
                 "links": [{
@@ -113,7 +114,7 @@ class ImagesControllerTest(test.TestCase):
             },
         }
 
-        self.assertEqual(expected_image, actual_image)
+        self.assertDictMatch(expected_image, actual_image)
 
     def test_get_image_404(self):
         fake_req = fakes.HTTPRequest.blank('/v1.1/fake/images/unknown')
@@ -395,8 +396,9 @@ class ImagesControllerTest(test.TestCase):
         response = self.controller.detail(request)
         response_list = response["images"]
 
-        server_href = "http://localhost/v1.1/servers/42"
-        server_bookmark = "http://localhost/servers/42"
+        server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
+        server_href = "http://localhost/v1.1/servers/" + server_uuid
+        server_bookmark = "http://localhost/servers/" + server_uuid
         alternate = "%s/fake/images/%s"
 
         expected = [{
@@ -427,7 +429,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '124',
             'name': 'queued snapshot',
             'metadata': {
-                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'instance_ref': server_href,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -437,7 +439,7 @@ class ImagesControllerTest(test.TestCase):
             'minDisk': 0,
             'minRam': 0,
             'server': {
-                'id': '42',
+                'id': server_uuid,
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -465,7 +467,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '125',
             'name': 'saving snapshot',
             'metadata': {
-                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'instance_ref': server_href,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -475,7 +477,7 @@ class ImagesControllerTest(test.TestCase):
             'minDisk': 0,
             'minRam': 0,
             'server': {
-                'id': '42',
+                'id': server_uuid,
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -503,7 +505,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '126',
             'name': 'active snapshot',
             'metadata': {
-                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'instance_ref': server_href,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -513,7 +515,7 @@ class ImagesControllerTest(test.TestCase):
             'minDisk': 0,
             'minRam': 0,
             'server': {
-                'id': '42',
+                'id': server_uuid,
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -541,7 +543,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '127',
             'name': 'killed snapshot',
             'metadata': {
-                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'instance_ref': server_href,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -551,7 +553,7 @@ class ImagesControllerTest(test.TestCase):
             'minDisk': 0,
             'minRam': 0,
             'server': {
-                'id': '42',
+                'id': server_uuid,
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -579,7 +581,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '128',
             'name': 'deleted snapshot',
             'metadata': {
-                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'instance_ref': server_href,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -589,7 +591,7 @@ class ImagesControllerTest(test.TestCase):
             'minDisk': 0,
             'minRam': 0,
             'server': {
-                'id': '42',
+                'id': server_uuid,
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -617,7 +619,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '129',
             'name': 'pending_delete snapshot',
             'metadata': {
-                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'instance_ref': server_href,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -627,7 +629,7 @@ class ImagesControllerTest(test.TestCase):
             'minDisk': 0,
             'minRam': 0,
             'server': {
-                'id': '42',
+                'id': server_uuid,
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -685,8 +687,9 @@ class ImagesControllerTest(test.TestCase):
         response_list = response["images"]
         response_links = response["images_links"]
 
-        server_href = "http://localhost/v1.1/servers/42"
-        server_bookmark = "http://localhost/servers/42"
+        server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
+        server_href = "http://localhost/v1.1/servers/" + server_uuid
+        server_bookmark = "http://localhost/servers/" + server_uuid
         alternate = "%s/fake/images/%s"
 
         expected = [{
@@ -717,7 +720,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '124',
             'name': 'queued snapshot',
             'metadata': {
-                u'instance_ref': u'http://localhost/v1.1/servers/42',
+                u'instance_ref': server_href,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -727,7 +730,7 @@ class ImagesControllerTest(test.TestCase):
             'progress': 25,
             'minRam': 0,
             'server': {
-                'id': '42',
+                'id': server_uuid,
                 "links": [{
                     "rel": "self",
                     "href": server_href,
@@ -817,10 +820,10 @@ class ImagesControllerTest(test.TestCase):
 
     def test_image_filter_server(self):
         image_service = self.mox.CreateMockAnything()
-        # 'server' should be converted to 'property-instance_ref'
-        filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?server='
-                                         'http://localhost:8774/servers/12')
+        uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
+        ref = 'http://localhost:8774/servers/' + uuid
+        filters = {'property-instance_ref': ref}
+        request = fakes.HTTPRequest.blank('/v1.1/images?server=' + ref)
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -912,10 +915,11 @@ class ImagesControllerTest(test.TestCase):
 
     def test_image_detail_filter_server(self):
         image_service = self.mox.CreateMockAnything()
-        # 'server' should be converted to 'property-instance_ref'
-        filters = {'property-instance_ref': 'http://localhost:8774/servers/12'}
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail?server='
-                                          'http://localhost:8774/servers/12')
+        uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
+        ref = 'http://localhost:8774/servers/' + uuid
+        url = '/v1.1/fake/images/detail?server=' + ref
+        filters = {'property-instance_ref': ref}
+        request = fakes.HTTPRequest.blank(url)
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -991,8 +995,9 @@ class ImagesControllerTest(test.TestCase):
 class ImageXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
-    SERVER_HREF = 'http://localhost/v1.1/servers/123'
-    SERVER_BOOKMARK = 'http://localhost/servers/123'
+    SERVER_UUID = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'
+    SERVER_HREF = 'http://localhost/v1.1/servers/' + SERVER_UUID
+    SERVER_BOOKMARK = 'http://localhost/servers/' + SERVER_UUID
     IMAGE_HREF = 'http://localhost/v1.1/fake/images/%s'
     IMAGE_NEXT = 'http://localhost/v1.1/fake/images?limit=%s&marker=%s'
     IMAGE_BOOKMARK = 'http://localhost/fake/images/%s'
@@ -1009,7 +1014,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'status': 'ACTIVE',
                 'progress': 80,
                 'server': {
-                    'id': '1',
+                    'id': self.SERVER_UUID,
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1055,7 +1060,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'minRam': 10,
                 'minDisk': 100,
                 'server': {
-                    'id': '1',
+                    'id': self.SERVER_UUID,
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1124,7 +1129,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 'status': 'ACTIVE',
                 'server': {
-                    'id': '1',
+                    'id': self.SERVER_UUID,
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1186,7 +1191,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'updated': self.TIMESTAMP,
                 'status': 'ACTIVE',
                 'server': {
-                    'id': '1',
+                    'id': self.SERVER_UUID,
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1300,7 +1305,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'progress': 80,
                 'minRam': 256,
                 'server': {
-                    'id': '1',
+                    'id': self.SERVER_UUID,
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1372,7 +1377,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 'progress': 80,
                 'minDisk': 5,
                 'server': {
-                    'id': '1',
+                    'id': self.SERVER_UUID,
                     'links': [
                         {
                             'href': self.SERVER_HREF,
@@ -1574,7 +1579,7 @@ class ImageXMLSerializationTest(test.TestCase):
                     'updated': self.TIMESTAMP,
                     'status': 'ACTIVE',
                     'server': {
-                        'id': '1',
+                        'id': self.SERVER_UUID,
                         'links': [
                             {
                                 'href': self.SERVER_HREF,

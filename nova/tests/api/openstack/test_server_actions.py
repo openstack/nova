@@ -19,10 +19,15 @@ from nova.tests.api.openstack import fakes
 
 
 FLAGS = flags.FLAGS
+FAKE_UUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
 
 def return_server_by_id(context, id):
     return stub_instance(id)
+
+
+def return_server_by_uuid(context, uuid):
+    return stub_instance(1, uuid=uuid)
 
 
 def instance_update(context, instance_id, kwargs):
@@ -47,11 +52,14 @@ def return_server_with_uuid_and_state(vm_state, task_state=None):
 
 
 def stub_instance(id, metadata=None, image_ref="10", flavor_id="1",
-                  name=None, vm_state=None, task_state=None):
+                  name=None, vm_state=None, task_state=None, uuid=None):
     if metadata is not None:
         metadata_items = [{'key':k, 'value':v} for k, v in metadata.items()]
     else:
         metadata_items = [{'key':'seq', 'value':id}]
+
+    if uuid is None:
+        uuid = FAKE_UUID
 
     inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
 
@@ -89,7 +97,7 @@ def stub_instance(id, metadata=None, image_ref="10", flavor_id="1",
         "metadata": metadata_items,
         "access_ip_v4": "",
         "access_ip_v6": "",
-        "uuid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "uuid": uuid,
         "virtual_interfaces": [],
         "progress": 0,
     }
@@ -121,11 +129,13 @@ class ServerActionsTest(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server_by_uuid)
         self.stubs.Set(nova.db.api, 'instance_update', instance_update)
 
         fakes.stub_out_glance(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
-        fakes.stub_out_compute_api_snapshot(self.stubs)
+        self.snapshot = fakes.stub_out_compute_api_snapshot(self.stubs)
+        self.backup = fakes.stub_out_compute_api_backup(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
         self.context = context.RequestContext(1, None)
@@ -133,6 +143,8 @@ class ServerActionsTest(test.TestCase):
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
         self.flags(allow_instance_snapshots=True)
+        self.uuid = FAKE_UUID
+        self.url = '/v1.1/fake/servers/%s/action' % self.uuid
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -140,7 +152,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_bad_body(self):
         body = {}
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -149,7 +161,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_unknown_action(self):
         body = {'sockTheFox': {'fakekey': '1234'}}
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -160,19 +172,19 @@ class ServerActionsTest(test.TestCase):
         mock_method = MockSetAdminPassword()
         self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
         body = {'changePassword': {'adminPass': '1234pass'}}
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
-        self.assertEqual(mock_method.instance_id, '1')
+        self.assertEqual(mock_method.instance_id, self.uuid)
         self.assertEqual(mock_method.password, '1234pass')
 
     def test_server_change_password_xml(self):
         mock_method = MockSetAdminPassword()
         self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = "application/xml"
         req.body = """<?xml version="1.0" encoding="UTF-8"?>
@@ -181,12 +193,12 @@ class ServerActionsTest(test.TestCase):
                         adminPass="1234pass"/>"""
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
-        self.assertEqual(mock_method.instance_id, '1')
+        self.assertEqual(mock_method.instance_id, self.uuid)
         self.assertEqual(mock_method.password, '1234pass')
 
     def test_server_change_password_not_a_string(self):
         body = {'changePassword': {'adminPass': 1234}}
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -195,7 +207,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_change_password_bad_request(self):
         body = {'changePassword': {'pass': '12345'}}
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -204,7 +216,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_change_password_empty_string(self):
         body = {'changePassword': {'adminPass': ''}}
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -213,7 +225,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_change_password_none(self):
         body = {'changePassword': {'adminPass': None}}
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -222,7 +234,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_reboot_hard(self):
         body = dict(reboot=dict(type="HARD"))
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -231,7 +243,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_reboot_soft(self):
         body = dict(reboot=dict(type="SOFT"))
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -240,7 +252,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_reboot_incorrect_type(self):
         body = dict(reboot=dict(type="NOT_A_TYPE"))
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -249,7 +261,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_server_reboot_missing_type(self):
         body = dict(reboot=dict())
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -266,7 +278,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -285,13 +297,12 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        state = vm_states.BUILDING
-        new_return_server = return_server_with_state(state)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_with_uuid_and_state(state))
+        def fake_rebuild(*args, **kwargs):
+            raise exception.RebuildRequiresActiveInstance
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        self.stubs.Set(nova.compute.api.API, 'rebuild', fake_rebuild)
+
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -312,7 +323,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -330,7 +341,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -345,7 +356,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -364,7 +375,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -383,7 +394,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -404,7 +415,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -426,7 +437,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -436,7 +447,7 @@ class ServerActionsTest(test.TestCase):
 
     def test_resize_server(self):
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.content_type = 'application/json'
         req.method = 'POST'
         body_dict = dict(resize=dict(flavorRef="http://localhost/3"))
@@ -454,7 +465,7 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(self.resize_called, True)
 
     def test_resize_server_no_flavor(self):
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.content_type = 'application/json'
         req.method = 'POST'
         body_dict = dict(resize=dict())
@@ -464,7 +475,7 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_resize_server_no_flavor_ref(self):
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.content_type = 'application/json'
         req.method = 'POST'
         body_dict = dict(resize=dict(flavorRef=None))
@@ -474,7 +485,7 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_confirm_resize_server(self):
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.content_type = 'application/json'
         req.method = 'POST'
         body_dict = dict(confirmResize=None)
@@ -492,7 +503,7 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(self.confirm_resize_called, True)
 
     def test_confirm_resize_migration_not_found(self):
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.content_type = 'application/json'
         req.method = 'POST'
         body_dict = dict(confirmResize=None)
@@ -510,7 +521,7 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_revert_resize_migration_not_found(self):
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.content_type = 'application/json'
         req.method = 'POST'
         body_dict = dict(revertResize=None)
@@ -528,7 +539,7 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_revert_resize_server(self):
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.content_type = 'application/json'
         req.method = 'POST'
         body_dict = dict(revertResize=None)
@@ -551,7 +562,7 @@ class ServerActionsTest(test.TestCase):
                 'name': 'Snapshot 1',
             },
         }
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -559,6 +570,9 @@ class ServerActionsTest(test.TestCase):
         self.assertEqual(202, response.status_int)
         location = response.headers['Location']
         self.assertEqual('http://localhost/v1.1/fake/images/123', location)
+        server_location = self.snapshot.extra_props_last_call['instance_ref']
+        expected_server_location = 'http://localhost/v1.1/servers/' + self.uuid
+        self.assertEqual(expected_server_location, server_location)
 
     def test_create_image_snapshots_disabled(self):
         """Don't permit a snapshot if the allow_instance_snapshots flag is
@@ -570,7 +584,7 @@ class ServerActionsTest(test.TestCase):
                 'name': 'Snapshot 1',
             },
         }
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -584,7 +598,7 @@ class ServerActionsTest(test.TestCase):
                 'metadata': {'key': 'asdf'},
             },
         }
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -602,7 +616,7 @@ class ServerActionsTest(test.TestCase):
         }
         for num in range(FLAGS.quota_metadata_items + 1):
             body['createImage']['metadata']['foo%i' % num] = "bar"
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -613,7 +627,7 @@ class ServerActionsTest(test.TestCase):
         body = {
             'createImage': {},
         }
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -627,7 +641,7 @@ class ServerActionsTest(test.TestCase):
                 'metadata': 'henry',
             },
         }
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -640,7 +654,7 @@ class ServerActionsTest(test.TestCase):
             raise exception.InstanceSnapshotting
         self.stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
-        req = webob.Request.blank('/v1.1/fakes/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps({
             "createImage": {
@@ -663,13 +677,16 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(202, response.status_int)
         self.assertTrue(response.headers['Location'])
+        server_location = self.backup.extra_props_last_call['instance_ref']
+        expected_server_location = 'http://localhost/v1.1/servers/' + self.uuid
+        self.assertEqual(expected_server_location, server_location)
 
     def test_create_backup_admin_api_off(self):
         """The happy path for creating backups"""
@@ -683,7 +700,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -702,7 +719,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -723,7 +740,7 @@ class ServerActionsTest(test.TestCase):
         }
         for num in range(FLAGS.quota_metadata_items + 1):
             body['createBackup']['metadata']['foo%i' % num] = "bar"
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -741,7 +758,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -759,7 +776,7 @@ class ServerActionsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -777,7 +794,7 @@ class ServerActionsTest(test.TestCase):
                 'rotation': 1,
             },
         }
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -789,7 +806,7 @@ class ServerActionsTest(test.TestCase):
         self.flags(allow_admin_api=True)
 
         body = {'createBackup': 'go'}
-        req = webob.Request.blank('/v1.1/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
