@@ -97,8 +97,8 @@ class VMOps(object):
         # TODO(justinsb): Should we just always use the details method?
         #  Seems to be the same number of API calls..
         vm_refs = []
-        for vm_ref in self._session.get_xenapi().VM.get_all():
-            vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+        for vm_ref in self._session.call_xenapi("VM.get_all"):
+            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
             if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
                 vm_refs.append(vm_rec["name_label"])
         return vm_refs
@@ -106,8 +106,8 @@ class VMOps(object):
     def list_instances_detail(self):
         """List VM instances, returning InstanceInfo objects."""
         instance_infos = []
-        for vm_ref in self._session.get_xenapi().VM.get_all():
-            vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+        for vm_ref in self._session.call_xenapi("VM.get_all"):
+            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
             if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
                 name = vm_rec["name_label"]
 
@@ -519,7 +519,7 @@ class VMOps(object):
             obj = None
             try:
                 # check for opaque ref
-                obj = self._session.get_xenapi().VM.get_uuid(instance_or_vm)
+                obj = self._session.call_xenapi("VM.get_uuid", instance_or_vm)
                 return instance_or_vm
             except self.XenAPI.Failure:
                 # wasn't an opaque ref, can be an instance name
@@ -788,7 +788,7 @@ class VMOps(object):
             return resp['message'].replace('\\r\\n', '')
 
         vm_ref = self._get_vm_opaque_ref(instance)
-        vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
 
         domid = vm_rec['domid']
 
@@ -798,7 +798,7 @@ class VMOps(object):
             if ret:
                 return ret
 
-            vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
             if vm_rec['domid'] != domid:
                 LOG.info(_('domid changed from %(olddomid)s to '
                            '%(newdomid)s') % {
@@ -913,8 +913,8 @@ class VMOps(object):
 
         We use the second VBD here because swap is first with the root file
         system coming in second."""
-        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[1]
-        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
+        vbd_ref = self._session.call_xenapi("VM.get_VBDs", vm_ref)[1]
+        vdi_ref = self._session.call_xenapi("VBD.get_record", vbd_ref)["VDI"]
 
         return VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref, 1,
                 False)
@@ -951,9 +951,9 @@ class VMOps(object):
 
     def _destroy_rescue_vbds(self, rescue_vm_ref):
         """Destroys all VBDs tied to a rescue VM."""
-        vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
+        vbd_refs = self._session.call_xenapi("VM.get_VBDs", rescue_vm_ref)
         for vbd_ref in vbd_refs:
-            vbd_rec = self._session.get_xenapi().VBD.get_record(vbd_ref)
+            vbd_rec = self._session.call_xenapi("VBD.get_record", vbd_ref)
             if vbd_rec.get("userdevice", None) == "1":  # VBD is always 1
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
@@ -1147,14 +1147,14 @@ class VMOps(object):
 
     def _cancel_stale_tasks(self, timeout, task):
         """Cancel the given tasks that are older than the given timeout."""
-        task_refs = self._session.get_xenapi().task.get_by_name_label(task)
+        task_refs = self._session.call_xenapi("task.get_by_name_label", task)
         for task_ref in task_refs:
-            task_rec = self._session.get_xenapi().task.get_record(task_ref)
+            task_rec = self._session.call_xenapi("task.get_record", task_ref)
             task_created = utils.parse_strtime(task_rec["created"].value,
                     "%Y%m%dT%H:%M:%SZ")
 
             if utils.is_older_than(task_created, timeout):
-                self._session.get_xenapi().task.cancel(task_ref)
+                self._session.call_xenapi("task.cancel", task_ref)
 
     def poll_rebooting_instances(self, timeout):
         """Look for expirable rebooting instances.
@@ -1243,13 +1243,13 @@ class VMOps(object):
     def get_info(self, instance):
         """Return data about VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
         return VMHelper.compile_info(vm_rec)
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
         return VMHelper.compile_diagnostics(self._session, vm_rec)
 
     def get_all_bw_usage(self, start_time, stop_time=None):
@@ -1264,10 +1264,10 @@ class VMOps(object):
                           exc_info=sys.exc_info())
         bw = {}
         for uuid, data in metrics.iteritems():
-            vm_ref = self._session.get_xenapi().VM.get_by_uuid(uuid)
-            vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+            vm_ref = self._session.call_xenapi("VM.get_by_uuid", uuid)
+            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
             vif_map = {}
-            for vif in [self._session.get_xenapi().VIF.get_record(vrec)
+            for vif in [self._session.call_xenapi("VIF.get_record", vrec)
                         for vrec in vm_rec['VIFs']]:
                 vif_map[vif['device']] = vif['MAC']
             name = vm_rec['name_label']
@@ -1340,7 +1340,7 @@ class VMOps(object):
         """
         if vm_ref:
             # this function raises if vm_ref is not a vm_opaque_ref
-            self._session.get_xenapi().VM.get_record(vm_ref)
+            self._session.call_xenapi("VM.get_record", vm_ref)
         else:
             vm_ref = VMHelper.lookup(self._session, instance.name)
         logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
@@ -1364,7 +1364,7 @@ class VMOps(object):
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
 
         # this function raises if vm_ref is not a vm_opaque_ref
-        self._session.get_xenapi().VM.get_record(vm_ref)
+        self._session.call_xenapi("VM.get_record", vm_ref)
 
         for device, (network, info) in enumerate(network_info):
             vif_rec = self.vif_driver.plug(self._session,
@@ -1473,7 +1473,7 @@ class VMOps(object):
         """
         instance_id = vm.id
         vm_ref = vm_ref or self._get_vm_opaque_ref(vm)
-        vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
         args = {'dom_id': vm_rec['domid'], 'path': path}
         args.update(addl_args or {})
         try:

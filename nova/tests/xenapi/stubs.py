@@ -38,7 +38,7 @@ def stubout_instance_snapshot(stubs):
         sr_ref = "fakesr"
         vdi_ref = create_vdi(name_label=name_label, read_only=False,
                              sr_ref=sr_ref, sharable=False)
-        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+        vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         vdi_uuid = vdi_rec['uuid']
         return [dict(vdi_type='os', vdi_uuid=vdi_uuid)]
 
@@ -307,7 +307,7 @@ def stub_out_migration_methods(stubs):
     def fake_get_vdi(cls, session, vm_ref):
         vdi_ref = fake.create_vdi(name_label='derp', read_only=False,
                              sr_ref='herp', sharable=False)
-        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+        vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         return vdi_ref, {'uuid': vdi_rec['uuid'], }
 
     def fake_shutdown(self, inst, vm, hard=True):
