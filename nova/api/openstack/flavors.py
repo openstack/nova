@@ -70,7 +70,7 @@ class Controller(object):
             ctxt = req.environ['nova.context']
             flavor = instance_types.get_instance_type_by_flavor_id(id)
         except exception.NotFound:
-            return webob.exc.HTTPNotFound()
+            raise webob.exc.HTTPNotFound()
 
         builder = self._get_view_builder(req)
         values = builder.build(flavor, is_detail=True)
