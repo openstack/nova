@@ -699,7 +699,11 @@ class API(base.Base):
                 context.project_id,
                 security_group_name)
         # check if the server exists
-        inst = self.db.instance_get(context, instance_id)
+        if utils.is_uuid_like(instance_id):
+            inst = self.db.instance_get_by_uuid(context, instance_id)
+        else:
+            inst = self.db.instance_get(context, instance_id)
+        instance_id = inst['id']
         #check if the security group is associated with the server
         if self._is_security_group_associated_with_server(security_group,
                                                         instance_id):
@@ -725,7 +729,11 @@ class API(base.Base):
                 context.project_id,
                 security_group_name)
         # check if the server exists
-        inst = self.db.instance_get(context, instance_id)
+        if utils.is_uuid_like(instance_id):
+            inst = self.db.instance_get_by_uuid(context, instance_id)
+        else:
+            inst = self.db.instance_get(context, instance_id)
+        instance_id = inst['id']
         #check if the security group is associated with the server
         if not self._is_security_group_associated_with_server(security_group,
                                                         instance_id):
