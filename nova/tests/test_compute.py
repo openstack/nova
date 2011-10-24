@@ -588,9 +588,20 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         self.compute.run_instance(self.context, instance['uuid'])
 
-        console = self.compute.get_console_output(self.context,
+        output = self.compute.get_console_output(self.context,
                                                   instance['uuid'])
-        self.assert_(console)
+        self.assertEqual(output, 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
+        self.compute.terminate_instance(self.context, instance['uuid'])
+
+    def test_console_output_tail(self):
+        """Make sure we can get console output from instance"""
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['uuid'])
+
+        output = self.compute.get_console_output(self.context,
+                                                instance['uuid'],
+                                                tail_length=2)
+        self.assertEqual(output, 'ANOTHER\nLAST LINE')
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_ajax_console(self):

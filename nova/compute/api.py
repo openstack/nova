@@ -1486,11 +1486,12 @@ class API(base.Base):
                        'hostignore',
                        'portignore')}
 
-    def get_console_output(self, context, instance):
+    def get_console_output(self, context, instance, tail_length=None):
         """Get console output for an an instance."""
         return self._call_compute_message('get_console_output',
                                           context,
-                                          instance)
+                                          instance,
+                                          {'tail_length': tail_length})
 
     def lock(self, context, instance):
         """Lock the given instance."""
