@@ -695,7 +695,7 @@ class ComputeTestCase(test.TestCase):
         inst_ref = db.instance_get(context, instance_id)
         instance_type_ref = db.instance_type_get(context,
                 inst_ref['instance_type_id'])
-        self.assertEqual(instance_type_ref['flavorid'], 1)
+        self.assertEqual(instance_type_ref['flavorid'], '1')
 
         db.instance_update(self.context, instance_id, {'host': 'foo'})
 
@@ -715,7 +715,7 @@ class ComputeTestCase(test.TestCase):
         inst_ref = db.instance_get(context, instance_id)
         instance_type_ref = db.instance_type_get(context,
                 inst_ref['instance_type_id'])
-        self.assertEqual(instance_type_ref['flavorid'], 3)
+        self.assertEqual(instance_type_ref['flavorid'], '3')
 
         # Finally, revert and confirm the old flavor has been applied
         self.compute.revert_resize(context, inst_ref['uuid'],
@@ -726,7 +726,7 @@ class ComputeTestCase(test.TestCase):
         inst_ref = db.instance_get(context, instance_id)
         instance_type_ref = db.instance_type_get(context,
                 inst_ref['instance_type_id'])
-        self.assertEqual(instance_type_ref['flavorid'], 1)
+        self.assertEqual(instance_type_ref['flavorid'], '1')
 
         self.compute.terminate_instance(context, instance_id)
 

@@ -633,8 +633,7 @@ w
         # FIXME(jk0): this was copied directly from compute.manager.py, let's
         # refactor this to a common area
         instance_type_id = instance['instance_type_id']
-        instance_type = db.instance_type_get(context,
-                instance_type_id)
+        instance_type = instance_types.get_instance_type(instance_type_id)
         allowed_size_gb = instance_type['local_gb']
         allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 

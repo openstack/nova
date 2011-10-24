@@ -33,66 +33,72 @@ LOG = logging.getLogger('nova.instance_types')
 def create(name, memory, vcpus, local_gb, flavorid, swap=0,
            rxtx_quota=0, rxtx_cap=0):
     """Creates instance types."""
-    for option in [memory, vcpus, local_gb, flavorid]:
+    kwargs = {
+        'memory_mb': memory,
+        'vcpus': vcpus,
+        'local_gb': local_gb,
+        'swap': swap,
+        'rxtx_quota': rxtx_quota,
+        'rxtx_cap': rxtx_cap,
+    }
+
+    # ensure some attributes are integers and greater than or equal to 0
+    for option in kwargs:
         try:
-            int(option)
-        except ValueError:
-            raise exception.InvalidInput(reason=_("create arguments must "
-                                                  "be positive integers"))
-    if (int(memory) <= 0) or (int(vcpus) <= 0) or (int(local_gb) < 0):
-        raise exception.InvalidInput(reason=_("create arguments must "
-                                              "be positive integers"))
+            kwargs[option] = int(kwargs[option])
+            assert kwargs[option] >= 0
+        except (ValueError, AssertionError):
+            msg = _("create arguments must be positive integers")
+            raise exception.InvalidInput(reason=msg)
+
+    # some value are required to be nonzero, not just positive
+    for option in ['memory_mb', 'vcpus']:
+        try:
+            assert kwargs[option] > 0
+        except AssertionError:
+            msg = _("create arguments must be positive integers")
+            raise exception.InvalidInput(reason=msg)
+
+    kwargs['name'] = name
+    kwargs['flavorid'] = flavorid
 
     try:
-        db.instance_type_create(
-                context.get_admin_context(),
-                dict(name=name,
-                    memory_mb=memory,
-                    vcpus=vcpus,
-                    local_gb=local_gb,
-                    flavorid=flavorid,
-                    swap=swap,
-                    rxtx_quota=rxtx_quota,
-                    rxtx_cap=rxtx_cap))
+        return db.instance_type_create(context.get_admin_context(), kwargs)
     except exception.DBError, e:
         LOG.exception(_('DB error: %s') % e)
-        raise exception.ApiError(_("Cannot create instance_type with "
-                                    "name %(name)s and flavorid %(flavorid)s")
-                                    % locals())
+        msg = _("Cannot create instance_type with name %(name)s and "
+                "flavorid %(flavorid)s") % locals()
+        raise exception.ApiError(msg)
 
 
 def destroy(name):
     """Marks instance types as deleted."""
-    if name is None:
-        raise exception.InvalidInstanceType(instance_type=name)
-    else:
-        try:
-            db.instance_type_destroy(context.get_admin_context(), name)
-        except exception.NotFound:
-            LOG.exception(_('Instance type %s not found for deletion') % name)
-            raise exception.ApiError(_("Unknown instance type: %s") % name)
+    try:
+        assert name is not None
+        db.instance_type_destroy(context.get_admin_context(), name)
+    except (AssertionError, exception.NotFound):
+        LOG.exception(_('Instance type %s not found for deletion') % name)
+        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
 
 
 def purge(name):
     """Removes instance types from database."""
-    if name is None:
-        raise exception.InvalidInstanceType(instance_type=name)
-    else:
-        try:
-            db.instance_type_purge(context.get_admin_context(), name)
-        except exception.NotFound:
-            LOG.exception(_('Instance type %s not found for purge') % name)
-            raise exception.ApiError(_("Unknown instance type: %s") % name)
+    try:
+        assert name is not None
+        db.instance_type_purge(context.get_admin_context(), name)
+    except (AssertionError, exception.NotFound):
+        LOG.exception(_('Instance type %s not found for purge') % name)
+        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
 
 
-def get_all_types(inactive=0):
+def get_all_types(inactive=0, filters=None):
     """Get all non-deleted instance_types.
 
     Pass true as argument if you want deleted instance types returned also.
 
     """
     ctxt = context.get_admin_context()
-    inst_types = db.instance_type_get_all(ctxt, inactive)
+    inst_types = db.instance_type_get_all(ctxt, inactive, filters)
     inst_type_dict = {}
     for inst_type in inst_types:
         inst_type_dict[inst_type['name']] = inst_type
@@ -110,23 +116,27 @@ def get_default_instance_type():
         raise exception.ApiError(_("Unknown instance type: %s") % name)
 
 
-def get_instance_type(id):
+def get_instance_type(instance_type_id):
     """Retrieves single instance type by id."""
-    if id is None:
+    if instance_type_id is None:
         return get_default_instance_type()
+
+    ctxt = context.get_admin_context()
     try:
-        ctxt = context.get_admin_context()
-        return db.instance_type_get(ctxt, id)
+        return db.instance_type_get(ctxt, instance_type_id)
     except exception.DBError:
-        raise exception.ApiError(_("Unknown instance type: %s") % id)
+        msg = _("Unknown instance type: %s") % instance_type_id
+        raise exception.ApiError(msg)
 
 
 def get_instance_type_by_name(name):
     """Retrieves single instance type by name."""
     if name is None:
         return get_default_instance_type()
+
+    ctxt = context.get_admin_context()
+
     try:
-        ctxt = context.get_admin_context()
         return db.instance_type_get_by_name(ctxt, name)
     except exception.DBError:
         raise exception.ApiError(_("Unknown instance type: %s") % name)
@@ -134,10 +144,10 @@ def get_instance_type_by_name(name):
 
 # TODO(termie): flavor-specific code should probably be in the API that uses
 #               flavors.
-def get_instance_type_by_flavor_id(flavor_id):
-    """Retrieve instance type by flavor_id."""
+def get_instance_type_by_flavor_id(flavorid):
+    """Retrieve instance type by flavorid."""
     ctxt = context.get_admin_context()
     try:
-        return db.instance_type_get_by_flavor_id(ctxt, flavor_id)
-    except ValueError:
-        raise exception.FlavorNotFound(flavor_id=flavor_id)
+        return db.instance_type_get_by_flavor_id(ctxt, flavorid)
+    except exception.DBError:
+        raise exception.ApiError(_("Unknown instance type: %s") % flavorid)

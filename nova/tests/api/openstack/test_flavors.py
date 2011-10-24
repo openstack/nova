@@ -16,14 +16,15 @@
 #    under the License.
 
 import json
-import webob
+
 from lxml import etree
+import webob
 
 from nova.api.openstack import flavors
-import nova.db.api
+from nova.api.openstack import xmlutil
+import nova.compute.instance_types
 from nova import exception
 from nova import test
-from nova.api.openstack import xmlutil
 from nova.tests.api.openstack import fakes
 from nova import wsgi
 
@@ -48,30 +49,33 @@ FAKE_FLAVORS = {
 }
 
 
-def fake_instance_type_get_by_flavor_id(context, flavorid):
+def fake_instance_type_get_by_flavor_id(flavorid):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 
 
-def fake_instance_type_get_all(context, inactive=False, filters=None):
+def fake_instance_type_get_all(inactive=False, filters=None):
     def reject_min(db_attr, filter_attr):
         return filter_attr in filters and\
                int(flavor[db_attr]) < int(filters[filter_attr])
 
     filters = filters or {}
-    for flavor in FAKE_FLAVORS.values():
+    output = {}
+    for (flavor_name, flavor) in FAKE_FLAVORS.items():
         if reject_min('memory_mb', 'min_memory_mb'):
             continue
         elif reject_min('local_gb', 'min_local_gb'):
             continue
 
-        yield flavor
+        output[flavor_name] = flavor
+
+    return output
 
 
-def empty_instance_type_get_all(context, inactive=False, filters=None):
+def empty_instance_type_get_all(inactive=False, filters=None):
     return {}
 
 
-def return_instance_type_not_found(context, flavor_id):
+def return_instance_type_not_found(flavor_id):
     raise exception.InstanceTypeNotFound(flavor_id=flavor_id)
 
 
@@ -80,9 +84,10 @@ class FlavorsTest(test.TestCase):
         super(FlavorsTest, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(nova.db.api, "instance_type_get_all",
+        self.stubs.Set(nova.compute.instance_types, "get_all_types",
                        fake_instance_type_get_all)
-        self.stubs.Set(nova.db.api, "instance_type_get_by_flavor_id",
+        self.stubs.Set(nova.compute.instance_types,
+                       "get_instance_type_by_flavor_id",
                        fake_instance_type_get_by_flavor_id)
 
     def tearDown(self):
@@ -90,7 +95,8 @@ class FlavorsTest(test.TestCase):
         super(FlavorsTest, self).tearDown()
 
     def test_get_flavor_by_invalid_id(self):
-        self.stubs.Set(nova.db.api, "instance_type_get_by_flavor_id",
+        self.stubs.Set(nova.compute.instance_types,
+                       "get_instance_type_by_flavor_id",
                        return_instance_type_not_found)
         req = webob.Request.blank('/v1.1/fake/flavors/asdf')
         res = req.get_response(fakes.wsgi_app())
@@ -216,7 +222,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_empty_flavor_list(self):
-        self.stubs.Set(nova.db.api, "instance_type_get_all",
+        self.stubs.Set(nova.compute.instance_types, "get_all_types",
                        empty_instance_type_get_all)
 
         req = webob.Request.blank('/v1.1/fake/flavors')
