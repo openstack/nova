@@ -39,6 +39,9 @@ def return_create_instance_metadata(context, server_id, metadata, delete):
 
 
 def return_server_metadata(context, server_id):
+    if not isinstance(server_id, int):
+        msg = 'id %s must be int in return server metadata' % server_id
+        raise Exception(msg)
     return stub_server_metadata()
 
 
@@ -70,6 +73,10 @@ def return_server(context, server_id):
     return {'id': server_id}
 
 
+def return_server_by_uuid(context, server_uuid):
+    return {'id': 1}
+
+
 def return_server_nonexistant(context, server_id):
     raise exception.InstanceNotFound()
 
@@ -80,13 +87,14 @@ class ServerMetaDataTest(test.TestCase):
         super(ServerMetaDataTest, self).setUp()
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get', return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_by_uuid',
+                       return_server_by_uuid)
 
         self.stubs.Set(nova.db.api, 'instance_metadata_get',
                        return_server_metadata)
 
         self.controller = server_metadata.Controller()
-        self.uuid = utils.gen_uuid()
+        self.uuid = str(utils.gen_uuid())
         self.url = '/v1.1/fake/servers/%s/metadata' % self.uuid
 
     def test_index(self):

@@ -1528,13 +1528,21 @@ class API(base.Base):
                                                floating_address=address,
                                                fixed_address=fixed_ip_addrs[0])
 
+    def _get_native_instance_id(self, context, instance_id):
+        """If an instance id is a UUID, convert it to a native ID."""
+        if utils.is_uuid_like(instance_id):
+            instance_id = self.get(context, instance_id)['id']
+        return instance_id
+
     def get_instance_metadata(self, context, instance_id):
         """Get all metadata associated with an instance."""
+        instance_id = self._get_native_instance_id(context, instance_id)
         rv = self.db.instance_metadata_get(context, instance_id)
         return dict(rv.iteritems())
 
     def delete_instance_metadata(self, context, instance_id, key):
         """Delete the given metadata item from an instance."""
+        instance_id = self._get_native_instance_id(context, instance_id)
         self.db.instance_metadata_delete(context, instance_id, key)
 
     def update_instance_metadata(self, context, instance_id,
@@ -1545,6 +1553,8 @@ class API(base.Base):
         `metadata` argument will be deleted.
 
         """
+        instance_id = self._get_native_instance_id(context, instance_id)
+
         if delete:
             _metadata = metadata
         else:
