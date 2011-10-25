@@ -304,7 +304,7 @@ class VSAVolumeApiTest(test.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
-        self.stubs.Set(nova.db.api, 'vsa_get', return_vsa)
+        self.stubs.Set(nova.db, 'vsa_get', return_vsa)
         self.stubs.Set(vsa.api.API, "get_vsa_volume_type",
                         stub_get_vsa_volume_type)
 

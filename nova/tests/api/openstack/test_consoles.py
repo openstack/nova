@@ -107,7 +107,7 @@ class ConsolesTest(test.TestCase):
     def setUp(self):
         super(ConsolesTest, self).setUp()
         self.flags(verbose=True)
-        self.stubs.Set(db.api, 'instance_get', return_server_by_id)
+        self.stubs.Set(db, 'instance_get', return_server_by_id)
         self.webreq = common.webob_factory('/v1.1/fake/servers')
 
     def test_create_console(self):

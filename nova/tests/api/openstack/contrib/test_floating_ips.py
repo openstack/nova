@@ -120,7 +120,7 @@ class FloatingIpTest(test.TestCase):
                        network_api_disassociate)
         self.stubs.Set(network.api.API, "get_instance_nw_info",
                        network_get_instance_nw_info)
-        self.stubs.Set(db.api, 'instance_get',
+        self.stubs.Set(db, 'instance_get',
                        fake_instance_get)
 
         self.context = context.get_admin_context()

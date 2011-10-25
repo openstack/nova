@@ -61,7 +61,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
 
     def test_index(self):
-        self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
                        return_flavor_extra_specs)
         request = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs')
         res = request.get_response(fakes.wsgi_app())
@@ -71,7 +71,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
     def test_index_no_data(self):
-        self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
                        return_empty_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs')
         res = req.get_response(fakes.wsgi_app())
@@ -81,7 +81,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(0, len(res_dict['extra_specs']))
 
     def test_show(self):
-        self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
                        return_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs/key5')
         res = req.get_response(fakes.wsgi_app())
@@ -91,7 +91,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual('value5', res_dict['key5'])
 
     def test_show_spec_not_found(self):
-        self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
                        return_empty_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs/key6')
         res = req.get_response(fakes.wsgi_app())
@@ -99,7 +99,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(404, res.status_int)
 
     def test_delete(self):
-        self.stubs.Set(nova.db.api, 'instance_type_extra_specs_delete',
+        self.stubs.Set(nova.db, 'instance_type_extra_specs_delete',
                        delete_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs/key5')
         req.method = 'DELETE'
@@ -107,7 +107,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(200, res.status_int)
 
     def test_create(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs')
@@ -121,7 +121,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
     def test_create_empty_body(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs')
@@ -131,7 +131,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_item(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs/key1')
@@ -145,7 +145,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual('value1', res_dict['key1'])
 
     def test_update_item_empty_body(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs/key1')
@@ -155,7 +155,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_item_too_many_keys(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs/key1')
@@ -166,7 +166,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_item_body_uri_mismatch(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'instance_type_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/123/flavors/1/os-extra_specs/bad')

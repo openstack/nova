@@ -1645,7 +1645,7 @@ class CloudTestCase(test.TestCase):
                         'attach_time': '13:56:24',
                         'status': 'in-use'}
             raise exception.VolumeNotFound(volume_id=volume_id)
-        self.stubs.Set(db.api, 'volume_get', fake_volume_get)
+        self.stubs.Set(db, 'volume_get', fake_volume_get)
 
         get_attribute = functools.partial(
             self.cloud.describe_instance_attribute,

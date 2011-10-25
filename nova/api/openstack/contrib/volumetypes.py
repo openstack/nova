@@ -95,7 +95,7 @@ class VolumeTypeExtraSpecsController(object):
     """ The volume type extra specs API controller for the Openstack API """
 
     def _get_extra_specs(self, context, vol_type_id):
-        extra_specs = db.api.volume_type_extra_specs_get(context, vol_type_id)
+        extra_specs = db.volume_type_extra_specs_get(context, vol_type_id)
         specs_dict = {}
         for key, value in extra_specs.iteritems():
             specs_dict[key] = value
@@ -116,7 +116,7 @@ class VolumeTypeExtraSpecsController(object):
         context = req.environ['nova.context']
         specs = body.get('extra_specs')
         try:
-            db.api.volume_type_extra_specs_update_or_create(context,
+            db.volume_type_extra_specs_update_or_create(context,
                                                             vol_type_id,
                                                             specs)
         except quota.QuotaError as error:
@@ -133,7 +133,7 @@ class VolumeTypeExtraSpecsController(object):
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
         try:
-            db.api.volume_type_extra_specs_update_or_create(context,
+            db.volume_type_extra_specs_update_or_create(context,
                                                             vol_type_id,
                                                             body)
         except quota.QuotaError as error:
@@ -153,7 +153,7 @@ class VolumeTypeExtraSpecsController(object):
     def delete(self, req, vol_type_id, id):
         """ Deletes an existing extra spec """
         context = req.environ['nova.context']
-        db.api.volume_type_extra_specs_delete(context, vol_type_id, id)
+        db.volume_type_extra_specs_delete(context, vol_type_id, id)
 
     def _handle_quota_error(self, error):
         """Reraise quota errors as api-specific http exceptions."""

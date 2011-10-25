@@ -201,7 +201,7 @@ class QuantumTestCaseBase(object):
         project_id = "fake_project1"
         ctx = context.RequestContext('user1', project_id)
 
-        instance_ref = db.api.instance_create(ctx,
+        instance_ref = db.instance_create(ctx,
                                     {"project_id": project_id})
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
@@ -246,7 +246,7 @@ class QuantumTestCaseBase(object):
 
         self.net_man.validate_networks(ctx, requested_networks)
 
-        instance_ref = db.api.instance_create(ctx,
+        instance_ref = db.instance_create(ctx,
                                     {"project_id": project_id})
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",

@@ -129,7 +129,7 @@ def require_instance_exists(f):
     """
 
     def wrapper(context, instance_id, *args, **kwargs):
-        db.api.instance_get(context, instance_id)
+        db.instance_get(context, instance_id)
         return f(context, instance_id, *args, **kwargs)
     wrapper.__name__ = f.__name__
     return wrapper
@@ -143,7 +143,7 @@ def require_volume_exists(f):
     """
 
     def wrapper(context, volume_id, *args, **kwargs):
-        db.api.volume_get(context, volume_id)
+        db.volume_get(context, volume_id)
         return f(context, volume_id, *args, **kwargs)
     wrapper.__name__ = f.__name__
     return wrapper
