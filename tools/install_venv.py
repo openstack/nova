@@ -150,8 +150,9 @@ def pip_install(*args):
 def install_dependencies(venv=VENV):
     print 'Installing dependencies with pip (this can take a while)...'
 
-    # First things first, make sure our venv has the latest pip.
+    # First things first, make sure our venv has the latest pip and distribute.
     pip_install('pip')
+    pip_install('distribute')
 
     # Install greenlet by hand - just listing it in the requires file does not
     # get it in stalled in the right order
