@@ -1057,40 +1057,32 @@ class VMOps(object):
             for (network, mapping) in network_info:
                 self.vif_driver.unplug(instance, network, mapping)
 
-    def _wait_with_callback(self, instance_id, task, callback):
-        ret = None
-        try:
-            ret = self._session.wait_for_task(task, instance_id)
-        except self.XenAPI.Failure, exc:
-            LOG.exception(exc)
-        callback(ret)
-
-    def pause(self, instance, callback):
+    def pause(self, instance):
         """Pause VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.pause', vm_ref)
-        self._wait_with_callback(instance.id, task, callback)
+        self._session.wait_for_task(task, instance.id)
 
-    def unpause(self, instance, callback):
+    def unpause(self, instance):
         """Unpause VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.unpause', vm_ref)
-        self._wait_with_callback(instance.id, task, callback)
+        self._session.wait_for_task(task, instance.id)
 
-    def suspend(self, instance, callback):
+    def suspend(self, instance):
         """Suspend the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.suspend', vm_ref)
-        self._wait_with_callback(instance.id, task, callback)
+        self._session.wait_for_task(task, instance.id)
 
-    def resume(self, instance, callback):
+    def resume(self, instance):
         """Resume the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi('Async.VM.resume', vm_ref, False,
-                                         True)
-        self._wait_with_callback(instance.id, task, callback)
+        task = self._session.call_xenapi('Async.VM.resume',
+                                         vm_ref, False, True)
+        self._session.wait_for_task(task, instance.id)
 
-    def rescue(self, context, instance, _callback, network_info):
+    def rescue(self, context, instance, network_info):
         """Rescue the specified instance.
 
             - shutdown the instance VM.
@@ -1114,7 +1106,7 @@ class VMOps(object):
 
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
-    def unrescue(self, instance, _callback):
+    def unrescue(self, instance):
         """Unrescue the specified instance.
 
             - unplug the instance VM's disk from the rescue VM.

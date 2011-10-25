@@ -550,31 +550,31 @@ class LibvirtConnection(driver.ComputeDriver):
         return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception()
-    def pause(self, instance, callback):
+    def pause(self, instance):
         """Pause VM instance"""
         dom = self._lookup_by_name(instance.name)
         dom.suspend()
 
     @exception.wrap_exception()
-    def unpause(self, instance, callback):
+    def unpause(self, instance):
         """Unpause paused VM instance"""
         dom = self._lookup_by_name(instance.name)
         dom.resume()
 
     @exception.wrap_exception()
-    def suspend(self, instance, callback):
+    def suspend(self, instance):
         """Suspend the specified instance"""
         dom = self._lookup_by_name(instance.name)
         dom.managedSave(0)
 
     @exception.wrap_exception()
-    def resume(self, instance, callback):
+    def resume(self, instance):
         """resume the specified instance"""
         dom = self._lookup_by_name(instance.name)
         dom.create()
 
     @exception.wrap_exception()
-    def rescue(self, context, instance, callback, network_info):
+    def rescue(self, context, instance, network_info):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
@@ -604,7 +604,7 @@ class LibvirtConnection(driver.ComputeDriver):
         self.reboot(instance, network_info, xml=xml)
 
     @exception.wrap_exception()
-    def unrescue(self, instance, callback, network_info):
+    def unrescue(self, instance, network_info):
         """Reboot the VM which is being rescued back into primary images.
 
         Because reboot destroys and re-creates instances, unresue should

@@ -125,10 +125,10 @@ class FakeConnection(driver.ComputeDriver):
     def agent_update(self, instance, url, md5hash):
         pass
 
-    def rescue(self, context, instance, callback, network_info):
+    def rescue(self, context, instance, network_info):
         pass
 
-    def unrescue(self, instance, callback, network_info):
+    def unrescue(self, instance, network_info):
         pass
 
     def poll_rebooting_instances(self, timeout):
@@ -143,16 +143,16 @@ class FakeConnection(driver.ComputeDriver):
     def poll_unconfirmed_resizes(self, resize_confirm_window):
         pass
 
-    def pause(self, instance, callback):
+    def pause(self, instance):
         pass
 
-    def unpause(self, instance, callback):
+    def unpause(self, instance):
         pass
 
-    def suspend(self, instance, callback):
+    def suspend(self, instance):
         pass
 
-    def resume(self, instance, callback):
+    def resume(self, instance):
         pass
 
     def destroy(self, instance, network_info, block_device_info=None,

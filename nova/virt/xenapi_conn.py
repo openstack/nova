@@ -236,34 +236,34 @@ class XenAPIConnection(driver.ComputeDriver):
         """Destroy VM instance"""
         self._vmops.destroy(instance, network_info)
 
-    def pause(self, instance, callback):
+    def pause(self, instance):
         """Pause VM instance"""
-        self._vmops.pause(instance, callback)
+        self._vmops.pause(instance)
 
-    def unpause(self, instance, callback):
+    def unpause(self, instance):
         """Unpause paused VM instance"""
-        self._vmops.unpause(instance, callback)
+        self._vmops.unpause(instance)
 
     def migrate_disk_and_power_off(self, context, instance, dest):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
         return self._vmops.migrate_disk_and_power_off(context, instance, dest)
 
-    def suspend(self, instance, callback):
+    def suspend(self, instance):
         """suspend the specified instance"""
-        self._vmops.suspend(instance, callback)
+        self._vmops.suspend(instance)
 
-    def resume(self, instance, callback):
+    def resume(self, instance):
         """resume the specified instance"""
-        self._vmops.resume(instance, callback)
+        self._vmops.resume(instance)
 
-    def rescue(self, context, instance, _callback, network_info):
+    def rescue(self, context, instance, network_info):
         """Rescue the specified instance"""
-        self._vmops.rescue(context, instance, _callback, network_info)
+        self._vmops.rescue(context, instance, network_info)
 
-    def unrescue(self, instance, _callback, network_info):
+    def unrescue(self, instance, network_info):
         """Unrescue the specified instance"""
-        self._vmops.unrescue(instance, _callback)
+        self._vmops.unrescue(instance)
 
     def power_off(self, instance):
         """Power off the specified instance"""
