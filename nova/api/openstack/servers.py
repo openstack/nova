@@ -801,24 +801,6 @@ class Controller(object):
             LOG.debug(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
-    def _decode_personalities(self, personalities):
-        """Decode the Base64-encoded personalities."""
-        for personality in personalities:
-            try:
-                path = personality["path"]
-                contents = personality["contents"]
-            except (KeyError, TypeError):
-                msg = _("Unable to parse personality path/contents.")
-                LOG.info(msg)
-                raise exc.HTTPBadRequest(explanation=msg)
-
-            try:
-                personality["contents"] = base64.b64decode(contents)
-            except TypeError:
-                msg = _("Personality content could not be Base64 decoded.")
-                LOG.info(msg)
-                raise exc.HTTPBadRequest(explanation=msg)
-
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
@@ -842,13 +824,16 @@ class Controller(object):
             LOG.debug(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
-        personalities = info["rebuild"].get("personality", [])
+        personality = info["rebuild"].get("personality", [])
+        injected_files = []
+        if personality:
+            injected_files = self._get_injected_files(personality)
+
         metadata = info["rebuild"].get("metadata")
         name = info["rebuild"].get("name")
 
         if metadata:
             self._validate_metadata(metadata)
-        self._decode_personalities(personalities)
 
         if 'rebuild' in info and 'adminPass' in info['rebuild']:
             password = info['rebuild']['adminPass']
@@ -858,7 +843,7 @@ class Controller(object):
         try:
             self.compute_api.rebuild(context, instance_id, image_href,
                                      password, name=name, metadata=metadata,
-                                     files_to_inject=personalities)
+                                     files_to_inject=injected_files)
         except exception.RebuildRequiresActiveInstance:
             msg = _("Instance %s must be active to rebuild.") % instance_id
             raise exc.HTTPConflict(explanation=msg)
