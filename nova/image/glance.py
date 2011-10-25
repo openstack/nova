@@ -99,8 +99,9 @@ def get_glance_client(context, image_href):
 
     """
     image_href = image_href or 0
+    glance_host, glance_port = pick_glance_api_server()
+
     if str(image_href).isdigit():
-        glance_host, glance_port = pick_glance_api_server()
         glance_client = _create_glance_client(context, glance_host,
                                               glance_port)
         return (glance_client, int(image_href))
