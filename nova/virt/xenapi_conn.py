@@ -57,6 +57,7 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 - suffix "_rec" for record objects
 """
 
+import contextlib
 import json
 import random
 import sys
@@ -65,6 +66,7 @@ import urlparse
 import xmlrpclib
 
 from eventlet import event
+from eventlet import queue
 from eventlet import tpool
 from eventlet import timeout
 
@@ -97,6 +99,10 @@ flags.DEFINE_string('xenapi_connection_password',
                     None,
                     'Password for connection to XenServer/Xen Cloud Platform.'
                     ' Used only if connection_type=xenapi.')
+flags.DEFINE_integer('xenapi_connection_concurrent',
+                     5,
+                     'Maximum number of concurrent XenAPI connections.'
+                     ' Used only if connection_type=xenapi.')
 flags.DEFINE_float('xenapi_task_poll_interval',
                    0.5,
                    'The interval used for polling of remote tasks '
@@ -401,44 +407,56 @@ class XenAPISession(object):
 
     def __init__(self, url, user, pw):
         self.XenAPI = self.get_imported_xenapi()
-        self._session = self._create_session(url)
+        self._sessions = queue.Queue()
         exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
                             "(is the Dom0 disk full?)"))
-        with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
-            self._session.login_with_password(user, pw)
+        for i in xrange(FLAGS.xenapi_connection_concurrent):
+            session = self._create_session(url)
+            with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
+                session.login_with_password(user, pw)
+            self._sessions.put(session)
 
     def get_imported_xenapi(self):
         """Stubout point. This can be replaced with a mock xenapi module."""
         return __import__('XenAPI')
 
-    def get_xenapi(self):
-        """Return the xenapi object"""
-        return self._session.xenapi
+    @contextlib.contextmanager
+    def _get_session(self):
+        """Return exclusive session for scope of with statement"""
+        session = self._sessions.get()
+        try:
+            yield session
+        finally:
+            self._sessions.put(session)
 
     def get_xenapi_host(self):
         """Return the xenapi host"""
-        return self._session.xenapi.session.get_this_host(self._session.handle)
+        with self._get_session() as session:
+            return session.xenapi.session.get_this_host(session.handle)
 
     def call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread."""
-        f = self._session.xenapi
-        for m in method.split('.'):
-            f = f.__getattr__(m)
-        return tpool.execute(f, *args)
+        with self._get_session() as session:
+            f = session.xenapi
+            for m in method.split('.'):
+                f = getattr(f, m)
+            return tpool.execute(f, *args)
 
     def call_xenapi_request(self, method, *args):
         """Some interactions with dom0, such as interacting with xenstore's
         param record, require using the xenapi_request method of the session
         object. This wraps that call on a background thread.
         """
-        f = self._session.xenapi_request
-        return tpool.execute(f, method, *args)
+        with self._get_session() as session:
+            f = session.xenapi_request
+            return tpool.execute(f, method, *args)
 
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread."""
-        return tpool.execute(self._unwrap_plugin_exceptions,
-                             self._session.xenapi.Async.host.call_plugin,
-                             self.get_xenapi_host(), plugin, fn, args)
+        with self._get_session() as session:
+            return tpool.execute(self._unwrap_plugin_exceptions,
+                                 session.xenapi.Async.host.call_plugin,
+                                 self.get_xenapi_host(), plugin, fn, args)
 
     def wait_for_task(self, task, id=None):
         """Return the result of the given task. The task is polled
@@ -452,8 +470,8 @@ class XenAPISession(object):
             """
             try:
                 ctxt = context.get_admin_context()
-                name = self._session.xenapi.task.get_name_label(task)
-                status = self._session.xenapi.task.get_status(task)
+                name = self.call_xenapi("task.get_name_label", task)
+                status = self.call_xenapi("task.get_status", task)
 
                 # Ensure action is never > 255
                 action = dict(action=name[:255], error=None)
@@ -464,7 +482,7 @@ class XenAPISession(object):
                 if status == "pending":
                     return
                 elif status == "success":
-                    result = self._session.xenapi.task.get_result(task)
+                    result = self.call_xenapi("task.get_result", task)
                     LOG.info(_("Task [%(name)s] %(task)s status:"
                             " success    %(result)s") % locals())
 
@@ -473,7 +491,7 @@ class XenAPISession(object):
 
                     done.send(_parse_xmlrpc_value(result))
                 else:
-                    error_info = self._session.xenapi.task.get_error_info(task)
+                    error_info = self.call_xenapi("task.get_error_info", task)
                     LOG.warn(_("Task [%(name)s] %(task)s status:"
                             " %(status)s    %(error_info)s") % locals())
 
@@ -559,7 +577,7 @@ class HostState(object):
             # No SR configured
             LOG.error(_("Unable to get SR for this host: %s") % e)
             return
-        sr_rec = self._session.get_xenapi().SR.get_record(sr_ref)
+        sr_rec = self._session.call_xenapi("SR.get_record", sr_ref)
         total = int(sr_rec["virtual_allocation"])
         used = int(sr_rec["physical_utilisation"])
         data["disk_total"] = total

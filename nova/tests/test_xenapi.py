@@ -1072,8 +1072,11 @@ class FakeSession(object):
               'free-computed': 40}
         return json.dumps({'host_memory': vm})
 
-    def get_xenapi(self):
-        return FakeXenApi()
+    def call_xenapi(self, method, *args):
+        f = FakeXenApi()
+        for m in method.split('.'):
+            f = getattr(f, m)
+        return f(*args)
 
 
 class HostStateTestCase(test.TestCase):
