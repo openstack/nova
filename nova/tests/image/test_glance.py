@@ -141,6 +141,32 @@ class TestGlanceImageServiceProperties(BaseGlanceTest):
                     'properties': {'prop1': 'propvalue1', 'foo': 'bar'}}]
         self.assertEqual(image_meta, expected)
 
+    def test_glance_client_image_id(self):
+        fixtures = {'image1': {'id': '1', 'name': 'image1', 'is_public': True,
+                               'foo': 'bar',
+                               'properties': {'prop1': 'propvalue1'}}}
+        self.client.images = fixtures
+        client, same_id = glance.get_glance_client(self.context, 1)
+        self.assertEquals(same_id, 1)
+
+    def test_glance_client_image_ref(self):
+        fixtures = {'image1': {'id': '1', 'name': 'image1', 'is_public': True,
+                               'foo': 'bar',
+                               'properties': {'prop1': 'propvalue1'}}}
+        self.client.images = fixtures
+        image_url = 'http://something-less-likely/1'
+        client, same_id = glance.get_glance_client(self.context, image_url)
+        self.assertEquals(same_id, 1)
+        self.assertEquals(client.host, 'something-less-likely')
+
+    def test_glance_client_invalid_image_ref(self):
+        fixtures = {'image1': {'id': '1', 'name': 'image1', 'is_public': True,
+                               'foo': 'bar',
+                               'properties': {'prop1': 'propvalue1'}}}
+        self.client.images = fixtures
+        self.assertRaises(exception.InvalidImageRef, glance.get_glance_client,
+                self.context, 'khan')
+
 
 class TestGetterDateTimeNoneTests(BaseGlanceTest):
 
