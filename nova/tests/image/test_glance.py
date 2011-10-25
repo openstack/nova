@@ -272,6 +272,24 @@ class TestGlanceImageService(test.TestCase):
             self.assertDictMatch(meta, expected)
             i = i + 1
 
+    def test_index_private_image(self):
+        fixture = self._make_fixture(name='test image')
+        fixture['is_public'] = False
+        properties = {'owner_id': 'proj1'}
+        fixture['properties'] = properties
+
+        image_id = self.service.create(self.context, fixture)['id']
+
+        proj = self.context.project_id
+        self.context.project_id = 'proj1'
+
+        image_metas = self.service.index(self.context)
+
+        self.context.project_id = proj
+
+        expected = [{'id': 'DONTCARE', 'name': 'test image'}]
+        self.assertDictListMatch(image_metas, expected)
+
     def test_detail_marker(self):
         fixtures = []
         ids = []
@@ -376,6 +394,32 @@ class TestGlanceImageService(test.TestCase):
         self.assertEquals(2, num_images, str(self.service.index(self.context)))
 
         self.service.delete(self.context, ids[0])
+
+        num_images = len(self.service.index(self.context))
+        self.assertEquals(1, num_images)
+
+    def test_delete_not_by_owner(self):
+        # this test is only relevant for deprecated auth mode
+        self.flags(use_deprecated_auth=True)
+
+        fixture = self._make_fixture(name='test image')
+        properties = {'project_id': 'proj1'}
+        fixture['properties'] = properties
+
+        num_images = len(self.service.index(self.context))
+        self.assertEquals(0, num_images)
+
+        image_id = self.service.create(self.context, fixture)['id']
+        num_images = len(self.service.index(self.context))
+        self.assertEquals(1, num_images)
+
+        proj_id = self.context.project_id
+        self.context.project_id = 'proj2'
+
+        self.assertRaises(exception.NotAuthorized, self.service.delete,
+                          self.context, image_id)
+
+        self.context.project_id = proj_id
 
         num_images = len(self.service.index(self.context))
         self.assertEquals(1, num_images)
