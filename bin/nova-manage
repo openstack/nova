@@ -1021,7 +1021,7 @@ class ServiceCommands(object):
                     _('Updated_At'))
         for svc in services:
             delta = now - (svc['updated_at'] or svc['created_at'])
-            alive = (delta.seconds <= 15)
+            alive = abs(utils.total_seconds(delta)) <= FLAGS.service_down_time
             art = (alive and ":-)") or "XXX"
             active = 'enabled'
             if svc['disabled']:
