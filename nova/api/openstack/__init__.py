@@ -64,7 +64,7 @@ class FaultWrapper(base_wsgi.Middleware):
             return req.get_response(self.application)
         except Exception as ex:
             LOG.exception(_("Caught error: %s"), unicode(ex))
-            exc = webob.exc.HTTPInternalServerError(explanation=unicode(ex))
+            exc = webob.exc.HTTPInternalServerError()
             return faults.Fault(exc)
 
 
