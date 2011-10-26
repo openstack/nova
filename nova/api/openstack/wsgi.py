@@ -602,3 +602,13 @@ class Resource(wsgi.Application):
         except TypeError as exc:
             LOG.exception(exc)
             return faults.Fault(webob.exc.HTTPBadRequest())
+
+
+class Controller(object):
+    """Default controller."""
+
+    _view_builder_class = None
+
+    def __init__(self, view_builder=None):
+        """Initialize controller with a view builder instance."""
+        self._view_builder = view_builder or self._view_builder_class()

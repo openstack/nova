@@ -21,9 +21,9 @@ from webob import exc
 
 import nova
 from nova.api.openstack import common
-from nova.api.openstack.views import addresses as views_addresses
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.api.openstack.views import addresses as view_addresses
 from nova import log as logging
 from nova import flags
 
@@ -32,15 +32,18 @@ LOG = logging.getLogger('nova.api.openstack.ips')
 FLAGS = flags.FLAGS
 
 
-class Controller(object):
+class Controller(wsgi.Controller):
     """The servers addresses API controller for the Openstack API."""
 
-    def __init__(self):
-        self.compute_api = nova.compute.API()
+    _view_builder_class = view_addresses.ViewBuilder
+
+    def __init__(self, **kwargs):
+        super(Controller, self).__init__(**kwargs)
+        self._compute_api = nova.compute.API()
 
     def _get_instance(self, context, server_id):
         try:
-            instance = self.compute_api.get(context, server_id)
+            instance = self._compute_api.get(context, server_id)
         except nova.exception.NotFound:
             msg = _("Instance does not exist")
             raise exc.HTTPNotFound(explanation=msg)
@@ -53,25 +56,21 @@ class Controller(object):
         raise exc.HTTPNotImplemented()
 
     def index(self, req, server_id):
-        context = req.environ['nova.context']
+        context = req.environ["nova.context"]
         instance = self._get_instance(context, server_id)
         networks = common.get_networks_for_instance(context, instance)
-        return {'addresses': self._get_view_builder(req).build(networks)}
+        return self._view_builder.index(networks)
 
     def show(self, req, server_id, id):
-        context = req.environ['nova.context']
+        context = req.environ["nova.context"]
         instance = self._get_instance(context, server_id)
         networks = common.get_networks_for_instance(context, instance)
-        network = self._get_view_builder(req).build_network(networks, id)
 
-        if network is None:
+        if id not in networks:
             msg = _("Instance is not a member of specified network")
             raise exc.HTTPNotFound(explanation=msg)
 
-        return network
-
-    def _get_view_builder(self, req):
-        return views_addresses.ViewBuilder()
+        return self._view_builder.show(networks[id], id)
 
 
 def make_network(elem):

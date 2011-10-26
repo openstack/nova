@@ -14,31 +14,30 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
-from nova import utils
 from nova.api.openstack import extensions
 from nova.api.openstack import servers
+from nova.api.openstack import views
 from nova.api.openstack import wsgi
 
 
-class CreateServerController(servers.Controller):
-    def _build_view(self, req, instance, is_detail=False, is_create=False):
-        server = super(CreateServerController, self).\
-                    _build_view(req,
-                                instance,
-                                is_detail=is_detail,
-                                is_create=is_create)
-        if is_detail:
-            self._build_security_groups(server['server'], instance)
+class ViewBuilder(views.servers.ViewBuilder):
+    """Adds security group output when viewing server details."""
+
+    def show(self, request, instance):
+        """Detailed view of a single instance."""
+        server = super(ViewBuilder, self).show(request, instance)
+        server["server"]["security_groups"] = self._get_groups(instance)
         return server
 
-    def _build_security_groups(self, response, inst):
-        sg_names = []
-        sec_groups = inst.get('security_groups')
-        if sec_groups:
-            sg_names = [sec_group['name'] for sec_group in sec_groups]
+    def _get_groups(self, instance):
+        """Get a list of security groups for this instance."""
+        groups = instance.get('security_groups')
+        if groups is not None:
+            return [{"name": group["name"]} for group in groups]
 
-        response['security_groups'] = utils.convert_to_list_dict(sg_names,
-                                                                 'name')
+
+class Controller(servers.Controller):
+    _view_builder_class = ViewBuilder
 
 
 class Createserverext(extensions.ExtensionDescriptor):
@@ -64,9 +63,10 @@ class Createserverext(extensions.ExtensionDescriptor):
         serializer = wsgi.ResponseSerializer(body_serializers,
                                              headers_serializer)
         deserializer = wsgi.RequestDeserializer(body_deserializers)
+        controller = Controller()
 
         res = extensions.ResourceExtension('os-create-server-ext',
-                                        controller=CreateServerController(),
+                                        controller=controller,
                                         deserializer=deserializer,
                                         serializer=serializer)
         resources.append(res)
