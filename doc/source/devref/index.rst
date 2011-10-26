@@ -56,6 +56,7 @@ Module Reference
    services
    database
    volume
+   xensmvolume
    compute
    network
    auth
