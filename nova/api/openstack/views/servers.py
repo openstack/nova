@@ -41,13 +41,15 @@ class ViewBuilder(object):
         self.base_url = base_url
         self.project_id = project_id
 
-    def build(self, inst, is_detail=False):
+    def build(self, inst, is_detail=False, is_create=False):
         """Return a dict that represenst a server."""
         if inst.get('_is_precooked', False):
             server = dict(server=inst)
         else:
             if is_detail:
                 server = self._build_detail(inst)
+            elif is_create:
+                server = self._build_create(inst)
             else:
                 server = self._build_simple(inst)
 
@@ -58,6 +60,12 @@ class ViewBuilder(object):
     def _build_simple(self, inst):
         """Return a simple model of a server."""
         return dict(server=dict(id=inst['uuid'], name=inst['display_name']))
+
+    def _build_create(self, inst):
+        """Return data that should be returned from a server create."""
+        server = dict(server=dict(id=inst['uuid']))
+        self._build_links(server['server'], inst)
+        return server
 
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
