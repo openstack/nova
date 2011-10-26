@@ -377,6 +377,7 @@ DEFINE_string('logdir', None, 'output to a per-service log file in named '
                               'directory')
 DEFINE_string('logfile_mode', '0644', 'Default file mode of the logs.')
 DEFINE_string('sqlite_db', 'nova.sqlite', 'file name for sqlite')
+DEFINE_bool('sqlite_synchronous', True, 'Synchronous mode for sqlite')
 DEFINE_string('sql_connection',
               'sqlite:///$state_path/$sqlite_db',
               'connection string for sql database')

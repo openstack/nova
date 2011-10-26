@@ -19,6 +19,7 @@
 """Session Handling for SQLAlchemy backend."""
 
 import sqlalchemy.exc
+import sqlalchemy.interfaces
 import sqlalchemy.orm
 import time
 
@@ -48,6 +49,13 @@ def get_session(autocommit=True, expire_on_commit=False):
     return session
 
 
+class SynchronousSwitchListener(sqlalchemy.interfaces.PoolListener):
+    """Switch sqlite connections to non-synchronous mode"""
+
+    def connect(self, dbapi_con, con_record):
+        dbapi_con.execute("PRAGMA synchronous = OFF")
+
+
 def get_engine():
     """Return a SQLAlchemy engine."""
     connection_dict = sqlalchemy.engine.url.make_url(FLAGS.sql_connection)
@@ -59,6 +67,8 @@ def get_engine():
 
     if "sqlite" in connection_dict.drivername:
         engine_args["poolclass"] = sqlalchemy.pool.NullPool
+        if not FLAGS.sqlite_synchronous:
+            engine_args["listeners"] = [SynchronousSwitchListener()]
 
     engine = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
     ensure_connection(engine)
