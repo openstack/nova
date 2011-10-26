@@ -39,7 +39,8 @@ class _ImageTestCase(test.TestCase):
             keys = set(image.keys())
             self.assertEquals(keys, set(['id', 'name', 'created_at',
                                          'updated_at', 'deleted_at', 'deleted',
-                                         'status', 'is_public', 'properties']))
+                                         'status', 'is_public', 'properties',
+                                         'disk_format', 'container_format']))
             self.assertTrue(isinstance(image['created_at'], datetime.datetime))
             self.assertTrue(isinstance(image['updated_at'], datetime.datetime))
 
