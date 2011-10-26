@@ -582,6 +582,7 @@ w
                   'glance_port': glance_port,
                   'uuid_stack': uuid_stack,
                   'sr_path': cls.get_sr_path(session),
+                  'num_retries': FLAGS.glance_num_retries,
                   'auth_token': getattr(context, 'auth_token', None)}
 
         kwargs = {'params': pickle.dumps(params)}

@@ -297,6 +297,8 @@ DEFINE_integer('glance_port', 9292, 'default glance port')
 DEFINE_list('glance_api_servers',
             ['%s:%d' % (FLAGS.glance_host, FLAGS.glance_port)],
             'list of glance api servers available to nova (host:port)')
+DEFINE_integer('glance_num_retries', 0,
+               'The number of times to retry downloading an image from glance')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '$my_ip', 's3 host (for infrastructure)')
 DEFINE_string('s3_dmz', '$my_ip', 's3 dmz ip (for instances)')

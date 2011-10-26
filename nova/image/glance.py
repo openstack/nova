@@ -23,6 +23,7 @@ import copy
 import datetime
 import json
 import random
+import time
 from urlparse import urlparse
 
 from glance.common import exception as glance_exception
@@ -231,11 +232,18 @@ class GlanceImageService(object):
 
     def get(self, context, image_id, data):
         """Calls out to Glance for metadata and data and writes data."""
-        try:
+        num_retries = FLAGS.glance_num_retries
+        for count in xrange(1 + num_retries):
             client = self._get_client(context)
-            image_meta, image_chunks = client.get_image(image_id)
-        except glance_exception.NotFound:
-            raise exception.ImageNotFound(image_id=image_id)
+            try:
+                image_meta, image_chunks = client.get_image(image_id)
+                break
+            except glance_exception.NotFound:
+                raise exception.ImageNotFound(image_id=image_id)
+            except Exception:
+                if count == num_retries:
+                    raise
+            time.sleep(1)
 
         for chunk in image_chunks:
             data.write(chunk)

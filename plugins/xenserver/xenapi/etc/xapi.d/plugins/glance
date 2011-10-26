@@ -33,6 +33,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
+import time
 
 import XenAPIPlugin
 
@@ -67,7 +68,7 @@ def _copy_kernel_vdi(dest, copy_args):
 
 
 def _download_tarball(sr_path, staging_path, image_id, glance_host,
-                      glance_port, auth_token):
+                      glance_port, auth_token, num_retries):
     """Download the tarball image from Glance and extract it into the staging
     area.
     """
@@ -77,12 +78,17 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
         headers['x-auth-token'] = auth_token
 
     conn = httplib.HTTPConnection(glance_host, glance_port)
-    conn.request('GET', '/v1/images/%s' % image_id, headers=headers)
-    resp = conn.getresponse()
-    if resp.status == httplib.NOT_FOUND:
-        raise Exception("Image '%s' not found in Glance" % image_id)
-    elif resp.status != httplib.OK:
-        raise Exception("Unexpected response from Glance %i" % resp.status)
+
+    for count in xrange(1 + num_retries):
+        conn.request('GET', '/v1/images/%s' % image_id, headers=headers)
+        resp = conn.getresponse()
+        if resp.status == httplib.OK:
+            break
+        elif resp.status == httplib.NOT_FOUND:
+            raise Exception("Image '%s' not found in Glance" % image_id)
+        elif count == num_retries:
+            raise Exception("Unexpected response from Glance %i" % resp.status)
+        time.sleep(1)
 
     tar_cmd = "tar -zx --directory=%(staging_path)s" % locals()
     tar_proc = _make_subprocess(tar_cmd, stderr=True, stdin=True)
@@ -404,11 +410,12 @@ def download_vhd(session, args):
     uuid_stack = params["uuid_stack"]
     sr_path = params["sr_path"]
     auth_token = params["auth_token"]
+    num_retries = params["num_retries"]
 
     staging_path = _make_staging_area(sr_path)
     try:
         _download_tarball(sr_path, staging_path, image_id, glance_host,
-                          glance_port, auth_token)
+                          glance_port, auth_token, num_retries)
         # Right now, it's easier to return a single string via XenAPI,
         # so we'll json encode the list of VHDs.
         return json.dumps(_import_vhds(sr_path, staging_path, uuid_stack))

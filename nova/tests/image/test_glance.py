@@ -508,6 +508,35 @@ class TestGlanceImageService(test.TestCase):
         self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
         self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
 
+    def test_get_with_retries(self):
+        tries = [0]
+
+        class GlanceBusyException(Exception):
+            pass
+
+        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
+            """A client that fails the first time, then succeeds."""
+            def get_image(self, image_id):
+                if tries[0] == 0:
+                    tries[0] = 1
+                    raise GlanceBusyException()
+                else:
+                    return {}, []
+
+        client = MyGlanceStubClient()
+        service = glance.GlanceImageService(client=client)
+        image_id = 1  # doesn't matter
+        writer = NullWriter()
+
+        # When retries are disabled, we should get an exception
+        self.flags(glance_num_retries=0)
+        self.assertRaises(GlanceBusyException, service.get, self.context,
+                          image_id, writer)
+
+        # Now lets enable retries. No exception should happen now.
+        self.flags(glance_num_retries=1)
+        service.get(self.context, image_id, writer)
+
     def test_glance_client_image_id(self):
         fixture = self._make_fixture(name='test image')
         image_id = self.service.create(self.context, fixture)['id']
