@@ -654,13 +654,13 @@ class XenAPIVMTestCase(test.TestCase):
     def test_rescue(self):
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
-        conn.rescue(self.context, instance, None, [])
+        conn.rescue(self.context, instance, [])
 
     def test_unrescue(self):
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
         # Ensure that it will not unrescue a non-rescued instance.
-        self.assertRaises(Exception, conn.unrescue, instance, None)
+        self.assertRaises(Exception, conn.unrescue, instance)
 
     def test_finish_revert_migration(self):
         instance = self._create_instance()

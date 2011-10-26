@@ -142,21 +142,21 @@ class VMWareESXConnection(driver.ComputeDriver):
         """Destroy VM instance."""
         self._vmops.destroy(instance, network_info)
 
-    def pause(self, instance, callback):
+    def pause(self, instance):
         """Pause VM instance."""
-        self._vmops.pause(instance, callback)
+        self._vmops.pause(instance)
 
-    def unpause(self, instance, callback):
+    def unpause(self, instance):
         """Unpause paused VM instance."""
-        self._vmops.unpause(instance, callback)
+        self._vmops.unpause(instance)
 
-    def suspend(self, instance, callback):
+    def suspend(self, instance):
         """Suspend the specified instance."""
-        self._vmops.suspend(instance, callback)
+        self._vmops.suspend(instance)
 
-    def resume(self, instance, callback):
+    def resume(self, instance):
         """Resume the suspended VM instance."""
-        self._vmops.resume(instance, callback)
+        self._vmops.resume(instance)
 
     def get_info(self, instance_id):
         """Return info about the VM instance."""

@@ -153,24 +153,22 @@ class _VirtDriverTestCase(test.TestCase):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.rescue(self.ctxt, instance_ref,
-                               lambda x: None, network_info)
+        self.connection.rescue(self.ctxt, instance_ref, network_info)
 
     @catch_notimplementederror
     def test_unrescue_unrescued_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.unrescue(instance_ref, lambda x: None, network_info)
+        self.connection.unrescue(instance_ref, network_info)
 
     @catch_notimplementederror
     def test_unrescue_rescued_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.rescue(self.ctxt, instance_ref,
-                               lambda x: None, network_info)
-        self.connection.unrescue(instance_ref, lambda x: None, network_info)
+        self.connection.rescue(self.ctxt, instance_ref, network_info)
+        self.connection.unrescue(instance_ref, network_info)
 
     @catch_notimplementederror
     def test_poll_rebooting_instances(self):
@@ -197,44 +195,44 @@ class _VirtDriverTestCase(test.TestCase):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.pause(instance_ref, None)
+        self.connection.pause(instance_ref)
 
     @catch_notimplementederror
     def test_unpause_unpaused_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.unpause(instance_ref, None)
+        self.connection.unpause(instance_ref)
 
     @catch_notimplementederror
     def test_unpause_paused_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.pause(instance_ref, None)
-        self.connection.unpause(instance_ref, None)
+        self.connection.pause(instance_ref)
+        self.connection.unpause(instance_ref)
 
     @catch_notimplementederror
     def test_suspend(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.suspend(instance_ref, None)
+        self.connection.suspend(instance_ref)
 
     @catch_notimplementederror
     def test_resume_unsuspended_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.resume(instance_ref, None)
+        self.connection.resume(instance_ref)
 
     @catch_notimplementederror
     def test_resume_suspended_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()
         self.connection.spawn(self.ctxt, instance_ref, network_info)
-        self.connection.suspend(instance_ref, None)
-        self.connection.resume(instance_ref, None)
+        self.connection.suspend(instance_ref)
+        self.connection.resume(instance_ref)
 
     @catch_notimplementederror
     def test_destroy_instance_nonexistant(self):

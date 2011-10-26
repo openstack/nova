@@ -183,7 +183,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.suspend(self.instance, self.dummy_callback_handler)
+        self.conn.suspend(self.instance)
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.PAUSED)
         self.assertRaises(Exception, self.conn.reboot, self.instance)
@@ -192,37 +192,34 @@ class VMWareAPIVMTestCase(test.TestCase):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.suspend(self.instance, self.dummy_callback_handler)
+        self.conn.suspend(self.instance)
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.PAUSED)
 
     def test_suspend_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertRaises(Exception, self.conn.suspend, self.instance,
-                          self.dummy_callback_handler)
+        self.assertRaises(Exception, self.conn.suspend, self.instance)
 
     def test_resume(self):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.suspend(self.instance, self.dummy_callback_handler)
+        self.conn.suspend(self.instance)
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.PAUSED)
-        self.conn.resume(self.instance, self.dummy_callback_handler)
+        self.conn.resume(self.instance)
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_resume_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertRaises(Exception, self.conn.resume, self.instance,
-                          self.dummy_callback_handler)
+        self.assertRaises(Exception, self.conn.resume, self.instance)
 
     def test_resume_not_suspended(self):
         self._create_vm()
         info = self.conn.get_info(1)
         self._check_vm_info(info, power_state.RUNNING)
-        self.assertRaises(Exception, self.conn.resume, self.instance,
-                          self.dummy_callback_handler)
+        self.assertRaises(Exception, self.conn.resume, self.instance)
 
     def test_get_info(self):
         self._create_vm()
@@ -257,10 +254,4 @@ class VMWareAPIVMTestCase(test.TestCase):
         pass
 
     def test_get_ajax_console(self):
-        pass
-
-    def dummy_callback_handler(self, ret):
-        """
-        Dummy callback function to be passed to suspend, resume, etc., calls.
-        """
         pass

@@ -901,8 +901,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 utils.generate_password(FLAGS.password_length))
         network_info = self._get_instance_nw_info(context, instance_ref)
 
-        # NOTE(blamar): None of the virt drivers use the 'callback' param
-        self.driver.rescue(context, instance_ref, None, network_info)
+        self.driver.rescue(context, instance_ref, network_info)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -921,8 +920,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         network_info = self._get_instance_nw_info(context, instance_ref)
 
-        # NOTE(blamar): None of the virt drivers use the 'callback' param
-        self.driver.unrescue(instance_ref, None, network_info)
+        self.driver.unrescue(instance_ref, network_info)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -1174,7 +1172,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         instance_ref = self.db.instance_get(context, instance_id)
-        self.driver.pause(instance_ref, lambda result: None)
+        self.driver.pause(instance_ref)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -1191,7 +1189,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         instance_ref = self.db.instance_get(context, instance_id)
-        self.driver.unpause(instance_ref, lambda result: None)
+        self.driver.unpause(instance_ref)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -1227,7 +1225,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         instance_ref = self.db.instance_get(context, instance_id)
-        self.driver.suspend(instance_ref, lambda result: None)
+        self.driver.suspend(instance_ref)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -1244,7 +1242,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         instance_ref = self.db.instance_get(context, instance_id)
-        self.driver.resume(instance_ref, lambda result: None)
+        self.driver.resume(instance_ref)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,

@@ -58,15 +58,6 @@ class VMWareVMOps(object):
         self._session = session
         self._vif_driver = utils.import_object(FLAGS.vmware_vif_driver)
 
-    def _wait_with_callback(self, instance_id, task, callback):
-        """Waits for the task to finish and does a callback after."""
-        ret = None
-        try:
-            ret = self._session._wait_for_task(instance_id, task)
-        except Exception, excep:
-            LOG.exception(excep)
-        callback(ret)
-
     def list_instances(self):
         """Lists the VM instances that are registered with the ESX host."""
         LOG.debug(_("Getting list of instances"))
@@ -615,15 +606,15 @@ class VMWareVMOps(object):
         except Exception, exc:
             LOG.exception(exc)
 
-    def pause(self, instance, callback):
+    def pause(self, instance):
         """Pause a VM instance."""
         raise exception.ApiError("pause not supported for vmwareapi")
 
-    def unpause(self, instance, callback):
+    def unpause(self, instance):
         """Un-Pause a VM instance."""
         raise exception.ApiError("unpause not supported for vmwareapi")
 
-    def suspend(self, instance, callback):
+    def suspend(self, instance):
         """Suspend the specified instance."""
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
@@ -637,7 +628,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Suspending the VM %s ") % instance.name)
             suspend_task = self._session._call_method(self._session._get_vim(),
                     "SuspendVM_Task", vm_ref)
-            self._wait_with_callback(instance.id, suspend_task, callback)
+            self._session._wait_for_task(instance.id, suspend_task)
             LOG.debug(_("Suspended the VM %s ") % instance.name)
         # Raise Exception if VM is poweredOff
         elif pwr_state == "poweredOff":
@@ -647,7 +638,7 @@ class VMWareVMOps(object):
         LOG.debug(_("VM %s was already in suspended state. So returning "
                     "without doing anything") % instance.name)
 
-    def resume(self, instance, callback):
+    def resume(self, instance):
         """Resume the specified instance."""
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
@@ -661,7 +652,7 @@ class VMWareVMOps(object):
             suspend_task = self._session._call_method(
                                         self._session._get_vim(),
                                        "PowerOnVM_Task", vm_ref)
-            self._wait_with_callback(instance.id, suspend_task, callback)
+            self._session._wait_for_task(instance.id, suspend_task)
             LOG.debug(_("Resumed the VM %s ") % instance.name)
         else:
             reason = _("instance is not in a suspended state")
