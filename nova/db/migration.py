@@ -23,7 +23,7 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
-flags.DECLARE('db_backend', 'nova.db.api')
+flags.DECLARE('db_backend', 'nova.db')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],

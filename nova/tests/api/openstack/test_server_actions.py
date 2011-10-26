@@ -12,7 +12,7 @@ from nova import flags
 from nova.api.openstack import servers
 from nova.compute import vm_states
 from nova.compute import instance_types
-import nova.db.api
+import nova.db
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
@@ -128,9 +128,9 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
-        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        self.stubs.Set(nova.db, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server_by_uuid)
-        self.stubs.Set(nova.db.api, 'instance_update', instance_update)
+        self.stubs.Set(nova.db, 'instance_update', instance_update)
 
         fakes.stub_out_glance(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
@@ -226,7 +226,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_server_rebuild_accepted_minimum(self):
         new_return_server = return_server_with_attributes(image_ref='2')
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
         body = {
             "rebuild": {
@@ -261,7 +261,7 @@ class ServerActionsControllerTest(test.TestCase):
         metadata = {'new': 'metadata'}
 
         new_return_server = return_server_with_attributes(metadata=metadata)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
         body = {
             "rebuild": {
@@ -331,7 +331,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_server_rebuild_admin_pass(self):
         new_return_server = return_server_with_attributes(image_ref='2')
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
         body = {
             "rebuild": {
@@ -349,7 +349,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_server_rebuild_server_not_found(self):
         def server_not_found(self, instance_id):
             raise exception.InstanceNotFound(instance_id=instance_id)
-        self.stubs.Set(nova.db.api, 'instance_get', server_not_found)
+        self.stubs.Set(nova.db, 'instance_get', server_not_found)
 
         body = {
             "rebuild": {

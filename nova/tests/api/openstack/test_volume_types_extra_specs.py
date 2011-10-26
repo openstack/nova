@@ -65,7 +65,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.api_path = '/v1.1/123/os-volume-types/1/extra_specs'
 
     def test_index(self):
-        self.stubs.Set(nova.db.api, 'volume_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'volume_type_extra_specs_get',
                        return_volume_type_extra_specs)
         request = webob.Request.blank(self.api_path)
         res = request.get_response(fakes.wsgi_app())
@@ -75,7 +75,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
     def test_index_no_data(self):
-        self.stubs.Set(nova.db.api, 'volume_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'volume_type_extra_specs_get',
                        return_empty_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path)
         res = req.get_response(fakes.wsgi_app())
@@ -85,7 +85,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual(0, len(res_dict['extra_specs']))
 
     def test_show(self):
-        self.stubs.Set(nova.db.api, 'volume_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'volume_type_extra_specs_get',
                        return_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path + '/key5')
         res = req.get_response(fakes.wsgi_app())
@@ -95,7 +95,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual('value5', res_dict['key5'])
 
     def test_show_spec_not_found(self):
-        self.stubs.Set(nova.db.api, 'volume_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'volume_type_extra_specs_get',
                        return_empty_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path + '/key6')
         res = req.get_response(fakes.wsgi_app())
@@ -103,7 +103,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual(404, res.status_int)
 
     def test_delete(self):
-        self.stubs.Set(nova.db.api, 'volume_type_extra_specs_delete',
+        self.stubs.Set(nova.db, 'volume_type_extra_specs_delete',
                        delete_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path + '/key5')
         req.method = 'DELETE'
@@ -111,7 +111,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual(200, res.status_int)
 
     def test_create(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'volume_type_extra_specs_update_or_create',
                        return_create_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path)
@@ -125,7 +125,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
     def test_create_empty_body(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'volume_type_extra_specs_update_or_create',
                        return_create_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path)
@@ -135,7 +135,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_item(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'volume_type_extra_specs_update_or_create',
                        return_create_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path + '/key1')
@@ -149,7 +149,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual('value1', res_dict['key1'])
 
     def test_update_item_empty_body(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'volume_type_extra_specs_update_or_create',
                        return_create_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path + '/key1')
@@ -159,7 +159,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_item_too_many_keys(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'volume_type_extra_specs_update_or_create',
                        return_create_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path + '/key1')
@@ -170,7 +170,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         self.assertEqual(400, res.status_int)
 
     def test_update_item_body_uri_mismatch(self):
-        self.stubs.Set(nova.db.api,
+        self.stubs.Set(nova.db,
                        'volume_type_extra_specs_update_or_create',
                        return_create_volume_type_extra_specs)
         req = webob.Request.blank(self.api_path + '/bad')

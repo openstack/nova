@@ -36,7 +36,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
-import nova.db.api
+import nova.db
 from nova.db.sqlalchemy.models import InstanceMetadata
 from nova import exception
 from nova import flags
@@ -241,21 +241,19 @@ class ServersControllerTest(test.TestCase):
         fakes.stub_out_image_service(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(utils, 'gen_uuid', fake_gen_uuid)
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
+        self.stubs.Set(nova.db, 'instance_get_all_by_filters',
                 return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        self.stubs.Set(nova.db, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        return_server_by_uuid)
-        self.stubs.Set(nova.db.api, 'instance_get_by_uuid',
-                       return_server_by_uuid)
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_project',
+        self.stubs.Set(nova.db, 'instance_get_all_by_project',
                        return_servers)
-        self.stubs.Set(nova.db.api, 'instance_add_security_group',
+        self.stubs.Set(nova.db, 'instance_add_security_group',
                        return_security_group)
-        self.stubs.Set(nova.db.api, 'instance_update', instance_update)
-        self.stubs.Set(nova.db.api, 'instance_get_fixed_addresses',
+        self.stubs.Set(nova.db, 'instance_update', instance_update)
+        self.stubs.Set(nova.db, 'instance_get_fixed_addresses',
                        instance_addresses)
-        self.stubs.Set(nova.db.api, 'instance_get_floating_address',
+        self.stubs.Set(nova.db, 'instance_get_floating_address',
                        instance_addresses)
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
@@ -407,7 +405,7 @@ class ServersControllerTest(test.TestCase):
                                                                 get_floats)
         new_return_server = return_server_with_attributes(
             vm_state=vm_states.ACTIVE, progress=100)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
         uuid = FAKE_UUID
         req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % uuid)
@@ -504,7 +502,7 @@ class ServersControllerTest(test.TestCase):
         new_return_server = return_server_with_attributes(
             vm_state=vm_states.ACTIVE,
             image_ref=image_ref, flavor_id=flavor_id, progress=100)
-        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
         uuid = FAKE_UUID
         req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % uuid)
@@ -589,7 +587,7 @@ class ServersControllerTest(test.TestCase):
         fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
                                                                 get_floats)
 
-        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        self.stubs.Set(nova.db, 'instance_get', return_server_by_id)
 
         req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
@@ -792,7 +790,7 @@ class ServersControllerTest(test.TestCase):
         def fake_instance_get(*args, **kwargs):
             raise nova.exception.InstanceNotFound()
 
-        self.stubs.Set(nova.db.api, 'instance_get_by_uuid', fake_instance_get)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(nova.network.API, 'get_instance_nw_info', fake)
 
         server_id = str(utils.gen_uuid())
@@ -801,7 +799,7 @@ class ServersControllerTest(test.TestCase):
                           self.ips_controller.index, req, server_id)
 
     def test_get_server_list_with_reservation_id(self):
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+        self.stubs.Set(nova.db, 'instance_get_all_by_reservation',
                        return_servers_by_reservation)
         self.stubs.Set(nova.scheduler.api, 'call_zone_method',
                        return_servers_from_child_zones)
@@ -818,7 +816,7 @@ class ServersControllerTest(test.TestCase):
                 i += 1
 
     def test_get_server_list_with_reservation_id_empty(self):
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+        self.stubs.Set(nova.db, 'instance_get_all_by_reservation',
                        return_servers_by_reservation_empty)
         self.stubs.Set(nova.scheduler.api, 'call_zone_method',
                        return_servers_from_child_zones_empty)
@@ -836,7 +834,7 @@ class ServersControllerTest(test.TestCase):
                 i += 1
 
     def test_get_server_list_with_reservation_id_details(self):
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+        self.stubs.Set(nova.db, 'instance_get_all_by_reservation',
                        return_servers_by_reservation)
         self.stubs.Set(nova.scheduler.api, 'call_zone_method',
                        return_servers_from_child_zones)
@@ -1004,7 +1002,7 @@ class ServersControllerTest(test.TestCase):
             self.assertFalse(filters.get('tenant_id'))
             return [stub_instance(100)]
 
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
+        self.stubs.Set(nova.db, 'instance_get_all_by_filters',
                        fake_get_all)
         self.flags(allow_admin_api=True)
 
@@ -1247,7 +1245,7 @@ class ServersControllerTest(test.TestCase):
                           self.controller.update, req, FAKE_UUID, None)
 
     def test_update_server_all_attributes(self):
-        self.stubs.Set(nova.db.api, 'instance_get',
+        self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(name='server_test',
                                               access_ipv4='0.0.0.0',
                                               access_ipv6='beef::0123'))
@@ -1268,7 +1266,7 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['accessIPv6'], 'beef::0123')
 
     def test_update_server_name(self):
-        self.stubs.Set(nova.db.api, 'instance_get',
+        self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(name='server_test'))
         req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
@@ -1281,7 +1279,7 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server_test')
 
     def test_update_server_access_ipv4(self):
-        self.stubs.Set(nova.db.api, 'instance_get',
+        self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(access_ipv4='0.0.0.0'))
         req = fakes.HTTPRequest.blank('/v1.1/123/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
@@ -1294,7 +1292,7 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['accessIPv4'], '0.0.0.0')
 
     def test_update_server_access_ipv6(self):
-        self.stubs.Set(nova.db.api, 'instance_get',
+        self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(access_ipv6='beef::0123'))
         req = fakes.HTTPRequest.blank('/v1.1/123/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
@@ -1315,8 +1313,8 @@ class ServersControllerTest(test.TestCase):
             self.assertEqual(params, filtered_dict)
             return filtered_dict
 
-        self.stubs.Set(nova.db.api, 'instance_update', server_update)
-        self.stubs.Set(nova.db.api, 'instance_get',
+        self.stubs.Set(nova.db, 'instance_update', server_update)
+        self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(name='server_test'))
 
         req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
@@ -1372,7 +1370,7 @@ class ServersControllerTest(test.TestCase):
                                   uuid=get_fake_uuid(i))
                     for i in xrange(5)]
 
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
+        self.stubs.Set(nova.db, 'instance_get_all_by_filters',
             return_servers_with_host)
 
         req = fakes.HTTPRequest.blank('/v1.1/fake/servers/detail')
@@ -1397,7 +1395,7 @@ class ServersControllerTest(test.TestCase):
         def instance_destroy_mock(context, id):
             self.server_delete_called = True
 
-        self.stubs.Set(nova.db.api, 'instance_destroy',
+        self.stubs.Set(nova.db, 'instance_destroy',
             instance_destroy_mock)
 
         self.controller.delete(req, FAKE_UUID)
@@ -1416,7 +1414,7 @@ class ServerStatusTest(test.TestCase):
     def _get_with_state(self, vm_state, task_state=None):
         new_server = return_server_with_state(vm_state, task_state)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_server)
-        self.stubs.Set(nova.db.api, 'instance_get', new_server)
+        self.stubs.Set(nova.db, 'instance_get', new_server)
 
         request = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
         return self.controller.show(request, FAKE_UUID)
@@ -1536,16 +1534,16 @@ class ServersControllerCreateTest(test.TestCase):
         fakes.stub_out_image_service(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(utils, 'gen_uuid', fake_gen_uuid)
-        self.stubs.Set(nova.db.api, 'instance_add_security_group',
+        self.stubs.Set(nova.db, 'instance_add_security_group',
                        return_security_group)
-        self.stubs.Set(nova.db.api, 'project_get_networks',
+        self.stubs.Set(nova.db, 'project_get_networks',
                        project_get_networks)
-        self.stubs.Set(nova.db.api, 'instance_create', instance_create)
-        self.stubs.Set(nova.db.api, 'instance_get', instance_get)
+        self.stubs.Set(nova.db, 'instance_create', instance_create)
+        self.stubs.Set(nova.db, 'instance_get', instance_get)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
         self.stubs.Set(nova.rpc, 'call', rpc_call_wrapper)
-        self.stubs.Set(nova.db.api, 'instance_update', server_update)
-        self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
+        self.stubs.Set(nova.db, 'instance_update', server_update)
+        self.stubs.Set(nova.db, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
         self.stubs.Set(servers.Controller, "_get_kernel_ramdisk_from_image",

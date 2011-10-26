@@ -396,7 +396,7 @@ class ComputeDriver(object):
 
         When this is called, rules have either been added or removed from the
         datastore.  You can retrieve rules with
-        :method:`nova.db.api.provider_fw_rule_get_all`.
+        :method:`nova.db.provider_fw_rule_get_all`.
 
         Provider rules take precedence over security group rules.  If an IP
         would be allowed by a security group ingress rule, but blocked by

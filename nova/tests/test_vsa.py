@@ -104,7 +104,7 @@ class VsaTestCase(test.TestCase):
             LOG.debug(_("Test: Emulate DB error. Raise"))
             raise exception.Error
 
-        self.stubs.Set(nova.db.api, 'vsa_create', fake_vsa_create)
+        self.stubs.Set(nova.db, 'vsa_create', fake_vsa_create)
         self.assertRaises(exception.ApiError,
                           self.vsa_api.create, self.context)
 

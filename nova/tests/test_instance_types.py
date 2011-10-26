@@ -226,7 +226,7 @@ class InstanceTypeFilteringTest(test.TestCase):
         self.context = context.get_admin_context()
 
     def assertFilterResults(self, filters, expected):
-        inst_types = db.api.instance_type_get_all(
+        inst_types = db.instance_type_get_all(
                 self.context, filters=filters)
         inst_names = [i['name'] for i in inst_types]
         self.assertEqual(inst_names, expected)

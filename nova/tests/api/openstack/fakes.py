@@ -107,10 +107,10 @@ def stub_out_key_pair_funcs(stubs, have_key_pair=True):
         return []
 
     if have_key_pair:
-        stubs.Set(nova.db.api, 'key_pair_get_all_by_user', key_pair)
-        stubs.Set(nova.db.api, 'key_pair_get', one_key_pair)
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+        stubs.Set(nova.db, 'key_pair_get', one_key_pair)
     else:
-        stubs.Set(nova.db.api, 'key_pair_get_all_by_user', no_key_pair)
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_image_service(stubs):

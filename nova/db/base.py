@@ -23,7 +23,7 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('db_driver', 'nova.db.api',
+flags.DEFINE_string('db_driver', 'nova.db',
                     'driver to use for database access')
 
 
