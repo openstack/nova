@@ -781,11 +781,11 @@ class Controller(object):
         if (not 'changePassword' in input_dict
             or not 'adminPass' in input_dict['changePassword']):
             msg = _("No adminPass was specified")
-            return exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         password = input_dict['changePassword']['adminPass']
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
-            return exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         self.compute_api.set_admin_password(context, id, password)
         return webob.Response(status_int=202)
 
