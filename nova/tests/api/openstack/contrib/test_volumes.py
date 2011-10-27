@@ -47,7 +47,8 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
              'project_id': 'fake',
              'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
              'updated_at': datetime.datetime(2010, 11, 11, 11, 0, 0),
-             'progress': 0
+             'progress': 0,
+             'fixed_ips': []
              }], resv_id)
 
 
