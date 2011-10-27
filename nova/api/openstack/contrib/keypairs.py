@@ -21,6 +21,7 @@ import os
 import shutil
 import tempfile
 
+import webob
 from webob import exc
 
 from nova import crypto
@@ -97,7 +98,7 @@ class KeypairController(object):
         """
         context = req.environ['nova.context']
         db.key_pair_destroy(context, context.user_id, id)
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def index(self, req):
         """

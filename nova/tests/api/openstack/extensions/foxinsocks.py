@@ -16,6 +16,7 @@
 #    under the License.
 
 import json
+import webob.exc
 
 from nova.api.openstack import extensions
 
@@ -50,6 +51,8 @@ class Foxinsocks(object):
                                                     self._add_tweedle))
         actions.append(extensions.ActionExtension('servers', 'delete_tweedle',
                                                     self._delete_tweedle))
+        actions.append(extensions.ActionExtension('servers', 'fail',
+                                                    self._fail))
         return actions
 
     def get_request_extensions(self):
@@ -85,3 +88,7 @@ class Foxinsocks(object):
     def _delete_tweedle(self, input_dict, req, id):
 
         return "Tweedle Beetle Deleted."
+
+    def _fail(self, input_dict, req, id):
+
+        raise webob.exc.HTTPBadRequest(explanation='Tweedle fail')

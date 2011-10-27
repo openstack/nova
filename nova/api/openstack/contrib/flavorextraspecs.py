@@ -22,7 +22,6 @@ from webob import exc
 from nova import db
 from nova import quota
 from nova.api.openstack import extensions
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -83,7 +82,7 @@ class FlavorExtraSpecsController(object):
         if id in specs['extra_specs']:
             return {id: specs['extra_specs'][id]}
         else:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def delete(self, req, flavor_id, id):
         """ Deletes an existing extra spec """

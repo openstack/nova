@@ -99,7 +99,7 @@ class SecurityGroupController(object):
         LOG.audit(_("Delete security group %s"), id, context=context)
         db.security_group_destroy(context, security_group.id)
 
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def index(self, req):
         """Returns a list of security groups"""
@@ -120,12 +120,12 @@ class SecurityGroupController(object):
         """Creates a new security group."""
         context = req.environ['nova.context']
         if not body:
-            return exc.HTTPUnprocessableEntity()
+            raise exc.HTTPUnprocessableEntity()
 
         security_group = body.get('security_group', None)
 
         if security_group is None:
-            return exc.HTTPUnprocessableEntity()
+            raise exc.HTTPUnprocessableEntity()
 
         group_name = security_group.get('name', None)
         group_description = security_group.get('description', None)
@@ -189,10 +189,10 @@ class SecurityGroupRulesController(SecurityGroupController):
             security_group = db.security_group_get(context, parent_group_id)
         except ValueError:
             msg = _("Parent group id is not integer")
-            return exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.NotFound as exp:
             msg = _("Security group (%s) not found") % parent_group_id
-            return exc.HTTPNotFound(explanation=msg)
+            raise exc.HTTPNotFound(explanation=msg)
 
         msg = _("Authorize security group ingress %s")
         LOG.audit(msg, security_group['name'], context=context)
@@ -312,10 +312,10 @@ class SecurityGroupRulesController(SecurityGroupController):
             rule = db.security_group_rule_get(context, id)
         except ValueError:
             msg = _("Rule id is not integer")
-            return exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.NotFound as exp:
             msg = _("Rule (%s) not found") % id
-            return exc.HTTPNotFound(explanation=msg)
+            raise exc.HTTPNotFound(explanation=msg)
 
         group_id = rule.parent_group_id
         self.compute_api.ensure_default_security_group(context)
@@ -328,7 +328,7 @@ class SecurityGroupRulesController(SecurityGroupController):
         self.compute_api.trigger_security_group_rules_refresh(context,
                                     security_group_id=security_group['id'])
 
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
 
 class Security_groups(extensions.ExtensionDescriptor):
@@ -368,13 +368,13 @@ class Security_groups(extensions.ExtensionDescriptor):
             self.compute_api.add_security_group(context, instance_id,
                                                 group_name)
         except exception.SecurityGroupNotFound as exp:
-            return exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=unicode(exp))
         except exception.InstanceNotFound as exp:
-            return exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=unicode(exp))
         except exception.Invalid as exp:
-            return exc.HTTPBadRequest(explanation=unicode(exp))
+            raise exc.HTTPBadRequest(explanation=unicode(exp))
 
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _removeSecurityGroup(self, input_dict, req, instance_id):
         context = req.environ['nova.context']
@@ -401,13 +401,13 @@ class Security_groups(extensions.ExtensionDescriptor):
             self.compute_api.remove_security_group(context, instance_id,
                                                    group_name)
         except exception.SecurityGroupNotFound as exp:
-            return exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=unicode(exp))
         except exception.InstanceNotFound as exp:
-            return exc.HTTPNotFound(explanation=unicode(exp))
+            raise exc.HTTPNotFound(explanation=unicode(exp))
         except exception.Invalid as exp:
-            return exc.HTTPBadRequest(explanation=unicode(exp))
+            raise exc.HTTPBadRequest(explanation=unicode(exp))
 
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def get_actions(self):
         """Return the actions the extensions adds"""

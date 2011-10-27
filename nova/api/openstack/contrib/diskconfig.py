@@ -25,7 +25,6 @@ import nova.image
 from nova import log as logging
 from nova import network
 from nova import rpc
-from nova.api.openstack import faults
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
@@ -46,19 +45,19 @@ class DiskConfigController(object):
             server = self.compute_api.routing_get(context, server_id)
         except exception.NotFound:
             explanation = _("Server not found.")
-            return faults.Fault(exc.HTTPNotFound(explanation=explanation))
+            raise exc.HTTPNotFound(explanation=explanation)
         managed_disk = server['managed_disk'] or False
         return self._return_dict(server_id, managed_disk)
 
     def update(self, req, server_id, body=None):
         if not body:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
         context = req.environ['nova.context']
         try:
             server = self.compute_api.routing_get(context, server_id)
         except exception.NotFound:
             explanation = _("Server not found.")
-            return faults.Fault(exc.HTTPNotFound(explanation=explanation))
+            raise exc.HTTPNotFound(explanation=explanation)
 
         managed_disk = str(body['server'].get('managed_disk', False)).lower()
         managed_disk = managed_disk == 'true' or False

@@ -21,7 +21,6 @@ import webob
 from nova import compute
 from nova import log as logging
 from nova.api.openstack import extensions
-from nova.api.openstack import faults
 
 
 LOG = logging.getLogger("nova.api.multinic")
@@ -67,36 +66,32 @@ class Multinic(extensions.ExtensionDescriptor):
     def _add_fixed_ip(self, input_dict, req, id):
         """Adds an IP on a given network to an instance."""
 
-        try:
-            # Validate the input entity
-            if 'networkId' not in input_dict['addFixedIp']:
-                LOG.exception(_("Missing 'networkId' argument for addFixedIp"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
+        # Validate the input entity
+        if 'networkId' not in input_dict['addFixedIp']:
+            msg = _("Missing 'networkId' argument for addFixedIp")
+            raise exc.HTTPUnprocessableEntity(explanation=msg)
 
-            # Add the fixed IP
-            network_id = input_dict['addFixedIp']['networkId']
-            self.compute_api.add_fixed_ip(req.environ['nova.context'], id,
-                                          network_id)
-        except Exception, e:
-            LOG.exception(_("Error in addFixedIp %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
+        # Add the fixed IP
+        network_id = input_dict['addFixedIp']['networkId']
+        self.compute_api.add_fixed_ip(req.environ['nova.context'], id,
+                                      network_id)
         return webob.Response(status_int=202)
 
     def _remove_fixed_ip(self, input_dict, req, id):
         """Removes an IP from an instance."""
 
-        try:
-            # Validate the input entity
-            if 'address' not in input_dict['removeFixedIp']:
-                LOG.exception(_("Missing 'address' argument for "
-                                "removeFixedIp"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
+        # Validate the input entity
+        if 'address' not in input_dict['removeFixedIp']:
+            msg = _("Missing 'address' argument for removeFixedIp")
+            raise exc.HTTPUnprocessableEntity(explanation=msg)
 
-            # Remove the fixed IP
-            address = input_dict['removeFixedIp']['address']
+        # Remove the fixed IP
+        address = input_dict['removeFixedIp']['address']
+        try:
             self.compute_api.remove_fixed_ip(req.environ['nova.context'], id,
                                              address)
-        except Exception, e:
-            LOG.exception(_("Error in removeFixedIp %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
+        except exceptions.FixedIpNotFoundForSpecificInstance:
+            LOG.exception(_("Unable to find address %r") % address)
+            raise exc.HTTPBadRequest()
+
         return webob.Response(status_int=202)

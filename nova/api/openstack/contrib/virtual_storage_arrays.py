@@ -18,6 +18,7 @@
 """ The virtul storage array extension"""
 
 
+import webob
 from webob import exc
 
 from nova import vsa
@@ -30,7 +31,6 @@ from nova import exception
 from nova import log as logging
 from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 from nova.api.openstack import servers
 from nova.api.openstack.contrib import volumes
@@ -137,7 +137,7 @@ class VsaController(object):
         try:
             vsa = self.vsa_api.get(context, vsa_id=id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         instances = self._get_instances_by_vsa_id(context, vsa.get('id'))
         return {'vsa': _vsa_view(context, vsa, True, instances)}
@@ -148,7 +148,7 @@ class VsaController(object):
 
         if not body or 'vsa' not in body:
             LOG.debug(_("No body provided"), context=context)
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
 
         vsa = body['vsa']
 
@@ -157,7 +157,7 @@ class VsaController(object):
         try:
             instance_type = instance_types.get_instance_type_by_name(vc_type)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         LOG.audit(_("Create VSA %(display_name)s of type %(vc_type)s"),
                     locals(), context=context)
@@ -184,7 +184,7 @@ class VsaController(object):
         try:
             self.vsa_api.delete(context, vsa_id=id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def associate_address(self, req, id, body):
         """ /zadr-vsa/{vsa_id}/associate_address
@@ -203,7 +203,7 @@ class VsaController(object):
         try:
             instances = self._get_instances_by_vsa_id(context, id)
             if instances is None or len(instances) == 0:
-                return faults.Fault(exc.HTTPNotFound())
+                raise exc.HTTPNotFound()
 
             for instance in instances:
                 self.network_api.allocate_for_instance(context, instance,
@@ -212,7 +212,7 @@ class VsaController(object):
                 return
 
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
     def disassociate_address(self, req, id, body):
         """ /zadr-vsa/{vsa_id}/disassociate_address
@@ -313,7 +313,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
         context = req.environ['nova.context']
 
         if not body:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
 
         vol = body[self.object]
         size = vol['size']
@@ -323,7 +323,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
             # create is supported for volumes only (drives created through VSA)
             volume_type = self.vsa_api.get_vsa_volume_type(context)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         new_volume = self.volume_api.create(context,
                             size,
@@ -343,9 +343,9 @@ class VsaVolumeDriveController(volumes.VolumeController):
         try:
             self._check_volume_ownership(context, vsa_id, id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         except exception.Invalid:
-            return faults.Fault(exc.HTTPBadRequest())
+            raise exc.HTTPBadRequest()
 
         vol = body[self.object]
         updatable_fields = [{'displayName': 'display_name'},
@@ -367,8 +367,8 @@ class VsaVolumeDriveController(volumes.VolumeController):
         try:
             self.volume_api.update(context, volume_id=id, fields=changes)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-        return exc.HTTPAccepted()
+            raise exc.HTTPNotFound()
+        return webob.Response(status_int=202)
 
     def delete(self, req, vsa_id, id):
         """Delete a volume."""
@@ -379,9 +379,9 @@ class VsaVolumeDriveController(volumes.VolumeController):
         try:
             self._check_volume_ownership(context, vsa_id, id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         except exception.Invalid:
-            return faults.Fault(exc.HTTPBadRequest())
+            raise exc.HTTPBadRequest()
 
         return super(VsaVolumeDriveController, self).delete(req, id)
 
@@ -394,9 +394,9 @@ class VsaVolumeDriveController(volumes.VolumeController):
         try:
             self._check_volume_ownership(context, vsa_id, id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         except exception.Invalid:
-            return faults.Fault(exc.HTTPBadRequest())
+            raise exc.HTTPBadRequest()
 
         return super(VsaVolumeDriveController, self).show(req, id)
 
@@ -432,15 +432,15 @@ class VsaDriveController(VsaVolumeDriveController):
 
     def create(self, req, vsa_id, body):
         """Create a new drive for VSA. Should be done through VSA APIs"""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def update(self, req, vsa_id, id, body):
         """Update a drive. Should be done through VSA APIs"""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def delete(self, req, vsa_id, id):
         """Delete a volume. Should be done through VSA APIs"""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
 
 class VsaVPoolController(object):
@@ -474,19 +474,19 @@ class VsaVPoolController(object):
 
     def create(self, req, vsa_id, body):
         """Create a new vPool for VSA."""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def update(self, req, vsa_id, id, body):
         """Update vPool parameters."""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def delete(self, req, vsa_id, id):
         """Delete a vPool."""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def show(self, req, vsa_id, id):
         """Return data about the given vPool."""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
 
 class VsaVCController(servers.Controller):
@@ -529,15 +529,15 @@ class VsaVCController(servers.Controller):
 
     def create(self, req, vsa_id, body):
         """Create a new instance for VSA."""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def update(self, req, vsa_id, id, body):
         """Update VSA instance."""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def delete(self, req, vsa_id, id):
         """Delete VSA instance."""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def show(self, req, vsa_id, id):
         """Return data about the given instance."""

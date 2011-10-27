@@ -22,7 +22,6 @@ from nova import exception
 from nova import log as logging
 from nova import network
 from nova import rpc
-from nova.api.openstack import faults
 from nova.api.openstack import extensions
 
 
@@ -72,7 +71,7 @@ class FloatingIPController(object):
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
         except exception.NotFound:
-            return faults.Fault(webob.exc.HTTPNotFound())
+            raise webob.exc.HTTPNotFound()
 
         return _translate_floating_ip_view(floating_ip)
 
@@ -113,7 +112,7 @@ class FloatingIPController(object):
 
         self.network_api.release_floating_ip(context,
                                              address=floating_ip['address'])
-        return webob.exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def _get_ip_by_id(self, context, value):
         """Checks that value is id and then returns its address."""

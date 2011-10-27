@@ -46,6 +46,13 @@ class StubController(object):
     def index(self, req):
         return self.body
 
+    def create(self, req):
+        msg = 'All aboard the fail train!'
+        raise webob.exc.HTTPBadRequest(explanation=msg)
+
+    def show(self, req, id):
+        raise webob.exc.HTTPNotFound()
+
 
 class StubExtensionManager(object):
     """Provides access to Tweedle Beetles"""
@@ -252,6 +259,47 @@ class ResourceExtensionTest(ExtensionTestCase):
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
+    def test_bad_request(self):
+        res_ext = extensions.ResourceExtension('tweedles',
+                                               StubController(response_body))
+        manager = StubExtensionManager(res_ext)
+        app = openstack.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app, manager)
+        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
+        request = webob.Request.blank("/123/tweedles")
+        request.method = "POST"
+        response = request.get_response(ser_midware)
+        self.assertEqual(400, response.status_int)
+        self.assertEqual('application/json', response.content_type)
+        body = json.loads(response.body)
+        expected = {
+            "badRequest": {
+                "message": "All aboard the fail train!",
+                "code": 400
+            }
+        }
+        self.assertDictMatch(expected, body)
+
+    def test_non_exist_resource(self):
+        res_ext = extensions.ResourceExtension('tweedles',
+                                               StubController(response_body))
+        manager = StubExtensionManager(res_ext)
+        app = openstack.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app, manager)
+        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
+        request = webob.Request.blank("/123/tweedles/1")
+        response = request.get_response(ser_midware)
+        self.assertEqual(404, response.status_int)
+        self.assertEqual('application/json', response.content_type)
+        body = json.loads(response.body)
+        expected = {
+            "itemNotFound": {
+                "message": "The resource could not be found.",
+                "code": 404
+            }
+        }
+        self.assertDictMatch(expected, body)
+
 
 class InvalidExtension(object):
 
@@ -307,17 +355,41 @@ class ActionExtensionTest(ExtensionTestCase):
         self.assertEqual(200, response.status_int)
         self.assertEqual("Tweedle Beetle Deleted.", response.body)
 
-    def test_invalid_action_body(self):
+    def test_invalid_action(self):
         body = dict(blah=dict(name="test"))  # Doesn't exist
         url = "/123/servers/abcd/action"
         response = self._send_server_action_request(url, body)
         self.assertEqual(400, response.status_int)
+        self.assertEqual('application/json', response.content_type)
+        body = json.loads(response.body)
+        expected = {
+            "badRequest": {
+                "message": "There is no such server action: blah",
+                "code": 400
+            }
+        }
+        self.assertDictMatch(expected, body)
 
-    def test_invalid_action(self):
+    def test_non_exist_action(self):
         body = dict(blah=dict(name="test"))
         url = "/123/fdsa/1/action"
         response = self._send_server_action_request(url, body)
         self.assertEqual(404, response.status_int)
+
+    def test_failed_action(self):
+        body = dict(fail=dict(name="test"))
+        url = "/123/servers/abcd/action"
+        response = self._send_server_action_request(url, body)
+        self.assertEqual(400, response.status_int)
+        self.assertEqual('application/json', response.content_type)
+        body = json.loads(response.body)
+        expected = {
+            "badRequest": {
+                "message": "Tweedle fail",
+                "code": 400
+            }
+        }
+        self.assertDictMatch(expected, body)
 
 
 class RequestExtensionTest(ExtensionTestCase):
@@ -360,7 +432,7 @@ class RequestExtensionTest(ExtensionTestCase):
 
 class ExtensionsXMLSerializerTest(test.TestCase):
 
-    def test_serialize_extenstion(self):
+    def test_serialize_extension(self):
         serializer = extensions.ExtensionsXMLSerializer()
         data = {'extension': {
           'name': 'ext1',

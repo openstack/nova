@@ -28,7 +28,6 @@ from nova import volume
 from nova.volume import volume_types
 from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import faults
 from nova.api.openstack import servers
 
 
@@ -113,7 +112,7 @@ class VolumeController(object):
         try:
             vol = self.volume_api.get(context, id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         return {'volume': _translate_volume_detail_view(context, vol)}
 
@@ -126,7 +125,7 @@ class VolumeController(object):
         try:
             self.volume_api.delete(context, volume_id=id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
     def index(self, req):
@@ -151,7 +150,7 @@ class VolumeController(object):
         context = req.environ['nova.context']
 
         if not body:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
 
         vol = body['volume']
         size = vol['size']
@@ -163,7 +162,7 @@ class VolumeController(object):
                 vol_type = volume_types.get_volume_type_by_name(context,
                                                                 vol_type)
             except exception.NotFound:
-                return faults.Fault(exc.HTTPNotFound())
+                raise exc.HTTPNotFound()
 
         metadata = vol.get('metadata', None)
 
@@ -244,12 +243,12 @@ class VolumeAttachmentController(object):
             vol = self.volume_api.get(context, volume_id)
         except exception.NotFound:
             LOG.debug("volume_id not found")
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         instance = vol['instance']
         if instance is None or str(instance['uuid']) != server_id:
             LOG.debug("instance_id != server_id")
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         return {'volumeAttachment': _translate_attachment_detail_view(context,
                                                                       vol)}
@@ -259,7 +258,7 @@ class VolumeAttachmentController(object):
         context = req.environ['nova.context']
 
         if not body:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            raise exc.HTTPUnprocessableEntity()
 
         instance_id = server_id
         volume_id = body['volumeAttachment']['volumeId']
@@ -275,7 +274,7 @@ class VolumeAttachmentController(object):
                                            volume_id=volume_id,
                                            device=device)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         # The attach is async
         attachment = {}
@@ -295,7 +294,7 @@ class VolumeAttachmentController(object):
 
     def update(self, req, server_id, id, body):
         """Update a volume attachment.  We don't currently support this."""
-        return faults.Fault(exc.HTTPBadRequest())
+        raise exc.HTTPBadRequest()
 
     def delete(self, req, server_id, id):
         """Detach a volume from an instance."""
@@ -307,12 +306,12 @@ class VolumeAttachmentController(object):
         try:
             vol = self.volume_api.get(context, volume_id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         instance = vol['instance']
         if instance is None or str(instance['uuid']) != server_id:
             LOG.debug("instance_id != server_id")
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         self.compute_api.detach_volume(context,
                                        volume_id=volume_id)
@@ -326,7 +325,7 @@ class VolumeAttachmentController(object):
         try:
             instance = self.compute_api.get(context, server_id)
         except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+            raise exc.HTTPNotFound()
 
         volumes = instance['volumes']
         limited_list = common.limited(volumes, req)
