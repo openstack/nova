@@ -20,6 +20,7 @@ ZoneManager oversees all communications with child Zones.
 import datetime
 import thread
 import traceback
+import UserDict
 
 from novaclient import v1_1 as novaclient
 
@@ -111,6 +112,71 @@ def _poll_zone(zone):
         zone.log_error(traceback.format_exc())
 
 
+class ReadOnlyDict(UserDict.IterableUserDict):
+    """A read-only dict."""
+    def __init__(self, source=None):
+        self.update(source)
+
+    def __setitem__(self, key, item):
+        raise TypeError
+
+    def __delitem__(self, key):
+        raise TypeError
+
+    def clear(self):
+        raise TypeError
+
+    def pop(self, key, *args):
+        raise TypeError
+
+    def popitem(self):
+        raise TypeError
+
+    def update(self, source=None):
+        if source is None:
+            return
+        elif isinstance(source, UserDict.UserDict):
+            self.data = source.data
+        elif isinstance(source, type({})):
+            self.data = source
+        else:
+            raise TypeError
+
+
+class HostInfo(object):
+    """Mutable and immutable information on hosts tracked
+    by the ZoneManager. This is an attempt to remove the
+    ad-hoc data structures previously used and lock down
+    access."""
+
+    def __init__(self, host, caps=None, free_ram_mb=0, free_disk_gb=0):
+        self.host = host
+
+        # Read-only capability dicts
+        self.compute = None
+        self.volume = None
+        self.network = None
+
+        if caps:
+            self.compute = ReadOnlyDict(caps.get('compute', None))
+            self.volume = ReadOnlyDict(caps.get('volume', None))
+            self.network = ReadOnlyDict(caps.get('network', None))
+
+        # Mutable available resources.
+        # These will change as resources are virtually "consumed".
+        self.free_ram_mb = free_ram_mb
+        self.free_disk_gb = free_disk_gb
+
+    def consume_resources(self, disk_gb, ram_mb):
+        """Consume some of the mutable resources."""
+        self.free_disk_gb -= disk_gb
+        self.free_ram_mb -= ram_mb
+
+    def __repr__(self):
+        return "%s ram:%s disk:%s" % \
+                    (self.host, self.free_ram_mb, self.free_disk_gb)
+
+
 class ZoneManager(object):
     """Keeps the zone states updated."""
     def __init__(self):
@@ -134,6 +200,53 @@ class ZoneManager(object):
             for svc in self.service_states[host]:
                 ret.append({"service": svc, "host_name": host})
         return ret
+
+    def _compute_node_get_all(self, context):
+        """Broken out for testing."""
+        return db.compute_node_get_all(context)
+
+    def _instance_get_all(self, context):
+        """Broken out for testing."""
+        return db.instance_get_all(context)
+
+    def get_all_host_data(self, context):
+        """Returns a dict of all the hosts the ZoneManager
+        knows about. Also, each of the consumable resources in HostInfo
+        are pre-populated and adjusted based on data in the db.
+
+        For example:
+        {'192.168.1.100': HostInfo(), ...}
+
+        Note: this can be very slow with a lot of instances.
+        InstanceType table isn't required since a copy is stored
+        with the instance (in case the InstanceType changed since the
+        instance was created)."""
+
+        # Make a compute node dict with the bare essential metrics.
+        compute_nodes = self._compute_node_get_all(context)
+        host_info_map = {}
+        for compute in compute_nodes:
+            all_disk = compute['local_gb']
+            all_ram = compute['memory_mb']
+            host = compute['service']['host']
+
+            caps = self.service_states.get(host, None)
+            host_info_map[host] = HostInfo(host, caps=caps,
+                                           free_disk_gb=all_disk,
+                                           free_ram_mb=all_ram)
+
+        # "Consume" resources from the host the instance resides on.
+        instances = self._instance_get_all(context)
+        for instance in instances:
+            host = instance['host']
+            host_info = host_info_map.get(host, None)
+            if not host_info:
+                continue
+            disk = instance['local_gb']
+            ram = instance['memory_mb']
+            host_info.consume_resources(disk, ram)
+
+        return host_info_map
 
     def get_zone_capabilities(self, context):
         """Roll up all the individual host info to generic 'service'

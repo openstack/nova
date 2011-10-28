@@ -367,6 +367,16 @@ def compute_node_get(context, compute_id, session=None):
 
 
 @require_admin_context
+def compute_node_get_all(context, session=None):
+    if not session:
+        session = get_session()
+
+    return session.query(models.ComputeNode).\
+                    options(joinedload('service')).\
+                    filter_by(deleted=can_read_deleted(context))
+
+
+@require_admin_context
 def compute_node_create(context, values):
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)

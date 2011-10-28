@@ -13,9 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
 
 import nova.scheduler
 from nova.scheduler.filters import abstract_filter
+
+
+LOG = logging.getLogger('nova.scheduler.filter.instance_type_filter')
 
 
 class InstanceTypeFilter(abstract_filter.AbstractHostFilter):
@@ -29,6 +33,7 @@ class InstanceTypeFilter(abstract_filter.AbstractHostFilter):
         satisfy the extra specs associated with the instance type"""
         if 'extra_specs' not in instance_type:
             return True
+
         # NOTE(lorinh): For now, we are just checking exact matching on the
         # values. Later on, we want to handle numerical
         # values so we can represent things like number of GPU cards
@@ -36,58 +41,31 @@ class InstanceTypeFilter(abstract_filter.AbstractHostFilter):
             for key, value in instance_type['extra_specs'].iteritems():
                 if capabilities[key] != value:
                     return False
-        except KeyError:
+        except KeyError, e:
             return False
         return True
+
+    def _basic_ram_filter(self, host_name, host_info, instance_type):
+        """Only return hosts with sufficient available RAM."""
+        requested_ram = instance_type['memory_mb']
+        free_ram_mb = host_info.free_ram_mb
+        return free_ram_mb >= requested_ram
 
     def filter_hosts(self, host_list, query):
         """Return a list of hosts that can create instance_type."""
         instance_type = query
         selected_hosts = []
-        for host, capabilities in host_list:
-            # In case the capabilities have not yet been extracted from
-            # the zone manager's services dict...
-            capabilities = capabilities.get("compute", capabilities)
-            if not capabilities:
+        for hostname, host_info in host_list:
+            if not self._basic_ram_filter(hostname, host_info,
+                                          instance_type):
                 continue
-            if not capabilities.get("enabled", True):
-                # Host is disabled
-                continue
-            host_ram_mb = capabilities['host_memory_free']
-            disk_bytes = capabilities['disk_available']
-            spec_ram = instance_type['memory_mb']
-            spec_disk = instance_type['local_gb']
-            extra_specs = instance_type['extra_specs']
+            capabilities = host_info.compute
+            if capabilities:
+                if not capabilities.get("enabled", True):
+                    continue
+                if not self._satisfies_extra_specs(capabilities,
+                                                   instance_type):
+                    continue
 
-            if ((host_ram_mb >= spec_ram) and (disk_bytes >= spec_disk) and
-                    self._satisfies_extra_specs(capabilities, instance_type)):
-                selected_hosts.append((host, capabilities))
+            selected_hosts.append((hostname, host_info))
         return selected_hosts
-
-
-# host entries (currently) are like:
-#    {'host_name-description': 'Default install of XenServer',
-#    'host_hostname': 'xs-mini',
-#    'host_memory_total': 8244539392,
-#    'host_memory_overhead': 184225792,
-#    'host_memory_free': 3868327936,
-#    'host_memory_free_computed': 3840843776,
-#    'host_other_config': {},
-#    'host_ip_address': '192.168.1.109',
-#    'host_cpu_info': {},
-#    'enabled': True,
-#    'disk_available': 32954957824,
-#    'disk_total': 50394562560,
-#    'disk_used': 17439604736,
-#    'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
-#    'host_name_label': 'xs-mini'}
-
-# instance_type table has:
-# name = Column(String(255), unique=True)
-# memory_mb = Column(Integer)
-# vcpus = Column(Integer)
-# local_gb = Column(Integer)
-# flavorid = Column(Integer, unique=True)
-# swap = Column(Integer, nullable=False, default=0)
-# rxtx_quota = Column(Integer, nullable=False, default=0)
-# rxtx_cap = Column(Integer, nullable=False, default=0)

@@ -25,6 +25,7 @@ semantics of real hypervisor connections.
 
 """
 
+from nova import db
 from nova import exception
 from nova import log as logging
 from nova import utils
@@ -238,8 +239,36 @@ class FakeConnection(driver.ComputeDriver):
         pass
 
     def update_available_resource(self, ctxt, host):
-        """This method is supported only by libvirt."""
-        return
+        """Updates compute manager resource info on ComputeNode table.
+
+        Since we don't have a real hypervisor, pretend we have lots of
+        disk and ram.
+        """
+
+        try:
+            service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
+        except exception.NotFound:
+            raise exception.ComputeServiceUnavailable(host=host)
+
+        # Updating host information
+        dic = {'vcpus': 1,
+               'memory_mb': 4096,
+               'local_gb': 1028,
+               'vcpus_used': 0,
+               'memory_mb_used': 0,
+               'local_gb_used': 0,
+               'hypervisor_type': 'fake',
+               'hypervisor_version': '1.0',
+               'cpu_info': '?'}
+
+        compute_node_ref = service_ref['compute_node']
+        if not compute_node_ref:
+            LOG.info(_('Compute_service record created for %s ') % host)
+            dic['service_id'] = service_ref['id']
+            db.compute_node_create(ctxt, dic)
+        else:
+            LOG.info(_('Compute_service record updated for %s ') % host)
+            db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
 
     def compare_cpu(self, xml):
         """This method is supported only by libvirt."""

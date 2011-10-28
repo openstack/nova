@@ -96,7 +96,7 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
                 ['>=', '$compute.disk_available', required_disk]]
         return json.dumps(query)
 
-    def _parse_string(self, string, host, services):
+    def _parse_string(self, string, host, hostinfo):
         """Strings prefixed with $ are capability lookups in the
         form '$service.capability[.subcap*]'.
         """
@@ -106,13 +106,18 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
             return string
 
         path = string[1:].split(".")
-        for item in path:
-            services = services.get(item, None)
-            if not services:
+        services = dict(compute=hostinfo.compute, network=hostinfo.network,
+                        volume=hostinfo.volume)
+        service = services.get(path[0], None)
+        if not service:
+            return None
+        for item in path[1:]:
+            service = service.get(item, None)
+            if not service:
                 return None
-        return services
+        return service
 
-    def _process_filter(self, query, host, services):
+    def _process_filter(self, query, host, hostinfo):
         """Recursively parse the query structure."""
         if not query:
             return True
@@ -121,9 +126,9 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         cooked_args = []
         for arg in query[1:]:
             if isinstance(arg, list):
-                arg = self._process_filter(arg, host, services)
+                arg = self._process_filter(arg, host, hostinfo)
             elif isinstance(arg, basestring):
-                arg = self._parse_string(arg, host, services)
+                arg = self._parse_string(arg, host, hostinfo)
             if arg is not None:
                 cooked_args.append(arg)
         result = method(self, cooked_args)
@@ -135,16 +140,16 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         """
         expanded = json.loads(query)
         filtered_hosts = []
-        for host, capabilities in host_list:
-            if not capabilities:
+        for host, hostinfo in host_list:
+            if not hostinfo:
                 continue
-            if not capabilities.get("enabled", True):
+            if hostinfo.compute and not hostinfo.compute.get("enabled", True):
                 # Host is disabled
                 continue
-            result = self._process_filter(expanded, host, capabilities)
+            result = self._process_filter(expanded, host, hostinfo)
             if isinstance(result, list):
                 # If any succeeded, include the host
                 result = any(result)
             if result:
-                filtered_hosts.append((host, capabilities))
+                filtered_hosts.append((host, hostinfo))
         return filtered_hosts

@@ -158,6 +158,11 @@ def compute_node_get(context, compute_id, session=None):
     return IMPL.compute_node_get(context, compute_id)
 
 
+def compute_node_get_all(context, session=None):
+    """Get all computeNodes."""
+    return IMPL.compute_node_get_all(context)
+
+
 def compute_node_create(context, values):
     """Create a computeNode from the values dictionary."""
     return IMPL.compute_node_create(context, values)
