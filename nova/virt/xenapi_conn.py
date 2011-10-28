@@ -174,7 +174,7 @@ class XenAPIConnection(driver.ComputeDriver):
         self._host_state = None
 
     @property
-    def HostState(self):
+    def host_state(self):
         if not self._host_state:
             self._host_state = HostState(self._session)
         return self._host_state
@@ -377,12 +377,12 @@ class XenAPIConnection(driver.ComputeDriver):
     def update_host_status(self):
         """Update the status info of the host, and return those values
             to the calling program."""
-        return self.HostState.update_status()
+        return self.host_state.update_status()
 
     def get_host_stats(self, refresh=False):
         """Return the current state of the host. If 'refresh' is
            True, run the update first."""
-        return self.HostState.get_host_stats(refresh=refresh)
+        return self.host_state.get_host_stats(refresh=refresh)
 
     def host_power_action(self, host, action):
         """The only valid values for 'action' on XenServer are 'reboot' or

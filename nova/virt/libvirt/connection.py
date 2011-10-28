@@ -196,6 +196,12 @@ class LibvirtConnection(driver.ComputeDriver):
             driver_class = utils.import_class(driver)
             self.volume_drivers[driver_type] = driver_class(self)
 
+    @property
+    def host_state(self):
+        if not self._host_state:
+            self._host_state = HostState(self._session)
+        return self._host_state
+
     def init_host(self, host):
         # NOTE(nsokolov): moved instance restarting to ComputeManager
         pass
@@ -1930,12 +1936,18 @@ class LibvirtConnection(driver.ComputeDriver):
                                                network_info=network_info)
 
     def update_host_status(self):
-        """See xenapi_conn.py implementation."""
-        pass
+        """Retrieve status info from libvirt.
+
+        Query libvirt to get the state of the compute node, such
+        as memory and disk usage.
+        """
+        return self.host_state.update_status()
 
     def get_host_stats(self, refresh=False):
-        """See xenapi_conn.py implementation."""
-        pass
+        """Return the current state of the host.
+
+        If 'refresh' is True, run update the stats first."""
+        return self.host_state.get_host_stats(refresh=refresh)
 
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""
@@ -1944,3 +1956,41 @@ class LibvirtConnection(driver.ComputeDriver):
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         pass
+
+
+class HostState(object):
+    """Manages information about the compute node through libvirt"""
+    def __init__(self, read_only):
+        super(HostState, self).__init__()
+        self.read_only = read_only
+        self._stats = {}
+        self.connection = None
+        self.update_status()
+
+    def get_host_stats(self, refresh=False):
+        """Return the current state of the host.
+
+        If 'refresh' is True, run update the stats first."""
+        if refresh:
+            self.update_status()
+        return self._stats
+
+    def update_status(self):
+        """Retrieve status info from libvirt."""
+        LOG.debug(_("Updating host stats"))
+        if self.connection is None:
+            self.connection = get_connection(self.read_only)
+        data = {}
+        data["vcpus"] = self.connection.get_vcpu_total()
+        data["vcpus_used"] = self.connection.get_vcpu_used()
+        data["cpu_info"] = utils.loads(self.connection.get_cpu_info())
+        data["disk_total"] = self.connection.get_local_gb_total()
+        data["disk_used"] = self.connection.get_local_gb_used()
+        data["disk_available"] = data["disk_total"] - data["disk_used"]
+        data["host_memory_total"] = self.connection.get_memory_mb_total()
+        data["host_memory_free"] = data["host_memory_total"] - \
+            self.connection.get_memory_mb_used()
+        data["hypervisor_type"] = self.connection.get_hypervisor_type()
+        data["hypervisor_version"] = self.connection.get_hypervisor_version()
+
+        self._stats = data

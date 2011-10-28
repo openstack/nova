@@ -1076,6 +1076,68 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertRaises(NotImplementedError, compute_driver.reboot, *args)
 
 
+class HostStateTestCase(test.TestCase):
+
+    cpu_info = '{"vendor": "Intel", "model": "pentium", "arch": "i686", '\
+    '"features": ["ssse3", "monitor", "pni", "sse2", "sse", "fxsr", '\
+    '"clflush", "pse36", "pat", "cmov", "mca", "pge", "mtrr", "sep", '\
+    '"apic"], "topology": {"cores": "1", "threads": "1", "sockets": "1"}}'
+
+    class FakeConnection(object):
+        """Fake connection object"""
+
+        def get_vcpu_total(self):
+            return 1
+
+        def get_vcpu_used(self):
+            return 0
+
+        def get_cpu_info(self):
+            return HostStateTestCase.cpu_info
+
+        def get_local_gb_total(self):
+            return 100
+
+        def get_local_gb_used(self):
+            return 20
+
+        def get_memory_mb_total(self):
+            return 497
+
+        def get_memory_mb_used(self):
+            return 88
+
+        def get_hypervisor_type(self):
+            return 'QEMU'
+
+        def get_hypervisor_version(self):
+            return 13091
+
+    def test_update_status(self):
+        self.mox.StubOutWithMock(connection, 'get_connection')
+        connection.get_connection(True).AndReturn(self.FakeConnection())
+
+        self.mox.ReplayAll()
+        hs = connection.HostState(True)
+        stats = hs._stats
+        self.assertEquals(stats["vcpus"], 1)
+        self.assertEquals(stats["vcpus_used"], 0)
+        self.assertEquals(stats["cpu_info"], \
+          {"vendor": "Intel", "model": "pentium", "arch": "i686",
+           "features": ["ssse3", "monitor", "pni", "sse2", "sse", "fxsr",
+                        "clflush", "pse36", "pat", "cmov", "mca", "pge",
+                        "mtrr", "sep", "apic"],
+           "topology": {"cores": "1", "threads": "1", "sockets": "1"}
+          })
+        self.assertEquals(stats["disk_total"], 100)
+        self.assertEquals(stats["disk_used"], 20)
+        self.assertEquals(stats["disk_available"], 80)
+        self.assertEquals(stats["host_memory_total"], 497)
+        self.assertEquals(stats["host_memory_free"], 409)
+        self.assertEquals(stats["hypervisor_type"], 'QEMU')
+        self.assertEquals(stats["hypervisor_version"], 13091)
+
+
 class NWFilterFakes:
     def __init__(self):
         self.filters = {}
