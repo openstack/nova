@@ -269,3 +269,47 @@ class TestLimiter(test.TestCase):
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
+
+
+class TestNoAuthMiddleware(test.TestCase):
+
+    def setUp(self):
+        super(TestNoAuthMiddleware, self).setUp()
+        self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
+        fakes.FakeAuthManager.clear_fakes()
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_networking(self.stubs)
+
+    def tearDown(self):
+        fakes.fake_data_store = {}
+        super(TestNoAuthMiddleware, self).tearDown()
+
+    def test_authorize_user(self):
+        req = webob.Request.blank('/v1.1')
+        req.headers['X-Auth-User'] = 'user1'
+        req.headers['X-Auth-Key'] = 'user1_key'
+        req.headers['X-Auth-Project-Id'] = 'user1_project'
+        result = req.get_response(fakes.wsgi_app(fake_auth=False,
+                                                 use_no_auth=True))
+        self.assertEqual(result.status, '204 No Content')
+        self.assertEqual(result.headers['X-CDN-Management-Url'],
+            "")
+        self.assertEqual(result.headers['X-Storage-Url'], "")
+        self.assertEqual(result.headers['X-Server-Management-Url'],
+            "http://localhost/v1.1/user1_project")
+
+    def test_authorize_user_trailing_slash(self):
+        #make sure it works with trailing slash on the request
+        req = webob.Request.blank('/v1.1/')
+        req.headers['X-Auth-User'] = 'user1'
+        req.headers['X-Auth-Key'] = 'user1_key'
+        req.headers['X-Auth-Project-Id'] = 'user1_project'
+        result = req.get_response(fakes.wsgi_app(fake_auth=False,
+                                                 use_no_auth=True))
+        self.assertEqual(result.status, '204 No Content')
+        self.assertEqual(result.headers['X-CDN-Management-Url'],
+            "")
+        self.assertEqual(result.headers['X-Storage-Url'], "")
+        self.assertEqual(result.headers['X-Server-Management-Url'],
+            "http://localhost/v1.1/user1_project")
