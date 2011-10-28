@@ -768,6 +768,16 @@ def fixed_ip_create(_context, values):
 
 
 @require_context
+def fixed_ip_bulk_create(_context, ips):
+    session = get_session()
+    with session.begin():
+        for ip in ips:
+            model = models.FixedIp()
+            model.update(ip)
+            session.add(model)
+
+
+@require_context
 def fixed_ip_disassociate(context, address):
     session = get_session()
     with session.begin():
