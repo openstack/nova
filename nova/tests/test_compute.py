@@ -496,13 +496,14 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        inst_ref = db.instance_get(self.context, instance_id)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.create')
         payload = msg['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_id'], inst_ref.uuid)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
@@ -515,6 +516,7 @@ class ComputeTestCase(test.TestCase):
     def test_terminate_usage_notification(self):
         """Ensure terminate_instance generates apropriate usage notification"""
         instance_id = self._create_instance()
+        inst_ref = db.instance_get(self.context, instance_id)
         self.compute.run_instance(self.context, instance_id)
         test_notifier.NOTIFICATIONS = []
         self.compute.terminate_instance(self.context, instance_id)
@@ -530,7 +532,7 @@ class ComputeTestCase(test.TestCase):
         payload = msg['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_id'], inst_ref.uuid)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
@@ -613,7 +615,7 @@ class ComputeTestCase(test.TestCase):
         payload = msg['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance_id)
+        self.assertEquals(payload['instance_id'], inst_ref.uuid)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
