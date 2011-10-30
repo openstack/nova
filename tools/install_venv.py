@@ -23,6 +23,7 @@
 Installation script for Nova's development virtualenv
 """
 
+import optparse
 import os
 import subprocess
 import sys
@@ -128,12 +129,15 @@ def check_dependencies():
     get_distro().install_virtualenv()
 
 
-def create_virtualenv(venv=VENV):
+def create_virtualenv(venv=VENV, no_site_packages=True):
     """Creates the virtual environment and installs PIP only into the
     virtual environment
     """
     print 'Creating venv...',
-    run_command(['virtualenv', '-q', VENV])
+    if no_site_packages:
+        run_command(['virtualenv', '-q', '--no-site-packages', VENV])
+    else:
+        run_command(['virtualenv', '-q', VENV])
     print 'done.'
     print 'Installing pip in virtualenv...',
     if not run_command(['tools/with_venv.sh', 'easy_install', 'pip']).strip():
@@ -191,10 +195,20 @@ def print_help():
     print help
 
 
+def parse_args():
+    """Parse command-line arguments"""
+    parser = optparse.OptionParser()
+    parser.add_option("-n", "--no-site-packages", dest="no_site_packages",
+        default=False, action="store_true",
+        help="Do not inherit packages from global Python install")
+    return parser.parse_args()
+
+
 def main(argv):
+    (options, args) = parse_args()
     check_python_version()
     check_dependencies()
-    create_virtualenv()
+    create_virtualenv(no_site_packages=options.no_site_packages)
     install_dependencies()
     print_help()
 

@@ -8,6 +8,7 @@ function usage {
   echo ""
   echo "  -V, --virtual-env        Always use virtualenv.  Install automatically if not present"
   echo "  -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment"
+  echo "  -s, --no-site-packages   Isolate the virtualenv from the global Python environment"
   echo "  -r, --recreate-db        Recreate the test database (deprecated, as this is now the default)."
   echo "  -n, --no-recreate-db     Don't recreate the test database."
   echo "  -x, --stop               Stop running tests after the first error or failure."
@@ -29,6 +30,7 @@ function process_option {
     -h|--help) usage;;
     -V|--virtual-env) always_venv=1; never_venv=0;;
     -N|--no-virtual-env) always_venv=0; never_venv=1;;
+    -s|--no-site-packages) no_site_packages=1;;
     -r|--recreate-db) recreate_db=1;;
     -n|--no-recreate-db) recreate_db=0;;
     -f|--force) force=1;;
@@ -45,6 +47,8 @@ with_venv=tools/with_venv.sh
 always_venv=0
 never_venv=0
 force=0
+no_site_packages=0
+installvenvopts=
 noseargs=
 noseopts=
 wrapper=""
@@ -60,6 +64,10 @@ done
 # If enabled, tell nose to collect coverage data 
 if [ $coverage -eq 1 ]; then
     noseopts="$noseopts --with-coverage --cover-package=nova"
+fi
+
+if [ $no_site_packages -eq 1 ]; then
+  installvenvopts="--no-site-packages"
 fi
 
 function run_tests {
@@ -123,14 +131,14 @@ then
   else
     if [ $always_venv -eq 1 ]; then
       # Automatically install the virtualenv
-      python tools/install_venv.py
+      python tools/install_venv.py $installvenvopts
       wrapper="${with_venv}"
     else
       echo -e "No virtual environment found...create one? (Y/n) \c"
       read use_ve
       if [ "x$use_ve" = "xY" -o "x$use_ve" = "x" -o "x$use_ve" = "xy" ]; then
         # Install the virtualenv and run the test suite in it
-        python tools/install_venv.py
+        python tools/install_venv.py $installvenvopts
         wrapper=${with_venv}
       fi
     fi
