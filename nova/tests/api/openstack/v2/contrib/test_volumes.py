@@ -100,7 +100,8 @@ class VolumeSerializerTest(test.TestCase):
         self.assertEqual(tree.tag, 'volume')
 
         for attr in ('id', 'status', 'size', 'availabilityZone', 'createdAt',
-                     'displayName', 'displayDescription', 'volumeType'):
+                     'displayName', 'displayDescription', 'volumeType',
+                     'snapshotId'):
             self.assertEqual(str(vol[attr]), tree.get(attr))
 
         for child in tree:
@@ -173,6 +174,7 @@ class VolumeSerializerTest(test.TestCase):
             displayName='vol_name',
             displayDescription='vol_desc',
             volumeType='vol_type',
+            snapshotId='snap_id',
             metadata=dict(
                 foo='bar',
                 baz='quux',
@@ -201,6 +203,7 @@ class VolumeSerializerTest(test.TestCase):
                 displayName='vol1_name',
                 displayDescription='vol1_desc',
                 volumeType='vol1_type',
+                snapshotId='snap1_id',
                 metadata=dict(
                     foo='vol1_foo',
                     bar='vol1_bar',
@@ -220,6 +223,7 @@ class VolumeSerializerTest(test.TestCase):
                 displayName='vol2_name',
                 displayDescription='vol2_desc',
                 volumeType='vol2_type',
+                snapshotId='snap2_id',
                 metadata=dict(
                     foo='vol2_foo',
                     bar='vol2_bar',
