@@ -91,7 +91,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description', 'fixed_ips',
-                     'bandwidth', 'audit_period_begining',
+                     'bandwidth', 'audit_period_beginning',
                      'audit_period_ending'):
             self.assertTrue(attr in payload,
                             msg="Key %s not in payload" % attr)
