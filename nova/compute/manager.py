@@ -464,16 +464,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # be fixed once we have no-db-messaging
             pass
         except:
-            # NOTE(sirp): 3-arg raise needed since Eventlet clears exceptions
-            # when switching between greenthreads.
-            type_, value, traceback = sys.exc_info()
-            try:
+            with utils.save_and_reraise_exception():
                 _deallocate_network()
-            finally:
-                # FIXME(sirp): when/if
-                # https://github.com/jcrocholl/pep8/pull/27 merges, we can add
-                # a per-line disable flag here for W602
-                raise type_, value, traceback
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def run_instance(self, context, instance_id, **kwargs):

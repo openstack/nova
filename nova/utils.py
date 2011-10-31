@@ -19,6 +19,7 @@
 
 """Utilities and helper functions."""
 
+import contextlib
 import datetime
 import functools
 import inspect
@@ -910,3 +911,27 @@ def convert_to_list_dict(lst, label):
     if not isinstance(lst, list):
         lst = [lst]
     return [{label: x} for x in lst]
+
+
+@contextlib.contextmanager
+def save_and_reraise_exception():
+    """Save current exception, run some code and then re-raise.
+
+    In some cases the exception context can be cleared, resulting in None
+    being attempted to be reraised after an exception handler is run. This
+    can happen when eventlet switches greenthreads or when running an
+    exception handler, code raises and catches and exception. In both
+    cases the exception context will be cleared.
+
+    To work around this, we save the exception state, run handler code, and
+    then re-raise the original exception. If another exception occurs, the
+    saved exception is logged and the new exception is reraised.
+    """
+    type_, value, traceback = sys.exc_info()
+    try:
+        yield
+    except:
+        LOG.exception(_('Original exception being dropped'),
+                      exc_info=(type_, value, traceback))
+        raise
+    raise type_, value, traceback
