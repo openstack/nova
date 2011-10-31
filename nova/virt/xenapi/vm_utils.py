@@ -523,7 +523,7 @@ w
             cls.create_vbd(session, vm_ref, vdi_ref, userdevice,
                            bootable=False)
         except:
-            with utils.original_exception_raised():
+            with utils.save_and_reraise_exception():
                 cls.destroy_vdi(session, vdi_ref)
 
     @classmethod

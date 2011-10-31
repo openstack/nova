@@ -979,21 +979,27 @@ def generate_glance_url():
 
 
 @contextlib.contextmanager
-def original_exception_raised():
-    """Run some code, then re-raise the original exception.
+def save_and_reraise_exception():
+    """Save current exception, run some code and then re-raise.
 
-    This is needed because when Eventlet switches greenthreads, it clears the
-    exception context. This means if exception handler code blocks, we'll lose
-    the helpful exception traceback information.
+    In some cases the exception context can be cleared, resulting in None
+    being attempted to be reraised after an exception handler is run. This
+    can happen when eventlet switches greenthreads or when running an
+    exception handler, code raises and catches and exception. In both
+    cases the exception context will be cleared.
 
     To work around this, we save the exception state, run handler code, and
-    then re-raise the original exception.
+    then re-raise the original exception. If another exception occurs, the
+    saved exception is logged and the new exception is reraised.
     """
     type_, value, traceback = sys.exc_info()
     try:
         yield
-    finally:
-        raise type_, value, traceback
+    except:
+        LOG.exception(_('Original exception being dropped'),
+                      exc_info=(type_, value, traceback))
+        raise
+    raise type_, value, traceback
 
 
 def make_dev_path(dev, partition=None, base='/dev'):
