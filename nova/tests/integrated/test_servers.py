@@ -336,7 +336,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # rebuild the server with metadata
         post = {}
         post['rebuild'] = {
-            "imageRef": "https://localhost/v1.1/32278/images/3",
+            "imageRef": "c905cedb-7281-47e4-8a62-f26bc5fc4c77",
             "name": "blah",
         }
 
@@ -348,7 +348,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual(created_server_id, found_server['id'])
         self.assertEqual({}, found_server.get('metadata'))
         self.assertEqual('blah', found_server.get('name'))
-        self.assertEqual('3', found_server.get('image')['id'])
+        self.assertEqual(post['rebuild']['imageRef'],
+                         found_server.get('image')['id'])
 
         # Cleanup
         self._delete_server(created_server_id)
@@ -370,7 +371,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # rebuild the server with metadata
         post = {}
         post['rebuild'] = {
-            "imageRef": "https://localhost/v1.1/32278/images/2",
+            "imageRef": "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
             "name": "blah",
         }
 
@@ -416,7 +417,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # rebuild the server with metadata
         post = {}
         post['rebuild'] = {
-            "imageRef": "https://localhost/v1.1/32278/images/2",
+            "imageRef": "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
             "name": "blah",
         }
 

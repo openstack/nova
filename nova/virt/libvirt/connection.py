@@ -872,7 +872,7 @@ class LibvirtConnection(driver.ComputeDriver):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
-            fname = '%08x' % int(disk_images['kernel_id'])
+            fname = disk_images['kernel_id']
             self._cache_image(fn=self._fetch_image,
                               context=context,
                               target=basepath('kernel'),
@@ -881,7 +881,7 @@ class LibvirtConnection(driver.ComputeDriver):
                               user_id=inst['user_id'],
                               project_id=inst['project_id'])
             if disk_images['ramdisk_id']:
-                fname = '%08x' % int(disk_images['ramdisk_id'])
+                fname = disk_images['ramdisk_id']
                 self._cache_image(fn=self._fetch_image,
                                   context=context,
                                   target=basepath('ramdisk'),
@@ -966,7 +966,7 @@ class LibvirtConnection(driver.ComputeDriver):
             target_partition = None
 
         if config_drive_id:
-            fname = '%08x' % int(config_drive_id)
+            fname = config_drive_id
             self._cache_image(fn=self._fetch_image,
                               target=basepath('disk.config'),
                               fname=fname,

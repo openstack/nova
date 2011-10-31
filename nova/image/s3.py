@@ -29,6 +29,7 @@ import boto.s3.connection
 import eventlet
 
 from nova import crypto
+import nova.db.api
 from nova import exception
 from nova import flags
 from nova import image
@@ -54,6 +55,44 @@ class S3ImageService(object):
         self.service = service or image.get_default_image_service()
         self.service.__init__(*args, **kwargs)
 
+    def get_image_uuid(self, context, image_id):
+        return nova.db.api.s3_image_get(context, image_id)['uuid']
+
+    def get_image_id(self, context, image_uuid):
+        return nova.db.api.s3_image_get_by_uuid(context, image_uuid)['id']
+
+    def _create_image_id(self, context, image_uuid):
+        return nova.db.api.s3_image_create(context, image_uuid)['id']
+
+    def _translate_uuids_to_ids(self, context, images):
+        return [self._translate_uuid_to_id(context, img) for img in images]
+
+    def _translate_uuid_to_id(self, context, image):
+        def _find_or_create(image_uuid):
+            try:
+                return self.get_image_id(context, image_uuid)
+            except exception.NotFound:
+                return self._create_image_id(context, image_uuid)
+
+        image_copy = image.copy()
+
+        try:
+            image_id = image_copy['id']
+        except KeyError:
+            pass
+        else:
+            image_copy['id'] = _find_or_create(image_copy['id'])
+
+        for prop in ['kernel_id', 'ramdisk_id']:
+            try:
+                image_uuid = image_copy['properties'][prop]
+            except (KeyError, ValueError):
+                pass
+            else:
+                image_copy['properties'][prop] = _find_or_create(image_uuid)
+
+        return image_copy
+
     def create(self, context, metadata, data=None):
         """Create an image.
 
@@ -64,23 +103,38 @@ class S3ImageService(object):
         return image
 
     def delete(self, context, image_id):
-        self.service.delete(context, image_id)
+        image_uuid = self.get_image_uuid(context, image_id)
+        self.service.delete(context, image_uuid)
 
     def update(self, context, image_id, metadata, data=None):
-        image = self.service.update(context, image_id, metadata, data)
-        return image
+        image_uuid = self.get_image_uuid(context, image_id)
+        image = self.service.update(context, image_uuid, metadata, data)
+        return self._translate_uuid_to_id(context, image)
 
     def index(self, context):
-        return self.service.index(context)
+        #NOTE(bcwaldon): sort asc to make sure we assign lower ids
+        # to older images
+        images = self.service.index(context, sort_dir='asc')
+        return self._translate_uuids_to_ids(context, images)
 
     def detail(self, context):
-        return self.service.detail(context)
+        #NOTE(bcwaldon): sort asc to make sure we assign lower ids
+        # to older images
+        images = self.service.detail(context, sort_dir='asc')
+        return self._translate_uuids_to_ids(context, images)
 
     def show(self, context, image_id):
-        return self.service.show(context, image_id)
+        image_uuid = self.get_image_uuid(context, image_id)
+        image = self.service.show(context, image_uuid)
+        return self._translate_uuid_to_id(context, image)
 
     def show_by_name(self, context, name):
-        return self.service.show_by_name(context, name)
+        image = self.service.show_by_name(context, name)
+        return self._translate_uuid_to_id(context, image)
+
+    def get(self, context, image_id):
+        image_uuid = self.get_image_uuid(context, image_id)
+        return self.get(self, context, image_uuid)
 
     @staticmethod
     def _conn(context):
@@ -158,10 +212,14 @@ class S3ImageService(object):
         properties['architecture'] = arch
 
         if kernel_id:
-            properties['kernel_id'] = ec2utils.ec2_id_to_id(kernel_id)
+            kernel_id = ec2_utils.ec2_id_to_id(kernel_id)
+            kernel_uuid = self._get_image_uuid(context, kernel_id)
+            properties['kernel_id'] = kernel_uuid
 
         if ramdisk_id:
-            properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
+            ramdisk_id = ec2utils.ec2_id_to_id(ramdisk_id)
+            ramdisk_uuid = self._get_image_uuid(context, ramdisk_id)
+            properties['ramdisk_id'] = ramdisk_uuid
 
         if mappings:
             properties['mappings'] = mappings
@@ -172,8 +230,19 @@ class S3ImageService(object):
                          'is_public': False,
                          'properties': properties})
         metadata['properties']['image_state'] = 'pending'
+
+        #TODO(bcwaldon): right now, this removes user-defined ids.
+        # We need to re-enable this.
+        image_id = metadata.pop('id', None)
+
         image = self.service.create(context, metadata)
-        return manifest, image
+
+        # extract the new uuid and generate an int id to present back to user
+        image_uuid = image['id']
+        image['id'] = self._create_image_id(context, image_uuid)
+
+        # return image_uuid so the caller can still make use of image_service
+        return manifest, image, image_uuid
 
     def _s3_create(self, context, metadata):
         """Gets a manifext from s3 and makes an image."""
@@ -187,15 +256,16 @@ class S3ImageService(object):
         key = bucket.get_key(manifest_path)
         manifest = key.get_contents_as_string()
 
-        manifest, image = self._s3_parse_manifest(context, metadata, manifest)
-        image_id = image['id']
+        manifest, image, image_uuid = self._s3_parse_manifest(context,
+                                                              metadata,
+                                                              manifest)
 
         def delayed_create():
             """This handles the fetching and decrypting of the part files."""
             log_vars = {'image_location': image_location,
                         'image_path': image_path}
             metadata['properties']['image_state'] = 'downloading'
-            self.service.update(context, image_id, metadata)
+            self.service.update(context, image_uuid, metadata)
 
             try:
                 parts = []
@@ -217,11 +287,11 @@ class S3ImageService(object):
                 LOG.exception(_("Failed to download %(image_location)s "
                                 "to %(image_path)s"), log_vars)
                 metadata['properties']['image_state'] = 'failed_download'
-                self.service.update(context, image_id, metadata)
+                self.service.update(context, image_uuid, metadata)
                 return
 
             metadata['properties']['image_state'] = 'decrypting'
-            self.service.update(context, image_id, metadata)
+            self.service.update(context, image_uuid, metadata)
 
             try:
                 hex_key = manifest.find('image/ec2_encrypted_key').text
@@ -241,11 +311,11 @@ class S3ImageService(object):
                 LOG.exception(_("Failed to decrypt %(image_location)s "
                                 "to %(image_path)s"), log_vars)
                 metadata['properties']['image_state'] = 'failed_decrypt'
-                self.service.update(context, image_id, metadata)
+                self.service.update(context, image_uuid, metadata)
                 return
 
             metadata['properties']['image_state'] = 'untarring'
-            self.service.update(context, image_id, metadata)
+            self.service.update(context, image_uuid, metadata)
 
             try:
                 unz_filename = self._untarzip_image(image_path, dec_filename)
@@ -253,25 +323,25 @@ class S3ImageService(object):
                 LOG.exception(_("Failed to untar %(image_location)s "
                                 "to %(image_path)s"), log_vars)
                 metadata['properties']['image_state'] = 'failed_untar'
-                self.service.update(context, image_id, metadata)
+                self.service.update(context, image_uuid, metadata)
                 return
 
             metadata['properties']['image_state'] = 'uploading'
-            self.service.update(context, image_id, metadata)
+            self.service.update(context, image_uuid, metadata)
             try:
                 with open(unz_filename) as image_file:
-                    self.service.update(context, image_id,
+                    self.service.update(context, image_uuid,
                                         metadata, image_file)
             except Exception:
                 LOG.exception(_("Failed to upload %(image_location)s "
                                 "to %(image_path)s"), log_vars)
                 metadata['properties']['image_state'] = 'failed_upload'
-                self.service.update(context, image_id, metadata)
+                self.service.update(context, image_uuid, metadata)
                 return
 
             metadata['properties']['image_state'] = 'available'
             metadata['status'] = 'active'
-            self.service.update(context, image_id, metadata)
+            self.service.update(context, image_uuid, metadata)
 
             shutil.rmtree(image_path)
 

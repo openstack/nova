@@ -28,6 +28,7 @@ FLAGS = flags.FLAGS
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
 
 
 def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
@@ -42,7 +43,7 @@ def fake_compute_api_create(cls, context, instance_type, image_href, **kwargs):
              'instance_type': dict(inst_type),
              'access_ip_v4': '1.2.3.4',
              'access_ip_v6': 'fead::1234',
-             'image_ref': 3,
+             'image_ref': IMAGE_UUID,
              'user_id': 'fake',
              'project_id': 'fake',
              'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
@@ -61,7 +62,7 @@ class BootFromVolumeTest(test.TestCase):
 
     def test_create_root_volume(self):
         body = dict(server=dict(
-                name='test_server', imageRef=3,
+                name='test_server', imageRef=IMAGE_UUID,
                 flavorRef=2, min_count=1, max_count=1,
                 block_device_mapping=[dict(
                         volume_id=1,
@@ -82,7 +83,7 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
         self.assertEqual(2, int(server['flavor']['id']))
         self.assertEqual(u'test_server', server['name'])
-        self.assertEqual(3, int(server['image']['id']))
+        self.assertEqual(IMAGE_UUID, server['image']['id'])
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(len(_block_device_mapping_seen), 1)
         self.assertEqual(_block_device_mapping_seen[0]['volume_id'], 1)

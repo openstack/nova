@@ -354,12 +354,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
-            LOG.debug(_("image_id=%(image_id)d, image_size_bytes="
+            LOG.debug(_("image_id=%(image_id)s, image_size_bytes="
                         "%(size_bytes)d, allowed_size_bytes="
                         "%(allowed_size_bytes)d") % locals())
 
             if size_bytes > allowed_size_bytes:
-                LOG.info(_("Image '%(image_id)d' size %(size_bytes)d exceeded"
+                LOG.info(_("Image '%(image_id)s' size %(size_bytes)d exceeded"
                            " instance_type allowed size "
                            "%(allowed_size_bytes)d")
                            % locals())
@@ -798,7 +798,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             for i in xrange(excess):
                 image = images.pop()
                 image_id = image['id']
-                LOG.debug(_("Deleting image %d" % image_id))
+                LOG.debug(_("Deleting image %s" % image_id))
                 image_service.delete(context, image_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

@@ -31,7 +31,7 @@ def ec2_id_to_id(ec2_id):
 
 def id_to_ec2_id(instance_id, template='i-%08x'):
     """Convert an instance ID (int) to an ec2 ID (i-[base 16 number])"""
-    return template % instance_id
+    return template % int(instance_id)
 
 
 def id_to_ec2_snap_id(instance_id):

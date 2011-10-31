@@ -138,10 +138,11 @@ class CreateserverextTest(test.TestCase):
         compute_api = MockComputeAPI()
         self.stubs.Set(nova.compute, 'API',
                        self._make_stub_method(compute_api))
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.stubs.Set(
             nova.api.openstack.servers.Controller,
             '_get_kernel_ramdisk_from_image',
-            self._make_stub_method((1, 1)))
+            self._make_stub_method((image_uuid, image_uuid)))
         return compute_api
 
     def _setup_mock_network_api(self):
@@ -150,7 +151,7 @@ class CreateserverextTest(test.TestCase):
     def _create_security_group_request_dict(self, security_groups):
         server = {}
         server['name'] = 'new-server-test'
-        server['imageRef'] = 1
+        server['imageRef'] = 'cedef40a-ed67-4d10-800e-17455edce175'
         server['flavorRef'] = 1
         if security_groups is not None:
             sg_list = []
@@ -162,7 +163,7 @@ class CreateserverextTest(test.TestCase):
     def _create_networks_request_dict(self, networks):
         server = {}
         server['name'] = 'new-server-test'
-        server['imageRef'] = 1
+        server['imageRef'] = 'cedef40a-ed67-4d10-800e-17455edce175'
         server['flavorRef'] = 1
         if networks is not None:
             network_list = []
@@ -174,7 +175,7 @@ class CreateserverextTest(test.TestCase):
     def _create_user_data_request_dict(self, user_data):
         server = {}
         server['name'] = 'new-server-test'
-        server['imageRef'] = 1
+        server['imageRef'] = 'cedef40a-ed67-4d10-800e-17455edce175'
         server['flavorRef'] = 1
         server['user_data'] = user_data
         return {'server': server}

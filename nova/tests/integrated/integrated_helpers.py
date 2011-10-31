@@ -22,11 +22,12 @@ Provides common functionality for integrated unit tests
 import random
 import string
 
-from nova import service
-from nova import test  # For the flags
 import nova.image.glance
 from nova.log import logging
+from nova import service
+from nova import test  # For the flags
 from nova.tests.integrated.api import client
+from nova import utils
 
 
 LOG = logging.getLogger('nova.tests.integrated')
@@ -65,7 +66,7 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(verbose=True)
 
         def fake_get_image_service(context, image_href):
-            image_id = int(str(image_href).split('/')[-1])
+            image_id = str(image_href).split('/')[-1]
             return (nova.image.fake.FakeImageService(), image_id)
         self.stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
 
@@ -103,9 +104,7 @@ class _IntegratedTestBase(test.TestCase):
         return generate_new_element(server_names, 'server')
 
     def get_invalid_image(self):
-        images = self.api.get_images()
-        image_ids = [image['id'] for image in images]
-        return generate_new_element(image_ids, '', numeric=True)
+        return str(utils.gen_uuid())
 
     def _build_minimal_create_server_request(self):
         server = {}

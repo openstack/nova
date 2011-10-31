@@ -61,20 +61,24 @@ class UrlmapTest(test.TestCase):
 
     def test_path_content_type(self):
         """Test URL path specifying JSON returns JSON content."""
-        req = webob.Request.blank('/v1.1/foobar/images/1.json')
+        url = '/v1.1/foobar/images/cedef40a-ed67-4d10-800e-17455edce175.json'
+        req = webob.Request.blank(url)
         req.accept = "application/xml"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = json.loads(res.body)
-        self.assertEqual(body['image']['id'], '1')
+        self.assertEqual(body['image']['id'],
+                         'cedef40a-ed67-4d10-800e-17455edce175')
 
     def test_accept_content_type(self):
         """Test Accept header specifying JSON returns JSON content."""
-        req = webob.Request.blank('/v1.1/foobar/images/1')
+        url = '/v1.1/foobar/images/cedef40a-ed67-4d10-800e-17455edce175'
+        req = webob.Request.blank(url)
         req.accept = "application/xml;q=0.8, application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = json.loads(res.body)
-        self.assertEqual(body['image']['id'], '1')
+        self.assertEqual(body['image']['id'],
+                         'cedef40a-ed67-4d10-800e-17455edce175')
