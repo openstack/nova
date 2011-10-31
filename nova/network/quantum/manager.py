@@ -241,7 +241,9 @@ class QuantumManager(manager.FlatManager):
                 'injected': True,
                 'multi_host': False}
 
+            q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
             info = {
+                'label': self.q_conn.get_network_name(q_tenant_id, net_id),
                 'gateway': v4_subnet['gateway'],
                 'dhcp_server': v4_subnet['gateway'],
                 'broadcast': v4_subnet['broadcast'],
