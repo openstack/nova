@@ -887,7 +887,7 @@ class TestSecurityGroupRules(test.TestCase):
                   "ip_protocol": "tcp",
                   "from_port": "22",
                   "to_port": "22",
-                  "group_id": "invalid",
+                  "group_id": "",
                   "parent_group_id": "%s" % self.parent_security_group['id'],
                }
             }

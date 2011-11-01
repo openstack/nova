@@ -251,7 +251,7 @@ class SecurityGroupRulesController(SecurityGroupController):
                                   cidr=None, group_id=None):
         values = {}
 
-        if group_id:
+        if group_id is not None:
             try:
                 parent_group_id = int(parent_group_id)
                 group_id = int(group_id)
