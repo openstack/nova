@@ -304,18 +304,18 @@ class LibvirtConnection(driver.ComputeDriver):
                                 locals())
                     raise
 
-        try:
-            # NOTE(justinsb): We remove the domain definition. We probably
-            # would do better to keep it if cleanup=False (e.g. volumes?)
-            # (e.g. #2 - not losing machines on failure)
-            virt_dom.undefine()
-        except libvirt.libvirtError as e:
-            errcode = e.get_error_code()
-            LOG.warning(_("Error from libvirt during undefine of "
-                          "%(instance_name)s. Code=%(errcode)s "
-                          "Error=%(e)s") %
-                        locals())
-            raise
+            try:
+                # NOTE(justinsb): We remove the domain definition. We probably
+                # would do better to keep it if cleanup=False (e.g. volumes?)
+                # (e.g. #2 - not losing machines on failure)
+                virt_dom.undefine()
+            except libvirt.libvirtError as e:
+                errcode = e.get_error_code()
+                LOG.warning(_("Error from libvirt during undefine of "
+                              "%(instance_name)s. Code=%(errcode)s "
+                              "Error=%(e)s") %
+                            locals())
+                raise
 
         for (network, mapping) in network_info:
             self.vif_driver.unplug(instance, network, mapping)
