@@ -47,7 +47,7 @@ def notify_usage_exists(instance_ref, current_period=False):
                                          audit_start):
         bw[b.network_label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
     usage_info = utils.usage_from_instance(instance_ref,
-                          audit_period_begining=str(audit_start),
+                          audit_period_beginning=str(audit_start),
                           audit_period_ending=str(audit_end),
                           bandwidth=bw)
     notifier_api.notify('compute.%s' % FLAGS.host,
