@@ -54,7 +54,7 @@ class Controller(object):
         """Returns a list of consoles for this instance"""
         consoles = self.console_api.get_consoles(
                                     req.environ['nova.context'],
-                                    int(server_id))
+                                    server_id)
         return dict(consoles=[_translate_keys(console)
                               for console in consoles])
 
@@ -62,14 +62,14 @@ class Controller(object):
         """Creates a new console"""
         self.console_api.create_console(
                                 req.environ['nova.context'],
-                                int(server_id))
+                                server_id)
 
     def show(self, req, server_id, id):
         """Shows in-depth information on a specific console"""
         try:
             console = self.console_api.get_console(
                                         req.environ['nova.context'],
-                                        int(server_id),
+                                        server_id,
                                         int(id))
         except exception.NotFound:
             raise exc.HTTPNotFound()
@@ -83,7 +83,7 @@ class Controller(object):
         """Deletes a console"""
         try:
             self.console_api.delete_console(req.environ['nova.context'],
-                                            int(server_id),
+                                            server_id,
                                             int(id))
         except exception.NotFound:
             raise exc.HTTPNotFound()

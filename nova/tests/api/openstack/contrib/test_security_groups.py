@@ -27,6 +27,9 @@ from nova.api.openstack.contrib import security_groups
 from nova.tests.api.openstack import fakes
 
 
+FAKE_UUID = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
+
+
 def _get_create_request_json(body_dict):
     req = webob.Request.blank('/v1.1/123/os-security-groups')
     req.headers['Content-Type'] = 'application/json'
@@ -55,7 +58,17 @@ def _create_security_group_request_dict(security_group):
 
 
 def return_server(context, server_id):
-    return {'id': server_id, 'state': 0x01, 'host': "localhost"}
+    return {'id': int(server_id),
+            'state': 0x01,
+            'host': "localhost",
+            'uuid': FAKE_UUID}
+
+
+def return_server_by_uuid(context, server_uuid):
+    return {'id': 1,
+            'state': 0x01,
+            'host': "localhost",
+            'uuid': server_uuid}
 
 
 def return_non_running_server(context, server_id):
@@ -72,7 +85,7 @@ def return_security_group_without_instances(context, project_id, group_name):
     return {'id': 1, 'name': group_name}
 
 
-def return_server_nonexistant(context, server_id):
+def return_server_nonexistent(context, server_id):
     raise exception.InstanceNotFound(instance_id=server_id)
 
 
@@ -351,28 +364,16 @@ class TestSecurityGroups(test.TestCase):
 
     def test_associate_by_non_existing_security_group_name(self):
         body = dict(addSecurityGroup=dict(name='non-existing'))
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
         response = req.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 404)
 
-    def test_associate_by_invalid_server_id(self):
-        body = dict(addSecurityGroup=dict(name='test'))
-        self.stubs.Set(nova.db, 'security_group_get_by_name',
-                       return_security_group)
-        req = webob.Request.blank('/v1.1/123/servers/invalid/action')
-        req.headers['Content-Type'] = 'application/json'
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEquals(response.status_int, 400)
-
     def test_associate_without_body(self):
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         body = dict(addSecurityGroup=None)
-        self.stubs.Set(nova.db, 'instance_get', return_server)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -380,9 +381,8 @@ class TestSecurityGroups(test.TestCase):
         self.assertEquals(response.status_int, 400)
 
     def test_associate_no_security_group_name(self):
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         body = dict(addSecurityGroup=dict())
-        self.stubs.Set(nova.db, 'instance_get', return_server)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -390,9 +390,8 @@ class TestSecurityGroups(test.TestCase):
         self.assertEquals(response.status_int, 400)
 
     def test_associate_security_group_name_with_whitespaces(self):
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         body = dict(addSecurityGroup=dict(name="   "))
-        self.stubs.Set(nova.db, 'instance_get', return_server)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -400,11 +399,13 @@ class TestSecurityGroups(test.TestCase):
         self.assertEquals(response.status_int, 400)
 
     def test_associate_non_existing_instance(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server_nonexistant)
+        self.stubs.Set(nova.db, 'instance_get', return_server_nonexistent)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_nonexistent)
         body = dict(addSecurityGroup=dict(name="test"))
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group)
-        req = webob.Request.blank('/v1.1/123/servers/10000/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -413,10 +414,12 @@ class TestSecurityGroups(test.TestCase):
 
     def test_associate_non_running_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_non_running_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_non_running_server)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group_without_instances)
         body = dict(addSecurityGroup=dict(name="test"))
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -425,10 +428,12 @@ class TestSecurityGroups(test.TestCase):
 
     def test_associate_already_associated_security_group_to_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_by_uuid)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group)
         body = dict(addSecurityGroup=dict(name="test"))
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -437,6 +442,8 @@ class TestSecurityGroups(test.TestCase):
 
     def test_associate(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_by_uuid)
         self.mox.StubOutWithMock(nova.db, 'instance_add_security_group')
         nova.db.instance_add_security_group(mox.IgnoreArg(),
                                     mox.IgnoreArg(),
@@ -446,7 +453,7 @@ class TestSecurityGroups(test.TestCase):
         self.mox.ReplayAll()
 
         body = dict(addSecurityGroup=dict(name="test"))
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -455,6 +462,8 @@ class TestSecurityGroups(test.TestCase):
 
     def test_associate_xml(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_by_uuid)
         self.mox.StubOutWithMock(nova.db, 'instance_add_security_group')
         nova.db.instance_add_security_group(mox.IgnoreArg(),
                                     mox.IgnoreArg(),
@@ -463,7 +472,7 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_without_instances)
         self.mox.ReplayAll()
 
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/xml'
         req.method = 'POST'
         req.body = """<addSecurityGroup>
@@ -474,28 +483,16 @@ class TestSecurityGroups(test.TestCase):
 
     def test_disassociate_by_non_existing_security_group_name(self):
         body = dict(removeSecurityGroup=dict(name='non-existing'))
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
         response = req.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 404)
 
-    def test_disassociate_by_invalid_server_id(self):
-        body = dict(removeSecurityGroup=dict(name='test'))
-        self.stubs.Set(nova.db, 'security_group_get_by_name',
-                       return_security_group)
-        req = webob.Request.blank('/v1.1/123/servers/invalid/action')
-        req.headers['Content-Type'] = 'application/json'
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEquals(response.status_int, 400)
-
     def test_disassociate_without_body(self):
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         body = dict(removeSecurityGroup=None)
-        self.stubs.Set(nova.db, 'instance_get', return_server)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -503,9 +500,8 @@ class TestSecurityGroups(test.TestCase):
         self.assertEquals(response.status_int, 400)
 
     def test_disassociate_no_security_group_name(self):
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         body = dict(removeSecurityGroup=dict())
-        self.stubs.Set(nova.db, 'instance_get', return_server)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -513,9 +509,8 @@ class TestSecurityGroups(test.TestCase):
         self.assertEquals(response.status_int, 400)
 
     def test_disassociate_security_group_name_with_whitespaces(self):
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         body = dict(removeSecurityGroup=dict(name="   "))
-        self.stubs.Set(nova.db, 'instance_get', return_server)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -523,11 +518,13 @@ class TestSecurityGroups(test.TestCase):
         self.assertEquals(response.status_int, 400)
 
     def test_disassociate_non_existing_instance(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server_nonexistant)
+        self.stubs.Set(nova.db, 'instance_get', return_server_nonexistent)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_nonexistent)
         body = dict(removeSecurityGroup=dict(name="test"))
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group)
-        req = webob.Request.blank('/v1.1/123/servers/10000/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -536,10 +533,12 @@ class TestSecurityGroups(test.TestCase):
 
     def test_disassociate_non_running_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_non_running_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_non_running_server)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group)
         body = dict(removeSecurityGroup=dict(name="test"))
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -548,10 +547,12 @@ class TestSecurityGroups(test.TestCase):
 
     def test_disassociate_already_associated_security_group_to_instance(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_by_uuid)
         self.stubs.Set(nova.db, 'security_group_get_by_name',
                        return_security_group_without_instances)
         body = dict(removeSecurityGroup=dict(name="test"))
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -560,6 +561,8 @@ class TestSecurityGroups(test.TestCase):
 
     def test_disassociate(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_by_uuid)
         self.mox.StubOutWithMock(nova.db, 'instance_remove_security_group')
         nova.db.instance_remove_security_group(mox.IgnoreArg(),
                                     mox.IgnoreArg(),
@@ -569,7 +572,7 @@ class TestSecurityGroups(test.TestCase):
         self.mox.ReplayAll()
 
         body = dict(removeSecurityGroup=dict(name="test"))
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -578,6 +581,8 @@ class TestSecurityGroups(test.TestCase):
 
     def test_disassociate_xml(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_by_uuid)
         self.mox.StubOutWithMock(nova.db, 'instance_remove_security_group')
         nova.db.instance_remove_security_group(mox.IgnoreArg(),
                                     mox.IgnoreArg(),
@@ -586,7 +591,7 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group)
         self.mox.ReplayAll()
 
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
         req.headers['Content-Type'] = 'application/xml'
         req.method = 'POST'
         req.body = """<removeSecurityGroup>

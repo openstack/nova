@@ -349,10 +349,6 @@ class Security_groups(extensions.ExtensionDescriptor):
         try:
             body = input_dict['addSecurityGroup']
             group_name = body['name']
-            instance_id = int(instance_id)
-        except ValueError:
-            msg = _("Server id should be integer")
-            raise exc.HTTPBadRequest(explanation=msg)
         except TypeError:
             msg = _("Missing parameter dict")
             raise webob.exc.HTTPBadRequest(explanation=msg)
@@ -382,10 +378,6 @@ class Security_groups(extensions.ExtensionDescriptor):
         try:
             body = input_dict['removeSecurityGroup']
             group_name = body['name']
-            instance_id = int(instance_id)
-        except ValueError:
-            msg = _("Server id should be integer")
-            raise exc.HTTPBadRequest(explanation=msg)
         except TypeError:
             msg = _("Missing parameter dict")
             raise webob.exc.HTTPBadRequest(explanation=msg)
