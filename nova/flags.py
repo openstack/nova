@@ -290,7 +290,7 @@ DEFINE_string('ajax_console_proxy_url',
               'http://127.0.0.1:8000',
               'location of ajax console proxy, \
                in the form "http://127.0.0.1:8000"')
-DEFINE_string('ajax_console_proxy_port',
+DEFINE_integer('ajax_console_proxy_port',
                8000, 'port that ajax_console_proxy binds')
 DEFINE_string('vsa_topic', 'vsa', 'the topic that nova-vsa service listens on')
 DEFINE_bool('verbose', False, 'show debug output')
