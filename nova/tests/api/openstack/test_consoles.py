@@ -126,9 +126,9 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
     return instance
 
 
-class ConsolesTest(test.TestCase):
+class ConsolesControllerTest(test.TestCase):
     def setUp(self):
-        super(ConsolesTest, self).setUp()
+        super(ConsolesControllerTest, self).setUp()
         self.flags(verbose=True)
         self.instance_db = FakeInstanceDB()
         self.stubs.Set(db, 'instance_get',
@@ -137,17 +137,16 @@ class ConsolesTest(test.TestCase):
                        self.instance_db.return_server_by_uuid)
         self.uuid = str(utils.gen_uuid())
         self.url = '/v1.1/fake/servers/%s/consoles' % self.uuid
+        self.controller = consoles.Controller()
 
     def test_create_console(self):
         def fake_create_console(cons_self, context, instance_id):
-            self.assertTrue(instance_id, '10')
+            self.assertEqual(instance_id, self.uuid)
             return {}
         self.stubs.Set(console.API, 'create_console', fake_create_console)
 
-        req = webob.Request.blank(self.url)
-        req.method = "POST"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
+        req = fakes.HTTPRequest.blank(self.url)
+        self.controller.create(req, self.uuid)
 
     def test_show_console(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
@@ -166,35 +165,9 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'get_console', fake_get_console)
 
-        req = webob.Request.blank(self.url + '/20')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        req = fakes.HTTPRequest.blank(self.url + '/20')
+        res_dict = self.controller.show(req, self.uuid, '20')
         self.assertDictMatch(res_dict, expected)
-
-    def test_show_console_xml(self):
-        def fake_get_console(cons_self, context, instance_id, console_id):
-            self.assertEqual(instance_id, self.uuid)
-            self.assertEqual(console_id, 20)
-            pool = dict(console_type='fake_type',
-                    public_hostname='fake_hostname')
-            return dict(id=console_id, password='fake_password',
-                    port='fake_port', pool=pool)
-
-        self.stubs.Set(console.API, 'get_console', fake_get_console)
-
-        req = webob.Request.blank(self.url + '/20.xml')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-
-        res_tree = etree.fromstring(res.body)
-        self.assertEqual(res_tree.tag, 'console')
-        self.assertEqual(res_tree.xpath('id')[0].text, '20')
-        self.assertEqual(res_tree.xpath('port')[0].text, 'fake_port')
-        self.assertEqual(res_tree.xpath('host')[0].text, 'fake_hostname')
-        self.assertEqual(res_tree.xpath('password')[0].text, 'fake_password')
-        self.assertEqual(res_tree.xpath('console_type')[0].text,
-                         'fake_type')
 
     def test_show_console_unknown_console(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
@@ -202,9 +175,9 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'get_console', fake_get_console)
 
-        req = webob.Request.blank(self.url + '/20')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 404)
+        req = fakes.HTTPRequest.blank(self.url + '/20')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
+                          req, self.uuid, '20')
 
     def test_show_console_unknown_instance(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
@@ -212,9 +185,9 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'get_console', fake_get_console)
 
-        req = webob.Request.blank(self.url + '/20')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 404)
+        req = fakes.HTTPRequest.blank(self.url + '/20')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
+                          req, self.uuid, '20')
 
     def test_list_consoles(self):
         def fake_get_consoles(cons_self, context, instance_id):
@@ -236,51 +209,9 @@ class ConsolesTest(test.TestCase):
 
         self.stubs.Set(console.API, 'get_consoles', fake_get_consoles)
 
-        req = webob.Request.blank(self.url)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        req = fakes.HTTPRequest.blank(self.url)
+        res_dict = self.controller.index(req, self.uuid)
         self.assertDictMatch(res_dict, expected)
-
-    def test_list_consoles_xml(self):
-        def fake_get_consoles(cons_self, context, instance_id):
-            self.assertEqual(instance_id, self.uuid)
-
-            pool1 = dict(console_type='fake_type',
-                    public_hostname='fake_hostname')
-            cons1 = dict(id=10, password='fake_password',
-                    port='fake_port', pool=pool1)
-            pool2 = dict(console_type='fake_type2',
-                    public_hostname='fake_hostname2')
-            cons2 = dict(id=11, password='fake_password2',
-                    port='fake_port2', pool=pool2)
-            return [cons1, cons2]
-
-        expected = {'consoles':
-                [{'console': {'id': 10, 'console_type': 'fake_type'}},
-                 {'console': {'id': 11, 'console_type': 'fake_type2'}}]}
-
-        self.stubs.Set(console.API, 'get_consoles', fake_get_consoles)
-
-        req = webob.Request.blank(self.url + '.xml')
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-
-        res_tree = etree.fromstring(res.body)
-        self.assertEqual(res_tree.tag, 'consoles')
-        self.assertEqual(len(res_tree), 2)
-        self.assertEqual(res_tree[0].tag, 'console')
-        self.assertEqual(res_tree[1].tag, 'console')
-        self.assertEqual(len(res_tree[0]), 1)
-        self.assertEqual(res_tree[0][0].tag, 'console')
-        self.assertEqual(len(res_tree[1]), 1)
-        self.assertEqual(res_tree[1][0].tag, 'console')
-        self.assertEqual(res_tree[0][0].xpath('id')[0].text, '10')
-        self.assertEqual(res_tree[1][0].xpath('id')[0].text, '11')
-        self.assertEqual(res_tree[0][0].xpath('console_type')[0].text,
-                         'fake_type')
-        self.assertEqual(res_tree[1][0].xpath('console_type')[0].text,
-                         'fake_type2')
 
     def test_delete_console(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
@@ -298,29 +229,71 @@ class ConsolesTest(test.TestCase):
         self.stubs.Set(console.API, 'get_console', fake_get_console)
         self.stubs.Set(console.API, 'delete_console', fake_delete_console)
 
-        req = webob.Request.blank(self.url + '/20')
-        req.method = "DELETE"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 202)
+        req = fakes.HTTPRequest.blank(self.url + '/20')
+        self.controller.delete(req, self.uuid, '20')
 
-    def test_show_console_unknown_console(self):
+    def test_delete_console_unknown_console(self):
         def fake_delete_console(cons_self, context, instance_id, console_id):
             raise exception.ConsoleNotFound(console_id=console_id)
 
         self.stubs.Set(console.API, 'delete_console', fake_delete_console)
 
-        req = webob.Request.blank(self.url + '/20')
-        req.method = "DELETE"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 404)
+        req = fakes.HTTPRequest.blank(self.url + '/20')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
+                          req, self.uuid, '20')
 
-    def test_show_console_unknown_instance(self):
+    def test_delete_console_unknown_instance(self):
         def fake_delete_console(cons_self, context, instance_id, console_id):
             raise exception.InstanceNotFound(instance_id=instance_id)
 
         self.stubs.Set(console.API, 'delete_console', fake_delete_console)
 
-        req = webob.Request.blank(self.url + '/20')
-        req.method = "DELETE"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 404)
+        req = fakes.HTTPRequest.blank(self.url + '/20')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
+                          req, self.uuid, '20')
+
+
+class TestConsolesXMLSerializer(test.TestCase):
+
+    serializer = consoles.ConsoleXMLSerializer()
+
+    def test_show(self):
+        fixture = {'console': {'id': 20,
+                               'password': 'fake_password',
+                               'port': 'fake_port',
+                               'host': 'fake_hostname',
+                               'console_type': 'fake_type'}}
+
+        output = self.serializer.serialize(fixture, 'show')
+        res_tree = etree.XML(output)
+
+        self.assertEqual(res_tree.tag, 'console')
+        self.assertEqual(res_tree.xpath('id')[0].text, '20')
+        self.assertEqual(res_tree.xpath('port')[0].text, 'fake_port')
+        self.assertEqual(res_tree.xpath('host')[0].text, 'fake_hostname')
+        self.assertEqual(res_tree.xpath('password')[0].text, 'fake_password')
+        self.assertEqual(res_tree.xpath('console_type')[0].text, 'fake_type')
+
+    def test_index(self):
+        fixture = {'consoles': [{'console': {'id': 10,
+                                             'console_type': 'fake_type'}},
+                                {'console': {'id': 11,
+                                             'console_type': 'fake_type2'}}]}
+
+        output = self.serializer.serialize(fixture, 'index')
+        res_tree = etree.XML(output)
+
+        self.assertEqual(res_tree.tag, 'consoles')
+        self.assertEqual(len(res_tree), 2)
+        self.assertEqual(res_tree[0].tag, 'console')
+        self.assertEqual(res_tree[1].tag, 'console')
+        self.assertEqual(len(res_tree[0]), 1)
+        self.assertEqual(res_tree[0][0].tag, 'console')
+        self.assertEqual(len(res_tree[1]), 1)
+        self.assertEqual(res_tree[1][0].tag, 'console')
+        self.assertEqual(res_tree[0][0].xpath('id')[0].text, '10')
+        self.assertEqual(res_tree[1][0].xpath('id')[0].text, '11')
+        self.assertEqual(res_tree[0][0].xpath('console_type')[0].text,
+                         'fake_type')
+        self.assertEqual(res_tree[1][0].xpath('console_type')[0].text,
+                         'fake_type2')

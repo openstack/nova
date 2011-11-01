@@ -79,12 +79,10 @@ class QuotaSetsTest(test.TestCase):
 
     def test_quotas_defaults(self):
         uri = '/v1.1/fake_tenant/os-quota-sets/fake_tenant/defaults'
-        req = webob.Request.blank(uri)
-        req.method = 'GET'
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
 
-        self.assertEqual(res.status_int, 200)
+        req = fakes.HTTPRequest.blank(uri)
+        res_dict = self.controller.defaults(req, 'fake_tenant')
+
         expected = {'quota_set': {
                     'id': 'fake_tenant',
                     'instances': 10,
@@ -97,57 +95,40 @@ class QuotaSetsTest(test.TestCase):
                     'injected_files': 5,
                     'injected_file_content_bytes': 10240}}
 
-        self.assertEqual(json.loads(res.body), expected)
+        self.assertEqual(res_dict, expected)
 
     def test_quotas_show_as_admin(self):
-        req = webob.Request.blank('/v1.1/1234/os-quota-sets/1234')
-        req.method = 'GET'
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+        req = fakes.HTTPRequest.blank('/v1.1/1234/os-quota-sets/1234',
+                                      use_admin_context=True)
+        res_dict = self.controller.show(req, 1234)
 
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(json.loads(res.body), quota_set('1234'))
+        self.assertEqual(res_dict, quota_set('1234'))
 
     def test_quotas_show_as_unauthorized_user(self):
-        req = webob.Request.blank('/v1.1/fake/os-quota-sets/1234')
-        req.method = 'GET'
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context))
-
-        self.assertEqual(res.status_int, 403)
+        req = fakes.HTTPRequest.blank('/v1.1/1234/os-quota-sets/1234')
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
+                          req, 1234)
 
     def test_quotas_update_as_admin(self):
-        updated_quota_set = {'quota_set': {'instances': 50,
-                             'cores': 50, 'ram': 51200, 'volumes': 10,
-                             'gigabytes': 1000, 'floating_ips': 10,
-                             'metadata_items': 128, 'injected_files': 5,
-                             'injected_file_content_bytes': 10240}}
+        body = {'quota_set': {'instances': 50, 'cores': 50,
+                              'ram': 51200, 'volumes': 10,
+                              'gigabytes': 1000, 'floating_ips': 10,
+                              'metadata_items': 128, 'injected_files': 5,
+                              'injected_file_content_bytes': 10240}}
 
-        req = webob.Request.blank('/v1.1/1234/os-quota-sets/update_me')
-        req.method = 'PUT'
-        req.body = json.dumps(updated_quota_set)
-        req.headers['Content-Type'] = 'application/json'
+        req = fakes.HTTPRequest.blank('/v1.1/1234/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        res_dict = self.controller.update(req, 'update_me', body)
 
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
-
-        self.assertEqual(json.loads(res.body), updated_quota_set)
+        self.assertEqual(res_dict, body)
 
     def test_quotas_update_as_user(self):
-        updated_quota_set = {'quota_set': {'instances': 50,
-                             'cores': 50, 'ram': 51200, 'volumes': 10,
-                             'gigabytes': 1000, 'floating_ips': 10,
-                             'metadata_items': 128, 'injected_files': 5,
-                             'injected_file_content_bytes': 10240}}
+        body = {'quota_set': {'instances': 50, 'cores': 50,
+                              'ram': 51200, 'volumes': 10,
+                              'gigabytes': 1000, 'floating_ips': 10,
+                              'metadata_items': 128, 'injected_files': 5,
+                              'injected_file_content_bytes': 10240}}
 
-        req = webob.Request.blank('/v1.1/1234/os-quota-sets/update_me')
-        req.method = 'PUT'
-        req.body = json.dumps(updated_quota_set)
-        req.headers['Content-Type'] = 'application/json'
-
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context))
-
-        self.assertEqual(res.status_int, 403)
+        req = fakes.HTTPRequest.blank('/v1.1/1234/os-quota-sets/update_me')
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
+                          req, 'update_me', body)
