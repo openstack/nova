@@ -19,11 +19,7 @@
 Tests For misc util methods used with compute.
 """
 
-from datetime import datetime
-from datetime import timedelta
-
 from nova import db
-from nova import exception
 from nova import flags
 from nova import context
 from nova import test

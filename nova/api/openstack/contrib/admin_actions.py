@@ -23,9 +23,7 @@ from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova.api.openstack import extensions
-from nova.api.openstack import faults
 from nova.scheduler import api as scheduler_api
 
 

@@ -16,7 +16,6 @@
 #    under the License.
 
 import datetime
-import time
 
 from nova.api.openstack import common
 from nova import utils

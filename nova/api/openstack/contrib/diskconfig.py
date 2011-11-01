@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
-import json
 
 from webob import exc
 import webob
@@ -23,8 +22,6 @@ from nova import compute
 from nova import exception
 import nova.image
 from nova import log as logging
-from nova import network
-from nova import rpc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 

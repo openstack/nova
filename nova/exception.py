@@ -863,3 +863,11 @@ class InsufficientFreeMemory(NovaException):
 
 class CouldNotFetchMetrics(NovaException):
     message = _("Could not fetch bandwidth/cpu/disk metrics for this host.")
+
+
+class NoValidHost(NovaException):
+    message = _("No valid host was found. %(reason)s")
+
+
+class WillNotSchedule(NovaException):
+    message = _("Host %(host)s is not up or doesn't exist.")

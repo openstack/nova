@@ -71,7 +71,7 @@ class DistributedScheduler(driver.Scheduler):
         NOTE: We're only focused on compute instances right now,
         so this method will always raise NoValidHost()."""
         msg = _("No host selection for %s defined." % topic)
-        raise driver.NoValidHost(msg)
+        raise exception.NoValidHost(reason=msg)
 
     def schedule_run_instance(self, context, request_spec, *args, **kwargs):
         """This method is called from nova.compute.api to provision
@@ -103,7 +103,7 @@ class DistributedScheduler(driver.Scheduler):
                                         *args, **kwargs)
 
         if not weighted_hosts:
-            raise driver.NoValidHost(_('No hosts were available'))
+            raise exception.NoValidHost(reason=_(""))
 
         instances = []
         for num in xrange(num_instances):

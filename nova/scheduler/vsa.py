@@ -25,6 +25,7 @@ from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova import utils
+from nova import exception
 from nova.scheduler import driver
 from nova.scheduler import simple
 from nova.vsa.api import VsaState
@@ -173,7 +174,7 @@ class VsaScheduler(simple.SimpleScheduler):
                                                             selected_hosts,
                                                             unique)
         if host is None:
-            raise driver.WillNotSchedule(_("No available hosts"))
+            raise exception.NoValidHost(reason=_(""))
 
         return (host, qos_cap)
 
@@ -216,7 +217,7 @@ class VsaScheduler(simple.SimpleScheduler):
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-volume')
             if not self.service_is_up(service):
-                raise driver.WillNotSchedule(_("Host %s not available") % host)
+                raise exception.WillNotSchedule(host=host)
 
             return host
         else:

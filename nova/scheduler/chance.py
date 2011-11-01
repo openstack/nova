@@ -23,6 +23,7 @@ Chance (Random) Scheduler implementation
 
 import random
 
+from nova import exception
 from nova.scheduler import driver
 
 
@@ -35,9 +36,8 @@ class ChanceScheduler(driver.Scheduler):
         elevated = context.elevated()
         hosts = self.hosts_up(elevated, topic)
         if not hosts:
-            raise driver.NoValidHost(_("Scheduler was unable to locate a host"
-                                       " for this request. Is the appropriate"
-                                       " service running?"))
+            msg = _("Is the appropriate service running?")
+            raise exception.NoValidHost(reason=msg)
         return hosts[int(random.random() * len(hosts))]
 
     def schedule(self, context, topic, method, *_args, **kwargs):

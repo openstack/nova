@@ -28,7 +28,6 @@ from nova import utils
 from nova.volume import volume_types
 
 from nova.scheduler import vsa as vsa_sched
-from nova.scheduler import driver
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.scheduler.vsa')
@@ -274,7 +273,7 @@ class VsaSchedulerTestCase(test.TestCase):
                                  drive_type_num=5,
                                  init_num_drives=1)
         request_spec = self._get_vol_creation_request(num_vols=1, drive_ix=6)
-        self.assertRaises(driver.WillNotSchedule,
+        self.assertRaises(exception.NoValidHost,
                           self.sched.schedule_create_volumes,
                                 self.context,
                                 request_spec,
@@ -291,7 +290,7 @@ class VsaSchedulerTestCase(test.TestCase):
         prev = self._generate_default_service_states()
         request_spec = self._get_vol_creation_request(num_vols=3, drive_ix=0)
 
-        self.assertRaises(driver.WillNotSchedule,
+        self.assertRaises(exception.NoValidHost,
                           self.sched.schedule_create_volumes,
                                 self.context,
                                 request_spec,
@@ -314,7 +313,7 @@ class VsaSchedulerTestCase(test.TestCase):
         self.service_states = new_states
         request_spec = self._get_vol_creation_request(num_vols=1, drive_ix=0)
 
-        self.assertRaises(driver.WillNotSchedule,
+        self.assertRaises(exception.NoValidHost,
                           self.sched.schedule_create_volumes,
                                 self.context,
                                 request_spec,
@@ -365,7 +364,7 @@ class VsaSchedulerTestCase(test.TestCase):
                                            availability_zone=None)
         self._print_service_states()
 
-        self.assertRaises(driver.WillNotSchedule,
+        self.assertRaises(exception.NoValidHost,
                           self.sched.schedule_create_volumes,
                                 self.context,
                                 new_request,
@@ -393,7 +392,7 @@ class VsaSchedulerTestCase(test.TestCase):
         self.stubs.Set(self.sched,
                         'service_is_up', self._fake_service_is_up_False)
 
-        self.assertRaises(driver.WillNotSchedule,
+        self.assertRaises(exception.WillNotSchedule,
                           self.sched.schedule_create_volumes,
                                 self.context,
                                 request_spec,
@@ -483,7 +482,7 @@ class VsaSchedulerTestCase(test.TestCase):
         global_volume = {}
         global_volume['volume_type_id'] = None
 
-        self.assertRaises(driver.NoValidHost,
+        self.assertRaises(exception.NoValidHost,
                           self.sched.schedule_create_volume,
                                 self.context,
                                 123,

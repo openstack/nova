@@ -115,16 +115,6 @@ def encode_instance(instance, local=True):
         return instance
 
 
-class NoValidHost(exception.Error):
-    """There is no valid host for the command."""
-    pass
-
-
-class WillNotSchedule(exception.Error):
-    """The specified host is not up or doesn't exist."""
-    pass
-
-
 class Scheduler(object):
     """The base class that all Scheduler clases should inherit from."""
 
@@ -421,7 +411,7 @@ class Scheduler(object):
             raise exception.MigrationError(reason=reason % locals())
 
     def _get_compute_info(self, context, host, key):
-        """get compute node's infomation specified by key
+        """get compute node's information specified by key
 
         :param context: security context
         :param host: hostname(must be compute node)

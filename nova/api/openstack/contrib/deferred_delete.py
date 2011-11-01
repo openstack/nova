@@ -16,14 +16,10 @@
 """The deferred instance delete extension."""
 
 import webob
-from webob import exc
 
 from nova import compute
-from nova import exception
 from nova import log as logging
-from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import faults
 from nova.api.openstack import servers
 
 

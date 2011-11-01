@@ -25,7 +25,6 @@ from nova import exception
 from nova import rpc
 from nova import test
 from nova.compute import api as compute_api
-from nova.scheduler import driver
 from nova.scheduler import distributed_scheduler
 from nova.scheduler import least_cost
 from nova.scheduler import zone_manager
@@ -120,7 +119,7 @@ class DistributedSchedulerTestCase(test.TestCase):
 
         fake_context = context.RequestContext('user', 'project')
         request_spec = dict(instance_type=dict(memory_mb=1, local_gb=1))
-        self.assertRaises(driver.NoValidHost, sched.schedule_run_instance,
+        self.assertRaises(exception.NoValidHost, sched.schedule_run_instance,
                           fake_context, request_spec)
 
     def test_run_instance_with_blob_hint(self):
@@ -189,7 +188,7 @@ class DistributedSchedulerTestCase(test.TestCase):
 
         fake_context = context.RequestContext('user', 'project')
 
-        self.assertRaises(driver.NoValidHost, sched.schedule_run_instance,
+        self.assertRaises(exception.NoValidHost, sched.schedule_run_instance,
                           fake_context, {})
         self.assertTrue(self.was_admin)
 

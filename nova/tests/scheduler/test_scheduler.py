@@ -444,7 +444,7 @@ class SimpleDriverTestCase(test.TestCase):
                 'cast_to_compute_host', _fake_cast_to_compute_host)
 
         request_spec = _create_request_spec(availability_zone='nova:host1')
-        self.assertRaises(driver.WillNotSchedule,
+        self.assertRaises(exception.WillNotSchedule,
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
                           request_spec)
@@ -523,7 +523,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.start()
         request_spec = _create_request_spec(availability_zone='zone2')
         try:
-            self.assertRaises(driver.NoValidHost,
+            self.assertRaises(exception.NoValidHost,
                               self.scheduler.driver.schedule_run_instance,
                               self.context,
                               request_spec)
@@ -540,7 +540,7 @@ class SimpleDriverTestCase(test.TestCase):
         # uses 'nova' for zone
         volume_id = _create_volume()
         try:
-            self.assertRaises(driver.NoValidHost,
+            self.assertRaises(exception.NoValidHost,
                               self.scheduler.driver.schedule_create_volume,
                               self.context,
                               volume_id)
@@ -570,7 +570,7 @@ class SimpleDriverTestCase(test.TestCase):
             compute2.run_instance(self.context, instance_id)
             instance_ids2.append(instance_id)
         request_spec = _create_request_spec()
-        self.assertRaises(driver.NoValidHost,
+        self.assertRaises(exception.NoValidHost,
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
                           request_spec)
@@ -694,7 +694,7 @@ class SimpleDriverTestCase(test.TestCase):
         past = now - delta
         db.service_update(self.context, s1['id'], {'updated_at': past})
         request_spec = _create_request_spec(availability_zone='nova:host1')
-        self.assertRaises(driver.WillNotSchedule,
+        self.assertRaises(exception.WillNotSchedule,
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
                           request_spec)
@@ -749,7 +749,7 @@ class SimpleDriverTestCase(test.TestCase):
 
         request_spec = _create_request_spec()
 
-        self.assertRaises(driver.NoValidHost,
+        self.assertRaises(exception.NoValidHost,
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
                           request_spec)
@@ -795,7 +795,7 @@ class SimpleDriverTestCase(test.TestCase):
             volume2.create_volume(self.context, volume_id)
             volume_ids2.append(volume_id)
         volume_id = _create_volume()
-        self.assertRaises(driver.NoValidHost,
+        self.assertRaises(exception.NoValidHost,
                           self.scheduler.driver.schedule_create_volume,
                           self.context,
                           volume_id)
@@ -929,7 +929,7 @@ class SimpleDriverTestCase(test.TestCase):
         db.service_destroy(self.context, s_ref['id'])
 
     def test_live_migration_dest_check_service_same_host(self):
-        """Confirms exceptioin raises in case dest and src is same host."""
+        """Confirms exception raises in case dest and src is same host."""
         instance_id = _create_instance()['id']
         i_ref = db.instance_get(self.context, instance_id)
         s_ref = self._create_compute_service(host=i_ref['host'])
