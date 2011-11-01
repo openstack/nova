@@ -92,6 +92,9 @@ class Distro(object):
 
 
 class Fedora(Distro):
+    """This covers all Fedora-based distributions.
+
+    Includes: Fedora, RHEL, CentOS, Scientific Linux"""
 
     def check_pkg(self, pkg):
         return run_command_with_code(['rpm', '-q', pkg],
@@ -119,7 +122,8 @@ class Fedora(Distro):
 
 
 def get_distro():
-    if os.path.exists('/etc/fedora-release'):
+    if os.path.exists('/etc/fedora-release') or \
+       os.path.exists('/etc/redhat-release'):
         return Fedora()
     else:
         return Distro()
