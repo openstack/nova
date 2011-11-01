@@ -379,7 +379,7 @@ def _parse_glance_iso8601_timestamp(timestamp):
             pass
 
     raise ValueError(_('%(timestamp)s does not follow any of the '
-                       'signatures: %(ISO_FORMATS)s') % locals())
+                       'signatures: %(iso_formats)s') % locals())
 
 
 # TODO(yamahata): use block-device-mapping extension to glance
