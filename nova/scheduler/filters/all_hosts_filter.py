@@ -26,6 +26,6 @@ class AllHostsFilter(abstract_filter.AbstractHostFilter):
         """
         return instance_type
 
-    def filter_hosts(self, host_list, query):
+    def filter_hosts(self, host_list, query, options):
         """Return the entire list of supplied hosts."""
         return list(host_list)

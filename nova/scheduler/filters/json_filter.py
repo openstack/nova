@@ -134,7 +134,7 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         result = method(self, cooked_args)
         return result
 
-    def filter_hosts(self, host_list, query):
+    def filter_hosts(self, host_list, query, options):
         """Return a list of hosts that can fulfill the requirements
         specified in the query.
         """

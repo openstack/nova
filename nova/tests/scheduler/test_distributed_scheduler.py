@@ -212,10 +212,11 @@ class DistributedSchedulerTestCase(test.TestCase):
 
         self.next_weight = 1.0
 
-        def _fake_filter_hosts(topic, request_info, unfiltered_hosts):
+        def _fake_filter_hosts(topic, request_info, unfiltered_hosts,
+                                                                options):
             return unfiltered_hosts
 
-        def _fake_weigh_hosts(request_info, hosts):
+        def _fake_weighted_sum(functions, hosts, options):
             self.next_weight += 2.0
             host, hostinfo = hosts[0]
             return least_cost.WeightedHost(self.next_weight, host=host,
@@ -225,7 +226,7 @@ class DistributedSchedulerTestCase(test.TestCase):
         fake_context = context.RequestContext('user', 'project')
         sched.zone_manager = ds_fakes.FakeZoneManager()
         self.stubs.Set(sched, '_filter_hosts', _fake_filter_hosts)
-        self.stubs.Set(least_cost, 'weigh_hosts', _fake_weigh_hosts)
+        self.stubs.Set(least_cost, 'weighted_sum', _fake_weighted_sum)
         self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
 
@@ -260,3 +261,12 @@ class DistributedSchedulerTestCase(test.TestCase):
         self.assertTrue(isinstance(weighted_host, least_cost.WeightedHost))
         self.assertEqual(weighted_host.to_dict(), dict(weight=1, host='x',
                          blob='y', zone='z'))
+
+    def test_get_cost_functions(self):
+        fixture = ds_fakes.FakeDistributedScheduler()
+        fns = fixture.get_cost_functions()
+        self.assertEquals(len(fns), 1)
+        weight, fn = fns[0]
+        self.assertEquals(weight, 1.0)
+        hostinfo = zone_manager.HostInfo('host', free_ram_mb=1000)
+        self.assertEquals(1000, fn(hostinfo))

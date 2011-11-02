@@ -51,7 +51,7 @@ class InstanceTypeFilter(abstract_filter.AbstractHostFilter):
         free_ram_mb = host_info.free_ram_mb
         return free_ram_mb >= requested_ram
 
-    def filter_hosts(self, host_list, query):
+    def filter_hosts(self, host_list, query, options):
         """Return a list of hosts that can create instance_type."""
         instance_type = query
         selected_hosts = []

@@ -23,7 +23,7 @@ class AbstractHostFilter(object):
         """Convert instance_type into a filter for most common use-case."""
         raise NotImplementedError()
 
-    def filter_hosts(self, host_list, query):
+    def filter_hosts(self, host_list, query, options):
         """Return a list of hosts that fulfill the filter."""
         raise NotImplementedError()
 

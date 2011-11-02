@@ -25,21 +25,21 @@ import types
 
 import M2Crypto
 
+from nova.compute import api as compute_api
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
-
 from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
-
-from nova.compute import api as compute_api
 from nova.scheduler import api
 from nova.scheduler import driver
 from nova.scheduler import filters
 from nova.scheduler import least_cost
+from nova.scheduler import scheduler_options
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -59,6 +59,10 @@ class DistributedScheduler(driver.Scheduler):
     """Scheduler that can work across any nova deployment, from simple
     deployments to multiple nested zones.
     """
+    def __init__(self, *args, **kwargs):
+        super(DistributedScheduler, self).__init__(*args, **kwargs)
+        self.cost_function_cache = {}
+        self.options = scheduler_options.SchedulerOptions()
 
     def schedule(self, context, topic, method, *args, **kwargs):
         """The schedule() contract requires we return the one
@@ -243,6 +247,10 @@ class DistributedScheduler(driver.Scheduler):
         """Broken out for testing."""
         return db.zone_get_all(context)
 
+    def _get_configuration_options(self):
+        """Fetch options dictionary. Broken out for testing."""
+        return self.options.get_configuration()
+
     def _schedule(self, elevated, topic, request_spec, *args, **kwargs):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
@@ -257,8 +265,12 @@ class DistributedScheduler(driver.Scheduler):
                     "provisioning.")
             raise NotImplementedError(msg)
 
+        cost_functions = self.get_cost_functions()
+
         ram_requirement_mb = instance_type['memory_mb']
         disk_requirement_bg = instance_type['local_gb']
+
+        options = self._get_configuration_options()
 
         # Find our local list of acceptable hosts by repeatedly
         # filtering and weighing our options. Each time we choose a
@@ -274,7 +286,7 @@ class DistributedScheduler(driver.Scheduler):
         for num in xrange(num_instances):
             # Filter local hosts based on requirements ...
             filtered_hosts = self._filter_hosts(topic, request_spec,
-                    unfiltered_hosts)
+                    unfiltered_hosts, options)
 
             if not filtered_hosts:
                 # Can't get any more locally.
@@ -284,8 +296,8 @@ class DistributedScheduler(driver.Scheduler):
 
             # weighted_host = WeightedHost() ... the best
             # host for the job.
-            weighted_host = least_cost.weigh_hosts(request_spec,
-                                                   filtered_hosts)
+            weighted_host = least_cost.weighted_sum(cost_functions,
+                                                filtered_hosts, options)
             LOG.debug(_("Weighted %(weighted_host)s") % locals())
             selected_hosts.append(weighted_host)
 
@@ -343,7 +355,7 @@ class DistributedScheduler(driver.Scheduler):
             raise exception.SchedulerHostFilterNotFound(filter_name=msg)
         return good_filters
 
-    def _filter_hosts(self, topic, request_spec, hosts=None):
+    def _filter_hosts(self, topic, request_spec, hosts, options):
         """Filter the full host list. hosts = [(host, HostInfo()), ...].
         This method returns a subset of hosts, in the same format."""
         selected_filters = self._choose_host_filters()
@@ -358,6 +370,48 @@ class DistributedScheduler(driver.Scheduler):
 
         for selected_filter in selected_filters:
             query = selected_filter.instance_type_to_filter(instance_type)
-            hosts = selected_filter.filter_hosts(hosts, query)
+            hosts = selected_filter.filter_hosts(hosts, query, options)
 
         return hosts
+
+    def get_cost_functions(self, topic=None):
+        """Returns a list of tuples containing weights and cost functions to
+        use for weighing hosts
+        """
+        if topic is None:
+            # Schedulers only support compute right now.
+            topic = "compute"
+        if topic in self.cost_function_cache:
+            return self.cost_function_cache[topic]
+
+        cost_fns = []
+        for cost_fn_str in FLAGS.least_cost_functions:
+            if '.' in cost_fn_str:
+                short_name = cost_fn_str.split('.')[-1]
+            else:
+                short_name = cost_fn_str
+                cost_fn_str = "%s.%s.%s" % (
+                        __name__, self.__class__.__name__, short_name)
+            if not (short_name.startswith('%s_' % topic) or
+                    short_name.startswith('noop')):
+                continue
+
+            try:
+                # NOTE: import_class is somewhat misnamed since
+                # the weighing function can be any non-class callable
+                # (i.e., no 'self')
+                cost_fn = utils.import_class(cost_fn_str)
+            except exception.ClassNotFound:
+                raise exception.SchedulerCostFunctionNotFound(
+                        cost_fn_str=cost_fn_str)
+
+            try:
+                flag_name = "%s_weight" % cost_fn.__name__
+                weight = getattr(FLAGS, flag_name)
+            except AttributeError:
+                raise exception.SchedulerWeightFlagNotFound(
+                        flag_name=flag_name)
+            cost_fns.append((weight, cost_fn))
+
+        self.cost_function_cache[topic] = cost_fns
+        return cost_fns
