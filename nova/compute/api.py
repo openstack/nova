@@ -45,6 +45,7 @@ LOG = logging.getLogger('nova.compute.api')
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('enable_zone_routing', 'nova.scheduler.api')
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
 flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
@@ -189,8 +190,7 @@ class API(base.Base):
                injected_files, admin_password, zone_blob,
                reservation_id, access_ip_v4, access_ip_v6,
                requested_networks, config_drive,
-               block_device_mapping,
-               wait_for_instances):
+               block_device_mapping, create_instance_here=False):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation."""
@@ -325,10 +325,18 @@ class API(base.Base):
 
         LOG.debug(_("Going to run %s instances...") % num_instances)
 
-        if wait_for_instances:
-            rpc_method = rpc.call
-        else:
+        if create_instance_here:
+            instance = self.create_db_entry_for_new_instance(
+                    context, instance_type, image, base_options,
+                    security_group, block_device_mapping)
+            # Tells scheduler we created the instance already.
+            base_options['id'] = instance['id']
             rpc_method = rpc.cast
+        else:
+            # We need to wait for the scheduler to create the instance
+            # DB entries, because the instance *could* be # created in
+            # a child zone.
+            rpc_method = rpc.call
 
         # TODO(comstud): We should use rpc.multicall when we can
         # retrieve the full instance dictionary from the scheduler.
@@ -344,6 +352,8 @@ class API(base.Base):
                 num_instances, requested_networks,
                 block_device_mapping, security_group)
 
+        if create_instance_here:
+            return ([instance], reservation_id)
         return (instances, reservation_id)
 
     @staticmethod
@@ -534,8 +544,7 @@ class API(base.Base):
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None,
                access_ip_v4=None, access_ip_v6=None,
-               requested_networks=None, config_drive=None,
-               wait_for_instances=True):
+               requested_networks=None, config_drive=None):
         """
         Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
@@ -545,6 +554,13 @@ class API(base.Base):
         could be 'None' or a list of instance dicts depending on if
         we waited for information from the scheduler or not.
         """
+
+        # We can create the DB entry for the instance here if we're
+        # only going to create 1 instance and we're in a single
+        # zone deployment.  This speeds up API responses for builds
+        # as we don't need to wait for the scheduler.
+        create_instance_here = (max_count == 1 and
+                not FLAGS.enable_zone_routing)
 
         (instances, reservation_id) = self._create_instance(
                                context, instance_type,
@@ -557,10 +573,9 @@ class API(base.Base):
                                reservation_id, access_ip_v4, access_ip_v6,
                                requested_networks, config_drive,
                                block_device_mapping,
-                               wait_for_instances)
+                               create_instance_here=create_instance_here)
 
-        if instances is None:
-            # wait_for_instances must have been False
+        if create_instance_here or instances is None:
             return (instances, reservation_id)
 
         inst_ret_list = []

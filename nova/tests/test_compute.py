@@ -1409,25 +1409,6 @@ class ComputeTestCase(test.TestCase):
                 self.assertEqual(instance['reservation_id'], resv_id)
                 db.instance_destroy(self.context, instance['id'])
 
-    def test_reservation_ids_two_instances_no_wait(self):
-        """Verify building 2 instances at once without waiting for
-        instance IDs results in a reservation_id being returned equal
-        to reservation id set in both instances
-        """
-        (refs, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(), None,
-                min_count=2, max_count=2, wait_for_instances=False)
-        try:
-            self.assertEqual(refs, None)
-            self.assertNotEqual(resv_id, None)
-        finally:
-            instances = self.compute_api.get_all(self.context,
-                    search_opts={'reservation_id': resv_id})
-            self.assertEqual(len(instances), 2)
-            for instance in instances:
-                self.assertEqual(instance['reservation_id'], resv_id)
-                db.instance_destroy(self.context, instance['id'])
-
     def test_create_with_specified_reservation_id(self):
         """Verify building instances with a specified
         reservation_id results in the correct reservation_id

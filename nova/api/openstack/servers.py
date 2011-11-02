@@ -462,8 +462,7 @@ class Controller(object):
                             user_data=user_data,
                             availability_zone=availability_zone,
                             config_drive=config_drive,
-                            block_device_mapping=block_device_mapping,
-                            wait_for_instances=not ret_resv_id)
+                            block_device_mapping=block_device_mapping)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.InstanceTypeMemoryTooSmall as error:

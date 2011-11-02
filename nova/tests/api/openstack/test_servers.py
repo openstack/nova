@@ -1354,7 +1354,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.instance_cache_num += 1
             instance = {
                 'id': self.instance_cache_num,
-                'display_name': 'server_test',
+                'display_name': inst['display_name'] or 'test',
                 'uuid': FAKE_UUID,
                 'instance_type': dict(inst_type),
                 'access_ip_v4': '1.2.3.4',
@@ -1390,8 +1390,10 @@ class ServersControllerCreateTest(test.TestCase):
                         request_spec['instance_properties']))
                 return instances
 
-        def server_update(context, id, params):
-            return instance_create(context, id)
+        def server_update(context, instance_id, params):
+            inst = self.instance_cache[instance_id]
+            inst.update(params)
+            return inst
 
         def fake_method(*args, **kwargs):
             pass
