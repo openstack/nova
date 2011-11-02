@@ -497,7 +497,7 @@ class Controller(object):
             instance['instance_type'] = inst_type
             instance['image_ref'] = image_href
 
-        server = self._build_view(req, instance, is_detail=True)
+        server = self._build_view(req, instance, is_create=True)
         if '_is_precooked' in server['server']:
             del server['server']['_is_precooked']
         else:
@@ -748,7 +748,7 @@ class Controller(object):
 
         return common.get_id_from_href(flavor_ref)
 
-    def _build_view(self, req, instance, is_detail=False):
+    def _build_view(self, req, instance, is_detail=False, is_create=False):
         context = req.environ['nova.context']
         project_id = getattr(context, 'project_id', '')
         base_url = req.application_url
@@ -757,7 +757,9 @@ class Controller(object):
         addresses_builder = views_addresses.ViewBuilder()
         builder = views_servers.ViewBuilder(context, addresses_builder,
                 flavor_builder, image_builder, base_url, project_id)
-        return builder.build(instance, is_detail=is_detail)
+        return builder.build(instance,
+                             is_detail=is_detail,
+                             is_create=is_create)
 
     def _build_list(self, req, instances, is_detail=False):
         params = req.GET.copy()

@@ -292,10 +292,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
 
-        # Reenable when bug fixed
-        self.assertEqual(metadata, created_server.get('metadata'))
-        # Check it's there
-
         found_server = self.api.get_server(created_server_id)
         self.assertEqual(created_server_id, found_server['id'])
         self.assertEqual(metadata, found_server.get('metadata'))

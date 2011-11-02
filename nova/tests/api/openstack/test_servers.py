@@ -1441,10 +1441,7 @@ class ServersControllerCreateTest(test.TestCase):
         server = self.controller.create(req, body)['server']
 
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
-        self.assertEqual('server_test', server['name'])
         self.assertEqual(FAKE_UUID, server['id'])
-        self.assertEqual('2', server['flavor']['id'])
-        self.assertEqual(image_uuid, server['image']['id'])
 
     def test_create_multiple_instances(self):
         """Test creating multiple instances but not asking for
@@ -1613,12 +1610,6 @@ class ServersControllerCreateTest(test.TestCase):
         server = res['server']
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(FAKE_UUID, server['id'])
-        self.assertEqual(0, server['progress'])
-        self.assertEqual('server_test', server['name'])
-        self.assertEqual(expected_flavor, server['flavor'])
-        self.assertEqual(expected_image, server['image'])
-        self.assertEqual(access_ipv4, server['accessIPv4'])
-        self.assertEqual(access_ipv6, server['accessIPv6'])
 
     def test_create_instance(self):
         # proper local hrefs must start with 'http://localhost/v1.1/'
@@ -1670,13 +1661,6 @@ class ServersControllerCreateTest(test.TestCase):
         server = res['server']
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(FAKE_UUID, server['id'])
-        self.assertEqual("BUILD", server["status"])
-        self.assertEqual(0, server['progress'])
-        self.assertEqual('server_test', server['name'])
-        self.assertEqual(expected_flavor, server['flavor'])
-        self.assertEqual(expected_image, server['image'])
-        self.assertEqual('1.2.3.4', server['accessIPv4'])
-        self.assertEqual('fead::1234', server['accessIPv6'])
 
     def test_create_instance_invalid_key_name(self):
         image_href = 'http://localhost/v1.1/images/2'
@@ -1777,7 +1761,6 @@ class ServersControllerCreateTest(test.TestCase):
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
-        self.assertTrue(server['config_drive'])
 
     def test_create_instance_with_config_drive_as_id(self):
         self.config_drive = 2
@@ -1805,8 +1788,6 @@ class ServersControllerCreateTest(test.TestCase):
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
-        self.assertTrue(server['config_drive'])
-        self.assertEqual(2, server['config_drive'])
 
     def test_create_instance_with_bad_config_drive(self):
         self.config_drive = "asdf"
@@ -1859,7 +1840,6 @@ class ServersControllerCreateTest(test.TestCase):
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
-        self.assertFalse(server['config_drive'])
 
     def test_create_instance_bad_href(self):
         image_href = 'asdf'
@@ -1879,24 +1859,6 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_local_href(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
-        expected_flavor = {
-            "id": "3",
-            "links": [
-                {
-                    "rel": "bookmark",
-                    "href": 'http://localhost/fake/flavors/3',
-                },
-            ],
-        }
-        expected_image = {
-            "id": image_uuid,
-            "links": [
-                {
-                    "rel": "bookmark",
-                    "href": 'http://localhost/fake/images/%s' % image_uuid,
-                },
-            ],
-        }
         body = {
             'server': {
                 'name': 'server_test',
@@ -1912,8 +1874,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body)
 
         server = res['server']
-        self.assertEqual(expected_flavor, server['flavor'])
-        self.assertEqual(expected_image, server['image'])
+        self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_admin_pass(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'

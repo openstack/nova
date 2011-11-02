@@ -81,9 +81,6 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         server = json.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
-        self.assertEqual(2, int(server['flavor']['id']))
-        self.assertEqual(u'test_server', server['name'])
-        self.assertEqual(IMAGE_UUID, server['image']['id'])
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(len(_block_device_mapping_seen), 1)
         self.assertEqual(_block_device_mapping_seen[0]['volume_id'], 1)

@@ -21,10 +21,12 @@ from nova.api.openstack import wsgi
 
 
 class CreateServerController(servers.Controller):
-    def _build_view(self, req, instance, is_detail=False):
-        server = super(CreateServerController, self)._build_view(req,
-                                                             instance,
-                                                             is_detail)
+    def _build_view(self, req, instance, is_detail=False, is_create=False):
+        server = super(CreateServerController, self).\
+                    _build_view(req,
+                                instance,
+                                is_detail=is_detail,
+                                is_create=is_create)
         if is_detail:
             self._build_security_groups(server['server'], instance)
         return server
