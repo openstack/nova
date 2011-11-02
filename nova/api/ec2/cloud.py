@@ -1437,10 +1437,7 @@ class CloudController(object):
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
                                   'AvailabilityZone'),
-            block_device_mapping=kwargs.get('block_device_mapping', {}),
-            # NOTE(comstud): Unfortunately, EC2 requires that the
-            # instance DB entries have been created..
-            wait_for_instances=True)
+            block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context, resv_id)
 
     def _do_instance(self, action, context, ec2_id):
