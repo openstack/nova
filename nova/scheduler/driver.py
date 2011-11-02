@@ -291,7 +291,8 @@ class Scheduler(object):
         if avail <= mem_inst:
             instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
             reason = _("Unable to migrate %(instance_id)s to %(dest)s: "
-                       "Lack of disk(host:%(avail)s <= instance:%(mem_inst)s)")
+                       "Lack of memory(host:%(avail)s <= "
+                       "instance:%(mem_inst)s)")
             raise exception.MigrationError(reason=reason % locals())
 
     def assert_compute_node_has_enough_disk(self, context,
