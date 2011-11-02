@@ -107,35 +107,6 @@ class TestSecurityGroups(test.TestCase):
                 sg['description'] = security_group['description']
         return {'security_group': sg}
 
-    def _format_create_xml_request_body(self, body_dict):
-        sg = body_dict['security_group']
-        body_parts = []
-        body_parts.extend([
-                  '<?xml version="1.0" encoding="UTF-8"?>',
-                  '<security_group xmlns="http://docs.openstack.org/ext/'
-                  'securitygroups/api/v1.1"',
-                  ' name="%s">' % (sg['name'])])
-        if 'description' in sg:
-            body_parts.append('<description>%s</description>'
-                              % sg['description'])
-        body_parts.append('</security_group>')
-        return ''.join(body_parts)
-
-    def _get_create_request_xml(self, body_dict):
-        req = webob.Request.blank('/v1.1/123/os-security-groups')
-        req.headers['Content-Type'] = 'application/xml'
-        req.content_type = 'application/xml'
-        req.accept = 'application/xml'
-        req.method = 'POST'
-        req.body = self._format_create_xml_request_body(body_dict)
-        return req
-
-    def _create_security_group_xml(self, security_group):
-        body_dict = self._create_security_group_request_dict(security_group)
-        request = self._get_create_request_xml(body_dict)
-        response = request.get_response(fakes.wsgi_app())
-        return response
-
     def _delete_security_group(self, id):
         request = webob.Request.blank('/v1.1/123/os-security-groups/%s'
                                       % id)
@@ -143,7 +114,7 @@ class TestSecurityGroups(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         return response
 
-    def test_create_security_group_json(self):
+    def test_create_security_group(self):
         security_group = {}
         security_group['name'] = "test"
         security_group['description'] = "group-description"
@@ -154,60 +125,47 @@ class TestSecurityGroups(test.TestCase):
                          "group-description")
         self.assertEquals(response.status_int, 200)
 
-    def test_create_security_group_xml(self):
-        security_group = {}
-        security_group['name'] = "test"
-        security_group['description'] = "group-description"
-        response = \
-                self._create_security_group_xml(security_group)
-
-        self.assertEquals(response.status_int, 200)
-        dom = minidom.parseString(response.body)
-        sg = dom.childNodes[0]
-        self.assertEquals(sg.nodeName, 'security_group')
-        self.assertEqual(security_group['name'], sg.getAttribute('name'))
-
-    def test_create_security_group_with_no_name_json(self):
+    def test_create_security_group_with_no_name(self):
         security_group = {}
         security_group['description'] = "group-description"
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_with_no_description_json(self):
+    def test_create_security_group_with_no_description(self):
         security_group = {}
         security_group['name'] = "test"
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_with_blank_name_json(self):
+    def test_create_security_group_with_blank_name(self):
         security_group = {}
         security_group['name'] = ""
         security_group['description'] = "group-description"
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_with_whitespace_name_json(self):
+    def test_create_security_group_with_whitespace_name(self):
         security_group = {}
         security_group['name'] = " "
         security_group['description'] = "group-description"
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_with_blank_description_json(self):
+    def test_create_security_group_with_blank_description(self):
         security_group = {}
         security_group['name'] = "test"
         security_group['description'] = ""
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_with_whitespace_description_json(self):
+    def test_create_security_group_with_whitespace_description(self):
         security_group = {}
         security_group['name'] = "name"
         security_group['description'] = " "
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_with_duplicate_name_json(self):
+    def test_create_security_group_with_duplicate_name(self):
         security_group = {}
         security_group['name'] = "test"
         security_group['description'] = "group-description"
@@ -217,7 +175,7 @@ class TestSecurityGroups(test.TestCase):
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_with_no_body_json(self):
+    def test_create_security_group_with_no_body(self):
         request = _get_create_request_json(body_dict=None)
         response = request.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 422)
@@ -229,7 +187,7 @@ class TestSecurityGroups(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 422)
 
-    def test_create_security_group_above_255_characters_name_json(self):
+    def test_create_security_group_above_255_characters_name(self):
         security_group = {}
         security_group['name'] = ("1234567890123456"
                             "1234567890123456789012345678901234567890"
@@ -243,7 +201,7 @@ class TestSecurityGroups(test.TestCase):
 
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_above_255_characters_description_json(self):
+    def test_create_security_group_above_255_characters_description(self):
         security_group = {}
         security_group['name'] = "test"
         security_group['description'] = ("1234567890123456"
@@ -256,14 +214,14 @@ class TestSecurityGroups(test.TestCase):
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_non_string_name_json(self):
+    def test_create_security_group_non_string_name(self):
         security_group = {}
         security_group['name'] = 12
         security_group['description'] = "group-description"
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_security_group_non_string_description_json(self):
+    def test_create_security_group_non_string_description(self):
         security_group = {}
         security_group['name'] = "test"
         security_group['description'] = 12
@@ -460,27 +418,6 @@ class TestSecurityGroups(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 202)
 
-    def test_associate_xml(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_by_uuid)
-        self.mox.StubOutWithMock(nova.db, 'instance_add_security_group')
-        nova.db.instance_add_security_group(mox.IgnoreArg(),
-                                    mox.IgnoreArg(),
-                                    mox.IgnoreArg())
-        self.stubs.Set(nova.db, 'security_group_get_by_name',
-                       return_security_group_without_instances)
-        self.mox.ReplayAll()
-
-        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
-        req.headers['Content-Type'] = 'application/xml'
-        req.method = 'POST'
-        req.body = """<addSecurityGroup>
-                           <name>test</name>
-                    </addSecurityGroup>"""
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEquals(response.status_int, 202)
-
     def test_disassociate_by_non_existing_security_group_name(self):
         body = dict(removeSecurityGroup=dict(name='non-existing'))
         req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
@@ -579,27 +516,6 @@ class TestSecurityGroups(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 202)
 
-    def test_disassociate_xml(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_by_uuid)
-        self.mox.StubOutWithMock(nova.db, 'instance_remove_security_group')
-        nova.db.instance_remove_security_group(mox.IgnoreArg(),
-                                    mox.IgnoreArg(),
-                                    mox.IgnoreArg())
-        self.stubs.Set(nova.db, 'security_group_get_by_name',
-                       return_security_group)
-        self.mox.ReplayAll()
-
-        req = webob.Request.blank('/v1.1/123/servers/%s/action' % FAKE_UUID)
-        req.headers['Content-Type'] = 'application/xml'
-        req.method = 'POST'
-        req.body = """<removeSecurityGroup>
-                           <name>test</name>
-                    </removeSecurityGroup>"""
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEquals(response.status_int, 202)
-
 
 class TestSecurityGroupRules(test.TestCase):
     def setUp(self):
@@ -643,7 +559,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         return response
 
-    def test_create_by_cidr_json(self):
+    def test_create_by_cidr(self):
         rules = {
                   "security_group_rule": {
                         "ip_protocol": "tcp",
@@ -662,7 +578,7 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertEquals(security_group_rule['ip_range']['cidr'],
                           "10.2.3.124/24")
 
-    def test_create_by_group_id_json(self):
+    def test_create_by_group_id(self):
         rules = {
                   "security_group_rule": {
                         "ip_protocol": "tcp",
@@ -680,7 +596,7 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertNotEquals(security_group_rule['id'], 0)
         self.assertEquals(security_group_rule['parent_group_id'], 2)
 
-    def test_create_add_existing_rules_json(self):
+    def test_create_add_existing_rules(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -694,7 +610,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_no_body_json(self):
+    def test_create_with_no_body(self):
         request = webob.Request.blank('/v1.1/123/os-security-group-rules')
         request.headers['Content-Type'] = 'application/json'
         request.method = 'POST'
@@ -702,7 +618,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 422)
 
-    def test_create_with_no_security_group_rule_in_body_json(self):
+    def test_create_with_no_security_group_rule_in_body(self):
         request = webob.Request.blank('/v1.1/123/os-security-group-rules')
         request.headers['Content-Type'] = 'application/json'
         request.method = 'POST'
@@ -711,7 +627,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 422)
 
-    def test_create_with_invalid_parent_group_id_json(self):
+    def test_create_with_invalid_parent_group_id(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -724,7 +640,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_non_existing_parent_group_id_json(self):
+    def test_create_with_non_existing_parent_group_id(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -738,7 +654,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 404)
 
-    def test_create_with_invalid_protocol_json(self):
+    def test_create_with_invalid_protocol(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "invalid-protocol",
@@ -752,7 +668,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_no_protocol_json(self):
+    def test_create_with_no_protocol(self):
         rules = {
               "security_group_rule": {
                   "from_port": "22",
@@ -765,7 +681,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_invalid_from_port_json(self):
+    def test_create_with_invalid_from_port(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -779,7 +695,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_invalid_to_port_json(self):
+    def test_create_with_invalid_to_port(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -793,7 +709,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_non_numerical_from_port_json(self):
+    def test_create_with_non_numerical_from_port(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -807,7 +723,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_non_numerical_to_port_json(self):
+    def test_create_with_non_numerical_to_port(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -821,7 +737,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_no_to_port_json(self):
+    def test_create_with_no_to_port(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -834,7 +750,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_invalid_cidr_json(self):
+    def test_create_with_invalid_cidr(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -848,7 +764,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_no_cidr_group_json(self):
+    def test_create_with_no_cidr_group(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -867,7 +783,7 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertEquals(security_group_rule['ip_range']['cidr'],
                           "0.0.0.0/0")
 
-    def test_create_with_invalid_group_id_json(self):
+    def test_create_with_invalid_group_id(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -881,13 +797,13 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_empty_group_id_json(self):
+    def test_create_with_empty_group_id(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
                   "from_port": "22",
                   "to_port": "22",
-                  "group_id": "invalid",
+                  "group_id": "",
                   "parent_group_id": "%s" % self.parent_security_group['id'],
                }
             }
@@ -895,7 +811,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_with_invalid_group_id_json(self):
+    def test_create_with_invalid_group_id(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
@@ -909,7 +825,7 @@ class TestSecurityGroupRules(test.TestCase):
         response = self._create_security_group_rule_json(rules)
         self.assertEquals(response.status_int, 400)
 
-    def test_create_rule_with_same_group_parent_id_json(self):
+    def test_create_rule_with_same_group_parent_id(self):
         rules = {
               "security_group_rule": {
                   "ip_protocol": "tcp",
