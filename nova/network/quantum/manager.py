@@ -26,6 +26,7 @@ from nova import log as logging
 from nova import manager
 from nova.network import manager
 from nova.network.quantum import quantum_connection
+from nova.network.quantum import melange_ipam_lib
 from nova import utils
 
 LOG = logging.getLogger("nova.network.quantum.manager")
@@ -35,6 +36,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('quantum_ipam_lib',
                     'nova.network.quantum.nova_ipam_lib',
                     "Indicates underlying IP address management library")
+# TODO(Vek): Eventually, this needs to mean more than just using
+#            Melange for assignment of MAC addresses (with an
+#            appropriate flag name change, of course), but this is all
+#            it does right now
+flags.DEFINE_bool('use_melange_mac_generation', False,
+                  "Use Melange for assignment of MAC addresses")
 
 
 flags.DEFINE_string('quantum_use_dhcp', 'False',
@@ -225,8 +232,9 @@ class QuantumManager(manager.FlatManager):
                     "id": 'NULL',
                     "label": "quantum-net-%s" % quantum_net_id}
 
-            vif_rec = manager.FlatManager.add_virtual_interface(self,
-                                  context, instance_id, network_ref['id'])
+            vif_rec = self.add_virtual_interface(context,
+                                                 instance_id,
+                                                 network_ref['id'])
 
             # talk to Quantum API to create and attach port.
             q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
@@ -297,6 +305,32 @@ class QuantumManager(manager.FlatManager):
                 subnet['network_id'], project_id)
             self.driver.update_dhcp_hostfile_with_text(dev, hosts)
             self.driver.restart_dhcp(dev, network_ref)
+
+    def add_virtual_interface(self, context, instance_id, network_id):
+        # If we're not using melange, use the default means...
+        if FLAGS.use_melange_mac_generation:
+            return self._add_virtual_interface(context, instance_id,
+                                               network_id)
+
+        return super(QuantumManager, self).add_virtual_interface(context,
+                                                                 instance_id,
+                                                                 network_id)
+
+    def _add_virtual_interface(self, context, instance_id, network_id):
+        vif = {'instance_id': instance_id,
+               'network_id': network_id,
+               'uuid': str(utils.gen_uuid())}
+
+        # TODO(Vek): Ideally, we would have a VirtualInterface class
+        #            that would take care of delegating to whoever it
+        #            needs to get information from.  We'll look at
+        #            this after Trey's refactorings...
+        m_ipam = melange_ipam_lib.get_ipam_lib(self)
+        vif['address'] = m_ipam.create_vif(vif['uuid'],
+                                           vif['instance_id'],
+                                           context.project_id)
+
+        return self.db.virtual_interface_create(context, vif)
 
     def get_instance_nw_info(self, context, instance_id,
                                 instance_type_id, host):

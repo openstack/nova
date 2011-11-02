@@ -15,6 +15,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import stubout
+
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -23,8 +25,10 @@ from nova import exception
 from nova import ipv6
 from nova import log as logging
 from nova.network.quantum import manager as quantum_manager
+from nova.network.quantum import melange_connection
 from nova import test
 from nova import utils
+from nova.network import manager
 
 import mox
 
@@ -185,25 +189,56 @@ networks = [{'label': 'project1-net1',
 
 
 # this is a base class to be used by all other Quantum Test classes
-class QuantumTestCaseBase(object):
+class QuantumNovaTestCase(test.TestCase):
+    def setUp(self):
+        super(QuantumNovaTestCase, self).setUp()
 
+        self.net_man = quantum_manager.QuantumManager(
+                ipam_lib="nova.network.quantum.nova_ipam_lib",
+                q_conn=FakeQuantumClientConnection())
+
+        # Tests seem to create some networks by default, which
+        # we don't want.  So we delete them.
+
+        ctx = context.RequestContext('user1', 'fake_project1').elevated()
+        for n in db.network_get_all(ctx):
+            db.network_delete_safe(ctx, n['id'])
+
+        # Other unit tests (e.g., test_compute.py) have a nasty
+        # habit of of creating fixed IPs and not cleaning up, which
+        # can confuse these tests, so we remove all existing fixed
+        # ips before starting.
+        session = get_session()
+        result = session.query(models.FixedIp).all()
+        with session.begin():
+            for fip_ref in result:
+                session.delete(fip_ref)
+
+    def _create_network(self, n):
+        ctx = context.RequestContext('user1', n['project_id'])
+        nwks = self.net_man.create_networks(
+            ctx,
+            label=n['label'], cidr=n['cidr'],
+            multi_host=n['multi_host'],
+            num_networks=1, network_size=256,
+            cidr_v6=n['cidr_v6'],
+            gateway=n['gateway'],
+            gateway_v6=n['gateway_v6'], bridge=None,
+            bridge_interface=None, dns1=n['dns1'],
+            dns2=n['dns2'],
+            project_id=n['project_id'],
+            priority=n['priority'])
+        n['uuid'] = nwks[0]['uuid']
+
+
+class QuantumNovaIPAMTestCase(QuantumNovaTestCase):
     def test_create_and_delete_nets(self):
         self._create_nets()
         self._delete_nets()
 
     def _create_nets(self):
         for n in networks:
-            ctx = context.RequestContext('user1', n['project_id'])
-            nwks = self.net_man.create_networks(ctx,
-                    label=n['label'], cidr=n['cidr'],
-                    multi_host=n['multi_host'],
-                    num_networks=1, network_size=256, cidr_v6=n['cidr_v6'],
-                    gateway=n['gateway'],
-                    gateway_v6=n['gateway_v6'], bridge=None,
-                    bridge_interface=None, dns1=n['dns1'],
-                    dns2=n['dns2'], project_id=n['project_id'],
-                    priority=n['priority'])
-            n['uuid'] = nwks[0]['uuid']
+            self._create_network(n)
 
     def _delete_nets(self):
         for n in networks:
@@ -336,28 +371,45 @@ class QuantumTestCaseBase(object):
                         self.net_man.validate_networks, ctx, [("", None)])
 
 
-class QuantumNovaIPAMTestCase(QuantumTestCaseBase, test.TestCase):
+class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):
+    def test_local_mac_address_creation(self):
+        self.flags(use_melange_mac_generation=False)
+        fake_mac = "ab:cd:ef:ab:cd:ef"
+        self.stubs.Set(manager.FlatManager, "generate_mac_address",
+                       lambda x: fake_mac)
+        project_id = "fake_project1"
+        ctx = context.RequestContext('user1', project_id)
+        self._create_network(networks[0])
 
-    def setUp(self):
-        super(QuantumNovaIPAMTestCase, self).setUp()
+        net_ids = self.net_man.q_conn.get_networks_for_tenant(project_id)
+        requested_networks = [(net_id, None) for net_id in net_ids['networks']]
 
-        self.net_man = quantum_manager.QuantumManager(
-                ipam_lib="nova.network.quantum.nova_ipam_lib",
-                q_conn=FakeQuantumClientConnection())
+        instance_ref = db.api.instance_create(ctx,
+                                    {"project_id": project_id})
+        nw_info = self.net_man.allocate_for_instance(ctx,
+                        instance_id=instance_ref['id'], host="",
+                        instance_type_id=instance_ref['instance_type_id'],
+                        project_id=project_id,
+                        requested_networks=requested_networks)
+        self.assertEqual(nw_info[0][1]['mac'], fake_mac)
 
-        # Tests seem to create some networks by default, which
-        # we don't want.  So we delete them.
+    def test_melange_mac_address_creation(self):
+        self.flags(use_melange_mac_generation=True)
+        fake_mac = "ab:cd:ef:ab:cd:ef"
+        self.stubs.Set(melange_connection.MelangeConnection, "create_vif",
+                       lambda w, x, y, z: fake_mac)
+        project_id = "fake_project1"
+        ctx = context.RequestContext('user1', project_id)
+        self._create_network(networks[0])
 
-        ctx = context.RequestContext('user1', 'fake_project1').elevated()
-        for n in db.network_get_all(ctx):
-            db.network_delete_safe(ctx, n['id'])
+        net_ids = self.net_man.q_conn.get_networks_for_tenant(project_id)
+        requested_networks = [(net_id, None) for net_id in net_ids['networks']]
 
-        # Other unit tests (e.g., test_compute.py) have a nasty
-        # habit of of creating fixed IPs and not cleaning up, which
-        # can confuse these tests, so we remove all existing fixed
-        # ips before starting.
-        session = get_session()
-        result = session.query(models.FixedIp).all()
-        with session.begin():
-            for fip_ref in result:
-                session.delete(fip_ref)
+        instance_ref = db.api.instance_create(ctx,
+                                    {"project_id": project_id})
+        nw_info = self.net_man.allocate_for_instance(ctx,
+                        instance_id=instance_ref['id'], host="",
+                        instance_type_id=instance_ref['instance_type_id'],
+                        project_id=project_id,
+                        requested_networks=requested_networks)
+        self.assertEqual(nw_info[0][1]['mac'], fake_mac)
