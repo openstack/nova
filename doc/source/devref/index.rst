@@ -35,6 +35,7 @@ Background Concepts for Nova
 .. toctree::
    :maxdepth: 3
 
+   threading
    distributed_scheduler
    multinic
    zone
