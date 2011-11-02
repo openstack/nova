@@ -507,6 +507,12 @@ w
             # 2. Attach VDI to compute worker (VBD hotplug)
             with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
                 # 3. Create swap partition
+
+                # NOTE(jk0): We use a FAT32 filesystem for the Windows swap
+                # partition because that is what parted supports.
+                is_windows = instance.os_type == "windows"
+                fs_type = "fat32" if is_windows else "linux-swap"
+
                 dev_path = utils.make_dev_path(dev)
                 utils.execute('parted', '--script', dev_path,
                               'mklabel', 'msdos', run_as_root=True)
@@ -514,7 +520,7 @@ w
                 partition_start = 0
                 partition_end = swap_mb
                 utils.execute('parted', '--script', dev_path, 'mkpartfs',
-                              'primary', 'linux-swap',
+                              'primary', fs_type,
                               str(partition_start),
                               str(partition_end),
                               run_as_root=True)
