@@ -20,6 +20,15 @@
 
 The underlying driver is loaded as a :class:`LazyPluggable`.
 
+Functions in this module are imported into the nova.db namespace. Call these
+functions from nova.db namespace, not the nova.db.api namespace.
+
+All functions in this module return objects that implement a dictionary-like
+interface. Currently, many of these objects are sqlalchemy objects that
+implement a dictionary interface. However, a future goal is to have all of
+these objects be simple dictionaries.
+
+
 **Related Flags**
 
 :db_backend:  string to lookup in the list of LazyPluggable backends.
