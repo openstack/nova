@@ -571,7 +571,7 @@ class NoFloatingIpsDefined(NotFound):
 
 
 class KeypairNotFound(NotFound):
-    message = _("Keypair %(keypair_name)s not found for user %(user_id)s")
+    message = _("Keypair %(name)s not found for user %(user_id)s")
 
 
 class CertificateNotFound(NotFound):
