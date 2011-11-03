@@ -35,6 +35,7 @@ terminating it.
 
 """
 
+import contextlib
 import os
 import socket
 import sys
@@ -396,6 +397,23 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.network_api.deallocate_for_instance(context,
                                     instance)
 
+        def _cleanup():
+            with utils.save_and_reraise_exception():
+                self._instance_update(context,
+                                      instance_id,
+                                      vm_state=vm_states.ERROR)
+                if network_info is not None:
+                    _deallocate_network()
+
+        @contextlib.contextmanager
+        def _logging_error(instance_id, message):
+            try:
+                yield
+            except Exception as error:
+                with utils.save_and_reraise_exception():
+                    LOG.exception(_("Instance '%(instance_id)s' "
+                                   "failed %(message)s.") % locals())
+
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
 
@@ -418,14 +436,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance['admin_pass'] = kwargs.get('admin_password', None)
 
         is_vpn = instance['image_ref'] == str(FLAGS.vpn_image_id)
-        network_info = _make_network_info()
         try:
+            network_info = None
+            with _logging_error(instance_id, "network setup"):
+                network_info = _make_network_info()
+
             self._instance_update(context,
                                   instance_id,
                                   vm_state=vm_states.BUILDING,
                                   task_state=task_states.BLOCK_DEVICE_MAPPING)
-
-            block_device_info = _make_block_device_info()
+            with _logging_error(instance_id, "block device setup"):
+                block_device_info = _make_block_device_info()
 
             self._instance_update(context,
                                   instance_id,
@@ -433,16 +454,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   task_state=task_states.SPAWNING)
 
             # TODO(vish) check to make sure the availability zone matches
-            try:
+            with _logging_error(instance_id, "failed to spawn"):
                 self.driver.spawn(context, instance,
                                   network_info, block_device_info)
-            except Exception as ex:  # pylint: disable=W0702
-                msg = _("Instance '%(instance_id)s' failed to spawn. Is "
-                        "virtualization enabled in the BIOS? Details: "
-                        "%(ex)s") % locals()
-                LOG.exception(msg)
-                _deallocate_network()
-                return
 
             current_power_state = self._get_power_state(context, instance)
             self._instance_update(context,
@@ -463,9 +477,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # deleted before it actually got created.  This should
             # be fixed once we have no-db-messaging
             pass
-        except:
-            with utils.save_and_reraise_exception():
-                _deallocate_network()
+        except Exception:
+            _cleanup()
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def run_instance(self, context, instance_id, **kwargs):
