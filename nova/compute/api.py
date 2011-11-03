@@ -1321,6 +1321,7 @@ class API(base.Base):
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance_ref['uuid'],
+                              "update_db": False,
                               "instance_type_id": new_instance_type['id']}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")

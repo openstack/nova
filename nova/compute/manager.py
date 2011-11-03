@@ -1123,6 +1123,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.ACTIVE,
+                              host=migration_ref['dest_compute'],
                               task_state=task_states.RESIZE_VERIFY)
 
         self.db.migration_update(context, migration_id,
