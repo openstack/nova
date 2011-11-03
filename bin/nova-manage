@@ -2158,6 +2158,47 @@ class ConfigCommands(object):
         print FLAGS.FlagsIntoString()
 
 
+class GetLogCommands(object):
+    """Get logging information"""
+
+    def errors(self):
+        """Get all of the errors from the log files"""
+        if FLAGS.logdir:
+            error_found = 0
+            logs = [x for x in os.listdir(FLAGS.logdir) if x.endswith('.log')]
+            for file in logs:
+                log_file = os.path.join(FLAGS.logdir, file)
+                lines = [line.strip() for line in open(log_file, "r")]
+                lines.reverse()
+                print_name = 0
+                for index, line in enumerate(lines):
+                    if line.find(" ERROR ") > 0:
+                        error_found += 1
+                        if print_name == 0:
+                            print log_file + ":-"
+                            print_name = 1
+                        print "Line %d : %s" % (len(lines) - index, line)
+        if error_found == 0:
+            print "No errors in logfiles!"
+
+    def syslog(self, num_entries=10):
+        """Get <num_entries> of the nova syslog events"""
+        entries = int(num_entries)
+        count = 0
+        lines = [line.strip() for line in open('/var/log/syslog', "r")]
+        lines.reverse()
+        print "Last %s nova syslog entries:-" % (entries)
+        for line in lines:
+            if line.find("nova") > 0:
+                count += 1
+                print "%s" % (line)
+            if count == entries:
+                break
+
+        if count == 0:
+            print "No nova entries in syslog!"
+
+
 CATEGORIES = [
     ('account', AccountCommands),
     ('agent', AgentBuildCommands),
@@ -2181,7 +2222,8 @@ CATEGORIES = [
     ('vm', VmCommands),
     ('volume', VolumeCommands),
     ('vpn', VpnCommands),
-    ('vsa', VsaCommands)]
+    ('vsa', VsaCommands),
+    ('logs', GetLogCommands)]
 
 
 def lazy_match(name, key_value_tuples):
