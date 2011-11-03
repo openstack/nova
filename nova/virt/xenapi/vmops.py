@@ -620,9 +620,15 @@ class VMOps(object):
                   'instance_id': instance_id,
                   'sr_path': sr_path}
 
-        task = self._session.async_call_plugin('migration', 'transfer_vhd',
-                {'params': pickle.dumps(params)})
-        self._session.wait_for_task(task, instance_id)
+        try:
+            _params = {'params': pickle.dumps(params)}
+            task = self._session.async_call_plugin('migration',
+                                                   'transfer_vhd',
+                                                   _params)
+            self._session.wait_for_task(task, instance_id)
+        except self.XenAPI.Failure:
+            msg = _("Failed to transfer vhd to new host")
+            raise exception.MigrationError(reason=msg)
 
     def _get_orig_vm_name_label(self, instance):
         return instance.name + '-orig'

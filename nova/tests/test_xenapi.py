@@ -791,6 +791,19 @@ class XenAPIMigrateInstance(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(self.context, instance, '127.0.0.1')
 
+    def test_migrate_disk_and_power_off_passes_exceptions(self):
+        instance = db.instance_create(self.context, self.instance_values)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+
+        def fake_raise(*args, **kwargs):
+            raise exception.MigrationError(reason='test failure')
+        self.stubs.Set(vmops.VMOps, "_migrate_vhd", fake_raise)
+
+        conn = xenapi_conn.get_connection(False)
+        self.assertRaises(exception.MigrationError,
+                          conn.migrate_disk_and_power_off,
+                          self.context, instance, '127.0.0.1')
+
     def test_revert_migrate(self):
         instance = db.instance_create(self.context, self.instance_values)
         self.called = False
