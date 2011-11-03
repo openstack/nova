@@ -80,8 +80,11 @@ class VolumeManager(manager.SchedulerDependentManager):
     def init_host(self):
         """Do any initialization that needs to be run if this is a
            standalone service."""
-        self.driver.check_for_setup_error()
+
         ctxt = context.get_admin_context()
+        self.driver.do_setup(ctxt)
+        self.driver.check_for_setup_error()
+
         volumes = self.db.volume_get_all_by_host(ctxt, self.host)
         LOG.debug(_("Re-exporting %s volumes"), len(volumes))
         for volume in volumes:

@@ -1882,8 +1882,8 @@ def network_get_all_by_uuids(context, network_uuids, project_id=None):
     #check if host is set to all of the networks
     # returned in the result
     for network in result:
-            if network['host'] is None:
-                raise exception.NetworkHostNotSet(network_id=network['id'])
+        if network['host'] is None:
+            raise exception.NetworkHostNotSet(network_id=network['id'])
 
     #check if the result contains all the networks
     #we are looking for
@@ -4067,3 +4067,152 @@ def s3_image_create(context, image_uuid):
         raise exception.DBError(e)
 
     return s3_image_ref
+
+
+####################
+
+
+@require_admin_context
+def sm_backend_conf_create(context, values):
+    backend_conf = models.SMBackendConf()
+    backend_conf.update(values)
+    backend_conf.save()
+    return backend_conf
+
+
+@require_admin_context
+def sm_backend_conf_update(context, sm_backend_id, values):
+    session = get_session()
+    backend_conf = session.query(models.SMBackendConf).\
+                           filter_by(id=sm_backend_id).first()
+    if not backend_conf:
+        raise exception.NotFound(_("No backend config with id "\
+                                   "%(sm_backend_id)s") % locals())
+    backend_conf.update(values)
+    backend_conf.save(session=session)
+    return backend_conf
+
+
+@require_admin_context
+def sm_backend_conf_delete(context, sm_backend_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.SMBackendConf).\
+                filter_by(id=sm_backend_id).\
+                delete()
+
+
+@require_admin_context
+def sm_backend_conf_get(context, sm_backend_id):
+    session = get_session()
+    result = session.query(models.SMBackendConf).\
+                     filter_by(id=sm_backend_id).first()
+    if not result:
+        raise exception.NotFound(_("No backend config with id "\
+                                   "%(sm_backend_id)s") % locals())
+    return result
+
+
+@require_admin_context
+def sm_backend_conf_get_by_sr(context, sr_uuid):
+    session = get_session()
+    result = session.query(models.SMBackendConf).filter_by(sr_uuid=sr_uuid)
+    return result
+
+
+@require_admin_context
+def sm_backend_conf_get_all(context):
+    session = get_session()
+    return session.query(models.SMBackendConf).all()
+
+
+####################
+
+
+@require_admin_context
+def sm_flavor_create(context, values):
+    sm_flavor = models.SMFlavors()
+    sm_flavor.update(values)
+    sm_flavor.save()
+    return sm_flavor
+
+
+@require_admin_context
+def sm_flavor_update(context, sm_flavor_label, values):
+    session = get_session()
+    sm_flavor = session.query(models.SMFlavors).\
+                        filter_by(label=sm_flavor_label)
+    if not sm_flavor:
+        raise exception.NotFound(_("No sm_flavor with id "\
+                                   "%(sm_flavor_id)s") % locals())
+    sm_flavor.update(values)
+    sm_flavor.save()
+    return sm_flavor
+
+
+@require_admin_context
+def sm_flavor_delete(context, sm_flavor_label):
+    session = get_session()
+    with session.begin():
+        session.query(models.SMFlavors).\
+                filter_by(label=sm_flavor_label).\
+                delete()
+
+
+@require_admin_context
+def sm_flavor_get(context, sm_flavor):
+    session = get_session()
+    result = session.query(models.SMFlavors).filter_by(label=sm_flavor)
+    if not result:
+        raise exception.NotFound(_("No sm_flavor called %(sm_flavor)s") \
+                                 % locals())
+    return result
+
+
+@require_admin_context
+def sm_flavor_get_all(context):
+    session = get_session()
+    return session.query(models.SMFlavors).all()
+
+
+###############################
+
+
+def sm_volume_create(context, values):
+    sm_volume = models.SMVolume()
+    sm_volume.update(values)
+    sm_volume.save()
+    return sm_volume
+
+
+def sm_volume_update(context, volume_id, values):
+    session = get_session()
+    sm_volume = session.query(models.SMVolume).filter_by(id=volume_id).first()
+    if not sm_volume:
+        raise exception.NotFound(_("No sm_volume with id %(volume_id)s") \
+                                 % locals())
+    sm_volume.update(values)
+    sm_volume.save()
+    return sm_volume
+
+
+def sm_volume_delete(context, volume_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.SMVolume).\
+                filter_by(id=volume_id).\
+                delete()
+
+
+def sm_volume_get(context, volume_id):
+    session = get_session()
+    result = session.query(models.SMVolume).filter_by(id=volume_id).first()
+    if not result:
+        raise exception.NotFound(_("No sm_volume with id %(volume_id)s") \
+                                 % locals())
+    return result
+
+
+def sm_volume_get_all(context):
+    session = get_session()
+    return session.query(models.SMVolume).all()

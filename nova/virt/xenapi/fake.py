@@ -144,6 +144,7 @@ def create_vdi(name_label, read_only, sr_ref, sharable):
                            'xenstore_data': '',
                            'sm_config': {},
                            'physical_utilisation': '123',
+                           'managed': True,
                            'VBDs': {}})
 
 
@@ -351,6 +352,65 @@ class SessionBase(object):
             raise Failure(['DEVICE_ALREADY_DETACHED', ref])
         rec['currently_attached'] = False
         rec['device'] = ''
+
+    def PBD_create(self, _1, pbd_rec):
+        pbd_ref = _create_object('PBD', pbd_rec)
+        _db_content['PBD'][pbd_ref]['currently_attached'] = False
+        return pbd_ref
+
+    def PBD_plug(self, _1, pbd_ref):
+        rec = get_record('PBD', pbd_ref)
+        if rec['currently_attached']:
+            raise Failure(['DEVICE_ALREADY_ATTACHED', ref])
+        rec['currently_attached'] = True
+        sr_ref = rec['SR']
+        _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
+
+    def PBD_unplug(self, _1, pbd_ref):
+        rec = get_record('PBD', pbd_ref)
+        if not rec['currently_attached']:
+            raise Failure(['DEVICE_ALREADY_DETACHED', ref])
+        rec['currently_attached'] = False
+        sr_ref = pbd_ref['SR']
+        _db_content['SR'][sr_ref]['PBDs'].remove(pbd_ref)
+
+    def SR_introduce(self, _1, sr_uuid, label, desc, type, content_type,
+                     shared, sm_config):
+        host_ref = _db_content['host'].keys()[0]
+
+        ref = None
+        rec = None
+        for ref, rec in _db_content['SR'].iteritems():
+            if rec.get('uuid') == sr_uuid:
+                break
+        if rec:
+            # make forgotten = 0 and return ref
+            _db_content['SR'][ref]['forgotten'] = 0
+            return ref
+        else:
+            # SR not found in db, so we create one
+            params = {}
+            params.update(locals())
+            del params['self']
+            sr_ref = _create_object('SR', params)
+            _db_content['SR'][sr_ref]['uuid'] = sr_uuid
+            _db_content['SR'][sr_ref]['forgotten'] = 0
+            if type in ('iscsi'):
+                # Just to be clear
+                vdi_per_lun = True
+            if vdi_per_lun:
+                # we need to create a vdi because this introduce
+                # is likely meant for a single vdi
+                vdi_ref = create_vdi('', False, sr_ref, False)
+                _db_content['SR'][sr_ref]['VDIs'] = [vdi_ref]
+                _db_content['VDI'][vdi_ref]['SR'] = sr_ref
+            return sr_ref
+
+    def SR_forget(self, _1, sr_ref):
+        _db_content['SR'][sr_ref]['forgotten'] = 1
+
+    def SR_scan(self, _1, sr_ref):
+        return
 
     def PIF_get_all_records_where(self, _1, _2):
         # TODO (salvatore-orlando): filter table on _2
@@ -573,7 +633,7 @@ class SessionBase(object):
     def _check_session(self, params):
         if (self._session is None or
             self._session not in _db_content['session']):
-                raise Failure(['HANDLE_INVALID', 'session', self._session])
+            raise Failure(['HANDLE_INVALID', 'session', self._session])
         if len(params) == 0 or params[0] != self._session:
             LOG.debug(_('Raising NotImplemented'))
             raise NotImplementedError('Call to XenAPI without using .xenapi')

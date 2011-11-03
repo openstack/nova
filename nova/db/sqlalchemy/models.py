@@ -880,6 +880,32 @@ class S3Image(BASE, NovaBase):
     uuid = Column(String(36), nullable=False)
 
 
+class SMFlavors(BASE, NovaBase):
+    """Represents a flavor for SM volumes."""
+    __tablename__ = 'sm_flavors'
+    id = Column(Integer(), primary_key=True)
+    label = Column(String(255))
+    description = Column(String(255))
+
+
+class SMBackendConf(BASE, NovaBase):
+    """Represents the connection to the backend for SM."""
+    __tablename__ = 'sm_backend_config'
+    id = Column(Integer(), primary_key=True)
+    flavor_id = Column(Integer, ForeignKey('sm_flavors.id'), nullable=False)
+    sr_uuid = Column(String(255))
+    sr_type = Column(String(255))
+    config_params = Column(String(2047))
+
+
+class SMVolume(BASE, NovaBase):
+    __tablename__ = 'sm_volume'
+    id = Column(Integer(), ForeignKey(Volume.id), primary_key=True)
+    backend_id = Column(Integer, ForeignKey('sm_backend_config.id'),
+                        nullable=False)
+    vdi_uuid = Column(String(255))
+
+
 def register_models():
     """Register Models and create metadata.
 
@@ -895,7 +921,7 @@ def register_models():
               Project, Certificate, ConsolePool, Console, Zone,
               VolumeMetadata, VolumeTypes, VolumeTypeExtraSpecs,
               AgentBuild, InstanceMetadata, InstanceTypeExtraSpecs, Migration,
-              VirtualStorageArray)
+              VirtualStorageArray, SMFlavors, SMBackendConf, SMVolume)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

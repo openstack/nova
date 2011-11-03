@@ -1616,3 +1616,92 @@ def s3_image_get_by_uuid(context, image_uuid):
 def s3_image_create(context, image_uuid):
     """Create local s3 image represented by provided uuid"""
     return IMPL.s3_image_create(context, image_uuid)
+
+
+####################
+
+
+def sm_backend_conf_create(context, values):
+    """Create a new SM Backend Config entry."""
+    return IMPL.sm_backend_conf_create(context, values)
+
+
+def sm_backend_conf_update(context, sm_backend_conf_id, values):
+    """Update a SM Backend Config entry."""
+    return IMPL.sm_backend_conf_update(context, sm_backend_conf_id, values)
+
+
+def sm_backend_conf_delete(context, sm_backend_conf_id):
+    """Delete a SM Backend Config."""
+    return IMPL.sm_backend_conf_delete(context, sm_backend_conf_id)
+
+
+def sm_backend_conf_get(context, sm_backend_conf_id):
+    """Get a specific SM Backend Config."""
+    return IMPL.sm_backend_conf_get(context, sm_backend_conf_id)
+
+
+def sm_backend_conf_get_by_sr(context, sr_uuid):
+    """Get a specific SM Backend Config."""
+    return IMPL.sm_backend_conf_get(context, sr_uuid)
+
+
+def sm_backend_conf_get_all(context):
+    """Get all SM Backend Configs."""
+    return IMPL.sm_backend_conf_get_all(context)
+
+
+####################
+
+
+def sm_flavor_create(context, values):
+    """Create a new SM Flavor entry."""
+    return IMPL.sm_flavor_create(context, values)
+
+
+def sm_flavor_update(context, sm_flavor_id, values):
+    """Update a SM Flavor entry."""
+    return IMPL.sm_flavor_update(context, values)
+
+
+def sm_flavor_delete(context, sm_flavor_id):
+    """Delete a SM Flavor."""
+    return IMPL.sm_flavor_delete(context, sm_flavor_id)
+
+
+def sm_flavor_get(context, sm_flavor):
+    """Get a specific SM Flavor."""
+    return IMPL.sm_flavor_get(context, sm_flavor)
+
+
+def sm_flavor_get_all(context):
+    """Get all SM Flavors."""
+    return IMPL.sm_flavor_get_all(context)
+
+
+####################
+
+
+def sm_volume_create(context, values):
+    """Create a new child Zone entry."""
+    return IMPL.sm_volume_create(context, values)
+
+
+def sm_volume_update(context, volume_id, values):
+    """Update a child Zone entry."""
+    return IMPL.sm_volume_update(context, values)
+
+
+def sm_volume_delete(context, volume_id):
+    """Delete a child Zone."""
+    return IMPL.sm_volume_delete(context, volume_id)
+
+
+def sm_volume_get(context, volume_id):
+    """Get a specific child Zone."""
+    return IMPL.sm_volume_get(context, volume_id)
+
+
+def sm_volume_get_all(context):
+    """Get all child Zones."""
+    return IMPL.sm_volume_get_all(context)

@@ -1947,6 +1947,147 @@ class ImageCommands(object):
         self._convert_images(machine_images)
 
 
+class StorageManagerCommands(object):
+    """Class for mangaging Storage Backends and Flavors"""
+
+    def flavor_list(self, flavor=None):
+        ctxt = context.get_admin_context()
+
+        try:
+            if flavor == None:
+                flavors = db.sm_flavor_get_all(ctxt)
+            else:
+                flavors = db.sm_flavor_get(ctxt, flavor)
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
+
+        print "%-18s\t%-20s\t%s" % (_('id'),
+                                    _('Label'),
+                                    _('Description'))
+
+        for flav in flavors:
+            print "%-18s\t%-20s\t%s" % (
+                    flav['id'],
+                    flav['label'],
+                    flav['description'])
+
+    def flavor_create(self, label, desc):
+        # TODO flavor name must be unique
+        try:
+            db.sm_flavor_create(context.get_admin_context(),
+                                dict(label=label,
+                                     description=desc))
+        except exception.DBError, e:
+            _db_error(e)
+
+    def flavor_delete(self, label):
+        try:
+            db.sm_flavor_delete(context.get_admin_context(), label)
+
+        except exception.DBError, e:
+            _db_error(e)
+
+    def _splitfun(self, item):
+        i = item.split("=")
+        return i[0:2]
+
+    def backend_list(self, backend_conf_id=None):
+        ctxt = context.get_admin_context()
+
+        try:
+            if backend_conf_id == None:
+                backends = db.sm_backend_conf_get_all(ctxt)
+            else:
+                backends = db.sm_backend_conf_get(ctxt, backend_conf_id)
+
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
+
+        print "%-5s\t%-10s\t%-40s\t%-10s\t%s" % (_('id'),
+                                                      _('Flavor id'),
+                                                      _('SR UUID'),
+                                                      _('SR Type'),
+                                                      _('Config Parameters'),)
+
+        for b in backends:
+            print "%-5s\t%-10s\t%-40s\t%-10s\t%s" % (b['id'],
+                                                     b['flavor_id'],
+                                                     b['sr_uuid'],
+                                                     b['sr_type'],
+                                                     b['config_params'],)
+
+    def backend_add(self, flavor_label, sr_type, *args):
+        # TODO Add backend_introduce.
+        ctxt = context.get_admin_context()
+        params = dict(map(self._splitfun, args))
+
+        if 'sr_uuid' in params:
+            try:
+                backend = db.sm_backend_conf_get_by_sr(ctxt,
+                                                       params['sr_uuid'])
+            except exception.DBError, e:
+                _db_error(e)
+
+            if backend:
+                if len(backend) > 1:
+                    print 'error: Multiple backends found with given sr_uuid'
+                    sys.exit(2)
+
+                print 'Backend config found. Would you like to recreate this?'
+                print '(WARNING:Recreating will destroy all VDIs on backend!!)'
+                c = raw_input('Proceed? (y/n) ')
+                if c == 'y' or c == 'Y':
+                    try:
+                        db.sm_backend_conf_update(ctxt, backend['id'],
+                                                  dict(created=False))
+                    except exception.DBError, e:
+                        _db_error(e)
+                return
+
+            else:
+                print 'Backend config not found. Would you like to create it?'
+                print '(WARNING: Creating will destroy all data on backend!!!)'
+                c = raw_input('Proceed? (y/n) ')
+                if c != 'y' and c != 'Y':
+                    return
+
+        print '(WARNING: Creating will destroy all data on backend!!!)'
+        c = raw_input('Proceed? (y/n) ')
+        if c == 'y' or c == 'Y':
+            if flavor_label == None:
+                print "error: backend needs to be associated with flavor"
+                sys.exit(2)
+
+            try:
+                flavors = db.sm_flavor_get(ctxt, flavor_label)
+
+            except exception.NotFound as ex:
+                print "error: %s" % ex
+                sys.exit(2)
+
+            config_params = "".join(['%s=%s ' %
+                                   (key, params[key]) for key in params])
+
+            try:
+                db.sm_backend_conf_create(ctxt,
+                                          dict(flavor_id=flavors[0]['id'],
+                                               sr_uuid=None,
+                                               sr_type=sr_type,
+                                               config_params=config_params))
+            except exception.DBError, e:
+                _db_error(e)
+
+    def backend_remove(self, backend_conf_id):
+        try:
+            db.sm_backend_conf_delete(context.get_admin_context(),
+                                      backend_conf_id)
+
+        except exception.DBError, e:
+            _db_error(e)
+
+
 class AgentBuildCommands(object):
     """Class for managing agent builds."""
 
@@ -2034,6 +2175,7 @@ CATEGORIES = [
     ('role', RoleCommands),
     ('service', ServiceCommands),
     ('shell', ShellCommands),
+    ('sm', StorageManagerCommands),
     ('user', UserCommands),
     ('version', VersionCommands),
     ('vm', VmCommands),
