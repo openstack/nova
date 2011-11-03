@@ -44,6 +44,7 @@ from nova.db.sqlalchemy import models
 from nova.image import fake as fake_image
 from nova.notifier import test_notifier
 from nova.tests import fake_network
+from nova.network.quantum import client as quantum_client
 
 
 LOG = logging.getLogger('nova.tests.compute')
@@ -549,6 +550,50 @@ class ComputeTestCase(test.TestCase):
                           self.compute.run_instance,
                           self.context,
                           instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_instance_set_to_error_on_uncaught_exception(self):
+        """Test that instance is set to error state when exception is raised"""
+        instance_id = self._create_instance()
+
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 "allocate_for_instance")
+        self.compute.network_api.allocate_for_instance(mox.IgnoreArg(),
+                                                       mox.IgnoreArg(),
+                                                       requested_networks=None,
+                                                       vpn=False).\
+            AndRaise(quantum_client.QuantumServerException())
+
+        FLAGS.stub_network = False
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(quantum_client.QuantumServerException,
+                          self.compute.run_instance,
+                          self.context,
+                          instance_id)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        self.assertEqual(vm_states.ERROR, instances[0]['vm_state'])
+
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_network_is_deallocated_on_spawn_failure(self):
+        """When a spawn fails the network must be deallocated"""
+        instance_id = self._create_instance()
+
+        self.mox.StubOutWithMock(self.compute, "_setup_block_device_mapping")
+        self.compute._setup_block_device_mapping(mox.IgnoreArg(),
+                                                 mox.IgnoreArg()).\
+            AndRaise(rpc.common.RemoteError('', '', ''))
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(rpc.common.RemoteError,
+                          self.compute.run_instance,
+                          self.context,
+                          instance_id)
+
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_lock(self):
