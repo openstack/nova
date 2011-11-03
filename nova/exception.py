@@ -206,6 +206,10 @@ class Invalid(NovaException):
     message = _("Unacceptable parameters.")
 
 
+class InvalidRequest(Invalid):
+    message = _("The request is invalid.")
+
+
 class InvalidSignature(Invalid):
     message = _("Invalid signature %(signature)s for user %(user)s.")
 
