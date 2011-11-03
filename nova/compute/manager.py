@@ -1070,8 +1070,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  migration_id,
                                  {'status': 'migrating'})
 
-        disk_info = self.driver.migrate_disk_and_power_off(
-                context, instance_ref, migration_ref['dest_host'])
+        try:
+            disk_info = self.driver.migrate_disk_and_power_off(
+                    context, instance_ref, migration_ref['dest_host'])
+        except exception.MigrationError, error:
+            LOG.error(_('%s. Setting instance vm_state to ERROR') % (error,))
+            self._instance_update(context,
+                                  instance_id,
+                                  vm_state=vm_states.ERROR)
+            return
+
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'post-migrating'})

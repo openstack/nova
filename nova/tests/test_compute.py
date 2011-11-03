@@ -746,6 +746,30 @@ class ComputeTestCase(test.TestCase):
                 self.context, inst_ref['uuid'], 1)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_resize_instance_handles_migration_error(self):
+        """Ensure vm_state is ERROR when MigrationError occurs"""
+        def raise_migration_failure(*args):
+            raise exception.MigrationError(reason='test failure')
+        self.stubs.Set(self.compute.driver,
+                'migrate_disk_and_power_off',
+                raise_migration_failure)
+
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+        inst_ref = db.instance_get(context, instance_id)
+
+        self.compute.run_instance(self.context, instance_id)
+        db.instance_update(self.context, inst_ref['uuid'], {'host': 'foo'})
+        self.compute.prep_resize(context, inst_ref['uuid'], 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                inst_ref['uuid'], 'pre-migrating')
+        self.compute.resize_instance(context,
+                                     inst_ref['uuid'],
+                                     migration_ref['id'])
+        inst_ref = db.instance_get(context, instance_id)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
+        self.compute.terminate_instance(context, instance_id)
+
     def test_migrate(self):
         context = self.context.elevated()
         instance_id = self._create_instance()
