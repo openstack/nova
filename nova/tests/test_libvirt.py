@@ -1075,6 +1075,18 @@ class LibvirtConnTestCase(test.TestCase):
         compute_driver = driver.ComputeDriver()
         self.assertRaises(NotImplementedError, compute_driver.reboot, *args)
 
+    def test_immediate_delete(self):
+        # Skip if non-libvirt environment
+        if not self.lazy_load_library_exists():
+            return
+
+        conn = connection.LibvirtConnection(False)
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = lambda x: None
+
+        instance = db.instance_create(self.context, self.test_instance)
+        conn.destroy(instance, {})
+
 
 class NWFilterFakes:
     def __init__(self):
