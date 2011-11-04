@@ -293,6 +293,17 @@ class LibvirtConnection(driver.ComputeDriver):
                     raise
 
             try:
+                # NOTE(derekh): we can switch to undefineFlags and
+                # VIR_DOMAIN_UNDEFINE_MANAGED_SAVE once we require 0.9.4
+                if virt_dom.hasManagedSaveImage(0):
+                    virt_dom.managedSaveRemove(0)
+            except libvirt.libvirtError as e:
+                errcode = e.get_error_code()
+                LOG.warning(_("Error from libvirt during saved instance "
+                              "removal %(instance_name)s. Code=%(errcode)s"
+                              " Error=%(e)s") % locals())
+
+            try:
                 # NOTE(justinsb): We remove the domain definition. We probably
                 # would do better to keep it if cleanup=False (e.g. volumes?)
                 # (e.g. #2 - not losing machines on failure)
