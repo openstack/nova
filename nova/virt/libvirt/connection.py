@@ -641,7 +641,7 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
-    def spawn(self, context, instance, network_info,
+    def spawn(self, context, instance, image_meta, network_info,
               block_device_info=None):
         xml = self.to_xml(instance, network_info, False,
                           block_device_info=block_device_info)

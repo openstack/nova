@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import StringIO
 
 from nova import exception
@@ -74,11 +75,15 @@ class FakeGlance(object):
         pass
 
     def get_image_meta(self, image_id):
-        return self.IMAGE_FIXTURES[int(image_id)]['image_meta']
+        meta = copy.deepcopy(self.IMAGE_FIXTURES[int(image_id)]['image_meta'])
+        meta['id'] = image_id
+        return meta
 
     def get_image(self, image_id):
         image = self.IMAGE_FIXTURES[int(image_id)]
-        return image['image_meta'], image['image_data']
+        meta = copy.deepcopy(image['image_meta'])
+        meta['id'] = image_id
+        return meta, image['image_data']
 
 
 NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"

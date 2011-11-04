@@ -717,7 +717,7 @@ w
             raise e
 
     @classmethod
-    def determine_disk_image_type(cls, instance, context):
+    def determine_disk_image_type(cls, image_meta):
         """Disk Image Types are used to determine where the kernel will reside
         within an image. To figure out which type we're dealing with, we use
         the following rules:
@@ -736,12 +736,11 @@ w
                              ImageType.DISK_VHD: 'DISK_VHD',
                              ImageType.DISK_ISO: 'DISK_ISO'}
             disk_format = pretty_format[image_type]
-            image_ref = instance.image_ref
-            instance_id = instance.id
+            image_ref = image_meta['id']
             LOG.debug(_("Detected %(disk_format)s format for image "
-                        "%(image_ref)s, instance %(instance_id)s") % locals())
+                        "%(image_ref)s") % locals())
 
-        def determine_from_glance():
+        def determine_from_image_meta():
             glance_disk_format2nova_type = {
                 'ami': ImageType.DISK,
                 'aki': ImageType.KERNEL,
@@ -749,23 +748,13 @@ w
                 'raw': ImageType.DISK_RAW,
                 'vhd': ImageType.DISK_VHD,
                 'iso': ImageType.DISK_ISO}
-            image_ref = instance.image_ref
-            glance_client, image_id = glance.get_glance_client(context,
-                                                               image_ref)
-            meta = glance_client.get_image_meta(image_id)
-            disk_format = meta['disk_format']
+            disk_format = image_meta['disk_format']
             try:
                 return glance_disk_format2nova_type[disk_format]
             except KeyError:
                 raise exception.InvalidDiskFormat(disk_format=disk_format)
 
-        def determine_from_instance():
-            if instance.kernel_id:
-                return ImageType.DISK
-            else:
-                return ImageType.DISK_RAW
-
-        image_type = determine_from_glance()
+        image_type = determine_from_image_meta()
 
         log_disk_format(image_type)
         return image_type

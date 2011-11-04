@@ -127,7 +127,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def spawn(self, context, instance,
+    def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
         """
         Create a new instance/VM/domain on the virtualization platform.
@@ -143,6 +143,8 @@ class ComputeDriver(object):
         :param instance: Instance object as returned by DB layer.
                          This function should use the data there to guide
                          the creation of the new instance.
+        :param image_meta: image object returned by nova.image.glance that
+                           defines the image from which to boot this instance
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         :param block_device_info: Information about block devices to be
@@ -253,11 +255,14 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, resize_instance):
+                         network_info, image_meta, resize_instance):
         """Completes a resize, turning on the migrated instance
 
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param image_meta: image object returned by nova.image.glance that
+                           defines the image from which this instance
+                           was created
         """
         raise NotImplementedError()
 

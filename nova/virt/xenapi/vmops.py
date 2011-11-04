@@ -139,13 +139,13 @@ class VMOps(object):
         self._start(instance, vm_ref)
 
     def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, resize_instance):
+                         network_info, image_meta, resize_instance):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
 
         vm_ref = self._create_vm(context, instance,
                                  [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
-                                 network_info)
+                                 network_info, image_meta)
         if resize_instance:
             self.resize_instance(instance, vdi_uuid)
 
@@ -165,8 +165,8 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def _create_disks(self, context, instance):
-        disk_image_type = VMHelper.determine_disk_image_type(instance, context)
+    def _create_disks(self, context, instance, image_meta):
+        disk_image_type = VMHelper.determine_disk_image_type(image_meta)
         vdis = VMHelper.fetch_image(context, self._session,
                 instance, instance.image_ref,
                 instance.user_id, instance.project_id,
@@ -178,7 +178,7 @@ class VMOps(object):
 
         return vdis
 
-    def spawn(self, context, instance, network_info):
+    def spawn(self, context, instance, image_meta, network_info):
         vdis = None
         try:
             # 1. Vanity Step
@@ -193,13 +193,14 @@ class VMOps(object):
                                            total_steps=BUILD_TOTAL_STEPS)
 
             # 2. Fetch the Image over the Network
-            vdis = self._create_disks(context, instance)
+            vdis = self._create_disks(context, instance, image_meta)
             self._update_instance_progress(context, instance,
                                            step=2,
                                            total_steps=BUILD_TOTAL_STEPS)
 
             # 3. Create the VM records
-            vm_ref = self._create_vm(context, instance, vdis, network_info)
+            vm_ref = self._create_vm(context, instance, vdis, network_info,
+                                     image_meta)
             self._update_instance_progress(context, instance,
                                            step=3,
                                            total_steps=BUILD_TOTAL_STEPS)
@@ -222,7 +223,7 @@ class VMOps(object):
         """Spawn a rescue instance."""
         self.spawn(context, instance, network_info)
 
-    def _create_vm(self, context, instance, vdis, network_info):
+    def _create_vm(self, context, instance, vdis, network_info, image_meta):
         """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -233,7 +234,7 @@ class VMOps(object):
         if not VMHelper.ensure_free_mem(self._session, instance):
             raise exception.InsufficientFreeMemory(uuid=instance.uuid)
 
-        disk_image_type = VMHelper.determine_disk_image_type(instance, context)
+        disk_image_type = VMHelper.determine_disk_image_type(image_meta)
         kernel = None
         ramdisk = None
         try:
