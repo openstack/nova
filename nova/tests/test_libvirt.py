@@ -43,7 +43,21 @@ from nova.virt.libvirt import volume
 from nova.volume import driver as volume_driver
 from nova.tests import fake_network
 
-libvirt = None
+
+try:
+    import libvirt
+    connection.libvirt = libvirt
+except ImportError:
+    libvirt = None
+
+
+try:
+    import libxml2
+    connection.libxml2 = libxml2
+except ImportError:
+    libxml2 = None
+
+
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.test_libvirt')
 
@@ -228,6 +242,10 @@ class FakeVolumeDriver(object):
         return ""
 
 
+def missing_libvirt():
+    return libvirt is None or libxml2 is None
+
+
 class LibvirtConnTestCase(test.TestCase):
 
     def setUp(self):
@@ -251,20 +269,6 @@ class LibvirtConnTestCase(test.TestCase):
                      'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
                      'local_gb': 20,
                      'instance_type_id': '5'}  # m1.small
-
-    def lazy_load_library_exists(self):
-        """check if libvirt is available."""
-        # try to connect libvirt. if fail, skip test.
-        try:
-            import libvirt
-            import libxml2
-        except ImportError:
-            return False
-        global libvirt
-        libvirt = __import__('libvirt')
-        connection.libvirt = __import__('libvirt')
-        connection.libxml2 = __import__('libxml2')
-        return True
 
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtConnection(libvirt is not used)."""
@@ -352,10 +356,8 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_ami_format(self):
-        if not self.lazy_load_library_exists():
-            return
-
         self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
@@ -392,10 +394,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(snapshot['disk_format'], 'ami')
         self.assertEquals(snapshot['name'], snapshot_name)
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_raw_format(self):
-        if not self.lazy_load_library_exists():
-            return
-
         self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
@@ -428,10 +428,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(snapshot['disk_format'], 'raw')
         self.assertEquals(snapshot['name'], snapshot_name)
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_qcow2_format(self):
-        if not self.lazy_load_library_exists():
-            return
-
         self.flags(image_service='nova.image.fake.FakeImageService')
         self.flags(snapshot_image_format='qcow2')
 
@@ -465,10 +463,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(snapshot['disk_format'], 'qcow2')
         self.assertEquals(snapshot['name'], snapshot_name)
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_no_image_architecture(self):
-        if not self.lazy_load_library_exists():
-            return
-
         self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
@@ -732,12 +728,9 @@ class LibvirtConnTestCase(test.TestCase):
                           conn.update_available_resource,
                           self.context, 'dummy')
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_ensure_filtering_rules_for_instance_timeout(self):
         """ensure_filtering_fules_for_instance() finishes with timeout."""
-        # Skip if non-libvirt environment
-        if not self.lazy_load_library_exists():
-            return
-
         # Preparing mocks
         def fake_none(self, *args):
             return
@@ -786,12 +779,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_ref['id'])
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_live_migration_raises_exception(self):
         """Confirms recover method is called when exceptions are raised."""
-        # Skip if non-libvirt environment
-        if not self.lazy_load_library_exists():
-            return
-
         # Preparing data
         self.compute = utils.import_object(FLAGS.compute_manager)
         instance_dict = {'host': 'fake',
@@ -860,13 +850,9 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertEqual(conn.pre_live_migration(vol), None)
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_pre_block_migration_works_correctly(self):
         """Confirms pre_block_migration works correctly."""
-
-        # Skip if non-libvirt environment
-        if not self.lazy_load_library_exists():
-            return
-
         # Replace instances_path since this testcase creates tmpfile
         tmpdir = tempfile.mkdtemp()
         store = FLAGS.instances_path
@@ -897,12 +883,9 @@ class LibvirtConnTestCase(test.TestCase):
         # Restore FLAGS.instances_path
         FLAGS.instances_path = store
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_get_instance_disk_info_works_correctly(self):
         """Confirms pre_block_migration works correctly."""
-        # Skip if non-libvirt environment
-        if not self.lazy_load_library_exists():
-            return
-
         # Test data
         instance_ref = db.instance_create(self.context, self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -955,11 +938,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_ref['id'])
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_spawn_with_network_info(self):
-        # Skip if non-libvirt environment
-        if not self.lazy_load_library_exists():
-            return
-
         # Preparing mocks
         def fake_none(self, instance):
             return
@@ -1074,11 +1054,8 @@ class LibvirtConnTestCase(test.TestCase):
         compute_driver = driver.ComputeDriver()
         self.assertRaises(NotImplementedError, compute_driver.reboot, *args)
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_immediate_delete(self):
-        # Skip if non-libvirt environment
-        if not self.lazy_load_library_exists():
-            return
-
         conn = connection.LibvirtConnection(False)
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
         connection.LibvirtConnection._conn.lookupByName = lambda x: None
@@ -1128,20 +1105,6 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fake_libvirt_connection = FakeLibvirtConnection()
         self.fw = firewall.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
-
-    def lazy_load_library_exists(self):
-        """check if libvirt is available."""
-        # try to connect libvirt. if fail, skip test.
-        try:
-            import libvirt
-            import libxml2
-        except ImportError:
-            return False
-        global libvirt
-        libvirt = __import__('libvirt')
-        connection.libvirt = __import__('libvirt')
-        connection.libxml2 = __import__('libxml2')
-        return True
 
     in_nat_rules = [
       '# Generated by iptables-save v1.4.10 on Sat Feb 19 00:03:19 2011',
@@ -1366,11 +1329,8 @@ class IptablesFirewallTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.fw.do_refresh_security_group_rules("fake")
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_unfilter_instance_undefines_nwfilter(self):
-        # Skip if non-libvirt environment
-        if not self.lazy_load_library_exists():
-            return
-
         admin_ctxt = context.get_admin_context()
 
         fakefilter = NWFilterFakes()
