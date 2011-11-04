@@ -286,6 +286,25 @@ class SimpleDriverTestCase(test.TestCase):
         db.compute_node_create(self.context, dic)
         return db.service_get(self.context, s_ref['id'])
 
+    def test_regular_user_can_schedule(self):
+        """Ensures a non-admin can run an instance"""
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        instance_id = _create_instance()['id']
+        ctxt = context.RequestContext('fake', 'fake', False)
+        global instance_ids
+        instance_ids = []
+        self.stubs.Set(SimpleScheduler,
+                'create_instance_db_entry', _fake_create_instance_db_entry)
+        self.stubs.Set(driver,
+                'cast_to_compute_host', _fake_cast_to_compute_host)
+        request_spec = _create_request_spec()
+        self.scheduler.driver.schedule_run_instance(ctxt, request_spec)
+        compute1.kill()
+
     def test_doesnt_report_disabled_hosts_as_up_no_queue(self):
         """Ensures driver doesn't find hosts before they are enabled"""
         # NOTE(vish): constructing service without create method
