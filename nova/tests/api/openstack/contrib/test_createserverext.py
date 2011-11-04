@@ -138,11 +138,6 @@ class CreateserverextTest(test.TestCase):
         compute_api = MockComputeAPI()
         self.stubs.Set(nova.compute, 'API',
                        self._make_stub_method(compute_api))
-        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        self.stubs.Set(
-            nova.api.openstack.servers.Controller,
-            '_get_kernel_ramdisk_from_image',
-            self._make_stub_method((image_uuid, image_uuid)))
         return compute_api
 
     def _setup_mock_network_api(self):
