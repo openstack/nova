@@ -234,8 +234,8 @@ class FloatingIP(object):
 
             # call to correct network host to associate the floating ip
             self.network_api.associate_floating_ip(context,
-                                              floating_ip,
-                                              fixed_ip,
+                                              floating_ip['address'],
+                                              fixed_ip['address'],
                                               affect_auto_assigned=True)
         return ips
 
@@ -257,7 +257,9 @@ class FloatingIP(object):
             # disassociate floating ips related to fixed_ip
             for floating_ip in fixed_ip.floating_ips:
                 address = floating_ip['address']
-                self.network_api.disassociate_floating_ip(context, address)
+                self.network_api.disassociate_floating_ip(context,
+                                                          address,
+                                                          True)
                 # deallocate if auto_assigned
                 if floating_ip['auto_assigned']:
                     self.network_api.release_floating_ip(context,
