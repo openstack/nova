@@ -34,6 +34,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import urllib2
 
 import XenAPIPlugin
 
@@ -77,29 +78,52 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
     if auth_token:
         headers['x-auth-token'] = auth_token
 
-    conn = httplib.HTTPConnection(glance_host, glance_port)
+    url = "http://%(glance_host)s:%(glance_port)d/v1/images/"\
+          "%(image_id)s" % locals()
 
-    for count in xrange(1 + num_retries):
-        conn.request('GET', '/v1/images/%s' % image_id, headers=headers)
-        resp = conn.getresponse()
-        if resp.status == httplib.OK:
+    logging.debug("Downloading tarball from %(url)s" % locals())
+
+    request = urllib2.Request(url, headers=headers)
+    response = None
+
+    for try_num in xrange(1, num_retries + 2):
+        try:
+            response = urllib2.urlopen(request)
             break
-        elif resp.status == httplib.NOT_FOUND:
-            raise Exception("Image '%s' not found in Glance" % image_id)
-        elif count == num_retries:
-            raise Exception("Unexpected response from Glance %i" % resp.status)
+
+        except urllib2.HTTPError, error:
+            if error.code == 404:
+                msg = "Image '%s' not found in Glance" % image_id
+                logging.error(msg)
+                raise Exception(msg)
+
+            elif try_num == (num_retries + 1):
+                msg = "Unable to retrieve image after %d attempts." % try_num
+                logging.error(msg)
+                raise Exception(msg)
+
+        except urllib2.URLError, error:
+            pass
+
+        logging.error("Download attempt %d error: %s" % (try_num, error))
         time.sleep(1)
+
+    if response is None:
+        msg = "Unable to retrieve image: %(error)s" % locals()
+        logging.error(msg)
+        raise Exception(msg)
 
     tar_cmd = "tar -zx --directory=%(staging_path)s" % locals()
     tar_proc = _make_subprocess(tar_cmd, stderr=True, stdin=True)
 
-    chunk = resp.read(CHUNK_SIZE)
+    logging.info("Reading image data from %s" % url)
+
+    chunk = response.read(CHUNK_SIZE)
     while chunk:
         tar_proc.stdin.write(chunk)
-        chunk = resp.read(CHUNK_SIZE)
+        chunk = response.read(CHUNK_SIZE)
 
     _finish_subprocess(tar_proc, tar_cmd)
-    conn.close()
 
 
 def _import_vhds(sr_path, staging_path, uuid_stack):
