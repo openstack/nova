@@ -381,6 +381,8 @@ class SessionBase(object):
     def VDI_resize_online(self, *args):
         return 'derp'
 
+    VDI_resize = VDI_resize_online
+
     def VM_clean_reboot(self, *args):
         return 'burp'
 

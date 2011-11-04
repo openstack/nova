@@ -75,12 +75,13 @@ class VMOps(object):
     """
     Management class for VM-related tasks
     """
-    def __init__(self, session):
+    def __init__(self, session, product_version):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
         self.vif_driver = utils.import_object(FLAGS.xenapi_vif_driver)
+        self._product_version = product_version
 
     def list_instances(self):
         """List VM instances."""
@@ -622,7 +623,11 @@ class VMOps(object):
                         " GB") % locals())
             vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
             # for an instance with no local storage
-            self._session.call_xenapi('VDI.resize_online', vdi_ref,
+            if self._product_version[0] > 5:
+                resize_func_name = 'VDI.resize'
+            else:
+                resize_func_name = 'VDI.resize_online'
+            self._session.call_xenapi(resize_func_name, vdi_ref,
                     str(new_disk_size))
             LOG.debug(_("Resize instance %s complete") % (instance.name))
 
