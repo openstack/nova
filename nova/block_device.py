@@ -18,6 +18,9 @@
 import re
 
 
+DEFAULT_ROOT_DEV_NAME = '/dev/sda1'
+
+
 def properties_root_device_name(properties):
     """get root device name from image meta data.
     If it isn't specified, return None.

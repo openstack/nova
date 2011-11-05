@@ -24,7 +24,6 @@ import os
 from eventlet import greenthread
 from M2Crypto import BIO
 from M2Crypto import RSA
-import mox
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -37,7 +36,6 @@ from nova import flags
 from nova.image import fake
 from nova import log as logging
 from nova import manager
-from nova import network
 from nova import rpc
 from nova import test
 from nova import utils
@@ -1749,33 +1747,6 @@ class CloudTestCase(test.TestCase):
                      'delete_on_termination': None,
                      'device_name': '/dev/sd3'},
                     ]
-
-    def test_get_instance_mapping(self):
-        """Make sure that _get_instance_mapping works"""
-        ctxt = None
-        instance_ref0 = {'id': 0,
-                         'root_device_name': None}
-        instance_ref1 = {'id': 0,
-                         'root_device_name': '/dev/sda1'}
-
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       self._fake_bdm_get)
-
-        expected = {'ami': 'sda1',
-                    'root': '/dev/sda1',
-                    'ephemeral0': '/dev/sdb',
-                    'swap': '/dev/sdc',
-                    'ephemeral1': '/dev/sdd',
-                    'ephemeral2': '/dev/sd3',
-                    'ebs0': '/dev/sdh',
-                    'ebs1': '/dev/sdi'}
-
-        self.assertEqual(self.cloud._format_instance_mapping(ctxt,
-                                                             instance_ref0),
-                         cloud._DEFAULT_MAPPINGS)
-        self.assertEqual(self.cloud._format_instance_mapping(ctxt,
-                                                             instance_ref1),
-                         expected)
 
     def test_describe_instance_attribute(self):
         """Make sure that describe_instance_attribute works"""

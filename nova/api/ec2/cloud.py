@@ -32,13 +32,11 @@ import urllib
 
 from nova import block_device
 from nova import compute
-from nova import context
 
 from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
-from nova import ipv6
 from nova import log as logging
 from nova import network
 from nova import rpc
@@ -54,7 +52,7 @@ FLAGS = flags.FLAGS
 flags.DECLARE('dhcp_domain', 'nova.network.manager')
 flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
-LOG = logging.getLogger("nova.api.cloud")
+LOG = logging.getLogger("nova.api.ec2.cloud")
 
 
 def _gen_key(context, user_id, key_name):
@@ -102,14 +100,6 @@ _STATE_DESCRIPTION_MAP = {
 def state_description_from_vm_state(vm_state):
     """Map the vm state to the server status string"""
     return _STATE_DESCRIPTION_MAP.get(vm_state, vm_state)
-
-
-# TODO(yamahata): hypervisor dependent default device name
-_DEFAULT_ROOT_DEVICE_NAME = '/dev/sda1'
-_DEFAULT_MAPPINGS = {'ami': 'sda1',
-                     'ephemeral0': 'sda2',
-                     'root': _DEFAULT_ROOT_DEVICE_NAME,
-                     'swap': 'sda3'}
 
 
 def _parse_block_device_mapping(bdm):
@@ -237,178 +227,12 @@ class CloudController(object):
             utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
             os.chdir(start)
 
-    def _get_ip_info_for_instance(self, context, instance):
-        """Return a list of all fixed IPs for an instance"""
-
-        ip_info = dict(fixed_ips=[], fixed_ip6s=[], floating_ips=[])
-
-        fixed_ips = instance['fixed_ips']
-        for fixed_ip in fixed_ips:
-            fixed_addr = fixed_ip['address']
-            network = fixed_ip.get('network')
-            vif = fixed_ip.get('virtual_interface')
-            if not network or not vif:
-                name = instance['name']
-                ip = fixed_ip['address']
-                LOG.warn(_("Instance %(name)s has stale IP "
-                        "address: %(ip)s (no network or vif)") % locals())
-                continue
-            cidr_v6 = network.get('cidr_v6')
-            if FLAGS.use_ipv6 and cidr_v6:
-                ipv6_addr = ipv6.to_global(cidr_v6, vif['address'],
-                        network['project_id'])
-                if ipv6_addr not in ip_info['fixed_ip6s']:
-                    ip_info['fixed_ip6s'].append(ipv6_addr)
-
-            for floating_ip in fixed_ip.get('floating_ips', []):
-                float_addr = floating_ip['address']
-                ip_info['floating_ips'].append(float_addr)
-            ip_info['fixed_ips'].append(fixed_addr)
-        return ip_info
-
-    def _get_mpi_data(self, context, project_id):
-        result = {}
-        search_opts = {'project_id': project_id, 'deleted': False}
-        for instance in self.compute_api.get_all(context,
-                search_opts=search_opts):
-            ip_info = self._get_ip_info_for_instance(context, instance)
-            # only look at ipv4 addresses
-            fixed_ips = ip_info['fixed_ips']
-            if fixed_ips:
-                line = '%s slots=%d' % (fixed_ips[0], instance['vcpus'])
-                key = str(instance['key_name'])
-                if key in result:
-                    result[key].append(line)
-                else:
-                    result[key] = [line]
-        return result
-
-    def _get_availability_zone_by_host(self, context, host):
-        services = db.service_get_all_by_host(context.elevated(), host)
-        if len(services) > 0:
-            return services[0]['availability_zone']
-        return 'unknown zone'
-
     def _get_image_state(self, image):
         # NOTE(vish): fallback status if image_state isn't set
         state = image.get('status')
         if state == 'active':
             state = 'available'
         return image['properties'].get('image_state', state)
-
-    def _format_instance_mapping(self, ctxt, instance_ref):
-        root_device_name = instance_ref['root_device_name']
-        if root_device_name is None:
-            return _DEFAULT_MAPPINGS
-
-        mappings = {}
-        mappings['ami'] = block_device.strip_dev(root_device_name)
-        mappings['root'] = root_device_name
-        default_local_device = instance_ref.get('default_local_device')
-        if default_local_device:
-            mappings['ephemeral0'] = default_local_device
-        default_swap_device = instance_ref.get('default_swap_device')
-        if default_swap_device:
-            mappings['swap'] = default_swap_device
-        ebs_devices = []
-
-        # 'ephemeralN', 'swap' and ebs
-        for bdm in db.block_device_mapping_get_all_by_instance(
-            ctxt, instance_ref['id']):
-            if bdm['no_device']:
-                continue
-
-            # ebs volume case
-            if (bdm['volume_id'] or bdm['snapshot_id']):
-                ebs_devices.append(bdm['device_name'])
-                continue
-
-            virtual_name = bdm['virtual_name']
-            if not virtual_name:
-                continue
-
-            if block_device.is_swap_or_ephemeral(virtual_name):
-                mappings[virtual_name] = bdm['device_name']
-
-        # NOTE(yamahata): I'm not sure how ebs device should be numbered.
-        #                 Right now sort by device name for deterministic
-        #                 result.
-        if ebs_devices:
-            nebs = 0
-            ebs_devices.sort()
-            for ebs in ebs_devices:
-                mappings['ebs%d' % nebs] = ebs
-                nebs += 1
-
-        return mappings
-
-    def get_metadata(self, address):
-        ctxt = context.get_admin_context()
-        search_opts = {'fixed_ip': address, 'deleted': False}
-        try:
-            instance_ref = self.compute_api.get_all(ctxt,
-                    search_opts=search_opts)
-        except exception.NotFound:
-            instance_ref = None
-        if not instance_ref:
-            return None
-
-        # This ensures that all attributes of the instance
-        # are populated.
-        instance_ref = db.instance_get(ctxt, instance_ref[0]['id'])
-
-        mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
-        hostname = "%s.%s" % (instance_ref['hostname'], FLAGS.dhcp_domain)
-        host = instance_ref['host']
-        availability_zone = self._get_availability_zone_by_host(ctxt, host)
-
-        ip_info = self._get_ip_info_for_instance(ctxt, instance_ref)
-        floating_ips = ip_info['floating_ips']
-        floating_ip = floating_ips and floating_ips[0] or ''
-
-        ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
-        security_groups = db.security_group_get_by_instance(ctxt,
-                                                            instance_ref['id'])
-        security_groups = [x['name'] for x in security_groups]
-        mappings = self._format_instance_mapping(ctxt, instance_ref)
-        data = {
-            'user-data': self._format_user_data(instance_ref),
-            'meta-data': {
-                'ami-id': image_ec2_id,
-                'ami-launch-index': instance_ref['launch_index'],
-                'ami-manifest-path': 'FIXME',
-                'block-device-mapping': mappings,
-                'hostname': hostname,
-                'instance-action': 'none',
-                'instance-id': ec2_id,
-                'instance-type': instance_ref['instance_type']['name'],
-                'local-hostname': hostname,
-                'local-ipv4': address,
-                'placement': {'availability-zone': availability_zone},
-                'public-hostname': hostname,
-                'public-ipv4': floating_ip,
-                'reservation-id': instance_ref['reservation_id'],
-                'security-groups': security_groups,
-                'mpi': mpi}}
-
-        # public-keys should be in meta-data only if user specified one
-        if instance_ref['key_name']:
-            data['meta-data']['public-keys'] = {
-                '0': {'_name': instance_ref['key_name'],
-                      'openssh-key': instance_ref['key_data']}}
-
-        for image_type in ['kernel', 'ramdisk']:
-            if instance_ref.get('%s_id' % image_type):
-                ec2_id = self.image_ec2_id(instance_ref['%s_id' % image_type],
-                                           self._image_type(image_type))
-                data['meta-data']['%s-id' % image_type] = ec2_id
-
-        if False:  # TODO(vish): store ancestor ids
-            data['ancestor-ami-ids'] = []
-        if False:  # TODO(vish): store product codes
-            data['product-codes'] = []
-        return data
 
     def describe_availability_zones(self, context, **kwargs):
         if ('zone_name' in kwargs and
@@ -1124,18 +948,14 @@ class CloudController(object):
         if kernel_uuid is None or kernel_uuid == '':
             return
         kernel_id = self._get_image_id(context, kernel_uuid)
-        result[key] = self.image_ec2_id(kernel_id, 'aki')
+        result[key] = ec2utils.image_ec2_id(kernel_id, 'aki')
 
     def _format_ramdisk_id(self, context, instance_ref, result, key):
         ramdisk_uuid = instance_ref['ramdisk_id']
         if ramdisk_uuid is None or ramdisk_uuid == '':
             return
         ramdisk_id = self._get_image_id(context, ramdisk_uuid)
-        result[key] = self.image_ec2_id(ramdisk_id, 'ari')
-
-    @staticmethod
-    def _format_user_data(instance_ref):
-        return base64.b64decode(instance_ref['user_data'])
+        result[key] = ec2utils.image_ec2_id(ramdisk_id, 'ari')
 
     def describe_instance_attribute(self, context, instance_id, attribute,
                                     **kwargs):
@@ -1182,7 +1002,7 @@ class CloudController(object):
             _unsupported_attribute(instance, result)
 
         def _format_attr_user_data(instance, result):
-            result['userData'] = self._format_user_data(instance)
+            result['userData'] = base64.b64decode(instance['user_data'])
 
         attribute_formatter = {
             'blockDeviceMapping': _format_attr_block_device_mapping,
@@ -1264,7 +1084,7 @@ class CloudController(object):
     @staticmethod
     def _format_instance_root_device_name(instance, result):
         result['rootDeviceName'] = (instance.get('root_device_name') or
-                                    _DEFAULT_ROOT_DEVICE_NAME)
+                                    block_device.DEFAULT_ROOT_DEV_NAME)
 
     @staticmethod
     def _format_instance_type(instance, result):
@@ -1317,7 +1137,7 @@ class CloudController(object):
             i['instanceId'] = ec2_id
             image_uuid = instance['image_ref']
             image_id = self._get_image_id(context, image_uuid)
-            i['imageId'] = self.image_ec2_id(image_id)
+            i['imageId'] = ec2utils.image_ec2_id(image_id)
             self._format_kernel_id(context, instance, i, 'kernelId')
             self._format_ramdisk_id(context, instance, i, 'ramdiskId')
             i['instanceState'] = {
@@ -1326,7 +1146,7 @@ class CloudController(object):
 
             fixed_ip = None
             floating_ip = None
-            ip_info = self._get_ip_info_for_instance(context, instance)
+            ip_info = ec2utils.get_ip_info_for_instance(context, instance)
             if ip_info['fixed_ips']:
                 fixed_ip = ip_info['fixed_ips'][0]
             if ip_info['floating_ips']:
@@ -1355,7 +1175,8 @@ class CloudController(object):
             self._format_instance_bdm(context, instance_id,
                                       i['rootDeviceName'], i)
             host = instance['host']
-            zone = self._get_availability_zone_by_host(context, host)
+            services = db.service_get_all_by_host(context.elevated(), host)
+            zone = ec2utils.get_availability_zone_by_host(services, host)
             i['placement'] = {'availabilityZone': zone}
             if instance['reservation_id'] not in reservations:
                 r = {}
@@ -1537,34 +1358,6 @@ class CloudController(object):
                                     **changes)
         return True
 
-    @staticmethod
-    def _image_type(image_type):
-        """Converts to a three letter image type.
-
-        aki, kernel => aki
-        ari, ramdisk => ari
-        anything else => ami
-
-        """
-        if image_type == 'kernel':
-            return 'aki'
-        if image_type == 'ramdisk':
-            return 'ari'
-        if image_type not in ['aki', 'ari']:
-            return 'ami'
-        return image_type
-
-    @staticmethod
-    def image_ec2_id(image_id, image_type='ami'):
-        """Returns image ec2_id using id and three letter type."""
-        template = image_type + '-%08x'
-        try:
-            return ec2utils.id_to_ec2_id(image_id, template=template)
-        except ValueError:
-            #TODO(wwolf): once we have ec2_id -> glance_id mapping
-            # in place, this wont be necessary
-            return "ami-00000000"
-
     def _get_image(self, context, ec2_id):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
@@ -1575,7 +1368,7 @@ class CloudController(object):
             except exception.NotFound:
                 raise exception.ImageNotFound(image_id=ec2_id)
         image_type = ec2_id.split('-')[0]
-        if self._image_type(image.get('container_format')) != image_type:
+        if ec2utils.image_type(image.get('container_format')) != image_type:
             raise exception.ImageNotFound(image_id=ec2_id)
         return image
 
@@ -1591,16 +1384,16 @@ class CloudController(object):
     def _format_image(self, image):
         """Convert from format defined by GlanceImageService to S3 format."""
         i = {}
-        image_type = self._image_type(image.get('container_format'))
-        ec2_id = self.image_ec2_id(image.get('id'), image_type)
+        image_type = ec2utils.image_type(image.get('container_format'))
+        ec2_id = ec2utils.image_ec2_id(image.get('id'), image_type)
         name = image.get('name')
         i['imageId'] = ec2_id
         kernel_id = image['properties'].get('kernel_id')
         if kernel_id:
-            i['kernelId'] = self.image_ec2_id(kernel_id, 'aki')
+            i['kernelId'] = ec2utils.image_ec2_id(kernel_id, 'aki')
         ramdisk_id = image['properties'].get('ramdisk_id')
         if ramdisk_id:
-            i['ramdiskId'] = self.image_ec2_id(ramdisk_id, 'ari')
+            i['ramdiskId'] = ec2utils.image_ec2_id(ramdisk_id, 'ari')
         i['imageOwnerId'] = image['properties'].get('owner_id')
         if name:
             i['imageLocation'] = "%s (%s)" % (image['properties'].
@@ -1626,7 +1419,8 @@ class CloudController(object):
                 ('snapshot_id' in bdm or 'volume_id' in bdm) and
                 not bdm.get('no_device')):
                 root_device_type = 'ebs'
-        i['rootDeviceName'] = (root_device_name or _DEFAULT_ROOT_DEVICE_NAME)
+        i['rootDeviceName'] = (root_device_name or
+                               block_device.DEFAULT_ROOT_DEV_NAME)
         i['rootDeviceType'] = root_device_type
 
         _format_mappings(properties, i)
@@ -1657,8 +1451,8 @@ class CloudController(object):
 
     def _register_image(self, context, metadata):
         image = self.image_service.create(context, metadata)
-        image_type = self._image_type(image.get('container_format'))
-        image_id = self.image_ec2_id(image['id'], image_type)
+        image_type = ec2utils.image_type(image.get('container_format'))
+        image_id = ec2utils.image_ec2_id(image['id'], image_type)
         return image_id
 
     def register_image(self, context, image_location=None, **kwargs):
@@ -1694,7 +1488,7 @@ class CloudController(object):
             result['rootDeviceName'] = \
                 block_device.properties_root_device_name(image['properties'])
             if result['rootDeviceName'] is None:
-                result['rootDeviceName'] = _DEFAULT_ROOT_DEVICE_NAME
+                result['rootDeviceName'] = block_device.DEFAULT_ROOT_DEV_NAME
 
         supported_attributes = {
             'blockDeviceMapping': _block_device_mapping_attribute,

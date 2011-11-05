@@ -18,18 +18,32 @@
 
 """Metadata request handler."""
 
+import base64
+
 import webob.dec
 import webob.exc
 
-from nova import log as logging
+from nova import block_device
+from nova import compute
+from nova import context
+from nova import db
+from nova import exception
 from nova import flags
+from nova import log as logging
+from nova import network
+from nova import volume
 from nova import wsgi
-from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
 
 
 LOG = logging.getLogger('nova.api.metadata')
 FLAGS = flags.FLAGS
 flags.DECLARE('use_forwarded_for', 'nova.api.auth')
+
+_DEFAULT_MAPPINGS = {'ami': 'sda1',
+                     'ephemeral0': 'sda2',
+                     'root': block_device.DEFAULT_ROOT_DEV_NAME,
+                     'swap': 'sda3'}
 
 
 class Versions(wsgi.Application):
@@ -56,7 +70,143 @@ class MetadataRequestHandler(wsgi.Application):
     """Serve metadata."""
 
     def __init__(self):
-        self.cc = cloud.CloudController()
+        self.compute_api = compute.API(
+                network_api=network.API(),
+                volume_api=volume.API())
+
+    def _get_mpi_data(self, context, project_id):
+        result = {}
+        search_opts = {'project_id': project_id, 'deleted': False}
+        for instance in self.compute_api.get_all(context,
+                search_opts=search_opts):
+            ip_info = ec2utils.get_ip_info_for_instance(context, instance)
+            # only look at ipv4 addresses
+            fixed_ips = ip_info['fixed_ips']
+            if fixed_ips:
+                line = '%s slots=%d' % (fixed_ips[0], instance['vcpus'])
+                key = str(instance['key_name'])
+                if key in result:
+                    result[key].append(line)
+                else:
+                    result[key] = [line]
+        return result
+
+    def _format_instance_mapping(self, ctxt, instance_ref):
+        root_device_name = instance_ref['root_device_name']
+        if root_device_name is None:
+            return _DEFAULT_MAPPINGS
+
+        mappings = {}
+        mappings['ami'] = block_device.strip_dev(root_device_name)
+        mappings['root'] = root_device_name
+        default_local_device = instance_ref.get('default_local_device')
+        if default_local_device:
+            mappings['ephemeral0'] = default_local_device
+        default_swap_device = instance_ref.get('default_swap_device')
+        if default_swap_device:
+            mappings['swap'] = default_swap_device
+        ebs_devices = []
+
+        # 'ephemeralN', 'swap' and ebs
+        for bdm in db.block_device_mapping_get_all_by_instance(
+            ctxt, instance_ref['id']):
+            if bdm['no_device']:
+                continue
+
+            # ebs volume case
+            if (bdm['volume_id'] or bdm['snapshot_id']):
+                ebs_devices.append(bdm['device_name'])
+                continue
+
+            virtual_name = bdm['virtual_name']
+            if not virtual_name:
+                continue
+
+            if block_device.is_swap_or_ephemeral(virtual_name):
+                mappings[virtual_name] = bdm['device_name']
+
+        # NOTE(yamahata): I'm not sure how ebs device should be numbered.
+        #                 Right now sort by device name for deterministic
+        #                 result.
+        if ebs_devices:
+            nebs = 0
+            ebs_devices.sort()
+            for ebs in ebs_devices:
+                mappings['ebs%d' % nebs] = ebs
+                nebs += 1
+
+        return mappings
+
+    def get_metadata(self, address):
+        ctxt = context.get_admin_context()
+        search_opts = {'fixed_ip': address, 'deleted': False}
+        try:
+            instance_ref = self.compute_api.get_all(ctxt,
+                    search_opts=search_opts)
+        except exception.NotFound:
+            instance_ref = None
+        if not instance_ref:
+            return None
+
+        # This ensures that all attributes of the instance
+        # are populated.
+        instance_ref = db.instance_get(ctxt, instance_ref[0]['id'])
+
+        mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
+        hostname = "%s.%s" % (instance_ref['hostname'], FLAGS.dhcp_domain)
+        host = instance_ref['host']
+        services = db.service_get_all_by_host(ctxt.elevated(), host)
+        availability_zone = ec2utils.get_availability_zone_by_host(services,
+                                                                   host)
+
+        ip_info = ec2utils.get_ip_info_for_instance(ctxt, instance_ref)
+        floating_ips = ip_info['floating_ips']
+        floating_ip = floating_ips and floating_ips[0] or ''
+
+        ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+        image_ec2_id = ec2utils.image_ec2_id(instance_ref['image_ref'])
+        security_groups = db.security_group_get_by_instance(ctxt,
+                                                            instance_ref['id'])
+        security_groups = [x['name'] for x in security_groups]
+        mappings = self._format_instance_mapping(ctxt, instance_ref)
+        data = {
+            'user-data': base64.b64decode(instance_ref['user_data']),
+            'meta-data': {
+                'ami-id': image_ec2_id,
+                'ami-launch-index': instance_ref['launch_index'],
+                'ami-manifest-path': 'FIXME',
+                'block-device-mapping': mappings,
+                'hostname': hostname,
+                'instance-action': 'none',
+                'instance-id': ec2_id,
+                'instance-type': instance_ref['instance_type']['name'],
+                'local-hostname': hostname,
+                'local-ipv4': address,
+                'placement': {'availability-zone': availability_zone},
+                'public-hostname': hostname,
+                'public-ipv4': floating_ip,
+                'reservation-id': instance_ref['reservation_id'],
+                'security-groups': security_groups,
+                'mpi': mpi}}
+
+        # public-keys should be in meta-data only if user specified one
+        if instance_ref['key_name']:
+            data['meta-data']['public-keys'] = {
+                '0': {'_name': instance_ref['key_name'],
+                      'openssh-key': instance_ref['key_data']}}
+
+        for image_type in ['kernel', 'ramdisk']:
+            if instance_ref.get('%s_id' % image_type):
+                ec2_id = ec2utils.image_ec2_id(
+                        instance_ref['%s_id' % image_type],
+                        ec2utils.image_type(image_type))
+                data['meta-data']['%s-id' % image_type] = ec2_id
+
+        if False:  # TODO(vish): store ancestor ids
+            data['ancestor-ami-ids'] = []
+        if False:  # TODO(vish): store product codes
+            data['product-codes'] = []
+        return data
 
     def print_data(self, data):
         if isinstance(data, dict):
@@ -95,7 +245,7 @@ class MetadataRequestHandler(wsgi.Application):
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
         try:
-            meta_data = self.cc.get_metadata(remote_address)
+            meta_data = self.get_metadata(remote_address)
         except Exception:
             LOG.exception(_('Failed to get metadata for ip: %s'),
                           remote_address)

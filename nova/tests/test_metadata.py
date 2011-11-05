@@ -23,6 +23,7 @@ import webob
 
 from nova.api.metadata import handler
 from nova.db.sqlalchemy import api
+from nova import db
 from nova import exception
 from nova import flags
 from nova import network
@@ -88,7 +89,7 @@ class MetadataTestCase(test.TestCase):
         self.stubs.Set(api, 'instance_get_floating_address', floating_get)
         self.app = handler.MetadataRequestHandler()
         network_manager = fake_network.FakeNetworkManager()
-        self.stubs.Set(self.app.cc.network_api,
+        self.stubs.Set(self.app.compute_api.network_api,
                        'get_instance_uuids_by_ip_filter',
                        network_manager.get_instance_uuids_by_ip_filter)
 
@@ -145,3 +146,47 @@ class MetadataTestCase(test.TestCase):
     def test_local_hostname_fqdn(self):
         self.assertEqual(self.request('/meta-data/local-hostname'),
             "%s.%s" % (self.instance['hostname'], FLAGS.dhcp_domain))
+
+    def test_get_instance_mapping(self):
+        """Make sure that _get_instance_mapping works"""
+        ctxt = None
+        instance_ref0 = {'id': 0,
+                         'root_device_name': None}
+        instance_ref1 = {'id': 0,
+                         'root_device_name': '/dev/sda1'}
+
+        def fake_bdm_get(ctxt, id):
+            return [{'volume_id': 87654321,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': None,
+                     'delete_on_termination': True,
+                     'device_name': '/dev/sdh'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'swap',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sdc'},
+                    {'volume_id': None,
+                     'snapshot_id': None,
+                     'no_device': None,
+                     'virtual_name': 'ephemeral0',
+                     'delete_on_termination': None,
+                     'device_name': '/dev/sdb'}]
+
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_bdm_get)
+
+        expected = {'ami': 'sda1',
+                    'root': '/dev/sda1',
+                    'ephemeral0': '/dev/sdb',
+                    'swap': '/dev/sdc',
+                    'ebs0': '/dev/sdh'}
+
+        self.assertEqual(self.app._format_instance_mapping(ctxt,
+                                                           instance_ref0),
+                         handler._DEFAULT_MAPPINGS)
+        self.assertEqual(self.app._format_instance_mapping(ctxt,
+                                                           instance_ref1),
+                         expected)
