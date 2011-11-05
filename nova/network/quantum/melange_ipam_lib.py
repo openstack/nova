@@ -15,8 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from netaddr import IPNetwork
-
+from netaddr import IPNetwork, IPAddress
 from nova import db
 from nova import exception
 from nova import flags
@@ -45,7 +44,7 @@ class QuantumMelangeIPAMLib(object):
 
     def create_subnet(self, context, label, project_id,
                       quantum_net_id, priority, cidr=None,
-                      gateway_v6=None, cidr_v6=None,
+                      gateway=None, gateway_v6=None, cidr_v6=None,
                       dns1=None, dns2=None):
         """Contact Melange and create a subnet for any non-NULL
            IPv4 or IPv6 subnets.
@@ -59,25 +58,34 @@ class QuantumMelangeIPAMLib(object):
         if cidr:
             self.m_conn.create_block(quantum_net_id, cidr,
                                      project_id=tenant_id,
+                                     gateway=gateway,
                                      dns1=dns1, dns2=dns2)
         if cidr_v6:
             self.m_conn.create_block(quantum_net_id, cidr_v6,
                                      project_id=tenant_id,
+                                     gateway=gateway_v6,
                                      dns1=dns1, dns2=dns2)
 
         net = {"uuid": quantum_net_id,
                "project_id": project_id,
                "priority": priority,
                "label": label}
+        if FLAGS.quantum_use_dhcp:
+            if cidr:
+                n = IPNetwork(cidr)
+                net['dhcp_start'] = IPAddress(n.first + 2)
+        else:
+            net['dhcp_start'] = None
         admin_context = context.elevated()
         network = db.network_create_safe(admin_context, net)
 
     def allocate_fixed_ip(self, context, project_id, quantum_net_id, vif_ref):
         """Pass call to allocate fixed IP on to Melange"""
         tenant_id = project_id or FLAGS.quantum_default_tenant_id
-        self.m_conn.allocate_ip(quantum_net_id,
-                                vif_ref['uuid'], project_id=tenant_id,
-                                mac_address=vif_ref['address'])
+        ip = self.m_conn.allocate_ip(quantum_net_id,
+                                     vif_ref['uuid'], project_id=tenant_id,
+                                     mac_address=vif_ref['address'])
+        return ip[0]['address']
 
     def get_network_id_by_cidr(self, context, cidr, project_id):
         """Find the Quantum UUID associated with a IPv4 CIDR
@@ -86,6 +94,7 @@ class QuantumMelangeIPAMLib(object):
         tenant_id = project_id or FLAGS.quantum_default_tenant_id
         all_blocks = self.m_conn.get_blocks(tenant_id)
         for b in all_blocks['ip_blocks']:
+            LOG.debug("block: %s" % b)
             if b['cidr'] == cidr:
                 return b['network_id']
         raise exception.NotFound(_("No network found for cidr %s" % cidr))
@@ -134,34 +143,43 @@ class QuantumMelangeIPAMLib(object):
         return [(network_id, tenant_id)
                 for priority, network_id, tenant_id in priority_nets]
 
-    def get_subnets_by_net_id(self, context, project_id, net_id):
+    def get_tenant_id_by_net_id(self, context, net_id, vif_id, project_id):
+        ipam_tenant_id = None
+        tenant_ids = [FLAGS.quantum_default_tenant_id, project_id, None]
+        for tid in tenant_ids:
+            try:
+                ips = self.m_conn.get_allocated_ips(net_id, vif_id, tid)
+            except Exception, e:
+                continue
+            ipam_tenant_id = tid
+            break
+        return ipam_tenant_id
+
+    # TODO(bgh): Rename this method .. it's now more of a
+    # "get_subnets_by_net_id_and_vif_id" method, but we could probably just
+    # call it "get_subnets".
+    def get_subnets_by_net_id(self, context, tenant_id, net_id, vif_id):
         """Returns information about the IPv4 and IPv6 subnets
            associated with a Quantum Network UUID.
         """
-
-        # FIXME(danwent):  Melange actually returns the subnet info
-        # when we query for a particular interface.  We may want to
-        # rework the ipam_manager python API to let us take advantage of
-        # this, as right now we have to get all blocks and cycle through
-        # them.
         subnet_v4 = None
         subnet_v6 = None
-        tenant_id = project_id or FLAGS.quantum_default_tenant_id
-        all_blocks = self.m_conn.get_blocks(tenant_id)
-        for b in all_blocks['ip_blocks']:
-            if b['network_id'] == net_id:
-                subnet = {'network_id': b['network_id'],
-                          'cidr': b['cidr'],
-                          'gateway': b['gateway'],
-                          'broadcast': b['broadcast'],
-                          'netmask': b['netmask'],
-                          'dns1': b['dns1'],
-                          'dns2': b['dns2']}
+        ips = self.m_conn.get_allocated_ips(net_id, vif_id, tenant_id)
 
-                if IPNetwork(b['cidr']).version == 6:
-                    subnet_v6 = subnet
-                else:
-                    subnet_v4 = subnet
+        for ip_address in ips:
+            block = ip_address['ip_block']
+            print block
+            subnet = {'network_id': block['id'],
+                      'cidr': block['cidr'],
+                      'gateway': block['gateway'],
+                      'broadcast': block['broadcast'],
+                      'netmask': block['netmask'],
+                      'dns1': block['dns1'],
+                      'dns2': block['dns2']}
+            if ip_address['version'] == 4:
+                subnet_v4 = subnet
+            else:
+                subnet_v6 = subnet
         return (subnet_v4, subnet_v6)
 
     def get_v4_ips_by_interface(self, context, net_id, vif_id, project_id):
@@ -179,7 +197,7 @@ class QuantumMelangeIPAMLib(object):
                                                         project_id, 6)
 
     def _get_ips_by_interface(self, context, net_id, vif_id, project_id,
-                                                               ip_version):
+                              ip_version):
         """Helper method to fetch v4 or v6 addresses for a particular
            virtual interface.
         """
@@ -192,10 +210,16 @@ class QuantumMelangeIPAMLib(object):
         """Confirms that a subnet exists that is associated with the
            specified Quantum Network UUID.
         """
+        # TODO(bgh): Would be nice if we could just do something like:
+        # GET /ipam/tenants/{tenant_id}/networks/{network_id}/ instead
+        # of searching through all the blocks.  Checking for a 404
+        # will then determine whether it exists.
         tenant_id = project_id or FLAGS.quantum_default_tenant_id
-        v4_subnet, v6_subnet = self.get_subnets_by_net_id(context, tenant_id,
-                                    quantum_net_id)
-        return v4_subnet is not None
+        all_blocks = self.m_conn.get_blocks(tenant_id)
+        for b in all_blocks['ip_blocks']:
+            if b['network_id'] == quantum_net_id:
+                return True
+        return False
 
     def deallocate_ips_by_vif(self, context, project_id, net_id, vif_ref):
         """Deallocate all fixed IPs associated with the specified
@@ -203,3 +227,7 @@ class QuantumMelangeIPAMLib(object):
         """
         tenant_id = project_id or FLAGS.quantum_default_tenant_id
         self.m_conn.deallocate_ips(net_id, vif_ref['uuid'], tenant_id)
+
+    def get_allocated_ips(self, context, subnet_id, project_id):
+        ips = self.m_conn.get_allocated_ips_for_network(subnet_id, project_id)
+        return [(ip['address'], ip['interface_id']) for ip in ips]

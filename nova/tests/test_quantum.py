@@ -26,6 +26,8 @@ from nova.network.quantum import manager as quantum_manager
 from nova import test
 from nova import utils
 
+import mox
+
 LOG = logging.getLogger('nova.tests.quantum_network')
 
 
@@ -41,7 +43,7 @@ class FakeQuantumClientConnection(object):
         for net_id, n in self.nets.items():
             if n['tenant-id'] == tenant_id:
                 net_ids.append(net_id)
-        return net_ids
+        return {'networks': net_ids}
 
     def create_network(self, tenant_id, network_name):
 
@@ -90,14 +92,22 @@ class FakeQuantumClientConnection(object):
                         "for tenant %(tenant_id)s" % locals()))
         del self.nets[net_id]['ports'][port_id]
 
-    def get_port_by_attachment(self, tenant_id, attachment_id):
-        for net_id, n in self.nets.items():
-            if n['tenant-id'] == tenant_id:
+    def get_port_by_attachment(self, tenant_id, net_id, attachment_id):
+        for nid, n in self.nets.items():
+            if nid == net_id and n['tenant-id'] == tenant_id:
                 for port_id, p in n['ports'].items():
                     if p['attachment-id'] == attachment_id:
-                        return (net_id, port_id)
+                        return port_id
+        return None
 
-        return (None, None)
+    def get_networks(self, tenant_id):
+        nets = []
+        for nid, n in self.nets.items():
+            if n['tenant-id'] == tenant_id:
+                x = {'id': nid}
+                nets.append(x)
+        return {'networks': nets}
+
 
 networks = [{'label': 'project1-net1',
              'injected': False,
@@ -184,14 +194,16 @@ class QuantumTestCaseBase(object):
     def _create_nets(self):
         for n in networks:
             ctx = context.RequestContext('user1', n['project_id'])
-            self.net_man.create_networks(ctx,
+            nwks = self.net_man.create_networks(ctx,
                     label=n['label'], cidr=n['cidr'],
                     multi_host=n['multi_host'],
                     num_networks=1, network_size=256, cidr_v6=n['cidr_v6'],
+                    gateway=n['gateway'],
                     gateway_v6=n['gateway_v6'], bridge=None,
                     bridge_interface=None, dns1=n['dns1'],
                     dns2=n['dns2'], project_id=n['project_id'],
                     priority=n['priority'])
+            n['uuid'] = nwks[0]['uuid']
 
     def _delete_nets(self):
         for n in networks:
@@ -210,6 +222,16 @@ class QuantumTestCaseBase(object):
 
         instance_ref = db.instance_create(ctx,
                                     {"project_id": project_id})
+
+        def func(arg1, arg2):
+            pass
+
+        def func1(arg1):
+            pass
+
+        self.net_man.driver.update_dhcp_hostfile_with_text = func
+        self.net_man.driver.restart_dhcp = func
+        self.net_man.driver.kill_dhcp = func1
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
                         instance_type_id=instance_ref['instance_type_id'],
@@ -249,12 +271,23 @@ class QuantumTestCaseBase(object):
         ctx = context.RequestContext('user1', project_id)
 
         net_ids = self.net_man.q_conn.get_networks_for_tenant(project_id)
-        requested_networks = [(net_id, None) for net_id in net_ids]
+        requested_networks = [(net_id, None) for net_id in
+            net_ids['networks']]
 
         self.net_man.validate_networks(ctx, requested_networks)
 
         instance_ref = db.instance_create(ctx,
                                     {"project_id": project_id})
+
+        def func(arg1, arg2):
+            pass
+
+        def func1(arg1):
+            pass
+
+        self.net_man.driver.update_dhcp_hostfile_with_text = func
+        self.net_man.driver.restart_dhcp = func
+        self.net_man.driver.kill_dhcp = func1
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
                         instance_type_id=instance_ref['instance_type_id'],

@@ -90,7 +90,8 @@ def init_leases(network_id):
     """Get the list of hosts for a network."""
     ctxt = context.get_admin_context()
     network_ref = db.network_get(ctxt, network_id)
-    return linux_net.get_dhcp_leases(ctxt, network_ref)
+    network_manager = utils.import_object(FLAGS.network_manager)
+    return network_manager.get_dhcp_leases(ctxt, network_ref)
 
 
 def main():

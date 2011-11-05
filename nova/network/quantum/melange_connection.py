@@ -66,11 +66,12 @@ class MelangeConnection(object):
         else:
             return httplib.HTTPConnection(self.host, self.port)
 
-    def do_request(self, method, path, body=None, headers=None, params=None):
+    def do_request(self, method, path, body=None, headers=None, params=None,
+            content_type=".json"):
         headers = headers or {}
         params = params or {}
 
-        url = "/%s/%s.json" % (self.version, path)
+        url = "/%s/%s%s" % (self.version, path, content_type)
         if params:
             url += "?%s" % urllib.urlencode(params)
         try:
@@ -98,13 +99,14 @@ class MelangeConnection(object):
         return json.loads(response)['ip_addresses']
 
     def create_block(self, network_id, cidr,
-                    project_id=None, dns1=None, dns2=None):
+                    project_id=None, gateway=None, dns1=None, dns2=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
 
         url = "ipam%(tenant_scope)s/ip_blocks" % locals()
 
         req_params = dict(ip_block=dict(cidr=cidr, network_id=network_id,
-                                    type='private', dns1=dns1, dns2=dns2))
+                                    type='private', gateway=gateway,
+                                    dns1=dns1, dns2=dns2))
         self.post(url, body=json.dumps(req_params),
                                 headers=json_content_type)
 
@@ -130,6 +132,14 @@ class MelangeConnection(object):
            "interfaces/%(vif_id)s/ip_allocations" % locals())
 
         response = self.get(url, headers=json_content_type)
+        return json.loads(response)['ip_addresses']
+
+    def get_allocated_ips_for_network(self, network_id, project_id=None):
+        tenant_scope = "/tenants/%s" % project_id if project_id else ""
+        url = ("ipam%(tenant_scope)s/allocated_ip_addresses" % locals())
+        # TODO(bgh): This request fails if you add the ".json" to the end so
+        # it has to call do_request itself.  Melange bug?
+        response = self.do_request("GET", url, content_type="")
         return json.loads(response)['ip_addresses']
 
     def deallocate_ips(self, network_id, vif_id, project_id=None):

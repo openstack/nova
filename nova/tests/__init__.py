@@ -63,6 +63,7 @@ def setup():
                             num_networks=FLAGS.num_networks,
                             network_size=FLAGS.network_size,
                             cidr_v6=FLAGS.fixed_range_v6,
+                            gateway=FLAGS.gateway,
                             gateway_v6=FLAGS.gateway_v6,
                             bridge=FLAGS.flat_network_bridge,
                             bridge_interface=bridge_interface,
