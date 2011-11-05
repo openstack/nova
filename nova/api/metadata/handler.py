@@ -23,18 +23,37 @@ import webob.exc
 
 from nova import log as logging
 from nova import flags
-from nova import utils
 from nova import wsgi
 from nova.api.ec2 import cloud
 
 
-LOG = logging.getLogger('nova.api.ec2.metadata')
+LOG = logging.getLogger('nova.api.metadata')
 FLAGS = flags.FLAGS
 flags.DECLARE('use_forwarded_for', 'nova.api.auth')
 
 
+class Versions(wsgi.Application):
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        """Respond to a request for all versions."""
+        # available api versions
+        versions = [
+            '1.0',
+            '2007-01-19',
+            '2007-03-01',
+            '2007-08-29',
+            '2007-10-10',
+            '2007-12-15',
+            '2008-02-01',
+            '2008-09-01',
+            '2009-04-04',
+        ]
+        return ''.join('%s\n' % v for v in versions)
+
+
 class MetadataRequestHandler(wsgi.Application):
-    """Serve metadata from the EC2 API."""
+    """Serve metadata."""
 
     def __init__(self):
         self.cc = cloud.CloudController()

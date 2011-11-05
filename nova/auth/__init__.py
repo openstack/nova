@@ -23,6 +23,6 @@
    :platform: Unix
    :synopsis: User-and-Project based RBAC using LDAP, SAML.
 .. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
+.. moduleauthor:: Vishvananda Ishaya <vishvananda@gmail.com>
 .. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
 """

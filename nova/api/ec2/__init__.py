@@ -20,10 +20,7 @@ Starting point for routing EC2 requests.
 
 """
 
-from urlparse import urlparse
 
-import eventlet
-from eventlet.green import httplib
 import webob
 import webob.dec
 import webob.exc
@@ -437,23 +434,3 @@ class Executor(wsgi.Application):
                          (utils.utf8(code), utils.utf8(message),
                          utils.utf8(context.request_id)))
         return resp
-
-
-class Versions(wsgi.Application):
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        """Respond to a request for all EC2 versions."""
-        # available api versions
-        versions = [
-            '1.0',
-            '2007-01-19',
-            '2007-03-01',
-            '2007-08-29',
-            '2007-10-10',
-            '2007-12-15',
-            '2008-02-01',
-            '2008-09-01',
-            '2009-04-04',
-        ]
-        return ''.join('%s\n' % v for v in versions)
