@@ -342,20 +342,68 @@ class ComputeTestCase(test.TestCase):
         self.compute.resume_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_soft_reboot_api(self):
+        """Ensure instance can be soft rebooted"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        reboot_type = "SOFT"
+        self.compute_api.reboot(self.context, instance_id, reboot_type)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], task_states.REBOOTING)
+
+        db.instance_destroy(self.context, instance_id)
+
     def test_soft_reboot(self):
         """Ensure instance can be soft rebooted"""
         instance_id = self._create_instance()
-        reboot_type = "SOFT"
         self.compute.run_instance(self.context, instance_id)
+        db.instance_update(self.context, instance_id,
+                           {'task_state': task_states.REBOOTING})
+
+        reboot_type = "SOFT"
         self.compute.reboot_instance(self.context, instance_id, reboot_type)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
+        self.assertEqual(inst_ref['task_state'], None)
+
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_hard_reboot_api(self):
+        """Ensure instance can be hard rebooted"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        reboot_type = "HARD"
+        self.compute_api.reboot(self.context, instance_id, reboot_type)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], task_states.REBOOTING_HARD)
+
+        db.instance_destroy(self.context, instance_id)
 
     def test_hard_reboot(self):
         """Ensure instance can be hard rebooted"""
         instance_id = self._create_instance()
-        reboot_type = "HARD"
         self.compute.run_instance(self.context, instance_id)
+        db.instance_update(self.context, instance_id,
+                           {'task_state': task_states.REBOOTING_HARD})
+
+        reboot_type = "HARD"
         self.compute.reboot_instance(self.context, instance_id, reboot_type)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
+        self.assertEqual(inst_ref['task_state'], None)
+
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_set_admin_password(self):
