@@ -411,6 +411,10 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         """This method is supported only libvirt."""
+        # NOTE(salvatore-orlando): it enforces security groups on
+        # host initialization and live migration.
+        # Live migration is not supported by XenAPI (as of 2011-11-09)
+        # In XenAPI we do not assume instances running upon host initialization
         return
 
     def live_migration(self, context, instance_ref, dest,
@@ -419,8 +423,22 @@ class XenAPIConnection(driver.ComputeDriver):
         return
 
     def unfilter_instance(self, instance_ref, network_info):
-        """This method is supported only by libvirt."""
-        raise NotImplementedError('This method is supported only by libvirt.')
+        """Removes security groups configured for an instance."""
+        return self._vmops.unfilter_instance(instance_ref, network_info)
+
+    def refresh_security_group_rules(self, security_group_id):
+        """ Updates security group rules for all instances
+            associated with a given security group
+            Invoked when security group rules are updated
+        """
+        return self._vmops.refresh_security_group_rules(security_group_id)
+
+    def refresh_security_group_members(self, security_group_id):
+        """ Updates security group rules for all instances
+            associated with a given security group
+            Invoked when instances are added/removed to a security group
+        """
+        return self._vmops.refresh_security_group_members(security_group_id)
 
     def update_host_status(self):
         """Update the status info of the host, and return those values

@@ -393,7 +393,10 @@ DEFINE_integer('max_vcs_in_vsa', 32,
                'maxinum VCs in a VSA')
 DEFINE_integer('vsa_part_size_gb', 100,
                'default partition size for shared capacity')
-
+# Default firewall driver for security groups and provider firewall
+DEFINE_string('firewall_driver',
+              'nova.virt.libvirt.firewall.IptablesFirewallDriver',
+              'Firewall driver (defaults to iptables)')
 # The service to use for image search and retrieval
 DEFINE_string('image_service', 'nova.image.glance.GlanceImageService',
               'The service to use for retrieving and searching for images.')

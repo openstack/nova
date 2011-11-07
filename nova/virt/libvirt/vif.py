@@ -24,8 +24,9 @@ from nova import flags
 from nova import log as logging
 from nova.network import linux_net
 from nova import utils
-from nova.virt.libvirt import netutils
+from nova.virt import netutils
 from nova.virt.vif import VIFDriver
+
 
 LOG = logging.getLogger('nova.virt.libvirt.vif')
 

@@ -849,6 +849,14 @@ class VMHelper(HelperBase):
             return (None, None)
 
     @classmethod
+    def is_snapshot(cls, session, vm):
+        vm_rec = session.call_xenapi("VM.get_record", vm)
+        if 'is_a_template' in vm_rec and 'is_a_snapshot' in vm_rec:
+            return vm_rec['is_a_template'] and vm_rec['is_a_snapshot']
+        else:
+            return False
+
+    @classmethod
     def compile_info(cls, record):
         """Fill record with VM status information"""
         LOG.info(_("(VM_UTILS) xenserver vm state -> |%s|"),

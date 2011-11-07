@@ -378,7 +378,7 @@ class SessionBase(object):
     def PBD_plug(self, _1, pbd_ref):
         rec = get_record('PBD', pbd_ref)
         if rec['currently_attached']:
-            raise Failure(['DEVICE_ALREADY_ATTACHED', ref])
+            raise Failure(['DEVICE_ALREADY_ATTACHED', rec])
         rec['currently_attached'] = True
         sr_ref = rec['SR']
         _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
@@ -386,7 +386,7 @@ class SessionBase(object):
     def PBD_unplug(self, _1, pbd_ref):
         rec = get_record('PBD', pbd_ref)
         if not rec['currently_attached']:
-            raise Failure(['DEVICE_ALREADY_DETACHED', ref])
+            raise Failure(['DEVICE_ALREADY_DETACHED', rec])
         rec['currently_attached'] = False
         sr_ref = pbd_ref['SR']
         _db_content['SR'][sr_ref]['PBDs'].remove(pbd_ref)
