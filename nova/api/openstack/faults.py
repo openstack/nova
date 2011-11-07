@@ -24,7 +24,7 @@ from nova.api.openstack import wsgi
 
 
 class Fault(webob.exc.HTTPException):
-    """An RS API fault response."""
+    """Wrap webob.exc.HTTPException to provide API friendly response."""
 
     _fault_names = {
             400: "badRequest",
