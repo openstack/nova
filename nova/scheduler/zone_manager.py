@@ -233,7 +233,7 @@ class ZoneManager(object):
             all_ram = compute['memory_mb']
             service = compute['service']
             if not service:
-                LOG.warn(_("No service for compute ID %s") % compute['id'])
+                logging.warn(_("No service for compute ID %s") % compute['id'])
                 continue
 
             host = service['host']
