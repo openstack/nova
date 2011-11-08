@@ -46,6 +46,7 @@ _STATE_MAP = {
     vm_states.ACTIVE: {
         'default': 'ACTIVE',
         task_states.REBOOTING: 'REBOOT',
+        task_states.REBOOTING_HARD: 'HARD_REBOOT',
         task_states.UPDATING_PASSWORD: 'PASSWORD',
         task_states.RESIZE_VERIFY: 'VERIFY_RESIZE',
     },

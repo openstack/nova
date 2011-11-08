@@ -680,8 +680,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_id,
                               power_state=current_power_state,
-                              vm_state=vm_states.ACTIVE,
-                              task_state=task_states.REBOOTING)
+                              vm_state=vm_states.ACTIVE)
 
         if instance_ref['power_state'] != power_state.RUNNING:
             state = instance_ref['power_state']
