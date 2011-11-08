@@ -332,6 +332,12 @@ class reroute_compute(object):
            context and resource id. Derived class should override this."""
         context = kwargs.get('context', None)
         instance_id = kwargs.get('instance_id', None)
+
+        #NOTE(blamar): This is going to get worse before it gets better...
+        instance = kwargs.get('instance', None)
+        if instance is not None:
+            instance_id = instance['uuid']
+
         if len(args) > 0 and not context:
             context = args[1]
         if len(args) > 1 and not instance_id:
