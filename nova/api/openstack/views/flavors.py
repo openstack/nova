@@ -66,7 +66,6 @@ class ViewBuilder(object):
 
     def _build_links(self, flavor_obj):
         """Generate a container of links that refer to the provided flavor."""
-        print flavor_obj
         href = self.generate_href(flavor_obj["id"])
         bookmark = self.generate_bookmark(flavor_obj["id"])
 
