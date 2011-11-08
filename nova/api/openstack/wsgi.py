@@ -527,6 +527,9 @@ class Resource(wsgi.Application):
     They may raise a webob.exc exception or return a dict, which will be
     serialized by requested content type.
 
+    Exceptions derived from webob.exc.HTTPException will be automatically
+    wrapped in faults.Fault() to provide API friendly error responses.
+
     """
 
     def __init__(self, controller, deserializer=None, serializer=None):
