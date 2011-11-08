@@ -368,8 +368,6 @@ class Controller(object):
                     image_href)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
                     req, image_service, image_id)
-            images = set([str(x['id']) for x in image_service.index(context)])
-            assert str(image_id) in images
         except Exception, e:
             msg = _("Cannot find requested image %(image_href)s: %(e)s" %
                                                                     locals())
