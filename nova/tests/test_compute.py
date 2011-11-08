@@ -410,7 +410,36 @@ class ComputeTestCase(test.TestCase):
         """Ensure instance can have its admin password set"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
+        db.instance_update(self.context, instance_id,
+                           {'task_state': task_states.UPDATING_PASSWORD})
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
+
         self.compute.set_admin_password(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_set_admin_password_api(self):
+        """Ensure instance can have its admin password set"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        self.compute_api.set_admin_password(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
+
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_inject_file(self):

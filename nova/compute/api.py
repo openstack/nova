@@ -1438,6 +1438,10 @@ class API(base.Base):
     @scheduler_api.reroute_compute("set_admin_password")
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
+        self.update(context,
+                    instance_id,
+                    task_state=task_states.UPDATING_PASSWORD)
+
         host = self._find_host(context, instance_id)
 
         rpc.cast(context,

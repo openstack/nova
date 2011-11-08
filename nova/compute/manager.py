@@ -824,18 +824,25 @@ class ComputeManager(manager.SchedulerDependentManager):
             expected_state = power_state.RUNNING
 
             if instance_state != expected_state:
+                self._instance_update(context, instance_id, task_state=None)
                 raise exception.Error(_('Instance is not running'))
             else:
                 try:
                     self.driver.set_admin_password(instance_ref, new_pass)
                     LOG.audit(_("Instance %s: Root password set"),
                                 instance_ref["name"])
+                    self._instance_update(context,
+                                          instance_id,
+                                          task_state=None)
                     break
                 except NotImplementedError:
                     # NOTE(dprince): if the driver doesn't implement
                     # set_admin_password we break to avoid a loop
                     LOG.warn(_('set_admin_password is not implemented '
-                            'by this driver.'))
+                             'by this driver.'))
+                    self._instance_update(context,
+                                          instance_id,
+                                          task_state=None)
                     break
                 except Exception, e:
                     # Catch all here because this could be anything.
@@ -844,6 +851,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                         # At some point this exception may make it back
                         # to the API caller, and we don't want to reveal
                         # too much.  The real exception is logged above
+                        self._instance_update(context,
+                                              instance_id,
+                                              vm_state=vm_states.ERROR)
                         raise exception.Error(_('Internal error'))
                     time.sleep(1)
                     continue
