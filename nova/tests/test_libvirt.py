@@ -248,7 +248,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'vcpus': 2,
                      'project_id': 'fake',
                      'bridge': 'br101',
-                     'image_ref': '123456',
+                     'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
                      'local_gb': 20,
                      'instance_type_id': '5'}  # m1.small
 
@@ -361,10 +361,9 @@ class LibvirtConnTestCase(test.TestCase):
         # Start test
         image_service = utils.import_object(FLAGS.image_service)
 
-        # Assign image_ref = 3 from nova/images/fakes for testing
-        # ami image
+        # Assign different image_ref from nova/images/fakes for testing ami
         test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = "3"
+        test_instance["image_ref"] = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
 
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, test_instance)
@@ -475,10 +474,10 @@ class LibvirtConnTestCase(test.TestCase):
         # Start test
         image_service = utils.import_object(FLAGS.image_service)
 
-        # Assign image_ref = 2 from nova/images/fakes for testing different
-        # base image
+        # Assign different image_ref from nova/images/fakes for
+        # testing different base image
         test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = "2"
+        test_instance["image_ref"] = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
 
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, test_instance)
