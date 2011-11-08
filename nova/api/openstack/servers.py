@@ -191,45 +191,6 @@ class Controller(object):
             msg = _("Server name is an empty string")
             raise exc.HTTPBadRequest(explanation=msg)
 
-    def _get_kernel_ramdisk_from_image(self, req, image_service, image_id):
-        """Fetch an image from the ImageService, then if present, return the
-        associated kernel and ramdisk image IDs.
-        """
-        context = req.environ['nova.context']
-        image_meta = image_service.show(context, image_id)
-        # NOTE(sirp): extracted to a separate method to aid unit-testing, the
-        # new method doesn't need a request obj or an ImageService stub
-        kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
-            image_meta)
-        return kernel_id, ramdisk_id
-
-    @staticmethod
-    def _do_get_kernel_ramdisk_from_image(image_meta):
-        """Given an ImageService image_meta, return kernel and ramdisk image
-        ids if present.
-
-        This is only valid for `ami` style images.
-        """
-        image_id = image_meta['id']
-        if image_meta['status'] != 'active':
-            raise exception.ImageUnacceptable(image_id=image_id,
-                                              reason=_("status is not active"))
-
-        if image_meta.get('container_format') != 'ami':
-            return None, None
-
-        try:
-            kernel_id = image_meta['properties']['kernel_id']
-        except KeyError:
-            raise exception.KernelNotFoundForImage(image_id=image_id)
-
-        try:
-            ramdisk_id = image_meta['properties']['ramdisk_id']
-        except KeyError:
-            ramdisk_id = None
-
-        return kernel_id, ramdisk_id
-
     def _get_injected_files(self, personality):
         """
         Create a list of injected files from the personality attribute
@@ -363,15 +324,6 @@ class Controller(object):
 
         if str(image_href).startswith(req.application_url):
             image_href = image_href.split('/').pop()
-        try:
-            image_service, image_id = image.get_image_service(context,
-                    image_href)
-            kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
-                    req, image_service, image_id)
-        except Exception, e:
-            msg = _("Cannot find requested image %(image_href)s: %(e)s" %
-                                                                    locals())
-            raise exc.HTTPBadRequest(explanation=msg)
 
         personality = server_dict.get('personality')
         config_drive = server_dict.get('config_drive')
@@ -440,9 +392,7 @@ class Controller(object):
 
             (instances, resv_id) = self.compute_api.create(context,
                             inst_type,
-                            image_id,
-                            kernel_id=kernel_id,
-                            ramdisk_id=ramdisk_id,
+                            image_href,
                             display_name=name,
                             display_description=name,
                             key_name=key_name,

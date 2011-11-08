@@ -1409,10 +1409,6 @@ class ServersControllerCreateTest(test.TestCase):
         def queue_get_for(context, *args):
             return 'network_topic'
 
-        def kernel_ramdisk_mapping(*args, **kwargs):
-            image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-            return (image_uuid, image_uuid)
-
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
@@ -1431,8 +1427,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.db, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
-        self.stubs.Set(servers.Controller, "_get_kernel_ramdisk_from_image",
-                       kernel_ramdisk_mapping)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
     def _test_create_instance(self):
@@ -2383,62 +2377,6 @@ class TestAddressesXMLSerialization(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
-
-
-class TestGetKernelRamdiskFromImage(test.TestCase):
-    """
-    If we're building from an AMI-style image, we need to be able to fetch the
-    kernel and ramdisk associated with the machine image. This information is
-    stored with the image metadata and return via the ImageService.
-
-    These tests ensure that we parse the metadata return the ImageService
-    correctly and that we handle failure modes appropriately.
-    """
-
-    def test_status_not_active(self):
-        """We should only allow fetching of kernel and ramdisk information if
-        we have a 'fully-formed' image, aka 'active'
-        """
-        image_meta = {'id': 1, 'status': 'queued'}
-        self.assertRaises(exception.Invalid, self._get_k_r, image_meta)
-
-    def test_not_ami(self):
-        """Anything other than ami should return no kernel and no ramdisk"""
-        image_meta = {'id': 1, 'status': 'active', 'container_format': 'vhd'}
-        kernel_id, ramdisk_id = self._get_k_r(image_meta)
-        self.assertEqual(kernel_id, None)
-        self.assertEqual(ramdisk_id, None)
-
-    def test_ami_no_kernel(self):
-        """If an ami is missing a kernel it should raise NotFound"""
-        image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
-                      'properties': {'ramdisk_id': 1}}
-        self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
-
-    def test_ami_no_ramdisk(self):
-        """If an ami is missing a ramdisk, return kernel ID and None for
-        ramdisk ID
-        """
-        image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
-                      'properties': {'kernel_id': 1}}
-        kernel_id, ramdisk_id = self._get_k_r(image_meta)
-        self.assertEqual(kernel_id, 1)
-        self.assertEqual(ramdisk_id, None)
-
-    def test_ami_kernel_ramdisk_present(self):
-        """Return IDs if both kernel and ramdisk are present"""
-        image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
-                      'properties': {'kernel_id': 1, 'ramdisk_id': 2}}
-        kernel_id, ramdisk_id = self._get_k_r(image_meta)
-        self.assertEqual(kernel_id, 1)
-        self.assertEqual(ramdisk_id, 2)
-
-    @staticmethod
-    def _get_k_r(image_meta):
-        """Rebinding function to a shorter name for convenience"""
-        kernel_id, ramdisk_id = servers.Controller.\
-                _do_get_kernel_ramdisk_from_image(image_meta)
-        return kernel_id, ramdisk_id
 
 
 class ServersViewBuilderTest(test.TestCase):
