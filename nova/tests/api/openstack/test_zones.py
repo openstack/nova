@@ -36,7 +36,8 @@ FLAGS = flags.FLAGS
 
 def zone_get(context, zone_id):
     return dict(id=1, api_url='http://example.com', username='bob',
-                password='xxx', weight_scale=1.0, weight_offset=0.0)
+                password='xxx', weight_scale=1.0, weight_offset=0.0,
+                name='darksecret')
 
 
 def zone_create(context, values):
@@ -106,198 +107,81 @@ class ZonesTest(test.TestCase):
         self.stubs.Set(nova.db, 'zone_create', zone_create)
         self.stubs.Set(nova.db, 'zone_delete', zone_delete)
 
+        self.controller = zones.Controller()
+
     def test_get_zone_list_scheduler(self):
         self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler)
-        req = webob.Request.blank('/v1.1/fake/zones')
-        res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
 
-        self.assertEqual(res.status_int, 200)
+        req = fakes.HTTPRequest.blank('/v1.1/fake/zones')
+        res_dict = self.controller.index(req)
+
         self.assertEqual(len(res_dict['zones']), 2)
-
-    def test_get_zone_list_scheduler_xml(self):
-        self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler)
-        req = webob.Request.blank('/v1.1/fake/zones.xml')
-        res = req.get_response(fakes.wsgi_app())
-        res_tree = etree.fromstring(res.body)
-
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res_tree.tag, '{%s}zones' % xmlutil.XMLNS_V10)
-        self.assertEqual(len(res_tree), 2)
-        self.assertEqual(res_tree[0].tag, '{%s}zone' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree[1].tag, '{%s}zone' % xmlutil.XMLNS_V10)
 
     def test_get_zone_list_db(self):
         self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler_empty)
         self.stubs.Set(nova.db, 'zone_get_all', zone_get_all_db)
-        req = webob.Request.blank('/v1.1/fake/zones')
-        req.headers["Content-Type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app())
 
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        req = fakes.HTTPRequest.blank('/v1.1/fake/zones')
+        res_dict = self.controller.index(req)
+
         self.assertEqual(len(res_dict['zones']), 2)
 
-    def test_get_zone_list_db_xml(self):
-        self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler_empty)
-        self.stubs.Set(nova.db, 'zone_get_all', zone_get_all_db)
-        req = webob.Request.blank('/v1.1/fake/zones.xml')
-        req.headers["Content-Type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app())
-
-        self.assertEqual(res.status_int, 200)
-        res_tree = etree.fromstring(res.body)
-        self.assertEqual(res_tree.tag, '{%s}zones' % xmlutil.XMLNS_V10)
-        self.assertEqual(len(res_tree), 2)
-        self.assertEqual(res_tree[0].tag, '{%s}zone' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree[1].tag, '{%s}zone' % xmlutil.XMLNS_V10)
-
     def test_get_zone_by_id(self):
-        req = webob.Request.blank('/v1.1/fake/zones/1')
-        req.headers["Content-Type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/1')
+        res_dict = self.controller.show(req, 1)
 
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://example.com')
         self.assertFalse('password' in res_dict['zone'])
 
-    def test_get_zone_by_id_xml(self):
-        req = webob.Request.blank('/v1.1/fake/zones/1.xml')
-        req.headers["Content-Type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app())
-        res_tree = etree.fromstring(res.body)
-
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res_tree.tag, '{%s}zone' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree.get('id'), '1')
-        self.assertEqual(res_tree.get('api_url'), 'http://example.com')
-        self.assertEqual(res_tree.get('password'), None)
-
     def test_zone_delete(self):
-        req = webob.Request.blank('/v1.1/fake/zones/1')
-        req.headers["Content-Type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app())
-
-        self.assertEqual(res.status_int, 200)
+        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/1')
+        self.controller.delete(req, 1)
 
     def test_zone_create(self):
         body = dict(zone=dict(api_url='http://example.com', username='fred',
                         password='fubar'))
-        req = webob.Request.blank('/v1.1/fake/zones')
-        req.headers["Content-Type"] = "application/json"
-        req.method = 'POST'
-        req.body = json.dumps(body)
 
-        res = req.get_response(fakes.wsgi_app())
+        req = fakes.HTTPRequest.blank('/v1.1/fake/zones')
+        res_dict = self.controller.create(req, body)
 
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://example.com')
         self.assertFalse('username' in res_dict['zone'])
-
-    def test_zone_create_xml(self):
-        body = dict(zone=dict(api_url='http://example.com', username='fred',
-                        password='fubar'))
-        req = webob.Request.blank('/v1.1/fake/zones.xml')
-        req.headers["Content-Type"] = "application/json"
-        req.method = 'POST'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-
-        self.assertEqual(res.status_int, 200)
-        res_tree = etree.fromstring(res.body)
-        self.assertEqual(res_tree.tag, '{%s}zone' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree.get('id'), '1')
-        self.assertEqual(res_tree.get('api_url'), 'http://example.com')
-        self.assertEqual(res_tree.get('username'), None)
 
     def test_zone_update(self):
         body = dict(zone=dict(username='zeb', password='sneaky'))
-        req = webob.Request.blank('/v1.1/fake/zones/1')
-        req.headers["Content-Type"] = "application/json"
-        req.method = 'PUT'
-        req.body = json.dumps(body)
 
-        res = req.get_response(fakes.wsgi_app())
+        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/1')
+        res_dict = self.controller.update(req, 1, body)
 
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://example.com')
         self.assertFalse('username' in res_dict['zone'])
-
-    def test_zone_update_xml(self):
-        body = dict(zone=dict(username='zeb', password='sneaky'))
-        req = webob.Request.blank('/v1.1/fake/zones/1.xml')
-        req.headers["Content-Type"] = "application/json"
-        req.method = 'PUT'
-        req.body = json.dumps(body)
-
-        res = req.get_response(fakes.wsgi_app())
-
-        self.assertEqual(res.status_int, 200)
-        res_tree = etree.fromstring(res.body)
-        self.assertEqual(res_tree.tag, '{%s}zone' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree.get('id'), '1')
-        self.assertEqual(res_tree.get('api_url'), 'http://example.com')
-        self.assertEqual(res_tree.get('username'), None)
 
     def test_zone_info(self):
         caps = ['cap1=a;b', 'cap2=c;d']
         self.flags(zone_name='darksecret', zone_capabilities=caps)
         self.stubs.Set(api, '_call_scheduler', zone_capabilities)
 
-        body = dict(zone=dict(username='zeb', password='sneaky'))
-        req = webob.Request.blank('/v1.1/fake/zones/info')
+        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/info')
+        res_dict = self.controller.info(req)
 
-        res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
-        self.assertEqual(res.status_int, 200)
         self.assertEqual(res_dict['zone']['name'], 'darksecret')
         self.assertEqual(res_dict['zone']['cap1'], 'a;b')
         self.assertEqual(res_dict['zone']['cap2'], 'c;d')
-
-    def test_zone_info_xml(self):
-        caps = ['cap1=a;b', 'cap2=c;d']
-        self.flags(zone_name='darksecret', zone_capabilities=caps)
-        self.stubs.Set(api, '_call_scheduler', zone_capabilities)
-
-        body = dict(zone=dict(username='zeb', password='sneaky'))
-        req = webob.Request.blank('/v1.1/fake/zones/info.xml')
-
-        res = req.get_response(fakes.wsgi_app())
-        res_tree = etree.fromstring(res.body)
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res_tree.tag, '{%s}zone' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree.get('name'), 'darksecret')
-        for elem in res_tree:
-            self.assertEqual(elem.tag in ('{%s}cap1' % xmlutil.XMLNS_V10,
-                                          '{%s}cap2' % xmlutil.XMLNS_V10),
-                             True)
-            if elem.tag == '{%s}cap1' % xmlutil.XMLNS_V10:
-                self.assertEqual(elem.text, 'a;b')
-            elif elem.tag == '{%s}cap2' % xmlutil.XMLNS_V10:
-                self.assertEqual(elem.text, 'c;d')
 
     def test_zone_select(self):
         key = 'c286696d887c9aa0611bbb3e2025a45a'
         self.flags(build_plan_encryption_key=key)
         self.stubs.Set(api, 'select', zone_select)
 
-        req = webob.Request.blank('/v1.1/fake/zones/select')
-        req.method = 'POST'
-        req.headers["Content-Type"] = "application/json"
         # Select queries end up being JSON encoded twice.
         # Once to a string and again as an HTTP POST Body
-        req.body = json.dumps(json.dumps({}))
+        body = json.dumps({})
 
-        res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
-        self.assertEqual(res.status_int, 200)
+        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/select')
+        res_dict = self.controller.select(req, body)
 
         self.assertTrue('weights' in res_dict)
 
@@ -317,21 +201,23 @@ class ZonesTest(test.TestCase):
             self.assertEqual(len(item), 2)
             self.assertTrue('weight' in item)
 
-    def test_zone_select_xml(self):
+
+class TestZonesXMLSerializer(test.TestCase):
+
+    serializer = zones.ZonesXMLSerializer()
+
+    def test_select(self):
         key = 'c286696d887c9aa0611bbb3e2025a45a'
-        self.flags(build_plan_encryption_key=key)
-        self.stubs.Set(api, 'select', zone_select)
 
-        req = webob.Request.blank('/v1.1/fake/zones/select.xml')
-        req.method = 'POST'
-        req.headers["Content-Type"] = "application/json"
-        # Select queries end up being JSON encoded twice.
-        # Once to a string and again as an HTTP POST Body
-        req.body = json.dumps(json.dumps({}))
+        encrypt = crypto.encryptor(key)
+        decrypt = crypto.decryptor(key)
 
-        res = req.get_response(fakes.wsgi_app())
-        res_tree = etree.fromstring(res.body)
-        self.assertEqual(res.status_int, 200)
+        item = GLOBAL_BUILD_PLAN[0]
+        fixture = {'weights': {'blob': encrypt(json.dumps(item)),
+                               'weight': item['weight']}}
+
+        output = self.serializer.serialize(fixture, 'select')
+        res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, '{%s}weights' % xmlutil.XMLNS_V10)
 
@@ -345,7 +231,6 @@ class ZonesTest(test.TestCase):
                 elif chld.tag.endswith('weight'):
                     weight = chld.text
 
-            decrypt = crypto.decryptor(FLAGS.build_plan_encryption_key)
             secret_item = json.loads(decrypt(blob))
             found = False
             for original_item in GLOBAL_BUILD_PLAN:
@@ -358,3 +243,41 @@ class ZonesTest(test.TestCase):
             self.assertTrue(found)
             self.assertEqual(len(item), 2)
             self.assertTrue(weight)
+
+    def test_index(self):
+        fixture = {'zones': zone_get_all_scheduler()}
+
+        output = self.serializer.serialize(fixture, 'index')
+        res_tree = etree.XML(output)
+
+        self.assertEqual(res_tree.tag, '{%s}zones' % xmlutil.XMLNS_V10)
+        self.assertEqual(len(res_tree), 2)
+        self.assertEqual(res_tree[0].tag, '{%s}zone' % xmlutil.XMLNS_V10)
+        self.assertEqual(res_tree[1].tag, '{%s}zone' % xmlutil.XMLNS_V10)
+
+    def test_show(self):
+        zone = {'id': 1,
+                'api_url': 'http://example.com',
+                'name': 'darksecret',
+                'cap1': 'a;b',
+                'cap2': 'c;d'}
+        fixture = {'zone': zone}
+
+        output = self.serializer.serialize(fixture, 'show')
+        print repr(output)
+        res_tree = etree.XML(output)
+
+        self.assertEqual(res_tree.tag, '{%s}zone' % xmlutil.XMLNS_V10)
+        self.assertEqual(res_tree.get('id'), '1')
+        self.assertEqual(res_tree.get('api_url'), 'http://example.com')
+        self.assertEqual(res_tree.get('password'), None)
+
+        self.assertEqual(res_tree.get('name'), 'darksecret')
+        for elem in res_tree:
+            self.assertEqual(elem.tag in ('{%s}cap1' % xmlutil.XMLNS_V10,
+                                          '{%s}cap2' % xmlutil.XMLNS_V10),
+                             True)
+            if elem.tag == '{%s}cap1' % xmlutil.XMLNS_V10:
+                self.assertEqual(elem.text, 'a;b')
+            elif elem.tag == '{%s}cap2' % xmlutil.XMLNS_V10:
+                self.assertEqual(elem.text, 'c;d')

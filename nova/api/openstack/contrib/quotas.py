@@ -49,7 +49,7 @@ class QuotaSetsController(object):
             return self._format_quota_set(id,
                                         quota.get_project_quotas(context, id))
         except exception.NotAuthorized:
-            return webob.Response(status_int=403)
+            raise webob.exc.HTTPForbidden()
 
     def update(self, req, id, body):
         context = req.environ['nova.context']
@@ -65,7 +65,7 @@ class QuotaSetsController(object):
                 except exception.ProjectQuotaNotFound:
                     db.quota_create(context, project_id, key, value)
                 except exception.AdminRequired:
-                    return webob.Response(status_int=403)
+                    raise webob.exc.HTTPForbidden()
         return {'quota_set': quota.get_project_quotas(context, project_id)}
 
     def defaults(self, req, id):
