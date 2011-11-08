@@ -202,6 +202,19 @@ class NetworkCommandsTestCase(test.TestCase):
         self.stubs.Set(db, 'network_delete_safe', fake_network_delete_safe)
         self.commands.delete(fixed_range=self.fake_net['cidr'])
 
+    def test_delete_by_cidr(self):
+        self.fake_net = self.net
+        self.fake_net['project_id'] = None
+        self.fake_net['host'] = None
+        self.stubs.Set(db, 'network_get_by_cidr',
+                       self.fake_network_get_by_cidr)
+
+        def fake_network_delete_safe(context, network_id):
+            self.assertTrue(context.to_dict()['is_admin'])
+            self.assertEqual(network_id, self.fake_net['id'])
+        self.stubs.Set(db, 'network_delete_safe', fake_network_delete_safe)
+        self.commands.delete(fixed_range=self.fake_net['cidr'])
+
     def _test_modify_base(self, update_value, project, host, dis_project=None,
                           dis_host=None):
         self.fake_net = self.net

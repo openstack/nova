@@ -100,15 +100,28 @@ class QuantumManager(manager.FlatManager):
         self.ipam.create_subnet(context, label, ipam_tenant_id, quantum_net_id,
                             priority, cidr, gateway_v6, cidr_v6, dns1, dns2)
 
-    def delete_network(self, context, fixed_range):
-        """Lookup network by IPv4 cidr, delete both the IPAM
+    def delete_network(self, context, fixed_range, uuid):
+        """Lookup network by uuid, delete both the IPAM
            subnet and the corresponding Quantum network.
+
+           The fixed_range parameter is kept here for interface compatibility
+           but is not used.
         """
+        quantum_net_id = uuid
         project_id = context.project_id
-        quantum_net_id = self.ipam.get_network_id_by_cidr(
-                                    context, fixed_range, project_id)
+        # TODO(bgh): The project_id isn't getting populated here for some
+        # reason.. I'm not sure if it's an invalid assumption or just a bug.
+        # In order to get the right quantum_net_id we'll have to query all the
+        # project_ids for now.
+        if project_id is None:
+            projects = db.project_get_all(context)
+            for p in projects:
+                if self.q_conn.network_exists(p['id'], uuid):
+                    project_id = p['id']
+                    break
+        LOG.debug("Deleting network for tenant: %s" % project_id)
         self.ipam.delete_subnets_by_net_id(context, quantum_net_id,
-                                                            project_id)
+                project_id)
         q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
         self.q_conn.delete_network(q_tenant_id, quantum_net_id)
 
