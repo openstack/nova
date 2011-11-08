@@ -107,8 +107,17 @@ class LibvirtOpenVswitchDriver(VIFDriver):
         iface_id = mapping['vif_uuid']
         dev = self.get_dev_name(iface_id)
         if not linux_net._device_exists(dev):
-            utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
+            # Older version of the command 'ip' from the iproute2 package
+            # don't have support for the tuntap option (lp:882568).  If it
+            # turns out we're on an old version we work around this by using
+            # tunctl.
+            try:
+                # First, try with 'ip'
+                utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
                           run_as_root=True)
+            except exception.ProcessExecutionError:
+                # Second option: tunctl
+                utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
             utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
         utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
                 FLAGS.libvirt_ovs_bridge, dev,
