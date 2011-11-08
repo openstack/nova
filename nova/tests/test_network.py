@@ -206,7 +206,7 @@ class FlatNetworkTestCase(test.TestCase):
                                               is_admin=True)
         nets = self.network.create_networks(context_admin, 'fake',
                                        '192.168.0.0/24', False, 1,
-                                       256, None, None, None, None )
+                                       256, None, None, None, None)
         self.assertEqual(1, len(nets))
         network = nets[0]
         self.assertEqual(3, db.network_count_reserved_ips(context_admin,

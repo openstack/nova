@@ -45,7 +45,7 @@ from nova.compute import power_state
 from nova.virt import disk
 from nova.virt import images
 from nova.virt.xenapi import HelperBase
-from nova.virt.xenapi.volume_utils import StorageError
+from nova.virt.xenapi import volume_utils
 
 
 LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
@@ -245,7 +245,8 @@ class VMHelper(HelperBase):
                         return vbd_ref
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
-        raise StorageError(_('VBD not found in instance %s') % vm_ref)
+        raise volume_utils.StorageError(
+                _('VBD not found in instance %s') % vm_ref)
 
     @classmethod
     def unplug_vbd(cls, session, vbd_ref):
@@ -255,7 +256,8 @@ class VMHelper(HelperBase):
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
             if exc.details[0] != 'DEVICE_ALREADY_DETACHED':
-                raise StorageError(_('Unable to unplug VBD %s') % vbd_ref)
+                raise volume_utils.StorageError(
+                        _('Unable to unplug VBD %s') % vbd_ref)
 
     @classmethod
     def destroy_vbd(cls, session, vbd_ref):
@@ -265,7 +267,8 @@ class VMHelper(HelperBase):
             session.wait_for_task(task)
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
-            raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
+            raise volume_utils.StorageError(
+                    _('Unable to destroy VBD %s') % vbd_ref)
 
     @classmethod
     def destroy_vdi(cls, session, vdi_ref):
@@ -274,7 +277,8 @@ class VMHelper(HelperBase):
             session.wait_for_task(task)
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
-            raise StorageError(_('Unable to destroy VDI %s') % vdi_ref)
+            raise volume_utils.StorageError(
+                    _('Unable to destroy VDI %s') % vdi_ref)
 
     @classmethod
     def create_vdi(cls, session, sr_ref, name_label, virtual_size, read_only):
@@ -502,8 +506,8 @@ w
                               run_as_root=True)
 
             # 4. Create VBD between instance VM and swap VDI
-            cls.create_vbd(session, vm_ref, vdi_ref, userdevice,
-                           bootable=False)
+            volume_utils.VolumeHelper.create_vbd(
+                    session, vm_ref, vdi_ref, userdevice, bootable=False)
         except:
             with utils.save_and_reraise_exception():
                 cls.destroy_vdi(session, vdi_ref)
@@ -1220,7 +1224,8 @@ def _wait_for_device(dev):
             return
         time.sleep(1)
 
-    raise StorageError(_('Timeout waiting for device %s to be created') % dev)
+    raise volume_utils.StorageError(
+            _('Timeout waiting for device %s to be created') % dev)
 
 
 @contextlib.contextmanager
