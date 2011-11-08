@@ -224,8 +224,6 @@ class Client(object):
                               type(data)))
 
     def deserialize(self, data, status_code):
-        if status_code == 202:
-            return data
         return JSONSerializer().deserialize(data, self.content_type())
 
     def content_type(self, format=None):
