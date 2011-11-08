@@ -477,6 +477,7 @@ class ResponseSerializer(object):
                 request.environ['nova.action'] = action
                 if (hasattr(serializer, 'get_template') and
                     'nova.template' not in request.environ):
+
                     template = serializer.get_template(action)
                     request.environ['nova.template'] = template
             else:
@@ -512,7 +513,6 @@ class LazySerializationMiddleware(wsgi.Middleware):
         # Re-serialize the body
         response.body = serializer.serialize(utils.loads(response.body),
                                              **kwargs)
-
         return response
 
 

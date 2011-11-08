@@ -102,6 +102,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Createserverext",
             "DeferredDelete",
             "DiskConfig",
+            "ExtendedStatus",
             "FlavorExtraSpecs",
             "FlavorExtraData",
             "Floating_ips",
