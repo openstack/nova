@@ -171,9 +171,6 @@ class VMHelper(HelperBase):
             'VCPUs_params': {},
             'xenstore_data': {}}
 
-        if instance_type.get("vcpu_weight"):
-            rec["VCPUs_params"]["weight"] = instance_type["vcpu_weight"]
-
         # Complete VM configuration record according to the image type
         # non-raw/raw with PV kernel/raw in HVM mode
         if use_pv_kernel:

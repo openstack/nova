@@ -443,6 +443,14 @@ class VMOps(object):
             LOG.debug(_("Resetting network"))
             self.reset_network(instance, vm_ref)
 
+        def _set_vcpu_weight():
+            inst_type = db.instance_type_get(ctx, instance.instance_type_id)
+            vcpu_weight = inst_type["vcpu_weight"]
+            if str(vcpu_weight) != "None":
+                LOG.debug(_("Setting VCPU weight"))
+                self._session.call_xenapi("VM.add_to_VCPUs_params", vm_ref,
+                        "weight", vcpu_weight)
+
         # NOTE(armando): Do we really need to do this in virt?
         # NOTE(tr3buchet): not sure but wherever we do it, we need to call
         #                  reset_network afterwards
@@ -458,6 +466,7 @@ class VMOps(object):
                     _inject_files()
                     _set_admin_password()
                     _reset_network()
+                    _set_vcpu_weight()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
