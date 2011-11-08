@@ -23,11 +23,8 @@ is then selected for provisioning.
 """
 
 
-import collections
-
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova import exception
 
 LOG = logging.getLogger('nova.scheduler.least_cost')
@@ -44,9 +41,6 @@ flags.DEFINE_float('noop_cost_fn_weight', 1.0,
              'How much weight to give the noop cost function')
 flags.DEFINE_float('compute_fill_first_cost_fn_weight', 1.0,
              'How much weight to give the fill-first cost function')
-
-
-COST_FUNCTION_CACHE = {}
 
 
 class WeightedHost(object):
@@ -74,36 +68,18 @@ class WeightedHost(object):
         return x
 
 
-def noop_cost_fn(host_info):
+def noop_cost_fn(host_info, options=None):
     """Return a pre-weight cost of 1 for each host"""
     return 1
 
 
-def compute_fill_first_cost_fn(host_info):
+def compute_fill_first_cost_fn(host_info, options=None):
     """More free ram = higher weight. So servers will less free
     ram will be preferred."""
     return host_info.free_ram_mb
 
 
-def normalize_grid(grid):
-    """Normalize a grid of numbers by row."""
-    if not grid:
-        return [[]]
-
-    normalized = []
-    for row in grid:
-        if not row:
-            normalized.append([])
-            continue
-        mx = float(max(row))
-        if abs(mx) < 0.001:
-            normalized = [0.0] * len(row)
-            continue
-        normalized.append([float(col) / mx for col in row])
-    return normalized
-
-
-def weighted_sum(host_list, weighted_fns):
+def weighted_sum(weighted_fns, host_list, options):
     """Use the weighted-sum method to compute a score for an array of objects.
     Normalize the results of the objective-functions so that the weights are
     meaningful regardless of objective-function's range.
@@ -111,6 +87,7 @@ def weighted_sum(host_list, weighted_fns):
     host_list - [(host, HostInfo()), ...]
     weighted_fns - list of weights and functions like:
         [(weight, objective-functions), ...]
+    options is an arbitrary dict of values.
 
     Returns a single WeightedHost object which represents the best
     candidate.
@@ -120,8 +97,8 @@ def weighted_sum(host_list, weighted_fns):
     # One row per host. One column per function.
     scores = []
     for weight, fn in weighted_fns:
-        scores.append([fn(host_info) for hostname, host_info in host_list])
-    scores = normalize_grid(scores)
+        scores.append([fn(host_info, options) for hostname, host_info
+                                                                in host_list])
 
     # Adjust the weights in the grid by the functions weight adjustment
     # and sum them up to get a final list of weights.
@@ -143,54 +120,3 @@ def weighted_sum(host_list, weighted_fns):
     final_scores = sorted(final_scores)
     weight, (host, hostinfo) = final_scores[0]  # Lowest score is the winner!
     return WeightedHost(weight, host=host, hostinfo=hostinfo)
-
-
-def get_cost_fns(topic=None):
-    """Returns a list of tuples containing weights and cost functions to
-    use for weighing hosts
-    """
-    global COST_FUNCTION_CACHE
-    cost_function_cache = COST_FUNCTION_CACHE
-
-    if topic is None:
-        # Schedulers only support compute right now.
-        topic = "compute"
-    if topic in cost_function_cache:
-        return cost_function_cache[topic]
-
-    cost_fns = []
-    for cost_fn_str in FLAGS.least_cost_functions:
-        if '.' in cost_fn_str:
-            short_name = cost_fn_str.split('.')[-1]
-        else:
-            short_name = cost_fn_str
-            cost_fn_str = "%s.%s.%s" % (
-                    __name__, self.__class__.__name__, short_name)
-        if not (short_name.startswith('%s_' % topic) or
-                short_name.startswith('noop')):
-            continue
-
-        try:
-            # NOTE(sirp): import_class is somewhat misnamed since it can
-            # any callable from a module
-            cost_fn = utils.import_class(cost_fn_str)
-        except exception.ClassNotFound:
-            raise exception.SchedulerCostFunctionNotFound(
-                    cost_fn_str=cost_fn_str)
-
-        try:
-            flag_name = "%s_weight" % cost_fn.__name__
-            weight = getattr(FLAGS, flag_name)
-        except AttributeError:
-            raise exception.SchedulerWeightFlagNotFound(
-                    flag_name=flag_name)
-        cost_fns.append((weight, cost_fn))
-
-    cost_function_cache[topic] = cost_fns
-    return cost_fns
-
-
-def weigh_hosts(request_spec, host_list):
-    """Returns the best host as a WeightedHost."""
-    cost_fns = get_cost_fns()
-    return weighted_sum(host_list, cost_fns)

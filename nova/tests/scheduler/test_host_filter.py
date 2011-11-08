@@ -122,7 +122,7 @@ class HostFilterTestCase(test.TestCase):
         hf = hfs[0]
         all_hosts = self._get_all_hosts()
         cooked = hf.instance_type_to_filter(self.instance_type)
-        hosts = hf.filter_hosts(all_hosts, cooked)
+        hosts = hf.filter_hosts(all_hosts, cooked, {})
         self.assertEquals(4, len(hosts))
         for host, capabilities in hosts:
             self.assertTrue(host.startswith('host'))
@@ -132,7 +132,7 @@ class HostFilterTestCase(test.TestCase):
         # filter all hosts that can support 30 ram and 300 disk
         cooked = hf.instance_type_to_filter(self.instance_type)
         all_hosts = self._get_all_hosts()
-        hosts = hf.filter_hosts(all_hosts, cooked)
+        hosts = hf.filter_hosts(all_hosts, cooked, {})
         self.assertEquals(3, len(hosts))
         just_hosts = [host for host, hostinfo in hosts]
         just_hosts.sort()
@@ -147,7 +147,7 @@ class HostFilterTestCase(test.TestCase):
         # reserving 2048 ram
         cooked = hf.instance_type_to_filter(self.instance_type)
         all_hosts = self._get_all_hosts()
-        hosts = hf.filter_hosts(all_hosts, cooked)
+        hosts = hf.filter_hosts(all_hosts, cooked, {})
         self.assertEquals(2, len(hosts))
         just_hosts = [host for host, hostinfo in hosts]
         just_hosts.sort()
@@ -159,7 +159,7 @@ class HostFilterTestCase(test.TestCase):
         # filter all hosts that can support 30 ram and 300 disk
         cooked = hf.instance_type_to_filter(self.gpu_instance_type)
         all_hosts = self._get_all_hosts()
-        hosts = hf.filter_hosts(all_hosts, cooked)
+        hosts = hf.filter_hosts(all_hosts, cooked, {})
         self.assertEquals(1, len(hosts))
         just_hosts = [host for host, caps in hosts]
         self.assertEquals('host4', just_hosts[0])
@@ -169,7 +169,7 @@ class HostFilterTestCase(test.TestCase):
         # filter all hosts that can support 30 ram and 300 disk
         cooked = hf.instance_type_to_filter(self.instance_type)
         all_hosts = self._get_all_hosts()
-        hosts = hf.filter_hosts(all_hosts, cooked)
+        hosts = hf.filter_hosts(all_hosts, cooked, {})
         self.assertEquals(2, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()
@@ -189,7 +189,7 @@ class HostFilterTestCase(test.TestCase):
                    ]
               ]
         cooked = json.dumps(raw)
-        hosts = hf.filter_hosts(all_hosts, cooked)
+        hosts = hf.filter_hosts(all_hosts, cooked, {})
 
         self.assertEquals(3, len(hosts))
         just_hosts = [host for host, caps in hosts]
@@ -201,7 +201,7 @@ class HostFilterTestCase(test.TestCase):
                   ['=', '$compute.host_memory_free', 30],
               ]
         cooked = json.dumps(raw)
-        hosts = hf.filter_hosts(all_hosts, cooked)
+        hosts = hf.filter_hosts(all_hosts, cooked, {})
 
         self.assertEquals(3, len(hosts))
         just_hosts = [host for host, caps in hosts]
@@ -211,7 +211,7 @@ class HostFilterTestCase(test.TestCase):
 
         raw = ['in', '$compute.host_memory_free', 20, 40, 60, 80, 100]
         cooked = json.dumps(raw)
-        hosts = hf.filter_hosts(all_hosts, cooked)
+        hosts = hf.filter_hosts(all_hosts, cooked, {})
         self.assertEquals(2, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()
@@ -222,32 +222,32 @@ class HostFilterTestCase(test.TestCase):
         raw = ['unknown command', ]
         cooked = json.dumps(raw)
         try:
-            hf.filter_hosts(all_hosts, cooked)
+            hf.filter_hosts(all_hosts, cooked, {})
             self.fail("Should give KeyError")
         except KeyError, e:
             pass
 
-        self.assertTrue(hf.filter_hosts(all_hosts, json.dumps([])))
-        self.assertTrue(hf.filter_hosts(all_hosts, json.dumps({})))
+        self.assertTrue(hf.filter_hosts(all_hosts, json.dumps([]), {}))
+        self.assertTrue(hf.filter_hosts(all_hosts, json.dumps({}), {}))
         self.assertTrue(hf.filter_hosts(all_hosts, json.dumps(
                 ['not', True, False, True, False],
-            )))
+            ), {}))
 
         try:
             hf.filter_hosts(all_hosts, json.dumps(
-                'not', True, False, True, False,
-            ))
+                'not', True, False, True, False,), {})
             self.fail("Should give KeyError")
         except KeyError, e:
             pass
 
         self.assertFalse(hf.filter_hosts(all_hosts,
-                json.dumps(['=', '$foo', 100])))
+                json.dumps(['=', '$foo', 100]), {}))
         self.assertFalse(hf.filter_hosts(all_hosts,
-                json.dumps(['=', '$.....', 100])))
+                json.dumps(['=', '$.....', 100]), {}))
         self.assertFalse(hf.filter_hosts(all_hosts,
                 json.dumps(
-            ['>', ['and', ['or', ['not', ['<', ['>=', ['<=', ['in', ]]]]]]]])))
+            ['>', ['and', ['or', ['not', ['<', ['>=', ['<=', ['in', ]]]]]]]]),
+                                                                        {}))
 
         self.assertFalse(hf.filter_hosts(all_hosts,
-                json.dumps(['=', {}, ['>', '$missing....foo']])))
+                json.dumps(['=', {}, ['>', '$missing....foo']]), {}))

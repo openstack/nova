@@ -21,11 +21,11 @@ from nova import test
 from nova.tests.scheduler import fake_zone_manager
 
 
-def offset(hostinfo):
+def offset(hostinfo, options):
     return hostinfo.free_ram_mb + 10000
 
 
-def scale(hostinfo):
+def scale(hostinfo, options):
     return hostinfo.free_ram_mb * 2
 
 
@@ -38,23 +38,6 @@ class LeastCostTestCase(test.TestCase):
 
     def tearDown(self):
         super(LeastCostTestCase, self).tearDown()
-
-    def test_normalize_grid(self):
-        raw = [
-            [1, 2, 3, 4, 5],
-            [10, 20, 30, 40, 50],
-            [100, 200, 300, 400, 500],
-        ]
-        expected = [
-            [.2, .4, .6, .8, 1.0],
-            [.2, .4, .6, .8, 1.0],
-            [.2, .4, .6, .8, 1.0],
-        ]
-
-        self.assertEquals(expected, least_cost.normalize_grid(raw))
-
-        self.assertEquals([[]], least_cost.normalize_grid([]))
-        self.assertEquals([[]], least_cost.normalize_grid([[]]))
 
     def test_weighted_sum_happy_day(self):
         fn_tuples = [(1.0, offset), (1.0, scale)]
@@ -69,16 +52,14 @@ class LeastCostTestCase(test.TestCase):
         # [10000, 11536, 13072, 18192]
         # [0,  768, 1536, 4096]
 
-        # normalized =
-        # [ 0.55, 0.63, 0.72, 1.0]
-        # [ 0.0, 0.19, 0.38, 1.0]
-
         # adjusted [ 1.0 * x + 1.0 * y] =
-        # [0.55, 0.82, 1.1, 2.0]
+        # [10000, 12304, 14608, 22288]
 
         # so, host1 should win:
-        weighted_host = least_cost.weighted_sum(hostinfo_list, fn_tuples)
-        self.assertTrue(abs(weighted_host.weight - 0.55) < 0.01)
+        options = {}
+        weighted_host = least_cost.weighted_sum(fn_tuples, hostinfo_list,
+                                                                    options)
+        self.assertEqual(weighted_host.weight, 10000)
         self.assertEqual(weighted_host.host, 'host1')
 
     def test_weighted_sum_single_function(self):
@@ -93,18 +74,9 @@ class LeastCostTestCase(test.TestCase):
         # [offset, ]=
         # [10000, 11536, 13072, 18192]
 
-        # normalized =
-        # [ 0.55, 0.63, 0.72, 1.0]
-
         # so, host1 should win:
-        weighted_host = least_cost.weighted_sum(hostinfo_list, fn_tuples)
-        self.assertTrue(abs(weighted_host.weight - 0.55) < 0.01)
+        options = {}
+        weighted_host = least_cost.weighted_sum(fn_tuples, hostinfo_list,
+                                                                    options)
+        self.assertEqual(weighted_host.weight, 10000)
         self.assertEqual(weighted_host.host, 'host1')
-
-    def test_get_cost_functions(self):
-        fns = least_cost.get_cost_fns()
-        self.assertEquals(len(fns), 1)
-        weight, fn = fns[0]
-        self.assertEquals(weight, 1.0)
-        hostinfo = zone_manager.HostInfo('host', free_ram_mb=1000)
-        self.assertEquals(1000, fn(hostinfo))
