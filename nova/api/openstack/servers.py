@@ -583,8 +583,10 @@ class Controller(object):
         return resp
 
     def _action_confirm_resize(self, input_dict, req, id):
+        context = req.environ['nova.context']
+        instance = self._get_server(context, id)
         try:
-            self.compute_api.confirm_resize(req.environ['nova.context'], id)
+            self.compute_api.confirm_resize(context, instance)
         except exception.MigrationNotFound:
             msg = _("Instance has not been resized.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -594,8 +596,10 @@ class Controller(object):
         return exc.HTTPNoContent()
 
     def _action_revert_resize(self, input_dict, req, id):
+        context = req.environ['nova.context']
+        instance = self._get_server(context, id)
         try:
-            self.compute_api.revert_resize(req.environ['nova.context'], id)
+            self.compute_api.revert_resize(context, instance)
         except exception.MigrationNotFound:
             msg = _("Instance has not been resized.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -651,9 +655,10 @@ class Controller(object):
     def _resize(self, req, instance_id, flavor_id):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
+        instance = self._get_server(context, instance_id)
 
         try:
-            self.compute_api.resize(context, instance_id, flavor_id)
+            self.compute_api.resize(context, instance, flavor_id)
         except exception.FlavorNotFound:
             msg = _("Unable to locate requested flavor.")
             raise exc.HTTPBadRequest(explanation=msg)

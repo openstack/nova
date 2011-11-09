@@ -763,14 +763,48 @@ class ComputeTestCase(test.TestCase):
                 migration_ref['id'])
         self.compute.terminate_instance(context, instance_id)
 
+    def test_resize_confirm_through_api(self):
+        """Ensure invalid flavors raise"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+        instance = db.instance_get(context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
+        self.compute_api.resize(context, instance, '4')
+
+        # create a fake migration record (manager does this)
+        migration_ref = db.migration_create(context,
+                {'instance_uuid': instance['uuid'],
+                 'status': 'finished'})
+
+        self.compute_api.confirm_resize(context, instance)
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_revert_through_api(self):
+        """Ensure invalid flavors raise"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+        instance = db.instance_get(context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
+
+        self.compute_api.resize(context, instance, '4')
+
+        # create a fake migration record (manager does this)
+        migration_ref = db.migration_create(context,
+                {'instance_uuid': instance['uuid'],
+                 'status': 'finished'})
+
+        self.compute_api.revert_resize(context, instance)
+        self.compute.terminate_instance(context, instance_id)
+
     def test_resize_invalid_flavor_fails(self):
         """Ensure invalid flavors raise"""
         instance_id = self._create_instance()
         context = self.context.elevated()
+        instance = db.instance_get(context, instance_id)
         self.compute.run_instance(self.context, instance_id)
 
         self.assertRaises(exception.NotFound, self.compute_api.resize,
-                context, instance_id, 200)
+                context, instance, 200)
 
         self.compute.terminate_instance(context, instance_id)
 
@@ -784,8 +818,9 @@ class ComputeTestCase(test.TestCase):
         db.instance_update(self.context, instance_id,
                 {'instance_type_id': inst_type['id']})
 
+        instance = db.instance_get(context, instance_id)
         self.assertRaises(exception.CannotResizeToSmallerSize,
-                          self.compute_api.resize, context, instance_id, 1)
+                          self.compute_api.resize, context, instance, 1)
 
         self.compute.terminate_instance(context, instance_id)
 
@@ -793,11 +828,12 @@ class ComputeTestCase(test.TestCase):
         """Ensure invalid flavors raise"""
         context = self.context.elevated()
         instance_id = self._create_instance()
+        instance = db.instance_get(context, instance_id)
 
         self.compute.run_instance(self.context, instance_id)
 
         self.assertRaises(exception.CannotResizeToSameSize,
-                          self.compute_api.resize, context, instance_id, 1)
+                          self.compute_api.resize, context, instance, 1)
 
         self.compute.terminate_instance(context, instance_id)
 
@@ -895,9 +931,10 @@ class ComputeTestCase(test.TestCase):
     def test_migrate(self):
         context = self.context.elevated()
         instance_id = self._create_instance()
+        instance = db.instance_get(context, instance_id)
         self.compute.run_instance(self.context, instance_id)
         # Migrate simply calls resize() without a flavor_id.
-        self.compute_api.resize(context, instance_id, None)
+        self.compute_api.resize(context, instance, None)
         self.compute.terminate_instance(context, instance_id)
 
     def _setup_other_managers(self):
