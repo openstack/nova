@@ -1458,7 +1458,10 @@ class CloudController(object):
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
-        self._do_instances(self.compute_api.reboot, context, instance_id)
+        for ec2_id in instance_id:
+            _instance_id = ec2utils.ec2_id_to_id(ec2_id)
+            instance = self.compute_api.get(context, _instance_id)
+            self.compute_api.reboot(context, instance, 'HARD')
         return True
 
     def stop_instances(self, context, instance_id, **kwargs):

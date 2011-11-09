@@ -30,6 +30,10 @@ def return_server_by_uuid(context, uuid):
     return stub_instance(1, uuid=uuid)
 
 
+def return_server_by_uuid_not_found(context, uuid):
+    raise exception.NotFound()
+
+
 def instance_update(context, instance_id, kwargs):
     return stub_instance(instance_id)
 
@@ -205,27 +209,36 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
-    def test_server_reboot_hard(self):
+    def test_reboot_hard(self):
         body = dict(reboot=dict(type="HARD"))
         req = fakes.HTTPRequest.blank(self.url)
         self.controller.action(req, FAKE_UUID, body)
 
-    def test_server_reboot_soft(self):
+    def test_reboot_soft(self):
         body = dict(reboot=dict(type="SOFT"))
         req = fakes.HTTPRequest.blank(self.url)
         self.controller.action(req, FAKE_UUID, body)
 
-    def test_server_reboot_incorrect_type(self):
+    def test_reboot_incorrect_type(self):
         body = dict(reboot=dict(type="NOT_A_TYPE"))
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
-    def test_server_reboot_missing_type(self):
+    def test_reboot_missing_type(self):
         body = dict(reboot=dict())
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
+
+    def test_reboot_not_found(self):
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_by_uuid_not_found)
+
+        body = dict(reboot=dict(type="HARD"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.action,
+                          req, str(utils.gen_uuid()), body)
 
     def test_server_rebuild_accepted_minimum(self):
         new_return_server = return_server_with_attributes(image_ref='2')

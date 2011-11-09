@@ -142,6 +142,13 @@ class Controller(object):
         limited_list = self._limit_items(instance_list, req)
         return self._build_list(req, limited_list, is_detail=is_detail)
 
+    def _get_server(self, context, instance_uuid):
+        """Utility function for looking up an instance by uuid"""
+        try:
+            return self.compute_api.get(context, instance_uuid)
+        except exception.NotFound:
+            raise exc.HTTPNotFound()
+
     def _handle_quota_error(self, error):
         """
         Reraise quota errors as api-specific http exceptions
@@ -609,9 +616,12 @@ class Controller(object):
             msg = _("Missing argument 'type' for reboot")
             LOG.exception(msg)
             raise exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ['nova.context']
+        instance = self._get_server(context, id)
+
         try:
-            self.compute_api.reboot(req.environ['nova.context'], id,
-                    reboot_type)
+            self.compute_api.reboot(context, instance, reboot_type)
         except Exception, e:
             LOG.exception(_("Error in reboot %s"), e)
             raise exc.HTTPUnprocessableEntity()

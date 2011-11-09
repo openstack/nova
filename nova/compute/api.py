@@ -1178,15 +1178,15 @@ class API(base.Base):
         return recv_meta
 
     @scheduler_api.reroute_compute("reboot")
-    def reboot(self, context, instance_id, reboot_type):
+    def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
         self.update(context,
-                    instance_id,
+                    instance['id'],
                     vm_state=vm_states.ACTIVE,
                     task_state=state)
-        self._cast_compute_message('reboot_instance', context, instance_id,
+        self._cast_compute_message('reboot_instance', context, instance['id'],
                 params={'reboot_type': reboot_type})
 
     @scheduler_api.reroute_compute("rebuild")

@@ -343,7 +343,7 @@ class ComputeTestCase(test.TestCase):
         self.compute.resume_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
-    def test_soft_reboot_api(self):
+    def test_reboot_soft_api(self):
         """Ensure instance can be soft rebooted"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
@@ -352,14 +352,14 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(inst_ref['task_state'], None)
 
         reboot_type = "SOFT"
-        self.compute_api.reboot(self.context, instance_id, reboot_type)
+        self.compute_api.reboot(self.context, inst_ref, reboot_type)
 
         inst_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(inst_ref['task_state'], task_states.REBOOTING)
 
         db.instance_destroy(self.context, instance_id)
 
-    def test_soft_reboot(self):
+    def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
@@ -375,7 +375,7 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(self.context, instance_id)
 
-    def test_hard_reboot_api(self):
+    def test_reboot_hard_api(self):
         """Ensure instance can be hard rebooted"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
@@ -384,14 +384,14 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(inst_ref['task_state'], None)
 
         reboot_type = "HARD"
-        self.compute_api.reboot(self.context, instance_id, reboot_type)
+        self.compute_api.reboot(self.context, inst_ref, reboot_type)
 
         inst_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(inst_ref['task_state'], task_states.REBOOTING_HARD)
 
         db.instance_destroy(self.context, instance_id)
 
-    def test_hard_reboot(self):
+    def test_reboot_hard(self):
         """Ensure instance can be hard rebooted"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
