@@ -87,7 +87,7 @@ class Controller(object):
 
     def _get_block_device_mapping(self, data):
         """Get block_device_mapping from 'server' dictionary.
-        Overidden by volumes controller.
+        Overridden by volumes controller.
         """
         return None
 

@@ -36,7 +36,7 @@ class EC2Manager(manager.Manager):
     def init_host(self):
         """Perform any initialization.
 
-        Currently, we only add an iptables filter rule for the metadta
+        Currently, we only add an iptables filter rule for the metadata
         service.
         """
         self.network_driver.metadata_accept()

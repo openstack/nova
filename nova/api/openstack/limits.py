@@ -109,7 +109,7 @@ def create_resource():
 
 class Limit(object):
     """
-    Stores information about a limit for HTTP requets.
+    Stores information about a limit for HTTP requests.
     """
 
     UNITS = {
