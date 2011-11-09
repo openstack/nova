@@ -51,34 +51,6 @@ flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
 
 
-def generate_default_hostname(instance):
-    """Default function to generate a hostname given an instance reference."""
-    display_name = instance['display_name']
-    if display_name is None:
-        return 'server-%d' % (instance['id'],)
-    table = ''
-    deletions = ''
-    for i in xrange(256):
-        c = chr(i)
-        if ('a' <= c <= 'z') or ('0' <= c <= '9') or (c == '-'):
-            table += c
-        elif c in " _":
-            table += '-'
-        elif ('A' <= c <= 'Z'):
-            table += c.lower()
-        else:
-            table += '\0'
-            deletions += c
-    if isinstance(display_name, unicode):
-        display_name = display_name.encode('latin-1', 'ignore')
-    return display_name.translate(table, deletions)
-
-
-def generate_default_display_name(instance):
-    """Generate a default display name"""
-    return 'Server %s' % instance['id']
-
-
 def _is_able_to_shutdown(instance):
     vm_state = instance["vm_state"]
     instance_id = instance["id"]
@@ -115,8 +87,7 @@ def _is_queued_delete(instance):
 class API(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, image_service=None, network_api=None,
-                 volume_api=None, hostname_factory=generate_default_hostname,
+    def __init__(self, image_service=None, network_api=None, volume_api=None,
                  **kwargs):
         self.image_service = image_service or \
                 nova.image.get_default_image_service()
@@ -127,7 +98,6 @@ class API(base.Base):
         if not volume_api:
             volume_api = volume.API()
         self.volume_api = volume_api
-        self.hostname_factory = hostname_factory
         super(API, self).__init__(**kwargs)
 
     def _check_injected_file_quota(self, context, injected_files):
@@ -489,16 +459,25 @@ class API(base.Base):
 
         # Set sane defaults if not specified
         updates = {}
-        if (not hasattr(instance, 'display_name') or
-                instance.display_name is None):
-            updates['display_name'] = generate_default_display_name(instance)
-            instance['display_name'] = updates['display_name']
-        updates['hostname'] = self.hostname_factory(instance)
+
+        display_name = instance.get('display_name')
+        if display_name is None:
+            display_name = self._default_display_name(instance_id)
+
+        hostname = instance.get('hostname')
+        if hostname is None:
+            hostname = display_name
+
+        updates['display_name'] = display_name
+        updates['hostname'] = utils.sanitize_hostname(hostname)
         updates['vm_state'] = vm_states.BUILDING
         updates['task_state'] = task_states.SCHEDULING
 
         instance = self.update(context, instance_id, **updates)
         return instance
+
+    def _default_display_name(self, instance_id):
+        return "Server %s" % instance_id
 
     def _schedule_run_instance(self,
             rpc_method,
@@ -783,6 +762,17 @@ class API(base.Base):
 
         :returns: None
         """
+        display_name = kwargs.get('display_name')
+        if display_name is None:
+            display_name = self._default_display_name(instance_id)
+
+        hostname = kwargs.get('hostname')
+        if hostname is None:
+            hostname = display_name
+
+        kwargs['display_name'] = display_name
+        kwargs['hostname'] = utils.sanitize_hostname(hostname)
+
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 

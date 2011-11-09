@@ -1237,6 +1237,30 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance_id)
 
+    def test_hostname_create(self):
+        """Ensure instance hostname is set during creation."""
+        inst_type = instance_types.get_instance_type_by_name('m1.tiny')
+        (instances, _) = self.compute_api.create(self.context,
+                                                 inst_type,
+                                                 None,
+                                                 display_name='test host')
+
+        self.assertEqual('test-host', instances[0]['hostname'])
+
+    def test_hostname_update(self):
+        """Ensure instance hostname is set during an update."""
+        instance_id = self._create_instance({"display_name": "test host"})
+        instance = db.instance_get(self.context, instance_id)
+
+        expected_hostname = 'test-host'
+        actual = self.compute_api.update(self.context,
+                                         instance_id,
+                                         **dict(instance))
+
+        self.assertEqual(expected_hostname, actual['hostname'])
+
+        db.instance_destroy(self.context, instance_id)
+
     def test_set_admin_password(self):
         """Ensure instance can have its admin password set"""
         instance_id = self._create_instance()
