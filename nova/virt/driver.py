@@ -87,9 +87,9 @@ class ComputeDriver(object):
     virtual network interface, and these IDs are opaque to the rest of Nova.
 
     Some methods here take an instance of nova.compute.service.Instance.  This
-    is the datastructure used by nova.compute to store details regarding an
+    is the data structure used by nova.compute to store details regarding an
     instance, and pass them into this layer.  This layer is responsible for
-    translating that generic datastructure into terms that are specific to the
+    translating that generic data structure into terms that are specific to the
     virtualization platform.
 
     """
@@ -365,7 +365,7 @@ class ComputeDriver(object):
         This message is sent to the virtualization drivers on hosts that are
         running an instance that belongs to a security group that has a rule
         that references the security group identified by `security_group_id`.
-        It is the responsiblity of this method to make sure any rules
+        It is the responsibility of this method to make sure any rules
         that authorize traffic flow with members of the security group are
         updated and any new members can communicate, and any removed members
         cannot.

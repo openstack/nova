@@ -99,7 +99,7 @@ class AuthBase(object):
 
         This method will return the id of the object if the object
         is of this class, otherwise it will return the original object.
-        This allows methods to accept objects or ids as paramaters.
+        This allows methods to accept objects or ids as parameters.
         """
         if isinstance(obj, cls):
             return obj.id
@@ -692,7 +692,7 @@ class AuthManager(object):
 
         @type admin: bool
         @param admin: Whether to set the admin flag. The admin flag gives
-        superuser status regardless of roles specifed for the user.
+        superuser status regardless of roles specified for the user.
 
         @type create_project: bool
         @param: Whether to create a project for the user with the same name.

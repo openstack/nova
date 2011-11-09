@@ -1470,7 +1470,7 @@ class API(base.Base):
                            'host': output['host'],
                            'port': output['port']}})
 
-        # hostignore and portignore are compatability params for noVNC
+        # hostignore and portignore are compatibility params for noVNC
         return {'url': '%s/vnc_auto.html?token=%s&host=%s&port=%s' % (
                        FLAGS.vncproxy_url,
                        output['token'],
@@ -1542,7 +1542,8 @@ class API(base.Base):
 
         # TODO(tr3buchet): currently network_info doesn't contain floating IPs
         # in its info, if this changes, the next few lines will need to
-        # accomodate the info containing floating as well as fixed ip addresses
+        # accommodate the info containing floating as well as fixed ip
+        # addresses
         fixed_ip_addrs = []
         for info in self.network_api.get_instance_nw_info(context,
                                                           instance):

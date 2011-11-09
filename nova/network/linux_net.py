@@ -218,14 +218,14 @@ class IptablesManager(object):
     intended for rules that need to live at the top of the FORWARD and OUTPUT
     chains. It's in both the ipv4 and ipv6 set of tables.
 
-    For ipv4 and ipv6, the builtin INPUT, OUTPUT, and FORWARD filter chains are
-    wrapped, meaning that the "real" INPUT chain has a rule that jumps to the
-    wrapped INPUT chain, etc. Additionally, there's a wrapped chain named
+    For ipv4 and ipv6, the built-in INPUT, OUTPUT, and FORWARD filter chains
+    are wrapped, meaning that the "real" INPUT chain has a rule that jumps to
+    the wrapped INPUT chain, etc. Additionally, there's a wrapped chain named
     "local" which is jumped to from nova-filter-top.
 
-    For ipv4, the builtin PREROUTING, OUTPUT, and POSTROUTING nat chains are
-    wrapped in the same was as the builtin filter chains. Additionally, there's
-    a snat chain that is applied after the POSTROUTING chain.
+    For ipv4, the built-in PREROUTING, OUTPUT, and POSTROUTING nat chains are
+    wrapped in the same was as the built-in filter chains. Additionally,
+    there's a snat chain that is applied after the POSTROUTING chain.
 
     """
 
@@ -253,7 +253,7 @@ class IptablesManager(object):
             tables['filter'].add_rule('nova-filter-top', '-j $local',
                                       wrap=False)
 
-        # Wrap the builtin chains
+        # Wrap the built-in chains
         builtin_chains = {4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
                               'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']},
                           6: {'filter': ['INPUT', 'OUTPUT', 'FORWARD']}}
@@ -364,7 +364,7 @@ class IptablesManager(object):
                 return True
 
         # We filter duplicates, letting the *last* occurrence take
-        # precendence.
+        # precedence.
         new_filter.reverse()
         new_filter = filter(_weed_out_duplicates, new_filter)
         new_filter.reverse()

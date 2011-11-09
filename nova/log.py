@@ -131,7 +131,7 @@ def _get_log_file_path(binary=None):
 class NovaLogger(logging.Logger):
     """NovaLogger manages request context and formatting.
 
-    This becomes the class that is instanciated by logging.getLogger.
+    This becomes the class that is instantiated by logging.getLogger.
 
     """
 
@@ -323,7 +323,7 @@ logging.setLoggerClass(NovaLogger)
 
 
 def audit(msg, *args, **kwargs):
-    """Shortcut for logging to root log with sevrity 'AUDIT'."""
+    """Shortcut for logging to root log with severity 'AUDIT'."""
     logging.root.log(AUDIT, msg, *args, **kwargs)
 
 

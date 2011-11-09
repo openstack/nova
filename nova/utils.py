@@ -872,7 +872,7 @@ def gen_uuid():
 
 
 def is_uuid_like(val):
-    """For our purposes, a UUID is a string in canoical form:
+    """For our purposes, a UUID is a string in canonical form:
 
         aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
     """
@@ -910,7 +910,7 @@ def is_valid_ipv4(address):
 
 def monkey_patch():
     """  If the Flags.monkey_patch set as True,
-    this functuion patches a decorator
+    this function patches a decorator
     for all functions in specified modules.
     You can set decorators for each modules
     using FLAGS.monkey_patch_modules.

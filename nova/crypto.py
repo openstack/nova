@@ -52,7 +52,7 @@ flags.DEFINE_string('key_file',
                     os.path.join('private', 'cakey.pem'),
                     _('Filename of private key'))
 flags.DEFINE_string('crl_file', 'crl.pem',
-                    _('Filename of root Certificate Revokation List'))
+                    _('Filename of root Certificate Revocation List'))
 flags.DEFINE_string('keys_path', '$state_path/keys',
                     _('Where we keep our keys'))
 flags.DEFINE_string('ca_path', '$state_path/CA',

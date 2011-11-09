@@ -124,7 +124,7 @@ def require_context(f):
 def require_instance_exists(f):
     """Decorator to require the specified instance to exist.
 
-    Requres the wrapped function to use context and instance_id as
+    Requires the wrapped function to use context and instance_id as
     their first two arguments.
     """
 
@@ -138,7 +138,7 @@ def require_instance_exists(f):
 def require_volume_exists(f):
     """Decorator to require the specified volume to exist.
 
-    Requres the wrapped function to use context and volume_id as
+    Requires the wrapped function to use context and volume_id as
     their first two arguments.
     """
 
@@ -947,7 +947,7 @@ def fixed_ip_update(context, address, values):
 
 @require_context
 def virtual_interface_create(context, values):
-    """Create a new virtual interface record in teh database.
+    """Create a new virtual interface record in the database.
 
     :param values: = dict containing column values
     """
@@ -1043,7 +1043,7 @@ def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
 def virtual_interface_get_by_instance(context, instance_id):
     """Gets all virtual interfaces for instance.
 
-    :param instance_id: = id of the instance to retreive vifs for
+    :param instance_id: = id of the instance to retrieve vifs for
     """
     session = get_session()
     vif_refs = session.query(models.VirtualInterface).\
@@ -1072,7 +1072,7 @@ def virtual_interface_get_by_instance_and_network(context, instance_id,
 def virtual_interface_get_by_network(context, network_id):
     """Gets all virtual_interface on network.
 
-    :param network_id: = network to retreive vifs for
+    :param network_id: = network to retrieve vifs for
     """
     session = get_session()
     vif_refs = session.query(models.VirtualInterface).\
@@ -1085,7 +1085,7 @@ def virtual_interface_get_by_network(context, network_id):
 
 @require_context
 def virtual_interface_delete(context, vif_id):
-    """Delete virtual interface record from teh database.
+    """Delete virtual interface record from the database.
 
     :param vif_id: = id of vif to delete
     """
@@ -1724,7 +1724,7 @@ def network_associate(context, project_id, force=False):
     or if force is True
 
     force solves race condition where a fresh project has multiple instance
-    builds simultaneosly picked up by multiple network hosts which attempt
+    builds simultaneously picked up by multiple network hosts which attempt
     to associate the project with multiple networks
     force should only be used as a direct consequence of user request
     all automated requests should not use force
@@ -1744,7 +1744,7 @@ def network_associate(context, project_id, force=False):
             network_ref = network_query(project_id)
 
         if force or not network_ref:
-            # in force mode or project doesn't have a network so assocaite
+            # in force mode or project doesn't have a network so associate
             # with a new network
 
             # get new network
