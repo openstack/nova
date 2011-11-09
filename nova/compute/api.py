@@ -1226,69 +1226,64 @@ class API(base.Base):
                                    params=rebuild_params)
 
     @scheduler_api.reroute_compute("revert_resize")
-    def revert_resize(self, context, instance_id):
+    def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
-        instance_ref = self._get_instance(context, instance_id,
-                'revert_resize')
         migration_ref = self.db.migration_get_by_instance_and_status(context,
-                instance_ref['uuid'], 'finished')
+                instance['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
                                                       status='finished')
 
         self.update(context,
-                    instance_id,
+                    instance['id'],
                     vm_state=vm_states.ACTIVE,
                     task_state=None)
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,
-                                   instance_ref['uuid'],
+                                   instance['uuid'],
                                    migration_ref['dest_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
-                {'status': 'reverted'})
+                                 {'status': 'reverted'})
 
     @scheduler_api.reroute_compute("confirm_resize")
-    def confirm_resize(self, context, instance_id):
+    def confirm_resize(self, context, instance):
         """Confirms a migration/resize and deletes the 'old' instance."""
         context = context.elevated()
-        instance_ref = self._get_instance(context, instance_id,
-                'confirm_resize')
         migration_ref = self.db.migration_get_by_instance_and_status(context,
-                instance_ref['uuid'], 'finished')
+                instance['uuid'], 'finished')
         if not migration_ref:
-            raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
-                                                      status='finished')
+            raise exception.MigrationNotFoundByStatus(
+                    instance_id=instance['id'], status='finished')
 
         self.update(context,
-                    instance_id,
+                    instance['id'],
                     vm_state=vm_states.ACTIVE,
                     task_state=None)
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context,
-                                   instance_ref['uuid'],
+                                   instance['uuid'],
                                    migration_ref['source_compute'],
                                    params=params)
 
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
-        self.db.instance_update(context, instance_id,
+        self.db.instance_update(context, instance['id'],
                 {'host': migration_ref['dest_compute'], })
 
     @scheduler_api.reroute_compute("resize")
-    def resize(self, context, instance_id, flavor_id=None):
+    def resize(self, context, instance, flavor_id=None):
         """Resize (ie, migrate) a running instance.
 
         If flavor_id is None, the process is considered a migration, keeping
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
         """
-        instance_ref = self._get_instance(context, instance_id, 'resize')
-        current_instance_type = instance_ref['instance_type']
+        current_instance_type = instance['instance_type']
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:
@@ -1314,15 +1309,14 @@ class API(base.Base):
             raise exception.CannotResizeToSameSize()
 
         self.update(context,
-                    instance_id,
+                    instance['id'],
                     vm_state=vm_states.RESIZING,
                     task_state=task_states.RESIZE_PREP)
 
-        instance_ref = self._get_instance(context, instance_id, 'resize')
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_id": instance_ref['uuid'],
+                              "instance_id": instance['uuid'],
                               "update_db": False,
                               "instance_type_id": new_instance_type['id']}})
 
