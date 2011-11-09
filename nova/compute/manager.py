@@ -127,6 +127,11 @@ def checks_instance_lock(function):
     return decorated_function
 
 
+def _get_image_meta(context, image_ref):
+    image_service, image_id = nova.image.get_image_service(context, image_ref)
+    return image_service.show(context, image_id)
+
+
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
@@ -310,7 +315,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
-        def _check_image_size():
+        def _check_image_size(image_meta):
             """Ensure image is smaller than the maximum size allowed by the
             instance_type.
 
@@ -325,13 +330,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                    image, but is accurate because it reflects the image's
                    actual size.
             """
-            # NOTE(jk0): image_ref is defined in the DB model, image_href is
-            # used by the image service. This should be refactored to be
-            # consistent.
-            image_href = instance['image_ref']
-            image_service, image_id = nova.image.get_image_service(context,
-                                                                   image_href)
-            image_meta = image_service.show(context, image_id)
 
             try:
                 size_bytes = image_meta['size']
@@ -355,6 +353,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
+            image_id = image_meta['id']
             LOG.debug(_("image_id=%(image_id)s, image_size_bytes="
                         "%(size_bytes)d, allowed_size_bytes="
                         "%(allowed_size_bytes)d") % locals())
@@ -427,7 +426,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         if instance['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
 
-        _check_image_size()
+        image_meta = _get_image_meta(context, instance['image_ref'])
+
+        _check_image_size(image_meta)
 
         LOG.audit(_("instance %s: starting..."), instance_id,
                   context=context)
@@ -460,7 +461,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             # TODO(vish) check to make sure the availability zone matches
             with _logging_error(instance_id, "failed to spawn"):
-                self.driver.spawn(context, instance,
+                self.driver.spawn(context, instance, image_meta,
                                   network_info, block_device_info)
 
             current_power_state = self._get_power_state(context, instance)
@@ -664,7 +665,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref.admin_pass = kwargs.get('new_pass',
                 utils.generate_password(FLAGS.password_length))
 
-        self.driver.spawn(context, instance_ref, network_info, bd_mapping)
+        image_meta = _get_image_meta(context, instance_ref['image_ref'])
+
+        self.driver.spawn(context, instance_ref, image_meta,
+                          network_info, bd_mapping)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -1146,8 +1150,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                             instance_ref.uuid)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
+
+        # Have to look up image here since we depend on disk_format later
+        image_meta = _get_image_meta(context, instance_ref['image_ref'])
+
         self.driver.finish_migration(context, migration_ref, instance_ref,
-                                     disk_info, network_info, resize_instance)
+                                     disk_info, network_info, image_meta,
+                                     resize_instance)
 
         self._instance_update(context,
                               instance_id,

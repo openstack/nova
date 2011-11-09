@@ -97,7 +97,7 @@ class FakeConnection(driver.ComputeDriver):
         """Plugin VIFs into networks."""
         pass
 
-    def spawn(self, context, instance,
+    def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
         name = instance.name
         state = power_state.RUNNING

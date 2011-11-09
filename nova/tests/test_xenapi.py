@@ -423,7 +423,9 @@ class XenAPIVMTestCase(test.TestCase):
         if empty_dns:
             network_info[0][1]['dns'] = []
 
-        self.conn.spawn(self.context, instance, network_info)
+        image_meta = {'id': glance_stubs.FakeGlance.IMAGE_VHD,
+                      'disk_format': 'vhd'}
+        self.conn.spawn(self.context, instance, image_meta, network_info)
         self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
         self.assertTrue(instance.os_type)
@@ -694,8 +696,10 @@ class XenAPIVMTestCase(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
+        image_meta = {'id': glance_stubs.FakeGlance.IMAGE_VHD,
+                      'disk_format': 'vhd'}
         if spawn:
-            self.conn.spawn(self.context, instance, network_info)
+            self.conn.spawn(self.context, instance, image_meta, network_info)
         return instance
 
 
@@ -842,9 +846,10 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
+        image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
-                              network_info, resize_instance=True)
+                              network_info, image_meta, resize_instance=True)
         self.assertEqual(self.called, True)
         self.assertEqual(self.fake_vm_start_called, True)
 
@@ -883,9 +888,10 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
+        image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
-                              network_info, resize_instance=True)
+                              network_info, image_meta, resize_instance=True)
         self.assertEqual(self.called, True)
         self.assertEqual(self.fake_vm_start_called, True)
 
@@ -918,9 +924,10 @@ class XenAPIMigrateInstance(test.TestCase):
                            'label': 'fake',
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
+        image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
-                              network_info, resize_instance=True)
+                              network_info, image_meta, resize_instance=True)
 
     def test_finish_migrate_no_resize_vdi(self):
         instance = db.instance_create(self.context, self.instance_values)
@@ -949,9 +956,10 @@ class XenAPIMigrateInstance(test.TestCase):
                            'rxtx_cap': 3})]
 
         # Resize instance would be determined by the compute call
+        image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
-                              network_info, resize_instance=False)
+                              network_info, image_meta, resize_instance=False)
 
 
 class XenAPIImageTypeTestCase(test.TestCase):
@@ -986,8 +994,9 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
 
     def assert_disk_type(self, disk_type):
         ctx = context.RequestContext('fake', 'fake')
-        dt = vm_utils.VMHelper.determine_disk_image_type(
-            self.fake_instance, ctx)
+        fake_glance = glance_stubs.FakeGlance('')
+        image_meta = fake_glance.get_image_meta(self.fake_instance.image_ref)
+        dt = vm_utils.VMHelper.determine_disk_image_type(image_meta)
         self.assertEqual(disk_type, dt)
 
     def test_instance_disk(self):
