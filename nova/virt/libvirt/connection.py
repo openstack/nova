@@ -195,11 +195,12 @@ class LibvirtConnection(driver.ComputeDriver):
             driver_type, _sep, driver = driver_str.partition('=')
             driver_class = utils.import_class(driver)
             self.volume_drivers[driver_type] = driver_class(self)
+        self._host_state = None
 
     @property
     def host_state(self):
         if not self._host_state:
-            self._host_state = HostState(self._session)
+            self._host_state = HostState(self.read_only)
         return self._host_state
 
     def init_host(self, host):
