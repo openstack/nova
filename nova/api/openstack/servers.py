@@ -91,12 +91,6 @@ class Controller(object):
         """
         return None
 
-    def _get_block_device_mapping(self, data):
-        """Get block_device_mapping from 'server' dictionary.
-        Overidden by volumes controller.
-        """
-        return None
-
     def _get_servers(self, req, is_detail):
         """Returns a list of servers, taking into account any search
         options specified.
