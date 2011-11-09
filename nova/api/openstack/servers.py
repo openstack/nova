@@ -145,7 +145,7 @@ class Controller(object):
     def _get_server(self, context, instance_uuid):
         """Utility function for looking up an instance by uuid"""
         try:
-            return self.compute_api.get(context, instance_uuid)
+            return self.compute_api.routing_get(context, instance_uuid)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
@@ -769,6 +769,7 @@ class Controller(object):
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
+        instance = self._get_server(context, instance_id)
 
         try:
             image_href = info["rebuild"]["imageRef"]
@@ -794,7 +795,7 @@ class Controller(object):
             password = utils.generate_password(FLAGS.password_length)
 
         try:
-            self.compute_api.rebuild(context, instance_id, image_href,
+            self.compute_api.rebuild(context, instance, image_href,
                                      password, name=name, metadata=metadata,
                                      files_to_inject=injected_files)
         except exception.RebuildRequiresActiveInstance:
@@ -804,7 +805,7 @@ class Controller(object):
             msg = _("Instance %s could not be found") % instance_id
             raise exc.HTTPNotFound(explanation=msg)
 
-        instance = self.compute_api.routing_get(context, instance_id)
+        instance = self._get_server(context, instance_id)
         view = self._build_view(request, instance, is_detail=True)
         view['server']['adminPass'] = password
 
