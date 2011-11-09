@@ -90,8 +90,18 @@ class Distro(object):
     def install_m2crypto(self):
         pip_install('M2Crypto')
 
+    def post_process(self):
+        """Any distribution-specific post-processing gets done here.
+
+        In particular, this is useful for applying patches to code inside
+        the venv."""
+        pass
+
 
 class Fedora(Distro):
+    """This covers all Fedora-based distributions.
+
+    Includes: Fedora, RHEL, CentOS, Scientific Linux"""
 
     def check_pkg(self, pkg):
         return run_command_with_code(['rpm', '-q', pkg],
@@ -117,9 +127,30 @@ class Fedora(Distro):
         if not self.check_pkg('m2crypto'):
             self.yum_install('m2crypto')
 
+    def post_process(self):
+        """Workaround for a bug in eventlet.
+
+        This currently affects RHEL6.1, but the fix can safely be
+        applied to all RHEL and Fedora distributions.
+
+        This can be removed when the fix is applied upstream
+
+        Nova: https://bugs.launchpad.net/nova/+bug/884915
+        Upstream: https://bitbucket.org/which_linden/eventlet/issue/89"""
+
+        # Install "patch" program if it's not there
+        if not self.check_pkg('patch'):
+            self.yum_install('patch')
+
+        # Apply the eventlet patch
+        run_command(['patch',
+        '.nova-venv/lib/python2.6/site-packages/eventlet/green/subprocess.py',
+        'contrib/redhat-eventlet.patch'])
+
 
 def get_distro():
-    if os.path.exists('/etc/fedora-release'):
+    if os.path.exists('/etc/fedora-release') or \
+       os.path.exists('/etc/redhat-release'):
         return Fedora()
     else:
         return Distro()
@@ -173,6 +204,10 @@ def install_dependencies(venv=VENV):
     f.write("%s\n" % ROOT)
 
 
+def post_process():
+    get_distro().post_process()
+
+
 def print_help():
     help = """
     Nova development environment setup is complete.
@@ -210,6 +245,7 @@ def main(argv):
     check_dependencies()
     create_virtualenv(no_site_packages=options.no_site_packages)
     install_dependencies()
+    post_process()
     print_help()
 
 if __name__ == '__main__':

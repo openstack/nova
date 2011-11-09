@@ -1,0 +1,16 @@
+--- .nova-venv/lib/python2.6/site-packages/eventlet/green/subprocess.py.orig
+2011-05-25
+23:31:34.597271402 +0000
++++ .nova-venv/lib/python2.6/site-packages/eventlet/green/subprocess.py
+2011-05-25
+23:33:24.055602468 +0000
+@@ -32,7 +32,7 @@
+                     setattr(self, attr, wrapped_pipe)
+         __init__.__doc__ = subprocess_orig.Popen.__init__.__doc__
+
+-    def wait(self, check_interval=0.01):
++    def wait(self, check_interval=0.01, timeout=None):
+         # Instead of a blocking OS call, this version of wait() uses logic
+         # borrowed from the eventlet 0.2 processes.Process.wait() method.
+         try:
+
