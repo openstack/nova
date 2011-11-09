@@ -63,7 +63,7 @@ def _try_convert(value):
     'True'        True case insensitive
     'False'       False case insensitive
     '0', '-0'     0
-    0xN, -0xN     int from hex (postitive) (N is any number)
+    0xN, -0xN     int from hex (positive) (N is any number)
     0bN, -0bN     int from binary (positive) (N is any number)
     *             try conversion to int, float, complex, fallback value
 
@@ -108,7 +108,7 @@ def _try_convert(value):
 
 def dict_from_dotted_str(items):
     """parse multi dot-separated argument into dict.
-    EBS boot uses multi dot-separeted arguments like
+    EBS boot uses multi dot-separated arguments like
     BlockDeviceMapping.1.DeviceName=snap-id
     Convert the above into
     {'block_device_mapping': {'1': {'device_name': snap-id}}}

@@ -95,7 +95,7 @@ class Lockout(wsgi.Middleware):
     z = lockout_attempts flag
 
     Uses memcached if lockout_memcached_servers flag is set, otherwise it
-    uses a very simple in-proccess cache. Due to the simplicity of
+    uses a very simple in-process cache. Due to the simplicity of
     the implementation, the timeout window is started with the first
     failed request, so it will block if there are x failed logins within
     that period.

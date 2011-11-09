@@ -254,10 +254,10 @@ class Reflection(object):
 
 
 class ServiceWrapper(object):
-    """Wrapper to dynamically povide a WSGI controller for arbitrary objects.
+    """Wrapper to dynamically provide a WSGI controller for arbitrary objects.
 
     With lightweight introspection allows public methods on the object to
-    be accesed via simple WSGI routing and parameters and serializes the
+    be accessed via simple WSGI routing and parameters and serializes the
     return values.
 
     Automatically used be nova.api.direct.Router to wrap registered instances.
@@ -297,14 +297,14 @@ class ServiceWrapper(object):
             }[content_type]
             return serializer.serialize(result)
         except Exception, e:
-            raise exception.Error(_("Returned non-serializable type: %s")
+            raise exception.Error(_("Returned non-serializeable type: %s")
                                   % result)
 
 
 class Limited(object):
     __notdoc = """Limit the available methods on a given object.
 
-    (Not a docstring so that the docstring can be conditionally overriden.)
+    (Not a docstring so that the docstring can be conditionally overridden.)
 
     Useful when defining a public API that only exposes a subset of an
     internal API.

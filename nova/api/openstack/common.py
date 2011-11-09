@@ -288,7 +288,7 @@ def get_networks_for_instance(context, instance):
     """Returns a prepared nw_info list for passing into the view
     builders
 
-    We end up with a datastructure like:
+    We end up with a data structure like:
     {'public': {'ips': [{'addr': '10.0.0.1', 'version': 4},
                         {'addr': '2001::1', 'version': 6}],
                 'floating_ips': [{'addr': '172.16.0.1', 'version': 4},
