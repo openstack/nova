@@ -1190,10 +1190,9 @@ class API(base.Base):
                 params={'reboot_type': reboot_type})
 
     @scheduler_api.reroute_compute("rebuild")
-    def rebuild(self, context, instance_id, image_href, admin_password,
+    def rebuild(self, context, instance, image_href, admin_password,
                 name=None, metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
-        instance = self.db.instance_get(context, instance_id)
         name = name or instance["display_name"]
 
         if instance["vm_state"] != vm_states.ACTIVE:
@@ -1207,7 +1206,7 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
 
         self.update(context,
-                    instance_id,
+                    instance["id"],
                     metadata=metadata,
                     display_name=name,
                     image_ref=image_href,
@@ -1222,7 +1221,7 @@ class API(base.Base):
 
         self._cast_compute_message('rebuild_instance',
                                    context,
-                                   instance_id,
+                                   instance["id"],
                                    params=rebuild_params)
 
     @scheduler_api.reroute_compute("revert_resize")

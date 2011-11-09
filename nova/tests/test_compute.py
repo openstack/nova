@@ -343,6 +343,22 @@ class ComputeTestCase(test.TestCase):
         self.compute.resume_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_rebuild(self):
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], None)
+
+        image_ref = instance["image_ref"]
+        password = "new_password"
+        self.compute_api.rebuild(self.context, instance, image_ref, password)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], task_states.REBUILDING)
+
+        db.instance_destroy(self.context, instance_id)
+
     def test_reboot_soft_api(self):
         """Ensure instance can be soft rebooted"""
         instance_id = self._create_instance()
