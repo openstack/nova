@@ -409,14 +409,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 if network_info is not None:
                     _deallocate_network()
 
-        @contextlib.contextmanager
-        def _logging_error(instance_id, message):
-            try:
-                yield
-            except Exception as error:
-                with utils.save_and_reraise_exception():
-                    LOG.exception(_("Instance '%(instance_id)s' "
-                                   "failed %(message)s.") % locals())
+        def _error_message(instance_id, message):
+            return _("Instance '%(instance_id)s' "
+                     "failed %(message)s.") % locals()
 
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
@@ -444,14 +439,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         is_vpn = instance['image_ref'] == str(FLAGS.vpn_image_id)
         try:
             network_info = None
-            with _logging_error(instance_id, "network setup"):
+            with utils.logging_error(_error_message(instance_id,
+                                                    "network setup")):
                 network_info = _make_network_info()
 
             self._instance_update(context,
                                   instance_id,
                                   vm_state=vm_states.BUILDING,
                                   task_state=task_states.BLOCK_DEVICE_MAPPING)
-            with _logging_error(instance_id, "block device setup"):
+            with utils.logging_error(_error_message(instance_id,
+                                                    "block device setup")):
                 block_device_info = _make_block_device_info()
 
             self._instance_update(context,
@@ -460,7 +457,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   task_state=task_states.SPAWNING)
 
             # TODO(vish) check to make sure the availability zone matches
-            with _logging_error(instance_id, "failed to spawn"):
+            with utils.logging_error(_error_message(instance_id,
+                                                    "failed to spawn")):
                 self.driver.spawn(context, instance, image_meta,
                                   network_info, block_device_info)
 
