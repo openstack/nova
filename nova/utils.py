@@ -1002,6 +1002,19 @@ def save_and_reraise_exception():
     raise type_, value, traceback
 
 
+@contextlib.contextmanager
+def logging_error(message):
+    """Catches exception, write message to the log, re-raise.
+    This is a common refinement of save_and_reraise that writes a specific
+    message to the log.
+    """
+    try:
+        yield
+    except Exception as error:
+        with save_and_reraise_exception():
+            LOG.exception(message)
+
+
 def make_dev_path(dev, partition=None, base='/dev'):
     """Return a path to a particular device.
 
