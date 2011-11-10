@@ -1471,14 +1471,20 @@ class CloudController(object):
         """Stop each instances in instance_id.
         Here instance_id is a list of instance ids"""
         LOG.debug(_("Going to stop instances"))
-        self._do_instances(self.compute_api.stop, context, instance_id)
+        for ec2_id in instance_id:
+            _instance_id = ec2utils.ec2_id_to_id(ec2_id)
+            instance = self.compute_api.get(context, _instance_id)
+            self.compute_api.stop(context, instance)
         return True
 
     def start_instances(self, context, instance_id, **kwargs):
         """Start each instances in instance_id.
         Here instance_id is a list of instance ids"""
         LOG.debug(_("Going to start instances"))
-        self._do_instances(self.compute_api.start, context, instance_id)
+        for ec2_id in instance_id:
+            _instance_id = ec2utils.ec2_id_to_id(ec2_id)
+            instance = self.compute_api.get(context, _instance_id)
+            self.compute_api.start(context, instance)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):

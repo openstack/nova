@@ -1369,6 +1369,35 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertTrue(result)
 
+    def test_start_instances(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+
+        result = self.cloud.stop_instances(self.context, [instance_id])
+        self.assertTrue(result)
+
+        result = self.cloud.start_instances(self.context, [instance_id])
+        self.assertTrue(result)
+
+        result = self.cloud.terminate_instances(self.context, [instance_id])
+        self.assertTrue(result)
+        self._restart_compute_service()
+
+    def test_stop_instances(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+
+        result = self.cloud.stop_instances(self.context, [instance_id])
+        self.assertTrue(result)
+
+        result = self.cloud.terminate_instances(self.context, [instance_id])
+        self.assertTrue(result)
+        self._restart_compute_service()
+
     def test_terminate_instances(self):
         kwargs = {'image_id': 'ami-1',
                   'instance_type': FLAGS.default_instance_type,

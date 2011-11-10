@@ -797,7 +797,8 @@ class API(base.Base):
     @scheduler_api.reroute_compute("soft_delete")
     def soft_delete(self, context, instance):
         """Terminate an instance."""
-        LOG.debug(_("Going to try to soft delete %s"), instance["id"])
+        instance_id = instance["id"]
+        LOG.debug(_("Going to try to soft delete %s"), instance_id)
 
         if not _is_able_to_shutdown(instance):
             return
@@ -814,11 +815,11 @@ class API(base.Base):
                         deleted_at=utils.utcnow())
 
             self._cast_compute_message('power_off_instance', context,
-                                       instance['id'], host)
+                                       instance_id, host)
         else:
             LOG.warning(_("No host for instance %s, deleting immediately"),
                         instance["id"])
-            self.db.instance_destroy(context, instance["id"])
+            self.db.instance_destroy(context, instance_id)
 
     def _delete(self, context, instance):
         host = instance['host']
@@ -875,11 +876,11 @@ class API(base.Base):
         self._delete(context, instance)
 
     @scheduler_api.reroute_compute("stop")
-    def stop(self, context, instance_id):
+    def stop(self, context, instance):
         """Stop an instance."""
+        instance_id = instance["id"]
         LOG.debug(_("Going to try to stop %s"), instance_id)
 
-        instance = self._get_instance(context, instance_id, 'stopping')
         if not _is_able_to_shutdown(instance):
             return
 
@@ -895,11 +896,11 @@ class API(base.Base):
             self._cast_compute_message('stop_instance', context,
                     instance_id, host)
 
-    def start(self, context, instance_id):
+    def start(self, context, instance):
         """Start an instance."""
-        LOG.debug(_("Going to try to start %s"), instance_id)
-        instance = self._get_instance(context, instance_id, 'starting')
         vm_state = instance["vm_state"]
+        instance_id = instance["id"]
+        LOG.debug(_("Going to try to start %s"), instance_id)
 
         if vm_state != vm_states.STOPPED:
             LOG.warning(_("Instance %(instance_id)s is not "
