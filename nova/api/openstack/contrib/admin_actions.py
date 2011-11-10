@@ -52,7 +52,8 @@ class Admin_actions(extensions.ExtensionDescriptor):
         """Permit Admins to pause the server"""
         ctxt = req.environ['nova.context']
         try:
-            self.compute_api.pause(ctxt, id)
+            server = self.compute_api.get(ctxt, id)
+            self.compute_api.pause(ctxt, server)
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
@@ -66,7 +67,8 @@ class Admin_actions(extensions.ExtensionDescriptor):
         """Permit Admins to unpause the server"""
         ctxt = req.environ['nova.context']
         try:
-            self.compute_api.unpause(ctxt, id)
+            server = self.compute_api.get(ctxt, id)
+            self.compute_api.unpause(ctxt, server)
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
@@ -80,7 +82,8 @@ class Admin_actions(extensions.ExtensionDescriptor):
         """Permit admins to suspend the server"""
         context = req.environ['nova.context']
         try:
-            self.compute_api.suspend(context, id)
+            server = self.compute_api.get(context, id)
+            self.compute_api.suspend(context, server)
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
@@ -94,7 +97,8 @@ class Admin_actions(extensions.ExtensionDescriptor):
         """Permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
         try:
-            self.compute_api.resume(context, id)
+            server = self.compute_api.get(context, id)
+            self.compute_api.resume(context, server)
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
