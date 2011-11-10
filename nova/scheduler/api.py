@@ -352,7 +352,7 @@ class reroute_compute(object):
         """
         if 'instance_id' in kwargs:
             kwargs['instance_id'] = replacement_id
-        elif len(args) > 1:
+        elif len(args) > 2:
             args.pop(2)
             args.insert(2, replacement_id)
 
