@@ -431,6 +431,7 @@ class ComputeTestCase(test.TestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
+        self.assertTrue(payload['launched_at'])
         self.assertEquals(payload['image_ref'], '1')
         self.compute.terminate_instance(self.context, instance_id)
 

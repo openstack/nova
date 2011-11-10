@@ -445,12 +445,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 return
 
             current_power_state = self._get_power_state(context, instance)
-            self._instance_update(context,
-                                  instance_id,
-                                  power_state=current_power_state,
-                                  vm_state=vm_states.ACTIVE,
-                                  task_state=None,
-                                  launched_at=utils.utcnow())
+            instance = self._instance_update(context,
+                                             instance_id,
+                                             power_state=current_power_state,
+                                             vm_state=vm_states.ACTIVE,
+                                             task_state=None,
+                                             launched_at=utils.utcnow())
 
             usage_info = utils.usage_from_instance(instance)
             notifier.notify('compute.%s' % self.host,
