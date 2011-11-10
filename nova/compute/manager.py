@@ -138,7 +138,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
         # TODO(vish): sync driver creation logic with the rest of the system
-        #             and redocument the module docstring
+        #             and re-document the module docstring
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
 

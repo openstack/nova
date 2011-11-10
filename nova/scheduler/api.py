@@ -60,7 +60,7 @@ def get_host_list(context):
 
 
 def get_zone_list(context):
-    """Return a list of zones assoicated with this zone."""
+    """Return a list of zones associated with this zone."""
     items = _call_scheduler('get_zone_list', context)
     for item in items:
         item['api_url'] = item['api_url'].replace('\\/', '/')

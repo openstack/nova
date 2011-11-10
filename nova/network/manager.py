@@ -517,7 +517,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                                self.host,
                                                                time)
             if num:
-                LOG.debug(_('Dissassociated %s stale fixed ip(s)'), num)
+                LOG.debug(_('Disassociated %s stale fixed ip(s)'), num)
 
     def set_network_host(self, context, network_ref):
         """Safely sets the host of the network."""
@@ -656,7 +656,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                              instance_type_id, host):
         """Creates network info list for instance.
 
-        called by allocate_for_instance and netowrk_api
+        called by allocate_for_instance and network_api
         context needs to be elevated
         :returns: network info list [(network,info),(network,info)...]
         where network = dict containing pertinent data from a network db object
@@ -976,7 +976,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 net['vlan'] = vlan
                 net['bridge'] = 'br%s' % vlan
 
-                # NOTE(vish): This makes ports unique accross the cloud, a more
+                # NOTE(vish): This makes ports unique across the cloud, a more
                 #             robust solution would be to make them uniq per ip
                 net['vpn_public_port'] = kwargs['vpn_start'] + index
 

@@ -36,7 +36,7 @@ from nova.api.ec2 import ec2utils
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.driver')
 flags.DEFINE_integer('service_down_time', 60,
-                     'maximum time since last checkin for up service')
+                     'maximum time since last check-in for up service')
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
@@ -116,7 +116,7 @@ def encode_instance(instance, local=True):
 
 
 class Scheduler(object):
-    """The base class that all Scheduler clases should inherit from."""
+    """The base class that all Scheduler classes should inherit from."""
 
     def __init__(self):
         self.zone_manager = None

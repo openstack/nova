@@ -53,7 +53,7 @@ def _get_drivers():
 
 
 def notify(message):
-    """Passes notification to mulitple notifiers in a list."""
+    """Passes notification to multiple notifiers in a list."""
     for driver in _get_drivers():
         try:
             driver.notify(message)

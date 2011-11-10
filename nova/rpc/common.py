@@ -13,10 +13,10 @@ flags.DEFINE_integer('rpc_conn_pool_size', 30,
 class RemoteError(exception.NovaException):
     """Signifies that a remote class has raised an exception.
 
-    Containes a string representation of the type of the original exception,
+    Contains a string representation of the type of the original exception,
     the value of the original exception, and the traceback.  These are
     sent to the parent as a joined string so printing the exception
-    contains all of the relevent info.
+    contains all of the relevant info.
 
     """
     message = _("Remote error: %(exc_type)s %(value)s\n%(traceback)s.")

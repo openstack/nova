@@ -319,7 +319,7 @@ class Connection(object):
         self.reconnect()
 
     def reconnect(self):
-        """Handles reconnecting and re-estblishing queues"""
+        """Handles reconnecting and re-establishing queues"""
         if self.connection:
             try:
                 self.connection.close()
@@ -609,7 +609,7 @@ class ProxyCallback(object):
 
     @exception.wrap_exception()
     def _process_data(self, ctxt, method, args):
-        """Thread that maigcally looks for a method on the proxy
+        """Thread that magically looks for a method on the proxy
         object and calls it.
         """
 

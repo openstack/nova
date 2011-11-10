@@ -114,7 +114,7 @@ def _match_query(query, attrs):
     """Match an ldap query to an attribute dictionary.
 
     The characters &, |, and ! are supported in the query. No syntax checking
-    is performed, so malformed querys will not work correctly.
+    is performed, so malformed queries will not work correctly.
     """
     # cut off the parentheses
     inner = query[1:-1]
@@ -171,7 +171,7 @@ def _match(key, value, attrs):
 def _subs(value):
     """Returns a list of subclass strings.
 
-    The strings represent the ldap objectclass plus any subclasses that
+    The strings represent the ldap object class plus any subclasses that
     inherit from it. Fakeldap doesn't know about the ldap object structure,
     so subclasses need to be defined manually in the dictionary below.
 
