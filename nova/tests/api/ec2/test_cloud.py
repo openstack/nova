@@ -1369,6 +1369,18 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertTrue(result)
 
+    def test_terminate_instances(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+
+        # a running instance can't be started. It is just ignored.
+        result = self.cloud.start_instances(self.context, [instance_id])
+        self.assertTrue(result)
+
+        result = self.cloud.terminate_instances(self.context, [instance_id])
+        self.assertTrue(result)
         self._restart_compute_service()
 
     def test_reboot_instances(self):

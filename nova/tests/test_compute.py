@@ -1047,6 +1047,52 @@ class ComputeAPITestCase(BaseTestCase):
         finally:
             db.instance_destroy(self.context, ref[0]['id'])
 
+    def test_delete(self):
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], None)
+
+        self.compute_api.delete(self.context, instance)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], task_states.DELETING)
+
+        db.instance_destroy(self.context, instance_id)
+
+    def test_delete_soft(self):
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], None)
+
+        self.compute_api.soft_delete(self.context, instance)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
+
+        db.instance_destroy(self.context, instance_id)
+
+    def test_force_delete(self):
+        """Ensure instance can be soft rebooted"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.compute_api.soft_delete(self.context, instance)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
+
+        self.compute_api.force_delete(self.context, instance)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], task_states.DELETING)
+
+        db.instance_destroy(self.context, instance_id)
+
     def test_rebuild(self):
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)

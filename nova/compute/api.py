@@ -79,8 +79,9 @@ def generate_default_display_name(instance):
     return 'Server %s' % instance['id']
 
 
-def _is_able_to_shutdown(instance, instance_id):
+def _is_able_to_shutdown(instance):
     vm_state = instance["vm_state"]
+    instance_id = instance["id"]
 
     valid_shutdown_states = [
         vm_states.ACTIVE,
@@ -97,9 +98,10 @@ def _is_able_to_shutdown(instance, instance_id):
     return True
 
 
-def _is_queued_delete(instance, instance_id):
+def _is_queued_delete(instance):
     vm_state = instance["vm_state"]
     task_state = instance["task_state"]
+    instance_id = instance["id"]
 
     if vm_state != vm_states.SOFT_DELETE:
         LOG.warn(_("Instance %(instance_id)s is not in a 'soft delete' "
@@ -793,12 +795,11 @@ class API(base.Base):
             raise
 
     @scheduler_api.reroute_compute("soft_delete")
-    def soft_delete(self, context, instance_id):
+    def soft_delete(self, context, instance):
         """Terminate an instance."""
-        LOG.debug(_("Going to try to soft delete %s"), instance_id)
-        instance = self._get_instance(context, instance_id, 'soft delete')
+        LOG.debug(_("Going to try to soft delete %s"), instance["id"])
 
-        if not _is_able_to_shutdown(instance, instance_id):
+        if not _is_able_to_shutdown(instance):
             return
 
         # NOTE(jerdfelt): The compute daemon handles reclaiming instances
@@ -807,17 +808,17 @@ class API(base.Base):
         host = instance['host']
         if host:
             self.update(context,
-                        instance_id,
+                        instance["id"],
                         vm_state=vm_states.SOFT_DELETE,
                         task_state=task_states.POWERING_OFF,
                         deleted_at=utils.utcnow())
 
             self._cast_compute_message('power_off_instance', context,
-                                       instance_id, host)
+                                       instance['id'], host)
         else:
             LOG.warning(_("No host for instance %s, deleting immediately"),
-                        instance_id)
-            self.db.instance_destroy(context, instance_id)
+                        instance["id"])
+            self.db.instance_destroy(context, instance["id"])
 
     def _delete(self, context, instance):
         host = instance['host']
@@ -833,12 +834,11 @@ class API(base.Base):
             self.db.instance_destroy(context, instance['id'])
 
     @scheduler_api.reroute_compute("delete")
-    def delete(self, context, instance_id):
+    def delete(self, context, instance):
         """Terminate an instance."""
-        LOG.debug(_("Going to try to terminate %s"), instance_id)
-        instance = self._get_instance(context, instance_id, 'delete')
+        LOG.debug(_("Going to try to terminate %s"), instance["id"])
 
-        if not _is_able_to_shutdown(instance, instance_id):
+        if not _is_able_to_shutdown(instance):
             return
 
         self._delete(context, instance)
@@ -848,7 +848,7 @@ class API(base.Base):
         """Restore a previously deleted (but not reclaimed) instance."""
         instance = self._get_instance(context, instance_id, 'restore')
 
-        if not _is_queued_delete(instance, instance_id):
+        if not _is_queued_delete(instance):
             return
 
         self.update(context,
@@ -866,11 +866,10 @@ class API(base.Base):
                     instance_id, host)
 
     @scheduler_api.reroute_compute("force_delete")
-    def force_delete(self, context, instance_id):
+    def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
-        instance = self._get_instance(context, instance_id, 'force delete')
 
-        if not _is_queued_delete(instance, instance_id):
+        if not _is_queued_delete(instance):
             return
 
         self._delete(context, instance)
@@ -881,7 +880,7 @@ class API(base.Base):
         LOG.debug(_("Going to try to stop %s"), instance_id)
 
         instance = self._get_instance(context, instance_id, 'stopping')
-        if not _is_able_to_shutdown(instance, instance_id):
+        if not _is_able_to_shutdown(instance):
             return
 
         self.update(context,

@@ -453,10 +453,11 @@ class Controller(object):
         return server
 
     def _delete(self, context, id):
+        instance = self._get_server(context, id)
         if FLAGS.reclaim_instance_interval:
-            self.compute_api.soft_delete(context, id)
+            self.compute_api.soft_delete(context, instance)
         else:
-            self.compute_api.delete(context, id)
+            self.compute_api.delete(context, instance)
 
     @scheduler_api.redirect_handler
     def update(self, req, id, body):

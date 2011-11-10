@@ -1452,7 +1452,10 @@ class CloudController(object):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified."""
         LOG.debug(_("Going to start terminating instances"))
-        self._do_instances(self.compute_api.delete, context, instance_id)
+        for ec2_id in instance_id:
+            _instance_id = ec2utils.ec2_id_to_id(ec2_id)
+            instance = self.compute_api.get(context, _instance_id)
+            self.compute_api.delete(context, instance)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
