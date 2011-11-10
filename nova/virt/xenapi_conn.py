@@ -169,9 +169,10 @@ class XenAPIConnection(driver.ComputeDriver):
     def __init__(self, url, user, pw):
         super(XenAPIConnection, self).__init__()
         self._session = XenAPISession(url, user, pw)
-        self._vmops = VMOps(self._session)
         self._volumeops = VolumeOps(self._session)
         self._host_state = None
+        self._product_version = self._session.get_product_version()
+        self._vmops = VMOps(self._session, self._product_version)
 
     @property
     def host_state(self):
@@ -454,6 +455,14 @@ class XenAPISession(object):
             with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
                 session.login_with_password(user, pw)
             self._sessions.put(session)
+
+    def get_product_version(self):
+        """Return a tuple of (major, minor, rev) for the host version"""
+        host = self.get_xenapi_host()
+        software_version = self.call_xenapi('host.get_software_version',
+                                            host)
+        product_version = software_version['product_version']
+        return tuple(int(part) for part in product_version.split('.'))
 
     def get_imported_xenapi(self):
         """Stubout point. This can be replaced with a mock xenapi module."""
