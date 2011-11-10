@@ -74,7 +74,6 @@ from nova.virt.libvirt import netutils
 
 
 libvirt = None
-libxml2 = None
 Template = None
 
 
@@ -155,11 +154,8 @@ def get_connection(read_only):
     # Cheetah is separate because the unit tests want to load Cheetah,
     # but not libvirt.
     global libvirt
-    global libxml2
     if libvirt is None:
         libvirt = __import__('libvirt')
-    if libxml2 is None:
-        libxml2 = __import__('libxml2')
     _late_load_cheetah()
     return LibvirtConnection(read_only)
 
@@ -399,22 +395,15 @@ class LibvirtConnection(driver.ComputeDriver):
     def _get_disk_xml(self, xml, device):
         """Returns the xml for the disk mounted at device"""
         try:
-            doc = libxml2.parseDoc(xml)
+            doc = ElementTree.fromstring(xml)
         except Exception:
             return None
-        ctx = doc.xpathNewContext()
-        try:
-            ret = ctx.xpathEval('/domain/devices/disk')
-            for node in ret:
-                for child in node.children:
-                    if child.name == 'target':
-                        if child.prop('dev') == device:
-                            return str(node)
-        finally:
-            if ctx is not None:
-                ctx.xpathFreeContext()
-            if doc is not None:
-                doc.freeDoc()
+        ret = doc.findall('./devices/disk')
+        for node in ret:
+            for child in node.getchildren():
+                if child.tag == 'target':
+                    if child.get('dev') == device:
+                        return ElementTree.tostring(node)
 
     @exception.wrap_exception()
     def detach_volume(self, connection_info, instance_name, mountpoint):
@@ -1285,37 +1274,29 @@ class LibvirtConnection(driver.ComputeDriver):
         Returns a list of all block devices for this domain.
         """
         domain = self._lookup_by_name(instance_name)
-        # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
         doc = None
 
         try:
-            doc = libxml2.parseDoc(xml)
+            doc = ElementTree.fromstring(xml)
         except Exception:
             return []
 
-        ctx = doc.xpathNewContext()
         disks = []
 
-        try:
-            ret = ctx.xpathEval('/domain/devices/disk')
+        ret = doc.findall('./devices/disk')
 
-            for node in ret:
-                devdst = None
+        for node in ret:
+            devdst = None
 
-                for child in node.children:
-                    if child.name == 'target':
-                        devdst = child.prop('dev')
+            for child in node.children:
+                if child.name == 'target':
+                    devdst = child.prop('dev')
 
-                if devdst is None:
-                    continue
+            if devdst is None:
+                continue
 
-                disks.append(devdst)
-        finally:
-            if ctx is not None:
-                ctx.xpathFreeContext()
-            if doc is not None:
-                doc.freeDoc()
+            disks.append(devdst)
 
         return disks
 
@@ -1326,37 +1307,29 @@ class LibvirtConnection(driver.ComputeDriver):
         Returns a list of all network interfaces for this instance.
         """
         domain = self._lookup_by_name(instance_name)
-        # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
         doc = None
 
         try:
-            doc = libxml2.parseDoc(xml)
+            doc = ElementTree.fromstring(xml)
         except Exception:
             return []
 
-        ctx = doc.xpathNewContext()
         interfaces = []
 
-        try:
-            ret = ctx.xpathEval('/domain/devices/interface')
+        ret = doc.findall('./devices/interface')
 
-            for node in ret:
-                devdst = None
+        for node in ret:
+            devdst = None
 
-                for child in node.children:
-                    if child.name == 'target':
-                        devdst = child.prop('dev')
+            for child in node.children:
+                if child.name == 'target':
+                    devdst = child.prop('dev')
 
-                if devdst is None:
-                    continue
+            if devdst is None:
+                continue
 
-                interfaces.append(devdst)
-        finally:
-            if ctx is not None:
-                ctx.xpathFreeContext()
-            if doc is not None:
-                doc.freeDoc()
+            interfaces.append(devdst)
 
         return interfaces
 
@@ -1488,8 +1461,8 @@ class LibvirtConnection(driver.ComputeDriver):
         """
 
         xml = self._conn.getCapabilities()
-        xml = libxml2.parseDoc(xml)
-        nodes = xml.xpathEval('//host/cpu')
+        xml = ElementTree.fromstring(xml)
+        nodes = xml.findall('.//host/cpu')
         if len(nodes) != 1:
             reason = _("'<cpu>' must be 1, but %d\n") % len(nodes)
             reason += xml.serialize()
@@ -1497,38 +1470,36 @@ class LibvirtConnection(driver.ComputeDriver):
 
         cpu_info = dict()
 
-        arch_nodes = xml.xpathEval('//host/cpu/arch')
+        arch_nodes = xml.findall('.//host/cpu/arch')
         if arch_nodes:
-            cpu_info['arch'] = arch_nodes[0].getContent()
+            cpu_info['arch'] = arch_nodes[0].text
 
-        model_nodes = xml.xpathEval('//host/cpu/model')
+        model_nodes = xml.findall('.//host/cpu/model')
         if model_nodes:
-            cpu_info['model'] = model_nodes[0].getContent()
+            cpu_info['model'] = model_nodes[0].text
 
-        vendor_nodes = xml.xpathEval('//host/cpu/vendor')
+        vendor_nodes = xml.findall('.//host/cpu/vendor')
         if vendor_nodes:
-            cpu_info['vendor'] = vendor_nodes[0].getContent()
+            cpu_info['vendor'] = vendor_nodes[0].text
 
-        topology_nodes = xml.xpathEval('//host/cpu/topology')
+        topology_nodes = xml.findall('.//host/cpu/topology')
         topology = dict()
         if topology_nodes:
-            topology_node = topology_nodes[0].get_properties()
-            while topology_node:
-                name = topology_node.get_name()
-                topology[name] = topology_node.getContent()
-                topology_node = topology_node.get_next()
+            topology_node = topology_nodes[0]
 
             keys = ['cores', 'sockets', 'threads']
-            tkeys = topology.keys()
+            tkeys = topology_node.keys()
             if set(tkeys) != set(keys):
                 ks = ', '.join(keys)
                 reason = _("topology (%(topology)s) must have %(ks)s")
                 raise exception.InvalidCPUInfo(reason=reason % locals())
+            for key in keys:
+                topology[key] = topology_node.get(key)
 
-        feature_nodes = xml.xpathEval('//host/cpu/feature')
+        feature_nodes = xml.findall('.//host/cpu/feature')
         features = list()
         for nodes in feature_nodes:
-            features.append(nodes.get_properties().getContent())
+            features.append(nodes.get('name'))
 
         cpu_info['topology'] = topology
         cpu_info['features'] = features
@@ -1889,26 +1860,21 @@ class LibvirtConnection(driver.ComputeDriver):
 
         virt_dom = self._lookup_by_name(instance_ref.name)
         xml = virt_dom.XMLDesc(0)
-        doc = libxml2.parseDoc(xml)
-        disk_nodes = doc.xpathEval('//devices/disk')
-        path_nodes = doc.xpathEval('//devices/disk/source')
-        driver_nodes = doc.xpathEval('//devices/disk/driver')
+        doc = ElementTree.fromstring(xml)
+        disk_nodes = doc.findall('.//devices/disk')
+        path_nodes = doc.findall('.//devices/disk/source')
+        driver_nodes = doc.findall('.//devices/disk/driver')
 
         for cnt, path_node in enumerate(path_nodes):
-            disk_type = disk_nodes[cnt].get_properties().getContent()
-            path = path_node.get_properties().getContent()
+            disk_type = disk_nodes[cnt].get('type')
+            path = path_node.get('file')
 
             if disk_type != 'file':
                 LOG.debug(_('skipping %(path)s since it looks like volume') %
                           locals())
                 continue
 
-            # In case of libvirt.xml, disk type can be obtained
-            # by the below statement.
-            # -> disk_type = driver_nodes[cnt].get_properties().getContent()
-            # but this xml is generated by kvm, format is slightly different.
-            disk_type = \
-                driver_nodes[cnt].get_properties().get_next().getContent()
+            disk_type = driver_nodes[cnt].get('type')
             if disk_type == 'raw':
                 size = int(os.path.getsize(path))
                 backing_file = ""

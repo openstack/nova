@@ -51,13 +51,6 @@ except ImportError:
     libvirt = None
 
 
-try:
-    import libxml2
-    connection.libxml2 = libxml2
-except ImportError:
-    libxml2 = None
-
-
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.test_libvirt')
 
@@ -243,7 +236,7 @@ class FakeVolumeDriver(object):
 
 
 def missing_libvirt():
-    return libvirt is None or libxml2 is None
+    return libvirt is None
 
 
 class LibvirtConnTestCase(test.TestCase):
