@@ -149,3 +149,14 @@ class MelangeConnection(object):
            "interfaces/%(vif_id)s/ip_allocations" % locals())
 
         self.delete(url, headers=json_content_type)
+
+    def create_vif(self, vif_id, instance_id, project_id=None):
+        url = "ipam/interfaces"
+
+        request_body = dict(interface=dict(id=vif_id, tenant_id=project_id,
+                                           device_id=instance_id))
+
+        response = self.post(url, body=json.dumps(request_body),
+                             headers=json_content_type)
+
+        return json.loads(response)['interface']['mac_address']

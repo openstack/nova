@@ -231,3 +231,9 @@ class QuantumMelangeIPAMLib(object):
     def get_allocated_ips(self, context, subnet_id, project_id):
         ips = self.m_conn.get_allocated_ips_for_network(subnet_id, project_id)
         return [(ip['address'], ip['interface_id']) for ip in ips]
+
+    def create_vif(self, vif_id, instance_id, project_id=None):
+        """Create a new vif with the specified information.
+        """
+        tenant_id = project_id or FLAGS.quantum_default_tenant_id
+        return self.m_conn.create_vif(vif_id, instance_id, tenant_id)
