@@ -104,6 +104,14 @@ Note:- Due to a faulty wsdl being shipped with ESX vSphere 4.1 we need a working
 * Set the flag "--vmwareapi_wsdl_loc" with url, "http://<WEB SERVER>/vimService.wsdl"
 
 
+Debug flag
+----------
+::
+
+suds logging is very verbose and turned off by default.  If you need to
+debug the VMware API calls, change the default_log_levels flag appropriately.
+
+
 VLAN Network Manager
 --------------------
 VLAN network support is added through a custom network driver in the nova-compute node i.e "nova.network.vmwareapi_net" and it uses a Physical ethernet adapter on the VMware ESX/ESXi host for VLAN Networking (the name of the ethernet adapter is specified as vlan_interface flag in the nova-compute configuration flag) in the nova-compute node.
