@@ -122,8 +122,8 @@ class MockSetAdminPassword(object):
         self.instance_id = None
         self.password = None
 
-    def __call__(self, context, instance_id, password):
-        self.instance_id = instance_id
+    def __call__(self, context, instance, password):
+        self.instance_id = instance['uuid']
         self.password = password
 
 

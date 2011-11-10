@@ -1429,8 +1429,11 @@ class API(base.Base):
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("set_admin_password")
-    def set_admin_password(self, context, instance_id, password=None):
+    def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance."""
+        #NOTE(bcwaldon): we need to use the integer id here since manager uses
+        # db.instance_get, not db.instance_get_by_uuid
+        instance_id = instance['id']
         self.update(context,
                     instance_id,
                     task_state=task_states.UPDATING_PASSWORD)

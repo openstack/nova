@@ -745,7 +745,8 @@ class Controller(object):
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
             raise exc.HTTPBadRequest(explanation=msg)
-        self.compute_api.set_admin_password(context, id, password)
+        server = self._get_server(context, id)
+        self.compute_api.set_admin_password(context, server, password)
         return webob.Response(status_int=202)
 
     def _limit_items(self, items, req):

@@ -1180,7 +1180,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
         self.assertEqual(inst_ref['task_state'], None)
 
-        self.compute_api.set_admin_password(self.context, instance_id)
+        self.compute_api.set_admin_password(self.context, inst_ref)
 
         inst_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
