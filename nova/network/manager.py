@@ -1217,6 +1217,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             self.db.fixed_ip_associate(context,
                                        address,
                                        instance_id,
+                                       network['id'],
                                        reserved=True)
         else:
             address = kwargs.get('address', None)
