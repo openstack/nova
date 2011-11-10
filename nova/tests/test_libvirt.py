@@ -1063,6 +1063,25 @@ class LibvirtConnTestCase(test.TestCase):
         instance = db.instance_create(self.context, self.test_instance)
         conn.destroy(instance, {})
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
+    def test_destroy_saved(self):
+        """Ensure destroy calls managedSaveRemove for saved instance"""
+        mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.destroy()
+        mock.hasManagedSaveImage(0).AndReturn(1)
+        mock.managedSaveRemove(0)
+        mock.undefine()
+
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock
+
+        conn = connection.LibvirtConnection(False)
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        instance = {"name": "instancename", "id": "instanceid"}
+        conn.destroy(instance, [])
+
 
 class HostStateTestCase(test.TestCase):
 
