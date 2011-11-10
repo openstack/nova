@@ -1824,6 +1824,7 @@ class ImageCommands(object):
             return new
         except Exception as exc:
             print _("Failed to register %(path)s: %(exc)s") % locals()
+            sys.exit(1)
 
     @args('--image', dest='image', metavar='<image>', help='Image')
     @args('--kernel', dest='kernel', metavar='<kernel>', help='Kernel')
