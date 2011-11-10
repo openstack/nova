@@ -16,6 +16,7 @@
 #    under the License.
 
 import datetime
+import StringIO
 
 from nova import context
 from nova import exception
@@ -127,6 +128,16 @@ class _ImageTestCase(test.TestCase):
         self.image_service.delete_all()
         index = self.image_service.index(self.context)
         self.assertEquals(len(index), 0)
+
+    def test_create_then_get(self):
+        blob = 'some data'
+        s1 = StringIO.StringIO(blob)
+        self.image_service.create(self.context,
+                                  {'id': '32', 'foo': 'bar'},
+                                  data=s1)
+        s2 = StringIO.StringIO()
+        self.image_service.get(self.context, '32', data=s2)
+        self.assertEquals(s2.getvalue(), blob, 'Did not get blob back intact')
 
 
 class FakeImageTestCase(_ImageTestCase):

@@ -118,6 +118,7 @@ class _FakeImageService(object):
         self.create(None, image3)
         self.create(None, image4)
         self.create(None, image5)
+        self._imagedata = {}
         super(_FakeImageService, self).__init__()
 
     def index(self, context, filters=None, marker=None, limit=None):
@@ -131,6 +132,11 @@ class _FakeImageService(object):
     def detail(self, context, filters=None, marker=None, limit=None):
         """Return list of detailed image information."""
         return copy.deepcopy(self.images.values())
+
+    def get(self, context, image_id, data):
+        metadata = self.show(context, image_id)
+        data.write(self._imagedata.get(image_id, ''))
+        return metadata
 
     def show(self, context, image_id):
         """Get data about specified image.
@@ -164,6 +170,8 @@ class _FakeImageService(object):
         if image_id in self.images:
             raise exception.Duplicate()
         self.images[image_id] = copy.deepcopy(metadata)
+        if data:
+            self._imagedata[image_id] = data.read()
         return self.images[image_id]
 
     def update(self, context, image_id, metadata, data=None):
