@@ -1455,9 +1455,13 @@ class API(base.Base):
                  {"method": "set_admin_password",
                   "args": {"instance_id": instance_id, "new_pass": password}})
 
-    def inject_file(self, context, instance_id):
+    @scheduler_api.reroute_compute("inject_file")
+    def inject_file(self, context, instance, path, file_contents):
         """Write a file to the given instance."""
-        self._cast_compute_message('inject_file', context, instance_id)
+        instance_id = instance['id']
+        params = {'path': path, 'file_contents': file_contents}
+        self._cast_compute_message('inject_file', context,
+                                   instance_id, params=params)
 
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console."""

@@ -1882,3 +1882,11 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
         self.compute_api.delete(self.context, instance)
+
+    def test_inject_file(self):
+        """Ensure we can write a file to an instance"""
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.inject_file(self.context, instance,
+                                     "/tmp/test", "File Contents")
+        db.instance_destroy(self.context, instance_id)
