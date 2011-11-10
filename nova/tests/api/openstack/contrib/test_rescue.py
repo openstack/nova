@@ -23,17 +23,23 @@ from nova.tests.api.openstack import fakes
 FLAGS = flags.FLAGS
 
 
-def rescue(self, context, instance_id, rescue_password=None):
+def rescue(self, context, instance, rescue_password=None):
     pass
 
 
-def unrescue(self, context, instance_id):
+def unrescue(self, context, instance):
     pass
 
 
 class RescueTest(test.TestCase):
     def setUp(self):
         super(RescueTest, self).setUp()
+
+        def fake_compute_get(*args, **kwargs):
+            uuid = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
+            return {'id': 1, 'uuid': uuid}
+
+        self.stubs.Set(compute.api.API, "get", fake_compute_get)
         self.stubs.Set(compute.api.API, "rescue", rescue)
         self.stubs.Set(compute.api.API, "unrescue", unrescue)
 

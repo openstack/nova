@@ -1190,6 +1190,31 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_rescue_unrescue(self):
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        self.compute_api.rescue(self.context, inst_ref)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(inst_ref['task_state'], task_states.RESCUING)
+
+        params = {'vm_state': vm_states.RESCUED, 'task_state': None}
+        db.instance_update(self.context, instance_id, params)
+
+        self.compute_api.unrescue(self.context, inst_ref)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['vm_state'], vm_states.RESCUED)
+        self.assertEqual(inst_ref['task_state'], task_states.UNRESCUING)
+
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_snapshot(self):
         """Can't backup an instance which is already being backed up."""
         instance_id = self._create_instance()
