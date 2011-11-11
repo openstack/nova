@@ -20,7 +20,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import log as logging
-from nova import quota
 from nova import rpc
 from nova import test
 from nova.network import manager as network_manager
@@ -463,7 +462,7 @@ class VlanNetworkTestCase(test.TestCase):
 
         # this time should raise
         self.stubs.Set(self.network.db, 'floating_ip_count_by_project', fake2)
-        self.assertRaises(quota.QuotaError,
+        self.assertRaises(exception.QuotaError,
                           self.network.allocate_floating_ip,
                           ctxt,
                           ctxt.project_id)

@@ -162,8 +162,3 @@ def allowed_injected_file_content_bytes(context, requested_bytes):
 def allowed_injected_file_path_bytes(context):
     """Return the number of bytes allowed in an injected file path."""
     return FLAGS.quota_max_injected_file_path_bytes
-
-
-class QuotaError(exception.ApiError):
-    """Quota Exceeded."""
-    pass

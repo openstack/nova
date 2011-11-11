@@ -293,7 +293,7 @@ class FloatingIP(object):
             LOG.warn(_('Quota exceeded for %s, tried to allocate '
                        'address'),
                      context.project_id)
-            raise quota.QuotaError(_('Address quota exceeded. You cannot '
+            raise exception.QuotaError(_('Address quota exceeded. You cannot '
                                      'allocate any more addresses'))
         # TODO(vish): add floating ips through manage command
         return self.db.floating_ip_allocate_address(context,

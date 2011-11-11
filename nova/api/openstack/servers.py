@@ -40,7 +40,6 @@ from nova import exception
 from nova import flags
 from nova import image
 from nova import log as logging
-from nova import quota
 from nova.rpc import common as rpc_common
 from nova.scheduler import api as scheduler_api
 from nova import utils
@@ -412,7 +411,7 @@ class Controller(object):
                             availability_zone=availability_zone,
                             config_drive=config_drive,
                             block_device_mapping=block_device_mapping)
-        except quota.QuotaError as error:
+        except exception.QuotaError as error:
             self._handle_quota_error(error)
         except exception.InstanceTypeMemoryTooSmall as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))

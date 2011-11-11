@@ -871,3 +871,8 @@ class NoValidHost(NovaException):
 
 class WillNotSchedule(NovaException):
     message = _("Host %(host)s is not up or doesn't exist.")
+
+
+class QuotaError(ApiError):
+    """Quota Exceeded."""
+    pass

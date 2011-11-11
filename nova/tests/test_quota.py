@@ -21,6 +21,7 @@ from nova import context
 from nova import db
 from nova import flags
 from nova import quota
+from nova import exception
 from nova import rpc
 from nova import test
 from nova import volume
@@ -219,7 +220,7 @@ class QuotaTestCase(test.TestCase):
             instance_ids.append(instance_id)
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        self.assertRaises(quota.QuotaError, compute.API().create,
+        self.assertRaises(exception.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
@@ -234,7 +235,7 @@ class QuotaTestCase(test.TestCase):
         instance_ids.append(instance_id)
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        self.assertRaises(quota.QuotaError, compute.API().create,
+        self.assertRaises(exception.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
@@ -248,7 +249,7 @@ class QuotaTestCase(test.TestCase):
         for i in range(FLAGS.quota_volumes):
             volume_id = self._create_volume()
             volume_ids.append(volume_id)
-        self.assertRaises(quota.QuotaError,
+        self.assertRaises(exception.QuotaError,
                           volume.API().create,
                           self.context,
                           size=10,
@@ -262,7 +263,7 @@ class QuotaTestCase(test.TestCase):
         volume_ids = []
         volume_id = self._create_volume(size=20)
         volume_ids.append(volume_id)
-        self.assertRaises(quota.QuotaError,
+        self.assertRaises(exception.QuotaError,
                           volume.API().create,
                           self.context,
                           size=10,
@@ -277,7 +278,7 @@ class QuotaTestCase(test.TestCase):
         db.floating_ip_create(context.get_admin_context(),
                               {'address': address,
                                'project_id': self.project_id})
-        self.assertRaises(quota.QuotaError,
+        self.assertRaises(exception.QuotaError,
                           self.network.allocate_floating_ip,
                           self.context,
                           self.project_id)
@@ -289,7 +290,7 @@ class QuotaTestCase(test.TestCase):
             metadata['key%s' % i] = 'value%s' % i
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        self.assertRaises(quota.QuotaError, compute.API().create,
+        self.assertRaises(exception.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
@@ -367,7 +368,7 @@ class QuotaTestCase(test.TestCase):
         files = []
         for i in xrange(FLAGS.quota_max_injected_files + 1):
             files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
-        self.assertRaises(quota.QuotaError,
+        self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)
 
     def test_max_injected_file_content_bytes(self):
@@ -380,7 +381,7 @@ class QuotaTestCase(test.TestCase):
         max = FLAGS.quota_max_injected_file_content_bytes
         content = ''.join(['a' for i in xrange(max + 1)])
         files = [('/test/path', content)]
-        self.assertRaises(quota.QuotaError,
+        self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)
 
     def test_allowed_injected_file_path_bytes(self):
@@ -398,5 +399,5 @@ class QuotaTestCase(test.TestCase):
         max = FLAGS.quota_max_injected_file_path_bytes
         path = ''.join(['a' for i in xrange(max + 1)])
         files = [(path, 'config = quotatest')]
-        self.assertRaises(quota.QuotaError,
+        self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)

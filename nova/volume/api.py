@@ -54,7 +54,7 @@ class API(base.Base):
             pid = context.project_id
             LOG.warn(_("Quota exceeded for %(pid)s, tried to create"
                     " %(size)sG volume") % locals())
-            raise quota.QuotaError(_("Volume quota exceeded. You cannot "
+            raise exception.QuotaError(_("Volume quota exceeded. You cannot "
                                      "create a volume of size %sG") % size)
 
         if availability_zone is None:

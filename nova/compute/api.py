@@ -139,15 +139,16 @@ class API(base.Base):
             return
         limit = quota.allowed_injected_files(context, len(injected_files))
         if len(injected_files) > limit:
-            raise quota.QuotaError(code="OnsetFileLimitExceeded")
+            raise exception.QuotaError(code="OnsetFileLimitExceeded")
         path_limit = quota.allowed_injected_file_path_bytes(context)
         for path, content in injected_files:
             if len(path) > path_limit:
-                raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
+                raise exception.QuotaError(code="OnsetFilePathLimitExceeded")
             content_limit = quota.allowed_injected_file_content_bytes(
                                                     context, len(content))
             if len(content) > content_limit:
-                raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
+                raise exception.QuotaError(
+                                  code="OnsetFileContentLimitExceeded")
 
     def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
@@ -160,7 +161,7 @@ class API(base.Base):
             msg = _("Quota exceeded for %(pid)s, tried to set "
                     "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
-            raise quota.QuotaError(msg, "MetadataLimitExceeded")
+            raise exception.QuotaError(msg, "MetadataLimitExceeded")
 
         # Because metadata is stored in the DB, we hard-code the size limits
         # In future, we may support more variable length strings, so we act
@@ -171,7 +172,7 @@ class API(base.Base):
                 msg = _("Quota exceeded for %(pid)s, metadata property "
                         "key or value too long") % locals()
                 LOG.warn(msg)
-                raise quota.QuotaError(msg, "MetadataLimitExceeded")
+                raise exception.QuotaError(msg, "MetadataLimitExceeded")
 
     def _check_requested_networks(self, context, requested_networks):
         """ Check if the networks requested belongs to the project
@@ -227,7 +228,7 @@ class API(base.Base):
             else:
                 message = _("Instance quota exceeded. You can only run %s "
                             "more instances of this type.") % num_instances
-            raise quota.QuotaError(message, "InstanceLimitExceeded")
+            raise exception.QuotaError(message, "InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
