@@ -1111,41 +1111,41 @@ class API(base.Base):
                                 % instance_id)
 
     @scheduler_api.reroute_compute("backup")
-    def backup(self, context, instance_id, name, backup_type, rotation,
+    def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
 
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance: nova.db.sqlalchemy.models.Instance
         :param name: name of the backup or snapshot
             name = backup_type  # daily backups are called 'daily'
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         :param extra_properties: dict of extra image properties to include
         """
-        recv_meta = self._create_image(context, instance_id, name, 'backup',
+        recv_meta = self._create_image(context, instance, name, 'backup',
                             backup_type=backup_type, rotation=rotation,
                             extra_properties=extra_properties)
         return recv_meta
 
     @scheduler_api.reroute_compute("snapshot")
-    def snapshot(self, context, instance_id, name, extra_properties=None):
+    def snapshot(self, context, instance, name, extra_properties=None):
         """Snapshot the given instance.
 
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance: nova.db.sqlalchemy.models.Instance
         :param name: name of the backup or snapshot
         :param extra_properties: dict of extra image properties to include
 
         :returns: A dict containing image metadata
         """
-        return self._create_image(context, instance_id, name, 'snapshot',
+        return self._create_image(context, instance, name, 'snapshot',
                                   extra_properties=extra_properties)
 
-    def _create_image(self, context, instance_id, name, image_type,
+    def _create_image(self, context, instance, name, image_type,
                       backup_type=None, rotation=None, extra_properties=None):
         """Create snapshot or backup for an instance on this host.
 
         :param context: security context
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance: nova.db.sqlalchemy.models.Instance
         :param name: string for name of the snapshot
         :param image_type: snapshot | backup
         :param backup_type: daily | weekly
@@ -1154,8 +1154,8 @@ class API(base.Base):
         :param extra_properties: dict of extra image properties to include
 
         """
-        instance = self.db.instance_get(context, instance_id)
         task_state = instance["task_state"]
+        instance_id = instance['id']
 
         if task_state == task_states.IMAGE_BACKUP:
             raise exception.InstanceBackingUp(instance_id=instance_id)
