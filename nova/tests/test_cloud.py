@@ -1103,6 +1103,41 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['instanceState']['name'], 'running')
         self.assertEqual(instance['instanceType'], 'm1.small')
 
+    def test_run_instances_availability_zone(self):
+        kwargs = {'image_id': 'ami-00000001',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1,
+                  'placement': {'availability_zone': 'fake'},
+                 }
+        run_instances = self.cloud.run_instances
+
+        def fake_show(self, context, id):
+            return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'properties': {
+                        'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                        'type': 'machine'},
+                    'container_format': 'ami',
+                    'status': 'active'}
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        # NOTE(comstud): Make 'cast' behave like a 'call' which will
+        # ensure that operations complete
+        self.stubs.Set(rpc, 'cast', rpc.call)
+
+        def fake_format(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.cloud, '_format_run_instances', fake_format)
+
+        def fake_create(*args, **kwargs):
+            self.assertEqual(kwargs['availability_zone'], 'fake')
+            return ([{'id': 'fake-instance', 'reservation_id': 'fake-res-id'}])
+
+        self.stubs.Set(self.cloud.compute_api, 'create', fake_create)
+
+        # NOTE(vish) the assert for this call is in the fake_create method.
+        run_instances(self.context, **kwargs)
+
     def test_run_instances_image_state_none(self):
         kwargs = {'image_id': FLAGS.default_image,
                   'instance_type': FLAGS.default_instance_type,

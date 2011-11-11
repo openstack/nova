@@ -1398,7 +1398,7 @@ class CloudController(object):
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
-                                  'AvailabilityZone'),
+                                  'availability_zone'),
             block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context,
                 reservation_id=instances[0]['reservation_id'])
