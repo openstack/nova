@@ -15,12 +15,13 @@
 
 """The multinic extension."""
 
-from webob import exc
 import webob
+from webob import exc
 
-from nova import compute
-from nova import log as logging
 from nova.api.openstack import extensions
+from nova import compute
+from nova import exception
+from nova import log as logging
 
 
 LOG = logging.getLogger("nova.api.multinic")
@@ -63,6 +64,13 @@ class Multinic(extensions.ExtensionDescriptor):
 
         return actions
 
+    def _get_instance(self, context, instance_id):
+        try:
+            return self.compute_api.get(context, instance_id)
+        except exception.InstanceNotFound:
+            msg = _("Server not found")
+            raise exc.HTTPNotFound(msg)
+
     def _add_fixed_ip(self, input_dict, req, id):
         """Adds an IP on a given network to an instance."""
 
@@ -71,10 +79,10 @@ class Multinic(extensions.ExtensionDescriptor):
             msg = _("Missing 'networkId' argument for addFixedIp")
             raise exc.HTTPUnprocessableEntity(explanation=msg)
 
-        # Add the fixed IP
+        context = req.environ['nova.context']
+        instance = self._get_instance(context, id)
         network_id = input_dict['addFixedIp']['networkId']
-        self.compute_api.add_fixed_ip(req.environ['nova.context'], id,
-                                      network_id)
+        self.compute_api.add_fixed_ip(context, instance, network_id)
         return webob.Response(status_int=202)
 
     def _remove_fixed_ip(self, input_dict, req, id):
@@ -85,11 +93,12 @@ class Multinic(extensions.ExtensionDescriptor):
             msg = _("Missing 'address' argument for removeFixedIp")
             raise exc.HTTPUnprocessableEntity(explanation=msg)
 
-        # Remove the fixed IP
+        context = req.environ['nova.context']
+        instance = self._get_instance(context, id)
         address = input_dict['removeFixedIp']['address']
+
         try:
-            self.compute_api.remove_fixed_ip(req.environ['nova.context'], id,
-                                             address)
+            self.compute_api.remove_fixed_ip(context, instance, address)
         except exceptions.FixedIpNotFoundForSpecificInstance:
             LOG.exception(_("Unable to find address %r") % address)
             raise exc.HTTPBadRequest()
