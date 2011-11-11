@@ -17,12 +17,13 @@
 import webob
 from webob import exc
 
+from nova.api.openstack import extensions as exts
+from nova.api.openstack import faults
 from nova import compute
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.api.openstack import extensions as exts
-from nova.api.openstack import faults
 
 
 FLAGS = flags.FLAGS
@@ -41,24 +42,33 @@ class Rescue(exts.ExtensionDescriptor):
         super(Rescue, self).__init__(ext_mgr)
         self.compute_api = compute.API()
 
+    def _get_instance(self, context, instance_id):
+        try:
+            return self.compute_api.get(context, instance_id)
+        except exception.InstanceNotFound:
+            msg = _("Server not found")
+            raise exc.HTTPNotFound(msg)
+
     @exts.wrap_errors
     def _rescue(self, input_dict, req, instance_id):
         """Rescue an instance."""
         context = req.environ["nova.context"]
+
         if input_dict['rescue'] and 'adminPass' in input_dict['rescue']:
             password = input_dict['rescue']['adminPass']
         else:
             password = utils.generate_password(FLAGS.password_length)
-        self.compute_api.rescue(context, instance_id, rescue_password=password)
 
+        instance = self._get_instance(context, instance_id)
+        self.compute_api.rescue(context, instance, rescue_password=password)
         return {'adminPass': password}
 
     @exts.wrap_errors
     def _unrescue(self, input_dict, req, instance_id):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
-        self.compute_api.unrescue(context, instance_id)
-
+        instance = self._get_instance(context, instance_id)
+        self.compute_api.unrescue(context, instance)
         return webob.Response(status_int=202)
 
     def get_actions(self):
