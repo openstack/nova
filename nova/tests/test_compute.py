@@ -420,9 +420,11 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEquals(payload['state'], 'active')
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
+        self.assertTrue(payload['launched_at'])
         self.assertEquals(payload['image_ref'], '1')
         self.compute.terminate_instance(self.context, instance_id)
 
