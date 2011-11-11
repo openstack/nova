@@ -1875,3 +1875,10 @@ class ComputeAPITestCase(BaseTestCase):
         i_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(i_ref['name'], i_ref['uuid'])
         db.instance_destroy(self.context, i_ref['id'])
+
+    def test_add_remove_fixed_ip(self):
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.add_fixed_ip(self.context, instance, '1')
+        self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
+        self.compute_api.delete(self.context, instance)

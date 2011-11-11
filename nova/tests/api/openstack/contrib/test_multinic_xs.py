@@ -23,20 +23,25 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
+UUID = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
 last_add_fixed_ip = (None, None)
 last_remove_fixed_ip = (None, None)
 
 
-def compute_api_add_fixed_ip(self, context, instance_id, network_id):
+def compute_api_add_fixed_ip(self, context, instance, network_id):
     global last_add_fixed_ip
 
-    last_add_fixed_ip = (instance_id, network_id)
+    last_add_fixed_ip = (instance['uuid'], network_id)
 
 
-def compute_api_remove_fixed_ip(self, context, instance_id, address):
+def compute_api_remove_fixed_ip(self, context, instance, address):
     global last_remove_fixed_ip
 
-    last_remove_fixed_ip = (instance_id, address)
+    last_remove_fixed_ip = (instance['uuid'], address)
+
+
+def compute_api_get(self, context, instance_id):
+    return {'id': 1, 'uuid': instance_id}
 
 
 class FixedIpTest(test.TestCase):
@@ -48,6 +53,7 @@ class FixedIpTest(test.TestCase):
                        compute_api_add_fixed_ip)
         self.stubs.Set(compute.api.API, "remove_fixed_ip",
                        compute_api_remove_fixed_ip)
+        self.stubs.Set(compute.api.API, 'get', compute_api_get)
         self.context = context.get_admin_context()
 
     def test_add_fixed_ip(self):
@@ -55,21 +61,21 @@ class FixedIpTest(test.TestCase):
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
-        self.assertEqual(last_add_fixed_ip, ('test_inst', 'test_net'))
+        self.assertEqual(last_add_fixed_ip, (UUID, 'test_net'))
 
     def test_add_fixed_ip_no_network(self):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict())
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -83,21 +89,21 @@ class FixedIpTest(test.TestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
-        self.assertEqual(last_remove_fixed_ip, ('test_inst', '10.10.10.1'))
+        self.assertEqual(last_remove_fixed_ip, (UUID, '10.10.10.1'))
 
     def test_remove_fixed_ip_no_address(self):
         global last_remove_fixed_ip
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict())
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/123/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
