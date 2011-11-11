@@ -29,6 +29,8 @@ Supports KVM, LXC, QEMU, UML, and XEN.
                 (default: kvm).
 :libvirt_uri:  Override for the default libvirt URI (depends on libvirt_type).
 :libvirt_xml_template:  Libvirt XML Template.
+:libvirt_disk_prefix:  Override the default disk prefix for the devices
+                       attached to a server.
 :rescue_image_id:  Rescue ami image (None = original image).
 :rescue_kernel_id:  Rescue aki image (None = original image).
 :rescue_ramdisk_id:  Rescue ari image (None = original image).
@@ -146,6 +148,11 @@ flags.DEFINE_string('default_local_format',
 flags.DEFINE_bool('libvirt_use_virtio_for_bridges',
                   False,
                   'Use virtio for bridge interfaces')
+flags.DEFINE_string('libvirt_disk_prefix',
+                    None,
+                    'Override the default disk prefix for the devices '
+                    'attached to a server, which is dependent on '
+                    'libvirt_type. (valid options are: sd, xvd, uvd, vd)')
 
 
 def get_connection(read_only):
@@ -192,6 +199,15 @@ class LibvirtConnection(driver.ComputeDriver):
             driver_class = utils.import_class(driver)
             self.volume_drivers[driver_type] = driver_class(self)
         self._host_state = None
+
+        disk_prefix_map = {"lxc": "", "uml": "ubd", "xen": "sd"}
+        if FLAGS.libvirt_disk_prefix:
+            self._disk_prefix = FLAGS.libvirt_disk_prefix
+        else:
+            self._disk_prefix = disk_prefix_map.get(FLAGS.libvirt_type, 'vd')
+        self.default_root_device = self._disk_prefix + 'a'
+        self.default_local_device = self._disk_prefix + 'b'
+        self.default_swap_device = self._disk_prefix + 'c'
 
     @property
     def host_state(self):
@@ -1063,19 +1079,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if FLAGS.libvirt_type == 'uml':
             utils.execute('chown', 'root', basepath('disk'), run_as_root=True)
-
-    if FLAGS.libvirt_type == 'uml':
-        _disk_prefix = 'ubd'
-    elif FLAGS.libvirt_type == 'xen':
-        _disk_prefix = 'sd'
-    elif FLAGS.libvirt_type == 'lxc':
-        _disk_prefix = ''
-    else:
-        _disk_prefix = 'vd'
-
-    default_root_device = _disk_prefix + 'a'
-    default_local_device = _disk_prefix + 'b'
-    default_swap_device = _disk_prefix + 'c'
 
     def _volume_in_mapping(self, mount_device, block_device_info):
         block_device_list = [block_device.strip_dev(vol['mount_device'])
