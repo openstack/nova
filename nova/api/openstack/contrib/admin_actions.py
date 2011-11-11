@@ -124,7 +124,8 @@ class Admin_actions(extensions.ExtensionDescriptor):
         """Permit admins to reset networking on an server"""
         context = req.environ['nova.context']
         try:
-            self.compute_api.reset_network(context, id)
+            instance = self.compute_api.get(context, id)
+            self.compute_api.reset_network(context, instance)
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
@@ -138,7 +139,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
         """Permit admins to inject network info into a server"""
         context = req.environ['nova.context']
         try:
-            self.compute_api.inject_network_info(context, id)
+            instance = self.compute_api.get(context, id)
+            self.compute_api.inject_network_info(context, instance)
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::inject_network_info %s"), readable)

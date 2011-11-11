@@ -1519,12 +1519,14 @@ class API(base.Base):
         instance = self.get(context, instance_id)
         return instance['locked']
 
-    def reset_network(self, context, instance_id):
+    def reset_network(self, context, instance):
         """Reset networking on the instance."""
+        instance_id = instance['id']
         self._cast_compute_message('reset_network', context, instance_id)
 
-    def inject_network_info(self, context, instance_id):
+    def inject_network_info(self, context, instance):
         """Inject network info for the instance."""
+        instance_id = instance['id']
         self._cast_compute_message('inject_network_info', context, instance_id)
 
     def attach_volume(self, context, instance, volume_id, device):

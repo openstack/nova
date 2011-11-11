@@ -45,9 +45,8 @@ def fake_compute_api(cls, req, id):
     return True
 
 
-def return_server_by_id(context, id, session=None):
-    INSTANCE['id'] = id
-    return INSTANCE
+def fake_compute_api_get(self, context, instance_id):
+    return {'id': 1, 'uuid': instance_id}
 
 
 class AdminActionsTest(test.TestCase):
@@ -61,9 +60,9 @@ class AdminActionsTest(test.TestCase):
     def setUp(self):
         super(AdminActionsTest, self).setUp()
         self.flags(allow_admin_api=True)
+        self.stubs.Set(compute.API, 'get', fake_compute_api_get)
         for _method in self._methods:
             self.stubs.Set(compute.API, _method, fake_compute_api)
-        self.stubs.Set(compute.API, 'get', return_server_by_id)
 
     def test_admin_api_enabled(self):
         app = fakes.wsgi_app()

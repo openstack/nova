@@ -2008,6 +2008,19 @@ class ComputeAPITestCase(BaseTestCase):
         instance_id = self._create_instance()
         instance = self.compute_api.get(self.context, instance_id)
         self.compute_api.attach_volume(self.context, instance, 1, '/dev/vdb')
+
+    def test_inject_network_info(self):
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.inject_network_info(self.context, instance)
+        self.compute_api.delete(self.context, instance)
+
+    def test_reset_network(self):
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.reset_network(self.context, instance)
         self.compute_api.delete(self.context, instance)
 
     def test_inject_file(self):
