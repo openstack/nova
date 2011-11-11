@@ -21,7 +21,6 @@ from nova import compute
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import exception
-from nova import quota
 
 
 class Controller(object):
@@ -120,7 +119,7 @@ class Controller(object):
             msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        except quota.QuotaError as error:
+        except exception.QuotaError as error:
             self._handle_quota_error(error)
 
     def show(self, req, server_id, id):

@@ -20,7 +20,7 @@
 from webob import exc
 
 from nova import db
-from nova import quota
+from nova import exception
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
@@ -53,7 +53,7 @@ class FlavorExtraSpecsController(object):
             db.instance_type_extra_specs_update_or_create(context,
                                                               flavor_id,
                                                               specs)
-        except quota.QuotaError as error:
+        except exception.QuotaError as error:
             self._handle_quota_error(error)
         return body
 
@@ -70,7 +70,7 @@ class FlavorExtraSpecsController(object):
             db.instance_type_extra_specs_update_or_create(context,
                                                                flavor_id,
                                                                body)
-        except quota.QuotaError as error:
+        except exception.QuotaError as error:
             self._handle_quota_error(error)
 
         return body

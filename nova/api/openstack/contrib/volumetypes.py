@@ -21,7 +21,6 @@ from webob import exc
 
 from nova import db
 from nova import exception
-from nova import quota
 from nova.volume import volume_types
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -55,7 +54,7 @@ class VolumeTypesController(object):
         try:
             volume_types.create(context, name, specs)
             vol_type = volume_types.get_volume_type_by_name(context, name)
-        except quota.QuotaError as error:
+        except exception.QuotaError as error:
             self._handle_quota_error(error)
         except exception.NotFound:
             raise exc.HTTPNotFound()
@@ -118,7 +117,7 @@ class VolumeTypeExtraSpecsController(object):
             db.volume_type_extra_specs_update_or_create(context,
                                                             vol_type_id,
                                                             specs)
-        except quota.QuotaError as error:
+        except exception.QuotaError as error:
             self._handle_quota_error(error)
         return body
 
@@ -135,7 +134,7 @@ class VolumeTypeExtraSpecsController(object):
             db.volume_type_extra_specs_update_or_create(context,
                                                             vol_type_id,
                                                             body)
-        except quota.QuotaError as error:
+        except exception.QuotaError as error:
             self._handle_quota_error(error)
 
         return body
