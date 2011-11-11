@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
 import webob.exc
 
 from nova import context
@@ -21,7 +20,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
-from nova.api.openstack.contrib import hosts as os_hosts
+from nova.api.openstack.v2.contrib import hosts as os_hosts
 from nova.scheduler import api as scheduler_api
 
 

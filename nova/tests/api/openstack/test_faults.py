@@ -24,7 +24,6 @@ import webob.exc
 
 from nova import test
 from nova.api.openstack import common
-from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -46,7 +45,7 @@ class TestFaults(test.TestCase):
         ]
 
         for request in requests:
-            fault = faults.Fault(webob.exc.HTTPBadRequest(explanation='scram'))
+            fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='scram'))
             response = request.get_response(fault)
 
             expected = {
@@ -69,7 +68,7 @@ class TestFaults(test.TestCase):
 
         for request in requests:
             exc = webob.exc.HTTPRequestEntityTooLarge
-            fault = faults.Fault(exc(explanation='sorry',
+            fault = wsgi.Fault(exc(explanation='sorry',
                         headers={'Retry-After': 4}))
             response = request.get_response(fault)
 
@@ -89,7 +88,7 @@ class TestFaults(test.TestCase):
         """Ensure the ability to raise `Fault`s in WSGI-ified methods."""
         @webob.dec.wsgify
         def raiser(req):
-            raise faults.Fault(webob.exc.HTTPNotFound(explanation='whut?'))
+            raise wsgi.Fault(webob.exc.HTTPNotFound(explanation='whut?'))
 
         req = webob.Request.blank('/.xml')
         resp = req.get_response(raiser)
@@ -99,7 +98,7 @@ class TestFaults(test.TestCase):
 
     def test_fault_has_status_int(self):
         """Ensure the status_int is set correctly on faults"""
-        fault = faults.Fault(webob.exc.HTTPBadRequest(explanation='what?'))
+        fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='what?'))
         self.assertEqual(fault.status_int, 400)
 
     def test_xml_serializer(self):
@@ -107,7 +106,7 @@ class TestFaults(test.TestCase):
         request = webob.Request.blank('/v1.1',
                                       headers={"Accept": "application/xml"})
 
-        fault = faults.Fault(webob.exc.HTTPBadRequest(explanation='scram'))
+        fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='scram'))
         response = request.get_response(fault)
 
         self.assertTrue(common.XML_NS_V11 in response.body)

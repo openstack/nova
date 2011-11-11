@@ -23,25 +23,25 @@ import webob.request
 
 from glance import client as glance_client
 
-from nova import context
-from nova import exception as exc
-from nova import utils
-from nova import wsgi
-import nova.api.openstack.auth
-from nova.api import openstack
+import nova.api.openstack.v2.auth
 from nova.api import auth as api_auth
-from nova.api.openstack import auth
-from nova.api.openstack import extensions
-from nova.api.openstack import limits
-from nova.api.openstack import urlmap
-from nova.api.openstack import versions
+from nova.api.openstack import v2
+from nova.api.openstack.v2 import auth
+from nova.api.openstack.v2 import extensions
+from nova.api.openstack.v2 import limits
+from nova.api.openstack.v2 import urlmap
+from nova.api.openstack.v2 import versions
 from nova.api.openstack import wsgi as os_wsgi
 from nova.auth.manager import User, Project
 from nova.compute import instance_types
 from nova.compute import vm_states
+from nova import context
 from nova.db.sqlalchemy import models
+from nova import exception as exc
 import nova.image.fake
 from nova.tests.glance import stubs as glance_stubs
+from nova import utils
+from nova import wsgi
 
 
 class Context(object):
@@ -72,35 +72,36 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app(inner_app11=None, fake_auth=True, fake_auth_context=None,
+def wsgi_app(inner_app_v2=None, fake_auth=True, fake_auth_context=None,
         serialization=os_wsgi.LazySerializationMiddleware,
         use_no_auth=False):
-    if not inner_app11:
-        inner_app11 = openstack.APIRouter()
+    if not inner_app_v2:
+        inner_app_v2 = v2.APIRouter()
 
     if fake_auth:
         if fake_auth_context is not None:
             ctxt = fake_auth_context
         else:
             ctxt = context.RequestContext('fake', 'fake', auth_token=True)
-        api11 = openstack.FaultWrapper(api_auth.InjectContext(ctxt,
+        api_v2 = v2.FaultWrapper(api_auth.InjectContext(ctxt,
               limits.RateLimitingMiddleware(
                   serialization(
-                      extensions.ExtensionMiddleware(inner_app11)))))
+                      extensions.ExtensionMiddleware(inner_app_v2)))))
     elif use_no_auth:
-        api11 = openstack.FaultWrapper(auth.NoAuthMiddleware(
+        api_v2 = v2.FaultWrapper(auth.NoAuthMiddleware(
               limits.RateLimitingMiddleware(
                   serialization(
-                      extensions.ExtensionMiddleware(inner_app11)))))
+                      extensions.ExtensionMiddleware(inner_app_v2)))))
     else:
-        api11 = openstack.FaultWrapper(auth.AuthMiddleware(
+        api_v2 = v2.FaultWrapper(auth.AuthMiddleware(
               limits.RateLimitingMiddleware(
                   serialization(
-                      extensions.ExtensionMiddleware(inner_app11)))))
+                      extensions.ExtensionMiddleware(inner_app_v2)))))
         Auth = auth
     mapper = urlmap.URLMap()
-    mapper['/v1.1'] = api11
-    mapper['/'] = openstack.FaultWrapper(versions.Versions())
+    mapper['/v2'] = api_v2
+    mapper['/v1.1'] = api_v2
+    mapper['/'] = v2.FaultWrapper(versions.Versions())
     return mapper
 
 
@@ -136,9 +137,9 @@ def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
 
-    stubs.Set(nova.api.openstack.auth.AuthMiddleware,
+    stubs.Set(nova.api.openstack.v2.auth.AuthMiddleware,
         '__init__', fake_auth_init)
-    stubs.Set(nova.api.openstack.auth.AuthMiddleware,
+    stubs.Set(nova.api.openstack.v2.auth.AuthMiddleware,
         '__call__', fake_wsgi)
 
 
@@ -147,10 +148,10 @@ def stub_out_rate_limiting(stubs):
         super(limits.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    stubs.Set(nova.api.openstack.limits.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.v2.limits.RateLimitingMiddleware,
         '__init__', fake_rate_init)
 
-    stubs.Set(nova.api.openstack.limits.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.v2.limits.RateLimitingMiddleware,
         '__call__', fake_wsgi)
 
 

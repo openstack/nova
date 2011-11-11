@@ -369,7 +369,7 @@ DEFINE_integer('ec2_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_scheme', 'http', 'prefix for ec2')
 DEFINE_string('ec2_path', '/services/Cloud', 'suffix for ec2')
 DEFINE_multistring('osapi_extension',
-                   ['nova.api.openstack.contrib.standard_extensions'],
+                   ['nova.api.openstack.v2.contrib.standard_extensions'],
                    'osapi extension to load')
 DEFINE_string('osapi_host', '$my_ip', 'ip of api server')
 DEFINE_string('osapi_scheme', 'http', 'prefix for openstack')

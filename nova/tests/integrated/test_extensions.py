@@ -30,7 +30,7 @@ class ExtensionsTest(integrated_helpers._IntegratedTestBase):
     def _get_flags(self):
         f = super(ExtensionsTest, self)._get_flags()
         f['osapi_extension'] = FLAGS.osapi_extension[:]
-        f['osapi_extension'].append('nova.tests.api.openstack.extensions.'
+        f['osapi_extension'].append('nova.tests.api.openstack.v2.extensions.'
                                     'foxinsocks.Foxinsocks')
         return f
 
