@@ -568,8 +568,10 @@ class Controller(object):
             msg = _("Invalid metadata")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        instance = self._get_server(context, instance_id)
+
         image = self.compute_api.backup(context,
-                                        instance_id,
+                                        instance,
                                         image_name,
                                         backup_type,
                                         rotation,
@@ -846,9 +848,11 @@ class Controller(object):
             msg = _("Invalid metadata")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        instance = self._get_server(context, instance_id)
+
         try:
             image = self.compute_api.snapshot(context,
-                                              instance_id,
+                                              instance,
                                               image_name,
                                               extra_properties=props)
         except exception.InstanceBusy:
