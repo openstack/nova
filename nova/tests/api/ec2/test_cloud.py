@@ -1536,8 +1536,9 @@ class CloudTestCase(test.TestCase):
         vol = db.volume_get(self.context, vol2['id'])
         self._assert_volume_detached(vol)
 
+        instance = db.instance_get(self.context, instance_id)
         self.cloud.compute_api.attach_volume(self.context,
-                                             instance_id=instance_id,
+                                             instance,
                                              volume_id=vol2['id'],
                                              device='/dev/vdc')
         vol = db.volume_get(self.context, vol2['id'])

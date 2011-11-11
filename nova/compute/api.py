@@ -1527,13 +1527,12 @@ class API(base.Base):
         """Inject network info for the instance."""
         self._cast_compute_message('inject_network_info', context, instance_id)
 
-    def attach_volume(self, context, instance_id, volume_id, device):
+    def attach_volume(self, context, instance, volume_id, device):
         """Attach an existing volume to an existing instance."""
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
             raise exception.ApiError(_("Invalid device specified: %s. "
                                      "Example device: /dev/vdb") % device)
         self.volume_api.check_attach(context, volume_id=volume_id)
-        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),

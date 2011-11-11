@@ -260,7 +260,6 @@ class VolumeAttachmentController(object):
         if not body:
             raise exc.HTTPUnprocessableEntity()
 
-        instance_id = server_id
         volume_id = body['volumeAttachment']['volumeId']
         device = body['volumeAttachment']['device']
 
@@ -269,10 +268,9 @@ class VolumeAttachmentController(object):
         LOG.audit(msg, context=context)
 
         try:
-            self.compute_api.attach_volume(context,
-                                           instance_id=instance_id,
-                                           volume_id=volume_id,
-                                           device=device)
+            instance = self.compute_api.get(context, server_id)
+            self.compute_api.attach_volume(context, instance,
+                                           volume_id, device)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 

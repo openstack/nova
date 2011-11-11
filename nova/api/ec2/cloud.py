@@ -1094,13 +1094,11 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         instance_id = ec2utils.ec2_id_to_id(instance_id)
+        instance = self.compute_api.get(context, instance_id)
         msg = _("Attach volume %(volume_id)s to instance %(instance_id)s"
                 " at %(device)s") % locals()
         LOG.audit(msg, context=context)
-        self.compute_api.attach_volume(context,
-                                       instance_id=instance_id,
-                                       volume_id=volume_id,
-                                       device=device)
+        self.compute_api.attach_volume(context, instance, volume_id, device)
         volume = self.volume_api.get(context, volume_id=volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],

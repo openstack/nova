@@ -21,30 +21,31 @@ Tests For Compute
 """
 
 from copy import copy
+
 import mox
 
-from nova import compute
-from nova import context
-from nova import db
-from nova import exception
-from nova import flags
-from nova import log as logging
-from nova.scheduler import driver as scheduler_driver
-from nova import rpc
-from nova import test
-from nova import utils
 import nova
-
+from nova import compute
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import context
+from nova import db
 from nova.db.sqlalchemy import models
+from nova import exception
+from nova import flags
 from nova.image import fake as fake_image
-from nova.notifier import test_notifier
-from nova.tests import fake_network
+from nova import log as logging
 from nova.network.quantum import client as quantum_client
+from nova.notifier import test_notifier
+from nova.scheduler import driver as scheduler_driver
+from nova import rpc
+from nova import test
+from nova.tests import fake_network
+from nova import utils
+import nova.volume
 
 
 LOG = logging.getLogger('nova.tests.compute')
@@ -1995,6 +1996,18 @@ class ComputeAPITestCase(BaseTestCase):
         instance_id = self._create_instance()
         instance = self.compute_api.get(self.context, instance_id)
         console = self.compute_api.get_console_output(self.context, instance)
+
+    def test_attach_volume(self):
+        """Ensure instance can be soft rebooted"""
+
+        def fake_check_attach(*args, **kwargs):
+            pass
+
+        self.stubs.Set(nova.volume.api.API, 'check_attach', fake_check_attach)
+
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.attach_volume(self.context, instance, 1, '/dev/vdb')
         self.compute_api.delete(self.context, instance)
 
     def test_inject_file(self):
