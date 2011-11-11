@@ -72,20 +72,23 @@ def security_group_rule_db(rule, id=None):
 
 def return_server(context, server_id):
     return {'id': int(server_id),
-            'state': 0x01,
+            'power_state': 0x01,
             'host': "localhost",
-            'uuid': FAKE_UUID}
+            'uuid': FAKE_UUID,
+            'name': 'asdf'}
 
 
 def return_server_by_uuid(context, server_uuid):
     return {'id': 1,
-            'state': 0x01,
+            'power_state': 0x01,
             'host': "localhost",
-            'uuid': server_uuid}
+            'uuid': server_uuid,
+            'name': 'asdf'}
 
 
 def return_non_running_server(context, server_id):
-    return {'id': server_id, 'state': 0x02, 'host': "localhost"}
+    return {'id': server_id, 'power_state': 0x02,
+            'host': "localhost", 'name': 'asdf'}
 
 
 def return_security_group_by_name(context, project_id, group_name):

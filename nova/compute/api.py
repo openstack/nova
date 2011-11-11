@@ -690,63 +690,59 @@ class API(base.Base):
 
         return False
 
-    def add_security_group(self, context, instance_id, security_group_name):
+    def add_security_group(self, context, instance, security_group_name):
         """Add security group to the instance"""
         security_group = self.db.security_group_get_by_name(context,
                 context.project_id,
                 security_group_name)
-        # check if the server exists
-        if utils.is_uuid_like(instance_id):
-            inst = self.db.instance_get_by_uuid(context, instance_id)
-        else:
-            inst = self.db.instance_get(context, instance_id)
-        instance_id = inst['id']
+
+        instance_id = instance['id']
+
         #check if the security group is associated with the server
         if self._is_security_group_associated_with_server(security_group,
-                                                        instance_id):
+                                                          instance_id):
             raise exception.SecurityGroupExistsForInstance(
                                         security_group_id=security_group['id'],
                                         instance_id=instance_id)
 
         #check if the instance is in running state
-        if inst['state'] != power_state.RUNNING:
+        if instance['power_state'] != power_state.RUNNING:
             raise exception.InstanceNotRunning(instance_id=instance_id)
 
         self.db.instance_add_security_group(context.elevated(),
                                             instance_id,
                                             security_group['id'])
+        host = instance['host']
         rpc.cast(context,
-             self.db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             self.db.queue_get_for(context, FLAGS.compute_topic, host),
              {"method": "refresh_security_group_rules",
               "args": {"security_group_id": security_group['id']}})
 
-    def remove_security_group(self, context, instance_id, security_group_name):
+    def remove_security_group(self, context, instance, security_group_name):
         """Remove the security group associated with the instance"""
         security_group = self.db.security_group_get_by_name(context,
                 context.project_id,
                 security_group_name)
-        # check if the server exists
-        if utils.is_uuid_like(instance_id):
-            inst = self.db.instance_get_by_uuid(context, instance_id)
-        else:
-            inst = self.db.instance_get(context, instance_id)
-        instance_id = inst['id']
+
+        instance_id = instance['id']
+
         #check if the security group is associated with the server
         if not self._is_security_group_associated_with_server(security_group,
-                                                        instance_id):
+                                                              instance_id):
             raise exception.SecurityGroupNotExistsForInstance(
                                     security_group_id=security_group['id'],
                                     instance_id=instance_id)
 
         #check if the instance is in running state
-        if inst['state'] != power_state.RUNNING:
+        if instance['power_state'] != power_state.RUNNING:
             raise exception.InstanceNotRunning(instance_id=instance_id)
 
         self.db.instance_remove_security_group(context.elevated(),
                                                instance_id,
                                                security_group['id'])
+        host = instance['host']
         rpc.cast(context,
-             self.db.queue_get_for(context, FLAGS.compute_topic, inst['host']),
+             self.db.queue_get_for(context, FLAGS.compute_topic, host),
              {"method": "refresh_security_group_rules",
               "args": {"security_group_id": security_group['id']}})
 

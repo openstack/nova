@@ -2053,6 +2053,18 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertFalse(self.compute_api.get_lock(self.context, instance))
         db.instance_update(self.context, instance_id, {'locked': True})
         self.assertTrue(self.compute_api.get_lock(self.context, instance))
+
+    def test_add_remove_security_group(self):
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        instance = self.compute_api.get(self.context, instance_id)
+        security_group_name = self._create_group()['name']
+        self.compute_api.add_security_group(self.context,
+                                            instance,
+                                            security_group_name)
+        self.compute_api.remove_security_group(self.context,
+                                               instance,
+                                               security_group_name)
         self.compute_api.delete(self.context, instance)
 
     def test_inject_file(self):
