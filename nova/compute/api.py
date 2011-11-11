@@ -1506,18 +1506,19 @@ class API(base.Base):
                                           context,
                                           instance_id)
 
-    def lock(self, context, instance_id):
+    def lock(self, context, instance):
         """Lock the given instance."""
-        self._cast_compute_message('lock_instance', context, instance_id)
+        self._cast_compute_message('lock_instance', context, instance['uuid'])
 
-    def unlock(self, context, instance_id):
+    def unlock(self, context, instance):
         """Unlock the given instance."""
-        self._cast_compute_message('unlock_instance', context, instance_id)
+        self._cast_compute_message('unlock_instance',
+                                   context,
+                                   instance['uuid'])
 
-    def get_lock(self, context, instance_id):
+    def get_lock(self, context, instance):
         """Return the boolean state of given instance's lock."""
-        instance = self.get(context, instance_id)
-        return instance['locked']
+        return self.get(context, instance['uuid'])['locked']
 
     def reset_network(self, context, instance):
         """Reset networking on the instance."""

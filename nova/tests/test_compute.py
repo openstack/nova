@@ -2021,6 +2021,25 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         instance = self.compute_api.get(self.context, instance_id)
         self.compute_api.reset_network(self.context, instance)
+
+    def test_lock(self):
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.lock(self.context, instance)
+        self.compute_api.delete(self.context, instance)
+
+    def test_unlock(self):
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.unlock(self.context, instance)
+        self.compute_api.delete(self.context, instance)
+
+    def test_get_lock(self):
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        self.assertFalse(self.compute_api.get_lock(self.context, instance))
+        db.instance_update(self.context, instance_id, {'locked': True})
+        self.assertTrue(self.compute_api.get_lock(self.context, instance))
         self.compute_api.delete(self.context, instance)
 
     def test_inject_file(self):

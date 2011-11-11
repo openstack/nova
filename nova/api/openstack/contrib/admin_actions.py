@@ -156,7 +156,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
         """Permit admins to lock a server"""
         context = req.environ['nova.context']
         try:
-            self.compute_api.lock(context, id)
+            instance = self.compute_api.get(context, id)
+            self.compute_api.lock(context, instance)
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::lock %s"), readable)
@@ -170,7 +173,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
         """Permit admins to lock a server"""
         context = req.environ['nova.context']
         try:
-            self.compute_api.unlock(context, id)
+            instance = self.compute_api.get(context, id)
+            self.compute_api.unlock(context, instance)
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unlock %s"), readable)
