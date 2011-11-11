@@ -1112,7 +1112,7 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance_id)
 
     def test_force_delete(self):
-        """Ensure instance can be soft rebooted"""
+        """Ensure instance can be deleted after a soft delete"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
 
@@ -1186,6 +1186,24 @@ class ComputeAPITestCase(BaseTestCase):
 
         inst_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(inst_ref['task_state'], task_states.UNPAUSING)
+
+        db.instance_destroy(self.context, instance_id)
+
+    def test_restore(self):
+        """Ensure instance can be restored from a soft delete"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.compute_api.soft_delete(self.context, instance)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
+
+        self.compute_api.restore(self.context, instance)
+
+        instance = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance['task_state'], task_states.POWERING_ON)
 
         db.instance_destroy(self.context, instance_id)
 
@@ -1980,6 +1998,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self.compute_api.get(self.context, instance_id)
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
+        self.compute_api.delete(self.context, instance)
 
     def test_attach_volume_invalid(self):
         self.assertRaises(exception.ApiError,
@@ -2106,6 +2125,18 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.remove_security_group(self.context,
                                                instance,
                                                security_group_name)
+
+    def test_get_diagnostics(self):
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.get_diagnostics(self.context, instance)
+        self.compute_api.delete(self.context, instance)
+
+    def test_get_actions(self):
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        self.compute_api.get_actions(context, instance)
         self.compute_api.delete(self.context, instance)
 
     def test_inject_file(self):

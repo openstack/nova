@@ -646,12 +646,14 @@ class Controller(object):
     def diagnostics(self, req, id):
         """Permit Admins to retrieve server diagnostics."""
         ctxt = req.environ["nova.context"]
-        return self.compute_api.get_diagnostics(ctxt, id)
+        instance = self._get_server(ctxt, id)
+        return self.compute_api.get_diagnostics(ctxt, instance)
 
     def actions(self, req, id):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]
-        items = self.compute_api.get_actions(ctxt, id)
+        instance = self._get_server(ctxt, id)
+        items = self.compute_api.get_actions(ctxt, instance)
         actions = []
         # TODO(jk0): Do not do pre-serialization here once the default
         # serializer is updated

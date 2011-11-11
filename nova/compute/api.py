@@ -827,9 +827,9 @@ class API(base.Base):
         self._delete(context, instance)
 
     @scheduler_api.reroute_compute("restore")
-    def restore(self, context, instance_id):
+    def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
-        instance = self._get_instance(context, instance_id, 'restore')
+        instance_id = instance['id']
 
         if not _is_queued_delete(instance):
             return
@@ -846,7 +846,7 @@ class API(base.Base):
                         instance_id,
                         task_state=task_states.POWERING_ON)
             self._cast_compute_message('power_on_instance', context,
-                    instance_id, host)
+                                       instance_id, host)
 
     @scheduler_api.reroute_compute("force_delete")
     def force_delete(self, context, instance):
@@ -1370,15 +1370,15 @@ class API(base.Base):
                 context, host=host, params={"action": action})
 
     @scheduler_api.reroute_compute("diagnostics")
-    def get_diagnostics(self, context, instance_id):
+    def get_diagnostics(self, context, instance):
         """Retrieve diagnostics for the given instance."""
         return self._call_compute_message("get_diagnostics",
                                           context,
-                                          instance_id)
+                                          instance['id'])
 
-    def get_actions(self, context, instance_id):
+    def get_actions(self, context, instance):
         """Retrieve actions for the given instance."""
-        return self.db.instance_get_actions(context, instance_id)
+        return self.db.instance_get_actions(context, instance['id'])
 
     @scheduler_api.reroute_compute("suspend")
     def suspend(self, context, instance):
