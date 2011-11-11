@@ -1456,11 +1456,11 @@ class API(base.Base):
         """Write a file to the given instance."""
         self._cast_compute_message('inject_file', context, instance_id)
 
-    def get_ajax_console(self, context, instance_id):
+    def get_ajax_console(self, context, instance):
         """Get a url to an AJAX Console."""
         output = self._call_compute_message('get_ajax_console',
                                             context,
-                                            instance_id)
+                                            instance['id'])
         rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
                  {'method': 'authorize_ajax_console',
                   'args': {'token': output['token'], 'host': output['host'],
@@ -1468,12 +1468,11 @@ class API(base.Base):
         return {'url': '%s/?token=%s' % (FLAGS.ajax_console_proxy_url,
                                          output['token'])}
 
-    def get_vnc_console(self, context, instance_id):
+    def get_vnc_console(self, context, instance):
         """Get a url to a VNC Console."""
-        instance = self.get(context, instance_id)
         output = self._call_compute_message('get_vnc_console',
                                             context,
-                                            instance_id)
+                                            instance['id'])
         rpc.call(context, '%s' % FLAGS.vncproxy_topic,
                  {'method': 'authorize_vnc_console',
                   'args': {'token': output['token'],
@@ -1487,8 +1486,9 @@ class API(base.Base):
                        'hostignore',
                        'portignore')}
 
-    def get_console_output(self, context, instance_id):
+    def get_console_output(self, context, instance):
         """Get console output for an an instance."""
+        instance_id = instance['id']
         return self._call_compute_message('get_console_output',
                                           context,
                                           instance_id)

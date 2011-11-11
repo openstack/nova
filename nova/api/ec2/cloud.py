@@ -951,8 +951,8 @@ class CloudController(object):
         else:
             ec2_id = instance_id
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
-        output = self.compute_api.get_console_output(
-                context, instance_id=instance_id)
+        instance = self.compute_api.get(context, instance_id)
+        output = self.compute_api.get_console_output(context, instance)
         now = utils.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
@@ -961,15 +961,15 @@ class CloudController(object):
     def get_ajax_console(self, context, instance_id, **kwargs):
         ec2_id = instance_id[0]
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
-        return self.compute_api.get_ajax_console(context,
-                                                 instance_id=instance_id)
+        instance = self.compute_api.get(context, instance_id)
+        return self.compute_api.get_ajax_console(context, instance)
 
     def get_vnc_console(self, context, instance_id, **kwargs):
         """Returns vnc browser url.  Used by OS dashboard."""
         ec2_id = instance_id
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
-        return self.compute_api.get_vnc_console(context,
-                                                instance_id=instance_id)
+        instance = self.compute_api.get(context, instance_id)
+        return self.compute_api.get_vnc_console(context, instance)
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if volume_id:

@@ -1839,4 +1839,33 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self.compute_api.get(self.context, instance_id)
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
+
+    def test_vnc_console(self):
+        """Make sure we can a vnc console for an instance."""
+        def vnc_rpc_call_wrapper(*args, **kwargs):
+            return {'token': 'asdf', 'host': '0.0.0.0', 'port': 8080}
+
+        self.stubs.Set(rpc, 'call', vnc_rpc_call_wrapper)
+
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        console = self.compute_api.get_vnc_console(self.context, instance)
+        self.compute_api.delete(self.context, instance)
+
+    def test_ajax_console(self):
+        """Make sure we can a vnc console for an instance."""
+        def ajax_rpc_call_wrapper(*args, **kwargs):
+            return {'token': 'asdf', 'host': '0.0.0.0', 'port': 8080}
+
+        self.stubs.Set(rpc, 'call', ajax_rpc_call_wrapper)
+
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        console = self.compute_api.get_ajax_console(self.context, instance)
+        self.compute_api.delete(self.context, instance)
+
+    def test_console_output(self):
+        instance_id = self._create_instance()
+        instance = self.compute_api.get(self.context, instance_id)
+        console = self.compute_api.get_console_output(self.context, instance)
         self.compute_api.delete(self.context, instance)
