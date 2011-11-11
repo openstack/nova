@@ -1632,6 +1632,32 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(c, instance_id3)
         db.instance_destroy(c, instance_id4)
 
+    def test_instance_metadata(self):
+        """Test searching instances by state"""
+        _context = context.get_admin_context()
+        instance_id = self._create_instance({'metadata': {'key1': 'value1'}})
+        instance = self.compute_api.get(_context, instance_id)
+
+        metadata = self.compute_api.get_instance_metadata(_context, instance)
+        self.assertEqual(metadata, {'key1': 'value1'})
+
+        self.compute_api.update_instance_metadata(_context, instance,
+                                                  {'key2': 'value2'})
+        metadata = self.compute_api.get_instance_metadata(_context, instance)
+        self.assertEqual(metadata, {'key1': 'value1', 'key2': 'value2'})
+
+        new_metadata = {'key2': 'bah', 'key3': 'value3'}
+        self.compute_api.update_instance_metadata(_context, instance,
+                                                  new_metadata, delete=True)
+        metadata = self.compute_api.get_instance_metadata(_context, instance)
+        self.assertEqual(metadata, new_metadata)
+
+        self.compute_api.delete_instance_metadata(_context, instance, 'key2')
+        metadata = self.compute_api.get_instance_metadata(_context, instance)
+        self.assertEqual(metadata, {'key3': 'value3'})
+
+        db.instance_destroy(_context, instance_id)
+
     @staticmethod
     def _parse_db_block_device_mapping(bdm_ref):
         attr_list = ('delete_on_termination', 'device_name', 'no_device',

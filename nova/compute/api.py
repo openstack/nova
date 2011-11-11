@@ -1232,8 +1232,8 @@ class API(base.Base):
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'finished')
         if not migration_ref:
-            raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
-                                                      status='finished')
+            raise exception.MigrationNotFoundByStatus(
+                    instance_id=instance['id'], status='finished')
 
         self.update(context,
                     instance['id'],
@@ -1568,24 +1568,16 @@ class API(base.Base):
                                                floating_address=address,
                                                fixed_address=fixed_ip_addrs[0])
 
-    def _get_native_instance_id(self, context, instance_id):
-        """If an instance id is a UUID, convert it to a native ID."""
-        if utils.is_uuid_like(instance_id):
-            instance_id = self.get(context, instance_id)['id']
-        return instance_id
-
-    def get_instance_metadata(self, context, instance_id):
+    def get_instance_metadata(self, context, instance):
         """Get all metadata associated with an instance."""
-        instance_id = self._get_native_instance_id(context, instance_id)
-        rv = self.db.instance_metadata_get(context, instance_id)
+        rv = self.db.instance_metadata_get(context, instance['id'])
         return dict(rv.iteritems())
 
-    def delete_instance_metadata(self, context, instance_id, key):
+    def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
-        instance_id = self._get_native_instance_id(context, instance_id)
-        self.db.instance_metadata_delete(context, instance_id, key)
+        self.db.instance_metadata_delete(context, instance['id'], key)
 
-    def update_instance_metadata(self, context, instance_id,
+    def update_instance_metadata(self, context, instance,
                                  metadata, delete=False):
         """Updates or creates instance metadata.
 
@@ -1593,14 +1585,13 @@ class API(base.Base):
         `metadata` argument will be deleted.
 
         """
-        instance_id = self._get_native_instance_id(context, instance_id)
-
         if delete:
             _metadata = metadata
         else:
-            _metadata = self.get_instance_metadata(context, instance_id)
+            _metadata = self.get_instance_metadata(context, instance)
             _metadata.update(metadata)
 
         self._check_metadata_properties_quota(context, _metadata)
-        self.db.instance_metadata_update(context, instance_id, _metadata, True)
+        self.db.instance_metadata_update(context, instance['id'],
+                                         _metadata, True)
         return _metadata

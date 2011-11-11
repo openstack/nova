@@ -32,7 +32,8 @@ class Controller(object):
 
     def _get_metadata(self, context, server_id):
         try:
-            meta = self.compute_api.get_instance_metadata(context, server_id)
+            server = self.compute_api.get(context, server_id)
+            meta = self.compute_api.get_instance_metadata(context, server)
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
@@ -106,8 +107,9 @@ class Controller(object):
     def _update_instance_metadata(self, context, server_id, metadata,
                                   delete=False):
         try:
+            server = self.compute_api.get(context, server_id)
             return self.compute_api.update_instance_metadata(context,
-                                                             server_id,
+                                                             server,
                                                              metadata,
                                                              delete)
 
@@ -146,7 +148,8 @@ class Controller(object):
             raise exc.HTTPNotFound(explanation=msg)
 
         try:
-            self.compute_api.delete_instance_metadata(context, server_id, id)
+            server = self.compute_api.get(context, server_id)
+            self.compute_api.delete_instance_metadata(context, server, id)
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
