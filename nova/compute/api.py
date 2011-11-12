@@ -1353,8 +1353,9 @@ class API(base.Base):
         self.network_api.add_network_to_project(context, project_id)
 
     @scheduler_api.reroute_compute("pause")
-    def pause(self, context, instance_id):
+    def pause(self, context, instance):
         """Pause the given instance."""
+        instance_id = instance["id"]
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
@@ -1362,8 +1363,9 @@ class API(base.Base):
         self._cast_compute_message('pause_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("unpause")
-    def unpause(self, context, instance_id):
+    def unpause(self, context, instance):
         """Unpause the given instance."""
+        instance_id = instance["id"]
         self.update(context,
                     instance_id,
                     vm_state=vm_states.PAUSED,
@@ -1398,8 +1400,9 @@ class API(base.Base):
         return self.db.instance_get_actions(context, instance_id)
 
     @scheduler_api.reroute_compute("suspend")
-    def suspend(self, context, instance_id):
+    def suspend(self, context, instance):
         """Suspend the given instance."""
+        instance_id = instance["id"]
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
@@ -1407,8 +1410,9 @@ class API(base.Base):
         self._cast_compute_message('suspend_instance', context, instance_id)
 
     @scheduler_api.reroute_compute("resume")
-    def resume(self, context, instance_id):
+    def resume(self, context, instance):
         """Resume the given instance."""
+        instance_id = instance["id"]
         self.update(context,
                     instance_id,
                     vm_state=vm_states.SUSPENDED,

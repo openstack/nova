@@ -1123,6 +1123,66 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get(self.context, instance_id)
         self.assertEqual(instance['task_state'], task_states.DELETING)
 
+    def test_suspend(self):
+        """Ensure instance can be suspended"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        self.compute_api.suspend(self.context, inst_ref)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], task_states.SUSPENDING)
+
+        db.instance_destroy(self.context, instance_id)
+
+    def test_resume(self):
+        """Ensure instance can be resumed"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        self.compute_api.resume(self.context, inst_ref)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], task_states.RESUMING)
+
+        db.instance_destroy(self.context, instance_id)
+
+    def test_pause(self):
+        """Ensure instance can be paused"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        self.compute_api.pause(self.context, inst_ref)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], task_states.PAUSING)
+
+        db.instance_destroy(self.context, instance_id)
+
+    def test_unpause(self):
+        """Ensure instance can be unpaused"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        self.compute.pause_instance(self.context, instance_id)
+
+        self.compute_api.unpause(self.context, inst_ref)
+
+        inst_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(inst_ref['task_state'], task_states.UNPAUSING)
+
         db.instance_destroy(self.context, instance_id)
 
     def test_rebuild(self):
