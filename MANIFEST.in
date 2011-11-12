@@ -1,12 +1,11 @@
 include HACKING LICENSE run_tests.py run_tests.sh
-include README builddeb.sh exercise_rsapi.py
+include README exercise_rsapi.py
 include ChangeLog MANIFEST.in pylintrc Authors
 graft nova/CA
 graft doc
 graft smoketests
 graft tools
 graft etc
-graft bzrplugins
 graft contrib
 graft po
 graft plugins
