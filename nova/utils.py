@@ -37,6 +37,7 @@ import time
 import types
 import uuid
 import pyclbr
+import netaddr
 from xml.sax import saxutils
 
 from eventlet import event
@@ -905,6 +906,26 @@ def is_valid_ipv4(address):
                 return False
         except ValueError:
             return False
+    return True
+
+
+def is_valid_cidr(address):
+    """Check if the provided ipv4 or ipv6 address is a valid
+    CIDR address or not"""
+    try:
+        # Validate the correct CIDR Address
+        netaddr.IPNetwork(address)
+    except netaddr.core.AddrFormatError:
+        return False
+
+    # Prior validation partially verify /xx part
+    # Verify it here
+    ip_segment = address.split('/')
+
+    if (len(ip_segment) <= 1 or
+        ip_segment[1] == ''):
+        return False
+
     return True
 
 
