@@ -53,8 +53,6 @@ flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
 
 LOG = logging.getLogger('nova.ajax_console_proxy')
-LOG.setLevel(logging.DEBUG)
-LOG.addHandler(logging.StreamHandler())
 
 
 class AjaxConsoleProxy(object):
