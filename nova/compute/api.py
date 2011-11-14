@@ -1522,7 +1522,7 @@ class API(base.Base):
 
     def attach_volume(self, context, instance, volume_id, device):
         """Attach an existing volume to an existing instance."""
-        if not re.match("^/dev/[a-z]d[a-z]+$", device):
+        if not re.match("^/dev/x{0,1}[a-z]d[a-z]+$", device):
             raise exception.ApiError(_("Invalid device specified: %s. "
                                      "Example device: /dev/vdb") % device)
         self.volume_api.check_attach(context, volume_id=volume_id)

@@ -35,14 +35,19 @@ class LibvirtVolumeDriver(object):
     def __init__(self, connection):
         self.connection = connection
 
+    def _pick_volume_driver(self):
+        hypervisor_type = self.connection.get_hypervisor_type().lower()
+        return "phy" if hypervisor_type == "xen" else "qemu"
+
     def connect_volume(self, connection_info, mount_device):
         """Connect the volume. Returns xml for libvirt."""
+        driver = self._pick_volume_driver()
         device_path = connection_info['data']['device_path']
         xml = """<disk type='block'>
-                     <driver name='qemu' type='raw'/>
+                     <driver name='%s' type='raw'/>
                      <source dev='%s'/>
                      <target dev='%s' bus='virtio'/>
-                 </disk>""" % (device_path, mount_device)
+                 </disk>""" % (driver, device_path, mount_device)
         return xml
 
     def disconnect_volume(self, connection_info, mount_device):
@@ -54,13 +59,14 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
 
     def connect_volume(self, connection_info, mount_device):
+        driver = self._pick_volume_driver()
         protocol = connection_info['driver_volume_type']
         name = connection_info['data']['name']
         xml = """<disk type='network'>
-                     <driver name='qemu' type='raw'/>
+                     <driver name='%s' type='raw'/>
                      <source protocol='%s' name='%s'/>
                      <target dev='%s' bus='virtio'/>
-                 </disk>""" % (protocol, name, mount_device)
+                 </disk>""" % (driver, protocol, name, mount_device)
         return xml
 
 
