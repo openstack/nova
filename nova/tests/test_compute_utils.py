@@ -91,5 +91,6 @@ class UsageInfoTestCase(test.TestCase):
                      'audit_period_ending'):
             self.assertTrue(attr in payload,
                             msg="Key %s not in payload" % attr)
-        self.assertEquals(payload['image_ref'], '1')
+        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance_id)

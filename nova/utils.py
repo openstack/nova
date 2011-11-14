@@ -337,6 +337,9 @@ def current_audit_period(unit=None):
 
 
 def usage_from_instance(instance_ref, **kw):
+    image_ref_url = "%s/images/%s" % (generate_glance_url(),
+            instance_ref['image_ref'])
+
     usage_info = dict(
           tenant_id=instance_ref['project_id'],
           user_id=instance_ref['user_id'],
@@ -347,7 +350,7 @@ def usage_from_instance(instance_ref, **kw):
           created_at=str(instance_ref['created_at']),
           launched_at=str(instance_ref['launched_at']) \
                       if instance_ref['launched_at'] else '',
-          image_ref=instance_ref['image_ref'],
+          image_ref_url=image_ref_url,
           state=instance_ref['vm_state'],
           state_description=instance_ref['task_state'] \
                              if instance_ref['task_state'] else '',
